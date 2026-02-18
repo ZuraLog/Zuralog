@@ -248,8 +248,9 @@ class BaseMCPServer:
 | **Fitbit** | `get_daily_activity`, `get_sleep_log`, `get_heart_rate`, `get_body_weight`, `get_hrv` | OAuth 2.0 | 150 req / hour |
 | **Oura** | `get_daily_sleep`, `get_readiness`, `get_daily_activity`, `get_heart_rate` | OAuth 2.0 / PAT | 5000 req / 5 min |
 | **WHOOP** | `get_recovery`, `get_strain`, `get_sleep`, `get_workouts` | OAuth 2.0 | TBD |
-| **Garmin** | `get_daily_summary`, `get_sleep`, `get_heart_rate`, `get_stress`, `get_body_composition` | OAuth 1.0a | TBD (commercial) |
-| **Health Writer** | `write_nutrition`, `write_workout`, `write_weight` | Internal (FCM) | N/A |
+| **Garmin** | Read via `health_writer` (Health Connect/Apple Health) - **NO DIRECT API** for MVP | N/A | N/A |
+| **Health Writer** | `write_nutrition`, `write_workout`, `write_weight`, `read_metrics` | Internal (FCM) | N/A |
+
 | **Deep Link** | `open_app`, `open_strava_recording` | Local (Edge) | N/A |
 
 #### MCP Data Flow: Tool Call Lifecycle
@@ -422,8 +423,9 @@ class BaseMCPServer:
 | FCM push delivery latency (5-10s cold start) | User feels logging is slow | Optimistic UI: show "Queued for logging..." immediately in chat. Confirm when write completes. |
 | Strava/Fitbit/Oura API rate limits | Blocked integrations | Intelligent caching + Celery queue with exponential backoff. |
 | App Store rejection for HealthKit usage | Blocks iOS launch | Apply for HealthKit entitlement early. Document clear user benefit per HK data type. |
-| Garmin Health API requires commercial approval | Delays Garmin integration | Apply early. Fallback: read Garmin data via Health Connect on Android. Phase 2 if approval is slow. |
+| Garmin Health API requires commercial approval | Delays Garmin integration | **MITIGATED:** MVP uses Health Connect (Android) and Apple Health (iOS) to read Garmin data. Direct API pushed to Phase 2. |
 | MCP server complexity overhead | Slower initial development | Start with 3 MCP servers (Strava, Fitbit, Oura). Validate the pattern before building WHOOP/Garmin. |
+
 
 ---
 

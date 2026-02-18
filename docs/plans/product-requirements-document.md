@@ -116,6 +116,13 @@ Quick-glance cards within the chat interface showing aggregated stats:
 - Weight trend (from Health Store)
 - AI insight card at the top
 
+### 5.6 AI Persona: "The Tough Love Coach"
+The AI is not a passive dashboard. It is an active, opinionated coach.
+- **Opinionated:** It doesn't just say "You ran 5K." It says "You ran 5K, but you're still 10K short of your weekly goal. strictly speaking, you need to run tomorrow."
+- **Proactive:** Checks data in the background and pushes insights. "I noticed you haven't logged food today. forgetting something?"
+- **Context-Aware:** "You slept 5 hours. Take it easy on the run today, keep heart rate Zone 2."
+
+
 ---
 
 ## 6. Integration Strategy
@@ -133,7 +140,8 @@ All external app integrations are implemented as **MCP Servers**. This allows pl
 | **P1** | **Fitbit** | Public Web API | Cloud | Steps, sleep stages, HR, weight | — (Read-only) |
 | **P1** | **Oura Ring** | Public API v2 | Cloud | Sleep, readiness, HRV, temp | — (Read-only) |
 | **P2** | **WHOOP** | Public API | Cloud | Recovery, strain, sleep | — (Read-only) |
-| **P2** | **Garmin Health** | REST API | Cloud | Steps, sleep, stress, Body Battery | — (Read-only) |
+| **P2** | **Garmin** | Via Health Connect/Apple Health | Edge | Steps, sleep, stress (via OS) | — (Read-only) |
+
 
 ### 6.3 CalAI Strategy (The "Zero-Friction" Approach)
 - **Primary Data Flow:** User logs food in CalAI (or any nutrition app).
@@ -171,6 +179,13 @@ See the companion [Architecture Design Document](file:///c:/Projects/life-logger
 ### 9.2 AI Reasoning Engine
 - **Narrator, not Calculator:** Uses deterministic stats (Pearson correlations) to find patterns, uses LLM to explain them.
 - **Data Normalization:** Converts all incoming data (Strava runs, Oura sleep, CalAI food) into a standard format for analysis.
+
+### 9.3 Data Freshness & UX
+Mobile background sync is not real-time. We must manage user expectations.
+- **Explicit Freshness:** UI must show "Last update: 15m ago" for background data.
+- **Optimistic Updates:** When the user logs something, show it immediately with a "Syncing..." state.
+- **Pull-to-Refresh:** Allow users to force a check (where APIs allow) or trigger a foreground sync of the Edge Agent.
+
 
 ---
 
