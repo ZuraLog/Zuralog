@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Life Logger - Integrations Hub</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#5bec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#162210",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "2xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        /* Hide scrollbar for clean look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Custom toggle styles to match iOS feel */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #5bec13;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #5bec13;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased min-h-screen">
+<div class="max-w-md mx-auto min-h-screen bg-background-light dark:bg-background-dark relative flex flex-col">
+<!-- Header -->
+<header class="pt-14 pb-4 px-5 flex flex-col gap-4 bg-background-light dark:bg-background-dark sticky top-0 z-10 backdrop-blur-md bg-opacity-90 dark:bg-opacity-90">
+<div class="flex items-center justify-between">
+<button class="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-white" style="font-size: 28px;">chevron_left</span>
+</button>
+<button class="p-2 -mr-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-white" style="font-size: 24px;">settings</span>
+</button>
+</div>
+<div>
+<h1 class="text-[34px] font-bold tracking-tight text-slate-900 dark:text-white leading-tight">Integrations</h1>
+<p class="text-slate-500 dark:text-slate-400 mt-1 text-sm font-medium">Manage your data sources and connected apps.</p>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-5 pb-24 flex flex-col gap-8">
+<!-- Connected Section -->
+<section>
+<h2 class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 ml-1">Connected</h2>
+<div class="bg-white dark:bg-white/5 rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-white/10">
+<!-- Strava Item -->
+<div class="flex items-center justify-between p-4 min-h-[72px] hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group cursor-pointer relative">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-[#FC4C02] flex items-center justify-center shrink-0 shadow-sm text-white">
+<!-- Simple S icon representation -->
+<svg class="w-7 h-7" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0 7.627 5.598h2.836z"></path>
+</svg>
+</div>
+<div class="flex flex-col">
+<span class="text-[17px] font-semibold text-slate-900 dark:text-white leading-tight">Strava</span>
+<span class="text-[13px] text-green-600 dark:text-primary font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-primary"></span>
+                                    Last synced: 10:42 AM
+                                </span>
+</div>
+</div>
+<div class="shrink-0 relative z-10">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-[51px] h-[31px] bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[27px] after:w-[27px] after:transition-all dark:border-gray-600 peer-checked:bg-primary after:shadow-sm"></div>
+</label>
+</div>
+<!-- Divider -->
+<div class="absolute bottom-0 right-0 left-[76px] h-px bg-slate-100 dark:bg-white/10"></div>
+</div>
+<!-- Apple Health Item -->
+<div class="flex items-center justify-between p-4 min-h-[72px] hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-white border border-slate-100 dark:border-none dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm relative overflow-hidden">
+<!-- Apple Health Heart Icon -->
+<div class="absolute inset-0 bg-gradient-to-tr from-rose-500 to-orange-400 opacity-10"></div>
+<span class="material-symbols-outlined text-rose-500" style="font-variation-settings: 'FILL' 1; font-size: 28px;">favorite</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[17px] font-semibold text-slate-900 dark:text-white leading-tight">Apple Health</span>
+<span class="text-[13px] text-slate-500 dark:text-slate-400 font-medium">Auto-sync active</span>
+</div>
+</div>
+<div class="shrink-0">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-[51px] h-[31px] bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[27px] after:w-[27px] after:transition-all dark:border-gray-600 peer-checked:bg-primary after:shadow-sm"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Available Section -->
+<section>
+<h2 class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 ml-1">Available</h2>
+<div class="bg-white dark:bg-white/5 rounded-2xl overflow-hidden shadow-sm border border-slate-100 dark:border-white/10">
+<!-- Oura Item -->
+<div class="flex items-center justify-between p-4 min-h-[72px] hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group cursor-pointer relative">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center shrink-0 shadow-sm text-white relative overflow-hidden">
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-6 h-6 border-4 border-white rounded-full"></div>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-[17px] font-semibold text-slate-900 dark:text-white leading-tight">Oura Ring</span>
+<span class="text-[13px] text-slate-500 dark:text-slate-400 font-medium">Connect to import sleep data</span>
+</div>
+</div>
+<div class="shrink-0 z-10">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-[51px] h-[31px] bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[27px] after:w-[27px] after:transition-all dark:border-gray-600 peer-checked:bg-primary after:shadow-sm"></div>
+</label>
+</div>
+<!-- Divider -->
+<div class="absolute bottom-0 right-0 left-[76px] h-px bg-slate-100 dark:bg-white/10"></div>
+</div>
+<!-- Fitbit Item -->
+<div class="flex items-center justify-between p-4 min-h-[72px] hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-[#00B0B9] flex items-center justify-center shrink-0 shadow-sm text-white">
+<!-- Abstract Fitbit dots -->
+<div class="flex gap-1 items-center">
+<div class="w-1.5 h-1.5 rounded-full bg-white opacity-80"></div>
+<div class="w-1.5 h-3 rounded-full bg-white"></div>
+<div class="w-1.5 h-2 rounded-full bg-white opacity-80"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-white opacity-60"></div>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-[17px] font-semibold text-slate-900 dark:text-white leading-tight">Fitbit</span>
+<span class="text-[13px] text-slate-500 dark:text-slate-400 font-medium">Connect to import activity</span>
+</div>
+</div>
+<div class="shrink-0">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-[51px] h-[31px] bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[27px] after:w-[27px] after:transition-all dark:border-gray-600 peer-checked:bg-primary after:shadow-sm"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Coming Soon Section -->
+<section>
+<h2 class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 ml-1">Coming Soon</h2>
+<div class="bg-white/60 dark:bg-white/5 rounded-2xl overflow-hidden border border-slate-100 dark:border-white/10 backdrop-blur-sm">
+<!-- WHOOP Item -->
+<div class="flex items-center justify-between p-4 min-h-[72px] opacity-70 relative">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-black flex items-center justify-center shrink-0 grayscale opacity-80">
+<span class="text-white font-bold text-xs">WHOOP</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[17px] font-semibold text-slate-900 dark:text-white leading-tight opacity-60">WHOOP</span>
+<span class="text-[13px] text-slate-400 font-medium">Recovery metrics</span>
+</div>
+</div>
+<div class="shrink-0">
+<span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 ring-1 ring-inset ring-slate-500/10">Notify Me</span>
+</div>
+<!-- Divider -->
+<div class="absolute bottom-0 right-0 left-[76px] h-px bg-slate-100 dark:bg-white/5"></div>
+</div>
+<!-- Garmin Item -->
+<div class="flex items-center justify-between p-4 min-h-[72px] opacity-70">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-[#007cc3] flex items-center justify-center shrink-0 grayscale opacity-80 text-white">
+<span class="font-bold text-lg tracking-tighter">G</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[17px] font-semibold text-slate-900 dark:text-white leading-tight opacity-60">Garmin Connect</span>
+<span class="text-[13px] text-slate-400 font-medium">Advanced GPS data</span>
+</div>
+</div>
+<div class="shrink-0">
+<span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 ring-1 ring-inset ring-slate-500/10">Soon</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation -->
+<nav class="bg-white/95 dark:bg-[#162210]/95 backdrop-blur-lg border-t border-slate-100 dark:border-white/5 px-6 pb-6 pt-3 fixed bottom-0 w-full max-w-md z-50">
+<div class="flex items-center justify-between">
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors w-16" href="#">
+<span class="material-symbols-outlined" style="font-size: 26px;">calendar_today</span>
+<span class="text-[10px] font-medium tracking-wide">Today</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-900 dark:text-white w-16 relative" href="#">
+<div class="absolute -top-3 w-12 h-1 bg-primary rounded-b-full shadow-[0_0_10px_rgba(91,236,19,0.5)]"></div>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1; font-size: 26px;">sync_alt</span>
+<span class="text-[10px] font-semibold tracking-wide">Integrations</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors w-16" href="#">
+<span class="material-symbols-outlined" style="font-size: 26px;">share</span>
+<span class="text-[10px] font-medium tracking-wide">Sharing</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors w-16" href="#">
+<span class="material-symbols-outlined" style="font-size: 26px;">person</span>
+<span class="text-[10px] font-medium tracking-wide">Profile</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

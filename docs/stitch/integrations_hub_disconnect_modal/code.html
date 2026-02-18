@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Life Logger - Integrations</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#64c91d",
+                        "primary-dark": "#4da315",
+                        "background-light": "#f2f2f7", // Apple Health style background
+                        "background-dark": "#182111",
+                        "sage-light": "#e8f5e0",
+                        "sage-text": "#4b6b3c",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2rem", "full": "9999px" },
+                    boxShadow: {
+                        "soft": "0 4px 20px -2px rgba(0, 0, 0, 0.1)",
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased">
+<div class="relative flex h-screen w-full flex-col overflow-hidden max-w-md mx-auto bg-background-light dark:bg-background-dark shadow-2xl">
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto hide-scrollbar pb-24">
+<!-- Header -->
+<header class="pt-12 pb-4 px-5 flex items-center justify-between sticky top-0 z-10 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
+<div>
+<h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Integrations</h1>
+</div>
+<div class="rounded-full bg-slate-200 dark:bg-slate-800 p-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 24px;">account_circle</span>
+</div>
+</header>
+<div class="px-5 mt-6 space-y-8">
+<!-- Section: Connected -->
+<div>
+<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 ml-1">Connected Apps</h2>
+<div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm">
+<!-- Strava Item (Active State logic handled by modal) -->
+<div class="flex items-center p-4 border-b border-slate-100 dark:border-slate-800 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors">
+<div class="h-10 w-10 rounded-lg bg-[#FC4C02] flex items-center justify-center shrink-0 text-white shadow-sm">
+<!-- Strava Icon Placeholder -->
+<svg class="w-6 h-6" fill="currentColor" role="img" viewbox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.477 0 4.262 12.227h4.172"></path></svg>
+</div>
+<div class="ml-4 flex-1">
+<h3 class="text-base font-medium text-slate-900 dark:text-white">Strava</h3>
+<p class="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                    Syncing
+                                </p>
+</div>
+<div class="shrink-0">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+<!-- Apple Health Item -->
+<div class="flex items-center p-4">
+<div class="h-10 w-10 rounded-lg bg-white border border-slate-100 flex items-center justify-center shrink-0 shadow-sm relative overflow-hidden">
+<img alt="Apple Health" class="w-full h-full object-cover" data-alt="Apple Health Logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsQjv99k8Js-Nwodesm_u5ROvv0eo9u7gaHskoyT4mTHKnCfflL8DwWGiyOkd_N1OhaUbDplaf0O7Mv3YJJB8RiPtvauExbS97rycyywdo3mhVH8w3CcV70BLfKijEKEoy4L_BA2UQuGBMnxIVUIldsx3cGLBxhtwfEWkfbj9yTvRiimTiCMR0e3DFIyMceeWBCB1GjEqB-1j18k5-rnZqOu07aRymKLvNvLmUDjdT6hqrQR7tpn7L-fKbG4CtKtzPrcZPeyMzWXfz"/>
+</div>
+<div class="ml-4 flex-1">
+<h3 class="text-base font-medium text-slate-900 dark:text-white">Apple Health</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Last synced 2m ago</p>
+</div>
+<div class="shrink-0">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600">chevron_right</span>
+</div>
+</div>
+</div>
+<p class="text-xs text-slate-400 mt-2 ml-1">Data is automatically synced in the background.</p>
+</div>
+<!-- Section: Available -->
+<div>
+<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 ml-1">Available to Connect</h2>
+<div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm">
+<!-- MyFitnessPal -->
+<div class="flex items-center p-4 border-b border-slate-100 dark:border-slate-800">
+<div class="h-10 w-10 rounded-lg bg-blue-500 flex items-center justify-center shrink-0 text-white shadow-sm">
+<span class="font-bold text-lg">MFP</span>
+</div>
+<div class="ml-4 flex-1">
+<h3 class="text-base font-medium text-slate-900 dark:text-white">MyFitnessPal</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Nutrition &amp; Calories</p>
+</div>
+<button class="px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+                                Connect
+                            </button>
+</div>
+<!-- Fitbit -->
+<div class="flex items-center p-4 border-b border-slate-100 dark:border-slate-800">
+<div class="h-10 w-10 rounded-lg bg-[#00B0B9] flex items-center justify-center shrink-0 text-white shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 20px;">watch</span>
+</div>
+<div class="ml-4 flex-1">
+<h3 class="text-base font-medium text-slate-900 dark:text-white">Fitbit</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Steps &amp; Sleep</p>
+</div>
+<button class="px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+                                Connect
+                            </button>
+</div>
+<!-- Oura -->
+<div class="flex items-center p-4">
+<div class="h-10 w-10 rounded-lg bg-black flex items-center justify-center shrink-0 text-white shadow-sm border border-slate-700">
+<span class="material-symbols-outlined" style="font-size: 20px;">ring_volume</span>
+</div>
+<div class="ml-4 flex-1">
+<h3 class="text-base font-medium text-slate-900 dark:text-white">Oura</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Sleep &amp; Readiness</p>
+</div>
+<button class="px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+                                Connect
+                            </button>
+</div>
+</div>
+</div>
+<!-- Section: Coming Soon -->
+<div class="pb-8">
+<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 ml-1">Coming Soon</h2>
+<div class="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-sm opacity-60">
+<div class="flex items-center p-4">
+<div class="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
+<span class="material-symbols-outlined" style="font-size: 20px;">satellite_alt</span>
+</div>
+<div class="ml-4 flex-1">
+<h3 class="text-base font-medium text-slate-900 dark:text-white">Garmin</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Planned for Q4</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="absolute bottom-0 w-full z-0">
+<div class="flex gap-2 border-t border-[#f2f4f0] bg-white dark:bg-slate-900 px-4 pb-6 pt-2">
+<a class="just flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 24px;">wb_sunny</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Today</p>
+</a>
+<a class="just flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 24px;">menu_book</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Journal</p>
+</a>
+<a class="just flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-primary" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined font-variation-settings-fill" style="font-size: 24px;">extension</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Integrations</p>
+</a>
+<a class="just flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 24px;">account_circle</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Profile</p>
+</a>
+</div>
+</nav>
+<!-- Overlay & Modal -->
+<!-- The overlay has z-index higher than nav but lower than modal content -->
+<div class="absolute inset-0 z-40 bg-black/40 backdrop-blur-[2px] flex flex-col justify-end transition-opacity duration-300">
+<!-- Modal Content -->
+<!-- Using translate-y-0 to simulate open state, usually this would toggle -->
+<div class="w-full bg-white dark:bg-slate-900 rounded-t-2xl p-6 pb-10 shadow-soft transform transition-transform duration-300 ease-out translate-y-0 animate-[slideUp_0.3s_ease-out]">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center mb-6">
+<div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+</div>
+<!-- Modal Header Icon -->
+<div class="flex justify-center mb-5">
+<div class="relative">
+<div class="w-20 h-20 bg-sage-light dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm">
+<!-- Strava Icon (Big) -->
+<svg class="w-10 h-10 text-[#FC4C02]" fill="currentColor" role="img" viewbox="0 0 24 24"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.477 0 4.262 12.227h4.172"></path></svg>
+</div>
+<!-- Status Badge: Disconnect -->
+<div class="absolute -bottom-2 -right-2 bg-white dark:bg-slate-900 p-1 rounded-full">
+<div class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
+<span class="material-symbols-outlined" style="font-size: 18px;">link_off</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Text Content -->
+<div class="text-center mb-8 px-4">
+<h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Disconnect Strava?</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                        You will stop syncing activities and heart rate data from Strava. Historical data will be kept in your journal.
+                    </p>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-3">
+<button class="w-full py-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-red-600 dark:text-red-400 font-bold text-base hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        Disconnect
+                    </button>
+<button class="w-full py-4 rounded-xl bg-primary text-white font-semibold text-base shadow-sm hover:bg-primary-dark transition-colors">
+                        Cancel
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Custom Animation for Modal Slide Up -->
+<style>
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+    </style>
+</body></html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Life Logger Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#19e65e",
+                        "sage": "#CFE1B9",
+                        "sage-dark": "#63886f",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#112116",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "1.5rem", 
+                        "xl": "2rem", // Adjusted for the 24px/32px requested soft look
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
+                        'card': '0 4px 24px -4px rgba(0, 0, 0, 0.04)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-[#111813] dark:text-white min-h-screen flex flex-col antialiased selection:bg-primary/20">
+<div class="flex-1 w-full max-w-md mx-auto bg-white dark:bg-black min-h-screen shadow-2xl overflow-hidden relative pb-24">
+<!-- Header -->
+<header class="pt-8 px-6 pb-4 flex justify-between items-center bg-white dark:bg-black sticky top-0 z-10">
+<div class="flex flex-col">
+<p class="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Wednesday, Oct 18</p>
+<h1 class="text-3xl font-bold tracking-tight text-[#111813] dark:text-white">Good Morning,<br/>Alex</h1>
+</div>
+<div class="relative">
+<div class="h-12 w-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-800 shadow-sm">
+<img alt="Profile Picture" class="h-full w-full object-cover" data-alt="User profile portrait of a smiling woman" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8qmlcXBSHatFrd8Eyxdi6_YGX6M5OopwvvhnoOzK0rNV56GP_5m_dwLa0E16KJHDvXf5StDSMOP6uGP0WlqSkleuXZCRli_lHFfPrutn9-5nwBD6AvZBJ-9BPbn-QcJmDTV6BYhI3xf9qFZS_Cw4y-G0XSFXJUcSeUwbPJonWgfmgG8rQ0ZYd0wAFxHHIxLXrQa9UiuMO-zL5KMKb8FQBxOkevndzVaBVlOlynlR3ove3gV0KgZPIVtLWRkT_4wzma-VRzRcoLqmE"/>
+</div>
+<div class="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-black"></div>
+</div>
+</header>
+<!-- Main Content Scroll Area -->
+<main class="flex flex-col gap-6 px-6 pt-2">
+<!-- Hero Card: Daily Activity -->
+<div class="relative overflow-hidden rounded-xl p-6 shadow-soft group transition-all duration-300 hover:shadow-lg">
+<!-- Gradient Background -->
+<div class="absolute inset-0 bg-gradient-to-br from-white via-[#f4f9f4] to-sage opacity-80 dark:from-gray-800 dark:to-gray-900 z-0"></div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-full flex justify-between items-start mb-2">
+<h2 class="text-lg font-bold text-[#111813] dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-sage-dark">local_fire_department</span>
+                            Daily Activity
+                        </h2>
+<button class="bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 rounded-full p-2 backdrop-blur-sm transition-colors">
+<span class="material-symbols-outlined text-sage-dark text-xl">more_horiz</span>
+</button>
+</div>
+<!-- Circular Progress Ring -->
+<div class="relative w-48 h-48 flex items-center justify-center my-4">
+<!-- Outer Ring Background -->
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-gray-100 dark:text-gray-700" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="16"></circle>
+<!-- Progress Ring -->
+<circle class="text-sage-dark dark:text-primary transition-all duration-1000 ease-out" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-dasharray="552.9" stroke-dashoffset="138" stroke-linecap="round" stroke-width="16"></circle>
+</svg>
+<!-- Inner Content -->
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="text-4xl font-bold text-[#111813] dark:text-white tracking-tighter">8,432</span>
+<span class="text-sm font-medium text-gray-500 uppercase tracking-wide mt-1">Steps</span>
+</div>
+</div>
+<div class="w-full grid grid-cols-3 divide-x divide-gray-200 dark:divide-gray-700 mt-2">
+<div class="flex flex-col items-center px-2">
+<span class="text-xs text-gray-500 font-medium mb-1">Cals</span>
+<span class="font-bold text-[#111813] dark:text-white">420</span>
+</div>
+<div class="flex flex-col items-center px-2">
+<span class="text-xs text-gray-500 font-medium mb-1">Dist</span>
+<span class="font-bold text-[#111813] dark:text-white">5.2km</span>
+</div>
+<div class="flex flex-col items-center px-2">
+<span class="text-xs text-gray-500 font-medium mb-1">Goal</span>
+<span class="font-bold text-[#111813] dark:text-white">84%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Integrations Row -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Connected Apps</h3>
+<a class="text-primary text-sm font-medium hover:underline" href="#">Manage</a>
+</div>
+<div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-6 px-6 snap-x">
+<!-- Strava -->
+<button class="snap-start shrink-0 flex items-center gap-3 pl-2 pr-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-card border border-gray-100 dark:border-gray-700 hover:border-orange-200 dark:hover:border-orange-900 transition-colors group">
+<div class="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+<!-- Custom Strava-like icon shape -->
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M10.9,2.8L6.4,11.7h3.8l0.7-1.4l2.9,5.8l2.9-5.8l0.7,1.4h3.8L16.7,2.8H10.9z"></path>
+</svg>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-sm font-bold text-[#111813] dark:text-white">Strava</span>
+<span class="text-[10px] text-gray-500 font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Synced
+                            </span>
+</div>
+</button>
+<!-- Oura -->
+<button class="snap-start shrink-0 flex items-center gap-3 pl-2 pr-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-card border border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors group">
+<div class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-gray-900 dark:text-white group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-lg">ring_volume</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-sm font-bold text-[#111813] dark:text-white">Oura</span>
+<span class="text-[10px] text-gray-500 font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Syncing
+                            </span>
+</div>
+</button>
+<!-- Fitbit -->
+<button class="snap-start shrink-0 flex items-center gap-3 pl-2 pr-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-card border border-gray-100 dark:border-gray-700 hover:border-teal-200 dark:hover:border-teal-900 transition-colors group">
+<div class="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-lg">watch</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-sm font-bold text-[#111813] dark:text-white">Fitbit</span>
+<span class="text-[10px] text-gray-500 font-medium">Last sync 2h</span>
+</div>
+</button>
+<!-- Apple Health -->
+<button class="snap-start shrink-0 flex items-center gap-3 pl-2 pr-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-card border border-gray-100 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-900 transition-colors group">
+<div class="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-sm font-bold text-[#111813] dark:text-white">Health</span>
+<span class="text-[10px] text-gray-500 font-medium">Active</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Metrics Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Sleep Card -->
+<div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-card flex flex-col justify-between h-40 relative group overflow-hidden">
+<div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex justify-between items-start z-10">
+<div class="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-full text-indigo-500 dark:text-indigo-300">
+<span class="material-symbols-outlined text-xl">bedtime</span>
+</div>
+<span class="text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full">+12%</span>
+</div>
+<div class="z-10">
+<p class="text-gray-500 text-sm font-medium mb-1">Sleep Duration</p>
+<h4 class="text-2xl font-bold text-[#111813] dark:text-white tracking-tight">7h 42m</h4>
+<p class="text-[10px] text-gray-400 mt-1">Deep sleep goal met</p>
+</div>
+</div>
+<!-- Recovery Card -->
+<div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-card flex flex-col justify-between h-40 relative group overflow-hidden">
+<div class="absolute -right-4 -top-4 w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex justify-between items-start z-10">
+<div class="p-2 bg-green-50 dark:bg-green-900/30 rounded-full text-green-600 dark:text-green-400">
+<span class="material-symbols-outlined text-xl">battery_charging_full</span>
+</div>
+</div>
+<div class="z-10 w-full">
+<div class="flex justify-between items-end mb-1">
+<p class="text-gray-500 text-sm font-medium">Recovery</p>
+<span class="text-[10px] font-bold text-green-600">High</span>
+</div>
+<h4 class="text-2xl font-bold text-[#111813] dark:text-white tracking-tight flex items-baseline gap-1">
+                            85<span class="text-sm font-normal text-gray-400">%</span>
+</h4>
+<!-- Mini Bar Chart -->
+<div class="flex items-end gap-1 h-6 mt-2 w-full justify-between opacity-80">
+<div class="w-1.5 bg-gray-200 dark:bg-gray-600 rounded-t-sm h-[40%]"></div>
+<div class="w-1.5 bg-gray-200 dark:bg-gray-600 rounded-t-sm h-[60%]"></div>
+<div class="w-1.5 bg-gray-200 dark:bg-gray-600 rounded-t-sm h-[30%]"></div>
+<div class="w-1.5 bg-gray-200 dark:bg-gray-600 rounded-t-sm h-[70%]"></div>
+<div class="w-1.5 bg-primary dark:bg-primary rounded-t-sm h-[85%] shadow-[0_0_8px_rgba(25,230,94,0.4)]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Additional Spacer for Bottom Nav -->
+<div class="h-8"></div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 dark:bg-black/90 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 px-6 pb-6 pt-3 z-50">
+<div class="flex items-center justify-between">
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-primary text-2xl group-hover:scale-110 transition-transform">today</span>
+<span class="text-[10px] font-medium text-[#111813] dark:text-white">Today</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 text-2xl group-hover:text-primary transition-colors group-hover:scale-110 transition-transform">fitness_center</span>
+<span class="text-[10px] font-medium text-gray-500 group-hover:text-[#111813] dark:group-hover:text-white transition-colors">Fitness</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 text-2xl group-hover:text-primary transition-colors group-hover:scale-110 transition-transform">ecg_heart</span>
+<span class="text-[10px] font-medium text-gray-500 group-hover:text-[#111813] dark:group-hover:text-white transition-colors">Vitals</span>
+</a>
+<a class="flex flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 text-2xl group-hover:text-primary transition-colors group-hover:scale-110 transition-transform">person</span>
+<span class="text-[10px] font-medium text-gray-500 group-hover:text-[#111813] dark:group-hover:text-white transition-colors">Profile</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>
