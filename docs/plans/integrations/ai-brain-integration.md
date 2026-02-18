@@ -1,4 +1,4 @@
-# AI Brain Integration (Kimi K2.5)
+# AI Brain Integration (OpenRouter + Kimi K2.5)
 
 > **Status:** Reference document for Phase 1.8 implementation  
 > **Priority:** P0 (MVP)
@@ -7,23 +7,32 @@
 
 ## Overview
 
-This document covers the AI Brain implementation using Kimi K2.5 as the primary LLM, integrated via the MCP (Model Context Protocol) architecture.
+This document covers the AI Brain implementation using **OpenRouter** as the unified LLM gateway with **Kimi K2.5** as the primary model, integrated via the MCP (Model Context Protocol) architecture.
 
 ---
 
 ## LLM Selection
 
-### Primary: Kimi K2.5 (Moonshot AI)
+### Primary: OpenRouter (Unified Gateway)
 
 **Justification:**
+- Unified API for 100+ LLMs with single integration
+- Built-in rate limiting and cost tracking
+- Automatic fallback capabilities
+- Cost-effective at ~$1.50/user/month
+- No single-vendor lock-in
+
+### Model: Kimi K2.5 (via OpenRouter)
+
+**Why Kimi K2.5:**
 - Superior instruction following for MCP tool calls
 - Interleaved reasoning reduces hallucinations
-- Cost-effective at ~$2.16/user/month
-- 78% gross margin on $9.99 subscription
+- Available through OpenRouter at competitive pricing
+- 200K context window
 
-### Alternative: MiniMax M2.5 (Future)
-- Lower cost ($0.90/user/month)
-- Risk: "Lazy Coder" tendency could cause data corruption
+### Alternative Models (Future)
+- **Claude 3.5 Sonnet**: Premium reasoning (~$3/1M input)
+- **Llama 3.1 70B**: Cost-effective ($0.80/1M input)
 
 ---
 
@@ -37,13 +46,18 @@ This document covers the AI Brain implementation using Kimi K2.5 as the primary 
 │  │   Chat    │    │   (Agent)    │    │                │  │
 │  └──────────┘    └──────────────┘    └────────┬───────┘  │
 │                                               │            │
-│  ┌───────────────────────────────────────────▼──────────┐  │
+│  ┌─────────────────────────────────────────────▼──────────┐  │
 │  │              Available MCP Tools                       │  │
 │  │  • apple_health_read/write                            │  │
 │  │  • health_connect_read/write                           │  │
 │  │  • strava_get_activities / create_activity           │  │
 │  │  • open_app (deep links)                              │  │
 │  └───────────────────────────────────────────────────────┘  │
+│                           │                                 │
+│                    ┌──────▼──────┐                          │
+│                    │ OpenRouter  │                          │
+│                    │  (Kimi K2.5) │                          │
+│                    └─────────────┘                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -121,7 +135,7 @@ All tools follow this schema format:
 1. User taps microphone in Flutter
 2. Audio recorded and uploaded to Cloud Brain
 3. Whisper transcribes audio to text
-4. Text sent to Kimi as regular message
+4. Text sent to OpenRouter (Kimi K2.5) as regular message
 
 ### Endpoint
 ```python
@@ -175,6 +189,142 @@ async def websocket_chat(websocket: WebSocket):
 
 ---
 
+## Security Features
+
+### API Rate Limiting
+
+Rate limits enforced per subscription tier via Redis sliding window algorithm:
+
+| Tier | Requests/minute | Requests/day | Tokens/day |
+|------|-----------------|--------------|------------|
+| Free | 10 | 100 | 10,000 |
+| Premium | 60 | 1,000 | 100,000 |
+| Enterprise | 120 | 10,000 | 1,000,000 |
+
+**Implementation:**
+- Redis-based sliding window counter
+- Per-user tracking with user_id
+- Graceful 429 response with retry-after header
+- Configurable via admin dashboard
+
+### Usage Tracking
+
+**Tracked Metrics:**
+- Daily/weekly/monthly request counts
+- Token usage per model (input/output)
+- Cost accumulation per user
+- Peak usage times
+
+**Storage:**
+- Redis: Real-time counters (hourly reset, 30-day retention)
+- PostgreSQL: Historical analytics
+
+### Tiered Access Control
+
+```python
+TIER_LIMITS = {
+    "free": {
+        "max_requests_per_day": 100,
+        "max_tokens_per_day": 10000,
+        "allowed_models": ["moonshot/kimi-k2.5"],
+        "features": ["basic_chat", "health_read"]
+    },
+    "premium": {
+        "max_requests_per_day": 1000,
+        "max_tokens_per_day": 100000,
+        "allowed_models": ["moonshot/kimi-k2.5", "anthropic/claude-3.5-sonnet"],
+        "features": ["basic_chat", "health_read", "health_write", "analytics"]
+    }
+}
+```
+
+### Cost Budget Alerts
+
+- **Warning**: Triggered at 80% of monthly budget
+- **Hard limit**: Block requests at 100%
+- **Notifications**: Admin via email, users in-app
+
+### Request Validation
+
+```python
+async def validate_request(user_id: str, model: str, estimated_tokens: int) -> bool:
+    user = await get_user(user_id)
+    tier = user.subscription_tier
+    
+    limits = TIER_LIMITS[tier]
+    
+    # Check model access
+    if model not in limits["allowed_models"]:
+        return False
+    
+    # Check daily token limit
+    daily_usage = await get_daily_usage(user_id)
+    if daily_usage + estimated_tokens > limits["max_tokens_per_day"]:
+        return False
+    
+    return True
+```
+
+### OpenRouter Integration
+
+**Configuration:**
+```python
+# cloud-brain/app/config.py
+class Settings(BaseSettings):
+    openrouter_api_key: str
+    openrouter_referer: str = "https://lifelogger.app"
+    openrouter_title: str = "Life Logger"
+```
+
+**Client Initialization:**
+```python
+from openai import AsyncOpenAI
+
+class LLMService:
+    def __init__(self):
+        self.client = AsyncOpenAI(
+            api_key=settings.openrouter_api_key,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": settings.openrouter_referer,
+                "X-Title": settings.openrouter_title,
+            }
+        )
+    
+    async def chat(self, model: str, messages: list, user_id: str):
+        # Validate request against rate limits
+        await rate_limiter.check_limit(user_id)
+        
+        # Track usage
+        await usage_tracker.record_request(user_id, model)
+        
+        # Call OpenRouter
+        response = await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0.7,
+        )
+        
+        return response
+```
+
+**Model Selection:**
+```python
+def select_model(tier: str, preferred: str = None) -> str:
+    """Select best model based on tier and availability."""
+    if preferred and preferred in TIER_LIMITS[tier]["allowed_models"]:
+        return preferred
+    
+    defaults = {
+        "free": "moonshot/kimi-k2.5",
+        "premium": "moonshot/kimi-k2.5",
+        "enterprise": "moonshot/kimi-k2.5"
+    }
+    return defaults[tier]
+```
+
+---
+
 ## Testing Checklist
 
 - [ ] LLM responds to health queries
@@ -184,23 +334,35 @@ async def websocket_chat(websocket: WebSocket):
 - [ ] Streaming responses are smooth
 - [ ] Context persists between sessions
 
+### Security Testing
+
+- [ ] Rate limiting blocks excess requests (429 response)
+- [ ] Free tier cannot access premium models
+- [ ] Usage tracking records accurate counts
+- [ ] Budget alerts trigger at 80%
+- [ ] Cost tracking matches actual API costs
+
 ---
 
 ## Cost Estimation
 
-| Metric | Value |
-|--------|-------|
-| Daily messages/user | 30 |
-| Tokens/message (in) | 1500 |
-| Tokens/message (out) | 500 |
-| Monthly tokens/user | 1.35M in / 450K out |
-| Kimi cost | $0.60/1M input / $1.80/1M output |
-| **Cost/user/month** | **~$2.16** |
+### OpenRouter Pricing (Kimi K2.5)
+
+| Metric | Free Tier | Premium Tier |
+|--------|-----------|--------------|
+| Daily messages/user | 10 | 50 |
+| Model | moonshot/kimi-k2.5 | moonshot/kimi-k2.5 |
+| Tokens/message (in) | 1000 | 1500 |
+| Tokens/message (out) | 500 | 500 |
+| Monthly tokens/user | 300K in / 150K out | 2.25M in / 750K out |
+| OpenRouter cost | ~$0.15/1M input | ~$0.15/1M input |
+| **Cost/user/month** | **~$0.07** | **~$0.45** |
 
 ---
 
 ## References
 
-- [Kimi API Documentation](https://platform.moonshot.cn/)
+- [OpenRouter Documentation](https://openrouter.ai/docs)
+- [Kimi K2.5 Model](https://openrouter.ai/models/kimi-k2.5)
 - [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling)
 - [Pinecone Vector Database](https://www.pinecone.io/)

@@ -54,7 +54,9 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_anon_key: str
     supabase_service_key: str
-    openai_api_key: str
+    openrouter_api_key: str
+    openrouter_referer: str = "https://lifelogger.app"
+    openrouter_title: str = "Life Logger"
     pinecone_api_key: str
     redis_url: str
     strava_client_id: str
@@ -2912,7 +2914,7 @@ async def execute_tool(self, tool_name: str, params: dict, user_id: str) -> dict
 
 ## Phase 1.8: The AI Brain (Reasoning Engine)
 
-> **Reference:** Review `docs/plans/model-selection.md` for LLM selection (Kimi K2.5).
+> **Reference:** Review `docs/plans/integrations/ai-brain-integration.md` for LLM selection (OpenRouter + Kimi K2.5).
 
 **Goal:** Implement the LLM agent that orchestrates MCP tools, performs cross-app reasoning, and generates responses.
 
@@ -2933,15 +2935,17 @@ import httpx
 from cloudbrain.app.config import settings
 
 class LLMClient:
-    """Client for Kimi K2.5 (or other OpenAI-compatible LLM)."""
+    """Client for Kimi K2.5 via OpenRouter."""
     
-    def __init__(self, model: str = "kimik2.5"):
+    def __init__(self, model: str = "moonshot/kimi-k2.5"):
         self.model = model
-        self.base_url = "https://api.moonshot.cn/v1"  # Kimi API
-        self.api_key = settings.openai_api_key
+        self.base_url = "https://openrouter.ai/api/v1"
+        self.api_key = settings.openrouter_api_key
+        self.referer = settings.openrouter_referer
+        self.title = settings.openrouter_title
     
     async def chat(self, messages: list[dict], tools: list[dict] | None = None) -> dict:
-        """Send chat request to LLM."""
+        """Send chat request to LLM via OpenRouter."""
         payload = {
             "model": self.model,
             "messages": messages,
@@ -2956,7 +2960,9 @@ class LLMClient:
                 f"{self.base_url}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": self.referer,
+                    "X-Title": self.title,
                 },
                 json=payload,
                 timeout=60.0
@@ -2970,7 +2976,7 @@ class LLMClient:
         pass
 ```
 
-**Exit Criteria:** LLM client can send requests to Kimi API.
+**Exit Criteria:** LLM client can send requests to OpenRouter (Kimi K2.5).
 
 ---
 
@@ -3266,7 +3272,7 @@ TextField(
 ---
 
 **Phase 1.8 Exit Criteria:**
-- [ ] LLM client can call Kimi API
+- [ ] LLM client can call OpenRouter (Kimi K2.5)
 - [ ] System prompt defined for "Tough Love Coach"
 - [ ] Tool selection logic implemented in orchestrator
 - [ ] Cross-app reasoning engine created
@@ -3274,6 +3280,216 @@ TextField(
 - [ ] User profile manager
 - [ ] Harness can chat with AI
 - [ ] AI Brain integration document
+
+---
+
+### 1.8.4 Rate Limiter Service
+
+**Files:**
+- Create: `cloud-brain/app/services/rate_limiter.py`
+
+**Steps:**
+
+1. **Create rate limiter service**
+
+```python
+# cloud-brain/app/services/rate_limiter.py
+import redis.asyncio as redis
+from cloudbrain.app.config import settings
+
+class RateLimiter:
+    def __init__(self):
+        self.redis = redis.from_url(settings.redis_url)
+    
+    async def check_limit(self, user_id: str, tier: str = "free") -> bool:
+        """Check if user has not exceeded rate limit."""
+        limits = {
+            "free": {"requests_per_minute": 10, "requests_per_day": 100},
+            "premium": {"requests_per_minute": 60, "requests_per_day": 1000},
+            "enterprise": {"requests_per_minute": 120, "requests_per_day": 10000}
+        }
+        
+        tier_limits = limits.get(tier, limits["free"])
+        
+        minute_key = f"ratelimit:{user_id}:minute"
+        day_key = f"ratelimit:{user_id}:day"
+        
+        minute_count = await self.redis.get(minute_key)
+        if minute_count and int(minute_count) >= tier_limits["requests_per_minute"]:
+            return False
+        
+        day_count = await self.redis.get(day_key)
+        if day_count and int(day_count) >= tier_limits["requests_per_day"]:
+            return False
+        
+        return True
+    
+    async def increment(self, user_id: str):
+        """Increment rate limit counters."""
+        minute_key = f"ratelimit:{user_id}:minute"
+        day_key = f"ratelimit:{user_id}:day"
+        
+        pipe = self.redis.pipeline()
+        pipe.incr(minute_key)
+        pipe.expire(minute_key, 60)
+        pipe.incr(day_key)
+        pipe.expire(day_key, 86400)
+        await pipe.execute()
+    
+    async def get_remaining(self, user_id: str, tier: str = "free") -> dict:
+        """Get remaining requests for user."""
+        limits = {
+            "free": {"requests_per_minute": 10, "requests_per_day": 100},
+            "premium": {"requests_per_minute": 60, "requests_per_day": 1000},
+            "enterprise": {"requests_per_minute": 120, "requests_per_day": 10000}
+        }
+        
+        tier_limits = limits.get(tier, limits["free"])
+        
+        minute_key = f"ratelimit:{user_id}:minute"
+        day_key = f"ratelimit:{user_id}:day"
+        
+        minute_count = await self.redis.get(minute_key) or 0
+        day_count = await self.redis.get(day_key) or 0
+        
+        return {
+            "requests_per_minute_remaining": tier_limits["requests_per_minute"] - int(minute_count),
+            "requests_per_day_remaining": tier_limits["requests_per_day"] - int(day_count)
+        }
+
+rate_limiter = RateLimiter()
+```
+
+**Exit Criteria:** Rate limiter service implemented.
+
+---
+
+### 1.8.5 Usage Tracker Service
+
+**Files:**
+- Create: `cloud-brain/app/services/usage_tracker.py`
+
+**Steps:**
+
+1. **Create usage tracker service**
+
+```python
+# cloud-brain/app/services/usage_tracker.py
+import redis.asyncio as redis
+from datetime import datetime
+from cloudbrain.app.config import settings
+
+class UsageTracker:
+    def __init__(self):
+        self.redis = redis.from_url(settings.redis_url)
+    
+    async def record_request(self, user_id: str, model: str, input_tokens: int, output_tokens: int):
+        """Record a request for usage tracking."""
+        now = datetime.utcnow()
+        date_key = now.strftime("%Y-%m-%d")
+        
+        requests_key = f"usage:{user_id}:{date_key}:requests"
+        tokens_in_key = f"usage:{user_id}:{date_key}:tokens_in"
+        tokens_out_key = f"usage:{user_id}:{date_key}:tokens_out"
+        cost_key = f"usage:{user_id}:{date_key}:cost"
+        
+        model_prices = {
+            "moonshot/kimi-k2.5": {"input": 0.15, "output": 0.15},
+            "anthropic/claude-3.5-sonnet": {"input": 3.0, "output": 15.0},
+            "openai/gpt-4o": {"input": 2.5, "output": 10.0},
+        }
+        
+        price = model_prices.get(model, {"input": 1.0, "output": 1.0})
+        cost = (input_tokens / 1_000_000 * price["input"]) + (output_tokens / 1_000_000 * price["output"])
+        
+        pipe = self.redis.pipeline()
+        pipe.incr(requests_key)
+        pipe.incrby(tokens_in_key, input_tokens)
+        pipe.incrby(tokens_out_key, output_tokens)
+        pipe.incrbyfloat(cost_key, cost)
+        pipe.expire(requests_key, 86400 * 30)
+        pipe.expire(tokens_in_key, 86400 * 30)
+        pipe.expire(tokens_out_key, 86400 * 30)
+        pipe.expire(cost_key, 86400 * 30)
+        await pipe.execute()
+    
+    async def get_daily_usage(self, user_id: str) -> dict:
+        """Get today's usage for user."""
+        date_key = datetime.utcnow().strftime("%Y-%m-%d")
+        
+        requests = await self.redis.get(f"usage:{user_id}:{date_key}:requests") or 0
+        tokens_in = await self.redis.get(f"usage:{user_id}:{date_key}:tokens_in") or 0
+        tokens_out = await self.redis.get(f"usage:{user_id}:{date_key}:tokens_out") or 0
+        cost = await self.redis.get(f"usage:{user_id}:{date_key}:cost") or 0.0
+        
+        return {
+            "requests": int(requests),
+            "tokens_in": int(tokens_in),
+            "tokens_out": int(tokens_out),
+            "total_tokens": int(tokens_in) + int(tokens_out),
+            "cost": float(cost)
+        }
+    
+    async def check_budget(self, user_id: str, tier: str, estimated_cost: float) -> bool:
+        """Check if user has budget for request."""
+        daily_usage = await self.get_daily_usage(user_id)
+        
+        budgets = {
+            "free": 0.50,
+            "premium": 10.00,
+            "enterprise": 100.00
+        }
+        
+        budget = budgets.get(tier, budgets["free"])
+        
+        if daily_usage["cost"] + estimated_cost > budget:
+            if daily_usage["cost"] / budget >= 0.8:
+                await self.send_budget_alert(user_id, daily_usage["cost"], budget)
+            return False
+        
+        return True
+    
+    async def send_budget_alert(self, user_id: str, current: float, limit: float):
+        """Send budget warning alert."""
+        pass
+
+usage_tracker = UsageTracker()
+```
+
+**Exit Criteria:** Usage tracker service implemented.
+
+---
+
+### 1.8.6 Rate Limiter Middleware
+
+**Files:**
+- Modify: `cloud-brain/app/main.py`
+
+**Steps:**
+
+1. **Add rate limiter middleware**
+
+```python
+# cloud-brain/app/main.py
+from fastapi import FastAPI, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
+
+app = FastAPI(title="Life Logger Cloud Brain")
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded", "retry_after": exc.detail}
+    )
+```
+
+**Exit Criteria:** Rate limiter middleware configured.
 
 ---
 
