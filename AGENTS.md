@@ -114,3 +114,20 @@ This project uses specialized **Agent Skills** for development.
 ### 15. Continuous Improvement
 *   **Boy Scout Rule:** Always leave the code cleaner than you found it. Safe refactors (like renaming unclear variables) are encouraged during unrelated tasks.
 *   **ToDo Management:** Every `TODO` must have an owner and context (e.g., `// TODO(dev): Fix X`). If it's worth noting, it's worth doing.
+
+### 16. Critique Before Execution
+*   **Evaluate First:** Critically evaluate every design plan before execution; do not follow it blindly. Actively seek simpler, more efficient alternatives and identify any fundamental flaws in the provided logic.
+*   **Propose Revisions:** Before taking action, you must present a revised implementation plan that outlines your proposed approach, explicitly explaining why your method is better, or justifying why the original plan should be retained.
+
+### 17. Context Awareness
+*   **Check Executed Documentation:** Always check the *executed* documentation of the previous phase to gain context. Do NOT rely solely on the original plan, as the execution may have deviated.
+*   **Path:** Look for files in `docs/agent-executed/[backend|frontend]/phases/`. For example, if tasked to execute Phase 1.2.2, you must first read `executed-phase-1.2.1.[name].md`.
+
+### 18. Documentation of Executed Phases
+*   **Create Executed Doc:** After finishing a phase, you MUST create a summary file in `docs/agent-executed/[backend|frontend]/phases/`.
+*   **Naming Convention:** `executed-phase-[X.Y.Z].[name].md` (e.g., `executed-phase-1.2.1.database-setup.md`).
+*   **Content:**
+    *   **Summary:** What was actually built.
+    *   **Deviations:** Explicitly list any deviations from the original plan and the reasons why (e.g., "Found a better library," "Schema needed optimization").
+    *   **No Code:** Do not include large text blocks of code; focus on architectural decisions and outcomes.
+    *   **Next Steps:** Briefly mention what is ready for the next phase.
