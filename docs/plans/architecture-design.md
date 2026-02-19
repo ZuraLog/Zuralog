@@ -39,7 +39,7 @@ Flutter Web is not suitable for a production website. The future website will be
 │  ┌───────────┐  ┌────────────┐  ┌──────────────────────────┐│
 │  │  FastAPI   │  │  LLM Agent │  │   MCP Client             ││
 │  │  Gateway   │──│  Engine    │──│   (Orchestrator)          ││
-│  │           │  │  (GPT-4o)  │  │                           ││
+│  │           │  │  (kimi 2.5)  │  │                           ││
 │  └─────┬─────┘  └─────┬──────┘  │  ┌──────┐ ┌──────┐      ││
 │        │               │         │  │Strava│ │Fitbit│      ││
 │  ┌─────┴─────┐  ┌─────┴─────┐  │  │ MCP  │ │ MCP  │      ││
@@ -279,7 +279,7 @@ class BaseMCPServer:
 | Component | Choice | Justification |
 |---|---|---|
 | FastAPI | Web Framework | Async-native, WebSocket support, Pydantic validation for MCP tool schemas. |
-| GPT-4o (primary) | LLM | Structured tool calling for MCP execution. |
+| kimi-2.5 (primary) | LLM | Structured tool calling for MCP execution. |
 | PostgreSQL (Supabase) | Relational DB | Users, conversations, integration tokens. Supabase adds Auth + RLS for free. |
 | Pinecone Serverless | Vector Store | Long-term user context retrieval. Free tier covers MVP. |
 | Celery + Redis (Upstash) | Task Queue | Async scheduled tasks, integration sync. |
