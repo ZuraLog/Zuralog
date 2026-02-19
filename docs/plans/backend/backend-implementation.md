@@ -17,7 +17,7 @@
 
 ## Phase 1.1: Foundation & Infrastructure
 
-> **Reference:** Review `docs/plans/architecture-design.md` Section 2.3 for Cloud Brain directory structure.
+> **Reference:** Review `../architecture-design.md` Section 2.3 for Cloud Brain directory structure.
 
 **Goal:** Establish the development environment, repository structure, and core infrastructure for both Cloud Brain and Edge Agent.
 
@@ -544,7 +544,7 @@ class LifeLoggerApp extends StatelessWidget {
 
 ## Phase 1.2: Authentication & User Management
 
-> **Reference:** Review `docs/plans/architecture-design.md` Section 2.3 for Cloud Brain API routes.
+> **Reference:** Review `../architecture-design.md` Section 2.3 for Cloud Brain API routes.
 
 **Goal:** Implement user authentication flow — signup, login, logout — using Supabase Auth.
 
@@ -858,7 +858,7 @@ _interceptors.add(InterceptorsWrapper(
 
 ## Phase 1.3: MCP Base Framework
 
-> **Reference:** Review `docs/plans/architecture-design.md` Section 2.4 for MCP Architecture.
+> **Reference:** Review `../architecture-design.md` Section 2.4 for MCP Architecture.
 
 **Goal:** Build the foundation for all external integrations using the Model Context Protocol (MCP).
 
@@ -1252,7 +1252,7 @@ poetry run pytest tests/mcp/ -v
 
 ## Phase 1.4: Apple HealthKit Integration
 
-> **Reference:** See `docs/plans/integrations/apple-health-integration.md` for deep dive on HealthKit API.
+> **Reference:** See `integrations/apple-health-integration.md` for deep dive on HealthKit API.
 
 **Goal:** Implement read/write access to Apple HealthKit on iOS via Flutter platform channels.
 
@@ -1927,7 +1927,7 @@ ElevatedButton(
 
 ## Phase 1.5: Google Health Connect Integration
 
-> **Reference:** See `docs/plans/integrations/google-health-connect-integration.md` for deep dive.
+> **Reference:** See `integrations/google-health-connect-integration.md` for deep dive.
 
 **Goal:** Implement read/write access to Google Health Connect on Android via Flutter platform channels.
 
@@ -2368,7 +2368,7 @@ class HealthObserver {
 
 ## Phase 1.6: Strava Integration
 
-> **Reference:** See `docs/plans/integrations/strava-integration.md` for deep dive.
+> **Reference:** See `integrations/strava-integration.md` for deep dive.
 
 **Goal:** Implement Strava OAuth flow and activity read/write via MCP server.
 
@@ -2795,7 +2795,7 @@ ElevatedButton(
 
 ## Phase 1.7: CalAI Integration (Zero-Friction)
 
-> **Reference:** See `docs/plans/integrations/calai-integration.md` for deep dive.
+> **Reference:** See `integrations/calai-integration.md` for deep dive.
 
 **Goal:** Implement zero-friction CalAI integration via deep linking and Health Store reading (NOT direct API).
 
@@ -2914,7 +2914,7 @@ async def execute_tool(self, tool_name: str, params: dict, user_id: str) -> dict
 
 ## Phase 1.8: The AI Brain (Reasoning Engine)
 
-> **Reference:** Review `docs/plans/integrations/ai-brain-integration.md` for LLM selection (OpenRouter + Kimi K2.5).
+> **Reference:** Review `integrations/ai-brain-integration.md` for LLM selection (OpenRouter + Kimi K2.5).
 
 **Goal:** Implement the LLM agent that orchestrates MCP tools, performs cross-app reasoning, and generates responses.
 
@@ -4743,7 +4743,7 @@ testWidgets('Harness shows login and health buttons', (WidgetTester tester) asyn
 ### 1.14.3 Documentation
 
 **Files:**
-- Modify: `docs/plans/backend-implementation.md` (this document)
+- Modify**Doc:** [Backend Implementation Plan](./backend-implementation.md)` (this document)
 
 **Steps:**
 

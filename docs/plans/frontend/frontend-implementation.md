@@ -12,7 +12,7 @@
 
 ## Phase 2.1: Design System Setup
 
-> **Reference:** Review `docs/plans/view-design.md` for color palette and typography specs.
+> **Reference:** Review `view-design.md` for color palette and typography specs.
 
 **Goal:** Establish the design tokens, theme, and reusable component library.
 
@@ -156,12 +156,12 @@ class GlassCard extends StatelessWidget {
 ## Phase 2.2: Screen Implementation (Wiring)
 
 > **Reference Views:**
-> - `docs/stitch/life_logger_welcome_and_authentication/`
-> - `docs/stitch/life_logger_coach_chat/`
-> - `docs/stitch/life_logger_dashboard_variant_1/`
-> - `docs/stitch/life_logger_dashboard_variant_2/`
-> - `docs/stitch/integrations_hub_active_states/`
-> - `docs/stitch/integrations_hub_disconnect_modal/`
+> - `../../stitch/life_logger_welcome_and_authentication/`
+> - `../../stitch/life_logger_coach_chat/`
+> - `../../stitch/life_logger_dashboard_variant_1/`
+> - `../../stitch/life_logger_dashboard_variant_2/`
+> - `../../stitch/integrations_hub_active_states/`
+> - `../../stitch/integrations_hub_disconnect_modal/`
 
 **Goal:** Replace test harness screens with beautiful Stitch designs and connect to Phase 1 repositories.
 
@@ -170,7 +170,7 @@ class GlassCard extends StatelessWidget {
 
 ### 2.2.1 Welcome & Auth Screen
 
-**Reference:** `docs/stitch/life_logger_welcome_and_authentication/`
+**Reference:** `../../stitch/life_logger_welcome_and_authentication/`
 
 **Files:**
 - Create: `life_logger/lib/features/auth/presentation/welcome_screen.dart`
@@ -245,7 +245,7 @@ ElevatedButton(
 
 ### 2.2.2 Coach Chat Screen
 
-**Reference:** `docs/stitch/life_logger_coach_chat/`
+**Reference:** `../../stitch/life_logger_coach_chat/`
 
 **Files:**
 - Create: `life_logger/lib/features/chat/presentation/chat_screen.dart`
@@ -370,8 +370,8 @@ class ActivityWidget extends StatelessWidget {
 ### 2.2.3 Dashboard Screen
 
 **Reference:** 
-- `docs/stitch/life_logger_dashboard_variant_1/`
-- `docs/stitch/life_logger_dashboard_variant_2/`
+- `../../stitch/life_logger_dashboard_variant_1/`
+- `../../stitch/life_logger_dashboard_variant_2/`
 
 **Files:**
 - Create: `life_logger/lib/features/dashboard/presentation/dashboard_screen.dart`
@@ -433,8 +433,8 @@ final summary = await ref.read(analyticsRepositoryProvider).getDailySummary(Date
 ### 2.2.4 Integrations Hub Screen
 
 **Reference:** 
-- `docs/stitch/integrations_hub_active_states/`
-- `docs/stitch/integrations_hub_disconnect_modal/`
+- `../../stitch/integrations_hub_active_states/`
+- `../../stitch/integrations_hub_disconnect_modal/`
 
 **Files:**
 - Create: `life_logger/lib/features/integrations/presentation/integrations_screen.dart`
@@ -640,10 +640,10 @@ void _onSuccess() {
 
 ### 2.4.2 Final Exit Criteria
 
-- [ ] Welcome screen matches `docs/stitch/life_logger_welcome_and_authentication/`
-- [ ] Chat screen matches `docs/stitch/life_logger_coach_chat/`
-- [ ] Dashboard matches `docs/stitch/life_logger_dashboard_variant_1/` or `variant_2/`
-- [ ] Integrations hub matches `docs/stitch/integrations_hub_active_states/`
+- [ ] Welcome screen matches `../../stitch/life_logger_welcome_and_authentication/`
+- [ ] Chat screen matches `../../stitch/life_logger_coach_chat/`
+- [ ] Dashboard matches `../../stitch/life_logger_dashboard_variant_1/` or `variant_2/`
+- [ ] Integrations hub matches `../../stitch/integrations_hub_active_states/`
 - [ ] All Phase 1 repositories connected and working
 - [ ] Navigation flows work (go_router)
 - [ ] Animations and haptics working
