@@ -102,6 +102,7 @@ This project uses specialized **Agent Skills** for development.
 *   **Atomic Commits:** Focus each commit on a single logical change.
 *   **Descriptive Messages:** Explain *why* a change was made, not just *what* changed.
 *   **Pull Before Push:** Always resolve conflicts locally first.
+*   **Checkpoint Commits:** Commit often! Short, meaningful commits at logical checkpoints are far better than one massive, monolithic commit.
 
 ### 13. Dependency Management
 *   **Vet Your Packages:** Assess maintenance status and size before adding.
@@ -131,3 +132,10 @@ This project uses specialized **Agent Skills** for development.
     *   **Deviations:** Explicitly list any deviations from the original plan and the reasons why (e.g., "Found a better library," "Schema needed optimization").
     *   **No Code:** Do not include large text blocks of code; focus on architectural decisions and outcomes.
     *   **Next Steps:** Briefly mention what is ready for the next phase.
+
+### 19. Phase Branching & Clean Merging
+*   **Dedicated Branches:** Execute every major phase (e.g., `1.1`, `1.2`) on a dedicated branch (e.g., `feat/phase-1.1`). Do NOT commit directly to `main`. Sub-phases (e.g., `1.1.1`) stay on the parent phase branch.
+*   **Merge Criteria:**
+    *   **Complete Phase:** Merge only when the *entire* phase is complete.
+    *   **Zero Errors:** Strict prohibition on merging code with errors, warnings, or linting issues.
+    *   **Verify:** Ensure all tests pass before the merge.
