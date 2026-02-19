@@ -428,15 +428,24 @@ When third-party apps write data:
 
 ## 12. Infrastructure & Deployment
 
+> For the full infrastructure guide including cost analysis, onboarding, and service details, see [Infrastructure & Deployment Guide](./infrastructure-memo.md).
+
+### 12.1 Local Development (Hybrid Approach)
+
+The project uses a **hybrid development** strategy: Python code runs natively via `uv` virtual environments for fast iteration, while infrastructure services (PostgreSQL, Redis) run in Docker Compose containers.
+
+### 12.2 Production Services
+
 | Component | Service | Notes |
 |-----------|---------|-------|
-| Backend Hosting | Railway or Fly.io | Docker deployment, auto-scaling |
+| Backend Hosting | Railway or Fly.io | Docker deployment from GitHub, auto-scaling |
 | Database | Supabase (managed Postgres) | Postgres + Auth + Realtime + RLS |
 | Redis | Upstash (serverless) | Pay-per-request for Celery queue |
 | Vector DB | Pinecone Serverless | Free tier covers MVP |
 | Mobile CI/CD | Codemagic | Flutter-specific, handles iOS code signing |
 | Error Tracking | Sentry | Flutter + Python SDKs |
 | Analytics | PostHog | Privacy-friendly, open-source |
+| DNS + SSL | Cloudflare | Free plan covers all needs |
 
 ---
 
@@ -573,6 +582,7 @@ This document represents the comprehensive implementation plan for the Life Logg
 |----------|----------|
 | Product Requirements Document (PRD) | `docs/plans/product-requirements-document.md` |
 | Architecture Design | `docs/plans/architecture-design.md` |
+| Infrastructure & Deployment Guide | `docs/plans/infrastructure-memo.md` |
 | Model Selection (Kimi K2.5) | `docs/plans/model-selection.md` |
 | View Design | `docs/plans/view-design.md` |
 | Execution Plan | `docs/plans/execution-plan.md` |

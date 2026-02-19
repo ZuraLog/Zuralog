@@ -12,29 +12,35 @@
 ---
 
 ## What
-Initialize the backend "Cloud Brain" as a modular Python application using FastAPI. This involves setting up the directory structure, dependency management with Poetry, Docker containerization, and the core application entry point.
+Initialize the backend "Cloud Brain" as a modular Python application using FastAPI. This involves setting up the directory structure, dependency management with `uv`, Docker Compose for local services, a production `Dockerfile`, and the core application entry point.
 
 ## Why
-A solid foundation is critical for scalability. FastAPI provides high performance and automatic documentation. Poetry ensures reproducible builds. Docker enables consistent deployment across environments (dev vs prod).
+A solid foundation is critical for scalability. FastAPI provides high performance and automatic documentation. `uv` provides extremely fast, deterministic dependency resolution with a project-local `.venv/`. Docker Compose runs infrastructure services (Postgres, Redis) locally without polluting the host OS. The same `Dockerfile` is used for production deployment.
+
+> See [Infrastructure & Deployment Guide](../../infrastructure-memo.md) for the full rationale behind the hybrid development approach.
 
 ## How
 We will use:
 - **FastAPI:** For the web framework.
-- **Poetry:** For dependency management.
+- **uv:** For Python version management and dependency management (replaces Poetry).
 - **Uvicorn:** As the ASGI server.
-- **Docker:** For containerization.
+- **Docker Compose:** For local Postgres + Redis services.
+- **Docker (Dockerfile):** For production containerization.
 - **Pydantic:** For settings management and data validation.
 
 ## Features
 - **Health Check Endpoint:** Verifies the service is running.
 - **Configuration Management:** Type-safe settings via `.env` files.
-- **Dependency Isolation:** Virtual environments managed by Poetry.
-- **Containerization:** Ready for deployment.
+- **Dependency Isolation:** Project-local `.venv/` managed by `uv`.
+- **Local Services:** Postgres + Redis via Docker Compose.
+- **Production Containerization:** `Dockerfile` ready for Railway/Fly.io deployment.
 
 ## Files
 - Create: `cloud-brain/pyproject.toml`
 - Create: `cloud-brain/Dockerfile`
 - Create: `cloud-brain/docker-compose.yml`
+- Create: `cloud-brain/.env.example`
+- Create: `cloud-brain/Makefile`
 - Create: `cloud-brain/app/main.py`
 - Create: `cloud-brain/app/config.py`
 
@@ -45,12 +51,19 @@ We will use:
 ```bash
 mkdir -p cloud-brain
 cd cloud-brain
-poetry init --name life-logger-cloud-brain
-poetry add fastapi uvicorn sqlalchemy asyncpg pydantic pydantic-settings python-dotenv openai pinecone celery redis httpx
-poetry add --group dev pytest pytest-asyncio black ruff
+uv init --name life-logger-cloud-brain
+uv add fastapi uvicorn sqlalchemy asyncpg pydantic pydantic-settings python-dotenv openai pinecone celery redis httpx
+uv add --dev pytest pytest-asyncio ruff
 ```
 
-2. **Create `cloud-brain/app/config.py`**
+2. **Start local services**
+
+```bash
+docker compose up -d
+# Starts PostgreSQL on localhost:5432 and Redis on localhost:6379
+```
+
+3. **Create `cloud-brain/app/config.py`**
 
 ```python
 from pydantic_settings import BaseSettings
@@ -73,7 +86,7 @@ class Settings(BaseSettings):
 settings = Settings()
 ```
 
-3. **Create `cloud-brain/app/main.py`**
+4. **Create `cloud-brain/app/main.py`**
 
 ```python
 from fastapi import FastAPI
@@ -98,14 +111,15 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-4. **Test the setup**
+5. **Test the setup**
 
 ```bash
 cd cloud-brain
-poetry run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 # Verify: http://localhost:8000/health returns {"status": "healthy"}
 ```
 
 ## Exit Criteria
-- Cloud Brain starts without errors.
+- Docker Compose services (Postgres, Redis) are running.
+- Cloud Brain starts without errors using `uv run`.
 - `/health` endpoint returns `{"status": "healthy"}`.

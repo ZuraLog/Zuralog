@@ -371,15 +371,28 @@ class BaseMCPServer:
 
 ## 4. Infrastructure & Deployment
 
+> For the full infrastructure guide including cost analysis, onboarding, and service details, see [Infrastructure & Deployment Guide](./infrastructure-memo.md).
+
+### 4.1 Local Development (Hybrid Approach)
+
+| Component | Tool | Notes |
+|---|---|---|
+| Python Backend | `uv` virtual environment (`.venv/`) | Runs natively on developer machine for fast I/O and hot-reload. |
+| PostgreSQL + Redis | Docker Compose | Infrastructure services run in containers to keep the host OS clean. |
+| Flutter | Native Flutter SDK | Docker is incompatible with mobile emulators. |
+
+### 4.2 Production Deployment
+
 | Component | Service | Justification |
 |---|---|---|
-| Backend Hosting | Railway or Fly.io | Docker deployment in minutes, auto-scaling. Migrate to AWS ECS/Fargate at scale. |
+| Backend Hosting | Railway or Fly.io | Docker deployment from GitHub, auto-scaling. Migrate to AWS ECS/Fargate at scale. |
 | Database | Supabase (managed Postgres) | Postgres + Auth + Realtime + RLS. Free tier covers MVP. |
 | Redis | Upstash (serverless) | Pay-per-request for Celery queue. ~$0-5/month at MVP scale. |
 | Vector DB | Pinecone Serverless | Free tier, purpose-built for similarity search. |
 | Flutter CI/CD | Codemagic | Purpose-built for Flutter. Handles iOS code signing and store uploads. |
 | Error Tracking | Sentry | Flutter + Python SDKs. |
 | Analytics | PostHog | Open-source, privacy-friendly — important optics for health data. |
+| DNS + SSL | Cloudflare | Free SSL certs, DDoS protection, DNS management. |
 
 ---
 
