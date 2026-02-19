@@ -24,13 +24,37 @@ The MVP is complete ONLY when **Phase 2 is finished**.
 
 ### Phase 1: Backend Implementation
 **Focus:** Infrastructure, Auth, MCP Integrations, Edge Agent Logic.
-**Doc:** [Backend Implementation Plan](./backend-implementation.md)
+**Location:** `docs/plans/backend/phases/`
+
+| Phase | Description | Status |
+| :--- | :--- | :--- |
+| **1.1** | [Foundation & Infrastructure](backend/phases/phase-1.1-foundation-and-infrastructure/phase-1.1-goal-and-checklist.md) | Ready |
+| **1.2** | [Auth & User Management](backend/phases/phase-1.2-authentication-and-user-management/phase-1.2-goal-and-checklist.md) | Ready |
+| **1.3** | [MCP Base Framework](backend/phases/phase-1.3-mcp-base-framework/phase-1.3-goal-and-checklist.md) | Ready |
+| **1.4** | [Apple HealthKit](backend/phases/phase-1.4-apple-healthkit-integration/phase-1.4-goal-and-checklist.md) | Ready |
+| **1.5** | [Google Health Connect](backend/phases/phase-1.5-google-health-connect-integration/phase-1.5-goal-and-checklist.md) | Ready |
+| **1.6** | [Strava Integration](backend/phases/phase-1.6-strava-integration/phase-1.6-goal-and-checklist.md) | Ready |
+| **1.7** | [CalAI Integration](backend/phases/phase-1.7-calai-integration/phase-1.7-goal-and-checklist.md) | Ready |
+| **1.8** | [The AI Brain](backend/phases/phase-1.8-ai-brain/phase-1.8-goal-and-checklist.md) | Ready |
+| **1.9** | [Chat & Communication](backend/phases/phase-1.9-chat-and-communication/phase-1.9-goal-and-checklist.md) | Ready |
+| **1.10** | [Background Services](backend/phases/phase-1.10-background-services/phase-1.10-goal-and-checklist.md) | Ready |
+| **1.11** | [Analytics](backend/phases/phase-1.11-analytics/phase-1.11-goal-and-checklist.md) | Ready |
+| **1.12** | [Autonomous Actions](backend/phases/phase-1.12-autonomous-actions/phase-1.12-goal-and-checklist.md) | Ready |
+| **1.13** | [Subscription](backend/phases/phase-1.13-subscription/phase-1.13-goal-and-checklist.md) | Ready |
+| **1.14** | [E2E Testing](backend/phases/phase-1.14-e2e-testing/phase-1.14-goal-and-checklist.md) | Ready |
 
 > **The Rule for Phase 1:** DO NOT style anything. Use raw buttons and text. If it looks good, you're wasting time. Make it work first.
 
 ### Phase 2: Frontend Implementation
 **Focus:** Visuals, UX, Animations, "Wow" Factor.
-**Doc:** [Frontend Implementation Plan](./frontend-implementation.md)
+**Location:** `docs/plans/frontend/phases/`
+
+| Phase | Description | Status |
+| :--- | :--- | :--- |
+| **2.1** | [Design System](frontend/phases/phase-2.1-design-system/phase-2.1-goal-and-checklist.md) | Ready |
+| **2.2** | [Screen Implementation](frontend/phases/phase-2.2-screen-implementation/phase-2.2-goal-and-checklist.md) | Ready |
+| **2.3** | [Navigation & Polish](frontend/phases/phase-2.3-navigation-and-polish/phase-2.3-goal-and-checklist.md) | Ready |
+| **2.4** | [Verification](frontend/phases/phase-2.4-verification/phase-2.4-goal-and-checklist.md) | Ready |
 
 > **The Rule for Phase 2:** DO NOT touch backend logic (unless bug fixing). Focus purely on the user experience and visual polish.
 
@@ -38,10 +62,10 @@ The MVP is complete ONLY when **Phase 2 is finished**.
 
 ## 3. How to Execute
 
-1.  **Start with Phase 1**: Open `backend-implementation.md`. Execute step-by-step.
-2.  **Verify Logic**: Use the Test Harness to prove that "Start Run" actually posts to Strava.
-3.  **Transition**: Once all Phase 1 checkboxes are ticked, move to Phase 2.
-4.  **Finish with Phase 2**: Open `frontend-implementation.md`. Replace the Test Harness with the Design System.
+1.  **Start with Phase 1.1**: Open the Goal/Checklist file. Execute step-by-step.
+2.  **Verify Logic**: Use the Test Harness to prove functionality.
+3.  **Transition**: Once Phase 1.14 is done, move to Phase 2.
+4.  **Finish with Phase 2.4**: Verify the final product.
 
 ---
 

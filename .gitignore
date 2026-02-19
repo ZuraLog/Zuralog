@@ -27,5 +27,4 @@
 .pub/
 /build/
 
-# Agent related
-.agent/skills/
+
