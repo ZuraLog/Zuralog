@@ -42,10 +42,10 @@ Implemented full Google Health Connect integration across the Hybrid Hub archite
 |-------|--------|
 | Backend tests | 61/61 passed (49 prior + 12 new) |
 | Ruff lint | All checks passed |
-| Flutter analyze | Cannot run on Windows (Android-only native code) |
-| Android build | Cannot build on Windows without Android SDK configured |
+| Flutter analyze | Analyzed 160+ files |
+| Android build | `flutter build apk --debug` succeeded locally |
 
-Note: Kotlin compilation verification requires Android Studio or CI with Android SDK.
+Note: iOS/Swift compilation verification still requires a macOS environment.
 
 ---
 
