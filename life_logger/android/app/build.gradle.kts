@@ -11,6 +11,8 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // Enable core library desugaring for java.time APIs on API < 26.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -20,11 +22,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.lifelogger.life_logger"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Health Connect requires Android 9+ (API 28).
+        minSdk = 28
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -41,4 +41,18 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Core library desugaring for java.time on older APIs.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Google Health Connect client (Phase 1.5.2).
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
+
+    // Android WorkManager for periodic background sync (Phase 1.5.5).
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Kotlin coroutines (required by Health Connect suspend functions).
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }

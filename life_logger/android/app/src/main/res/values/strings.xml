@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- String resources for the Life Logger Android app.
+     Includes Health Connect permission rationale (Phase 1.5.1). -->
+<resources>
+    <string name="app_name">Life Logger</string>
+    <string name="health_connect_rationale">Life Logger needs access to your health data to provide personalized AI coaching, track your fitness progress, and deliver cross-app health insights.</string>
+</resources>
