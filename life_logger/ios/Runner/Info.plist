@@ -66,5 +66,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Life Logger needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Life Logger needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 </dict>
 </plist>

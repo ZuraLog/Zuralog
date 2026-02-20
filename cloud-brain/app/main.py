@@ -18,6 +18,7 @@ from app.agent.context_manager.memory_store import InMemoryStore
 from app.agent.mcp_client import MCPClient
 from app.api.v1.auth import router as auth_router
 from app.config import settings
+from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.services.auth_service import AuthService
 
@@ -42,9 +43,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # MCP Framework (Phase 1.3)
     registry = MCPServerRegistry()
-    # Future phases will register servers here, e.g.:
-    # registry.register(StravaServer(...))
-    # registry.register(HealthKitServer(...))
+    registry.register(AppleHealthServer())
     app.state.mcp_registry = registry
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()

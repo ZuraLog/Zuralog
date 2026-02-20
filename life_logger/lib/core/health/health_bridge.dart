@@ -1,0 +1,277 @@
+/// Dart wrapper for native HealthKit access via platform channels.
+///
+/// This class communicates with the Swift `HealthKitBridge` via
+/// `MethodChannel('com.lifelogger/health')`. It marshals Dart
+/// arguments to/from the native layer.
+///
+/// **Usage:** Injected via Riverpod. Do NOT call directly from UI --
+/// use `HealthRepository` instead.
+library;
+
+import 'package:flutter/services.dart';
+
+/// Dart-side platform channel wrapper for Apple HealthKit.
+///
+/// Each method corresponds to a native Swift handler registered in
+/// `AppDelegate.swift`. Arguments are serialized as Maps with
+/// millisecondsSinceEpoch timestamps.
+class HealthBridge {
+  /// Creates a new [HealthBridge].
+  ///
+  /// Accepts an optional [MethodChannel] for testing.
+  HealthBridge({MethodChannel? channel})
+      : _channel = channel ?? const MethodChannel('com.lifelogger/health');
+
+  final MethodChannel _channel;
+
+  /// Checks if HealthKit is available on this device.
+  ///
+  /// Returns `false` on non-iOS devices, iPads without HealthKit,
+  /// or simulators that don't support it.
+  Future<bool> isAvailable() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('isAvailable');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.isAvailable PlatformException: ${e.message}');
+        return true;
+      }());
+      return false;
+    }
+  }
+
+  /// Requests HealthKit read/write authorization from the user.
+  ///
+  /// Returns `true` if the authorization dialog was presented
+  /// successfully. Note: HealthKit does NOT reveal which specific
+  /// types were denied -- only that the dialog appeared.
+  ///
+  /// Throws nothing -- returns `false` on any failure.
+  Future<bool> requestAuthorization() async {
+    try {
+      final result =
+          await _channel.invokeMethod<bool>('requestAuthorization');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'HealthBridge.requestAuthorization PlatformException: ${e.message}',
+        );
+        return true;
+      }());
+      return false;
+    }
+  }
+
+  /// Fetches total step count for a specific [date].
+  ///
+  /// Returns `0.0` if no data exists or on error.
+  Future<double> getSteps(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getSteps', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble() ?? 0.0;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getSteps PlatformException: ${e.message}');
+        return true;
+      }());
+      return 0.0;
+    }
+  }
+
+  /// Fetches workouts within a date range.
+  ///
+  /// Returns an empty list if no workouts exist or on error.
+  /// Each workout is a Map with keys:
+  /// `id`, `activityType`, `duration`, `startDate`, `endDate`, `energyBurned`.
+  Future<List<Map<String, dynamic>>> getWorkouts(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final result = await _channel.invokeMethod<List<dynamic>>(
+        'getWorkouts',
+        {
+          'startDate': startDate.millisecondsSinceEpoch,
+          'endDate': endDate.millisecondsSinceEpoch,
+        },
+      );
+      if (result == null) return [];
+      return result
+          .cast<Map<dynamic, dynamic>>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getWorkouts PlatformException: ${e.message}');
+        return true;
+      }());
+      return [];
+    }
+  }
+
+  /// Fetches sleep analysis samples within a date range.
+  ///
+  /// Returns an empty list if no data exists or on error.
+  /// Each sample is a Map with keys:
+  /// `value` (HKCategoryValueSleepAnalysis), `startDate`, `endDate`, `source`.
+  Future<List<Map<String, dynamic>>> getSleep(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final result = await _channel.invokeMethod<List<dynamic>>(
+        'getSleep',
+        {
+          'startDate': startDate.millisecondsSinceEpoch,
+          'endDate': endDate.millisecondsSinceEpoch,
+        },
+      );
+      if (result == null) return [];
+      return result
+          .cast<Map<dynamic, dynamic>>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getSleep PlatformException: ${e.message}');
+        return true;
+      }());
+      return [];
+    }
+  }
+
+  /// Fetches the most recent body weight in kilograms.
+  ///
+  /// Returns `null` if no weight data exists.
+  Future<double?> getWeight() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getWeight');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getWeight PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Writes a workout entry to HealthKit.
+  ///
+  /// - [activityType]: e.g., "running", "cycling", "walking".
+  /// - [startDate]: Workout start time.
+  /// - [endDate]: Workout end time.
+  /// - [energyBurned]: Calories burned (kcal).
+  ///
+  /// Returns `true` on success, `false` on failure.
+  Future<bool> writeWorkout({
+    required String activityType,
+    required DateTime startDate,
+    required DateTime endDate,
+    required double energyBurned,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('writeWorkout', {
+        'activityType': activityType,
+        'startDate': startDate.millisecondsSinceEpoch,
+        'endDate': endDate.millisecondsSinceEpoch,
+        'energyBurned': energyBurned,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.writeWorkout PlatformException: ${e.message}');
+        return true;
+      }());
+      return false;
+    }
+  }
+
+  /// Writes a dietary energy (calorie) entry to HealthKit.
+  ///
+  /// - [calories]: Kilocalories consumed.
+  /// - [date]: The date/time of the meal.
+  ///
+  /// Returns `true` on success, `false` on failure.
+  Future<bool> writeNutrition({
+    required double calories,
+    required DateTime date,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('writeNutrition', {
+        'calories': calories,
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.writeNutrition PlatformException: ${e.message}');
+        return true;
+      }());
+      return false;
+    }
+  }
+
+  /// Writes a body mass entry to HealthKit.
+  ///
+  /// - [weightKg]: Weight in kilograms.
+  /// - [date]: The date of the measurement.
+  ///
+  /// Returns `true` on success, `false` on failure.
+  Future<bool> writeWeight({
+    required double weightKg,
+    required DateTime date,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('writeWeight', {
+        'weightKg': weightKg,
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.writeWeight PlatformException: ${e.message}');
+        return true;
+      }());
+      return false;
+    }
+  }
+
+  /// Starts background observers for health data changes.
+  ///
+  /// When HealthKit detects new data (e.g., from Apple Watch),
+  /// the native layer will be notified. In Phase 1.10, this
+  /// will trigger background sync to the Cloud Brain.
+  ///
+  /// Returns `true` if observers started successfully.
+  Future<bool> startBackgroundObservers() async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'startBackgroundObservers',
+      );
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'HealthBridge.startBackgroundObservers PlatformException: ${e.message}',
+        );
+        return true;
+      }());
+      return false;
+    }
+  }
+}
