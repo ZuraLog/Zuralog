@@ -9,6 +9,16 @@
 .history
 .svn/
 
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+
 # IntelliJ related
 *.iml
 *.ipr

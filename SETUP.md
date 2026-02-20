@@ -64,7 +64,29 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-The defaults in `.env.example` are configured for local Docker services — no changes needed for local development.
+Open `.env` and fill in the Supabase credentials:
+
+| Variable | Where to find it | Description |
+|---|---|---|
+| `DATABASE_URL` | **Keep default** | Points to your local Docker Postgres |
+| `REDIS_URL` | **Keep default** | Points to your local Docker Redis |
+| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL | e.g., `https://xxxxx.supabase.co` |
+| `SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` `public` | JWT token starting with `eyJ...` |
+| `SUPABASE_SERVICE_KEY` | Supabase → Project Settings → API → `service_role` `secret` | Starts with `sb_secret_...` |
+
+> **⚠️ Warning:** The `SUPABASE_SERVICE_KEY` has **full admin access** to your Supabase project. Never commit it to Git, share it in chat, or expose it client-side. The `.gitignore` already excludes `.env` files.
+
+#### Supabase for Auth Only (Team Strategy)
+
+The project uses a **hybrid database strategy:**
+
+- **Local Docker Postgres** → Your application data (users, integrations, health records). Fast, isolated per developer.
+- **Supabase** → Authentication (GoTrue) only. The Cloud Brain proxies auth requests to Supabase's REST API.
+
+For team development, you have two options for Supabase auth:
+
+1. **Shared dev project** (simpler): All developers use the same Supabase project URL and anon key. The team lead distributes keys securely (e.g., via 1Password).
+2. **Individual free-tier projects** (isolated): Each developer creates their own free Supabase project for auth testing. Free tier is more than enough for development.
 
 ### 2d. Run Database Migrations
 
@@ -187,3 +209,10 @@ Try `flutter pub upgrade --major-versions` to resolve dependency conflicts.
 
 ### Android emulator can't reach backend
 Ensure the Cloud Brain server is running on `0.0.0.0:8000` (not `127.0.0.1:8000`) and use `http://10.0.2.2:8000` as the base URL from the emulator.
+
+### Auth endpoints return 500 / connection errors
+Verify your Supabase credentials in `.env`:
+- `SUPABASE_URL` should be `https://xxxxx.supabase.co` (no trailing slash)
+- `SUPABASE_ANON_KEY` is the JWT token (starts with `eyJ...`)
+- `SUPABASE_SERVICE_KEY` is the secret key (starts with `sb_secret_...`)
+- Make sure the Email auth provider is enabled in Supabase → Authentication → Providers
