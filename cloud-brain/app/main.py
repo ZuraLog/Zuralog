@@ -3,7 +3,8 @@ Life Logger Cloud Brain — Application Entry Point.
 
 Initializes the FastAPI application with CORS middleware,
 the health check endpoint, and the auth API router.
-Manages the httpx.AsyncClient lifecycle for Supabase Auth calls.
+Manages the httpx.AsyncClient lifecycle for Supabase Auth calls
+and wires up the MCP framework (registry, client, memory store).
 """
 
 from collections.abc import AsyncGenerator
@@ -13,8 +14,11 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agent.context_manager.memory_store import InMemoryStore
+from app.agent.mcp_client import MCPClient
 from app.api.v1.auth import router as auth_router
 from app.config import settings
+from app.mcp_servers.registry import MCPServerRegistry
 from app.services.auth_service import AuthService
 
 
@@ -22,7 +26,8 @@ from app.services.auth_service import AuthService
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events.
 
-    Startup: Create shared httpx client and AuthService.
+    Startup: Create shared httpx client, AuthService, MCP registry,
+    MCP client, and memory store.
     Shutdown: Close the httpx client and clean up resources.
 
     Args:
@@ -30,9 +35,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # --- Startup ---
     print(f"🚀 Life Logger Cloud Brain starting in {settings.app_env} mode")
+
+    # HTTP client (shared across services)
     http_client = httpx.AsyncClient(timeout=30.0)
     app.state.auth_service = AuthService(client=http_client)
+
+    # MCP Framework (Phase 1.3)
+    registry = MCPServerRegistry()
+    # Future phases will register servers here, e.g.:
+    # registry.register(StravaServer(...))
+    # registry.register(HealthKitServer(...))
+    app.state.mcp_registry = registry
+    app.state.mcp_client = MCPClient(registry=registry)
+    app.state.memory_store = InMemoryStore()
+
     yield
+
     # --- Shutdown ---
     await http_client.aclose()
     print("👋 Life Logger Cloud Brain shutting down")

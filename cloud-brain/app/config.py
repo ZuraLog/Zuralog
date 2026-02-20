@@ -17,6 +17,8 @@ class Settings(BaseSettings):
         supabase_url: Supabase project URL for Auth/RLS.
         supabase_anon_key: Supabase anonymous (public) key.
         supabase_service_key: Supabase service role key.
+        pinecone_api_key: Pinecone vector DB key (Phase 1.8).
+        openai_api_key: OpenAI API key for embeddings/LLM (Phase 1.8).
         app_env: Current environment (development, staging, production).
         app_debug: Enable debug mode.
     """
@@ -26,6 +28,8 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_key: str = ""
+    pinecone_api_key: str = ""
+    openai_api_key: str = ""
     app_env: str = "development"
     app_debug: bool = True
 

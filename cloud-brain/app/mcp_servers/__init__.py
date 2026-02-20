@@ -7,9 +7,11 @@ and shared models from here rather than reaching into sub-modules.
 
 from app.mcp_servers.base_server import BaseMCPServer
 from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
+from app.mcp_servers.registry import MCPServerRegistry
 
 __all__ = [
     "BaseMCPServer",
+    "MCPServerRegistry",
     "Resource",
     "ToolDefinition",
     "ToolResult",
