@@ -43,6 +43,11 @@ This project uses specialized **Agent Skills** for development.
 ## Engineering Standards (Do's & Don'ts)
 **These rules must be followed exactly by all agents working on this project (OpenCode, AntiGravity, etc.).**
 
+> [!IMPORTANT]
+> **CRITICAL: GIT BRANCHING & CHECKPOINTS**
+> *   **Make a New Branch**: START every task by creating a new branch (e.g., `feat/task-name`). NEVER work on `main` directly.
+> *   **Commit Checkpoints**: WORK IN PROGRESS MUST BE SAVED. Periodically `git commit` your changes at logical checkpoints. Do not wait for perfection to save your work.
+
 ### 1. Keep It Simple and DRY (Don't Repeat Yourself)
 *   **Simplicity (KISS):** Avoid over-engineering solutions. If a built-in Dart method or a basic widget can achieve the desired result, use it rather than writing custom logic.
 *   **Reusability:** If you write the same logic or UI component more than twice, extract it into a reusable function or a custom stateless widget.
@@ -117,25 +122,34 @@ This project uses specialized **Agent Skills** for development.
 *   **ToDo Management:** Every `TODO` must have an owner and context (e.g., `// TODO(dev): Fix X`). If it's worth noting, it's worth doing.
 
 ### 16. Critique Before Execution
-*   **Evaluate First:** Critically evaluate every design plan before execution; do not follow it blindly. Actively seek simpler, more efficient alternatives and identify any fundamental flaws in the provided logic.
-*   **Propose Revisions:** Before taking action, you must present a revised implementation plan that outlines your proposed approach, explicitly explaining why your method is better, or justifying why the original plan should be retained.
+> [!IMPORTANT]
+> **Evaluate First:** Critically evaluate every design plan before execution; do not follow it blindly. Actively seek simpler, more efficient alternatives and identify any fundamental flaws in the provided logic.
+>
+> **Propose Revisions:** Before taking action, you must present a revised implementation plan that outlines your proposed approach, explicitly explaining why your method is better, or justifying why the original plan should be retained.
 
 ### 17. Context Awareness
-*   **Check Executed Documentation:** Always check the *executed* documentation of the previous phase to gain context. Do NOT rely solely on the original plan, as the execution may have deviated.
-*   **Path:** Look for files in `docs/agent-executed/[backend|frontend]/phases/`. For example, if tasked to execute Phase 1.2.2, you must first read `executed-phase-1.2.1.[name].md`.
+> [!IMPORTANT]
+> **Check Executed Documentation:** Always check the *executed* documentation of the previous phase to gain context. Do NOT rely solely on the original plan, as the execution may have deviated.
+>
+> **Path:** Look for files in `docs/agent-executed/[backend|frontend]/phases/`. For example, if tasked to execute Phase 1.2.2, you must first read `executed-phase-1.2.1.[name].md`.
 
 ### 18. Documentation of Executed Phases
-*   **Create Executed Doc:** After finishing a phase, you MUST create a summary file in `docs/agent-executed/[backend|frontend]/phases/`.
-*   **Naming Convention:** `executed-phase-[X.Y.Z].[name].md` (e.g., `executed-phase-1.2.1.database-setup.md`).
-*   **Content:**
-    *   **Summary:** What was actually built.
-    *   **Deviations:** Explicitly list any deviations from the original plan and the reasons why (e.g., "Found a better library," "Schema needed optimization").
-    *   **No Code:** Do not include large text blocks of code; focus on architectural decisions and outcomes.
-    *   **Next Steps:** Briefly mention what is ready for the next phase.
+> [!IMPORTANT]
+> **Create Executed Doc:** After finishing a phase, you MUST create a summary file in `docs/agent-executed/[backend|frontend]/phases/`.
+>
+> **Naming Convention:** `executed-phase-[X.Y.Z].[name].md` (e.g., `executed-phase-1.2.1.database-setup.md`).
+>
+> **Content:**
+> *   **Summary:** What was actually built.
+> *   **Deviations:** Explicitly list any deviations from the original plan and the reasons why (e.g., "Found a better library," "Schema needed optimization").
+> *   **No Code:** Do not include large text blocks of code; focus on architectural decisions and outcomes.
+> *   **Next Steps:** Briefly mention what is ready for the next phase.
 
 ### 19. Phase Branching & Clean Merging
-*   **Dedicated Branches:** Execute every major phase (e.g., `1.1`, `1.2`) on a dedicated branch (e.g., `feat/phase-1.1`). Do NOT commit directly to `main`. Sub-phases (e.g., `1.1.1`) stay on the parent phase branch.
-*   **Merge Criteria:**
-    *   **Complete Phase:** Merge only when the *entire* phase is complete.
-    *   **Zero Errors:** Strict prohibition on merging code with errors, warnings, or linting issues.
-    *   **Verify:** Ensure all tests pass before the merge.
+> [!IMPORTANT]
+> **Dedicated Branches:** Execute every major phase (e.g., `1.1`, `1.2`) on a dedicated branch (e.g., `feat/phase-1.1`). Do NOT commit directly to `main`. Sub-phases (e.g., `1.1.1`) stay on the parent phase branch.
+>
+> **Merge Criteria:**
+> *   **Complete Phase:** Merge only when the *entire* phase is complete.
+> *   **Zero Errors:** Strict prohibition on merging code with errors, warnings, or linting issues.
+> *   **Verify:** Ensure all tests pass before the merge.
