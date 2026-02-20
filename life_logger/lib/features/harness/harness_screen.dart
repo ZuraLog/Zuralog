@@ -239,6 +239,89 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            const Divider(),
+            const Text(
+              'HEALTHKIT:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    _log('Checking HealthKit availability...');
+                    final healthRepo = ref.read(healthRepositoryProvider);
+                    final available = await healthRepo.isAvailable;
+                    _log(available
+                        ? '✅ HealthKit AVAILABLE'
+                        : '❌ HealthKit UNAVAILABLE');
+                  },
+                  child: const Text('Check Available'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    _log('Requesting HealthKit authorization...');
+                    final healthRepo = ref.read(healthRepositoryProvider);
+                    final authorized =
+                        await healthRepo.requestAuthorization();
+                    _log(authorized
+                        ? '✅ HealthKit AUTHORIZED'
+                        : '❌ HealthKit DENIED/UNAVAILABLE');
+                  },
+                  child: const Text('Request Auth'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    _log('Reading steps for today...');
+                    final healthRepo = ref.read(healthRepositoryProvider);
+                    final steps = await healthRepo.getSteps(DateTime.now());
+                    _log('✅ Steps today: $steps');
+                  },
+                  child: const Text('Read Steps'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    _log('Reading workouts (last 7 days)...');
+                    final healthRepo = ref.read(healthRepositoryProvider);
+                    final workouts = await healthRepo.getWorkouts(
+                      DateTime.now().subtract(const Duration(days: 7)),
+                      DateTime.now(),
+                    );
+                    _log('✅ Workouts: ${workouts.length}');
+                    for (final w in workouts) {
+                      _log('  - ${w["activityType"]}: ${w["duration"]}s, ${w["energyBurned"]} kcal');
+                    }
+                  },
+                  child: const Text('Read Workouts'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    _log('Reading sleep (last 7 days)...');
+                    final healthRepo = ref.read(healthRepositoryProvider);
+                    final sleep = await healthRepo.getSleep(
+                      DateTime.now().subtract(const Duration(days: 7)),
+                      DateTime.now(),
+                    );
+                    _log('✅ Sleep segments: ${sleep.length}');
+                  },
+                  child: const Text('Read Sleep'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    _log('Reading latest weight...');
+                    final healthRepo = ref.read(healthRepositoryProvider);
+                    final weight = await healthRepo.getWeight();
+                    _log(weight != null
+                        ? '✅ Weight: ${weight.toStringAsFixed(1)} kg'
+                        : '⚠️ No weight data');
+                  },
+                  child: const Text('Read Weight'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             const Text(
               'OUTPUT:',
               style: TextStyle(fontWeight: FontWeight.bold),
