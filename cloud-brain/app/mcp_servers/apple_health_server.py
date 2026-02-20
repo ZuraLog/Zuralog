@@ -127,6 +127,13 @@ class AppleHealthServer(BaseMCPServer):
             ToolResult with success status and queued message.
         """
         if tool_name == "apple_health_read_metrics":
+            required = ("data_type", "start_date", "end_date")
+            missing = [k for k in required if k not in params]
+            if missing:
+                return ToolResult(
+                    success=False,
+                    error=f"Missing required parameters: {', '.join(missing)}",
+                )
             return ToolResult(
                 success=True,
                 data={
@@ -137,6 +144,13 @@ class AppleHealthServer(BaseMCPServer):
             )
 
         if tool_name == "apple_health_write_entry":
+            required = ("data_type", "value", "date")
+            missing = [k for k in required if k not in params]
+            if missing:
+                return ToolResult(
+                    success=False,
+                    error=f"Missing required parameters: {', '.join(missing)}",
+                )
             return ToolResult(
                 success=True,
                 data={

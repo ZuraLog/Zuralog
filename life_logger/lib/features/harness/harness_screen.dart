@@ -143,6 +143,69 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     });
   }
 
+  // -- HealthKit Harness Methods --
+
+  /// Tests HealthKit availability on this device.
+  Future<void> _testHealthAvailable() async {
+    _log('Checking HealthKit availability...');
+    final healthRepo = ref.read(healthRepositoryProvider);
+    final available = await healthRepo.isAvailable;
+    _log(available ? '✅ HealthKit AVAILABLE' : '❌ HealthKit UNAVAILABLE');
+  }
+
+  /// Requests HealthKit authorization from the user.
+  Future<void> _testHealthAuth() async {
+    _log('Requesting HealthKit authorization...');
+    final healthRepo = ref.read(healthRepositoryProvider);
+    final authorized = await healthRepo.requestAuthorization();
+    _log(authorized
+        ? '✅ HealthKit AUTHORIZED'
+        : '❌ HealthKit DENIED/UNAVAILABLE');
+  }
+
+  /// Reads today's step count from HealthKit.
+  Future<void> _testReadSteps() async {
+    _log('Reading steps for today...');
+    final healthRepo = ref.read(healthRepositoryProvider);
+    final steps = await healthRepo.getSteps(DateTime.now());
+    _log('✅ Steps today: $steps');
+  }
+
+  /// Reads workouts from the last 7 days.
+  Future<void> _testReadWorkouts() async {
+    _log('Reading workouts (last 7 days)...');
+    final healthRepo = ref.read(healthRepositoryProvider);
+    final workouts = await healthRepo.getWorkouts(
+      DateTime.now().subtract(const Duration(days: 7)),
+      DateTime.now(),
+    );
+    _log('✅ Workouts: ${workouts.length}');
+    for (final w in workouts) {
+      _log('  - ${w["activityType"]}: ${w["duration"]}s, ${w["energyBurned"]} kcal');
+    }
+  }
+
+  /// Reads sleep data from the last 7 days.
+  Future<void> _testReadSleep() async {
+    _log('Reading sleep (last 7 days)...');
+    final healthRepo = ref.read(healthRepositoryProvider);
+    final sleep = await healthRepo.getSleep(
+      DateTime.now().subtract(const Duration(days: 7)),
+      DateTime.now(),
+    );
+    _log('✅ Sleep segments: ${sleep.length}');
+  }
+
+  /// Reads the latest body weight from HealthKit.
+  Future<void> _testReadWeight() async {
+    _log('Reading latest weight...');
+    final healthRepo = ref.read(healthRepositoryProvider);
+    final weight = await healthRepo.getWeight();
+    _log(weight != null
+        ? '✅ Weight: ${weight.toStringAsFixed(1)} kg'
+        : '⚠️ No weight data');
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
@@ -250,73 +313,27 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
               runSpacing: 8,
               children: [
                 ElevatedButton(
-                  onPressed: () async {
-                    _log('Checking HealthKit availability...');
-                    final healthRepo = ref.read(healthRepositoryProvider);
-                    final available = await healthRepo.isAvailable;
-                    _log(available
-                        ? '✅ HealthKit AVAILABLE'
-                        : '❌ HealthKit UNAVAILABLE');
-                  },
+                  onPressed: _testHealthAvailable,
                   child: const Text('Check Available'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    _log('Requesting HealthKit authorization...');
-                    final healthRepo = ref.read(healthRepositoryProvider);
-                    final authorized =
-                        await healthRepo.requestAuthorization();
-                    _log(authorized
-                        ? '✅ HealthKit AUTHORIZED'
-                        : '❌ HealthKit DENIED/UNAVAILABLE');
-                  },
+                  onPressed: _testHealthAuth,
                   child: const Text('Request Auth'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    _log('Reading steps for today...');
-                    final healthRepo = ref.read(healthRepositoryProvider);
-                    final steps = await healthRepo.getSteps(DateTime.now());
-                    _log('✅ Steps today: $steps');
-                  },
+                  onPressed: _testReadSteps,
                   child: const Text('Read Steps'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    _log('Reading workouts (last 7 days)...');
-                    final healthRepo = ref.read(healthRepositoryProvider);
-                    final workouts = await healthRepo.getWorkouts(
-                      DateTime.now().subtract(const Duration(days: 7)),
-                      DateTime.now(),
-                    );
-                    _log('✅ Workouts: ${workouts.length}');
-                    for (final w in workouts) {
-                      _log('  - ${w["activityType"]}: ${w["duration"]}s, ${w["energyBurned"]} kcal');
-                    }
-                  },
+                  onPressed: _testReadWorkouts,
                   child: const Text('Read Workouts'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    _log('Reading sleep (last 7 days)...');
-                    final healthRepo = ref.read(healthRepositoryProvider);
-                    final sleep = await healthRepo.getSleep(
-                      DateTime.now().subtract(const Duration(days: 7)),
-                      DateTime.now(),
-                    );
-                    _log('✅ Sleep segments: ${sleep.length}');
-                  },
+                  onPressed: _testReadSleep,
                   child: const Text('Read Sleep'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    _log('Reading latest weight...');
-                    final healthRepo = ref.read(healthRepositoryProvider);
-                    final weight = await healthRepo.getWeight();
-                    _log(weight != null
-                        ? '✅ Weight: ${weight.toStringAsFixed(1)} kg'
-                        : '⚠️ No weight data');
-                  },
+                  onPressed: _testReadWeight,
                   child: const Text('Read Weight'),
                 ),
               ],

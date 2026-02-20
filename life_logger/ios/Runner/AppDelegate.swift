@@ -23,11 +23,12 @@ import UIKit
     func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
         GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
 
-        // Register HealthKit platform channel
-        let controller = engineBridge.engine.viewController!
+        // Register HealthKit platform channel.
+        // Use engine.binaryMessenger directly (not viewController) to avoid
+        // force-unwrap crashes during background delivery wakeups.
         let healthChannel = FlutterMethodChannel(
             name: "com.lifelogger/health",
-            binaryMessenger: controller.binaryMessenger
+            binaryMessenger: engineBridge.engine.binaryMessenger
         )
 
         healthChannel.setMethodCallHandler { [weak self] (call, result) in
@@ -37,6 +38,22 @@ import UIKit
             }
             self.handleMethodCall(call: call, result: result)
         }
+    }
+
+    // MARK: - Timestamp Helpers
+
+    /// Safely extracts a millisecond epoch timestamp from a platform channel argument.
+    ///
+    /// Flutter's `StandardMethodCodec` serializes Dart `int` values as `NSNumber`,
+    /// which may bridge to `Int`, `Int64`, or `Double` depending on magnitude.
+    /// This helper handles all representations safely.
+    ///
+    /// - Parameter value: The raw argument value from the method channel.
+    /// - Returns: A `Date` if the value is a valid numeric timestamp, or `nil`.
+    private func dateFromMs(_ value: Any?) -> Date? {
+        guard let number = value as? NSNumber else { return nil }
+        let ms = number.doubleValue
+        return Date(timeIntervalSince1970: ms / 1000.0)
     }
 
     // MARK: - Method Channel Handler
@@ -64,11 +81,10 @@ import UIKit
 
         case "getSteps":
             guard let args = call.arguments as? [String: Any],
-                  let dateMs = args["date"] as? Int else {
+                  let date = dateFromMs(args["date"]) else {
                 result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
                 return
             }
-            let date = Date(timeIntervalSince1970: Double(dateMs) / 1000.0)
             healthKitBridge.fetchSteps(date: date) { steps, error in
                 if let error = error {
                     result(FlutterError(code: "STEPS_ERROR", message: error.localizedDescription, details: nil))
@@ -79,13 +95,11 @@ import UIKit
 
         case "getWorkouts":
             guard let args = call.arguments as? [String: Any],
-                  let startMs = args["startDate"] as? Int,
-                  let endMs = args["endDate"] as? Int else {
+                  let start = dateFromMs(args["startDate"]),
+                  let end = dateFromMs(args["endDate"]) else {
                 result(FlutterError(code: "BAD_ARGS", message: "Missing 'startDate' or 'endDate'", details: nil))
                 return
             }
-            let start = Date(timeIntervalSince1970: Double(startMs) / 1000.0)
-            let end = Date(timeIntervalSince1970: Double(endMs) / 1000.0)
             healthKitBridge.fetchWorkouts(startDate: start, endDate: end) { workouts, error in
                 if let error = error {
                     result(FlutterError(code: "WORKOUTS_ERROR", message: error.localizedDescription, details: nil))
@@ -96,13 +110,11 @@ import UIKit
 
         case "getSleep":
             guard let args = call.arguments as? [String: Any],
-                  let startMs = args["startDate"] as? Int,
-                  let endMs = args["endDate"] as? Int else {
+                  let start = dateFromMs(args["startDate"]),
+                  let end = dateFromMs(args["endDate"]) else {
                 result(FlutterError(code: "BAD_ARGS", message: "Missing 'startDate' or 'endDate'", details: nil))
                 return
             }
-            let start = Date(timeIntervalSince1970: Double(startMs) / 1000.0)
-            let end = Date(timeIntervalSince1970: Double(endMs) / 1000.0)
             healthKitBridge.fetchSleep(startDate: start, endDate: end) { sleep, error in
                 if let error = error {
                     result(FlutterError(code: "SLEEP_ERROR", message: error.localizedDescription, details: nil))
@@ -123,14 +135,12 @@ import UIKit
         case "writeWorkout":
             guard let args = call.arguments as? [String: Any],
                   let activityType = args["activityType"] as? String,
-                  let startMs = args["startDate"] as? Int,
-                  let endMs = args["endDate"] as? Int,
+                  let start = dateFromMs(args["startDate"]),
+                  let end = dateFromMs(args["endDate"]),
                   let energy = args["energyBurned"] as? Double else {
                 result(FlutterError(code: "BAD_ARGS", message: "Missing workout arguments", details: nil))
                 return
             }
-            let start = Date(timeIntervalSince1970: Double(startMs) / 1000.0)
-            let end = Date(timeIntervalSince1970: Double(endMs) / 1000.0)
             healthKitBridge.writeWorkout(activityType: activityType, startDate: start, endDate: end, energyBurned: energy) { success, error in
                 if let error = error {
                     result(FlutterError(code: "WRITE_ERROR", message: error.localizedDescription, details: nil))
@@ -142,11 +152,10 @@ import UIKit
         case "writeNutrition":
             guard let args = call.arguments as? [String: Any],
                   let calories = args["calories"] as? Double,
-                  let dateMs = args["date"] as? Int else {
+                  let date = dateFromMs(args["date"]) else {
                 result(FlutterError(code: "BAD_ARGS", message: "Missing nutrition arguments", details: nil))
                 return
             }
-            let date = Date(timeIntervalSince1970: Double(dateMs) / 1000.0)
             healthKitBridge.writeNutrition(calories: calories, date: date) { success, error in
                 if let error = error {
                     result(FlutterError(code: "WRITE_ERROR", message: error.localizedDescription, details: nil))
@@ -158,11 +167,10 @@ import UIKit
         case "writeWeight":
             guard let args = call.arguments as? [String: Any],
                   let weightKg = args["weightKg"] as? Double,
-                  let dateMs = args["date"] as? Int else {
+                  let date = dateFromMs(args["date"]) else {
                 result(FlutterError(code: "BAD_ARGS", message: "Missing weight arguments", details: nil))
                 return
             }
-            let date = Date(timeIntervalSince1970: Double(dateMs) / 1000.0)
             healthKitBridge.writeWeight(weightKg: weightKg, date: date) { success, error in
                 if let error = error {
                     result(FlutterError(code: "WRITE_ERROR", message: error.localizedDescription, details: nil))

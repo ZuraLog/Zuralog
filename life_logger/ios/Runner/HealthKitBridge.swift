@@ -234,7 +234,12 @@ class HealthKitBridge: NSObject {
         case "cycle", "cycling": workoutType = .cycling
         case "swim", "swimming": workoutType = .swimming
         case "hike", "hiking": workoutType = .hiking
-        default: workoutType = .traditionalStrengthTraining
+        case "strength", "strength_training": workoutType = .traditionalStrengthTraining
+        case "yoga": workoutType = .yoga
+        case "dance": workoutType = .dance
+        default:
+            // Use .other for unrecognized types rather than silently misclassifying.
+            workoutType = .other
         }
 
         let workout = HKWorkout(
@@ -323,6 +328,10 @@ class HealthKitBridge: NSObject {
             (sleepType, "sleep"),
         ]
 
+        // Track whether all background delivery registrations succeed.
+        let group = DispatchGroup()
+        var allSucceeded = true
+
         for (sampleType, label) in typesToObserve {
             let query = HKObserverQuery(
                 sampleType: sampleType,
@@ -339,17 +348,25 @@ class HealthKitBridge: NSObject {
 
             // Enable background delivery (frequency: .immediate means
             // "as soon as practical" -- iOS may batch for battery).
+            group.enter()
             healthStore.enableBackgroundDelivery(
                 for: sampleType,
                 frequency: .immediate
             ) { success, error in
+                if !success {
+                    allSucceeded = false
+                }
                 if let error = error {
                     print("HealthKit background delivery error for \(label): \(error.localizedDescription)")
                 }
+                group.leave()
             }
         }
 
-        completion(true)
+        // Report success only after all background delivery registrations complete.
+        group.notify(queue: .main) {
+            completion(allSucceeded)
+        }
     }
 
     /// Called when an HKObserverQuery fires due to new data.

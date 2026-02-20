@@ -97,6 +97,34 @@ class TestAppleHealthServerExecution:
         assert result.success is False
         assert result.error is not None
 
+    @pytest.mark.asyncio
+    async def test_read_metrics_missing_params_returns_error(self, server: AppleHealthServer) -> None:
+        """Read tool rejects calls with missing required parameters."""
+        result = await server.execute_tool(
+            tool_name="apple_health_read_metrics",
+            params={"data_type": "steps"},
+            user_id="test-user-123",
+        )
+        assert isinstance(result, ToolResult)
+        assert result.success is False
+        assert result.error is not None
+        assert "start_date" in result.error
+        assert "end_date" in result.error
+
+    @pytest.mark.asyncio
+    async def test_write_entry_missing_params_returns_error(self, server: AppleHealthServer) -> None:
+        """Write tool rejects calls with missing required parameters."""
+        result = await server.execute_tool(
+            tool_name="apple_health_write_entry",
+            params={"data_type": "nutrition"},
+            user_id="test-user-123",
+        )
+        assert isinstance(result, ToolResult)
+        assert result.success is False
+        assert result.error is not None
+        assert "value" in result.error
+        assert "date" in result.error
+
 
 class TestAppleHealthServerResources:
     """Tests for resource listing."""
@@ -105,4 +133,4 @@ class TestAppleHealthServerResources:
     async def test_get_resources_returns_list(self, server: AppleHealthServer) -> None:
         resources = await server.get_resources(user_id="test-user-123")
         assert isinstance(resources, list)
-        assert all(isinstance(r, Resource) for r in resources) or len(resources) == 0
+        assert all(isinstance(r, Resource) for r in resources)
