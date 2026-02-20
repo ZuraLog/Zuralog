@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:life_logger/core/di/providers.dart';
+import 'package:life_logger/features/auth/domain/auth_providers.dart';
+import 'package:life_logger/features/auth/domain/auth_state.dart';
 
 /// The developer test harness screen.
 ///
@@ -26,10 +28,14 @@ class HarnessScreen extends ConsumerStatefulWidget {
 
 class _HarnessScreenState extends ConsumerState<HarnessScreen> {
   final _outputController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _outputController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -80,6 +86,56 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     }
   }
 
+  /// Tests login via the AuthRepository.
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    if (email.isEmpty || password.isEmpty) {
+      _log('⚠️ Email and password are required');
+      return;
+    }
+
+    _log('Attempting login with $email...');
+    final authNotifier = ref.read(authStateProvider.notifier);
+    final result = await authNotifier.login(email, password);
+
+    switch (result) {
+      case AuthSuccess(:final userId):
+        _log('✅ LOGIN SUCCESS: User ID = $userId');
+      case AuthFailure(:final message):
+        _log('❌ LOGIN FAILED: $message');
+    }
+  }
+
+  /// Tests registration via the AuthRepository.
+  Future<void> _handleRegister() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    if (email.isEmpty || password.isEmpty) {
+      _log('⚠️ Email and password are required');
+      return;
+    }
+
+    _log('Attempting registration with $email...');
+    final authNotifier = ref.read(authStateProvider.notifier);
+    final result = await authNotifier.register(email, password);
+
+    switch (result) {
+      case AuthSuccess(:final userId):
+        _log('✅ REGISTER SUCCESS: User ID = $userId');
+      case AuthFailure(:final message):
+        _log('❌ REGISTER FAILED: $message');
+    }
+  }
+
+  /// Tests logout via the AuthRepository.
+  Future<void> _handleLogout() async {
+    _log('Logging out...');
+    final authNotifier = ref.read(authStateProvider.notifier);
+    await authNotifier.logout();
+    _log('✅ LOGOUT: Tokens cleared');
+  }
+
   /// Clears the output area.
   void _clearOutput() {
     setState(() {
@@ -89,8 +145,25 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('TEST HARNESS - NO STYLING')),
+      appBar: AppBar(
+        title: const Text('TEST HARNESS - NO STYLING'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: Center(
+              child: Text(
+                authState == AuthState.authenticated
+                    ? '🟢 AUTHED'
+                    : '🔴 UNAUTHED',
+                style: const TextStyle(fontFamily: 'monospace'),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -120,6 +193,48 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
                 ElevatedButton(
                   onPressed: _clearOutput,
                   child: const Text('Clear'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const Text('AUTH:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: _handleLogin,
+                  child: const Text('Login'),
+                ),
+                ElevatedButton(
+                  onPressed: _handleRegister,
+                  child: const Text('Register'),
+                ),
+                ElevatedButton(
+                  onPressed: _handleLogout,
+                  child: const Text('Logout'),
                 ),
               ],
             ),

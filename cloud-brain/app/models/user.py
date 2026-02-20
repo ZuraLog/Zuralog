@@ -7,10 +7,9 @@ Supabase UID, ensuring a single source of truth for identity.
 
 import uuid
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
-from sqlalchemy import DateTime
 
 from app.database import Base
 

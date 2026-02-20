@@ -1,33 +1,40 @@
 """
 Life Logger Cloud Brain — Application Entry Point.
 
-Initializes the FastAPI application with CORS middleware and
-the health check endpoint. This is the root of the backend.
+Initializes the FastAPI application with CORS middleware,
+the health check endpoint, and the auth API router.
+Manages the httpx.AsyncClient lifecycle for Supabase Auth calls.
 """
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.auth import router as auth_router
 from app.config import settings
+from app.services.auth_service import AuthService
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan handler for startup and shutdown events.
 
-    Startup: Log environment and verify configuration.
-    Shutdown: Clean up resources (database connections, etc.).
+    Startup: Create shared httpx client and AuthService.
+    Shutdown: Close the httpx client and clean up resources.
 
     Args:
         app: The FastAPI application instance.
     """
     # --- Startup ---
     print(f"🚀 Life Logger Cloud Brain starting in {settings.app_env} mode")
+    http_client = httpx.AsyncClient(timeout=30.0)
+    app.state.auth_service = AuthService(client=http_client)
     yield
     # --- Shutdown ---
+    await http_client.aclose()
     print("👋 Life Logger Cloud Brain shutting down")
 
 
@@ -45,6 +52,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router, prefix="/api/v1")
 
 
 @app.get("/health")
