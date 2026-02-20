@@ -1,8 +1,12 @@
-/// Dart wrapper for native HealthKit access via platform channels.
+/// Dart wrapper for native health platform access via platform channels.
 ///
-/// This class communicates with the Swift `HealthKitBridge` via
-/// `MethodChannel('com.lifelogger/health')`. It marshals Dart
-/// arguments to/from the native layer.
+/// Communicates with the native health bridge on each platform:
+/// - **iOS:** Swift `HealthKitBridge` via `AppDelegate`.
+/// - **Android:** Kotlin `HealthConnectBridge` via `MainActivity`.
+///
+/// Both platforms share the same `MethodChannel('com.lifelogger/health')`
+/// and identical method names, so this class works transparently
+/// on either OS.
 ///
 /// **Usage:** Injected via Riverpod. Do NOT call directly from UI --
 /// use `HealthRepository` instead.
@@ -10,24 +14,24 @@ library;
 
 import 'package:flutter/services.dart';
 
-/// Dart-side platform channel wrapper for Apple HealthKit.
+/// Dart-side platform channel wrapper for native health data access.
 ///
-/// Each method corresponds to a native Swift handler registered in
-/// `AppDelegate.swift`. Arguments are serialized as Maps with
-/// millisecondsSinceEpoch timestamps.
+/// Each method corresponds to a native handler registered in
+/// `AppDelegate.swift` (iOS) or `MainActivity.kt` (Android).
+/// Arguments are serialized as Maps with millisecondsSinceEpoch timestamps.
 class HealthBridge {
   /// Creates a new [HealthBridge].
   ///
   /// Accepts an optional [MethodChannel] for testing.
   HealthBridge({MethodChannel? channel})
-      : _channel = channel ?? const MethodChannel('com.lifelogger/health');
+    : _channel = channel ?? const MethodChannel('com.lifelogger/health');
 
   final MethodChannel _channel;
 
-  /// Checks if HealthKit is available on this device.
+  /// Checks if the native health platform is available on this device.
   ///
-  /// Returns `false` on non-iOS devices, iPads without HealthKit,
-  /// or simulators that don't support it.
+  /// Returns `false` on unsupported devices, or if Health Connect
+  /// is not installed (Android 13 and below).
   Future<bool> isAvailable() async {
     try {
       final result = await _channel.invokeMethod<bool>('isAvailable');
@@ -42,17 +46,16 @@ class HealthBridge {
     }
   }
 
-  /// Requests HealthKit read/write authorization from the user.
+  /// Requests health data read/write authorization from the user.
   ///
-  /// Returns `true` if the authorization dialog was presented
-  /// successfully. Note: HealthKit does NOT reveal which specific
-  /// types were denied -- only that the dialog appeared.
+  /// On iOS, shows the HealthKit permission dialog. On Android,
+  /// checks if Health Connect permissions are granted.
   ///
+  /// Returns `true` if authorization was successful.
   /// Throws nothing -- returns `false` on any failure.
   Future<bool> requestAuthorization() async {
     try {
-      final result =
-          await _channel.invokeMethod<bool>('requestAuthorization');
+      final result = await _channel.invokeMethod<bool>('requestAuthorization');
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
@@ -95,13 +98,10 @@ class HealthBridge {
     DateTime endDate,
   ) async {
     try {
-      final result = await _channel.invokeMethod<List<dynamic>>(
-        'getWorkouts',
-        {
-          'startDate': startDate.millisecondsSinceEpoch,
-          'endDate': endDate.millisecondsSinceEpoch,
-        },
-      );
+      final result = await _channel.invokeMethod<List<dynamic>>('getWorkouts', {
+        'startDate': startDate.millisecondsSinceEpoch,
+        'endDate': endDate.millisecondsSinceEpoch,
+      });
       if (result == null) return [];
       return result
           .cast<Map<dynamic, dynamic>>()
@@ -127,13 +127,10 @@ class HealthBridge {
     DateTime endDate,
   ) async {
     try {
-      final result = await _channel.invokeMethod<List<dynamic>>(
-        'getSleep',
-        {
-          'startDate': startDate.millisecondsSinceEpoch,
-          'endDate': endDate.millisecondsSinceEpoch,
-        },
-      );
+      final result = await _channel.invokeMethod<List<dynamic>>('getSleep', {
+        'startDate': startDate.millisecondsSinceEpoch,
+        'endDate': endDate.millisecondsSinceEpoch,
+      });
       if (result == null) return [];
       return result
           .cast<Map<dynamic, dynamic>>()

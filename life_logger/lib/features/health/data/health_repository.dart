@@ -1,8 +1,10 @@
-/// Health data repository -- abstraction over the native HealthKit bridge.
+/// Health data repository -- abstraction over the native health bridge.
 ///
 /// Wraps the low-level [HealthBridge] platform channel calls into a
-/// clean, testable API. Manages authorization state centrally and
-/// provides the public surface for UI and background services.
+/// clean, testable API. Works transparently on both iOS (HealthKit)
+/// and Android (Health Connect). Manages authorization state
+/// centrally and provides the public surface for UI and background
+/// services.
 ///
 /// Injected via Riverpod (`healthRepositoryProvider`).
 library;
@@ -11,8 +13,9 @@ import 'package:life_logger/core/health/health_bridge.dart';
 
 /// Repository for reading and writing health data.
 ///
-/// All methods are safe to call even if HealthKit is unavailable --
-/// they return sensible defaults (empty lists, `false`, `0.0`).
+/// All methods are safe to call on any platform -- they return
+/// sensible defaults (empty lists, `false`, `0.0`) when the
+/// native health platform is unavailable.
 class HealthRepository {
   /// Creates a [HealthRepository] backed by the given [HealthBridge].
   ///
@@ -21,16 +24,16 @@ class HealthRepository {
 
   final HealthBridge _bridge;
 
-  /// Whether HealthKit is available on this device.
+  /// Whether the native health platform is available on this device.
   ///
-  /// Returns `false` on Android and non-supported iOS devices.
+  /// Returns `true` on iOS with HealthKit or Android with Health Connect.
+  /// Returns `false` on unsupported platforms (web, desktop).
   Future<bool> get isAvailable => _bridge.isAvailable();
 
-  /// Requests HealthKit authorization from the user.
+  /// Requests health data authorization from the user.
   ///
-  /// Shows the iOS system permission dialog. Returns `true` if the
-  /// dialog was presented successfully (does NOT mean all types
-  /// were granted -- HealthKit hides per-type denial).
+  /// On iOS, shows the HealthKit permission dialog.
+  /// On Android, checks Health Connect permissions.
   Future<bool> requestAuthorization() => _bridge.requestAuthorization();
 
   // -- Read Methods --

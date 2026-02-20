@@ -33,7 +33,7 @@ final localDbProvider = Provider<LocalDb>((ref) {
   return LocalDb();
 });
 
-/// Provides the native HealthKit platform channel bridge.
+/// Provides the native health platform channel bridge (HealthKit on iOS, Health Connect on Android).
 final healthBridgeProvider = Provider<HealthBridge>((ref) => HealthBridge());
 
 /// Provides the health data repository.
