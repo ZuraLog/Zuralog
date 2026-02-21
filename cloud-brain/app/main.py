@@ -17,10 +17,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.agent.context_manager.memory_store import InMemoryStore
 from app.agent.mcp_client import MCPClient
 from app.api.v1.auth import router as auth_router
+from app.api.v1.integrations import router as integrations_router
 from app.config import settings
 from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.registry import MCPServerRegistry
+from app.mcp_servers.strava_server import StravaServer
 from app.services.auth_service import AuthService
 
 
@@ -42,10 +44,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     http_client = httpx.AsyncClient(timeout=30.0)
     app.state.auth_service = AuthService(client=http_client)
 
-    # MCP Framework (Phase 1.3)
+    # MCP Framework (Phase 1.3+)
     registry = MCPServerRegistry()
     registry.register(AppleHealthServer())
     registry.register(HealthConnectServer())
+    registry.register(StravaServer())  # Phase 1.6
     app.state.mcp_registry = registry
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()
@@ -73,6 +76,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(integrations_router, prefix="/api/v1")  # Phase 1.6
 
 
 @app.get("/health")
