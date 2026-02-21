@@ -163,6 +163,39 @@ class HealthBridge {
     }
   }
 
+  /// Fetches nutrition (dietary energy consumed) entries within a date range.
+  ///
+  /// Returns an empty list if no nutrition data exists or on error.
+  /// Each entry is a Map with keys:
+  /// `calories` (kcal), `date` (ISO 8601), `source` (app name).
+  ///
+  /// This reads data written by any app (e.g., CalAI, MyFitnessPal)
+  /// to the OS Health Store.
+  Future<List<Map<String, dynamic>>> getNutrition(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final result = await _channel
+          .invokeMethod<List<dynamic>>('getNutrition', {
+            'startDate': startDate.millisecondsSinceEpoch,
+            'endDate': endDate.millisecondsSinceEpoch,
+          });
+      if (result == null) return [];
+      return result
+          .cast<Map<dynamic, dynamic>>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getNutrition PlatformException: ${e.message}');
+        return true;
+      }());
+      return [];
+    }
+  }
+
   /// Writes a workout entry to HealthKit.
   ///
   /// - [activityType]: e.g., "running", "cycling", "walking".

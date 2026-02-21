@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:life_logger/core/deeplink/deeplink_handler.dart';
+import 'package:life_logger/core/deeplink/deeplink_launcher.dart';
 import 'package:life_logger/core/di/providers.dart';
 import 'package:life_logger/features/auth/domain/auth_providers.dart';
 import 'package:life_logger/features/auth/domain/auth_state.dart';
@@ -169,9 +170,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     _log('Requesting HealthKit authorization...');
     final healthRepo = ref.read(healthRepositoryProvider);
     final authorized = await healthRepo.requestAuthorization();
-    _log(authorized
-        ? '✅ HealthKit AUTHORIZED'
-        : '❌ HealthKit DENIED/UNAVAILABLE');
+    _log(
+      authorized ? '✅ HealthKit AUTHORIZED' : '❌ HealthKit DENIED/UNAVAILABLE',
+    );
   }
 
   /// Reads today's step count from HealthKit.
@@ -192,7 +193,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     );
     _log('✅ Workouts: ${workouts.length}');
     for (final w in workouts) {
-      _log('  - ${w["activityType"]}: ${w["duration"]}s, ${w["energyBurned"]} kcal');
+      _log(
+        '  - ${w["activityType"]}: ${w["duration"]}s, ${w["energyBurned"]} kcal',
+      );
     }
   }
 
@@ -212,9 +215,40 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     _log('Reading latest weight...');
     final healthRepo = ref.read(healthRepositoryProvider);
     final weight = await healthRepo.getWeight();
-    _log(weight != null
-        ? '✅ Weight: ${weight.toStringAsFixed(1)} kg'
-        : '⚠️ No weight data');
+    _log(
+      weight != null
+          ? '✅ Weight: ${weight.toStringAsFixed(1)} kg'
+          : '⚠️ No weight data',
+    );
+  }
+
+  /// Reads nutrition (calorie) data from the last 7 days.
+  Future<void> _readNutrition() async {
+    _log('Reading nutrition (last 7 days)...');
+    final healthRepo = ref.read(healthRepositoryProvider);
+    final nutrition = await healthRepo.getNutrition(
+      DateTime.now().subtract(const Duration(days: 7)),
+      DateTime.now(),
+    );
+    _log('✅ Nutrition entries: ${nutrition.length}');
+    for (final entry in nutrition) {
+      _log('  - ${entry["calories"]} kcal on ${entry["date"]}');
+    }
+  }
+
+  // -- CalAI Harness Methods (Phase 1.7) --
+
+  /// Opens CalAI for food photo logging via deep link.
+  ///
+  /// Falls back to CalAI web/store URL if the app is not installed.
+  Future<void> _openCalAI() async {
+    _log('Opening CalAI for food logging...');
+    final opened = await DeepLinkLauncher.openFoodLogging();
+    if (opened) {
+      _log('✅ CalAI launched (or web fallback opened)');
+    } else {
+      _log('❌ Could not open CalAI or fallback URL');
+    }
   }
 
   // -- Strava Harness Methods (Phase 1.6) --
@@ -245,8 +279,12 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
   /// A dedicated status endpoint will be added in a future phase.
   void _checkStravaStatus() {
     _log('ℹ️ Strava status: check server logs for stored token.');
-    _log('   After connecting, the StravaServer instance holds your token in-memory.');
-    _log('   Phase 1.7 will add DB persistence and a /integrations/strava/status endpoint.');
+    _log(
+      '   After connecting, the StravaServer instance holds your token in-memory.',
+    );
+    _log(
+      '   Phase 1.7 will add DB persistence and a /integrations/strava/status endpoint.',
+    );
   }
 
   @override
@@ -275,132 +313,166 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'COMMANDS:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: _testHealthCheck,
-                  child: const Text('1. Health Check'),
+            Expanded(
+              flex: 5,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'COMMANDS:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _testHealthCheck,
+                          child: const Text('1. Health Check'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _testSecureStorage,
+                          child: const Text('2. Secure Storage'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _testLocalDb,
+                          child: const Text('3. Local DB'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _clearOutput,
+                          child: const Text('Clear'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const Text(
+                      'AUTH:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _handleLogin,
+                          child: const Text('Login'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _handleRegister,
+                          child: const Text('Register'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _handleLogout,
+                          child: const Text('Logout'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const Text(
+                      'HEALTHKIT:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _testHealthAvailable,
+                          child: const Text('Check Available'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _testHealthAuth,
+                          child: const Text('Request Auth'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _testReadSteps,
+                          child: const Text('Read Steps'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _testReadWorkouts,
+                          child: const Text('Read Workouts'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _testReadSleep,
+                          child: const Text('Read Sleep'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _testReadWeight,
+                          child: const Text('Read Weight'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _readNutrition,
+                          child: const Text('Read Nutrition'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const Text(
+                      'STRAVA:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _connectStrava,
+                          child: const Text('Connect Strava'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _checkStravaStatus,
+                          child: const Text('Check Strava Status'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const Text(
+                      'CALAI:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _openCalAI,
+                          child: const Text('Log Food (CalAI)'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: _testSecureStorage,
-                  child: const Text('2. Secure Storage'),
-                ),
-                ElevatedButton(
-                  onPressed: _testLocalDb,
-                  child: const Text('3. Local DB'),
-                ),
-                ElevatedButton(
-                  onPressed: _clearOutput,
-                  child: const Text('Clear'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const Text('AUTH:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-                isDense: true,
               ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: _handleLogin,
-                  child: const Text('Login'),
-                ),
-                ElevatedButton(
-                  onPressed: _handleRegister,
-                  child: const Text('Register'),
-                ),
-                ElevatedButton(
-                  onPressed: _handleLogout,
-                  child: const Text('Logout'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const Text(
-              'HEALTHKIT:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: _testHealthAvailable,
-                  child: const Text('Check Available'),
-                ),
-                ElevatedButton(
-                  onPressed: _testHealthAuth,
-                  child: const Text('Request Auth'),
-                ),
-                ElevatedButton(
-                  onPressed: _testReadSteps,
-                  child: const Text('Read Steps'),
-                ),
-                ElevatedButton(
-                  onPressed: _testReadWorkouts,
-                  child: const Text('Read Workouts'),
-                ),
-                ElevatedButton(
-                  onPressed: _testReadSleep,
-                  child: const Text('Read Sleep'),
-                ),
-                ElevatedButton(
-                  onPressed: _testReadWeight,
-                  child: const Text('Read Weight'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const Text(
-              'STRAVA:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: _connectStrava,
-                  child: const Text('Connect Strava'),
-                ),
-                ElevatedButton(
-                  onPressed: _checkStravaStatus,
-                  child: const Text('Check Strava Status'),
-                ),
-              ],
             ),
             const SizedBox(height: 16),
             const Text(
@@ -409,6 +481,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
             ),
             const SizedBox(height: 8),
             Expanded(
+              flex: 2,
               child: TextField(
                 controller: _outputController,
                 maxLines: null,
