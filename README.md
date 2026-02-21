@@ -1,3 +1,3 @@
-# Life Logger
+# ZuraLog
 
 A personal life logging application.
