@@ -16,13 +16,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.limiter import limiter
-
 from app.agent.context_manager.memory_store import InMemoryStore
 from app.agent.mcp_client import MCPClient
 from app.api.v1.auth import router as auth_router
+from app.api.v1.chat import router as chat_router
 from app.api.v1.integrations import router as integrations_router
 from app.config import settings
+from app.limiter import limiter
 from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.registry import MCPServerRegistry
@@ -83,6 +83,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")  # Phase 1.9
 app.include_router(integrations_router, prefix="/api/v1")  # Phase 1.6
 
 

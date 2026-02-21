@@ -6,6 +6,8 @@
 /// during Phase 1 (backend-first development).
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,8 +15,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:life_logger/core/deeplink/deeplink_handler.dart';
 import 'package:life_logger/core/deeplink/deeplink_launcher.dart';
 import 'package:life_logger/core/di/providers.dart';
+import 'package:life_logger/core/network/ws_client.dart';
 import 'package:life_logger/features/auth/domain/auth_providers.dart';
 import 'package:life_logger/features/auth/domain/auth_state.dart';
+import 'package:life_logger/features/chat/data/chat_repository.dart';
+import 'package:life_logger/features/chat/domain/message.dart';
 
 /// The developer test harness screen.
 ///
@@ -33,6 +38,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
   final _outputController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _chatController = TextEditingController();
+  StreamSubscription<ChatMessage>? _wsSubscription;
+  StreamSubscription<ConnectionStatus>? _wsStatusSubscription;
 
   @override
   void initState() {
@@ -45,9 +53,12 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
   @override
   void dispose() {
     DeeplinkHandler.dispose();
+    _wsSubscription?.cancel();
+    _wsStatusSubscription?.cancel();
     _outputController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _chatController.dispose();
     super.dispose();
   }
 
@@ -249,6 +260,60 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     } else {
       _log('❌ Could not open CalAI or fallback URL');
     }
+  }
+
+  // -- Chat Harness Methods (Phase 1.9) --
+
+  /// Connects the WebSocket to the Cloud Brain.
+  void _connectWebSocket() {
+    _log('Connecting WebSocket...');
+    final chatRepo = ref.read(chatRepositoryProvider);
+
+    // Listen for incoming messages
+    _wsSubscription?.cancel();
+    _wsSubscription = chatRepo.messages.listen((msg) {
+      _log('💬 [${msg.role}] ${msg.content}');
+    });
+
+    // Listen for connection status changes
+    _wsStatusSubscription?.cancel();
+    _wsStatusSubscription = chatRepo.connectionStatus.listen((status) {
+      switch (status) {
+        case ConnectionStatus.connected:
+          _log('✅ WS Connected');
+        case ConnectionStatus.connecting:
+          _log('⏳ WS Connecting...');
+        case ConnectionStatus.disconnected:
+          _log('🔴 WS Disconnected');
+      }
+    });
+
+    // Use a mock token for testing — replace with real auth token
+    chatRepo.connect('test_token');
+  }
+
+  /// Sends a chat message via WebSocket.
+  void _sendChatMessage() {
+    final text = _chatController.text.trim();
+    if (text.isEmpty) {
+      _log('⚠️ Chat message is empty');
+      return;
+    }
+
+    _log('📤 Sending: $text');
+    final chatRepo = ref.read(chatRepositoryProvider);
+    chatRepo.sendMessage(text);
+    _chatController.clear();
+  }
+
+  /// Disconnects the WebSocket.
+  void _disconnectWebSocket() {
+    _log('Disconnecting WebSocket...');
+    final chatRepo = ref.read(chatRepositoryProvider);
+    chatRepo.dispose();
+    _wsSubscription?.cancel();
+    _wsStatusSubscription?.cancel();
+    _log('✅ WS Disconnected');
   }
 
   // -- Strava Harness Methods (Phase 1.6) --
@@ -550,6 +615,40 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
                         ElevatedButton(
                           onPressed: _openCalAI,
                           child: const Text('Log Food (CalAI)'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const Text(
+                      'CHAT (Phase 1.9):',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _chatController,
+                      decoration: const InputDecoration(
+                        labelText: 'Chat Message',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _connectWebSocket,
+                          child: const Text('Connect WS'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _sendChatMessage,
+                          child: const Text('Send Message'),
+                        ),
+                        ElevatedButton(
+                          onPressed: _disconnectWebSocket,
+                          child: const Text('Disconnect WS'),
                         ),
                       ],
                     ),
