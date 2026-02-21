@@ -460,7 +460,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
           ),
           const SizedBox(width: 10),
           const Text(
-            'Life Logger',
+            'ZuraLog',
             style: TextStyle(
               color: _Colors.textPrimary,
               fontWeight: FontWeight.w700,
