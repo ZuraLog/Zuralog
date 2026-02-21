@@ -66,6 +66,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Custom URL scheme for OAuth deep-link callbacks (Phase 1.6) -->
+	<!-- e.g. lifelogger://oauth/strava?code=XXX returned by Strava after login -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.lifelogger</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lifelogger</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Life Logger needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
 	<key>NSHealthUpdateUsageDescription</key>

@@ -186,3 +186,77 @@ Strava supports webhooks for real-time activity updates:
 - [Strava API Documentation](https://developers.strava.com/)
 - [Strava API Reference](https://www.strava.com/api/v3)
 - [OAuth Flow](https://developers.strava.com/docs/authentication/)
+
+---
+
+## Phase 1.6 Implementation Details
+
+> **Status:** ✅ Implemented (2026-02-21)
+
+### Implemented Auth Flow
+
+```text
+User          Edge Agent              Cloud Brain            Strava
+ │                │                       │                    │
+ │  "Connect"     │                       │                    │
+ │───────────────>│                       │                    │
+ │                │ GET /api/v1/           │                    │
+ │                │   integrations/        │                    │
+ │                │   strava/authorize     │                    │
+ │                │──────────────────────>│                    │
+ │                │  {"auth_url": "..."}  │                    │
+ │                │<──────────────────────│                    │
+ │                │ launchUrl() → browser │                    │
+ │   [User logs in to Strava in browser]  │                    │
+ │                │                       │                    │
+ │  lifelogger://oauth/strava?code=XXX (deep link)             │
+ │<───────────────│                       │                    │
+ │                │ DeeplinkHandler fires │                    │
+ │                │ POST /api/v1/          │                    │
+ │                │   integrations/        │                    │
+ │                │   strava/exchange      │                    │
+ │                │   ?code=XXX           │                    │
+ │                │   &user_id=UUID       │                    │
+ │                │──────────────────────>│                    │
+ │                │                       │ POST /oauth/token  │
+ │                │                       │───────────────────>│
+ │                │                       │ {access_token,...} │
+ │                │                       │<───────────────────│
+ │                │                       │ store_token()      │
+ │                │   {"success": true}   │ (StravaServer)     │
+ │                │<──────────────────────│                    │
+ │  "✅ Strava connected!"                │                    │
+```
+
+### Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `STRAVA_CLIENT_ID` | From [strava.com/settings/api](https://www.strava.com/settings/api) |
+| `STRAVA_CLIENT_SECRET` | Keep server-side only — never expose to client |
+| `STRAVA_REDIRECT_URI` | `lifelogger://oauth/strava` (must match Strava portal) |
+
+**Strava Portal Setup:** Set Authorization Callback Domain to `localhost` for dev or your production domain.
+
+### MCP Tools (StravaServer)
+
+| Tool | Description | Live in MVP? |
+| --- | --- | --- |
+| `strava_get_activities` | Fetch recent activities | Mock (live call ready to activate) |
+| `strava_create_activity` | Create a manual entry | Mock (live call ready to activate) |
+
+### Token Storage
+
+MVP: in-memory `dict[user_id → access_token]` on the `StravaServer` instance.
+**Phase 1.7:** Migrate to a `user_integrations` DB table with `expires_at` and auto-refresh.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `400` on exchange | Code expired (~10 min TTL) | Tap "Connect Strava" again |
+| `503` unreachable | Network or Strava outage | Check connectivity, retry |
+| Deep link doesn't open (iOS) | Missing URL scheme | Check `CFBundleURLSchemes: lifelogger` in `Info.plist` |
+| Deep link doesn't open (Android) | Missing intent-filter | Check `scheme=lifelogger host=oauth` in `AndroidManifest.xml` |
+| `no user_id in secure storage` | User not logged in | Log in via AUTH section first |
+| Token lost on restart | In-memory storage | Expected in Phase 1.6 — Phase 1.7 adds DB persistence |

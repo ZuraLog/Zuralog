@@ -55,8 +55,9 @@ class AuthRepository {
 
       final data = response.data as Map<String, dynamic>;
       await _saveTokens(
-        data['access_token'] as String,
-        data['refresh_token'] as String,
+        userId: data['user_id'] as String,
+        accessToken: data['access_token'] as String,
+        refreshToken: data['refresh_token'] as String,
       );
 
       return AuthSuccess(
@@ -90,8 +91,9 @@ class AuthRepository {
 
       final data = response.data as Map<String, dynamic>;
       await _saveTokens(
-        data['access_token'] as String,
-        data['refresh_token'] as String,
+        userId: data['user_id'] as String,
+        accessToken: data['access_token'] as String,
+        refreshToken: data['refresh_token'] as String,
       );
 
       return AuthSuccess(
@@ -130,14 +132,24 @@ class AuthRepository {
     return token != null;
   }
 
-  /// Saves access and refresh tokens to secure storage.
-  Future<void> _saveTokens(String accessToken, String refreshToken) async {
+  /// Saves user ID and auth tokens to secure storage.
+  ///
+  /// Persisting [userId] alongside tokens allows downstream features
+  /// (e.g. OAuth integrations in Phase 1.6) to identify the user
+  /// without requiring a server round-trip.
+  Future<void> _saveTokens({
+    required String userId,
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await _secureStorage.write('user_id', userId);
     await _secureStorage.saveAuthToken(accessToken);
     await _secureStorage.write('refresh_token', refreshToken);
   }
 
-  /// Clears all auth tokens from secure storage.
+  /// Clears all auth tokens and the user ID from secure storage.
   Future<void> _clearTokens() async {
+    await _secureStorage.delete('user_id');
     await _secureStorage.clearAuthToken();
     await _secureStorage.delete('refresh_token');
   }
