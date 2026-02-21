@@ -28,10 +28,10 @@ import UIKit
         // force-unwrap crashes during background delivery wakeups.
         let healthChannel = FlutterMethodChannel(
             name: "com.lifelogger/health",
-            binaryMessenger: engineBridge.engine.binaryMessenger
+            binaryMessenger: engineBridge.applicationRegistrar.messenger()
         )
 
-        healthChannel.setMethodCallHandler { [weak self] (call, result) in
+        healthChannel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
             guard let self = self else {
                 result(FlutterError(code: "BRIDGE_GONE", message: "HealthKit bridge deallocated", details: nil))
                 return

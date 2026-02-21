@@ -95,18 +95,22 @@ class AuthService:
         data = response.json()
         session = data.get("session")
 
+        # Supabase returns the user object either nested under "user" (auto-confirm on)
+        # or directly at the top level (email confirmation required).
+        user = data.get("user") or data
+
         # Supabase may return a user without a session if email confirmation
         # is enabled. In that case, there are no tokens to return yet.
         if not session:
             return {
-                "user_id": data["user"]["id"],
+                "user_id": user["id"],
                 "access_token": "",
                 "refresh_token": "",
                 "expires_in": 0,
             }
 
         return {
-            "user_id": data["user"]["id"],
+            "user_id": user["id"],
             "access_token": session["access_token"],
             "refresh_token": session["refresh_token"],
             "expires_in": session.get("expires_in", 3600),

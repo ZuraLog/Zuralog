@@ -384,7 +384,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
             const SizedBox(height: 16),
             const Divider(),
             const Text(
-              'STRAVA (Phase 1.6):',
+              'STRAVA:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
