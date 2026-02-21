@@ -129,9 +129,15 @@ class ApiClient {
   /// Returns the Dio [Response] containing the server's response.
   Future<Response<dynamic>> get(String path) => _dio.get(path);
 
-  /// Sends a POST request to the given [path] with optional [data].
+  /// Sends a POST request to the given [path] with optional [data] and
+  /// [queryParameters].
   ///
+  /// [queryParameters] are appended to the URL as query string key-value pairs.
   /// Returns the Dio [Response] containing the server's response.
-  Future<Response<dynamic>> post(String path, {dynamic data}) =>
-      _dio.post(path, data: data);
+  Future<Response<dynamic>> post(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) =>
+      _dio.post(path, data: data, queryParameters: queryParameters);
 }

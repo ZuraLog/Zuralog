@@ -12,6 +12,7 @@ import 'package:life_logger/core/network/ws_client.dart';
 import 'package:life_logger/core/storage/secure_storage.dart';
 import 'package:life_logger/core/storage/local_db.dart';
 import 'package:life_logger/features/health/data/health_repository.dart';
+import 'package:life_logger/features/integrations/data/oauth_repository.dart';
 
 /// Provides a singleton [ApiClient] for REST API communication.
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -39,4 +40,9 @@ final healthBridgeProvider = Provider<HealthBridge>((ref) => HealthBridge());
 /// Provides the health data repository.
 final healthRepositoryProvider = Provider<HealthRepository>((ref) {
   return HealthRepository(bridge: ref.watch(healthBridgeProvider));
+});
+
+/// Provides the OAuth repository for third-party integration flows (Phase 1.6).
+final oauthRepositoryProvider = Provider<OAuthRepository>((ref) {
+  return OAuthRepository(apiClient: ref.read(apiClientProvider));
 });
