@@ -8,7 +8,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'package:life_logger/core/deeplink/deeplink_handler.dart';
 import 'package:life_logger/core/di/providers.dart';
 import 'package:life_logger/features/auth/domain/auth_providers.dart';
 import 'package:life_logger/features/auth/domain/auth_state.dart';
@@ -32,7 +34,16 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
   final _passwordController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Start listening for OAuth deep-link callbacks (Phase 1.6).
+    // The handler routes lifelogger://oauth/strava?code=XXX back here via _log.
+    DeeplinkHandler.init(ref, onLog: _log);
+  }
+
+  @override
   void dispose() {
+    DeeplinkHandler.dispose();
     _outputController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -206,6 +217,38 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
         : '⚠️ No weight data');
   }
 
+  // -- Strava Harness Methods (Phase 1.6) --
+
+  /// Fetches the Strava OAuth URL from the Cloud Brain and opens it in the
+  /// system browser. On return, Strava redirects to lifelogger://oauth/strava
+  /// which [DeeplinkHandler] intercepts automatically.
+  Future<void> _connectStrava() async {
+    _log('Fetching Strava auth URL...');
+    final oauthRepo = ref.read(oauthRepositoryProvider);
+    final authUrl = await oauthRepo.getStravaAuthUrl();
+
+    if (authUrl == null) {
+      _log('❌ Failed to get Strava auth URL — is the backend running?');
+      return;
+    }
+
+    final uri = Uri.parse(authUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      _log('🌐 Opened Strava login: $authUrl');
+    } else {
+      _log('❌ Could not launch URL: $authUrl');
+    }
+  }
+
+  /// Logs a reminder that Strava connection status is visible in server logs.
+  /// A dedicated status endpoint will be added in a future phase.
+  void _checkStravaStatus() {
+    _log('ℹ️ Strava status: check server logs for stored token.');
+    _log('   After connecting, the StravaServer instance holds your token in-memory.');
+    _log('   Phase 1.7 will add DB persistence and a /integrations/strava/status endpoint.');
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
@@ -335,6 +378,27 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
                 ElevatedButton(
                   onPressed: _testReadWeight,
                   child: const Text('Read Weight'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const Text(
+              'STRAVA (Phase 1.6):',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: _connectStrava,
+                  child: const Text('Connect Strava'),
+                ),
+                ElevatedButton(
+                  onPressed: _checkStravaStatus,
+                  child: const Text('Check Strava Status'),
                 ),
               ],
             ),
