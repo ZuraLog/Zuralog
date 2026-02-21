@@ -29,6 +29,7 @@ dependencies:
 
   # Utilities
   url_launcher: any
+  app_links: any  # Deep link / custom URL scheme interception (Phase 1.6)
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

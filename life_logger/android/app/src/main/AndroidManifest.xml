@@ -44,6 +44,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Deep link: intercept lifelogger://oauth/... callbacks (Phase 1.6) -->
+            <!-- Strava redirects here after login: lifelogger://oauth/strava?code=XXX -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="lifelogger" android:host="oauth" />
+            </intent-filter>
         </activity>
 
         <!-- Health Connect: Required activity-alias for permission usage
