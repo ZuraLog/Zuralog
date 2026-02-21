@@ -18,6 +18,7 @@ from app.api.v1.schemas import (
     RegisterRequest,
 )
 from app.database import get_db
+from app.limiter import limiter
 from app.services.auth_service import AuthService
 from app.services.user_service import sync_user_to_db
 
@@ -42,7 +43,9 @@ def _get_auth_service(request: Request) -> AuthService:
 
 
 @router.post("/register", response_model=AuthResponse)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     body: RegisterRequest,
     auth_service: AuthService = Depends(_get_auth_service),
     db: AsyncSession = Depends(get_db),
@@ -75,7 +78,9 @@ async def register(
 
 
 @router.post("/login", response_model=AuthResponse)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     body: LoginRequest,
     auth_service: AuthService = Depends(_get_auth_service),
     db: AsyncSession = Depends(get_db),
@@ -108,7 +113,9 @@ async def login(
 
 
 @router.post("/logout", response_model=MessageResponse)
+@limiter.limit("10/minute")
 async def logout(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> MessageResponse:
@@ -132,7 +139,9 @@ async def logout(
 
 
 @router.post("/refresh", response_model=AuthResponse)
+@limiter.limit("10/minute")
 async def refresh(
+    request: Request,
     body: RefreshRequest,
     auth_service: AuthService = Depends(_get_auth_service),
 ) -> AuthResponse:

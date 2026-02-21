@@ -64,6 +64,15 @@ class HealthRepository {
   /// Returns `null` if no weight data exists.
   Future<double?> getWeight() => _bridge.getWeight();
 
+  /// Fetches nutrition (dietary energy consumed) entries within a date range.
+  ///
+  /// Returns an empty list if no nutrition data exists.
+  /// Each entry is a Map with keys: `calories`, `date`, `source`.
+  Future<List<Map<String, dynamic>>> getNutrition(
+    DateTime startDate,
+    DateTime endDate,
+  ) => _bridge.getNutrition(startDate, endDate);
+
   // -- Write Methods --
 
   /// Writes a workout entry to HealthKit.

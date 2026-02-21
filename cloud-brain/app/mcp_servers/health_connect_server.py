@@ -35,7 +35,8 @@ class HealthConnectServer(BaseMCPServer):
         """Human-readable description for LLM system prompts."""
         return (
             "Read and write health data on Android via Google Health Connect. "
-            "Supports steps, calories, workouts, sleep analysis, and body weight."
+            "Supports steps, calories, workouts, sleep analysis, body weight, "
+            "and nutrition (dietary energy consumed via apps like CalAI)."
         )
 
     def get_tools(self) -> list[ToolDefinition]:
@@ -50,7 +51,7 @@ class HealthConnectServer(BaseMCPServer):
                 name="health_connect_read_metrics",
                 description=(
                     "Read health metrics from Google Health Connect. "
-                    "Supports: steps, calories, workouts, sleep, weight."
+                    "Supports: steps, calories, workouts, sleep, weight, nutrition."
                 ),
                 input_schema={
                     "type": "object",
@@ -63,6 +64,7 @@ class HealthConnectServer(BaseMCPServer):
                                 "workouts",
                                 "sleep",
                                 "weight",
+                                "nutrition",
                             ],
                             "description": "The type of health metric to read.",
                         },
@@ -81,8 +83,7 @@ class HealthConnectServer(BaseMCPServer):
             ToolDefinition(
                 name="health_connect_write_entry",
                 description=(
-                    "Write health data to Google Health Connect. "
-                    "Supports: nutrition (calories), workout, weight."
+                    "Write health data to Google Health Connect. Supports: nutrition (calories), workout, weight."
                 ),
                 input_schema={
                     "type": "object",

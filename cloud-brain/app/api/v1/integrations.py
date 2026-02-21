@@ -12,15 +12,20 @@ flow and intercepts the redirect URI via a custom URL scheme deep link.
 import urllib.parse
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.api.v1.auth import _get_auth_service
 from app.config import settings
+from app.services.auth_service import AuthService
+from app.limiter import limiter
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
-
+security = HTTPBearer()
 
 @router.get("/strava/authorize")
-async def strava_authorize() -> dict[str, str]:
+@limiter.limit("5/minute")
+async def strava_authorize(request: Request) -> dict[str, str]:
     """Return the Strava OAuth authorization URL for the mobile app to open.
 
     The app opens this URL in the system browser. After the user grants
@@ -42,10 +47,12 @@ async def strava_authorize() -> dict[str, str]:
 
 
 @router.post("/strava/exchange")
+@limiter.limit("10/minute")
 async def strava_exchange(
     request: Request,
     code: str,
-    user_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
 ) -> dict[str, object]:
     """Exchange a Strava authorization code for access and refresh tokens.
 
@@ -67,8 +74,12 @@ async def strava_exchange(
 
     Raises:
         HTTPException: 400 if Strava rejects the code exchange.
+        HTTPException: 401 if the bearer token is invalid.
         HTTPException: 503 if the Strava API is unreachable.
     """
+    user_data = await auth_service.get_user(credentials.credentials)
+    user_id = user_data["id"]
+
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post(

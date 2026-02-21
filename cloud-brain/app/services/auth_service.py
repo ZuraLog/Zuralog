@@ -207,6 +207,32 @@ class AuthService:
             "expires_in": data.get("expires_in", 3600),
         }
 
+    async def get_user(self, access_token: str) -> dict:
+        """Retrieves and validates the user profile using their access token.
+
+        Args:
+            access_token: The user's current JWT access token.
+
+        Returns:
+            A dict containing the user's data from Supabase.
+
+        Raises:
+            HTTPException: 401 if the access token is invalid or expired.
+        """
+        response = await self._client.get(
+            self._auth_url("/user"),
+            headers=self._headers(access_token=access_token),
+        )
+
+        if response.status_code != 200:
+            detail = self._extract_error(response)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid token: {detail}",
+            )
+
+        return response.json()
+
     @staticmethod
     def _extract_error(response: httpx.Response) -> str:
         """Extracts a human-readable error message from a Supabase response.

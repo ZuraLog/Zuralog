@@ -19,6 +19,7 @@ from app.services.auth_service import AuthService
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def client():
     """Create a TestClient with mocked AuthService and DB dependencies."""
@@ -37,6 +38,7 @@ def client():
 # ---------------------------------------------------------------------------
 # Registration Tests
 # ---------------------------------------------------------------------------
+
 
 def test_register_success(client):
     """Successful registration returns 200 with auth tokens."""
@@ -77,6 +79,7 @@ def test_register_invalid_email(client):
 # Login Tests
 # ---------------------------------------------------------------------------
 
+
 def test_login_success(client):
     """Successful login returns 200 with auth tokens."""
     c, mock_auth = client
@@ -104,6 +107,7 @@ def test_login_success(client):
 # Logout Tests
 # ---------------------------------------------------------------------------
 
+
 def test_logout_success(client):
     """Successful logout returns 200 with message."""
     c, mock_auth = client
@@ -130,6 +134,7 @@ def test_logout_no_token(client):
 # Refresh Tests
 # ---------------------------------------------------------------------------
 
+
 def test_refresh_success(client):
     """Successful token refresh returns 200 with new tokens."""
     c, mock_auth = client
@@ -155,6 +160,7 @@ def test_refresh_success(client):
 # ---------------------------------------------------------------------------
 # Health Check (regression)
 # ---------------------------------------------------------------------------
+
 
 def test_health_still_works(client):
     """Health endpoint should still return healthy after auth changes."""

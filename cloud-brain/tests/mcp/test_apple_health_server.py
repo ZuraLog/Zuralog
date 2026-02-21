@@ -53,6 +53,13 @@ class TestAppleHealthServerTools:
         assert "start_date" in required
         assert "end_date" in required
 
+    def test_read_metrics_includes_nutrition_data_type(self, server: AppleHealthServer) -> None:
+        """Nutrition data type must be in the read_metrics enum (Phase 1.7)."""
+        tools = server.get_tools()
+        read_tool = next(t for t in tools if t.name == "apple_health_read_metrics")
+        enum_values = read_tool.input_schema["properties"]["data_type"]["enum"]
+        assert "nutrition" in enum_values
+
 
 class TestAppleHealthServerExecution:
     """Tests for tool execution."""
@@ -65,6 +72,22 @@ class TestAppleHealthServerExecution:
                 "data_type": "steps",
                 "start_date": "2026-02-20",
                 "end_date": "2026-02-20",
+            },
+            user_id="test-user-123",
+        )
+        assert isinstance(result, ToolResult)
+        assert result.success is True
+        assert "pending_device_sync" in str(result.data)
+
+    @pytest.mark.asyncio
+    async def test_read_metrics_nutrition_returns_success(self, server: AppleHealthServer) -> None:
+        """Read tool accepts nutrition data type (Phase 1.7)."""
+        result = await server.execute_tool(
+            tool_name="apple_health_read_metrics",
+            params={
+                "data_type": "nutrition",
+                "start_date": "2026-02-20",
+                "end_date": "2026-02-21",
             },
             user_id="test-user-123",
         )
