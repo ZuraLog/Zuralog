@@ -328,21 +328,104 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        ElevatedButton(
+                        ElevatedButton.icon(
                           onPressed: _testHealthCheck,
-                          child: const Text('1. Health Check'),
+                          icon: const Icon(
+                            Icons.favorite_border,
+                            size: 18,
+                            color: Colors.deepPurple,
+                          ),
+                          label: const Text(
+                            '1. Health Check',
+                            style: TextStyle(
+                              color: Colors.deepPurple,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple.shade50,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
                         ),
-                        ElevatedButton(
+                        ElevatedButton.icon(
                           onPressed: _testSecureStorage,
-                          child: const Text('2. Secure Storage'),
+                          icon: const Icon(
+                            Icons.lock_outline,
+                            size: 18,
+                            color: Colors.deepPurple,
+                          ),
+                          label: const Text(
+                            '2. Secure Storage',
+                            style: TextStyle(
+                              color: Colors.deepPurple,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple.shade50,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
                         ),
-                        ElevatedButton(
+                        ElevatedButton.icon(
                           onPressed: _testLocalDb,
-                          child: const Text('3. Local DB'),
+                          icon: const Icon(
+                            Icons.storage,
+                            size: 18,
+                            color: Colors.deepPurple,
+                          ),
+                          label: const Text(
+                            '3. Local DB',
+                            style: TextStyle(
+                              color: Colors.deepPurple,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple.shade50,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
                         ),
                         ElevatedButton(
                           onPressed: _clearOutput,
-                          child: const Text('Clear'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey.shade100,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: const Text(
+                            'Clear',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -482,15 +565,29 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
             const SizedBox(height: 8),
             Expanded(
               flex: 2,
-              child: TextField(
-                controller: _outputController,
-                maxLines: null,
-                expands: true,
-                readOnly: true,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Output will appear here...',
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: TextField(
+                  controller: _outputController,
+                  maxLines: null,
+                  expands: true,
+                  readOnly: true,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    height: 1.5,
+                    color: Colors.black87,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(16),
+                    hintText: 'System output will appear here...',
+                    hintStyle: TextStyle(color: Colors.black38),
+                  ),
                 ),
               ),
             ),
