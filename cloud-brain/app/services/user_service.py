@@ -31,10 +31,10 @@ async def sync_user_to_db(db: AsyncSession, supabase_user_id: str, email: str) -
     # TOCTOU vulnerability under concurrent requests.
     stmt = text(
         """
-        INSERT INTO users (id, email)
-        VALUES (:id, :email)
+        INSERT INTO users (id, email, coach_persona, is_premium)
+        VALUES (:id, :email, 'tough_love', false)
         ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email
-        RETURNING id, email
+        RETURNING id, email, coach_persona, is_premium
         """
     )
 
