@@ -20,4 +20,3 @@ __all__ = [
     "ToolDefinition",
     "ToolResult",
 ]
-

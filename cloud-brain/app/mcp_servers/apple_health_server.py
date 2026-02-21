@@ -34,7 +34,8 @@ class AppleHealthServer(BaseMCPServer):
         """Human-readable description for LLM system prompts."""
         return (
             "Read and write Apple HealthKit data on the user's iOS device. "
-            "Supports steps, calories, workouts, sleep analysis, and body weight."
+            "Supports steps, calories, workouts, sleep analysis, body weight, "
+            "and nutrition (dietary energy consumed via apps like CalAI)."
         )
 
     def get_tools(self) -> list[ToolDefinition]:
@@ -48,7 +49,8 @@ class AppleHealthServer(BaseMCPServer):
             ToolDefinition(
                 name="apple_health_read_metrics",
                 description=(
-                    "Read health metrics from Apple HealthKit. Supports: steps, calories, workouts, sleep, weight."
+                    "Read health metrics from Apple HealthKit. "
+                    "Supports: steps, calories, workouts, sleep, weight, nutrition."
                 ),
                 input_schema={
                     "type": "object",
@@ -61,6 +63,7 @@ class AppleHealthServer(BaseMCPServer):
                                 "workouts",
                                 "sleep",
                                 "weight",
+                                "nutrition",
                             ],
                             "description": "The type of health metric to read.",
                         },

@@ -107,6 +107,7 @@ class TestMCPClient:
             "user_1",
         )
         assert result.success is False
+        assert result.error is not None
         assert "not found" in result.error
 
     @pytest.mark.asyncio
@@ -118,6 +119,7 @@ class TestMCPClient:
 
         result = await client.execute_tool("will_fail", {}, "user_1")
         assert result.success is False
+        assert result.error is not None
         assert "Simulated external API failure" in result.error
 
     def test_get_all_tools_delegates_to_registry(self, client_with_health: MCPClient) -> None:

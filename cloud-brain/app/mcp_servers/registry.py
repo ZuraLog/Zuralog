@@ -48,8 +48,7 @@ class MCPServerRegistry:
         """
         if server.name in self._servers:
             raise ValueError(
-                f"MCP server '{server.name}' is already registered. "
-                "Use a unique name for each integration."
+                f"MCP server '{server.name}' is already registered. Use a unique name for each integration."
             )
         self._servers[server.name] = server
         logger.info("Registered MCP server: %s", server.name)

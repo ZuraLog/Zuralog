@@ -145,4 +145,4 @@ class TestBaseMCPServerEnforcement:
             # Missing: description, get_tools, execute_tool, get_resources
 
         with pytest.raises(TypeError):
-            IncompleteServer()
+            IncompleteServer()  # type: ignore[abstract]
