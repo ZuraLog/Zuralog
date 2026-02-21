@@ -17,8 +17,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.api.v1.auth import _get_auth_service
 from app.config import settings
-from app.services.auth_service import AuthService
 from app.limiter import limiter
+from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 security = HTTPBearer()

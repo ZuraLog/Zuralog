@@ -22,6 +22,7 @@ class Settings(BaseSettings):
         strava_client_id: Strava application Client ID (Phase 1.6).
         strava_client_secret: Strava application Client Secret (Phase 1.6).
         strava_redirect_uri: OAuth callback URI registered with Strava (Phase 1.6).
+        fcm_credentials_path: Path to Firebase service account JSON (Phase 1.9).
         app_env: Current environment (development, staging, production).
         app_debug: Enable debug mode.
     """
@@ -36,6 +37,7 @@ class Settings(BaseSettings):
     strava_client_id: str = ""
     strava_client_secret: str = ""
     strava_redirect_uri: str = "lifelogger://oauth/strava"
+    fcm_credentials_path: str = ""
     app_env: str = "development"
     app_debug: bool = True
 

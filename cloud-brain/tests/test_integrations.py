@@ -7,12 +7,12 @@ Tests for the /api/v1/integrations/* endpoints.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
+from app.api.v1.auth import _get_auth_service
 from app.main import app
 from app.services.auth_service import AuthService
-from app.api.v1.auth import _get_auth_service
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def test_strava_exchange_success(mock_post: AsyncMock, client_with_auth):
     strava_server = registry.get("strava")
     assert strava_server is not None
     assert strava_server._tokens.get("test-user-123") == "test-access-token"
-    
+
     mock_auth.get_user.assert_called_once_with("fake-jwt")
 
 
@@ -76,7 +76,7 @@ def test_strava_exchange_failure(mock_post: AsyncMock, client_with_auth):
     """Verify backend handles Strava API rejection correctly."""
     c, mock_auth = client_with_auth
     mock_auth.get_user.return_value = {"id": "test-user-123"}
-    
+
     mock_response = MagicMock()
     mock_response.status_code = 400
     mock_response.text = "Bad Request"
@@ -96,7 +96,7 @@ def test_strava_exchange_failure(mock_post: AsyncMock, client_with_auth):
 def test_strava_exchange_network_error(mock_post: AsyncMock, client_with_auth):
     """Verify backend handles network unreachable errors correctly."""
     mock_post.side_effect = httpx.RequestError("Network Down")
-    
+
     c, mock_auth = client_with_auth
     mock_auth.get_user.return_value = {"id": "test-user-123"}
 
