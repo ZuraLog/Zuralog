@@ -34,25 +34,35 @@ class HarnessScreen extends ConsumerStatefulWidget {
   ConsumerState<HarnessScreen> createState() => _HarnessScreenState();
 }
 
-class _HarnessScreenState extends ConsumerState<HarnessScreen> {
+class _HarnessScreenState extends ConsumerState<HarnessScreen>
+    with TickerProviderStateMixin {
   final _outputController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _chatController = TextEditingController();
   StreamSubscription<ChatMessage>? _wsSubscription;
   StreamSubscription<ConnectionStatus>? _wsStatusSubscription;
+  ConnectionStatus _chatStatus = ConnectionStatus.disconnected;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    // Start listening for OAuth deep-link callbacks (Phase 1.6).
-    // The handler routes lifelogger://oauth/strava?code=XXX back here via _log.
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     DeeplinkHandler.init(ref, onLog: _log);
   }
 
   @override
   void dispose() {
     DeeplinkHandler.dispose();
+    _pulseController.dispose();
     _wsSubscription?.cancel();
     _wsStatusSubscription?.cancel();
     _outputController.dispose();
@@ -278,6 +288,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     // Listen for connection status changes
     _wsStatusSubscription?.cancel();
     _wsStatusSubscription = chatRepo.connectionStatus.listen((status) {
+      _updateChatStatus(status);
       switch (status) {
         case ConnectionStatus.connected:
           _log('✅ WS Connected');
@@ -291,6 +302,27 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     // Use a mock token for testing — replace with real auth token
     chatRepo.connect('test_token');
   }
+
+  /// Updates the tracked chat connection status and rebuilds the UI.
+  void _updateChatStatus(ConnectionStatus status) {
+    setState(() {
+      _chatStatus = status;
+    });
+  }
+
+  /// Returns the color associated with the current chat connection status.
+  Color get _chatStatusColor => switch (_chatStatus) {
+    ConnectionStatus.connected => Colors.green.shade600,
+    ConnectionStatus.connecting => Colors.orange.shade600,
+    ConnectionStatus.disconnected => Colors.grey.shade500,
+  };
+
+  /// Returns the label text for the current chat connection status.
+  String get _chatStatusLabel => switch (_chatStatus) {
+    ConnectionStatus.connected => 'Connected',
+    ConnectionStatus.connecting => 'Connecting...',
+    ConnectionStatus.disconnected => 'Disconnected',
+  };
 
   /// Sends a chat message via WebSocket.
   void _sendChatMessage() {
@@ -313,6 +345,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
     chatRepo.dispose();
     _wsSubscription?.cancel();
     _wsStatusSubscription?.cancel();
+    _updateChatStatus(ConnectionStatus.disconnected);
     _log('✅ WS Disconnected');
   }
 
@@ -621,34 +654,226 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
                     const SizedBox(height: 16),
                     const Divider(),
                     const Text(
-                      'CHAT (Phase 1.9):',
+                      'CHAT:',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: _chatController,
-                      decoration: const InputDecoration(
-                        labelText: 'Chat Message',
-                        border: OutlineInputBorder(),
-                        isDense: true,
+                    // -- Connection Status Pill --
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _chatStatusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _chatStatusColor.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Pulsing dot for connecting state
+                          if (_chatStatus == ConnectionStatus.connecting)
+                            FadeTransition(
+                              opacity: _pulseAnimation,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _chatStatusColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _chatStatusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: Text(
+                              _chatStatusLabel,
+                              key: ValueKey(_chatStatus),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _chatStatusColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    const SizedBox(height: 12),
+                    // -- Chat Input + Send --
+                    Row(
                       children: [
-                        ElevatedButton(
-                          onPressed: _connectWebSocket,
-                          child: const Text('Connect WS'),
+                        Expanded(
+                          child: TextField(
+                            controller: _chatController,
+                            onSubmitted: (_) => _sendChatMessage(),
+                            decoration: InputDecoration(
+                              hintText: 'Type a message...',
+                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: const BorderSide(
+                                  color: Colors.deepPurple,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                        ElevatedButton(
-                          onPressed: _sendChatMessage,
-                          child: const Text('Send Message'),
+                        const SizedBox(width: 8),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: _chatStatus == ConnectionStatus.connected
+                                  ? [
+                                      Colors.deepPurple,
+                                      Colors.deepPurple.shade300,
+                                    ]
+                                  : [
+                                      Colors.grey.shade400,
+                                      Colors.grey.shade300,
+                                    ],
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            onPressed: _chatStatus == ConnectionStatus.connected
+                                ? _sendChatMessage
+                                : null,
+                            icon: const Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
                         ),
-                        ElevatedButton(
-                          onPressed: _disconnectWebSocket,
-                          child: const Text('Disconnect WS'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // -- Connect / Disconnect Buttons --
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  _chatStatus == ConnectionStatus.disconnected
+                                  ? _connectWebSocket
+                                  : null,
+                              icon: Icon(
+                                Icons.power_settings_new_rounded,
+                                size: 18,
+                                color:
+                                    _chatStatus == ConnectionStatus.disconnected
+                                    ? Colors.green.shade700
+                                    : Colors.grey,
+                              ),
+                              label: Text(
+                                'Connect',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      _chatStatus ==
+                                          ConnectionStatus.disconnected
+                                      ? Colors.green.shade700
+                                      : Colors.grey,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    _chatStatus == ConnectionStatus.disconnected
+                                    ? Colors.green.shade50
+                                    : Colors.grey.shade100,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  _chatStatus != ConnectionStatus.disconnected
+                                  ? _disconnectWebSocket
+                                  : null,
+                              icon: Icon(
+                                Icons.power_off_rounded,
+                                size: 18,
+                                color:
+                                    _chatStatus != ConnectionStatus.disconnected
+                                    ? Colors.red.shade700
+                                    : Colors.grey,
+                              ),
+                              label: Text(
+                                'Disconnect',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      _chatStatus !=
+                                          ConnectionStatus.disconnected
+                                      ? Colors.red.shade700
+                                      : Colors.grey,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    _chatStatus != ConnectionStatus.disconnected
+                                    ? Colors.red.shade50
+                                    : Colors.grey.shade100,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
