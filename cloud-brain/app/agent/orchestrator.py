@@ -1,79 +1,224 @@
 """
-Life Logger Cloud Brain — Orchestrator Scaffold.
+Life Logger Cloud Brain — Orchestrator (AI Brain).
 
-The Orchestrator is the "AI Brain" that will eventually hold the LLM
-conversation loop, function-calling logic, and context injection.
-This module is a scaffold — Phase 1.8 (AI Brain) will add the full
-LLM integration.
+The Orchestrator is the central "AI Brain" that manages the LLM
+conversation loop with ReAct-style function-calling. It:
+
+1. Injects the system prompt with user context.
+2. Retrieves relevant memories for context.
+3. Passes available MCP tools to the LLM.
+4. Executes tool calls via MCPClient (max 5 turns).
+5. Feeds tool results back to the LLM.
+6. Returns the final assistant response.
+
+This replaces the Phase 1.3 scaffold with a production-ready
+implementation.
 """
 
+import json
 import logging
+from typing import Any
 
 from app.agent.context_manager.memory_store import MemoryStore
+from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
+from app.agent.prompts.system import build_system_prompt
 
 logger = logging.getLogger(__name__)
 
+MAX_TOOL_TURNS = 5
+"""Maximum number of LLM round-trips for tool execution.
+
+Prevents infinite loops if the model continuously requests tools
+without generating a final text response.
+"""
+
 
 class Orchestrator:
-    """LLM Agent that orchestrates MCP tool calls.
+    """LLM Agent that orchestrates MCP tool calls with ReAct-style loop.
 
-    Currently a skeleton that demonstrates the dependency wiring
-    between the MCP client and the memory store. The actual LLM
-    conversation loop (OpenAI / Kimi function-calling) will be
-    implemented in Phase 1.8.
+    Manages the full conversation lifecycle: context injection,
+    LLM inference, tool execution, and response generation.
 
     Attributes:
         mcp_client: Routes tool calls to MCP servers.
         memory_store: Stores and retrieves long-term user context.
+        llm_client: Async LLM client for chat completions.
     """
 
     def __init__(
         self,
         mcp_client: MCPClient,
         memory_store: MemoryStore,
+        llm_client: LLMClient | None = None,
     ) -> None:
         """Create a new Orchestrator.
 
         Args:
             mcp_client: The tool routing client.
             memory_store: The long-term memory backend.
+            llm_client: The LLM client. If None, creates a default instance.
         """
         self.mcp_client = mcp_client
         self.memory_store = memory_store
+        self.llm_client = llm_client or LLMClient()
 
-    async def process_message(self, user_id: str, message: str) -> str:
-        """Process a user message and return an AI response.
+    def _build_tools_for_llm(self) -> list[dict[str, Any]]:
+        """Convert MCP ToolDefinitions to OpenAI function-calling format.
 
-        This is a simplified scaffold. The full implementation in
-        Phase 1.8 will:
-        1. Retrieve relevant context from the memory store.
-        2. Build a system prompt with available tools.
-        3. Call the LLM with function-calling enabled.
-        4. Execute any tool calls via the MCP client.
-        5. Return the final AI response.
-
-        Args:
-            user_id: The authenticated user.
-            message: The user's chat message.
+        Maps the internal ``ToolDefinition`` model to the format expected
+        by the OpenAI API's tools parameter.
 
         Returns:
-            A placeholder response string.
+            A list of tool dicts in OpenAI function-calling schema.
         """
-        # 1. Get user context (scaffold — will use real queries in Phase 1.8)
-        context = await self.memory_store.query(user_id, query_text=message, limit=5)
+        mcp_tools = self.mcp_client.get_all_tools()
+        openai_tools = []
+
+        for tool in mcp_tools:
+            openai_tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.input_schema,
+                    },
+                }
+            )
+
+        return openai_tools
+
+    async def process_message(
+        self,
+        user_id: str,
+        message: str,
+        user_context_suffix: str | None = None,
+    ) -> str:
+        """Process a user message through the AI Brain.
+
+        Implements the full ReAct-style conversation loop:
+        1. Build system prompt with user context.
+        2. Retrieve relevant memories.
+        3. Get available tools from MCP registry.
+        4. Loop: LLM inference -> tool execution -> feed results back.
+        5. Return the final text response.
+
+        Args:
+            user_id: The authenticated user's ID.
+            message: The user's chat message.
+            user_context_suffix: Optional user profile context to append
+                to the system prompt.
+
+        Returns:
+            The final assistant response text.
+        """
+        # 1. Build system prompt
+        system_prompt = build_system_prompt(user_context_suffix)
+
+        # 2. Retrieve relevant context from memory
+        context_entries = await self.memory_store.query(user_id, query_text=message, limit=5)
+        context_text = ""
+        if context_entries:
+            context_text = "\n\n## Relevant Context\n"
+            for entry in context_entries:
+                context_text += f"- {entry.get('text', '')}\n"
+
+        # 3. Build initial messages
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt + context_text},
+            {"role": "user", "content": message},
+        ]
+
+        # 4. Get available tools
+        tools = self._build_tools_for_llm()
+
         logger.info(
-            "Processing message for user '%s' with %d context items",
+            "Processing message for user '%s' with %d context items and %d tools",
             user_id,
-            len(context),
+            len(context_entries),
+            len(tools),
         )
 
-        # 2. Get available tools for the system prompt
-        tools = self.mcp_client.get_all_tools()
-        logger.info("Available tools: %d", len(tools))
+        # 5. ReAct loop (max MAX_TOOL_TURNS turns)
+        for turn in range(MAX_TOOL_TURNS):
+            response = await self.llm_client.chat(
+                messages,
+                tools=tools if tools else None,
+            )
+            assistant_message = response.choices[0].message
 
-        # 3. Placeholder — Phase 1.8 adds LLM function-calling here
+            # Check for tool calls
+            if assistant_message.tool_calls:
+                # Add assistant message with tool calls to history
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": assistant_message.content,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in assistant_message.tool_calls
+                        ],
+                    }
+                )
+
+                # Execute each tool call
+                for tool_call in assistant_message.tool_calls:
+                    func_name = tool_call.function.name
+                    try:
+                        arguments = json.loads(tool_call.function.arguments)
+                    except json.JSONDecodeError:
+                        arguments = {}
+
+                    logger.info(
+                        "Turn %d: executing tool '%s' with args %s",
+                        turn + 1,
+                        func_name,
+                        arguments,
+                    )
+
+                    # Execute via MCP
+                    result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
+
+                    # Build tool result message
+                    if result.success:
+                        result_content = json.dumps(result.data)
+                    else:
+                        result_content = json.dumps({"error": result.error or "Tool execution failed"})
+
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": result_content,
+                        }
+                    )
+
+                # Continue loop — LLM will process tool results
+                continue
+
+            # No tool calls — return final text response
+            final_content = assistant_message.content or ""
+            logger.info(
+                "Final response for user '%s' after %d turn(s)",
+                user_id,
+                turn + 1,
+            )
+            return final_content
+
+        # Safety: max turns exceeded
+        logger.warning(
+            "Max tool turns (%d) exceeded for user '%s'",
+            MAX_TOOL_TURNS,
+            user_id,
+        )
         return (
-            f"[Orchestrator scaffold] Received: '{message}'. "
-            f"Context items: {len(context)}, Available tools: {len(tools)}."
+            "I'm having trouble retrieving all the information right now. Please try again or rephrase your question."
         )

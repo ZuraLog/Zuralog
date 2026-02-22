@@ -49,8 +49,19 @@ def client(mock_auth_service, mock_db):
         # Override app.state AFTER lifespan has run (it sets real services)
         app.state.auth_service = mock_auth_service
         app.state.mcp_client = MagicMock()
+        app.state.mcp_client.get_all_tools.return_value = []
         app.state.memory_store = MagicMock()
         app.state.memory_store.query = AsyncMock(return_value=[])
+
+        # Mock LLM client so tests don't call the real OpenAI API
+        mock_llm = MagicMock()
+        mock_msg = MagicMock()
+        mock_msg.content = "Hello from the AI Brain!"
+        mock_msg.tool_calls = None
+        mock_resp = MagicMock()
+        mock_resp.choices = [MagicMock(message=mock_msg)]
+        mock_llm.chat = AsyncMock(return_value=mock_resp)
+        app.state.llm_client = mock_llm
 
         yield c
 
@@ -82,7 +93,7 @@ def test_ws_rejects_with_invalid_token(client, mock_auth_service):
 
 
 def test_ws_connect_and_echo(client, mock_auth_service):
-    """WebSocket should connect with valid token and echo via orchestrator."""
+    """WebSocket should connect with valid token and respond via orchestrator."""
     mock_auth_service.get_user.return_value = {
         "id": "user-123",
         "email": "test@example.com",
@@ -94,7 +105,7 @@ def test_ws_connect_and_echo(client, mock_auth_service):
 
         assert response["type"] == "message"
         assert response["role"] == "assistant"
-        assert "Hello" in response["content"]
+        assert "AI Brain" in response["content"]
         mock_auth_service.get_user.assert_called_once_with("valid-token")
 
 

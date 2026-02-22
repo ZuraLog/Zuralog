@@ -22,6 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.context_manager.memory_store import MemoryStore
+from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.orchestrator import Orchestrator
 from app.database import get_db
@@ -61,6 +62,7 @@ def _get_orchestrator(request: Request) -> Orchestrator:
     return Orchestrator(
         mcp_client=request.app.state.mcp_client,
         memory_store=request.app.state.memory_store,
+        llm_client=request.app.state.llm_client,
     )
 
 
@@ -115,6 +117,7 @@ async def websocket_chat(
     auth_service: AuthService = app.state.auth_service
     mcp_client: MCPClient = app.state.mcp_client
     memory_store: MemoryStore = app.state.memory_store
+    llm_client: LLMClient = app.state.llm_client
 
     # Authenticate before accepting the connection
     user = await _authenticate_ws(websocket, auth_service, token)
@@ -125,7 +128,11 @@ async def websocket_chat(
     await websocket.accept()
     logger.info("WebSocket connected for user '%s'", user_id)
 
-    orchestrator = Orchestrator(mcp_client=mcp_client, memory_store=memory_store)
+    orchestrator = Orchestrator(
+        mcp_client=mcp_client,
+        memory_store=memory_store,
+        llm_client=llm_client,
+    )
 
     try:
         while True:
@@ -133,26 +140,32 @@ async def websocket_chat(
             message_text = data.get("message", "")
 
             if not message_text:
-                await websocket.send_json({
-                    "type": "error",
-                    "content": "Empty message",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "content": "Empty message",
+                    }
+                )
                 continue
 
             # Process through the Orchestrator
             try:
                 response = await orchestrator.process_message(user_id, message_text)
-                await websocket.send_json({
-                    "type": "message",
-                    "content": response,
-                    "role": "assistant",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "message",
+                        "content": response,
+                        "role": "assistant",
+                    }
+                )
             except Exception as e:
                 logger.exception("Orchestrator error for user '%s'", user_id)
-                await websocket.send_json({
-                    "type": "error",
-                    "content": f"Processing error: {e!s}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "content": f"Processing error: {e!s}",
+                    }
+                )
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected for user '%s'", user_id)
@@ -187,36 +200,32 @@ async def get_chat_history(
     user_id = user.get("id", "unknown")
 
     result = await db.execute(
-        select(Conversation)
-        .where(Conversation.user_id == user_id)
-        .order_by(Conversation.created_at.desc())
+        select(Conversation).where(Conversation.user_id == user_id).order_by(Conversation.created_at.desc())
     )
     conversations = result.scalars().all()
 
     history = []
     for conv in conversations:
         msg_result = await db.execute(
-            select(Message)
-            .where(Message.conversation_id == conv.id)
-            .order_by(Message.created_at.asc())
+            select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at.asc())
         )
         messages = msg_result.scalars().all()
 
-        history.append({
-            "id": conv.id,
-            "title": conv.title,
-            "created_at": conv.created_at.isoformat() if conv.created_at else None,
-            "messages": [
-                {
-                    "id": msg.id,
-                    "role": msg.role,
-                    "content": msg.content,
-                    "created_at": msg.created_at.isoformat()
-                    if msg.created_at
-                    else None,
-                }
-                for msg in messages
-            ],
-        })
+        history.append(
+            {
+                "id": conv.id,
+                "title": conv.title,
+                "created_at": conv.created_at.isoformat() if conv.created_at else None,
+                "messages": [
+                    {
+                        "id": msg.id,
+                        "role": msg.role,
+                        "content": msg.content,
+                        "created_at": msg.created_at.isoformat() if msg.created_at else None,
+                    }
+                    for msg in messages
+                ],
+            }
+        )
 
     return history
