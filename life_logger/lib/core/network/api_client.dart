@@ -124,10 +124,15 @@ class ApiClient {
     }
   }
 
-  /// Sends a GET request to the given [path].
+  /// Sends a GET request to the given [path] with optional [queryParameters].
   ///
+  /// [queryParameters] are appended to the URL as query string key-value pairs.
   /// Returns the Dio [Response] containing the server's response.
-  Future<Response<dynamic>> get(String path) => _dio.get(path);
+  Future<Response<dynamic>> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) =>
+      _dio.get(path, queryParameters: queryParameters);
 
   /// Sends a POST request to the given [path] with optional [data] and
   /// [queryParameters].

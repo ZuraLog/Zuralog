@@ -485,6 +485,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   const SizedBox(height: 16),
                   _buildBackgroundSyncSection(),
                   const SizedBox(height: 16),
+                  _buildAnalyticsSection(),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -959,6 +961,86 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               onTap: () => _log(
                 'Sync status check — not yet implemented',
               ),
+            ),
+           ],
+        ),
+      ],
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Section: Analytics
+  // -----------------------------------------------------------------------
+
+  /// Builds the Analytics harness section with buttons for daily summaries,
+  /// weekly trends, and AI-generated dashboard insights.
+  Widget _buildAnalyticsSection() {
+    return _SectionCard(
+      icon: Icons.insights_rounded,
+      iconColor: _Colors.success,
+      title: 'ANALYTICS',
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChip(
+              icon: Icons.today_rounded,
+              label: 'Daily Summary',
+              color: _Colors.success,
+              onTap: () async {
+                try {
+                  _log('Fetching daily summary...');
+                  final repo = ref.read(analyticsRepositoryProvider);
+                  final summary = await repo.getDailySummary(DateTime.now());
+                  _log('Summary for ${summary.date}:\n'
+                      '  Steps: ${summary.steps}\n'
+                      '  Cal In: ${summary.caloriesConsumed}\n'
+                      '  Cal Out: ${summary.caloriesBurned}\n'
+                      '  Workouts: ${summary.workoutsCount}\n'
+                      '  Sleep: ${summary.sleepHours}h\n'
+                      '  Weight: ${summary.weightKg ?? "N/A"} kg');
+                } catch (e) {
+                  _log('Error: $e');
+                }
+              },
+            ),
+            _ActionChip(
+              icon: Icons.show_chart_rounded,
+              label: 'Weekly Trends',
+              color: _Colors.success,
+              onTap: () async {
+                try {
+                  _log('Fetching weekly trends...');
+                  final repo = ref.read(analyticsRepositoryProvider);
+                  final trends = await repo.getWeeklyTrends();
+                  _log('Weekly Trends:\n'
+                      '  Dates: ${trends.dates}\n'
+                      '  Steps: ${trends.steps}\n'
+                      '  Cal In: ${trends.caloriesIn}\n'
+                      '  Cal Out: ${trends.caloriesOut}\n'
+                      '  Sleep: ${trends.sleepHours}');
+                } catch (e) {
+                  _log('Error: $e');
+                }
+              },
+            ),
+            _ActionChip(
+              icon: Icons.lightbulb_rounded,
+              label: 'Dashboard Insight',
+              color: _Colors.warning,
+              onTap: () async {
+                try {
+                  _log('Fetching dashboard insight...');
+                  final repo = ref.read(analyticsRepositoryProvider);
+                  final insight = await repo.getDashboardInsight();
+                  _log('Insight: ${insight.insight}\n'
+                      'Goals: ${insight.goals.length} active\n'
+                      'Trends: ${insight.trends.keys.toList()}');
+                } catch (e) {
+                  _log('Error: $e');
+                }
+              },
             ),
           ],
         ),
