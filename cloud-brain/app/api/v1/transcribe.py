@@ -99,8 +99,39 @@ async def transcribe_audio(
         ext,
     )
 
-    # --- Mock transcription ---
-    # TODO(phase-1.8): Replace with real Whisper API call when ready
-    text = "[Mock transcription] Audio received and would be transcribed here."
+    try:
+        from openai import AsyncOpenAI
+        from app.config import settings
+
+        if not settings.openai_api_key:
+            logger.error("openai_api_key is not configured in settings.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Transcription service is not properly configured.",
+            )
+
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        
+        # Whisper expects a tuple of (filename, file_content) or a file-like object
+        # with a name attribute. We'll use the tuple format.
+        file_tuple = (filename, content)
+        
+        transcription = await client.audio.transcriptions.create(
+            model="whisper-1",
+            file=file_tuple,
+            response_format="text"
+        )
+        
+        # When response_format="text", the API returns a string directly
+        text = str(transcription)
+        
+    except Exception as e:
+        logger.exception("Error during OpenAI transcription")
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Error processing audio transcription. Please try again later.",
+        )
 
     return {"text": text}

@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_referer: str = "https://lifelogger.app"
     openrouter_title: str = "Life Logger"
-    openrouter_model: str = "moonshot/kimi-k2.5"
+    openrouter_model: str = "moonshotai/kimi-k2.5"
     strava_client_id: str = ""
     strava_client_secret: str = ""
     strava_redirect_uri: str = "lifelogger://oauth/strava"
