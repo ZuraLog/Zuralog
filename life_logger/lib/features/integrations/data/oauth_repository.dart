@@ -17,7 +17,8 @@ import 'package:life_logger/core/network/api_client.dart';
 /// injects the user's auth token into every request.
 class OAuthRepository {
   /// Creates an [OAuthRepository] backed by the given [ApiClient].
-  const OAuthRepository({required ApiClient apiClient}) : _apiClient = apiClient;
+  const OAuthRepository({required ApiClient apiClient})
+    : _apiClient = apiClient;
 
   final ApiClient _apiClient;
 
@@ -31,7 +32,9 @@ class OAuthRepository {
   ///   The Strava OAuth URL string, or `null` if the request fails.
   Future<String?> getStravaAuthUrl() async {
     try {
-      final response = await _apiClient.get('/integrations/strava/authorize');
+      final response = await _apiClient.get(
+        '/api/v1/integrations/strava/authorize',
+      );
       final data = response.data as Map<String, dynamic>;
       return data['auth_url'] as String?;
     } catch (_) {
@@ -55,7 +58,7 @@ class OAuthRepository {
   Future<bool> handleStravaCallback(String code, String userId) async {
     try {
       final response = await _apiClient.post(
-        '/integrations/strava/exchange',
+        '/api/v1/integrations/strava/exchange',
         queryParameters: <String, dynamic>{'code': code, 'user_id': userId},
       );
       final data = response.data as Map<String, dynamic>;

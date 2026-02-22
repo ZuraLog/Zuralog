@@ -31,8 +31,9 @@ COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
 
-# Use the virtual environment's Python
+# Use the virtual environment's Python and binaries
 ENV PATH="/app/.venv/bin:$PATH"
+ENV VIRTUAL_ENV="/app/.venv"
 
 EXPOSE 8000
 

@@ -1,0 +1,100 @@
+{
+  "identifier" : "3B9E7E4A-F1B2-4C3D-8A5E-9F6D2B1C4E7A",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "79.99",
+      "familySharable" : false,
+      "internalID" : "4D5E6F7A-8B9C-0D1E-2F3A-4B5C6D7E8F9A",
+      "localizations" : [
+        {
+          "description" : "Unlock ZuraLog Pro forever with a one-time purchase.",
+          "displayName" : "ZuraLog Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "lifetime",
+      "referenceName" : "ZuraLog Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInReviewEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingGracePeriodUnits" : 0,
+    "_billingRetryEnabled" : false,
+    "_customerProductPageEnabled" : false,
+    "_failTransactionsEnabled" : false,
+    "_interrupted" : false,
+    "_interruptedPurchasesEnabled" : false,
+    "_localizationEnabled" : false,
+    "_paywallEnabled" : false,
+    "_priceConsentEnabled" : false,
+    "_renewalRateOptions" : [
+      0
+    ],
+    "_reviewBillingEnabled" : false,
+    "_storeExceptionEnabled" : false,
+    "_storeFrontID" : "USA",
+    "_timeRateMonthsValue" : 1,
+    "_timeRateValue" : 1,
+    "_transactionFailureEnabled" : false
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "2A3B4C5D-6E7F-8A9B-0C1D-2E3F4A5B6C7D",
+      "localizations" : [
+
+      ],
+      "name" : "ZuraLog Pro",
+      "products" : [
+        {
+          "adHocOfferCodesEnabled" : false,
+          "displayPrice" : "9.99",
+          "familySharable" : false,
+          "groupNumber" : 1,
+          "internalID" : "1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Access all ZuraLog Pro features including unlimited AI health insights.",
+              "displayName" : "ZuraLog Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "ZuraLog Pro Monthly",
+          "subscriptionGroupID" : "2A3B4C5D-6E7F-8A9B-0C1D-2E3F4A5B6C7D",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOfferCodesEnabled" : false,
+          "displayPrice" : "59.99",
+          "familySharable" : false,
+          "groupNumber" : 1,
+          "internalID" : "5F6A7B8C-9D0E-1F2A-3B4C-5D6E7F8A9B0C",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Save 50% with an annual ZuraLog Pro subscription.",
+              "displayName" : "ZuraLog Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "ZuraLog Pro Yearly",
+          "subscriptionGroupID" : "2A3B4C5D-6E7F-8A9B-0C1D-2E3F4A5B6C7D",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}

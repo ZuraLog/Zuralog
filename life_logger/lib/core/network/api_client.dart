@@ -131,8 +131,7 @@ class ApiClient {
   Future<Response<dynamic>> get(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) =>
-      _dio.get(path, queryParameters: queryParameters);
+  }) => _dio.get(path, queryParameters: queryParameters);
 
   /// Sends a POST request to the given [path] with optional [data] and
   /// [queryParameters].
@@ -143,6 +142,5 @@ class ApiClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
-  }) =>
-      _dio.post(path, data: data, queryParameters: queryParameters);
+  }) => _dio.post(path, data: data, queryParameters: queryParameters);
 }

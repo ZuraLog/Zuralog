@@ -65,15 +65,13 @@ class AnalyticsRepository {
 
     try {
       final response = await _apiClient.get(
-        '/analytics/daily-summary',
-        queryParameters: {
-          'user_id': _mockUserId,
-          'date_str': dateStr,
-        },
+        '/api/v1/analytics/daily-summary',
+        queryParameters: {'user_id': _mockUserId, 'date_str': dateStr},
       );
 
-      final summary =
-          DailySummary.fromJson(response.data as Map<String, dynamic>);
+      final summary = DailySummary.fromJson(
+        response.data as Map<String, dynamic>,
+      );
 
       // Update cache.
       _dailySummaryCache[dateStr] = _CacheEntry(value: summary);
@@ -98,7 +96,7 @@ class AnalyticsRepository {
   /// Throws [DioException] on network failure.
   Future<WeeklyTrends> getWeeklyTrends() async {
     final response = await _apiClient.get(
-      '/analytics/weekly-trends',
+      '/api/v1/analytics/weekly-trends',
       queryParameters: {'user_id': _mockUserId},
     );
 
@@ -116,7 +114,7 @@ class AnalyticsRepository {
   /// Throws [DioException] on network failure.
   Future<DashboardInsight> getDashboardInsight() async {
     final response = await _apiClient.get(
-      '/analytics/dashboard-insight',
+      '/api/v1/analytics/dashboard-insight',
       queryParameters: {'user_id': _mockUserId},
     );
 

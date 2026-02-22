@@ -18,7 +18,7 @@ dependencies:
   go_router: any
 
   # Networking
-  dio: any
+  dio: ^5.9.1
   web_socket_channel: any
 
   # Local Storage
@@ -38,6 +38,8 @@ dependencies:
 
   # Subscription & Monetization (Phase 1.13)
   purchases_flutter: ^8.0.0
+  purchases_ui_flutter: ^8.0.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

@@ -20,6 +20,8 @@ import 'package:life_logger/features/auth/domain/auth_state.dart';
 import 'package:life_logger/features/chat/data/chat_repository.dart';
 import 'package:life_logger/features/chat/domain/message.dart';
 import 'package:life_logger/features/subscription/domain/subscription_providers.dart';
+import 'package:life_logger/features/subscription/presentation/paywall_screen.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 // ---------------------------------------------------------------------------
 // Design Tokens
@@ -188,6 +190,13 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     switch (result) {
       case AuthSuccess(:final userId):
         _log('✅ LOGIN SUCCESS: User ID = $userId');
+        _log('Initializing RevenueCat for user $userId...');
+        try {
+          await ref.read(subscriptionProvider.notifier).initialize(userId);
+          _log('✅ RevenueCat initialized');
+        } catch (e) {
+          _log('⚠️ RevenueCat init error: $e');
+        }
       case AuthFailure(:final message):
         _log('❌ LOGIN FAILED: $message');
     }
@@ -215,7 +224,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     _log('Logging out...');
     final authNotifier = ref.read(authStateProvider.notifier);
     await authNotifier.logout();
-    _log('✅ LOGOUT: Tokens cleared');
+    await ref.read(subscriptionProvider.notifier).logOut();
+    _log('✅ LOGOUT: Tokens cleared, RevenueCat session ended');
   }
 
   void _clearOutput() {
@@ -421,7 +431,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     _log('Triggering AI write: $dataType...');
     try {
       final response = await ref.read(apiClientProvider).post(
-        '/dev/trigger-write',
+        '/api/v1/dev/trigger-write',
         data: {
           'data_type': dataType,
           'value': value,
@@ -504,7 +514,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
       final current = offerings.current!;
       _log('Current offering: ${current.identifier}');
       for (final pkg in current.availablePackages) {
-        _log('  Package: ${pkg.identifier} - ${pkg.storeProduct.priceString}');
+        final price = pkg.storeProduct.priceString;
+        _log('  Package: ${pkg.identifier} - $price');
       }
     } catch (e) {
       _log('Error: $e');
@@ -518,6 +529,44 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
       final repo = ref.read(subscriptionRepositoryProvider);
       final info = await repo.restorePurchases();
       _log('Restored. Active: ${info.entitlements.active.keys.toList()}');
+    } catch (e) {
+      _log('Error: $e');
+    }
+  }
+
+  /// Present the full RevenueCat Paywall via the PaywallScreen route.
+  Future<void> _presentPaywall() async {
+    _log('Presenting full paywall...');
+    final result = await Navigator.push<PaywallResult>(
+      context,
+      MaterialPageRoute<PaywallResult>(
+        builder: (_) => const PaywallScreen(),
+      ),
+    );
+    _log('Paywall result: ${result?.name ?? "dismissed"}');
+    if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+      await _checkSubscriptionStatus();
+    }
+  }
+
+  /// Present the paywall only if the user lacks ZuraLog Pro entitlement.
+  Future<void> _presentPaywallIfNeeded() async {
+    _log('Presenting paywall if needed...');
+    try {
+      final result =
+          await ref.read(subscriptionProvider.notifier).presentPaywallIfNeeded();
+      _log('Paywall if needed result: ${result.name}');
+    } catch (e) {
+      _log('Error: $e');
+    }
+  }
+
+  /// Present the RevenueCat Customer Center for subscription management.
+  Future<void> _presentCustomerCenter() async {
+    _log('Opening Customer Center...');
+    try {
+      await ref.read(subscriptionProvider.notifier).presentCustomerCenter();
+      _log('✅ Customer Center closed');
     } catch (e) {
       _log('Error: $e');
     }
@@ -1137,10 +1186,39 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   /// backend status, RevenueCat entitlements, offerings, and restoring
   /// purchases.
   Widget _buildSubscriptionSection() {
+    final subState = ref.watch(subscriptionProvider);
     return _SectionCard(
       icon: Icons.workspace_premium_rounded,
       iconColor: _Colors.warning,
       title: 'SUBSCRIPTION',
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: subState.isPremium
+              ? _Colors.warning.withValues(alpha: 0.12)
+              : _Colors.surface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: subState.isPremium
+                ? _Colors.warning.withValues(alpha: 0.4)
+                : _Colors.border,
+          ),
+        ),
+        child: Text(
+          subState.isLoading
+              ? 'LOADING'
+              : subState.isPremium
+                  ? 'PRO'
+                  : 'FREE',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            color:
+                subState.isPremium ? _Colors.warning : _Colors.textSecondary,
+          ),
+        ),
+      ),
       children: [
         Wrap(
           spacing: 8,
@@ -1169,6 +1247,37 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               label: 'Restore',
               color: _Colors.warning,
               onTap: _restorePurchases,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionButton(
+                label: 'Paywall',
+                icon: Icons.star_rounded,
+                color: _Colors.warning,
+                onTap: _presentPaywall,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ActionButton(
+                label: 'If Needed',
+                icon: Icons.lock_open_rounded,
+                color: _Colors.primary,
+                onTap: _presentPaywallIfNeeded,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ActionButton(
+                label: 'Manage',
+                icon: Icons.manage_accounts_rounded,
+                color: _Colors.info,
+                onTap: _presentCustomerCenter,
+              ),
             ),
           ],
         ),

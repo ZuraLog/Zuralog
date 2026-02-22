@@ -4,27 +4,19 @@
 /// for consumption by UI widgets and other features.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 import 'package:life_logger/core/di/providers.dart';
+import 'package:life_logger/features/auth/domain/auth_providers.dart';
+import 'package:life_logger/features/auth/domain/auth_state.dart';
 import 'package:life_logger/features/subscription/data/subscription_repository.dart';
 import 'package:life_logger/features/subscription/domain/subscription_state.dart';
 
-/// The RevenueCat public API key, injected at build time.
-///
-/// Pass via: `flutter run --dart-define=REVENUECAT_API_KEY=your_key`
-/// In production, this should come from a build config or CI secret.
-const _kRevenueCatApiKey = String.fromEnvironment(
-  'REVENUECAT_API_KEY',
-  defaultValue: '',
-);
-
 /// Provides the [SubscriptionRepository] singleton.
 final subscriptionRepositoryProvider = Provider<SubscriptionRepository>((ref) {
-  return SubscriptionRepository(
-    apiClient: ref.watch(apiClientProvider),
-    revenueCatApiKey: _kRevenueCatApiKey,
-  );
+  return SubscriptionRepository(apiClient: ref.watch(apiClientProvider));
 });
 
 /// Notifier that manages subscription state.
@@ -42,9 +34,10 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
 
   /// Initialize RevenueCat and fetch current status.
   ///
-  /// [appUserId] is the authenticated user's Supabase UID.
+  /// Links the authenticated Supabase user to RevenueCat (RC is configured
+  /// anonymously at app startup), then fetches the authoritative tier.
   ///
-  /// Updates state to reflect the backend's subscription tier.
+  /// [appUserId] is the authenticated user's Supabase UID.
   Future<void> initialize(String appUserId) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -52,31 +45,95 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
       await repo.init(appUserId: appUserId);
       final status = await repo.fetchStatus();
       state = status;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[SubscriptionNotifier] initialize error: $e');
       state = const SubscriptionState(tier: SubscriptionTier.free);
     }
   }
 
+  /// Log out the RevenueCat user on app sign-out.
+  ///
+  /// Reverts to anonymous RevenueCat session and resets local state to free.
+  /// Call alongside Supabase sign-out.
+  Future<void> logOut() async {
+    try {
+      final repo = ref.read(subscriptionRepositoryProvider);
+      await repo.logOut();
+    } catch (e) {
+      debugPrint('[SubscriptionNotifier] logOut error: $e');
+    }
+    state = const SubscriptionState(tier: SubscriptionTier.free);
+  }
+
   /// Refresh subscription status from backend.
   ///
-  /// Fetches the latest tier from the server and updates local state.
+  /// Fetches the latest tier and updates local state. Useful after a purchase
+  /// or returning from the paywall / Customer Center.
+  ///
+  /// Skips the backend call if the user is not authenticated (avoids 401).
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true);
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
+      final authState = ref.read(authStateProvider);
+      if (authState != AuthState.authenticated) {
+        // Not logged in — skip backend, fall back to RC / free tier.
+        try {
+          final info = await repo.getCustomerInfo();
+          state = repo.stateFromCustomerInfo(info);
+        } catch (_) {
+          state = const SubscriptionState(tier: SubscriptionTier.free);
+        }
+        return;
+      }
       final status = await repo.fetchStatus();
       state = status;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[SubscriptionNotifier] refresh error: $e');
       state = const SubscriptionState(tier: SubscriptionTier.free);
     }
+  }
+
+  /// Present the full RevenueCat Paywall and refresh state on purchase/restore.
+  ///
+  /// Returns [PaywallResult] so callers can react to the outcome.
+  Future<PaywallResult> presentPaywall() async {
+    final repo = ref.read(subscriptionRepositoryProvider);
+    final result = await repo.presentPaywall();
+    if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+      await refresh();
+    }
+    return result;
+  }
+
+  /// Present the paywall only if the user lacks the ZuraLog Pro entitlement.
+  ///
+  /// Returns [PaywallResult.notPresented] if already entitled.
+  Future<PaywallResult> presentPaywallIfNeeded() async {
+    final repo = ref.read(subscriptionRepositoryProvider);
+    final result = await repo.presentPaywallIfNeeded();
+    if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+      await refresh();
+    }
+    return result;
+  }
+
+  /// Present the RevenueCat Customer Center for subscription self-service.
+  ///
+  /// Refreshes state after the user returns in case they cancelled or changed
+  /// their subscription from within the Customer Center.
+  Future<void> presentCustomerCenter() async {
+    final repo = ref.read(subscriptionRepositoryProvider);
+    await repo.presentCustomerCenter();
+    await refresh();
   }
 }
 
 /// Provides reactive subscription state across the app.
 final subscriptionProvider =
     NotifierProvider<SubscriptionNotifier, SubscriptionState>(
-  SubscriptionNotifier.new,
-);
+      SubscriptionNotifier.new,
+    );
 
 /// Convenience provider: whether the current user has Pro access.
 final isPremiumProvider = Provider<bool>((ref) {
