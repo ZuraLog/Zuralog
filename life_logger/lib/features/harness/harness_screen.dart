@@ -34,8 +34,10 @@ class _Colors {
   static const danger = Color(0xFFFF6B6B);
   static const dangerLight = Color(0xFFFFF0F0);
   static const warning = Color(0xFFFFA726);
+  // ignore: unused_field
   static const warningLight = Color(0xFFFFF8E1);
   static const info = Color(0xFF0984E3);
+  // ignore: unused_field
   static const infoLight = Color(0xFFE8F4FD);
   static const surface = Color(0xFFF8F9FA);
   static const surfaceDark = Color(0xFF2D3436);
@@ -1435,7 +1437,7 @@ class _SectionCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                if (trailing != null) trailing!,
+                ?trailing,
               ],
             ),
           ),

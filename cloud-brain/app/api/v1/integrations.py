@@ -23,6 +23,7 @@ from app.services.auth_service import AuthService
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 security = HTTPBearer()
 
+
 @router.get("/strava/authorize")
 @limiter.limit("5/minute")
 async def strava_authorize(request: Request) -> dict[str, str]:

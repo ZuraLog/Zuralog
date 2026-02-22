@@ -11,11 +11,11 @@ class MockUrlLauncher extends Fake
   bool mockCanLaunch = false;
   bool launchResult = true;
 
+  @override
   Future<bool> canLaunch(String url) async {
     return mockCanLaunch;
   }
 
-  @override
   Future<bool> canLaunchUrl(String url) async {
     return mockCanLaunch;
   }
@@ -150,12 +150,12 @@ class _FallbackMockUrlLauncher extends Fake
     implements UrlLauncherPlatform {
   String? launchedUrl;
 
+  @override
   Future<bool> canLaunch(String url) async {
     if (url.startsWith('calai')) return false;
     return true; // web url succeeds
   }
 
-  @override
   Future<bool> canLaunchUrl(String url) async {
     if (url.startsWith('calai')) return false;
     return true; // web url succeeds
@@ -192,13 +192,12 @@ class _GenericFallbackMockUrlLauncher extends Fake
     implements UrlLauncherPlatform {
   String? launchedUrl;
 
-  // ignore: annotate_overrides
+  @override
   Future<bool> canLaunch(String url) async {
     // Only allow HTTPS URLs, reject custom schemes.
     return url.startsWith('https');
   }
 
-  @override
   Future<bool> canLaunchUrl(String url) async {
     // Only allow HTTPS URLs, reject custom schemes.
     return url.startsWith('https');
