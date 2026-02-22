@@ -31,7 +31,7 @@ async def test_get_system_prompt_suffix_tough_love(profile_service, mock_session
         "id": "user-1",
         "email": "test@test.com",
         "coach_persona": "tough_love",
-        "is_premium": False,
+        "subscription_tier": "free",
     }
     mock_result.mappings.return_value.first.return_value = mock_row
     mock_session.execute.return_value = mock_result
@@ -49,7 +49,7 @@ async def test_get_system_prompt_suffix_gentle(profile_service, mock_session):
         "id": "user-2",
         "email": "gentle@test.com",
         "coach_persona": "gentle",
-        "is_premium": True,
+        "subscription_tier": "pro",
     }
     mock_result.mappings.return_value.first.return_value = mock_row
     mock_session.execute.return_value = mock_result

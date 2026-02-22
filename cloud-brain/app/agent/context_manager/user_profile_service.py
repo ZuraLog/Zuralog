@@ -83,7 +83,7 @@ class UserProfileService:
             A prompt suffix string. Empty string if user not found.
         """
         result = await self._session.execute(
-            text("SELECT id, email, coach_persona, is_premium FROM users WHERE id = :uid"),
+            text("SELECT id, email, coach_persona, subscription_tier FROM users WHERE id = :uid"),
             {"uid": user_id},
         )
         row = result.mappings().first()
@@ -93,7 +93,7 @@ class UserProfileService:
             return ""
 
         persona = row.get("coach_persona", "tough_love")
-        is_premium = row.get("is_premium", False)
+        subscription_tier = row.get("subscription_tier", "free")
 
         persona_descriptions = {
             "tough_love": (
@@ -115,7 +115,7 @@ class UserProfileService:
 
         suffix = persona_descriptions.get(persona, persona_descriptions["tough_love"])
 
-        tier = "Premium" if is_premium else "Free"
+        tier = "Premium" if subscription_tier != "free" else "Free"
         suffix += f"\nUser tier: {tier}."
 
         return suffix

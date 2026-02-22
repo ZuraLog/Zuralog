@@ -60,7 +60,7 @@ async def get_preferences(
         db: Injected async database session.
 
     Returns:
-        A dict with coach_persona and is_premium fields.
+        A dict with coach_persona, subscription_tier, and is_premium fields.
 
     Raises:
         HTTPException: 404 if the user is not found in the database.
@@ -69,7 +69,7 @@ async def get_preferences(
     user_id = user.get("id", "unknown")
 
     result = await db.execute(
-        text("SELECT coach_persona, is_premium FROM users WHERE id = :uid"),
+        text("SELECT coach_persona, subscription_tier FROM users WHERE id = :uid"),
         {"uid": user_id},
     )
     row = result.mappings().first()
@@ -77,7 +77,11 @@ async def get_preferences(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    return {"coach_persona": row["coach_persona"], "is_premium": row["is_premium"]}
+    return {
+        "coach_persona": row["coach_persona"],
+        "subscription_tier": row["subscription_tier"],
+        "is_premium": row["subscription_tier"] != "free",
+    }
 
 
 @router.patch("/me/preferences")

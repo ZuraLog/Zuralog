@@ -15,7 +15,7 @@ from app.models.health_data import (
     WeightMeasurement,
 )
 from app.models.integration import Integration
-from app.models.user import User
+from app.models.user import SubscriptionTier, User
 from app.models.user_device import UserDevice
 from app.models.user_goal import GoalPeriod, UserGoal
 
@@ -28,6 +28,7 @@ __all__ = [
     "Message",
     "NutritionEntry",
     "SleepRecord",
+    "SubscriptionTier",
     "UnifiedActivity",
     "User",
     "UserDevice",

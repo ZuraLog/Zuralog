@@ -37,9 +37,9 @@ async def check_rate_limit(
     """
     user_id = user.get("id", "unknown")
 
-    result = await db.execute(select(User.is_premium).where(User.id == user_id))
-    is_premium = result.scalar_one_or_none() or False
-    tier = "premium" if is_premium else "free"
+    result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
+    subscription_tier = result.scalar_one_or_none() or "free"
+    tier = "premium" if subscription_tier != "free" else "free"
 
     limit_result = await limiter.check_limit(user_id, tier=tier)
 
