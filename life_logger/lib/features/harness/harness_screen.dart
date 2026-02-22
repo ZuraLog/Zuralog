@@ -391,6 +391,36 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   }
 
   // -----------------------------------------------------------------------
+  // Background Sync Actions
+  // -----------------------------------------------------------------------
+
+  /// Sends a simulated AI write request to the backend.
+  ///
+  /// Calls the /dev/trigger-write endpoint which sends an FCM
+  /// data message to this device, triggering the background handler.
+  ///
+  /// [dataType] is the health data category (e.g., 'steps', 'nutrition').
+  /// [value] is the data payload to write.
+  Future<void> _triggerWrite(
+    String dataType,
+    Map<String, dynamic> value,
+  ) async {
+    _log('Triggering AI write: $dataType...');
+    try {
+      final response = await ref.read(apiClientProvider).post(
+        '/dev/trigger-write',
+        data: {
+          'data_type': dataType,
+          'value': value,
+        },
+      );
+      _log('Write triggered: ${response.data}');
+    } catch (e) {
+      _log('Error triggering write: $e');
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Strava Actions
   // -----------------------------------------------------------------------
 
@@ -452,6 +482,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _buildChatSection(),
                   const SizedBox(height: 16),
                   _buildAiBrainSection(),
+                  const SizedBox(height: 16),
+                  _buildBackgroundSyncSection(),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -880,6 +912,53 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               label: 'Voice Test',
               color: _Colors.warning,
               onTap: _testVoiceUpload,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Section: Background Sync
+  // -----------------------------------------------------------------------
+
+  Widget _buildBackgroundSyncSection() {
+    return _SectionCard(
+      icon: Icons.sync_rounded,
+      iconColor: _Colors.info,
+      title: 'BACKGROUND SYNC',
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChip(
+              icon: Icons.directions_walk_rounded,
+              label: 'AI Write (Steps)',
+              color: _Colors.info,
+              onTap: () => _triggerWrite('steps', {
+                'count': 500,
+                'date': DateTime.now().toIso8601String(),
+              }),
+            ),
+            _ActionChip(
+              icon: Icons.restaurant_rounded,
+              label: 'AI Write (Nutrition)',
+              color: _Colors.info,
+              onTap: () => _triggerWrite('nutrition', {
+                'calories': 650,
+                'meal': 'lunch',
+                'date': DateTime.now().toIso8601String(),
+              }),
+            ),
+            _ActionChip(
+              icon: Icons.info_outline_rounded,
+              label: 'Sync Status',
+              color: _Colors.warning,
+              onTap: () => _log(
+                'Sync status check — not yet implemented',
+              ),
             ),
           ],
         ),

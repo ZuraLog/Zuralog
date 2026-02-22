@@ -6,12 +6,29 @@ Stores OAuth tokens and sync metadata for each user-integration pair.
 """
 
 import uuid
+from enum import Enum as PyEnum
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from app.database import Base
+
+
+class SyncStatus(str, PyEnum):
+    """Sync status for an integration.
+
+    Tracks whether a background sync is idle, in progress, or failed.
+
+    Attributes:
+        IDLE: No sync in progress. Ready for next sync cycle.
+        SYNCING: A sync operation is currently running.
+        ERROR: The last sync attempt failed. Check sync_error for details.
+    """
+
+    IDLE = "idle"
+    SYNCING = "syncing"
+    ERROR = "error"
 
 
 class Integration(Base):
@@ -30,6 +47,8 @@ class Integration(Base):
         provider_metadata: Provider-specific data stored as JSON.
         is_active: Whether this integration is currently enabled.
         last_synced_at: Timestamp of the most recent data sync.
+        sync_status: Current sync state ('idle', 'syncing', 'error').
+        sync_error: Error message from the last failed sync attempt.
     """
 
     __tablename__ = "integrations"
@@ -60,7 +79,30 @@ class Integration(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    sync_status: Mapped[str] = mapped_column(
+        String,
+        insert_default=SyncStatus.IDLE,
+    )
+    sync_error: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        insert_default=None,
+    )
     created_at: Mapped[str] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )
+
+    def __init__(self, **kwargs: object) -> None:
+        """Initialise an Integration with Python-level defaults.
+
+        SQLAlchemy's ``insert_default`` only fires at flush time. This
+        constructor ensures ``sync_status`` is populated immediately so
+        callers can inspect the value before the object is persisted.
+
+        Args:
+            **kwargs: Column values forwarded to the ORM base constructor.
+        """
+        if "sync_status" not in kwargs:
+            kwargs["sync_status"] = SyncStatus.IDLE
+        super().__init__(**kwargs)

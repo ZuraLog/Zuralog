@@ -7,16 +7,64 @@
 library;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 /// Handles top-level background messages from FCM.
 ///
 /// This must be a top-level function (not a class method) because
-/// Flutter runs it in a separate isolate.
+/// Flutter runs it in a separate isolate. It processes 'write_health'
+/// actions by delegating to the platform-specific health bridge.
 ///
-/// [message] is the incoming FCM remote message.
+/// [message] is the incoming FCM remote message containing the
+/// action type and data payload from the Cloud Brain.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // TODO(phase-1.9): Process background data messages (e.g., sync triggers)
+  final action = message.data['action'];
+
+  if (action == 'write_health') {
+    await _handleBackgroundHealthWrite(message.data);
+  }
+}
+
+/// Processes a background health write request from the Cloud Brain.
+///
+/// Extracts the data type and value from the FCM payload, then
+/// delegates to the native platform channel for the actual
+/// HealthKit/Health Connect write operation.
+///
+/// This runs in a headless isolate — no UI context is available.
+/// Errors are logged locally but never shown to the user.
+///
+/// [data] is the FCM message data map with keys:
+/// - 'data_type': The health data category (e.g., 'nutrition', 'steps')
+/// - 'value': JSON-encoded data payload to write
+Future<void> _handleBackgroundHealthWrite(Map<String, dynamic> data) async {
+  try {
+    final dataType = data['data_type'] as String?;
+    final valueJson = data['value'] as String?;
+
+    if (dataType == null || valueJson == null) {
+      return;
+    }
+
+    // In a background isolate, full Riverpod DI is not available.
+    // Use a direct MethodChannel call for reliability.
+    const channel = MethodChannel('com.lifelogger/health');
+
+    await channel.invokeMethod('backgroundWrite', {
+      'data_type': dataType,
+      'value': valueJson,
+    });
+  } on PlatformException catch (e) {
+    // Log but don't rethrow — background handler must not crash
+    debugPrint('Background health write failed (PlatformException): $e');
+  } on MissingPluginException catch (_) {
+    // Plugin not registered in headless isolate — expected on some platforms
+    debugPrint('Health plugin not available in background isolate');
+  } catch (e) {
+    debugPrint('Background health write failed: $e');
+  }
 }
 
 /// Firebase Cloud Messaging service for push notifications.
@@ -79,8 +127,14 @@ class FCMService {
 
   /// Handles messages received while the app is in the foreground.
   ///
+  /// For 'write_health' actions, delegates to the same write handler.
+  /// For other messages, logs for debugging.
+  ///
   /// [message] is the incoming FCM remote message.
   void _handleForegroundMessage(RemoteMessage message) {
-    // TODO(phase-1.9): Show in-app notification banner or toast
+    final action = message.data['action'];
+    if (action == 'write_health') {
+      _handleBackgroundHealthWrite(message.data);
+    }
   }
 }

@@ -19,6 +19,7 @@ dependencies = [
     "firebase-admin>=6.0.0",
     "openai>=1.60.0",
     "redis[hiredis]>=5.0.0",
+    "celery[redis]>=5.4.0",
     "python-multipart>=0.0.9",
 ]
 

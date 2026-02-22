@@ -153,3 +153,11 @@ This project uses specialized **Agent Skills** for development.
 > *   **Complete Phase:** Merge only when the *entire* phase is complete.
 > *   **Zero Errors:** Strict prohibition on merging code with errors, warnings, or linting issues.
 > *   **Verify:** Ensure all tests pass before the merge.
+
+### 20. Localized AI Working Directories
+> [!IMPORTANT]
+> **Keep Plans Local:** OpenCode, AntiGravity, Cursor, and other AI coding tools MUST write their implementation plans and rules in their own local directories, NOT in the project repository.
+>
+> *   **OpenCode:** Do not attempt to write plans in `docs/plans/`. You will get a `no-write-permission` error, forcing you to rewrite everything in `.opencode/plans/` and wasting tokens. Always use `.opencode/plans/` directly.
+> *   **AntiGravity:** Continue rendering artifacts exclusively in your local artifact directory. Never leak scratchpads or implementation plans into the main project repository.
+> *   **Other Tools:** Keep your implementation plans and state tracking out of `docs/plans/` and the main codebase. Use your tool-specific local directories.

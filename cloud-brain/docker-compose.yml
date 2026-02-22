@@ -36,6 +36,30 @@ services:
       timeout: 5s
       retries: 5
 
+  celery-worker:
+    build: .
+    container_name: lifelogger-celery-worker
+    command: celery -A app.worker worker --loglevel=info --concurrency=2
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  celery-beat:
+    build: .
+    container_name: lifelogger-celery-beat
+    command: celery -A app.worker beat --loglevel=info
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
 volumes:
   postgres_data:
   redis_data:
