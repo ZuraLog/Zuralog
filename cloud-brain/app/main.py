@@ -19,6 +19,7 @@ from slowapi.errors import RateLimitExceeded
 from app.agent.context_manager.memory_store import InMemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
+from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.dev import router as dev_router
@@ -103,6 +104,7 @@ app.include_router(transcribe_router, prefix="/api/v1")  # Phase 1.8.5
 app.include_router(users_router, prefix="/api/v1")  # Phase 1.8.6
 app.include_router(devices_router, prefix="/api/v1")  # Phase 1.10
 app.include_router(dev_router, prefix="/api/v1")  # Phase 1.10 (dev-only)
+app.include_router(analytics_router, prefix="/api/v1")  # Phase 1.11
 
 
 @app.get("/health")
