@@ -13,9 +13,11 @@ Models:
 """
 
 import uuid
+from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import DateTime, Float, Integer, String, UniqueConstraint
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -78,15 +80,12 @@ class UnifiedActivity(Base):
     )
     source: Mapped[str] = mapped_column(String)
     original_id: Mapped[str] = mapped_column(String)
-    activity_type: Mapped[str] = mapped_column(String, default=ActivityType.UNKNOWN)
+    activity_type: Mapped[ActivityType] = mapped_column(SAEnum(ActivityType))
     duration_seconds: Mapped[int] = mapped_column(Integer, default=0)
     distance_meters: Mapped[float | None] = mapped_column(Float, nullable=True)
     calories: Mapped[int] = mapped_column(Integer, default=0)
-    start_time: Mapped[str | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-    created_at: Mapped[str] = mapped_column(
+    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )
@@ -124,7 +123,7 @@ class SleepRecord(Base):
     date: Mapped[str] = mapped_column(String)
     hours: Mapped[float] = mapped_column(Float)
     quality_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )
@@ -166,7 +165,7 @@ class NutritionEntry(Base):
     protein_grams: Mapped[float | None] = mapped_column(Float, nullable=True)
     carbs_grams: Mapped[float | None] = mapped_column(Float, nullable=True)
     fat_grams: Mapped[float | None] = mapped_column(Float, nullable=True)
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )
@@ -201,7 +200,7 @@ class WeightMeasurement(Base):
     source: Mapped[str] = mapped_column(String)
     date: Mapped[str] = mapped_column(String)
     weight_kg: Mapped[float] = mapped_column(Float)
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )
