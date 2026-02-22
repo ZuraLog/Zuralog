@@ -66,7 +66,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # --- Shutdown ---
-    await app.state.rate_limiter.close()
+    if getattr(app.state, "rate_limiter", None) is not None:
+        await app.state.rate_limiter.close()
     await http_client.aclose()
     print("👋 Life Logger Cloud Brain shutting down")
 

@@ -39,12 +39,21 @@ def mock_llm_client():
 
 
 @pytest.fixture
-def orchestrator(mock_mcp_client, mock_memory_store, mock_llm_client):
+def mock_usage_tracker():
+    """Create a mocked UsageTracker."""
+    tracker = MagicMock()
+    tracker.track_from_response = AsyncMock()
+    return tracker
+
+
+@pytest.fixture
+def orchestrator(mock_mcp_client, mock_memory_store, mock_llm_client, mock_usage_tracker):
     """Create an Orchestrator with all mocked dependencies."""
     return Orchestrator(
         mcp_client=mock_mcp_client,
         memory_store=mock_memory_store,
         llm_client=mock_llm_client,
+        usage_tracker=mock_usage_tracker,
     )
 
 
@@ -132,6 +141,49 @@ async def test_max_turns_safety(orchestrator, mock_llm_client):
     result = await orchestrator.process_message("user-1", "Loop test")
     assert "trouble" in result.lower() or "try again" in result.lower()
     assert mock_llm_client.chat.call_count == 5
+
+
+@pytest.mark.asyncio
+async def test_usage_tracked_after_llm_call(orchestrator, mock_llm_client, mock_usage_tracker):
+    """UsageTracker.track_from_response is called after each LLM call."""
+    mock_message = MagicMock()
+    mock_message.content = "Tracked response."
+    mock_message.tool_calls = None
+
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=mock_message)]
+    mock_response.usage.prompt_tokens = 50
+    mock_response.usage.completion_tokens = 20
+
+    mock_llm_client.chat.return_value = mock_response
+
+    await orchestrator.process_message("user-1", "Track me")
+    mock_usage_tracker.track_from_response.assert_called_once_with("user-1", mock_response)
+
+
+@pytest.mark.asyncio
+async def test_usage_tracker_failure_does_not_break_response(mock_mcp_client, mock_memory_store, mock_llm_client):
+    """If usage tracking fails, the Orchestrator still returns a response."""
+    failing_tracker = MagicMock()
+    failing_tracker.track_from_response = AsyncMock(side_effect=RuntimeError("DB down"))
+
+    orch = Orchestrator(
+        mcp_client=mock_mcp_client,
+        memory_store=mock_memory_store,
+        llm_client=mock_llm_client,
+        usage_tracker=failing_tracker,
+    )
+
+    mock_message = MagicMock()
+    mock_message.content = "Still works!"
+    mock_message.tool_calls = None
+
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=mock_message)]
+    mock_llm_client.chat.return_value = mock_response
+
+    result = await orch.process_message("user-1", "Test resilience")
+    assert result == "Still works!"
 
 
 @pytest.mark.asyncio

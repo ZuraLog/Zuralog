@@ -23,6 +23,7 @@ from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.prompts.system import build_system_prompt
+from app.services.usage_tracker import UsageTracker
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ class Orchestrator:
         mcp_client: MCPClient,
         memory_store: MemoryStore,
         llm_client: LLMClient | None = None,
+        usage_tracker: UsageTracker | None = None,
     ) -> None:
         """Create a new Orchestrator.
 
@@ -58,10 +60,13 @@ class Orchestrator:
             mcp_client: The tool routing client.
             memory_store: The long-term memory backend.
             llm_client: The LLM client. If None, creates a default instance.
+            usage_tracker: Optional tracker for recording per-request
+                LLM token consumption to the database.
         """
         self.mcp_client = mcp_client
         self.memory_store = memory_store
         self.llm_client = llm_client or LLMClient()
+        self.usage_tracker = usage_tracker
 
     def _build_tools_for_llm(self) -> list[dict[str, Any]]:
         """Convert MCP ToolDefinitions to OpenAI function-calling format.
@@ -146,6 +151,19 @@ class Orchestrator:
                 messages,
                 tools=tools if tools else None,
             )
+
+            # Track token usage for billing / analytics
+            if self.usage_tracker:
+                try:
+                    await self.usage_tracker.track_from_response(user_id, response)
+                except Exception:
+                    logger.warning(
+                        "Failed to track usage for user '%s' on turn %d",
+                        user_id,
+                        turn + 1,
+                        exc_info=True,
+                    )
+
             assistant_message = response.choices[0].message
 
             # Check for tool calls

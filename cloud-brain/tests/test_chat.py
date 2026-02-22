@@ -2,10 +2,12 @@
 Life Logger Cloud Brain — Chat Endpoint Tests.
 
 Tests for the WebSocket /ws/chat endpoint and REST /chat/history endpoint.
-Uses FastAPI dependency_overrides to inject mocked services.
+Uses FastAPI dependency_overrides to inject mocked services and
+monkeypatches the async_session used by the WebSocket handler.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException, status
@@ -40,30 +42,42 @@ def client(mock_auth_service, mock_db):
 
     Note: The lifespan function sets app.state values on startup,
     so we must override them AFTER the TestClient context enters.
+    Patches ``async_session`` in the chat module so the WS handler
+    does not attempt real DB connections for rate-limit / usage
+    tracking.
     """
     app.dependency_overrides[auth_get_auth_service] = lambda: mock_auth_service
     app.dependency_overrides[chat_get_auth_service] = lambda: mock_auth_service
     app.dependency_overrides[get_db] = lambda: mock_db
 
-    with TestClient(app, raise_server_exceptions=False) as c:
-        # Override app.state AFTER lifespan has run (it sets real services)
-        app.state.auth_service = mock_auth_service
-        app.state.mcp_client = MagicMock()
-        app.state.mcp_client.get_all_tools.return_value = []
-        app.state.memory_store = MagicMock()
-        app.state.memory_store.query = AsyncMock(return_value=[])
+    # Build a fake async context manager that yields mock_db
+    @asynccontextmanager
+    async def _fake_session():
+        yield mock_db
 
-        # Mock LLM client so tests don't call the real OpenAI API
-        mock_llm = MagicMock()
-        mock_msg = MagicMock()
-        mock_msg.content = "Hello from the AI Brain!"
-        mock_msg.tool_calls = None
-        mock_resp = MagicMock()
-        mock_resp.choices = [MagicMock(message=mock_msg)]
-        mock_llm.chat = AsyncMock(return_value=mock_resp)
-        app.state.llm_client = mock_llm
+    with patch("app.api.v1.chat.async_session", _fake_session):
+        with TestClient(app, raise_server_exceptions=False) as c:
+            # Override app.state AFTER lifespan has run (it sets real services)
+            app.state.auth_service = mock_auth_service
+            app.state.mcp_client = MagicMock()
+            app.state.mcp_client.get_all_tools.return_value = []
+            app.state.memory_store = MagicMock()
+            app.state.memory_store.query = AsyncMock(return_value=[])
 
-        yield c
+            # Mock LLM client so tests don't call the real OpenAI API
+            mock_llm = MagicMock()
+            mock_msg = MagicMock()
+            mock_msg.content = "Hello from the AI Brain!"
+            mock_msg.tool_calls = None
+            mock_resp = MagicMock()
+            mock_resp.choices = [MagicMock(message=mock_msg)]
+            mock_llm.chat = AsyncMock(return_value=mock_resp)
+            app.state.llm_client = mock_llm
+
+            # Disable rate limiter for most tests (tested separately)
+            app.state.rate_limiter = None
+
+            yield c
 
     app.dependency_overrides.clear()
 
