@@ -4,18 +4,13 @@ Life Logger Cloud Brain — Full User Journey Integration Tests.
 End-to-end tests simulating a complete user lifecycle:
 register, login, token refresh, and logout. All external
 dependencies (Supabase, PostgreSQL) are mocked via FastAPI
-dependency_overrides.
+dependency_overrides using the shared ``integration_client``
+fixture from conftest.
 """
 
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-
-from app.api.v1.auth import _get_auth_service
-from app.database import get_db
-from app.main import app
-from app.services.auth_service import AuthService
 
 
 class TestFullUserJourney:
@@ -26,24 +21,14 @@ class TestFullUserJourney:
     """
 
     @pytest.fixture(autouse=True)
-    def _setup_client(self):
-        """Set up TestClient with mocked dependencies for each test.
+    def _setup(self, integration_client):
+        """Bind shared integration_client fixture to instance attrs.
 
-        Installs dependency overrides before each test and tears
-        them down afterward. Exposes ``self.client``,
-        ``self.mock_auth``, and ``self.mock_db`` on the instance.
+        Args:
+            integration_client: Shared fixture providing
+                (TestClient, mock_auth_service, mock_db).
         """
-        self.mock_auth = AsyncMock(spec=AuthService)
-        self.mock_db = AsyncMock()
-
-        app.dependency_overrides[_get_auth_service] = lambda: self.mock_auth
-        app.dependency_overrides[get_db] = lambda: self.mock_db
-
-        with TestClient(app, raise_server_exceptions=False) as c:
-            self.client = c
-            yield
-
-        app.dependency_overrides.clear()
+        self.client, self.mock_auth, self.mock_db = integration_client
 
     def test_health_check_is_available(self):
         """GET /health returns 200 with healthy status."""

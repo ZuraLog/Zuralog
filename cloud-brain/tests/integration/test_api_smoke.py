@@ -5,17 +5,11 @@ Quick validation that all critical API surfaces are responsive
 and enforce input validation correctly. These tests do NOT verify
 business logic — they confirm the API contract (routes exist,
 schemas are enforced, auth is required where expected).
+
+Uses the shared ``integration_client`` fixture from conftest.
 """
 
-from unittest.mock import AsyncMock
-
 import pytest
-from fastapi.testclient import TestClient
-
-from app.api.v1.auth import _get_auth_service
-from app.database import get_db
-from app.main import app
-from app.services.auth_service import AuthService
 
 
 class TestAPISmokeTests:
@@ -26,23 +20,14 @@ class TestAPISmokeTests:
     """
 
     @pytest.fixture(autouse=True)
-    def _setup_client(self):
-        """Set up TestClient with mocked dependencies for each test.
+    def _setup(self, integration_client):
+        """Bind shared integration_client fixture to instance attrs.
 
-        Installs dependency overrides before each test and tears
-        them down afterward. Exposes ``self.client`` on the instance.
+        Args:
+            integration_client: Shared fixture providing
+                (TestClient, mock_auth_service, mock_db).
         """
-        mock_auth = AsyncMock(spec=AuthService)
-        mock_db = AsyncMock()
-
-        app.dependency_overrides[_get_auth_service] = lambda: mock_auth
-        app.dependency_overrides[get_db] = lambda: mock_db
-
-        with TestClient(app, raise_server_exceptions=False) as c:
-            self.client = c
-            yield
-
-        app.dependency_overrides.clear()
+        self.client, _, _ = integration_client
 
     # ------------------------------------------------------------------
     # Health

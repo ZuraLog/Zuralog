@@ -42,5 +42,6 @@ nul
 
 # AI Agents & Tools (Local Artifacts)
 .opencode/
+.claude/
 .cursor/
 .antigravity/
