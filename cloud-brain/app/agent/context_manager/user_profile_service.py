@@ -69,3 +69,53 @@ class UserProfileService:
             "goals": {},
             "connected_apps": [],
         }
+
+    async def get_system_prompt_suffix(self, user_id: str) -> str:
+        """Generate a system prompt suffix based on user preferences.
+
+        Queries the user's stored persona and subscription tier to produce
+        a context string that the Orchestrator appends to the base system prompt.
+
+        Args:
+            user_id: The Supabase auth UID.
+
+        Returns:
+            A prompt suffix string. Empty string if user not found.
+        """
+        result = await self._session.execute(
+            text("SELECT id, email, coach_persona, is_premium FROM users WHERE id = :uid"),
+            {"uid": user_id},
+        )
+        row = result.mappings().first()
+
+        if row is None:
+            logger.warning("No profile found for user '%s' — using defaults", user_id)
+            return ""
+
+        persona = row.get("coach_persona", "tough_love")
+        is_premium = row.get("is_premium", False)
+
+        persona_descriptions = {
+            "tough_love": (
+                "\n\n## User Preferences\n"
+                "The user prefers a direct, tough love coaching style. "
+                "Be blunt, hold them accountable, and don't sugarcoat."
+            ),
+            "balanced": (
+                "\n\n## User Preferences\n"
+                "The user prefers a balanced coaching style. "
+                "Be direct but encouraging. Mix tough feedback with recognition."
+            ),
+            "gentle": (
+                "\n\n## User Preferences\n"
+                "The user prefers a gentle, supportive coaching style. "
+                "Focus on progress, use encouraging language, and be patient."
+            ),
+        }
+
+        suffix = persona_descriptions.get(persona, persona_descriptions["tough_love"])
+
+        tier = "Premium" if is_premium else "Free"
+        suffix += f"\nUser tier: {tier}."
+
+        return suffix

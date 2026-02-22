@@ -17,10 +17,13 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.agent.context_manager.memory_store import InMemoryStore
+from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.integrations import router as integrations_router
+from app.api.v1.transcribe import router as transcribe_router
+from app.api.v1.users import router as users_router
 from app.config import settings
 from app.limiter import limiter
 from app.mcp_servers.apple_health_server import AppleHealthServer
@@ -28,6 +31,7 @@ from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
 from app.services.auth_service import AuthService
+from app.services.rate_limiter import RateLimiter
 
 
 @asynccontextmanager
@@ -56,10 +60,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.mcp_registry = registry
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()
+    app.state.llm_client = LLMClient()
+    app.state.rate_limiter = RateLimiter()
 
     yield
 
     # --- Shutdown ---
+    if getattr(app.state, "rate_limiter", None) is not None:
+        await app.state.rate_limiter.close()
     await http_client.aclose()
     print("👋 Life Logger Cloud Brain shutting down")
 
@@ -85,6 +93,8 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")  # Phase 1.9
 app.include_router(integrations_router, prefix="/api/v1")  # Phase 1.6
+app.include_router(transcribe_router, prefix="/api/v1")  # Phase 1.8.5
+app.include_router(users_router, prefix="/api/v1")  # Phase 1.8.6
 
 
 @app.get("/health")

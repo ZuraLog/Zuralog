@@ -360,6 +360,52 @@ def select_model(tier: str, preferred: str = None) -> str:
 
 ---
 
+## Implementation Status (Phase 1.8)
+
+> Updated after Phase 1.8 execution.
+
+### Deviations from Original Plan
+
+1. **LLM Client**: Uses the `openai` Python SDK (`AsyncOpenAI`) instead of raw `httpx` + `tenacity`. The SDK provides built-in retries, streaming, structured `tool_calls` parsing, and type safety — reducing custom code by ~60%.
+2. **Rate Limiter**: Uses Redis-backed per-user/tier limiter for LLM cost control. The existing `slowapi` is retained for IP-level abuse protection (separate concern).
+3. **Voice Input (1.8.5)**: Scaffolded with mock transcription. Real Whisper integration deferred until infrastructure is ready.
+
+### Actual Rate Limits
+
+| Tier | Daily Limit | Redis Key Pattern |
+|------|------------|-------------------|
+| Free | 50 requests/day | `rate_limit:{user_id}:{day_key}` |
+| Premium | 500 requests/day | `rate_limit:{user_id}:{day_key}` |
+
+### ReAct Tool Execution Loop
+
+- Max 5 turns per message
+- MCP tools converted to OpenAI function-calling format
+- Tool results fed back to LLM in `tool` role messages
+- Safety fallback message after max turns exceeded
+
+### Usage Tracking
+
+- PostgreSQL `usage_logs` table (via `UsageLog` SQLAlchemy model)
+- Records: `user_id`, `model`, `input_tokens`, `output_tokens`, `created_at`
+- `UsageTracker.track_from_response()` parses OpenAI response usage fields
+
+### Key Files
+
+| Component | File |
+|-----------|------|
+| LLM Client | `cloud-brain/app/agent/llm_client.py` |
+| System Prompt | `cloud-brain/app/agent/prompts/system.py` |
+| Orchestrator | `cloud-brain/app/agent/orchestrator.py` |
+| Reasoning Engine | `cloud-brain/app/analytics/reasoning_engine.py` |
+| Transcribe API | `cloud-brain/app/api/v1/transcribe.py` |
+| User Preferences API | `cloud-brain/app/api/v1/users.py` |
+| Rate Limiter | `cloud-brain/app/services/rate_limiter.py` |
+| Usage Tracker | `cloud-brain/app/services/usage_tracker.py` |
+| Rate Limit Middleware | `cloud-brain/app/api/deps.py` |
+
+---
+
 ## References
 
 - [OpenRouter Documentation](https://openrouter.ai/docs)

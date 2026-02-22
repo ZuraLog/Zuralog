@@ -361,6 +361,36 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   }
 
   // -----------------------------------------------------------------------
+  // AI Brain Actions
+  // -----------------------------------------------------------------------
+
+  Future<void> _testAiChat() async {
+    _log('Sending test AI message...');
+    final chatRepo = ref.read(chatRepositoryProvider);
+    if (_chatStatus != ConnectionStatus.connected) {
+      _log('Connecting WS first...');
+      _connectWebSocket();
+      // Give time for connection
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+    chatRepo.sendMessage('How are my steps today?');
+    _log('Sent: "How are my steps today?"');
+  }
+
+  Future<void> _testVoiceUpload() async {
+    _log('Testing voice transcription endpoint...');
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      // Send a minimal test request to check the endpoint exists.
+      // Real audio upload requires platform-specific recording.
+      final response = await apiClient.post('/transcribe');
+      _log('Transcribe response: ${response.data}');
+    } catch (e) {
+      _log('Transcribe endpoint: $e (expected — no file attached)');
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Strava Actions
   // -----------------------------------------------------------------------
 
@@ -420,6 +450,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _buildIntegrationsSection(),
                   const SizedBox(height: 16),
                   _buildChatSection(),
+                  const SizedBox(height: 16),
+                  _buildAiBrainSection(),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -816,6 +848,38 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                 enabled: _chatStatus != ConnectionStatus.disconnected,
                 onTap: _disconnectWebSocket,
               ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Section: AI Brain
+  // -----------------------------------------------------------------------
+
+  Widget _buildAiBrainSection() {
+    return _SectionCard(
+      icon: Icons.psychology_rounded,
+      iconColor: const Color(0xFF8B5CF6),
+      title: 'AI BRAIN',
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChip(
+              icon: Icons.smart_toy_rounded,
+              label: 'Test AI Chat',
+              color: _Colors.primary,
+              onTap: _testAiChat,
+            ),
+            _ActionChip(
+              icon: Icons.mic_rounded,
+              label: 'Voice Test',
+              color: _Colors.warning,
+              onTap: _testVoiceUpload,
             ),
           ],
         ),
