@@ -30,6 +30,7 @@ from app.api.v1.users import router as users_router
 from app.config import settings
 from app.limiter import limiter
 from app.mcp_servers.apple_health_server import AppleHealthServer
+from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
@@ -62,6 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     registry.register(AppleHealthServer())
     registry.register(HealthConnectServer())
     registry.register(StravaServer())  # Phase 1.6
+    registry.register(DeepLinkServer())  # Phase 1.12
     app.state.mcp_registry = registry
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()

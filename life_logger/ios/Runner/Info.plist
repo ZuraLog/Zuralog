@@ -79,6 +79,12 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Phase 1.12: Allow canLaunchUrl() to query third-party app schemes -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>strava</string>
+		<string>calai</string>
+	</array>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Life Logger needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
 	<key>NSHealthUpdateUsageDescription</key>

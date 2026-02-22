@@ -1,7 +1,8 @@
 /// Life Logger — Outbound Deep Link Launcher.
 ///
 /// Provides static helpers for launching external applications via
-/// custom URL schemes. Currently supports CalAI for food photo logging.
+/// custom URL schemes. Supports both specific integrations (CalAI)
+/// and generic deep link execution for AI-driven client actions.
 ///
 /// This is distinct from [DeeplinkHandler], which handles *inbound*
 /// deep links (`lifelogger://`). This class handles *outbound* links
@@ -11,6 +12,10 @@ library;
 import 'package:url_launcher/url_launcher.dart';
 
 /// Launches external apps via deep links with smart fallback.
+///
+/// Provides both specific integration helpers (e.g. [openFoodLogging])
+/// and a generic [executeDeepLink] method used by the chat system
+/// when the AI returns a `client_action` of type `open_url`.
 ///
 /// All methods are safe to call on any platform — they return
 /// `false` when the target app cannot be launched and the fallback
@@ -65,6 +70,56 @@ class DeepLinkLauncher {
       }
     } on Exception {
       // Web fallback also failed.
+    }
+
+    return false;
+  }
+
+  // -- Generic Deep Link ---------------------------------------------------
+
+  /// Launches an arbitrary deep link URL with optional fallback.
+  ///
+  /// This is the generic handler called by the chat system when the
+  /// AI returns a `client_action` of type `open_url`. It:
+  ///
+  /// 1. Tries to launch [url] as an external application.
+  /// 2. If [url] cannot be launched and [fallbackUrl] is provided,
+  ///    tries the fallback (typically a web/store URL).
+  /// 3. Returns `true` if any launch succeeds, `false` otherwise.
+  ///
+  /// Parameters:
+  ///   - [url]: The deep link URI string (e.g. `strava://record`).
+  ///   - [fallbackUrl]: Optional HTTPS fallback (e.g. `https://www.strava.com`).
+  ///
+  /// Returns:
+  ///   `true` if the URL was successfully launched, `false` otherwise.
+  static Future<bool> executeDeepLink(
+    String url, {
+    String? fallbackUrl,
+  }) async {
+    final deepLinkUri = Uri.parse(url);
+
+    try {
+      if (await canLaunchUrl(deepLinkUri)) {
+        return await launchUrl(
+          deepLinkUri,
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } on Exception {
+      // Deep link failed — fall through to fallback.
+    }
+
+    // Fallback: try web/store URL if provided.
+    if (fallbackUrl != null && fallbackUrl.isNotEmpty) {
+      final webUri = Uri.parse(fallbackUrl);
+      try {
+        if (await canLaunchUrl(webUri)) {
+          return await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        }
+      } on Exception {
+        // Fallback also failed.
+      }
     }
 
     return false;

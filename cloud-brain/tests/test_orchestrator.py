@@ -2,7 +2,8 @@
 Life Logger Cloud Brain — Orchestrator Tests.
 
 Tests the ReAct-style tool execution loop in the Orchestrator.
-All LLM and MCP calls are mocked.
+All LLM and MCP calls are mocked. The Orchestrator now returns
+``AgentResponse`` instead of plain ``str``.
 """
 
 import json
@@ -11,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.agent.orchestrator import Orchestrator
+from app.agent.response import AgentResponse
 
 
 @pytest.fixture
@@ -72,7 +74,8 @@ async def test_simple_text_response(orchestrator, mock_llm_client):
     mock_llm_client.chat.return_value = mock_response
 
     result = await orchestrator.process_message("user-1", "How are my steps?")
-    assert result == "You walked 10,000 steps today. Great job!"
+    assert isinstance(result, AgentResponse)
+    assert result.message == "You walked 10,000 steps today. Great job!"
 
 
 @pytest.mark.asyncio
@@ -113,7 +116,8 @@ async def test_single_tool_call(orchestrator, mock_mcp_client, mock_llm_client):
     mock_mcp_client.execute_tool.return_value = tool_result
 
     result = await orchestrator.process_message("user-1", "How many steps?")
-    assert result == "You hit 12,400 steps today!"
+    assert isinstance(result, AgentResponse)
+    assert result.message == "You hit 12,400 steps today!"
     mock_mcp_client.execute_tool.assert_called_once()
 
 
@@ -139,7 +143,8 @@ async def test_max_turns_safety(orchestrator, mock_llm_client):
     orchestrator.mcp_client.execute_tool = AsyncMock(return_value=MagicMock(success=True, data={}, error=None))
 
     result = await orchestrator.process_message("user-1", "Loop test")
-    assert "trouble" in result.lower() or "try again" in result.lower()
+    assert isinstance(result, AgentResponse)
+    assert "trouble" in result.message.lower() or "try again" in result.message.lower()
     assert mock_llm_client.chat.call_count == 5
 
 
@@ -183,7 +188,8 @@ async def test_usage_tracker_failure_does_not_break_response(mock_mcp_client, mo
     mock_llm_client.chat.return_value = mock_response
 
     result = await orch.process_message("user-1", "Test resilience")
-    assert result == "Still works!"
+    assert isinstance(result, AgentResponse)
+    assert result.message == "Still works!"
 
 
 @pytest.mark.asyncio
@@ -217,4 +223,99 @@ async def test_tool_error_fed_back(orchestrator, mock_mcp_client, mock_llm_clien
     mock_mcp_client.execute_tool.return_value = MagicMock(success=False, data=None, error="Tool not found")
 
     result = await orchestrator.process_message("user-1", "Bad request")
-    assert "Sorry" in result or "couldn't" in result.lower()
+    assert isinstance(result, AgentResponse)
+    assert "Sorry" in result.message or "couldn't" in result.message.lower()
+
+
+@pytest.mark.asyncio
+async def test_client_action_extracted_from_tool_result(orchestrator, mock_mcp_client, mock_llm_client):
+    """Orchestrator extracts client_action from tool result data."""
+    # First LLM response: tool call
+    tool_call = MagicMock()
+    tool_call.id = "call_deep_link"
+    tool_call.function.name = "open_strava"
+    tool_call.function.arguments = json.dumps({"app": "strava"})
+
+    msg_tool = MagicMock()
+    msg_tool.content = None
+    msg_tool.tool_calls = [tool_call]
+
+    response_1 = MagicMock()
+    response_1.choices = [MagicMock(message=msg_tool)]
+    response_1.usage.prompt_tokens = 100
+    response_1.usage.completion_tokens = 15
+
+    # Second LLM response: final text
+    msg_final = MagicMock()
+    msg_final.content = "Opening Strava for you!"
+    msg_final.tool_calls = None
+
+    response_2 = MagicMock()
+    response_2.choices = [MagicMock(message=msg_final)]
+    response_2.usage.prompt_tokens = 200
+    response_2.usage.completion_tokens = 20
+
+    mock_llm_client.chat.side_effect = [response_1, response_2]
+
+    # MCP tool returns a client_action in its data
+    tool_result = MagicMock()
+    tool_result.success = True
+    tool_result.data = {
+        "client_action": "open_url",
+        "url": "strava://record",
+        "fallback_url": "https://www.strava.com",
+        "message": "Opening Strava...",
+    }
+    tool_result.error = None
+    mock_mcp_client.execute_tool.return_value = tool_result
+
+    result = await orchestrator.process_message("user-1", "Open Strava")
+    assert isinstance(result, AgentResponse)
+    assert result.message == "Opening Strava for you!"
+    assert result.client_action is not None
+    assert result.client_action["client_action"] == "open_url"
+    assert result.client_action["url"] == "strava://record"
+    assert result.client_action["fallback_url"] == "https://www.strava.com"
+
+
+@pytest.mark.asyncio
+async def test_no_client_action_when_tool_has_none(orchestrator, mock_mcp_client, mock_llm_client):
+    """Orchestrator returns None client_action when tool data has no action."""
+    # First LLM response: tool call
+    tool_call = MagicMock()
+    tool_call.id = "call_steps"
+    tool_call.function.name = "read_metrics"
+    tool_call.function.arguments = json.dumps({"data_type": "steps"})
+
+    msg_tool = MagicMock()
+    msg_tool.content = None
+    msg_tool.tool_calls = [tool_call]
+
+    response_1 = MagicMock()
+    response_1.choices = [MagicMock(message=msg_tool)]
+    response_1.usage.prompt_tokens = 100
+    response_1.usage.completion_tokens = 15
+
+    # Second LLM response: final text
+    msg_final = MagicMock()
+    msg_final.content = "You walked 8,500 steps today."
+    msg_final.tool_calls = None
+
+    response_2 = MagicMock()
+    response_2.choices = [MagicMock(message=msg_final)]
+    response_2.usage.prompt_tokens = 200
+    response_2.usage.completion_tokens = 20
+
+    mock_llm_client.chat.side_effect = [response_1, response_2]
+
+    # Normal tool result without client_action
+    tool_result = MagicMock()
+    tool_result.success = True
+    tool_result.data = {"steps": 8500}
+    tool_result.error = None
+    mock_mcp_client.execute_tool.return_value = tool_result
+
+    result = await orchestrator.process_message("user-1", "How many steps?")
+    assert isinstance(result, AgentResponse)
+    assert result.message == "You walked 8,500 steps today."
+    assert result.client_action is None
