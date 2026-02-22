@@ -19,6 +19,7 @@ import 'package:life_logger/features/auth/domain/auth_providers.dart';
 import 'package:life_logger/features/auth/domain/auth_state.dart';
 import 'package:life_logger/features/chat/data/chat_repository.dart';
 import 'package:life_logger/features/chat/domain/message.dart';
+import 'package:life_logger/features/subscription/domain/subscription_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Design Tokens
@@ -457,6 +458,70 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   }
 
   // -----------------------------------------------------------------------
+  // Subscription Actions (Phase 1.13)
+  // -----------------------------------------------------------------------
+
+  /// Check subscription status from the backend and display tier info.
+  Future<void> _checkSubscriptionStatus() async {
+    _log('Checking subscription status from backend...');
+    try {
+      final notifier = ref.read(subscriptionProvider.notifier);
+      await notifier.refresh();
+      final state = ref.read(subscriptionProvider);
+      _log('Tier: ${state.tier.name}');
+      _log('Premium: ${state.isPremium}');
+      _log('Expires: ${state.expiresAt ?? "N/A"}');
+    } catch (e) {
+      _log('Error: $e');
+    }
+  }
+
+  /// Check RevenueCat entitlements and display active/all entitlement keys.
+  Future<void> _checkEntitlements() async {
+    _log('Checking RevenueCat entitlements...');
+    try {
+      final repo = ref.read(subscriptionRepositoryProvider);
+      final info = await repo.getCustomerInfo();
+      _log('Active Entitlements: ${info.entitlements.active.keys.toList()}');
+      _log('All Entitlements: ${info.entitlements.all.keys.toList()}');
+    } catch (e) {
+      _log('Error: $e');
+    }
+  }
+
+  /// Fetch RevenueCat offerings and display available packages.
+  Future<void> _viewOfferings() async {
+    _log('Fetching RevenueCat offerings...');
+    try {
+      final repo = ref.read(subscriptionRepositoryProvider);
+      final offerings = await repo.getOfferings();
+      if (offerings == null || offerings.current == null) {
+        _log('No offerings available');
+        return;
+      }
+      final current = offerings.current!;
+      _log('Current offering: ${current.identifier}');
+      for (final pkg in current.availablePackages) {
+        _log('  Package: ${pkg.identifier} - ${pkg.storeProduct.priceString}');
+      }
+    } catch (e) {
+      _log('Error: $e');
+    }
+  }
+
+  /// Restore previous purchases via RevenueCat.
+  Future<void> _restorePurchases() async {
+    _log('Restoring purchases...');
+    try {
+      final repo = ref.read(subscriptionRepositoryProvider);
+      final info = await repo.restorePurchases();
+      _log('Restored. Active: ${info.entitlements.active.keys.toList()}');
+    } catch (e) {
+      _log('Error: $e');
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Build
   // -----------------------------------------------------------------------
 
@@ -496,6 +561,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _buildBackgroundSyncSection(),
                   const SizedBox(height: 16),
                   _buildAnalyticsSection(),
+                  const SizedBox(height: 16),
+                  _buildSubscriptionSection(),
                   const SizedBox(height: 16),
                   _buildDeepLinksSection(),
                   const SizedBox(height: 16),
@@ -1053,6 +1120,53 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _log('Error: $e');
                 }
               },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Section: Subscription (Phase 1.13)
+  // -----------------------------------------------------------------------
+
+  /// Builds the Subscription harness section with buttons for checking
+  /// backend status, RevenueCat entitlements, offerings, and restoring
+  /// purchases.
+  Widget _buildSubscriptionSection() {
+    return _SectionCard(
+      icon: Icons.workspace_premium_rounded,
+      iconColor: _Colors.warning,
+      title: 'SUBSCRIPTION',
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChip(
+              icon: Icons.verified_user_rounded,
+              label: 'Check Status',
+              color: _Colors.success,
+              onTap: _checkSubscriptionStatus,
+            ),
+            _ActionChip(
+              icon: Icons.card_membership_rounded,
+              label: 'Entitlements',
+              color: _Colors.info,
+              onTap: _checkEntitlements,
+            ),
+            _ActionChip(
+              icon: Icons.shopping_bag_rounded,
+              label: 'View Offerings',
+              color: _Colors.primary,
+              onTap: _viewOfferings,
+            ),
+            _ActionChip(
+              icon: Icons.restore_rounded,
+              label: 'Restore',
+              color: _Colors.warning,
+              onTap: _restorePurchases,
             ),
           ],
         ),
