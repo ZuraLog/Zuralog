@@ -100,7 +100,7 @@ Every external service is an **MCP (Model Context Protocol) Server** that the AI
 | Task Queue | Celery + **Redis** |
 | Package Manager | **uv** |
 | Linting | **Ruff** |
-| Testing | **pytest** (93 tests passing) |
+| Testing | **pytest** (304 tests passing) |
 
 ### Edge Agent (Mobile)
 
@@ -181,13 +181,13 @@ Phase-based execution plan with 14 phases for MVP:
 | 1.5 | Google Health Connect Integration | ✅ Complete |
 | 1.6 | Strava Integration | ✅ Complete |
 | 1.7 | CalAI Integration | ✅ Complete |
-| 1.8 | AI Brain (LLM Orchestrator) | 🔲 Planned |
+| 1.8 | AI Brain (LLM Orchestrator) | ✅ Complete |
 | 1.9 | Chat & Communication | ✅ Complete |
-| 1.10 | Background Services | 🔲 Planned |
-| 1.11 | Analytics & Reasoning | 🔲 Planned |
-| 1.12 | Autonomous Actions | 🔲 Planned |
-| 1.13 | Subscription & Billing | 🔲 Planned |
-| 1.14 | End-to-End Testing | 🔲 Planned |
+| 1.10 | Background Services | ✅ Complete |
+| 1.11 | Analytics & Reasoning | ✅ Complete |
+| 1.12 | Autonomous Actions | ✅ Complete |
+| 1.13 | Subscription & Billing | ✅ Complete |
+| 1.14 | Documentation & E2E Testing | 🔄 In Progress |
 
 ---
 
@@ -224,12 +224,57 @@ flutter run                    # Launch on emulator/device
 curl http://localhost:8000/health
 # → {"status": "healthy"}
 
-# Run tests (93 passing)
+# Run tests (304 passing)
 cd cloud-brain && uv run pytest tests/ -v
 
 # API docs
 open http://localhost:8000/docs
 ```
+
+---
+
+## Testing
+
+### Backend (Python/pytest)
+
+```bash
+cd cloud-brain
+
+# Run all unit tests
+python -m pytest tests/ -v
+
+# Run integration tests only
+python -m pytest tests/integration/ -v
+
+# Collect test count without running
+python -m pytest tests/ --co -q
+```
+
+### Flutter
+
+```bash
+cd life_logger
+
+# Run all unit/widget tests
+flutter test
+
+# Run integration tests (requires emulator/device)
+flutter test integration_test/
+```
+
+---
+
+## Exporting OpenAPI Schema
+
+Generate the full OpenAPI 3.1 JSON schema from the running FastAPI app definition:
+
+```bash
+cd cloud-brain
+python -m scripts.export_openapi
+# → Writes openapi.json with endpoint count
+```
+
+The exported `openapi.json` can be used for client codegen, documentation hosting, or CI contract testing.
 
 ---
 

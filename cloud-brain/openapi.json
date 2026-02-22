@@ -1,0 +1,1473 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Life Logger Cloud Brain",
+    "description": "AI Health Assistant Backend \u2014 Cross-app reasoning and autonomous actions.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "description": "Register a new user via Supabase Auth.\n\nCreates the user in Supabase and syncs them to the local `users`\ntable. Returns session tokens for immediate use.\n\nArgs:\n    body: Email and password for registration.\n    auth_service: Injected Supabase auth service.\n    db: Injected async database session.\n\nReturns:\n    AuthResponse with user_id, access_token, refresh_token, expires_in.\n\nRaises:\n    HTTPException: 400 if registration fails (e.g., email already taken).",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "description": "Log in an existing user via Supabase Auth.\n\nAuthenticates the user with Supabase and syncs them to the local\n`users` table (idempotent upsert). Returns session tokens.\n\nArgs:\n    body: Email and password for login.\n    auth_service: Injected Supabase auth service.\n    db: Injected async database session.\n\nReturns:\n    AuthResponse with user_id, access_token, refresh_token, expires_in.\n\nRaises:\n    HTTPException: 401 if credentials are invalid.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "description": "Log out the current user by invalidating their Supabase session.\n\nUses the user's access token (from the Authorization header)\nto call Supabase logout \u2014 NOT the service key.\n\nArgs:\n    credentials: Bearer token from the Authorization header.\n    auth_service: Injected Supabase auth service.\n\nReturns:\n    MessageResponse confirming logout.\n\nRaises:\n    HTTPException: 400 if logout fails.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh",
+        "description": "Exchange a refresh token for a new session.\n\nArgs:\n    body: The refresh token from a prior login.\n    auth_service: Injected Supabase auth service.\n\nReturns:\n    AuthResponse with new access_token, refresh_token, and expires_in.\n\nRaises:\n    HTTPException: 401 if the refresh token is invalid or expired.",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chat/history": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "Get Chat History",
+        "description": "Retrieve chat history for the authenticated user.\n\nReturns all conversations and their messages, ordered by\nmost recent conversation first, messages chronologically.\n\nArgs:\n    credentials: Bearer token from the Authorization header.\n    auth_service: Injected auth service for token validation.\n    db: Injected async database session.\n\nReturns:\n    A list of conversation dicts, each containing a list of messages.\n\nRaises:\n    HTTPException: 401 if the token is invalid.",
+        "operationId": "get_chat_history_api_v1_chat_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Get Chat History Api V1 Chat History Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/strava/authorize": {
+      "get": {
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Strava Authorize",
+        "description": "Return the Strava OAuth authorization URL for the mobile app to open.\n\nThe app opens this URL in the system browser. After the user grants\naccess, Strava redirects to ``lifelogger://oauth/strava?code=XXX``.\nThe app intercepts the deep link and calls ``/strava/exchange``.\n\nReturns:\n    dict: ``{\"auth_url\": \"<strava_oauth_url>\"}``",
+        "operationId": "strava_authorize_api_v1_integrations_strava_authorize_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Strava Authorize Api V1 Integrations Strava Authorize Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/strava/exchange": {
+      "post": {
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Strava Exchange",
+        "description": "Exchange a Strava authorization code for access and refresh tokens.\n\nCalled by the mobile app after it intercepts the OAuth redirect deep\nlink. The backend performs the token swap so the Client Secret is never\nexposed to the client.\n\nOn success, the access token is stored in the in-memory ``StravaServer``\ninstance (keyed by ``user_id``) so MCP tool calls can use it immediately.\nProper database persistence is deferred to Phase 1.7.\n\nArgs:\n    request: FastAPI request \u2014 used to access ``app.state.mcp_registry``.\n    code: The short-lived authorization code returned by Strava.\n    user_id: The authenticated user's ID, used to key the stored token.\n\nReturns:\n    dict: ``{\"success\": True, \"message\": \"Strava connected!\"}`` on success.\n\nRaises:\n    HTTPException: 400 if Strava rejects the code exchange.\n    HTTPException: 401 if the bearer token is invalid.\n    HTTPException: 503 if the Strava API is unreachable.",
+        "operationId": "strava_exchange_api_v1_integrations_strava_exchange_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Strava Exchange Api V1 Integrations Strava Exchange Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transcribe": {
+      "post": {
+        "tags": [
+          "transcribe"
+        ],
+        "summary": "Transcribe Audio",
+        "description": "Transcribe an audio file to text.\n\nAccepts audio uploads in common formats, validates the file,\nand returns the transcribed text. Currently uses a mock\ntranscription response.\n\nRequires a valid Bearer token in the Authorization header.\n\nArgs:\n    file: The uploaded audio file.\n    credentials: Bearer token from the Authorization header.\n    auth_service: Injected auth service for token validation.\n\nReturns:\n    A dict with 'text' key containing the transcription.\n\nRaises:\n    HTTPException: 400 if file format is invalid or file is too large.\n    HTTPException: 401 if the token is invalid or expired.",
+        "operationId": "transcribe_audio_api_v1_transcribe_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_transcribe_audio_api_v1_transcribe_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Transcribe Audio Api V1 Transcribe Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/preferences": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Preferences",
+        "description": "Get the current user's AI preferences.\n\nArgs:\n    credentials: Bearer token from the Authorization header.\n    auth_service: Injected auth service for token validation.\n    db: Injected async database session.\n\nReturns:\n    A dict with coach_persona, subscription_tier, and is_premium fields.\n\nRaises:\n    HTTPException: 404 if the user is not found in the database.",
+        "operationId": "get_preferences_api_v1_users_me_preferences_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Preferences Api V1 Users Me Preferences Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update Preferences",
+        "description": "Update the current user's AI preferences.\n\nArgs:\n    body: The request body containing fields to update.\n    credentials: Bearer token from the Authorization header.\n    auth_service: Injected auth service for token validation.\n    db: Injected async database session.\n\nReturns:\n    A confirmation dict with the updated persona.\n\nRaises:\n    HTTPException: 400 if the persona is invalid or no fields provided.",
+        "operationId": "update_preferences_api_v1_users_me_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePreferencesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Update Preferences Api V1 Users Me Preferences Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/devices/register": {
+      "post": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Register Device",
+        "description": "Register or update a device's FCM token.\n\nCalled by the Edge Agent after FCM initialization. If the\ntoken already exists, updates the associated user. If it's\na new token, creates a new device record.\n\nFor MVP, stores tokens in-memory on app.state. Phase 2 will\npersist to the UserDevice database table.\n\nArgs:\n    request: FastAPI request.\n    body: Device registration payload with fcm_token and platform.\n    credentials: Bearer token for authentication.\n    auth_service: Auth service dependency.\n\nReturns:\n    dict with success status.\n\nRaises:\n    HTTPException: 401 if bearer token is invalid.",
+        "operationId": "register_device_api_v1_devices_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Register Device Api V1 Devices Register Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dev/trigger-write": {
+      "post": {
+        "tags": [
+          "dev"
+        ],
+        "summary": "Trigger Write",
+        "description": "Simulate an AI-initiated health data write via FCM.\n\nThis endpoint bypasses the LLM pipeline and directly sends\na write request to the user's registered device. Used by the\ndeveloper harness to test the FCM -> Background Handler ->\nHealthKit/Health Connect write chain.\n\nArgs:\n    request: FastAPI request \u2014 accesses app.state services.\n    body: The write request payload.\n    credentials: Bearer token for authentication.\n    auth_service: Auth service dependency.\n\nReturns:\n    The result from DeviceWriteService.send_write_request().\n\nRaises:\n    HTTPException: 401 if bearer token is invalid.\n    HTTPException: 404 if no device is registered for this user.\n    HTTPException: 503 if the endpoint is disabled in production.",
+        "operationId": "trigger_write_api_v1_dev_trigger_write_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriggerWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Trigger Write Api V1 Dev Trigger Write Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/analytics/daily-summary": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Daily Summary",
+        "description": "Get aggregated health data for a single day.\n\nCombines activity, nutrition, sleep, and weight data into a\nunified daily snapshot.\n\nArgs:\n    user_id: The user's unique identifier.\n    date_str: Optional ISO-8601 date string. Defaults to today.\n    db: Injected async database session.\n\nReturns:\n    DailySummaryResponse with day's health aggregates.\n\nRaises:\n    HTTPException: 400 if date_str cannot be parsed.",
+        "operationId": "daily_summary_api_v1_analytics_daily_summary_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          },
+          {
+            "name": "date_str",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO-8601 date (YYYY-MM-DD). Defaults to today.",
+              "title": "Date Str"
+            },
+            "description": "ISO-8601 date (YYYY-MM-DD). Defaults to today."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailySummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/weekly-trends": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Weekly Trends",
+        "description": "Get 7-day trend data for dashboard charts.\n\nReturns parallel arrays of daily values for the most recent\n7 days, suitable for multi-series chart rendering.\n\nArgs:\n    user_id: The user's unique identifier.\n    db: Injected async database session.\n\nReturns:\n    WeeklyTrendsResponse with 7 days of data arrays.",
+        "operationId": "weekly_trends_api_v1_analytics_weekly_trends_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyTrendsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/correlation/sleep-activity": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Sleep Activity Correlation",
+        "description": "Analyze correlation between sleep and activity.\n\nComputes the Pearson correlation coefficient between sleep hours\nand activity calories over the requested window, with optional\nlag offset.\n\nArgs:\n    user_id: The user's unique identifier.\n    days: Number of historical days to analyze (7-365).\n    lag: Day offset for activity relative to sleep (0-7).\n    db: Injected async database session.\n\nReturns:\n    CorrelationResponse with score, message, and data points.",
+        "operationId": "sleep_activity_correlation_api_v1_analytics_correlation_sleep_activity_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 7,
+              "description": "Lookback days",
+              "default": 30,
+              "title": "Days"
+            },
+            "description": "Lookback days"
+          },
+          {
+            "name": "lag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 7,
+              "minimum": 0,
+              "description": "Day lag for activity",
+              "default": 0,
+              "title": "Lag"
+            },
+            "description": "Day lag for activity"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrelationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/trend/{metric}": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Metric Trend",
+        "description": "Detect trend direction for a single health metric.\n\nCompares the recent window average against the previous window\nto classify the metric as trending up, down, or stable.\n\nArgs:\n    metric: Metric name (e.g. 'steps', 'calories_consumed').\n    user_id: The user's unique identifier.\n    window_size: Size of each comparison window (3-30).\n    db: Injected async database session.\n\nReturns:\n    TrendResponse with trend direction and statistics.",
+        "operationId": "metric_trend_api_v1_analytics_trend__metric__get",
+        "parameters": [
+          {
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          },
+          {
+            "name": "window_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 3,
+              "description": "Window size",
+              "default": 7,
+              "title": "Window Size"
+            },
+            "description": "Window size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrendResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/goals": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Get Goals",
+        "description": "Get progress for all active user goals.\n\nReturns current progress toward each of the user's active goals,\nincluding percentage completion and remaining deficit.\n\nArgs:\n    user_id: The user's unique identifier.\n    db: Injected async database session.\n\nReturns:\n    A list of GoalProgressResponse for each active goal.",
+        "operationId": "get_goals_api_v1_analytics_goals_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GoalProgressResponse"
+                  },
+                  "title": "Response Get Goals Api V1 Analytics Goals Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Create Or Update Goal",
+        "description": "Create or update a user goal (upsert by user_id + metric).\n\nIf a goal already exists for the given user and metric, updates\nits target value and period. Otherwise creates a new goal.\n\nArgs:\n    body: Goal creation/update request with metric, target, period.\n    user_id: The user's unique identifier.\n    db: Injected async database session.\n\nReturns:\n    GoalProgressResponse reflecting the saved goal's current progress.",
+        "operationId": "create_or_update_goal_api_v1_analytics_goals_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserGoalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalProgressResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/dashboard-insight": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Dashboard Insight",
+        "description": "Get the dashboard insight of the day.\n\nSynthesizes goal progress and metric trends into a single\nprioritized human-readable insight, along with structured\ngoal and trend data.\n\nArgs:\n    user_id: The user's unique identifier.\n    db: Injected async database session.\n\nReturns:\n    DashboardInsightResponse with insight text, goals, and trends.",
+        "operationId": "dashboard_insight_api_v1_analytics_dashboard_insight_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "User ID",
+              "title": "User Id"
+            },
+            "description": "User ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardInsightResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/revenuecat": {
+      "post": {
+        "tags": [
+          "webhooks"
+        ],
+        "summary": "Revenuecat Webhook",
+        "description": "Handle RevenueCat subscription lifecycle events.\n\nValidates the shared secret from the Authorization header,\nparses the event payload, and delegates processing to\nthe SubscriptionService.\n\nRevenueCat sends events for: INITIAL_PURCHASE, RENEWAL,\nCANCELLATION, UNCANCELLATION, EXPIRATION, BILLING_ISSUE,\nPRODUCT_CHANGE, TRANSFER.\n\nArgs:\n    request: The incoming FastAPI request.\n    authorization: The Authorization header (Bearer <secret>).\n    db: Injected async database session.\n\nReturns:\n    A confirmation dict acknowledging receipt.\n\nRaises:\n    HTTPException: 403 if the authorization secret is invalid.\n    HTTPException: 400 if the request body is not valid JSON.",
+        "operationId": "revenuecat_webhook_api_v1_webhooks_revenuecat_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Revenuecat Webhook Api V1 Webhooks Revenuecat Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.\n\nReturns a simple JSON response to verify the service is running.\nUsed by Docker health checks, load balancers, and monitoring.\n\nReturns:\n    dict: A dictionary with the service status.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "access_token",
+          "refresh_token",
+          "expires_in"
+        ],
+        "title": "AuthResponse",
+        "description": "Successful authentication response.\n\nReturned on register, login, and refresh.\n\nAttributes:\n    user_id: Supabase UID of the authenticated user.\n    access_token: Short-lived JWT for API authorization.\n    refresh_token: Long-lived token for silent session renewal.\n    expires_in: Token lifetime in seconds."
+      },
+      "Body_transcribe_audio_api_v1_transcribe_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_transcribe_audio_api_v1_transcribe_post"
+      },
+      "CorrelationResponse": {
+        "properties": {
+          "metric_x": {
+            "type": "string",
+            "title": "Metric X"
+          },
+          "metric_y": {
+            "type": "string",
+            "title": "Metric Y"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "lag": {
+            "type": "integer",
+            "title": "Lag",
+            "default": 0
+          },
+          "data_points": {
+            "type": "integer",
+            "title": "Data Points",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric_x",
+          "metric_y",
+          "score",
+          "message"
+        ],
+        "title": "CorrelationResponse",
+        "description": "Correlation analysis result between two health metrics.\n\nContains the Pearson correlation coefficient and a human-readable\ninterpretation of the relationship strength.\n\nAttributes:\n    metric_x: Name of the first metric (independent variable).\n    metric_y: Name of the second metric (dependent variable).\n    score: Pearson correlation coefficient (-1.0 to 1.0).\n    message: Human-readable description of correlation strength.\n    lag: Number of days the second metric was shifted (0 = same day).\n    data_points: Number of overlapping data points used."
+      },
+      "DailySummaryResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "steps": {
+            "type": "integer",
+            "title": "Steps",
+            "default": 0
+          },
+          "calories_consumed": {
+            "type": "integer",
+            "title": "Calories Consumed",
+            "default": 0
+          },
+          "calories_burned": {
+            "type": "integer",
+            "title": "Calories Burned",
+            "default": 0
+          },
+          "workouts_count": {
+            "type": "integer",
+            "title": "Workouts Count",
+            "default": 0
+          },
+          "sleep_hours": {
+            "type": "number",
+            "title": "Sleep Hours",
+            "default": 0.0
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date"
+        ],
+        "title": "DailySummaryResponse",
+        "description": "Aggregated health data for a single day.\n\nCombines activity, nutrition, sleep, and weight data into\na single snapshot suitable for daily summary cards.\n\nAttributes:\n    date: ISO-8601 date string (YYYY-MM-DD).\n    steps: Estimated step count for the day.\n    calories_consumed: Total caloric intake in kcal.\n    calories_burned: Total activity calories burned in kcal.\n    workouts_count: Number of recorded workouts.\n    sleep_hours: Total sleep duration in fractional hours.\n    weight_kg: Most recent weight measurement, or None if absent."
+      },
+      "DashboardInsightResponse": {
+        "properties": {
+          "insight": {
+            "type": "string",
+            "title": "Insight"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/GoalProgressResponse"
+            },
+            "type": "array",
+            "title": "Goals",
+            "default": []
+          },
+          "trends": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TrendResponse"
+            },
+            "type": "object",
+            "title": "Trends",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "insight"
+        ],
+        "title": "DashboardInsightResponse",
+        "description": "Dashboard insight of the day.\n\nCombines a prioritized textual insight with structured goal\nprogress and trend data for the frontend dashboard.\n\nAttributes:\n    insight: Human-readable insight string (1-2 sentences).\n    goals: List of goal progress snapshots.\n    trends: Mapping of metric name to trend detection result."
+      },
+      "DeviceRegistration": {
+        "properties": {
+          "fcm_token": {
+            "type": "string",
+            "title": "Fcm Token"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fcm_token",
+          "platform"
+        ],
+        "title": "DeviceRegistration",
+        "description": "Request body for registering a device's FCM token.\n\nAttributes:\n    fcm_token: The device's Firebase Cloud Messaging token.\n    platform: Device platform ('ios' or 'android')."
+      },
+      "GoalProgressResponse": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "target": {
+            "type": "number",
+            "title": "Target"
+          },
+          "current": {
+            "type": "number",
+            "title": "Current"
+          },
+          "progress_pct": {
+            "type": "number",
+            "title": "Progress Pct"
+          },
+          "is_met": {
+            "type": "boolean",
+            "title": "Is Met"
+          },
+          "remaining": {
+            "type": "number",
+            "title": "Remaining"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "period",
+          "target",
+          "current",
+          "progress_pct",
+          "is_met",
+          "remaining"
+        ],
+        "title": "GoalProgressResponse",
+        "description": "Progress toward a single user-defined goal.\n\nAttributes:\n    metric: The health/fitness metric being tracked.\n    period: Goal time horizon (daily, weekly, or long_term).\n    target: The user's target value for the metric.\n    current: The current accumulated value for the period.\n    progress_pct: Percentage of target achieved.\n    is_met: Whether the goal has been met or exceeded.\n    remaining: Deficit remaining to meet the target (0 if met)."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "description": "Credentials for user login.\n\nAttributes:\n    email: User's email address.\n    password: User's password (min 6 chars enforced by Supabase)."
+      },
+      "MessageResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "MessageResponse",
+        "description": "Simple message response.\n\nAttributes:\n    message: Human-readable status message."
+      },
+      "RefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshRequest",
+        "description": "Request body for token refresh.\n\nAttributes:\n    refresh_token: The long-lived refresh token from a prior login."
+      },
+      "RegisterRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "RegisterRequest",
+        "description": "Credentials for new user registration.\n\nAttributes:\n    email: User's email address.\n    password: User's password (min 6 chars enforced by Supabase)."
+      },
+      "TrendResponse": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "trend": {
+            "type": "string",
+            "title": "Trend"
+          },
+          "percent_change": {
+            "type": "number",
+            "title": "Percent Change",
+            "default": 0.0
+          },
+          "recent_avg": {
+            "type": "number",
+            "title": "Recent Avg",
+            "default": 0.0
+          },
+          "previous_avg": {
+            "type": "number",
+            "title": "Previous Avg",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "trend"
+        ],
+        "title": "TrendResponse",
+        "description": "Trend detection result for a single metric.\n\nCompares recent values against a prior window to classify\nthe metric's direction as up, down, or stable.\n\nAttributes:\n    metric: Name of the analyzed metric.\n    trend: Direction string \u2014 one of 'up', 'down', 'stable',\n        or 'insufficient_data'.\n    percent_change: Percent change between windows.\n    recent_avg: Mean of the recent window.\n    previous_avg: Mean of the previous window."
+      },
+      "TriggerWriteRequest": {
+        "properties": {
+          "data_type": {
+            "type": "string",
+            "title": "Data Type"
+          },
+          "value": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_type",
+          "value"
+        ],
+        "title": "TriggerWriteRequest",
+        "description": "Request body for simulating an AI write request.\n\nAttributes:\n    data_type: Health data type to write (e.g., 'steps', 'nutrition').\n    value: Data payload to write to the health store."
+      },
+      "UpdatePreferencesRequest": {
+        "properties": {
+          "coach_persona": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coach Persona"
+          }
+        },
+        "type": "object",
+        "title": "UpdatePreferencesRequest",
+        "description": "Request body for updating user preferences.\n\nAttributes:\n    coach_persona: The coaching style preference."
+      },
+      "UserGoalRequest": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric",
+            "description": "Metric name (e.g., 'steps', 'calories_consumed')"
+          },
+          "target_value": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Target Value",
+            "description": "Target value for the metric"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(daily|weekly|long_term)$",
+            "title": "Period",
+            "description": "Goal period"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "target_value",
+          "period"
+        ],
+        "title": "UserGoalRequest",
+        "description": "Request body for creating or updating a user goal.\n\nAttributes:\n    metric: Metric name (e.g., 'steps', 'calories_consumed').\n    target_value: Numeric target the user wants to achieve (must be > 0).\n    period: Goal time horizon \u2014 must be 'daily', 'weekly', or 'long_term'."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WeeklyTrendsResponse": {
+        "properties": {
+          "dates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dates"
+          },
+          "steps": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "calories_in": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Calories In"
+          },
+          "calories_out": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Calories Out"
+          },
+          "sleep_hours": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Sleep Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dates",
+          "steps",
+          "calories_in",
+          "calories_out",
+          "sleep_hours"
+        ],
+        "title": "WeeklyTrendsResponse",
+        "description": "7-day trend data for dashboard charts.\n\nProvides parallel arrays of daily values for the most recent\n7 days, intended to be plotted together on a multi-series chart.\n\nAttributes:\n    dates: List of 7 ISO-8601 date strings (oldest first).\n    steps: Daily step counts corresponding to each date.\n    calories_in: Daily caloric intake values.\n    calories_out: Daily activity calories burned.\n    sleep_hours: Daily sleep durations in fractional hours."
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
