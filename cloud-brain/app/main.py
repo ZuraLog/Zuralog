@@ -31,6 +31,7 @@ from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
 from app.services.auth_service import AuthService
+from app.services.rate_limiter import RateLimiter
 
 
 @asynccontextmanager
@@ -60,10 +61,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
+    app.state.rate_limiter = RateLimiter()
 
     yield
 
     # --- Shutdown ---
+    await app.state.rate_limiter.close()
     await http_client.aclose()
     print("👋 Life Logger Cloud Brain shutting down")
 
