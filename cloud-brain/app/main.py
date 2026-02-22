@@ -27,6 +27,7 @@ from app.api.v1.devices import router as devices_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.transcribe import router as transcribe_router
 from app.api.v1.users import router as users_router
+from app.api.v1.webhooks import router as webhooks_router
 from app.config import settings
 from app.limiter import limiter
 from app.mcp_servers.apple_health_server import AppleHealthServer
@@ -107,6 +108,7 @@ app.include_router(users_router, prefix="/api/v1")  # Phase 1.8.6
 app.include_router(devices_router, prefix="/api/v1")  # Phase 1.10
 app.include_router(dev_router, prefix="/api/v1")  # Phase 1.10 (dev-only)
 app.include_router(analytics_router, prefix="/api/v1")  # Phase 1.11
+app.include_router(webhooks_router, prefix="/api/v1")  # Phase 1.13
 
 
 @app.get("/health")
