@@ -23,6 +23,7 @@ from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.prompts.system import build_system_prompt
+from app.agent.response import AgentResponse
 from app.services.usage_tracker import UsageTracker
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,7 @@ class Orchestrator:
         user_id: str,
         message: str,
         user_context_suffix: str | None = None,
-    ) -> str:
+    ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
         Implements the full ReAct-style conversation loop:
@@ -107,7 +108,8 @@ class Orchestrator:
         2. Retrieve relevant memories.
         3. Get available tools from MCP registry.
         4. Loop: LLM inference -> tool execution -> feed results back.
-        5. Return the final text response.
+        5. Return a structured ``AgentResponse`` with the text and
+           optional client-side action.
 
         Args:
             user_id: The authenticated user's ID.
@@ -116,7 +118,8 @@ class Orchestrator:
                 to the system prompt.
 
         Returns:
-            The final assistant response text.
+            An ``AgentResponse`` containing the assistant's message and
+            an optional ``client_action`` dict for the Edge Agent.
         """
         # 1. Build system prompt
         system_prompt = build_system_prompt(user_context_suffix)
@@ -146,6 +149,7 @@ class Orchestrator:
         )
 
         # 5. ReAct loop (max MAX_TOOL_TURNS turns)
+        last_client_action: dict[str, Any] | None = None
         for turn in range(MAX_TOOL_TURNS):
             response = await self.llm_client.chat(
                 messages,
@@ -205,6 +209,10 @@ class Orchestrator:
                     # Execute via MCP
                     result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
 
+                    # Extract client_action if tool returned one (e.g. deep links)
+                    if result.success and isinstance(result.data, dict) and "client_action" in result.data:
+                        last_client_action = result.data
+
                     # Build tool result message
                     if result.success:
                         result_content = json.dumps(result.data)
@@ -229,7 +237,10 @@ class Orchestrator:
                 user_id,
                 turn + 1,
             )
-            return final_content
+            return AgentResponse(
+                message=final_content,
+                client_action=last_client_action,
+            )
 
         # Safety: max turns exceeded
         logger.warning(
@@ -237,6 +248,7 @@ class Orchestrator:
             MAX_TOOL_TURNS,
             user_id,
         )
-        return (
-            "I'm having trouble retrieving all the information right now. Please try again or rephrase your question."
+        return AgentResponse(
+            message="I'm having trouble retrieving all the information right now. "
+            "Please try again or rephrase your question.",
         )
