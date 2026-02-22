@@ -17,11 +17,13 @@ from app.models.health_data import (
 from app.models.integration import Integration
 from app.models.user import User
 from app.models.user_device import UserDevice
+from app.models.user_goal import GoalPeriod, UserGoal
 
 __all__ = [
     "ActivityType",
     "Base",
     "Conversation",
+    "GoalPeriod",
     "Integration",
     "Message",
     "NutritionEntry",
@@ -29,5 +31,6 @@ __all__ = [
     "UnifiedActivity",
     "User",
     "UserDevice",
+    "UserGoal",
     "WeightMeasurement",
 ]
