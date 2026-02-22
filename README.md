@@ -254,6 +254,17 @@ open http://localhost:8000/docs
 
 ---
 
+## AI Agent & Tool Rules
+
+> [!IMPORTANT]
+> **Local Artifacts:** AI tools (OpenCode, AntiGravity, Cursor, etc.) must write rules, plans, and temporary artifacts in their **local tool directories**, NOT in the project repository.
+
+*   **OpenCode:** Do not create implementation plans in `docs/plans/`. If you do, you will encounter a `no-write-permission` error and be forced to rewrite the plan in `.opencode/plans/`, wasting 2x the tokens. Always write plans directly to your local `.opencode/plans/` directory.
+*   **AntiGravity:** Continue utilizing your isolated artifact system. Do not write plans or temporary guidelines into the project repository.
+*   **Other Tools (Cursor, etc.):** Do not place any implementation plans or temporary context files in `docs/plans/` or the project repository. Keep them in your respective localized tool directories to prevent repository clutter.
+
+---
+
 ## License
 
 Copyright © 2026 Hyo Won Bernabe and Fernando Leano. All Rights Reserved.
