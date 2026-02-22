@@ -87,3 +87,41 @@ class PushService:
         except Exception:
             logger.exception("FCM send failed")
             return None
+
+    def send_data_message(
+        self,
+        token: str,
+        data: dict[str, str],
+    ) -> str | None:
+        """Send a silent data-only FCM message to a device.
+
+        Unlike send_notification(), this sends no visible notification.
+        The message wakes the app in the background for processing
+        (e.g., writing health data to HealthKit/Health Connect).
+
+        Args:
+            token: The device's FCM registration token.
+            data: Key-value data payload. All values must be strings
+                per FCM requirements.
+
+        Returns:
+            The FCM message ID on success, or None if FCM is not
+            configured or the send fails.
+        """
+        if not _fcm_initialized:
+            logger.debug("FCM not initialized — skipping data message")
+            return None
+
+        try:
+            from firebase_admin import messaging  # type: ignore[import-untyped]
+
+            message = messaging.Message(
+                data=data,
+                token=token,
+            )
+            response = messaging.send(message)
+            logger.info("FCM data message sent: %s", response)
+            return response
+        except Exception:
+            logger.exception("FCM data message send failed")
+            return None

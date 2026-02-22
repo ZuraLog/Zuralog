@@ -21,6 +21,7 @@ from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.devices import router as devices_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.transcribe import router as transcribe_router
 from app.api.v1.users import router as users_router
@@ -31,6 +32,8 @@ from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
 from app.services.auth_service import AuthService
+from app.services.device_write_service import DeviceWriteService
+from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
 
 
@@ -62,6 +65,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
     app.state.rate_limiter = RateLimiter()
+    app.state.push_service = PushService()
+    app.state.device_write_service = DeviceWriteService(push_service=app.state.push_service)
 
     yield
 
@@ -95,6 +100,7 @@ app.include_router(chat_router, prefix="/api/v1")  # Phase 1.9
 app.include_router(integrations_router, prefix="/api/v1")  # Phase 1.6
 app.include_router(transcribe_router, prefix="/api/v1")  # Phase 1.8.5
 app.include_router(users_router, prefix="/api/v1")  # Phase 1.8.6
+app.include_router(devices_router, prefix="/api/v1")  # Phase 1.10
 
 
 @app.get("/health")
