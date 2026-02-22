@@ -5,6 +5,7 @@ Receives and processes server-to-server notifications from
 RevenueCat for subscription lifecycle events.
 """
 
+import hmac
 import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
@@ -45,16 +46,25 @@ async def revenuecat_webhook(
 
     Raises:
         HTTPException: 403 if the authorization secret is invalid.
+        HTTPException: 400 if the request body is not valid JSON.
     """
     expected = f"Bearer {settings.revenuecat_webhook_secret}"
-    if not authorization or authorization != expected:
+    if not authorization or not hmac.compare_digest(authorization, expected):
         logger.warning("RevenueCat webhook: invalid authorization")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid webhook authorization",
         )
 
-    payload = await request.json()
+    try:
+        payload = await request.json()
+    except Exception:
+        logger.warning("RevenueCat webhook: malformed JSON payload")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid JSON payload",
+        )
+
     event = payload.get("event", {})
 
     event_type = event.get("type", "UNKNOWN")

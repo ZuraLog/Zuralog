@@ -44,17 +44,20 @@ class SubscriptionState {
 
   /// Creates a copy of this state with the given fields replaced.
   ///
-  /// Any parameter that is null retains the original value.
+  /// Pass [clearExpiresAt] as `true` to explicitly set [expiresAt] to null
+  /// (e.g., when downgrading to free tier). Without this flag, a null
+  /// [expiresAt] parameter preserves the current value.
   ///
   /// Returns a new [SubscriptionState] with the replaced fields.
   SubscriptionState copyWith({
     SubscriptionTier? tier,
     DateTime? expiresAt,
+    bool clearExpiresAt = false,
     bool? isLoading,
   }) {
     return SubscriptionState(
       tier: tier ?? this.tier,
-      expiresAt: expiresAt ?? this.expiresAt,
+      expiresAt: clearExpiresAt ? null : (expiresAt ?? this.expiresAt),
       isLoading: isLoading ?? this.isLoading,
     );
   }

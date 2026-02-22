@@ -50,5 +50,20 @@ void main() {
       expect(copied.expiresAt, expires);
       expect(copied.isLoading, isTrue);
     });
+
+    test('copyWith clearExpiresAt resets expiration to null', () {
+      final expires = DateTime(2026, 3, 1);
+      final original = SubscriptionState(
+        tier: SubscriptionTier.pro,
+        expiresAt: expires,
+      );
+      final downgraded = original.copyWith(
+        tier: SubscriptionTier.free,
+        clearExpiresAt: true,
+      );
+      expect(downgraded.tier, SubscriptionTier.free);
+      expect(downgraded.expiresAt, isNull);
+      expect(downgraded.isPremium, isFalse);
+    });
   });
 }

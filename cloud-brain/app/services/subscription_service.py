@@ -25,6 +25,11 @@ DOWNGRADE_EVENTS = {"EXPIRATION", "BILLING_ISSUE"}
 # but user keeps access until expiration date.
 CANCEL_INTENT_EVENTS = {"CANCELLATION"}
 
+# RevenueCat event types for subscription transfer between accounts.
+# TRANSFER moves the subscription to a new app_user_id, so the
+# *old* user loses access and the *new* user gains it.
+TRANSFER_EVENTS = {"TRANSFER"}
+
 
 class SubscriptionService:
     """Processes RevenueCat subscription lifecycle events.
@@ -92,6 +97,17 @@ class SubscriptionService:
                 "Subscription cancellation intent: user=%s (access until %s)",
                 app_user_id,
                 user.subscription_expires_at,
+            )
+
+        elif event_type in TRANSFER_EVENTS:
+            # TRANSFER means this user's subscription was transferred to
+            # another account. RevenueCat sends the event with the *old*
+            # app_user_id — so the old user loses access.
+            user.subscription_tier = "free"
+            user.subscription_expires_at = None
+            logger.info(
+                "Subscription transferred away: user=%s (downgraded to free)",
+                app_user_id,
             )
 
         else:

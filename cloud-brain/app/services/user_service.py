@@ -47,8 +47,11 @@ async def sync_user_to_db(db: AsyncSession, supabase_user_id: str, email: str) -
         msg = f"Failed to upsert user {supabase_user_id}"
         raise RuntimeError(msg)
 
-    # Return a lightweight User instance without a full ORM load
+    # Return a lightweight User instance without a full ORM load.
+    # Must set all RETURNING columns to avoid callers getting wrong defaults.
     user = User()
     user.id = row.id
     user.email = row.email
+    user.coach_persona = row.coach_persona
+    user.subscription_tier = row.subscription_tier
     return user

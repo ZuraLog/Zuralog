@@ -169,6 +169,28 @@ class TestCancellation:
         mock_db.commit.assert_awaited_once()
 
 
+class TestTransfer:
+    """Tests for TRANSFER events."""
+
+    @pytest.mark.asyncio
+    async def test_transfer_downgrades_old_user(self, service, mock_db):
+        """TRANSFER should downgrade the old user (subscription moved away)."""
+        user = _mock_user("pro")
+        _db_returns_user(mock_db, user)
+
+        await service.process_event(
+            db=mock_db,
+            event_type="TRANSFER",
+            app_user_id="u-old",
+            expiration_at_ms=None,
+            product_id="pro_monthly",
+        )
+
+        assert user.subscription_tier == "free"
+        assert user.subscription_expires_at is None
+        mock_db.commit.assert_awaited_once()
+
+
 class TestUnhandledEvent:
     """Tests for unrecognized event types."""
 

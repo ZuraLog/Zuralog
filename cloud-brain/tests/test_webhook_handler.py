@@ -90,3 +90,19 @@ class TestWebhookAuth:
             assert response.json() == {"received": True}
         finally:
             app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    @patch("app.api.v1.webhooks.settings")
+    async def test_rejects_malformed_json(self, mock_settings, app, client):
+        """Request with malformed JSON body should return 400."""
+        mock_settings.revenuecat_webhook_secret = "secret-123"
+
+        response = await client.post(
+            "/api/v1/webhooks/revenuecat",
+            content=b"not valid json{{{",
+            headers={
+                "Authorization": "Bearer secret-123",
+                "Content-Type": "application/json",
+            },
+        )
+        assert response.status_code == 400
