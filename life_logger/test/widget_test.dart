@@ -11,6 +11,6 @@ void main() {
   testWidgets('App should build without errors', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: LifeLoggerApp()));
 
-    expect(find.text('TEST HARNESS - NO STYLING'), findsOneWidget);
+    expect(find.text('ZuraLog'), findsOneWidget);
   });
 }

@@ -183,5 +183,5 @@ class TestEndpointLatency:
         assert p95_latency < LATENCY_THRESHOLD_MS, (
             f"p95 latency {p95_latency:.1f} ms exceeds "
             f"{LATENCY_THRESHOLD_MS} ms threshold "
-            f"(all latencies: {[f'{l:.1f}' for l in latencies]})"
+            f"(all latencies: {[f'{lat:.1f}' for lat in latencies]})"
         )
