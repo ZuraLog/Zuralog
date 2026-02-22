@@ -7,6 +7,7 @@ through the Orchestrator, and message persistence.
 """
 
 import logging
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -174,14 +175,15 @@ async def websocket_chat(
 
                 # Process through the Orchestrator
                 try:
-                    response = await orchestrator.process_message(user_id, message_text)
-                    await websocket.send_json(
-                        {
-                            "type": "message",
-                            "content": response,
-                            "role": "assistant",
-                        }
-                    )
+                    agent_response = await orchestrator.process_message(user_id, message_text)
+                    ws_payload: dict[str, Any] = {
+                        "type": "message",
+                        "content": agent_response.message,
+                        "role": "assistant",
+                    }
+                    if agent_response.client_action is not None:
+                        ws_payload["client_action"] = agent_response.client_action
+                    await websocket.send_json(ws_payload)
                 except Exception as e:
                     logger.exception("Orchestrator error for user '%s'", user_id)
                     await websocket.send_json(
