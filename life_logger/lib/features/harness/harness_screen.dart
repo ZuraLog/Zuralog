@@ -320,6 +320,16 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     _wsSubscription?.cancel();
     _wsSubscription = chatRepo.messages.listen((msg) {
       _log('💬 [${msg.role}] ${msg.content}');
+
+      // Phase 1.12: Auto-execute deep links from AI client_action payloads.
+      if (msg.clientAction != null &&
+          msg.clientAction!['client_action'] == 'open_url') {
+        final url = msg.clientAction!['url'] as String? ?? '';
+        final fallback = msg.clientAction!['fallback_url'] as String?;
+        if (url.isNotEmpty) {
+          DeepLinkLauncher.executeDeepLink(url, fallbackUrl: fallback);
+        }
+      }
     });
 
     _wsStatusSubscription?.cancel();
@@ -486,6 +496,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _buildBackgroundSyncSection(),
                   const SizedBox(height: 16),
                   _buildAnalyticsSection(),
+                  const SizedBox(height: 16),
+                  _buildDeepLinksSection(),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -1040,6 +1052,75 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                 } catch (e) {
                   _log('Error: $e');
                 }
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Section: Deep Links (Phase 1.12)
+  // -----------------------------------------------------------------------
+
+  /// Builds the Deep Links harness section with buttons for testing
+  /// outbound deep link launches to third-party apps (Strava, CalAI).
+  Widget _buildDeepLinksSection() {
+    return _SectionCard(
+      icon: Icons.link_rounded,
+      iconColor: _Colors.info,
+      title: 'DEEP LINKS',
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChip(
+              icon: Icons.directions_bike_rounded,
+              label: 'Strava (Record)',
+              color: const Color(0xFFFC4C02),
+              onTap: () async {
+                _log('Testing Strava Record deep link...');
+                final success = await DeepLinkLauncher.executeDeepLink(
+                  'strava://record',
+                  fallbackUrl: 'https://www.strava.com',
+                );
+                _log(
+                  success ? '✅ Strava launched!' : '❌ Strava launch failed',
+                );
+              },
+            ),
+            _ActionChip(
+              icon: Icons.camera_alt_rounded,
+              label: 'CalAI (Camera)',
+              color: _Colors.success,
+              onTap: () async {
+                _log('Testing CalAI Camera deep link...');
+                final success = await DeepLinkLauncher.executeDeepLink(
+                  'calai://camera',
+                  fallbackUrl: 'https://www.calai.app',
+                );
+                _log(
+                  success ? '✅ CalAI launched!' : '❌ CalAI launch failed',
+                );
+              },
+            ),
+            _ActionChip(
+              icon: Icons.search_rounded,
+              label: 'CalAI (Search)',
+              color: _Colors.primary,
+              onTap: () async {
+                _log('Testing CalAI Search deep link...');
+                final success = await DeepLinkLauncher.executeDeepLink(
+                  'calai://search?q=coffee',
+                  fallbackUrl: 'https://www.calai.app',
+                );
+                _log(
+                  success
+                      ? '✅ CalAI search launched!'
+                      : '❌ CalAI search failed',
+                );
               },
             ),
           ],
