@@ -326,9 +326,17 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   // Chat Actions
   // -----------------------------------------------------------------------
 
-  void _connectWebSocket() {
+  Future<void> _connectWebSocket() async {
     _log('Connecting WebSocket...');
     final chatRepo = ref.read(chatRepositoryProvider);
+
+    // Get the real auth token from secure storage.
+    final storage = ref.read(secureStorageProvider);
+    final token = await storage.getAuthToken();
+    if (token == null || token.isEmpty) {
+      _log('⚠️ No auth token stored — please log in first.');
+      return;
+    }
 
     _wsSubscription?.cancel();
     _wsSubscription = chatRepo.messages.listen((msg) {
@@ -358,7 +366,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
       }
     });
 
-    chatRepo.connect('test_token');
+    chatRepo.connect(token);
   }
 
   void _sendChatMessage() {
@@ -430,13 +438,12 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   ) async {
     _log('Triggering AI write: $dataType...');
     try {
-      final response = await ref.read(apiClientProvider).post(
-        '/api/v1/dev/trigger-write',
-        data: {
-          'data_type': dataType,
-          'value': value,
-        },
-      );
+      final response = await ref
+          .read(apiClientProvider)
+          .post(
+            '/api/v1/dev/trigger-write',
+            data: {'data_type': dataType, 'value': value},
+          );
       _log('Write triggered: ${response.data}');
     } catch (e) {
       _log('Error triggering write: $e');
@@ -539,9 +546,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     _log('Presenting full paywall...');
     final result = await Navigator.push<PaywallResult>(
       context,
-      MaterialPageRoute<PaywallResult>(
-        builder: (_) => const PaywallScreen(),
-      ),
+      MaterialPageRoute<PaywallResult>(builder: (_) => const PaywallScreen()),
     );
     _log('Paywall result: ${result?.name ?? "dismissed"}');
     if (result == PaywallResult.purchased || result == PaywallResult.restored) {
@@ -553,8 +558,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   Future<void> _presentPaywallIfNeeded() async {
     _log('Presenting paywall if needed...');
     try {
-      final result =
-          await ref.read(subscriptionProvider.notifier).presentPaywallIfNeeded();
+      final result = await ref
+          .read(subscriptionProvider.notifier)
+          .presentPaywallIfNeeded();
       _log('Paywall if needed result: ${result.name}');
     } catch (e) {
       _log('Error: $e');
@@ -1088,11 +1094,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               icon: Icons.info_outline_rounded,
               label: 'Sync Status',
               color: _Colors.warning,
-              onTap: () => _log(
-                'Sync status check — not yet implemented',
-              ),
+              onTap: () => _log('Sync status check — not yet implemented'),
             ),
-           ],
+          ],
         ),
       ],
     );
@@ -1123,13 +1127,15 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _log('Fetching daily summary...');
                   final repo = ref.read(analyticsRepositoryProvider);
                   final summary = await repo.getDailySummary(DateTime.now());
-                  _log('Summary for ${summary.date}:\n'
-                      '  Steps: ${summary.steps}\n'
-                      '  Cal In: ${summary.caloriesConsumed}\n'
-                      '  Cal Out: ${summary.caloriesBurned}\n'
-                      '  Workouts: ${summary.workoutsCount}\n'
-                      '  Sleep: ${summary.sleepHours}h\n'
-                      '  Weight: ${summary.weightKg ?? "N/A"} kg');
+                  _log(
+                    'Summary for ${summary.date}:\n'
+                    '  Steps: ${summary.steps}\n'
+                    '  Cal In: ${summary.caloriesConsumed}\n'
+                    '  Cal Out: ${summary.caloriesBurned}\n'
+                    '  Workouts: ${summary.workoutsCount}\n'
+                    '  Sleep: ${summary.sleepHours}h\n'
+                    '  Weight: ${summary.weightKg ?? "N/A"} kg',
+                  );
                 } catch (e) {
                   _log('Error: $e');
                 }
@@ -1144,12 +1150,14 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _log('Fetching weekly trends...');
                   final repo = ref.read(analyticsRepositoryProvider);
                   final trends = await repo.getWeeklyTrends();
-                  _log('Weekly Trends:\n'
-                      '  Dates: ${trends.dates}\n'
-                      '  Steps: ${trends.steps}\n'
-                      '  Cal In: ${trends.caloriesIn}\n'
-                      '  Cal Out: ${trends.caloriesOut}\n'
-                      '  Sleep: ${trends.sleepHours}');
+                  _log(
+                    'Weekly Trends:\n'
+                    '  Dates: ${trends.dates}\n'
+                    '  Steps: ${trends.steps}\n'
+                    '  Cal In: ${trends.caloriesIn}\n'
+                    '  Cal Out: ${trends.caloriesOut}\n'
+                    '  Sleep: ${trends.sleepHours}',
+                  );
                 } catch (e) {
                   _log('Error: $e');
                 }
@@ -1164,9 +1172,11 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _log('Fetching dashboard insight...');
                   final repo = ref.read(analyticsRepositoryProvider);
                   final insight = await repo.getDashboardInsight();
-                  _log('Insight: ${insight.insight}\n'
-                      'Goals: ${insight.goals.length} active\n'
-                      'Trends: ${insight.trends.keys.toList()}');
+                  _log(
+                    'Insight: ${insight.insight}\n'
+                    'Goals: ${insight.goals.length} active\n'
+                    'Trends: ${insight.trends.keys.toList()}',
+                  );
                 } catch (e) {
                   _log('Error: $e');
                 }
@@ -1208,14 +1218,13 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
           subState.isLoading
               ? 'LOADING'
               : subState.isPremium
-                  ? 'PRO'
-                  : 'FREE',
+              ? 'PRO'
+              : 'FREE',
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
-            color:
-                subState.isPremium ? _Colors.warning : _Colors.textSecondary,
+            color: subState.isPremium ? _Colors.warning : _Colors.textSecondary,
           ),
         ),
       ),
@@ -1311,9 +1320,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   'strava://record',
                   fallbackUrl: 'https://www.strava.com',
                 );
-                _log(
-                  success ? '✅ Strava launched!' : '❌ Strava launch failed',
-                );
+                _log(success ? '✅ Strava launched!' : '❌ Strava launch failed');
               },
             ),
             _ActionChip(
@@ -1326,9 +1333,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   'calai://camera',
                   fallbackUrl: 'https://www.calai.app',
                 );
-                _log(
-                  success ? '✅ CalAI launched!' : '❌ CalAI launch failed',
-                );
+                _log(success ? '✅ CalAI launched!' : '❌ CalAI launch failed');
               },
             ),
             _ActionChip(

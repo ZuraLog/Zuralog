@@ -50,8 +50,14 @@ class WsClient {
   /// Current reconnect delay in seconds (exponential backoff).
   int _reconnectDelay = 1;
 
+  /// Current retry attempt count.
+  int _retryCount = 0;
+
   /// Maximum reconnect delay in seconds.
   static const int _maxReconnectDelay = 30;
+
+  /// Maximum number of reconnect attempts before giving up.
+  static const int _maxRetries = 5;
 
   /// Broadcast controller for incoming messages.
   final StreamController<Map<String, dynamic>> _messageController =
@@ -66,15 +72,21 @@ class WsClient {
 
   /// Creates a new [WsClient].
   ///
-  /// [baseUrl] defaults to the Android emulator localhost alias.
-  /// Override for production via `--dart-define=WS_URL=...`.
-  WsClient({String? baseUrl})
-    : _baseUrl =
-          baseUrl ??
-          const String.fromEnvironment(
-            'WS_URL',
-            defaultValue: 'ws://10.0.2.2:8000',
-          );
+  /// The WebSocket URL is derived from the shared `BASE_URL` env var
+  /// (same one used by [ApiClient]), converting `http(s)` to `ws(s)`.
+  /// Override per-instance via [baseUrl] for testing.
+  WsClient({String? baseUrl}) : _baseUrl = baseUrl ?? _deriveWsUrl();
+
+  /// Derives the WebSocket URL from the shared `BASE_URL` env var.
+  static String _deriveWsUrl() {
+    const httpUrl = String.fromEnvironment(
+      'BASE_URL',
+      defaultValue: 'http://10.0.2.2:8000',
+    );
+    return httpUrl
+        .replaceFirst('https://', 'wss://')
+        .replaceFirst('http://', 'ws://');
+  }
 
   /// The incoming message stream from the Cloud Brain.
   ///
@@ -98,6 +110,7 @@ class WsClient {
     _token = token;
     _shouldReconnect = true;
     _reconnectDelay = 1;
+    _retryCount = 0;
     _doConnect();
   }
 
@@ -118,7 +131,8 @@ class WsClient {
       );
 
       _setStatus(ConnectionStatus.connected);
-      _reconnectDelay = 1; // Reset backoff on successful connect
+      _reconnectDelay = 1;
+      _retryCount = 0; // Reset on successful connect
     } catch (e) {
       _setStatus(ConnectionStatus.disconnected);
       _scheduleReconnect();
@@ -151,8 +165,17 @@ class WsClient {
   }
 
   /// Schedules a reconnection attempt with exponential backoff.
+  ///
+  /// Gives up after [_maxRetries] consecutive failures.
   void _scheduleReconnect() {
     if (!_shouldReconnect) return;
+
+    _retryCount++;
+    if (_retryCount > _maxRetries) {
+      _shouldReconnect = false;
+      _setStatus(ConnectionStatus.disconnected);
+      return;
+    }
 
     Future<void>.delayed(Duration(seconds: _reconnectDelay), () {
       if (_shouldReconnect) {
