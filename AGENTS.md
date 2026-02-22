@@ -156,8 +156,9 @@ This project uses specialized **Agent Skills** for development.
 
 ### 20. Localized AI Working Directories
 > [!IMPORTANT]
-> **Keep Plans Local:** OpenCode, AntiGravity, Cursor, and other AI coding tools MUST write their implementation plans and rules in their own local directories, NOT in the project repository.
+> **Keep Plans Local but Gitignored:** OpenCode, AntiGravity, Cursor, and other AI coding tools MUST write their implementation plans and rules in their own local directories within the project, BUT these directories MUST be added to `.gitignore`. Never push them to the remote GitHub repository.
 >
-> *   **OpenCode:** Do not attempt to write plans in `docs/plans/`. You will get a `no-write-permission` error, forcing you to rewrite everything in `.opencode/plans/` and wasting tokens. Always use `.opencode/plans/` directly.
-> *   **AntiGravity:** Continue rendering artifacts exclusively in your local artifact directory. Never leak scratchpads or implementation plans into the main project repository.
-> *   **Other Tools:** Keep your implementation plans and state tracking out of `docs/plans/` and the main codebase. Use your tool-specific local directories.
+> *   **Plan Persistence:** Saving plans in the working directory before initiating code changes is recommended to avoid losing the plan due to context compaction.
+> *   **OpenCode:** Use `.opencode/plans/` for your plans and ensure `.opencode/` is gitignored. Do not use `docs/plans/` for active tool workspace plans.
+> *   **AntiGravity:** Continue rendering artifacts exclusively in your local artifact directory. Never leak scratchpads or implementation plans into the main tracked repository.
+> *   **Other Tools:** Keep your implementation plans and state tracking in your tool-specific local directories (e.g., `.cursor/`) and ensure they are gitignored.

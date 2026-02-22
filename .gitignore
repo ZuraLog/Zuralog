@@ -37,4 +37,10 @@ __pycache__/
 .pub/
 /build/
 
+# nul
+nul
 
+# AI Agents & Tools (Local Artifacts)
+.opencode/
+.cursor/
+.antigravity/

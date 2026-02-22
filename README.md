@@ -257,11 +257,12 @@ open http://localhost:8000/docs
 ## AI Agent & Tool Rules
 
 > [!IMPORTANT]
-> **Local Artifacts:** AI tools (OpenCode, AntiGravity, Cursor, etc.) must write rules, plans, and temporary artifacts in their **local tool directories**, NOT in the project repository.
+> **Local Artifacts:** AI tools (OpenCode, AntiGravity, Cursor, etc.) must write rules, plans, and temporary artifacts in their **local tool directories within the project**, BUT these directories MUST be added to `.gitignore`. Never push them to the remote GitHub repository.
 
-*   **OpenCode:** Do not create implementation plans in `docs/plans/`. If you do, you will encounter a `no-write-permission` error and be forced to rewrite the plan in `.opencode/plans/`, wasting 2x the tokens. Always write plans directly to your local `.opencode/plans/` directory.
-*   **AntiGravity:** Continue utilizing your isolated artifact system. Do not write plans or temporary guidelines into the project repository.
-*   **Other Tools (Cursor, etc.):** Do not place any implementation plans or temporary context files in `docs/plans/` or the project repository. Keep them in your respective localized tool directories to prevent repository clutter.
+*   **Plan Persistence:** "If using 'Plan' mode, it is recommended to direct the agent to save the plan to a file in the working directory before initiating code changes to avoid losing the plan due to context compaction."
+*   **OpenCode:** Create implementation plans in `.opencode/plans/`. Ensure `.opencode/` is in `.gitignore` so it is not tracked by Git. Do NOT use `docs/plans/` for tool-specific working plans.
+*   **AntiGravity:** Continue utilizing your isolated artifact system. Do not leak scratchpads or implementation plans into the tracked project repository files.
+*   **Other Tools (Cursor, etc.):** Keep your implementation plans and state tracking in your respective localized tool directories (e.g., `.cursor/`) inside the project, and ensure those directories are gitignored.
 
 ---
 
