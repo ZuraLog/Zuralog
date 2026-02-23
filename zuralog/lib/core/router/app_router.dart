@@ -124,10 +124,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Step 3: Post-registration profile questionnaire guard. ───────────
       // If the user is authenticated but has not completed the profile
       // questionnaire, redirect them to it — unless they are already there.
+      //
+      // We also redirect when [profile] is null (still loading). A null
+      // profile after authentication means the user is either brand-new
+      // (no row yet) or the load hasn't resolved yet — both cases require
+      // the questionnaire. The questionnaire itself is the escape hatch:
+      // once [UserProfileNotifier.update(onboardingComplete: true)] is
+      // called, the provider emits a non-null profile with
+      // [onboardingComplete == true] and the guard clears automatically.
+      //
+      // This prevents the race-condition window where [load()] is still
+      // in-flight (or has failed silently), [profile] stays null, and the
+      // user gets dropped onto the dashboard permanently.
       if (authState == AuthState.authenticated &&
           location != RouteNames.profileQuestionnairePath) {
         final profile = ref.read(userProfileProvider);
-        if (profile != null && !profile.onboardingComplete) {
+        if (profile == null || !profile.onboardingComplete) {
           return RouteNames.profileQuestionnairePath;
         }
       }
