@@ -395,3 +395,23 @@ The project pins `sqlite3_flutter_libs: ^0.5.0`. Do **not** upgrade this to `0.6
 
 ### Emulator screen looks wrong / minSdk errors
 The project requires **minSdk 28** (Android 9) due to the Health Connect dependency. Create your emulator with a system image of API 28 or higher. API 34 (Android 14) is recommended for the best Health Connect support.
+
+### Google Sign-In works in debug but fails after a Play Store release
+The Android OAuth client in Google Cloud Console is registered with the **debug keystore SHA-1** (`3F:E9:FF:6A:41:D9:E0:45:94:77:BC:6C:D0:A0:E7:33:A2:DE:A2:55`). Release builds are signed with a completely different keystore, so Google will reject sign-in attempts from a release APK/AAB.
+
+**Before releasing to the Play Store, you must:**
+
+1. Generate your release keystore (or locate it if it already exists).
+2. Get its SHA-1 fingerprint:
+   ```bash
+   # Windows (from zuralog/android/)
+   JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" PATH="$JAVA_HOME/bin:$PATH" ./gradlew signingReport
+   # Look for the "release" Variant SHA1 line (will be different from the debug one above)
+   ```
+   Or directly from the keystore file:
+   ```bash
+   keytool -list -v -keystore your-release-key.jks -alias your-key-alias
+   ```
+3. Go to [console.cloud.google.com](https://console.cloud.google.com) → project `zuralog-8311a` → **APIs & Services** → **Credentials**.
+4. Find the existing Android OAuth client (`Zuralog Android`) → click **Edit** → add the release SHA-1 as a second fingerprint. Do **not** delete the debug SHA-1 — you still need that for local development.
+5. Save. No app restart or re-download of config files is needed — the credential update takes effect within a few minutes.
