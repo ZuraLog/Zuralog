@@ -16,6 +16,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/integrations/presentation/widgets/integration_tile.dart';
+import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// The Integrations Hub screen — connects and manages third-party services.
@@ -85,6 +86,12 @@ class _IntegrationsHubScreenState
               title: Text('Integrations'),
               floating: true,
               pinned: false,
+              actions: [
+                Padding(
+                  padding: EdgeInsets.only(right: AppDimens.spaceMd),
+                  child: ProfileAvatarButton(),
+                ),
+              ],
             ),
 
             // ── Connected Section ────────────────────────────────────────

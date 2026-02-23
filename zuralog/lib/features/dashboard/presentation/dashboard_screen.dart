@@ -18,7 +18,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:zuralog/core/state/side_panel_provider.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -28,6 +27,7 @@ import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/activity_rings.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/integrations_rail.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/metric_card.dart';
+import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── Internal constants ────────────────────────────────────────────────────────
 
@@ -178,18 +178,7 @@ class DashboardScreen extends ConsumerWidget {
         const Spacer(),
 
         // Right: profile avatar — opens side panel
-        GestureDetector(
-          onTap: () => ref.read(sidePanelOpenProvider.notifier).state = true,
-          child: CircleAvatar(
-            radius: AppDimens.avatarMd / 2,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-            child: const Icon(
-              Icons.person_rounded,
-              color: AppColors.primary,
-              size: AppDimens.iconMd,
-            ),
-          ),
-        ),
+        const ProfileAvatarButton(),
       ],
     );
   }

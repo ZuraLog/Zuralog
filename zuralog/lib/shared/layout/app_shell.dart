@@ -8,11 +8,12 @@
 /// **Push-reveal side panel:** When [sidePanelOpenProvider] is `true` the
 /// entire scaffold (content + bottom nav) slides LEFT by 80 % of the screen
 /// width using an animated [Transform.translate]. The [ProfileSidePanelWidget]
-/// occupies the right 80 % of the screen simultaneously. Both areas are
-/// visible at the same time — no scrim / dimming is applied to the 20 %
-/// visible content strip.
+/// occupies the right 80 % of the screen simultaneously. A dark scrim
+/// (up to 60 % opacity) animates in over the translated scaffold to draw
+/// focus to the panel.
 ///
-/// Tapping anywhere on the 20 % visible content strip dismisses the panel.
+/// Tapping anywhere on the scrim or the 20 % visible content strip dismisses
+/// the panel.
 ///
 /// **Frosted glass effect:** A [BackdropFilter] with a Gaussian blur is
 /// applied beneath the [NavigationBar] to create a translucent overlay that
@@ -41,6 +42,9 @@ const double _kPanelFraction = 0.80;
 /// Duration of the push-reveal animation.
 const Duration _kAnimDuration = Duration(milliseconds: 280);
 
+/// Maximum opacity of the scrim that darkens the 20 % exposed content strip.
+const double _kScrimMaxOpacity = 0.60;
+
 // ── AppShell ──────────────────────────────────────────────────────────────────
 
 /// The root scaffold for all tabbed screens.
@@ -52,7 +56,7 @@ const Duration _kAnimDuration = Duration(milliseconds: 280);
 /// Stack (fills screen)
 /// ├── AnimatedBuilder → Transform.translate (entire scaffold slides left)
 /// │   └── Scaffold (body + frosted bottom nav)
-/// │       └── GestureDetector (tap-to-close when panel is open)
+/// ├── AnimatedBuilder → Scrim (darkens exposed 20 % strip, tap-to-close)
 /// └── AnimatedBuilder → Transform.translate (panel slides in from right)
 ///     └── ProfileSidePanelWidget (the 80 % right panel)
 /// ```
@@ -167,21 +171,37 @@ class _AppShellState extends ConsumerState<AppShell>
               child: child,
             );
           },
-          child: GestureDetector(
-            // Tap the 20 % visible strip to close the panel.
-            onTap: isOpen ? _closePanel : null,
-            child: Scaffold(
-              // extendBody allows the shell body to render beneath the nav bar,
-              // so content can scroll behind the frosted glass.
-              extendBody: true,
-              body: widget.navigationShell,
-              bottomNavigationBar: _FrostedNavigationBar(
-                currentIndex: widget.navigationShell.currentIndex,
-                surfaceColor: surfaceColor,
-                onDestinationSelected: _onDestinationSelected,
-              ),
+          child: Scaffold(
+            // extendBody allows the shell body to render beneath the nav bar,
+            // so content can scroll behind the frosted glass.
+            extendBody: true,
+            body: widget.navigationShell,
+            bottomNavigationBar: _FrostedNavigationBar(
+              currentIndex: widget.navigationShell.currentIndex,
+              surfaceColor: surfaceColor,
+              onDestinationSelected: _onDestinationSelected,
             ),
           ),
+        ),
+
+        // ── Scrim (darkens the exposed 20 % strip to focus attention on
+        //    the side panel).  Covers the full screen but only visually
+        //    relevant over the translated scaffold.  The GestureDetector
+        //    captures taps anywhere on the scrim to close the panel.
+        AnimatedBuilder(
+          animation: _slideAnim,
+          builder: (context, child) {
+            final opacity = _kScrimMaxOpacity * _slideAnim.value;
+            if (opacity == 0) return const SizedBox.shrink();
+            return Positioned.fill(
+              child: GestureDetector(
+                onTap: _closePanel,
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: opacity),
+                ),
+              ),
+            );
+          },
         ),
 
         // ── Side Panel (slides in from the right) ────────────────────────

@@ -32,9 +32,6 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 /// Diameter of the avatar shown in the panel header.
 const double _kPanelAvatarSize = 64.0;
 
-/// Corner radius on the left edge of the panel.
-const double _kPanelRadius = 24.0;
-
 // ── ProfileSidePanelWidget ────────────────────────────────────────────────────
 
 /// The profile side panel surface with user info and navigation links.
@@ -62,15 +59,10 @@ class ProfileSidePanelWidget extends ConsumerWidget {
     final displayName = profile?.aiName ?? (email.isNotEmpty ? email : '—');
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(_kPanelRadius),
-        bottomLeft: Radius.circular(_kPanelRadius),
-      ),
-      child: Material(
-        color: cs.surface,
-        elevation: 8,
-        child: SafeArea(
+    return Material(
+      color: cs.surface,
+      elevation: 8,
+      child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -178,8 +170,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
