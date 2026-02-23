@@ -7,10 +7,10 @@
 ///
 /// **Route tree:**
 /// ```
-/// /welcome              → WelcomeScreen (placeholder)
-/// /onboarding           → OnboardingPageView (placeholder)
-/// /auth/login           → LoginScreen (placeholder)
-/// /auth/register        → RegisterScreen (placeholder)
+/// /welcome              → WelcomeScreen
+/// /onboarding           → OnboardingPageView
+/// /auth/login           → LoginScreen
+/// /auth/register        → RegisterScreen
 /// / (StatefulShellRoute) → AppShell
 ///   /dashboard          → DashboardScreen (placeholder, tab 0)
 ///   /chat               → ChatScreen (placeholder, tab 1)
@@ -19,8 +19,7 @@
 /// /debug/catalog        → CatalogScreen (dev-only)
 /// ```
 ///
-/// All placeholder screens will be replaced with real implementations in
-/// subsequent phases (2.2.1–2.2.5).
+/// Placeholder screens are used for routes pending Phase 2.2.2+.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -30,6 +29,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
+import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
+import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -91,36 +94,24 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.welcomePath,
       name: RouteNames.welcome,
-      builder: (context, state) => const _PlaceholderScreen(
-        title: 'Welcome',
-        icon: Icons.waving_hand_rounded,
-      ),
+      builder: (context, state) => const WelcomeScreen(),
     ),
     GoRoute(
       path: RouteNames.onboardingPath,
       name: RouteNames.onboarding,
-      builder: (context, state) => const _PlaceholderScreen(
-        title: 'Onboarding',
-        icon: Icons.auto_awesome_rounded,
-      ),
+      builder: (context, state) => const OnboardingPageView(),
     ),
 
     // ── Auth ─────────────────────────────────────────────────────────────
     GoRoute(
       path: RouteNames.loginPath,
       name: RouteNames.login,
-      builder: (context, state) => const _PlaceholderScreen(
-        title: 'Login',
-        icon: Icons.login_rounded,
-      ),
+      builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
       path: RouteNames.registerPath,
       name: RouteNames.register,
-      builder: (context, state) => const _PlaceholderScreen(
-        title: 'Register',
-        icon: Icons.person_add_rounded,
-      ),
+      builder: (context, state) => const RegisterScreen(),
     ),
 
     // ── Settings (pushed over shell) ──────────────────────────────────────
