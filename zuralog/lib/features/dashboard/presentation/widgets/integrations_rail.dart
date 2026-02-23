@@ -1,89 +1,27 @@
 /// Zuralog Dashboard — Integrations Rail Widget.
 ///
 /// A horizontal scrollable row of branded integration status pills.
-/// Each pill displays a brand icon, the app name, and a connection status dot.
-/// Hardcoded integration list — real data wiring is deferred to Phase 2.3+.
+/// Each pill displays the integration logo asset, the app name, and a
+/// connection status dot. Live data is sourced from [integrationsProvider],
+/// filtered to [IntegrationStatus.connected] entries only.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/integrations/domain/integration_model.dart';
+import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-// ── Data class ────────────────────────────────────────────────────────────────
-
-/// Represents one integration entry in the [IntegrationsRail].
-///
-/// [brandColor] is intentionally a raw hex colour — these are brand
-/// identity colours that are not part of the Zuralog design-system palette.
-class IntegrationPill {
-  /// Creates an [IntegrationPill].
-  const IntegrationPill({
-    required this.name,
-    required this.icon,
-    required this.brandColor,
-    required this.isConnected,
-  });
-
-  /// Human-readable name of the integration (e.g., "Strava").
-  final String name;
-
-  /// Icon representing the integration.
-  final IconData icon;
-
-  /// Brand accent colour used for the pill background and icon tint.
-  ///
-  // Brand color — not a design system token.
-  final Color brandColor;
-
-  /// Whether the user has connected this integration.
-  final bool isConnected;
-}
-
-// ── Static integration list ───────────────────────────────────────────────────
-
-const List<IntegrationPill> _kPills = [
-  IntegrationPill(
-    name: 'Strava',
-    icon: Icons.directions_run_rounded,
-    // Brand color — not a design system token.
-    brandColor: Color(0xFFFC4C02),
-    isConnected: false,
-  ),
-  IntegrationPill(
-    name: 'Apple Health',
-    icon: Icons.favorite_rounded,
-    // Brand color — not a design system token.
-    brandColor: Color(0xFFFF2D55),
-    isConnected: false,
-  ),
-  IntegrationPill(
-    name: 'Fitbit',
-    icon: Icons.watch_rounded,
-    // Brand color — not a design system token.
-    brandColor: Color(0xFF00B0B9),
-    isConnected: false,
-  ),
-  IntegrationPill(
-    name: 'Garmin',
-    icon: Icons.watch_later_rounded,
-    // Brand color — not a design system token.
-    brandColor: Color(0xFF006E9E),
-    isConnected: false,
-  ),
-  IntegrationPill(
-    name: 'MyFitnessPal',
-    icon: Icons.restaurant_rounded,
-    // Brand color — not a design system token.
-    brandColor: Color(0xFF0088CC),
-    isConnected: false,
-  ),
-];
-
-// ── Widget ────────────────────────────────────────────────────────────────────
+// ── Main widget ───────────────────────────────────────────────────────────────
 
 /// A labelled section containing a horizontally scrollable row of integration
-/// status pills.
+/// status pills, driven by live data from [integrationsProvider].
+///
+/// Only integrations with [IntegrationStatus.connected] are shown.
+/// When no integrations are connected, an empty-state prompt is rendered
+/// inside the same chrome ([_RailShell]).
 ///
 /// Tapping the "Manage" action invokes [onManageTap], typically navigating to
 /// the integrations hub screen.
@@ -94,11 +32,53 @@ const List<IntegrationPill> _kPills = [
 ///   onManageTap: () => context.go(RouteNames.integrationsPath),
 /// )
 /// ```
-class IntegrationsRail extends StatelessWidget {
+class IntegrationsRail extends ConsumerWidget {
   /// Creates an [IntegrationsRail].
   const IntegrationsRail({super.key, this.onManageTap});
 
   /// Callback invoked when the "Manage" action link is tapped.
+  final VoidCallback? onManageTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final integrationsState = ref.watch(integrationsProvider);
+    final connected = integrationsState.integrations
+        .where((i) => i.status == IntegrationStatus.connected)
+        .toList();
+
+    return _RailShell(
+      onManageTap: onManageTap,
+      child: connected.isEmpty
+          ? const _EmptyState()
+          : SizedBox(
+              height: 72,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: connected.length,
+                itemBuilder: (context, index) {
+                  return _IntegrationPillTile(integration: connected[index]);
+                },
+              ),
+            ),
+    );
+  }
+}
+
+// ── Shell ─────────────────────────────────────────────────────────────────────
+
+/// Chrome wrapper that renders the "Connected Apps" section header and the
+/// "Manage" action link above whatever [child] content is provided.
+///
+/// Extracted so the header/footer chrome is reusable independently of
+/// whether pills or an empty state is displayed inside.
+class _RailShell extends StatelessWidget {
+  /// Creates a [_RailShell].
+  const _RailShell({required this.child, this.onManageTap});
+
+  /// The content to render below the section header row.
+  final Widget child;
+
+  /// Callback for the "Manage" action link.
   final VoidCallback? onManageTap;
 
   @override
@@ -112,36 +92,64 @@ class IntegrationsRail extends StatelessWidget {
           onAction: onManageTap,
         ),
         const SizedBox(height: AppDimens.spaceMd),
-        SizedBox(
-          height: 72,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _kPills.length,
-            itemBuilder: (context, index) {
-              return _IntegrationPillTile(pill: _kPills[index]);
-            },
-          ),
-        ),
+        child,
       ],
+    );
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+/// Shown inside [_RailShell] when no integrations are connected.
+///
+/// Prompts the user to connect an app via the integrations hub.
+class _EmptyState extends StatelessWidget {
+  /// Creates an [_EmptyState].
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 72,
+      child: Row(
+        children: [
+          Icon(
+            Icons.link_off_rounded,
+            size: AppDimens.iconSm,
+            color: AppColors.textSecondary.withValues(alpha: 0.6),
+          ),
+          const SizedBox(width: AppDimens.spaceXs),
+          Text(
+            'No apps connected',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 // ── Pill tile ─────────────────────────────────────────────────────────────────
 
-/// A single branded integration pill tile.
+/// A single branded integration pill tile for a connected [IntegrationModel].
 ///
-/// Renders a semi-transparent brand-coloured background, the brand icon,
-/// the app name, and a status dot in the top-right corner.
+/// Renders a semi-transparent brand-coloured background, the integration logo
+/// (with initials fallback), the app name, and a green status dot indicating
+/// the connected state.
 class _IntegrationPillTile extends StatelessWidget {
-  /// Creates a [_IntegrationPillTile] for [pill].
-  const _IntegrationPillTile({required this.pill});
+  /// Creates an [_IntegrationPillTile] for [integration].
+  const _IntegrationPillTile({required this.integration});
 
-  /// The integration data to render.
-  final IntegrationPill pill;
+  /// The connected integration to render.
+  final IntegrationModel integration;
 
   // Status dot size constant.
   static const double _dotSize = 8.0;
+
+  // Connected status colour — iOS system green.
+  static const Color _connectedColor = Color(0xFF34C759);
 
   @override
   Widget build(BuildContext context) {
@@ -152,16 +160,16 @@ class _IntegrationPillTile extends StatelessWidget {
       height: 64,
       margin: const EdgeInsets.only(right: AppDimens.spaceSm),
       decoration: BoxDecoration(
-        color: pill.brandColor.withValues(alpha: isDark ? 0.15 : 0.08),
+        color: AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
         border: Border.all(
-          color: pill.brandColor.withValues(alpha: 0.3),
+          color: AppColors.primary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
       child: Stack(
         children: [
-          // ── Centre content ─────────────────────────────────────────────
+          // ── Centre content ───────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppDimens.spaceSm,
@@ -170,16 +178,16 @@ class _IntegrationPillTile extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  pill.icon,
-                  color: pill.brandColor,
-                  size: 20,
+                // Logo with initials fallback.
+                _IntegrationLogo(
+                  logoAsset: integration.logoAsset,
+                  name: integration.name,
                 ),
                 const SizedBox(height: AppDimens.spaceXs),
                 Text(
-                  pill.name,
+                  integration.name,
                   style: AppTextStyles.caption.copyWith(
-                    color: pill.brandColor,
+                    color: AppColors.primary,
                     fontSize: 10,
                   ),
                   textAlign: TextAlign.center,
@@ -190,23 +198,66 @@ class _IntegrationPillTile extends StatelessWidget {
             ),
           ),
 
-          // ── Status dot (top-right) ─────────────────────────────────────
+          // ── Status dot (top-right) — always green for connected ──────────
           Positioned(
             top: AppDimens.spaceXs,
             right: AppDimens.spaceXs,
             child: Container(
               width: _dotSize,
               height: _dotSize,
-              decoration: BoxDecoration(
-                // Green when connected, grey otherwise.
-                color: pill.isConnected
-                    ? const Color(0xFF34C759) // iOS system green
-                    : AppColors.textSecondary.withValues(alpha: 0.5),
+              decoration: const BoxDecoration(
+                color: _connectedColor,
                 shape: BoxShape.circle,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Logo helper ───────────────────────────────────────────────────────────────
+
+/// Renders the integration logo from [logoAsset], falling back to a two-letter
+/// initials [Text] if the asset cannot be loaded.
+///
+/// Parameters:
+///   logoAsset: Asset path for the integration image.
+///   name: Integration name used to derive initials for the fallback.
+class _IntegrationLogo extends StatelessWidget {
+  /// Creates an [_IntegrationLogo].
+  const _IntegrationLogo({required this.logoAsset, required this.name});
+
+  /// Asset path for the integration logo.
+  final String logoAsset;
+
+  /// Integration name used for the initials fallback.
+  final String name;
+
+  /// Derives up to two-character initials from [name].
+  String get _initials {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name.substring(0, name.length.clamp(0, 2)).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      logoAsset,
+      width: 20,
+      height: 20,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => Text(
+        _initials,
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

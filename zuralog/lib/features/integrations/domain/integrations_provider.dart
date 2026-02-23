@@ -258,10 +258,20 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 ///
 /// Auto-disposes to free resources when the Integrations Hub screen
 /// is removed from the widget tree.
+///
+/// [loadIntegrations] is triggered automatically via [Future.microtask] on
+/// first watch, so widgets that observe this provider do not need to call
+/// [IntegrationsNotifier.loadIntegrations] explicitly.
 final integrationsProvider =
     StateNotifierProvider.autoDispose<IntegrationsNotifier, IntegrationsState>(
-  (ref) => IntegrationsNotifier(
-    oauthRepository: ref.watch(oauthRepositoryProvider),
-    healthRepository: ref.watch(healthRepositoryProvider),
-  ),
+  (ref) {
+    final notifier = IntegrationsNotifier(
+      oauthRepository: ref.watch(oauthRepositoryProvider),
+      healthRepository: ref.watch(healthRepositoryProvider),
+    );
+    // Kick off the initial load after the current frame so the provider is
+    // fully initialised before any state mutation occurs.
+    Future.microtask(notifier.loadIntegrations);
+    return notifier;
+  },
 );
