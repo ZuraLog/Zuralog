@@ -1,7 +1,8 @@
 /// Zuralog Edge Agent — Register Screen Tests.
 ///
 /// Verifies form validation (empty fields, invalid email, short password),
-/// and error SnackBar on [AuthFailure].
+/// error SnackBar on [AuthFailure], and that the form calls [register] (not
+/// [login]).
 ///
 /// Mirrors [login_screen_test.dart] coverage for the registration flow.
 /// Uses a [_FakeAuthStateNotifier] override to avoid network calls.
@@ -20,15 +21,24 @@ import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 
 /// Fake [AuthStateNotifier] that returns a preset [AuthResult] without
 /// hitting any network. Used to isolate [RegisterScreen] from the data layer.
+///
+/// Tracks which auth method was last called via [lastCalledMethod] so tests
+/// can verify the correct code path (register, not login) is exercised.
 class _FakeAuthStateNotifier extends AuthStateNotifier {
   /// The result to return from [register] calls.
   final AuthResult response;
+
+  /// The name of the last method called: `'login'` or `'register'`.
+  ///
+  /// Starts as `null` before any call is made.
+  String? lastCalledMethod;
 
   /// Creates a [_FakeAuthStateNotifier] that always returns [response].
   _FakeAuthStateNotifier({required this.response});
 
   @override
   Future<AuthResult> login(String email, String password) async {
+    lastCalledMethod = 'login';
     switch (response) {
       case AuthSuccess():
         state = AuthState.authenticated;
@@ -40,6 +50,7 @@ class _FakeAuthStateNotifier extends AuthStateNotifier {
 
   @override
   Future<AuthResult> register(String email, String password) async {
+    lastCalledMethod = 'register';
     switch (response) {
       case AuthSuccess():
         state = AuthState.authenticated;
@@ -54,12 +65,17 @@ class _FakeAuthStateNotifier extends AuthStateNotifier {
 
 /// Creates a [ProviderScope] override that replaces [authStateProvider] with
 /// a [_FakeAuthStateNotifier] returning [response].
-ProviderScope _overrideScope({required AuthResult response}) {
+///
+/// The [notifier] out-parameter is set to the fake notifier instance so
+/// callers can inspect [_FakeAuthStateNotifier.lastCalledMethod] after a tap.
+ProviderScope _overrideScope({
+  required AuthResult response,
+  _FakeAuthStateNotifier? notifier,
+}) {
+  final fake = notifier ?? _FakeAuthStateNotifier(response: response);
   return ProviderScope(
     overrides: [
-      authStateProvider.overrideWith(
-        () => _FakeAuthStateNotifier(response: response),
-      ),
+      authStateProvider.overrideWith(() => fake),
     ],
     child: MaterialApp.router(
       routerConfig: GoRouter(
@@ -195,6 +211,29 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(errorMessage), findsOneWidget);
+    });
+
+    testWidgets('calls register() — not login() — on form submission',
+        (tester) async {
+      final fake = _FakeAuthStateNotifier(
+        response: const AuthFailure(message: 'stub'),
+      );
+      await tester.pumpWidget(_overrideScope(
+        response: const AuthFailure(message: 'stub'),
+        notifier: fake,
+      ));
+      await tester.pumpAndSettle();
+
+      await _fillForm(
+        tester,
+        email: 'user@test.com',
+        password: 'password123',
+      );
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Create Account'));
+      await tester.pumpAndSettle();
+
+      expect(fake.lastCalledMethod, equals('register'),
+          reason: 'RegisterScreen must call register(), not login()');
     });
   });
 }
