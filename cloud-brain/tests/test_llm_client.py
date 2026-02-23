@@ -19,7 +19,7 @@ def llm_client():
         mock_settings.openrouter_api_key = "test-key"
         mock_settings.openrouter_referer = "https://test.app"
         mock_settings.openrouter_title = "Test App"
-        mock_settings.openrouter_model = "moonshot/kimi-k2.5"
+        mock_settings.openrouter_model = "moonshotai/kimi-k2.5"
         client = LLMClient()
         yield client
 
@@ -96,7 +96,7 @@ async def test_chat_without_tools(llm_client):
 
 def test_default_model(llm_client):
     """LLMClient should use the configured default model."""
-    assert llm_client.model == "moonshot/kimi-k2.5"
+    assert llm_client.model == "moonshotai/kimi-k2.5"
 
 
 def test_custom_model():
@@ -105,6 +105,6 @@ def test_custom_model():
         mock_settings.openrouter_api_key = "test-key"
         mock_settings.openrouter_referer = "https://test.app"
         mock_settings.openrouter_title = "Test App"
-        mock_settings.openrouter_model = "moonshot/kimi-k2.5"
+        mock_settings.openrouter_model = "moonshotai/kimi-k2.5"
         client = LLMClient(model="google/gemini-flash-1.5")
         assert client.model == "google/gemini-flash-1.5"

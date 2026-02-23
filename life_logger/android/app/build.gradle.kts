@@ -3,6 +3,8 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Firebase / Google Services — processes google-services.json (Phase 1.9)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -35,6 +37,16 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    // Ensure native .so files (sqlite3, etc.) are extracted from the APK
+    // at install time rather than loaded directly from compressed storage.
+    // Required for sqlite3_flutter_libs 0.5.x on AGP 8.x+ where the
+    // default behaviour changed to store libs compressed (useLegacyPackaging=false).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 }

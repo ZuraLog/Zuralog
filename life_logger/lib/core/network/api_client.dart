@@ -26,14 +26,14 @@ class ApiClient {
   /// Creates a new [ApiClient].
   ///
   /// [baseUrl] defaults to the Android emulator localhost alias.
-  /// Override for iOS simulator (`http://localhost:8000`) or
+  /// Override for iOS simulator (`http://localhost:8001`) or
   /// production (`https://api.lifelogger.com`).
   ///
   /// [dio] and [storage] can be injected for testing.
   ApiClient({
     String baseUrl = const String.fromEnvironment(
       'BASE_URL',
-      defaultValue: 'http://10.0.2.2:8000',
+      defaultValue: 'http://10.0.2.2:8001',
     ),
     Dio? dio,
     FlutterSecureStorage? storage,
@@ -143,4 +143,56 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
   }) => _dio.post(path, data: data, queryParameters: queryParameters);
+
+  // -------------------------------------------------------------------------
+  // Error Helpers
+  // -------------------------------------------------------------------------
+
+  /// Produces a user-friendly error message from a [DioException].
+  ///
+  /// Differentiates between connection errors (backend unreachable)
+  /// and HTTP errors (backend responded with an error status).
+  ///
+  /// [e] is the Dio exception to format.
+  ///
+  /// Returns a human-readable error string suitable for display in
+  /// developer logs or UI error messages.
+  static String friendlyError(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Connection timed out. Is the Cloud Brain running at '
+            '${e.requestOptions.baseUrl}?';
+      case DioExceptionType.connectionError:
+        return 'Cannot reach Cloud Brain at ${e.requestOptions.baseUrl}. '
+            'Start the backend with: cd cloud-brain && make dev';
+      case DioExceptionType.badResponse:
+        final code = e.response?.statusCode;
+        final detail = _extractDetail(e);
+        return 'Server error ($code): $detail';
+      default:
+        return 'Network error: ${e.message}';
+    }
+  }
+
+  /// Extracts the `detail` field from a backend error response.
+  ///
+  /// FastAPI returns `{"detail": "..."}` for HTTP errors.
+  /// Falls back to the status message if parsing fails.
+  ///
+  /// [e] is the Dio exception containing the response.
+  ///
+  /// Returns the error detail string.
+  static String _extractDetail(DioException e) {
+    try {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic> && data.containsKey('detail')) {
+        return data['detail'].toString();
+      }
+    } catch (_) {
+      // Fall through to generic message
+    }
+    return e.response?.statusMessage ?? 'Unknown error';
+  }
 }

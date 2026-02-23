@@ -12,7 +12,7 @@ package com.lifelogger.life_logger
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.lifecycleScope
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 
 /// Main activity that bootstraps the Flutter engine and sets up the
 /// Health Connect method channel.
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         /// Channel name shared with `HealthBridge.dart`.

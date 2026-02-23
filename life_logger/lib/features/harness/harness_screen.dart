@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:life_logger/core/deeplink/deeplink_handler.dart';
 import 'package:life_logger/core/deeplink/deeplink_launcher.dart';
 import 'package:life_logger/core/di/providers.dart';
+import 'package:life_logger/core/network/api_client.dart';
 import 'package:life_logger/core/network/ws_client.dart';
 import 'package:life_logger/features/auth/domain/auth_providers.dart';
 import 'package:life_logger/features/auth/domain/auth_state.dart';
@@ -73,6 +74,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   StreamSubscription<ChatMessage>? _wsSubscription;
   StreamSubscription<ConnectionStatus>? _wsStatusSubscription;
   ConnectionStatus _chatStatus = ConnectionStatus.disconnected;
+  bool _backendOnline = false;
 
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
@@ -83,11 +85,14 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
+    // Animation starts stopped; only runs while chat status is "connecting".
+    // Avoids continuous compositor activity when not visually needed.
     _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
     DeeplinkHandler.init(ref, onLog: _log);
+    _checkBackendStatus();
   }
 
   @override
@@ -110,9 +115,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
 
   void _log(String message) {
     final timestamp = DateTime.now().toIso8601String().substring(11, 19);
-    setState(() {
-      _outputController.text += '[$timestamp] $message\n';
-    });
+    // TextEditingController notifies its own listeners — setState is redundant
+    // here and would trigger a full rebuild of the ~1900-line widget tree on
+    // every log message, causing jank during keyboard animations.
+    _outputController.text += '[$timestamp] $message\n';
   }
 
   // -----------------------------------------------------------------------
@@ -121,6 +127,16 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
 
   void _updateChatStatus(ConnectionStatus status) {
     setState(() => _chatStatus = status);
+    // Drive the pulse animation only while actively connecting.
+    if (status == ConnectionStatus.connecting) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      _pulseController.stop();
+      // Ensure the indicator is fully visible when not animating.
+      _pulseController.value = 1.0;
+    }
   }
 
   Color get _chatStatusColor => switch (_chatStatus) {
@@ -136,6 +152,26 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   };
 
   // -----------------------------------------------------------------------
+  // Backend Connectivity
+  // -----------------------------------------------------------------------
+
+  /// Checks if the Cloud Brain backend is reachable.
+  ///
+  /// Updates [_backendOnline] and logs the result. Called automatically
+  /// on startup and can be re-triggered via the Health Check button.
+  Future<void> _checkBackendStatus() async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.get('/health');
+      if (mounted) setState(() => _backendOnline = true);
+    } on DioException catch (_) {
+      if (mounted) setState(() => _backendOnline = false);
+    } catch (_) {
+      if (mounted) setState(() => _backendOnline = false);
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Backend Actions
   // -----------------------------------------------------------------------
 
@@ -144,9 +180,14 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get('/health');
+      if (mounted) setState(() => _backendOnline = true);
       _log('✅ Response: ${response.data}');
+    } on DioException catch (e) {
+      if (mounted) setState(() => _backendOnline = false);
+      _log('❌ ${ApiClient.friendlyError(e)}');
     } catch (e) {
-      _log('❌ Error: $e');
+      if (mounted) setState(() => _backendOnline = false);
+      _log('❌ Unexpected error: $e');
     }
   }
 
@@ -488,14 +529,50 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
             data: {'data_type': dataType, 'value': value},
           );
       _log('Write triggered: ${response.data}');
-    } catch (e) {
-      if (e is DioException && e.response?.statusCode == 404) {
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
         _log(
-          'Write trigger failed: No device registered (FCM not initialized). This is expected until Phase 1.9.',
+          '⚠️ No device registered. Tap "Init FCM" first, then retry.',
         );
       } else {
-        _log('Error triggering write: $e');
+        _log('❌ ${ApiClient.friendlyError(e)}');
       }
+    } catch (e) {
+      _log('❌ Unexpected error: $e');
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // FCM Actions
+  // -----------------------------------------------------------------------
+
+  /// Initializes Firebase Cloud Messaging and registers this device with
+  /// the Cloud Brain backend.
+  ///
+  /// Requires google-services.json to be present and Firebase configured.
+  /// Logs step-by-step progress for developer testing.
+  Future<void> _initFcm() async {
+    _log('Initializing FCM...');
+    try {
+      final fcmService = ref.read(fcmServiceProvider);
+      final token = await fcmService.initialize();
+      if (token == null) {
+        _log('❌ FCM permission denied or init failed');
+        return;
+      }
+      _log('✅ FCM token obtained: ${token.substring(0, 20)}...');
+      _log('Registering device with backend...');
+      final apiClient = ref.read(apiClientProvider);
+      final registered = await fcmService.registerWithBackend(apiClient);
+      if (registered) {
+        _log('✅ Device registered — AI Write buttons are now ready');
+      } else {
+        _log('❌ Device registration failed — check backend logs');
+      }
+    } catch (e) {
+      _log('❌ FCM init error: $e');
+      _log('  → Ensure google-services.json is in android/app/');
+      _log('  → Tap the "Firebase Setup" button for instructions');
     }
   }
 
@@ -739,6 +816,51 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
         ],
       ),
       actions: [
+        // Backend connectivity indicator
+        GestureDetector(
+          onTap: _checkBackendStatus,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _backendOnline
+                  ? _Colors.successLight
+                  : _Colors.dangerLight,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _backendOnline
+                    ? _Colors.success.withValues(alpha: 0.3)
+                    : _Colors.danger.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: _backendOnline ? _Colors.success : _Colors.danger,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _backendOnline ? 'API' : 'API',
+                  style: TextStyle(
+                    color: _backendOnline ? _Colors.success : _Colors.danger,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Auth state indicator
         AnimatedContainer(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOut,
@@ -985,6 +1107,52 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChip(
+              icon: Icons.help_outline_rounded,
+              label: 'Strava Guide',
+              color: _Colors.info,
+              onTap: () {
+                _log('--- STRAVA TESTING GUIDE ---');
+                _log('Prerequisites:');
+                _log(
+                  '  1. Cloud Brain must be running '
+                  '(cd cloud-brain && make dev)',
+                );
+                _log(
+                  '  2. .env must have STRAVA_CLIENT_ID '
+                  'and STRAVA_CLIENT_SECRET',
+                );
+                _log(
+                  '  3. STRAVA_REDIRECT_URI must be: '
+                  'lifelogger://oauth/strava',
+                );
+                _log('  4. You must be logged in (use AUTH section first)');
+                _log('');
+                _log('Steps:');
+                _log('  1. Log in via the AUTH section first');
+                _log(
+                  '  2. Tap "Strava" above — opens browser '
+                  'to Strava auth page',
+                );
+                _log('  3. Log into your Strava account in the browser');
+                _log('  4. Authorize "Life Logger" to access your data');
+                _log(
+                  '  5. Browser redirects to '
+                  'lifelogger://oauth/strava?code=XXX',
+                );
+                _log('  6. The app intercepts the deep link automatically');
+                _log('  7. Code is exchanged for tokens on the backend');
+                _log('  8. Check this log for exchange confirmation');
+                _log('----------------------------');
+              },
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -1121,6 +1289,37 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
           runSpacing: 8,
           children: [
             _ActionChip(
+              icon: Icons.notifications_active_rounded,
+              label: 'Init FCM',
+              color: _Colors.success,
+              onTap: _initFcm,
+            ),
+            _ActionChip(
+              icon: Icons.help_outline_rounded,
+              label: 'Firebase Setup',
+              color: _Colors.warning,
+              onTap: () {
+                _log('--- FIREBASE SETUP GUIDE ---');
+                _log('FCM (push notifications) requires a Firebase project:');
+                _log('');
+                _log('1. Go to https://console.firebase.google.com');
+                _log('2. Create a project (or use an existing one)');
+                _log('3. Add Android app: com.lifelogger.life_logger');
+                _log('4. Download google-services.json');
+                _log('5. Place it at: android/app/google-services.json');
+                _log('6. Rebuild the app: flutter run');
+                _log('');
+                _log('For backend FCM sends:');
+                _log('7. Firebase Console → Project Settings → Service Accounts');
+                _log('8. Generate new private key → save JSON file');
+                _log('9. Set FCM_CREDENTIALS_PATH=<path> in cloud-brain/.env');
+                _log('10. Restart the Cloud Brain');
+                _log('');
+                _log('Then tap "Init FCM" → "AI Write (Steps/Nutrition)"');
+                _log('----------------------------');
+              },
+            ),
+            _ActionChip(
               icon: Icons.directions_walk_rounded,
               label: 'AI Write (Steps)',
               color: _Colors.info,
@@ -1140,10 +1339,35 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               }),
             ),
             _ActionChip(
-              icon: Icons.info_outline_rounded,
+              icon: Icons.sync_rounded,
               label: 'Sync Status',
-              color: _Colors.warning,
-              onTap: () => _log('Sync status check — not yet implemented'),
+              color: _Colors.info,
+              onTap: () async {
+                _log('Checking sync status...');
+                final store = ref.read(syncStatusStoreProvider);
+                final lastSync = await store.getLastSyncTime();
+                final inProgress = await store.isSyncInProgress();
+                if (inProgress) {
+                  _log('🔄 Sync is currently in progress...');
+                } else if (lastSync != null) {
+                  final ago = DateTime.now().difference(lastSync);
+                  final String agoStr;
+                  if (ago.inMinutes < 1) {
+                    agoStr = '${ago.inSeconds}s ago';
+                  } else if (ago.inHours < 1) {
+                    agoStr = '${ago.inMinutes}m ago';
+                  } else {
+                    agoStr =
+                        '${ago.inHours}h ${ago.inMinutes % 60}m ago';
+                  }
+                  _log('✅ Last sync: $agoStr ($lastSync)');
+                } else {
+                  _log(
+                    '⚠️ Never synced. Background sync runs every '
+                    '~15 min via WorkManager.',
+                  );
+                }
+              },
             ),
           ],
         ),
@@ -1185,8 +1409,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                     '  Sleep: ${summary.sleepHours}h\n'
                     '  Weight: ${summary.weightKg ?? "N/A"} kg',
                   );
+                } on DioException catch (e) {
+                  _log('❌ ${ApiClient.friendlyError(e)}');
                 } catch (e) {
-                  _log('Error: $e');
+                  _log('❌ Unexpected error: $e');
                 }
               },
             ),
@@ -1207,8 +1433,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                     '  Cal Out: ${trends.caloriesOut}\n'
                     '  Sleep: ${trends.sleepHours}',
                   );
+                } on DioException catch (e) {
+                  _log('❌ ${ApiClient.friendlyError(e)}');
                 } catch (e) {
-                  _log('Error: $e');
+                  _log('❌ Unexpected error: $e');
                 }
               },
             ),
@@ -1226,8 +1454,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                     'Goals: ${insight.goals.length} active\n'
                     'Trends: ${insight.trends.keys.toList()}',
                   );
+                } on DioException catch (e) {
+                  _log('❌ ${ApiClient.friendlyError(e)}');
                 } catch (e) {
-                  _log('Error: $e');
+                  _log('❌ Unexpected error: $e');
                 }
               },
             ),

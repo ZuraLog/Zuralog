@@ -23,9 +23,12 @@ dependencies:
 
   # Local Storage
   drift: any
-  sqlite3_flutter_libs: any
+  sqlite3_flutter_libs: ^0.5.0
   flutter_secure_storage: any
   path_provider: any
+
+  # Lightweight key-value storage (sync status timestamps)
+  shared_preferences: any
 
   # Utilities
   url_launcher: any
