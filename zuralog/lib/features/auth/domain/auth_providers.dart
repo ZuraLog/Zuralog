@@ -54,7 +54,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// Attempts to log in with the given credentials.
   ///
   /// Returns the [AuthResult] for the UI to display.
-  /// Updates state to [AuthState.authenticated] on success.
+  /// Updates state to [AuthState.authenticated] on success and stores the
+  /// [email] in [userEmailProvider] for display in the Settings screen.
   Future<AuthResult> login(String email, String password) async {
     state = AuthState.loading;
     final result = await _authRepository.login(email, password);
@@ -62,6 +63,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
     switch (result) {
       case AuthSuccess():
         state = AuthState.authenticated;
+        ref.read(userEmailProvider.notifier).state = email;
       case AuthFailure():
         state = AuthState.unauthenticated;
     }
@@ -72,7 +74,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// Attempts to register with the given credentials.
   ///
   /// Returns the [AuthResult] for the UI to display.
-  /// Updates state to [AuthState.authenticated] on success.
+  /// Updates state to [AuthState.authenticated] on success and stores the
+  /// [email] in [userEmailProvider] for display in the Settings screen.
   Future<AuthResult> register(String email, String password) async {
     state = AuthState.loading;
     final result = await _authRepository.register(email, password);
@@ -80,6 +83,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
     switch (result) {
       case AuthSuccess():
         state = AuthState.authenticated;
+        ref.read(userEmailProvider.notifier).state = email;
       case AuthFailure():
         state = AuthState.unauthenticated;
     }
@@ -89,10 +93,12 @@ class AuthStateNotifier extends Notifier<AuthState> {
 
   /// Logs out the current user.
   ///
-  /// Always transitions to [AuthState.unauthenticated].
+  /// Always transitions to [AuthState.unauthenticated] and clears the
+  /// stored email from [userEmailProvider].
   Future<void> logout() async {
     state = AuthState.loading;
     await _authRepository.logout();
+    ref.read(userEmailProvider.notifier).state = '';
     state = AuthState.unauthenticated;
   }
 }
@@ -104,3 +110,17 @@ class AuthStateNotifier extends Notifier<AuthState> {
 final isLoggedInProvider = Provider<bool>((ref) {
   return ref.watch(authStateProvider) == AuthState.authenticated;
 });
+
+/// Stores the currently authenticated user's email address.
+///
+/// Set by [AuthStateNotifier.login] and [AuthStateNotifier.register] on
+/// successful auth, and cleared on logout. Defaults to an empty string.
+///
+/// Consumer example:
+/// ```dart
+/// final email = ref.watch(userEmailProvider);
+/// ```
+final userEmailProvider = StateProvider<String>(
+  (ref) => '',
+  name: 'userEmailProvider',
+);

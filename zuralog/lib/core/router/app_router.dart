@@ -15,11 +15,9 @@
 ///   /dashboard          → DashboardScreen (tab 0)
 ///   /chat               → ChatScreen (placeholder, tab 1)
 ///   /integrations       → IntegrationsHubScreen (tab 2)
-/// /settings             → SettingsScreen (placeholder, pushed over shell)
+/// /settings             → SettingsScreen (pushed over shell)
 /// /debug/catalog        → CatalogScreen (dev-only)
 /// ```
-///
-/// Placeholder screens are used for routes pending later phases.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -36,10 +34,10 @@ import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dar
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
-import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/chat/presentation/chat_screen.dart';
 import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:zuralog/features/integrations/presentation/integrations_hub_screen.dart';
+import 'package:zuralog/features/settings/presentation/settings_screen.dart';
 import 'package:zuralog/shared/layout/app_shell.dart';
 
 // ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
@@ -121,10 +119,7 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.settingsPath,
       name: RouteNames.settings,
-      builder: (context, state) => const _PlaceholderScreen(
-        title: 'Settings',
-        icon: Icons.settings_rounded,
-      ),
+      builder: (context, state) => const SettingsScreen(),
     ),
 
     // ── Developer Tools ───────────────────────────────────────────────────
@@ -177,51 +172,3 @@ List<RouteBase> _buildRoutes() {
   ];
 }
 
-// ── Placeholder Screen ────────────────────────────────────────────────────────
-
-/// Icon size used by [_PlaceholderScreen].
-const double _placeholderIconSize = 64;
-
-/// Temporary screen used for routes whose real implementation is pending.
-///
-/// Displays the route [title] and an [icon] so developers can verify routing
-/// without needing the final UI. Replaced in Phases 2.2.1–2.2.5.
-class _PlaceholderScreen extends StatelessWidget {
-  /// Creates a [_PlaceholderScreen] with the given [title] and [icon].
-  const _PlaceholderScreen({required this.title, required this.icon});
-
-  /// Human-readable name of the route shown in the center of the screen.
-  final String title;
-
-  /// Material icon displayed above the title.
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: _placeholderIconSize, color: colorScheme.primary),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'Placeholder — coming soon',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
