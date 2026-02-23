@@ -64,14 +64,17 @@ class HealthRepository {
   /// Returns `null` if no weight data exists.
   Future<double?> getWeight() => _bridge.getWeight();
 
-  /// Fetches nutrition (dietary energy consumed) entries within a date range.
+  /// Fetches total active calories burned for a specific [date] in kcal.
   ///
-  /// Returns an empty list if no nutrition data exists.
-  /// Each entry is a Map with keys: `calories`, `date`, `source`.
-  Future<List<Map<String, dynamic>>> getNutrition(
-    DateTime startDate,
-    DateTime endDate,
-  ) => _bridge.getNutrition(startDate, endDate);
+  /// Returns `null` if no data exists or the health platform is unavailable.
+  Future<double?> getCaloriesBurned(DateTime date) =>
+      _bridge.getCaloriesBurned(date);
+
+  /// Fetches total dietary energy consumed (calories) for a specific [date] in kcal.
+  ///
+  /// Returns `null` if no data exists or the health platform is unavailable.
+  Future<double?> getNutritionCalories(DateTime date) =>
+      _bridge.getNutritionCalories(date);
 
   /// Fetches the most recent resting heart rate in beats-per-minute.
   ///

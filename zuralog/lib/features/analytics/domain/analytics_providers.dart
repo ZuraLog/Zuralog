@@ -14,13 +14,14 @@
 /// when no widget is listening, which is important for background data that
 /// should not be held indefinitely in memory.
 ///
-/// **Cardio metric merge strategy:**
-/// For [restingHeartRate], [hrv], and [cardioFitnessLevel], the Cloud Brain
-/// API is the primary source (it aggregates data from Oura, Garmin, etc.).
-/// If the API returns null for any of these, the provider falls back to a
-/// direct native read from Apple HealthKit / Google Health Connect so that
-/// Apple Watch and Pixel Watch data is shown even when no OAuth integration
-/// is connected.
+/// **Native merge strategy (all six primary metrics):**
+/// The Cloud Brain API is always the primary source. For every field that
+/// the API returns as zero/null, the provider fans out a parallel native read
+/// from Apple HealthKit / Google Health Connect so that on-device data
+/// (Apple Watch, Pixel Watch, etc.) surfaces even when no OAuth integration
+/// is connected or when the Cloud Brain has not yet ingested a value for today.
+///
+/// Merge priority: API value (non-zero / non-null) > native bridge value > zero/null.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,64 +31,147 @@ import 'package:zuralog/features/analytics/domain/daily_summary.dart';
 import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 
-/// Fetches today's [DailySummary] from the analytics repository, then fills
-/// any null cardiovascular fields (RHR, HRV, VO2 max) from the local native
-/// health store (HealthKit on iOS / Health Connect on Android).
+/// Sums the total sleep duration from a list of raw native sleep segments.
 ///
-/// Uses [DateTime.now()] as the target date so the data always reflects
-/// the current calendar day. Auto-disposes when no widget is subscribed.
+/// Each segment map contains `startDate` and `endDate` as millisecond epoch
+/// integers (iOS) or `startTime` / `endTime` (Android). Both variants are
+/// handled. Returns total hours as a [double], capped at 24.
+double _sumSleepHours(List<Map<String, dynamic>> segments) {
+  var totalMs = 0.0;
+  for (final seg in segments) {
+    // iOS key names: startDate / endDate. Android key names: startTime / endTime.
+    final start =
+        (seg['startDate'] as num?)?.toDouble() ??
+        (seg['startTime'] as num?)?.toDouble();
+    final end =
+        (seg['endDate'] as num?)?.toDouble() ??
+        (seg['endTime'] as num?)?.toDouble();
+    if (start != null && end != null && end > start) {
+      totalMs += end - start;
+    }
+  }
+  final hours = totalMs / (1000 * 60 * 60);
+  return hours.clamp(0.0, 24.0);
+}
+
+/// Fetches today's [DailySummary] from the Cloud Brain API, then fills any
+/// zero/null primary metric fields from the local native health store
+/// (HealthKit on iOS / Health Connect on Android).
 ///
-/// Exposes a [DioException] as [AsyncError] if the backend is unreachable
-/// and no cached data is available (the repository manages the cache internally).
+/// **Merge order (for each metric):**
+/// 1. Use the Cloud Brain API value if it is non-zero (or non-null for
+///    nullable fields).
+/// 2. Otherwise fan out a parallel native bridge read and use that value.
+/// 3. Fall back to the original API value (zero/null) if the native read
+///    also returns nothing.
+///
+/// Uses [DateTime.now()] as the target date. Auto-disposes when no widget
+/// is subscribed. Throws [DioException] as [AsyncError] only when the API
+/// is unreachable AND no cached fallback exists.
 final dailySummaryProvider = FutureProvider.autoDispose<DailySummary>((
   ref,
 ) async {
-  // 1. Fetch primary data from the Cloud Brain API.
+  final today = DateTime.now();
+
+  // 1. Fetch primary data from the Cloud Brain API (cached for 15 min).
   final summary = await ref
       .watch(analyticsRepositoryProvider)
-      .getDailySummary(DateTime.now());
+      .getDailySummary(today);
 
-  // 2. If all three cardio metrics are already present, skip the native read.
-  if (summary.restingHeartRate != null &&
-      summary.hrv != null &&
-      summary.cardioFitnessLevel != null) {
-    return summary;
-  }
+  // 2. Determine which fields need a native fallback read.
+  final needsSteps = summary.steps == 0;
+  final needsSleep = summary.sleepHours == 0.0;
+  final needsCalBurned = summary.caloriesBurned == 0;
+  final needsCalConsumed = summary.caloriesConsumed == 0;
+  final needsRhr = summary.restingHeartRate == null;
+  final needsHrv = summary.hrv == null;
+  final needsCardio = summary.cardioFitnessLevel == null;
 
-  // 3. Read the missing metrics from the device health store as a fallback.
+  final anyNativeReadNeeded =
+      needsSteps ||
+      needsSleep ||
+      needsCalBurned ||
+      needsCalConsumed ||
+      needsRhr ||
+      needsHrv ||
+      needsCardio;
+
+  if (!anyNativeReadNeeded) return summary;
+
+  // 3. Fan out all required native reads in parallel.
   final healthRepo = ref.read(healthRepositoryProvider);
 
-  final results = await Future.wait([
-    summary.restingHeartRate == null
+  // Sleep segments need to be fetched over a window (last night: yesterday
+  // 6 pm → today 12 noon) to capture cross-midnight sessions.
+  final sleepStart = today.subtract(const Duration(hours: 18));
+  final sleepEnd = today.copyWith(hour: 12, minute: 0, second: 0);
+
+  final results = await Future.wait<Object?>([
+    needsSteps
+        ? healthRepo.getSteps(today)
+        : Future<double>.value(0),
+    needsSleep
+        ? healthRepo.getSleep(sleepStart, sleepEnd)
+        : Future<List<Map<String, dynamic>>>.value([]),
+    needsCalBurned
+        ? healthRepo.getCaloriesBurned(today)
+        : Future<double?>.value(null),
+    needsCalConsumed
+        ? healthRepo.getNutritionCalories(today)
+        : Future<double?>.value(null),
+    needsRhr
         ? healthRepo.getRestingHeartRate()
-        : Future.value(null),
-    summary.hrv == null ? healthRepo.getHRV() : Future.value(null),
-    summary.cardioFitnessLevel == null
+        : Future<double?>.value(null),
+    needsHrv
+        ? healthRepo.getHRV()
+        : Future<double?>.value(null),
+    needsCardio
         ? healthRepo.getCardioFitness()
-        : Future.value(null),
+        : Future<double?>.value(null),
   ]);
 
-  final nativeRhr = results[0];
-  final nativeHrv = results[1];
-  final nativeCardio = results[2];
+  final nativeSteps = needsSteps ? (results[0] as double?) : null;
+  final nativeSleepSegments =
+      needsSleep
+          ? (results[1] as List<Map<String, dynamic>>?)
+          : null;
+  final nativeCalBurned = needsCalBurned ? (results[2] as double?) : null;
+  final nativeCalConsumed = needsCalConsumed ? (results[3] as double?) : null;
+  final nativeRhr = needsRhr ? (results[4] as double?) : null;
+  final nativeHrv = needsHrv ? (results[5] as double?) : null;
+  final nativeCardio = needsCardio ? (results[6] as double?) : null;
 
-  // 4. Return the merged summary only if at least one native value was found.
-  if (nativeRhr == null && nativeHrv == null && nativeCardio == null) {
-    return summary;
-  }
+  // 4. Compute sleep hours from raw segments if fetched.
+  final nativeSleepHours =
+      nativeSleepSegments != null && nativeSleepSegments.isNotEmpty
+          ? _sumSleepHours(nativeSleepSegments)
+          : null;
 
-  return DailySummary(
-    date: summary.date,
-    steps: summary.steps,
-    caloriesConsumed: summary.caloriesConsumed,
-    caloriesBurned: summary.caloriesBurned,
-    workoutsCount: summary.workoutsCount,
-    sleepHours: summary.sleepHours,
-    weightKg: summary.weightKg,
+  // 5. Merge — only replace a field when the native value is meaningful.
+  return summary.copyWith(
+    steps:
+        (needsSteps && nativeSteps != null && nativeSteps > 0)
+            ? nativeSteps.round()
+            : null,
+    sleepHours:
+        (needsSleep && nativeSleepHours != null && nativeSleepHours > 0)
+            ? nativeSleepHours
+            : null,
+    caloriesBurned:
+        (needsCalBurned && nativeCalBurned != null && nativeCalBurned > 0)
+            ? nativeCalBurned.round()
+            : null,
+    caloriesConsumed:
+        (needsCalConsumed &&
+                nativeCalConsumed != null &&
+                nativeCalConsumed > 0)
+            ? nativeCalConsumed.round()
+            : null,
     restingHeartRate:
-        summary.restingHeartRate ?? nativeRhr?.round(),
-    hrv: summary.hrv ?? nativeHrv,
-    cardioFitnessLevel: summary.cardioFitnessLevel ?? nativeCardio,
+        (needsRhr && nativeRhr != null) ? nativeRhr.round() : null,
+    hrv: (needsHrv && nativeHrv != null) ? nativeHrv : null,
+    cardioFitnessLevel:
+        (needsCardio && nativeCardio != null) ? nativeCardio : null,
   );
 });
 

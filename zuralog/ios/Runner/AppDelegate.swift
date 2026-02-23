@@ -179,6 +179,34 @@ import UIKit
                 }
             }
 
+        case "getCaloriesBurned":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchActiveCaloriesBurned(date: date) { kcal, error in
+                if let error = error {
+                    result(FlutterError(code: "CALORIES_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(kcal)
+                }
+            }
+
+        case "getNutrition":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchNutritionCalories(date: date) { kcal, error in
+                if let error = error {
+                    result(FlutterError(code: "NUTRITION_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(kcal)
+                }
+            }
+
         case "getRestingHeartRate":
             healthKitBridge.fetchRestingHeartRate { bpm, error in
                 if let error = error {
