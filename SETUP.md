@@ -33,7 +33,7 @@ cd Life-Logger
 ## 2. Cloud Brain (Backend)
 
 > **Terminal to use:**
-> - **Windows** — Git Bash (not PowerShell). In AntiGravity, click the **`+`** dropdown next to your terminal tabs → select **"Git Bash"**.
+> - **Windows** — Git Bash (not PowerShell). In AntiGravity, click the **`+`** dropdown next to your terminal tabs → select **"Git Bash"**. `make` must be installed separately first — see [`make` not found](#make-not-found) below.
 > - **macOS** — Terminal or iTerm2. `make` is pre-installed.
 > - **Linux** — Any shell (bash/zsh). `make` is pre-installed on most distros; if not, run `sudo apt install make` (Debian/Ubuntu) or `sudo dnf install make` (Fedora).
 
@@ -413,19 +413,19 @@ All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to
 Add `C:\flutter\bin` (or wherever you extracted Flutter) to your system PATH, then restart your terminal.
 
 ### `make` not found
-`make` is not available in PowerShell on Windows. It is pre-installed on macOS and most Linux distros.
+`make` is not available in PowerShell or Git Bash on Windows by default. It is pre-installed on macOS and most Linux distros.
 
-**Windows — Option A: Git Bash (recommended, no install required)**
-Git Bash ships with Git for Windows and includes `make`. Open it in one of two ways:
-- **From AntiGravity / VS Code:** Click the **`+`** dropdown next to the terminal tabs → select **"Git Bash"**.
-- **From Windows:** Press **Win** → search **"Git Bash"** → open it.
+**Windows — Install `make` (one-time, required)**
 
-**Windows — Option B: Install `make` permanently**
+Run this in PowerShell (not Git Bash):
 ```powershell
-choco install make        # Chocolatey
-winget install GnuWin32.Make  # Winget
+winget install GnuWin32.Make
 ```
-Restart PowerShell after installing.
+Or with Chocolatey:
+```powershell
+choco install make
+```
+After installing, **close and reopen Git Bash** — the new `make` binary will then be on your PATH and `make dev` / `make run` will work.
 
 **Linux — `make` missing**
 ```bash
