@@ -1,11 +1,11 @@
 /// Zuralog — Integration Tile Widget.
 ///
 /// A single row in the Integrations Hub list, showing the integration logo,
-/// name, description, and an appropriate status control (Switch, "Soon" badge,
+/// name, description, and an appropriate status control (Connect button,
+/// Connected badge with disconnect icon, "Soon" badge,
 /// or [CircularProgressIndicator]).
 library;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -23,8 +23,9 @@ import 'package:zuralog/features/integrations/presentation/widgets/integration_l
 ///   - A branded logo on the left (with [IntegrationLogo] fallback).
 ///   - The integration name and description.
 ///   - A status control on the right that depends on [IntegrationModel.status]:
-///       - [IntegrationStatus.connected] / [IntegrationStatus.available] →
-///         iOS-style [CupertinoSwitch].
+///       - [IntegrationStatus.available] → [OutlinedButton] labelled "Connect".
+///       - [IntegrationStatus.connected] → green "Connected" badge + disconnect
+///         [IconButton] with [Icons.link_off_rounded].
 ///       - [IntegrationStatus.syncing] → [CircularProgressIndicator].
 ///       - [IntegrationStatus.comingSoon] → grey "Soon" pill badge.
 ///       - [IntegrationStatus.error] → error icon.
@@ -101,8 +102,9 @@ class IntegrationTile extends ConsumerWidget {
 
 /// Renders the right-side status control for an [IntegrationTile].
 ///
-/// Switches between a [CupertinoSwitch], a "Soon" badge, a loading spinner,
-/// or an error icon depending on [IntegrationModel.status].
+/// Switches between a Connect [OutlinedButton], a Connected badge with a
+/// disconnect [IconButton], a "Soon" badge, a loading spinner, or an error
+/// icon depending on [IntegrationModel.status].
 class _StatusControl extends ConsumerWidget {
   /// Creates a [_StatusControl] for the given [integration].
   const _StatusControl({required this.integration});
@@ -131,32 +133,61 @@ class _StatusControl extends ConsumerWidget {
         );
 
       case IntegrationStatus.connected:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ConnectedBadge(),
+            IconButton(
+              icon: const Icon(Icons.link_off_rounded),
+              tooltip: 'Disconnect',
+              onPressed: () => showDisconnectSheet(
+                context,
+                integration,
+                () => ref
+                    .read(integrationsProvider.notifier)
+                    .disconnect(integration.id),
+              ),
+            ),
+          ],
+        );
+
       case IntegrationStatus.available:
-        final isOn = integration.status == IntegrationStatus.connected;
-        return CupertinoSwitch(
-          value: isOn,
-          activeTrackColor: AppColors.primary,
-          onChanged: (turnOn) => _handleToggle(context, ref, turnOn),
+        return OutlinedButton(
+          onPressed: () => ref
+              .read(integrationsProvider.notifier)
+              .connect(integration.id, context),
+          child: const Text('Connect'),
         );
     }
   }
+}
 
-  /// Handles a switch toggle event.
-  ///
-  /// If [turnOn] is `true`, calls [IntegrationsNotifier.connect].
-  /// If [turnOn] is `false`, shows the [showDisconnectSheet] to confirm.
-  void _handleToggle(BuildContext context, WidgetRef ref, bool turnOn) {
-    if (turnOn) {
-      ref.read(integrationsProvider.notifier).connect(integration.id, context);
-    } else {
-      showDisconnectSheet(
-        context,
-        integration,
-        () => ref
-            .read(integrationsProvider.notifier)
-            .disconnect(integration.id),
-      );
-    }
+// ── Connected Badge ────────────────────────────────────────────────────────────
+
+/// A green pill badge reading "Connected".
+///
+/// Displayed alongside the disconnect [IconButton] when an integration is
+/// in the [IntegrationStatus.connected] state.
+class _ConnectedBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceSm,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.green.shade100,
+        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+      ),
+      child: Text(
+        'Connected',
+        style: AppTextStyles.caption.copyWith(
+          color: Colors.green.shade800,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }
 
