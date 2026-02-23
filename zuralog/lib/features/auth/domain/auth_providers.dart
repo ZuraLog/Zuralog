@@ -146,6 +146,18 @@ class AuthStateNotifier extends Notifier<AuthState> {
     ref.read(userProfileProvider.notifier).clear();
     state = AuthState.unauthenticated;
   }
+
+  /// Force-transitions to [AuthState.unauthenticated] without calling the
+  /// backend logout endpoint.
+  ///
+  /// Called by [ApiClient.onUnauthenticated] when both the access token and
+  /// refresh token are expired and cannot be recovered. Clears the local
+  /// profile and email state so the router redirects to the login screen.
+  void forceLogout() {
+    ref.read(userEmailProvider.notifier).state = '';
+    ref.read(userProfileProvider.notifier).clear();
+    state = AuthState.unauthenticated;
+  }
 }
 
 /// Convenience provider that returns `true` when the user is authenticated.
