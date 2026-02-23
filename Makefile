@@ -3,13 +3,16 @@
 # =============================================================================
 # Flutter Edge Agent development commands.
 #
-# NOTE (Windows): `make` requires GNU Make. Install via:
-#   - Git Bash (included with Git for Windows) — recommended
-#   - https://gnuwin32.sourceforge.net/packages/make.htm
+# NOTE (Windows): `make` requires GNU Make. Install via Scoop (recommended):
+#   scoop install make
+# Or see the "make not found" section in SETUP.md for alternatives.
 #
 # All flutter targets read GOOGLE_WEB_CLIENT_ID from cloud-brain/.env
 # automatically so you never have to pass it manually.
 # =============================================================================
+
+# Force Git Bash on Windows — prevents make from falling back to cmd.exe
+SHELL := /bin/bash
 
 # ---------------------------------------------------------------------------
 # Load secrets from cloud-brain/.env (gitignored — never committed)
