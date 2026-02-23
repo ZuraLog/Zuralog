@@ -136,9 +136,15 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   /// Populates the integration list with default mock data.
   ///
+  /// Sets [IntegrationsState.isLoading] to `true` at the start and `false`
+  /// once the list has been written, so the UI can show a meaningful spinner
+  /// while the (synchronous) merge is in progress.
+  ///
   /// Preserves the [IntegrationStatus] of already-connected integrations
   /// so toggling the switch and then pulling to refresh does not reset state.
   void loadIntegrations() {
+    state = state.copyWith(isLoading: true, clearError: true);
+
     final existing = {
       for (final i in state.integrations) i.id: i,
     };
@@ -152,7 +158,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       return defaults;
     }).toList();
 
-    state = state.copyWith(integrations: merged, clearError: true);
+    state = state.copyWith(integrations: merged, isLoading: false);
   }
 
   /// Connects the integration identified by [integrationId].

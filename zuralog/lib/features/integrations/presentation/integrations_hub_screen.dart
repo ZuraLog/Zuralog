@@ -108,11 +108,18 @@ class _IntegrationsHubScreenState
               _IntegrationListSliver(integrations: comingSoon),
             ],
 
-            // ── Empty state (no integrations loaded yet) ─────────────────
-            if (integrations.isEmpty && !state.isLoading)
+            // ── Loading indicator ─────────────────────────────────────────
+            if (state.isLoading)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator()),
+              ),
+
+            // ── Empty state (list loaded but genuinely empty) ─────────────
+            if (integrations.isEmpty && !state.isLoading)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: Text('No integrations available.')),
               ),
 
             // ── Bottom padding for nav bar ───────────────────────────────
