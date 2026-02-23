@@ -425,7 +425,16 @@ Or with Chocolatey:
 ```powershell
 choco install make
 ```
-After installing, **close and reopen Git Bash** — the new `make` binary will then be on your PATH and `make dev` / `make run` will work.
+After installing, **you must also add the GnuWin32 bin directory to your Windows PATH** — `winget` does not do this automatically:
+
+1. Open **Start** → search **"Edit the system environment variables"** → click **Environment Variables...**
+2. Under **System variables**, select **Path** → click **Edit** → click **New**
+3. Add: `C:\Program Files (x86)\GnuWin32\bin`
+4. Click **OK** on all dialogs, then **close and reopen Git Bash**
+
+After that, `make --version` in Git Bash should succeed and `make dev` / `make run` will work.
+
+> **Why?** `winget install GnuWin32.Make` places `make.exe` in `C:\Program Files (x86)\GnuWin32\bin\` but does not register that path in the system `PATH`. Git Bash (and PowerShell) will still report `command not found` until the PATH entry is added.
 
 **Linux — `make` missing**
 ```bash
