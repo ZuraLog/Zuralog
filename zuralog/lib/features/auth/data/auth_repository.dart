@@ -123,7 +123,7 @@ class AuthRepository {
 
   /// Fetches the current user's profile from the backend.
   ///
-  /// Calls `GET /api/v1/me/profile` using the stored auth token.
+  /// Calls `GET /api/v1/users/me/profile` using the stored auth token.
   ///
   /// Returns:
   ///   A fully populated [UserProfile] on success.
@@ -131,13 +131,13 @@ class AuthRepository {
   /// Throws:
   ///   [DioException] if the network call fails or returns a non-2xx status.
   Future<UserProfile> fetchProfile() async {
-    final response = await _apiClient.get('/api/v1/me/profile');
+    final response = await _apiClient.get('/api/v1/users/me/profile');
     return UserProfile.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Updates the current user's profile. Only non-null fields are sent.
   ///
-  /// Calls `PATCH /api/v1/me/profile` with only the provided fields, so
+  /// Calls `PATCH /api/v1/users/me/profile` with only the provided fields, so
   /// omitted parameters retain their current server-side values.
   ///
   /// Args:
@@ -170,7 +170,7 @@ class AuthRepository {
       body['onboarding_complete'] = onboardingComplete;
     }
     final response = await _apiClient.patch(
-      '/api/v1/me/profile',
+      '/api/v1/users/me/profile',
       body: body,
     );
     return UserProfile.fromJson(response.data as Map<String, dynamic>);
