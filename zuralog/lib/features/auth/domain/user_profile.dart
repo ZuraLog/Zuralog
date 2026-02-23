@@ -5,6 +5,12 @@
 /// with helpers for AI greeting name resolution.
 library;
 
+/// Sentinel value used by [UserProfile.copyWith] to distinguish between
+/// "caller passed null explicitly" and "caller omitted the argument".
+///
+/// This enables nullable fields to be cleared to `null` via [copyWith].
+const Object _copyWithSentinel = Object();
+
 /// Immutable domain model for a Zuralog user profile.
 ///
 /// Fields mirror the Cloud Brain profile schema. Use [fromJson] to
@@ -78,21 +84,58 @@ class UserProfile {
   ///
   /// Fields not passed to [copyWith] retain their current values.
   /// [id] and [email] are immutable and cannot be changed via [copyWith].
+  ///
+  /// Nullable fields ([displayName], [nickname], [birthday]) use a sentinel
+  /// default so callers can explicitly clear them to `null`:
+  /// ```dart
+  /// profile.copyWith(nickname: null); // clears nickname
+  /// profile.copyWith();               // nickname unchanged
+  /// ```
   UserProfile copyWith({
-    String? displayName,
-    String? nickname,
-    DateTime? birthday,
+    Object? displayName = _copyWithSentinel,
+    Object? nickname = _copyWithSentinel,
+    Object? birthday = _copyWithSentinel,
     String? gender,
     bool? onboardingComplete,
   }) {
     return UserProfile(
       id: id,
       email: email,
-      displayName: displayName ?? this.displayName,
-      nickname: nickname ?? this.nickname,
-      birthday: birthday ?? this.birthday,
+      displayName: displayName == _copyWithSentinel
+          ? this.displayName
+          : displayName as String?,
+      nickname: nickname == _copyWithSentinel
+          ? this.nickname
+          : nickname as String?,
+      birthday: birthday == _copyWithSentinel
+          ? this.birthday
+          : birthday as DateTime?,
       gender: gender ?? this.gender,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserProfile &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          email == other.email &&
+          displayName == other.displayName &&
+          nickname == other.nickname &&
+          birthday == other.birthday &&
+          gender == other.gender &&
+          onboardingComplete == other.onboardingComplete;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        email,
+        displayName,
+        nickname,
+        birthday,
+        gender,
+        onboardingComplete,
+      );
 }

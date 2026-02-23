@@ -8,6 +8,7 @@
 /// onboarding display via [SharedPreferences].
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -200,14 +201,14 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
   /// Fetches the profile from the backend and updates state.
   ///
   /// Intended to be called fire-and-forget from [AuthStateNotifier].
-  /// Errors are silently swallowed — the UI degrades gracefully to
-  /// `null` state (e.g., fallback greeting).
+  /// Errors are logged via [debugPrint] and the state remains `null`,
+  /// allowing the UI to degrade gracefully (e.g., fallback greeting).
   Future<void> load() async {
     try {
       final repo = ref.read(authRepositoryProvider);
       state = await repo.fetchProfile();
-    } catch (_) {
-      // Non-critical — UI falls back to null state gracefully.
+    } catch (e, st) {
+      debugPrint('[UserProfileNotifier.load] Profile fetch failed: $e\n$st');
     }
   }
 
