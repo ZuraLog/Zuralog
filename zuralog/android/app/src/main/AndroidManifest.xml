@@ -18,6 +18,18 @@
     <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
     <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION"/>
+    <!-- Heart rate data (needed for RHR computation context) -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
+    <!-- Resting Heart Rate -->
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE"/>
+    <!-- Heart Rate Variability (RMSSD) -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY"/>
+    <!-- VO2 Max / Cardio Fitness -->
+    <uses-permission android:name="android.permission.health.READ_VO2_MAX"/>
+    <uses-permission android:name="android.permission.health.WRITE_VO2_MAX"/>
 
     <application
         android:label="zuralog"
