@@ -4,12 +4,15 @@ Zuralog Cloud Brain — User Model.
 Represents a registered Zuralog user. The primary key is the
 Supabase UID, ensuring a single source of truth for identity.
 Subscription fields track tier, expiration, and RevenueCat linkage.
+Profile fields capture display name, nickname, birthday, gender,
+and onboarding state for the AI coach personalisation flow.
 """
 
 import enum
 import uuid
+from datetime import date
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import Boolean, Date, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -65,6 +68,33 @@ class User(Base):
         String,
         unique=True,
         index=True,
+    )
+    display_name: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="Full display name, e.g. 'Alex Johnson'",
+    )
+    nickname: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="What the AI coach calls the user, e.g. 'Alex'",
+    )
+    birthday: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+        comment="User's date of birth for age calculation",
+    )
+    gender: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="Self-identified gender (free text, optional)",
+    )
+    onboarding_complete: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+        comment="True once the user has completed the profile questionnaire",
     )
     created_at: Mapped[str] = mapped_column(
         DateTime(timezone=True),
