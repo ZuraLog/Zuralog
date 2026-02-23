@@ -85,7 +85,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
+    // Animation starts stopped; only runs while chat status is "connecting".
+    // Avoids continuous compositor activity when not visually needed.
     _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
@@ -113,9 +115,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
 
   void _log(String message) {
     final timestamp = DateTime.now().toIso8601String().substring(11, 19);
-    setState(() {
-      _outputController.text += '[$timestamp] $message\n';
-    });
+    // TextEditingController notifies its own listeners — setState is redundant
+    // here and would trigger a full rebuild of the ~1900-line widget tree on
+    // every log message, causing jank during keyboard animations.
+    _outputController.text += '[$timestamp] $message\n';
   }
 
   // -----------------------------------------------------------------------
@@ -124,6 +127,16 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
 
   void _updateChatStatus(ConnectionStatus status) {
     setState(() => _chatStatus = status);
+    // Drive the pulse animation only while actively connecting.
+    if (status == ConnectionStatus.connecting) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      _pulseController.stop();
+      // Ensure the indicator is fully visible when not animating.
+      _pulseController.value = 1.0;
+    }
   }
 
   Color get _chatStatusColor => switch (_chatStatus) {
