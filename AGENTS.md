@@ -33,6 +33,7 @@ This project uses specialized **Agent Skills** for development.
 - **Project Setup**: [AGENTS.md Generator](./.agent/skills/mad-agents-skills/agents-md-generator/SKILL.md)
 - **Superpowers**: [Superpowers Skill](.agent/skills/superpowers/skills/using-superpowers/SKILL.md)
   - **Note**: This is your primary directive for high-level reasoning, cross-domain synthesis, and creative problem-solving. Review its instructions before starting any complex task.
+- **Frontend Design**: [Creative Frontend Design Skill](./.agent/skills/frontend-design/SKILL.md) — Create distinctive, production-grade frontend interfaces with high design quality.
 
 ## Canonical Commands
 - **Discovery**: `dir /s /b *.md` (To find documentation)
@@ -157,8 +158,9 @@ This project uses specialized **Agent Skills** for development.
 ### 20. Localized AI Working Directories
 > [!IMPORTANT]
 > **Keep Plans Local but Gitignored:** OpenCode, AntiGravity, Cursor, and other AI coding tools MUST write their implementation plans and rules in their own local directories within the project, BUT these directories MUST be added to `.gitignore`. Never push them to the remote GitHub repository.
->
-> *   **Plan Persistence:** Saving plans in the working directory before initiating code changes is recommended to avoid losing the plan due to context compaction.
-> *   **OpenCode:** Use `.opencode/plans/` for your plans and ensure `.opencode/` is gitignored. Do not use `docs/plans/` for active tool workspace plans.
-> *   **AntiGravity:** Continue rendering artifacts exclusively in your local artifact directory. Never leak scratchpads or implementation plans into the main tracked repository.
-> *   **Other Tools:** Keep your implementation plans and state tracking in your tool-specific local directories (e.g., `.cursor/`) and ensure they are gitignored.
+
+*   **Plan Persistence:** Saving plans in the working directory before initiating code changes is recommended to avoid losing the plan due to context compaction.
+*   **NO CROSS-TOOL POLLUTION:** Do NOT use or refer to `.claude/`, `.cursor/`, or other tool-specific directories unless you are that exact tool. These are NOT project-wide conventions.
+*   **OpenCode:** Use `.opencode/plans/` for your plans and ensure `.opencode/` is gitignored. DO NOT write to `.claude/plans/` or `docs/plans/` for active workspace planning.
+*   **AntiGravity:** Continue rendering artifacts exclusively in your local artifact directory. Never leak scratchpads or implementation plans into the main tracked repository.
+*   **Other Tools:** Keep your implementation plans and state tracking in your tool-specific local directories (e.g., `.cursor/`, `.claude/`) and ensure they are gitignored.
