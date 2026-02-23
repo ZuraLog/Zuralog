@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:life_logger/core/deeplink/deeplink_handler.dart';
 import 'package:life_logger/core/deeplink/deeplink_launcher.dart';
 import 'package:life_logger/core/di/providers.dart';
+import 'package:life_logger/core/network/api_client.dart';
 import 'package:life_logger/core/network/ws_client.dart';
 import 'package:life_logger/features/auth/domain/auth_providers.dart';
 import 'package:life_logger/features/auth/domain/auth_state.dart';
@@ -73,6 +74,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   StreamSubscription<ChatMessage>? _wsSubscription;
   StreamSubscription<ConnectionStatus>? _wsStatusSubscription;
   ConnectionStatus _chatStatus = ConnectionStatus.disconnected;
+  bool _backendOnline = false;
 
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
@@ -88,6 +90,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
     DeeplinkHandler.init(ref, onLog: _log);
+    _checkBackendStatus();
   }
 
   @override
@@ -136,6 +139,26 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   };
 
   // -----------------------------------------------------------------------
+  // Backend Connectivity
+  // -----------------------------------------------------------------------
+
+  /// Checks if the Cloud Brain backend is reachable.
+  ///
+  /// Updates [_backendOnline] and logs the result. Called automatically
+  /// on startup and can be re-triggered via the Health Check button.
+  Future<void> _checkBackendStatus() async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.get('/health');
+      if (mounted) setState(() => _backendOnline = true);
+    } on DioException catch (_) {
+      if (mounted) setState(() => _backendOnline = false);
+    } catch (_) {
+      if (mounted) setState(() => _backendOnline = false);
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Backend Actions
   // -----------------------------------------------------------------------
 
@@ -144,9 +167,14 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get('/health');
+      if (mounted) setState(() => _backendOnline = true);
       _log('✅ Response: ${response.data}');
+    } on DioException catch (e) {
+      if (mounted) setState(() => _backendOnline = false);
+      _log('❌ ${ApiClient.friendlyError(e)}');
     } catch (e) {
-      _log('❌ Error: $e');
+      if (mounted) setState(() => _backendOnline = false);
+      _log('❌ Unexpected error: $e');
     }
   }
 
@@ -488,14 +516,16 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
             data: {'data_type': dataType, 'value': value},
           );
       _log('Write triggered: ${response.data}');
-    } catch (e) {
-      if (e is DioException && e.response?.statusCode == 404) {
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
         _log(
           'Write trigger failed: No device registered (FCM not initialized). This is expected until Phase 1.9.',
         );
       } else {
-        _log('Error triggering write: $e');
+        _log('❌ ${ApiClient.friendlyError(e)}');
       }
+    } catch (e) {
+      _log('❌ Unexpected error: $e');
     }
   }
 
@@ -739,6 +769,51 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
         ],
       ),
       actions: [
+        // Backend connectivity indicator
+        GestureDetector(
+          onTap: _checkBackendStatus,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _backendOnline
+                  ? _Colors.successLight
+                  : _Colors.dangerLight,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _backendOnline
+                    ? _Colors.success.withValues(alpha: 0.3)
+                    : _Colors.danger.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: _backendOnline ? _Colors.success : _Colors.danger,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _backendOnline ? 'API' : 'API',
+                  style: TextStyle(
+                    color: _backendOnline ? _Colors.success : _Colors.danger,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Auth state indicator
         AnimatedContainer(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOut,
@@ -1185,8 +1260,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                     '  Sleep: ${summary.sleepHours}h\n'
                     '  Weight: ${summary.weightKg ?? "N/A"} kg',
                   );
+                } on DioException catch (e) {
+                  _log('❌ ${ApiClient.friendlyError(e)}');
                 } catch (e) {
-                  _log('Error: $e');
+                  _log('❌ Unexpected error: $e');
                 }
               },
             ),
@@ -1207,8 +1284,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                     '  Cal Out: ${trends.caloriesOut}\n'
                     '  Sleep: ${trends.sleepHours}',
                   );
+                } on DioException catch (e) {
+                  _log('❌ ${ApiClient.friendlyError(e)}');
                 } catch (e) {
-                  _log('Error: $e');
+                  _log('❌ Unexpected error: $e');
                 }
               },
             ),
@@ -1226,8 +1305,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                     'Goals: ${insight.goals.length} active\n'
                     'Trends: ${insight.trends.keys.toList()}',
                   );
+                } on DioException catch (e) {
+                  _log('❌ ${ApiClient.friendlyError(e)}');
                 } catch (e) {
-                  _log('Error: $e');
+                  _log('❌ Unexpected error: $e');
                 }
               },
             ),
