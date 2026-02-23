@@ -14,6 +14,8 @@
 ///   - [dashboardInsightProvider] — AI-generated natural-language insight.
 library;
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -624,11 +626,14 @@ class _QuickStatChips extends StatelessWidget {
             bgColor: bgColor,
           ),
           const SizedBox(width: AppDimens.spaceSm),
+          // HRV: Android=RMSSD, iOS=SDNN — different metrics, displayed under
+          // same label. Subtitle clarifies which metric is shown per platform.
           _StatChip(
             icon: Icons.monitor_heart_outlined,
             label: 'HRV',
             value: hrv,
             bgColor: bgColor,
+            subtitle: Platform.isAndroid ? 'RMSSD' : 'SDNN',
           ),
           const SizedBox(width: AppDimens.spaceSm),
           _StatChip(
@@ -647,7 +652,8 @@ class _QuickStatChips extends StatelessWidget {
 
 /// A single chip in the [_QuickStatChips] strip.
 ///
-/// Displays an icon, a bold value, and a muted label in a compact rounded card.
+/// Displays an icon, a bold value, a muted label, and an optional subtitle
+/// (e.g. a platform-specific metric qualifier) in a compact rounded card.
 class _StatChip extends StatelessWidget {
   /// Creates a [_StatChip].
   const _StatChip({
@@ -655,6 +661,7 @@ class _StatChip extends StatelessWidget {
     required this.label,
     required this.value,
     required this.bgColor,
+    this.subtitle,
   });
 
   /// Icon glyph.
@@ -668,6 +675,12 @@ class _StatChip extends StatelessWidget {
 
   /// Background fill colour for the chip.
   final Color bgColor;
+
+  /// Optional qualifier shown below the [label] in a lighter style.
+  ///
+  /// Useful for platform-specific metric names (e.g. `'RMSSD'` on Android,
+  /// `'SDNN'` on iOS). Omit or pass `null` to hide the subtitle row.
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -709,6 +722,14 @@ class _StatChip extends StatelessWidget {
                   color: AppColors.textSecondary,
                 ),
               ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: 9,
+                    color: AppColors.textSecondary.withValues(alpha: 0.6),
+                  ),
+                ),
             ],
           ),
         ],
