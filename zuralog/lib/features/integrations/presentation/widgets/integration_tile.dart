@@ -17,13 +17,21 @@ import 'package:zuralog/features/integrations/domain/integrations_provider.dart'
 import 'package:zuralog/features/integrations/presentation/widgets/disconnect_sheet.dart';
 import 'package:zuralog/features/integrations/presentation/widgets/integration_logo.dart';
 
+// ── Internal dimension constants ──────────────────────────────────────────────
+
+/// Height of the compact connect pill button.
+const double _kConnectButtonHeight = 30.0;
+
+/// Horizontal padding inside the connect pill button.
+const double _kConnectButtonPaddingH = 10.0;
+
 /// A list tile representing a single third-party health integration.
 ///
 /// Renders:
 ///   - A branded logo on the left (with [IntegrationLogo] fallback).
 ///   - The integration name and description.
 ///   - A status control on the right that depends on [IntegrationModel.status]:
-///       - [IntegrationStatus.available] → [OutlinedButton] labelled "Connect".
+///       - [IntegrationStatus.available] → neutral pill [_ConnectButton] labelled "Connect".
 ///       - [IntegrationStatus.connected] → green "Connected" badge + disconnect
 ///         [IconButton] with [Icons.link_off_rounded].
 ///       - [IntegrationStatus.syncing] → [CircularProgressIndicator].
@@ -56,6 +64,7 @@ class IntegrationTile extends ConsumerWidget {
         children: [
           // ── Logo ─────────────────────────────────────────────────────────
           IntegrationLogo(
+            id: integration.id,
             logoAsset: integration.logoAsset,
             name: integration.name,
           ),
@@ -114,7 +123,7 @@ class IntegrationTile extends ConsumerWidget {
 
 /// Renders the right-side status control for an [IntegrationTile].
 ///
-/// Switches between a Connect [OutlinedButton], a Connected badge with a
+/// Switches between a neutral [_ConnectButton] pill, a Connected badge with a
 /// disconnect [IconButton], a "Soon" badge, a loading spinner, or an error
 /// icon depending on [IntegrationModel.status].
 class _StatusControl extends ConsumerWidget {
@@ -164,13 +173,61 @@ class _StatusControl extends ConsumerWidget {
         );
 
       case IntegrationStatus.available:
-        return OutlinedButton(
+        return _ConnectButton(
           onPressed: () => ref
               .read(integrationsProvider.notifier)
               .connect(integration.id, context),
-          child: const Text('Connect'),
         );
     }
+  }
+}
+
+// ── Connect Button ─────────────────────────────────────────────────────────────
+
+/// A compact, neutral pill-shaped button used to initiate an integration
+/// connection.
+///
+/// Intentionally **not** green — green is reserved exclusively for the
+/// [_ConnectedBadge] success state. This button uses the surface-variant
+/// palette so it reads as a secondary/neutral action without implying success.
+///
+/// Parameters:
+///   onPressed: Callback invoked when the user taps "Connect".
+class _ConnectButton extends StatelessWidget {
+  /// Creates a [_ConnectButton] with the given [onPressed] callback.
+  const _ConnectButton({required this.onPressed});
+
+  /// Callback invoked on tap.
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: _kConnectButtonHeight,
+      child: TextButton.icon(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: cs.onSurface.withValues(alpha: 0.08),
+          foregroundColor: cs.onSurface,
+          padding: const EdgeInsets.symmetric(
+            horizontal: _kConnectButtonPaddingH,
+            vertical: 0,
+          ),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: const StadiumBorder(),
+        ),
+        icon: Icon(Icons.add_rounded, size: AppDimens.iconSm),
+        label: Text(
+          'Connect',
+          style: AppTextStyles.caption.copyWith(
+            color: cs.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 }
 

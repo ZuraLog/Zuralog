@@ -179,6 +179,33 @@ import UIKit
                 }
             }
 
+        case "getRestingHeartRate":
+            healthKitBridge.fetchRestingHeartRate { bpm, error in
+                if let error = error {
+                    result(FlutterError(code: "RHR_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(bpm)
+                }
+            }
+
+        case "getHRV":
+            healthKitBridge.fetchHRV { ms, error in
+                if let error = error {
+                    result(FlutterError(code: "HRV_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(ms)
+                }
+            }
+
+        case "getCardioFitness":
+            healthKitBridge.fetchCardioFitness { vo2, error in
+                if let error = error {
+                    result(FlutterError(code: "CARDIO_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(vo2)
+                }
+            }
+
         case "startBackgroundObservers":
             healthKitBridge.startBackgroundObservers { success in
                 result(success)

@@ -10,14 +10,58 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/state/side_panel_provider.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/analytics/domain/daily_summary.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
+
+// ── Stub notifiers ────────────────────────────────────────────────────────────
+
+/// Stub [UserProfileNotifier] that immediately exposes [_kProfile].
+///
+/// Overrides [userProfileProvider] in the test harness so that the
+/// dashboard greeting header renders the expected name without making
+/// any real network calls.
+class _StubProfileNotifier extends UserProfileNotifier {
+  @override
+  UserProfile? build() => _kProfile;
+}
+
+/// Minimal stub [IntegrationsNotifier] that returns an empty integrations list
+/// with no loading state, so [IntegrationsRail] renders the "Connected Apps"
+/// section header immediately without depending on real repositories.
+class _StubIntegrationsNotifier extends StateNotifier<IntegrationsState>
+    implements IntegrationsNotifier {
+  _StubIntegrationsNotifier() : super(const IntegrationsState());
+
+  @override
+  void loadIntegrations() {}
+
+  @override
+  Future<void> connect(String integrationId, BuildContext context) async {}
+
+  @override
+  void disconnect(String integrationId) {}
+
+  @override
+  Future<bool> requestHealthPermissions() async => false;
+}
 
 // ── Fixture data ───────────────────────────────────────────────────────────────
+
+/// A stub [UserProfile] with the name "Alex" used by [userProfileProvider].
+const _kProfile = UserProfile(
+  id: 'test-user-id',
+  email: 'alex@example.com',
+  displayName: 'Alex',
+  onboardingComplete: true,
+);
 
 /// A fully-populated [DailySummary] used by provider overrides.
 const _kSummary = DailySummary(
@@ -27,6 +71,9 @@ const _kSummary = DailySummary(
   caloriesBurned: 480,
   workoutsCount: 1,
   sleepHours: 7.5,
+  restingHeartRate: 58,
+  hrv: 42.0,
+  cardioFitnessLevel: 47.3,
 );
 
 /// A minimal [WeeklyTrends] with 7 data points per list.
@@ -76,10 +123,15 @@ Widget _buildHarness({List<String>? navigatedPaths}) {
 
   return ProviderScope(
     overrides: [
+      // Provide a stub user profile so the greeting header shows "Alex".
+      userProfileProvider.overrideWith(() => _StubProfileNotifier()),
       // Override async providers with immediate synchronous data.
       dailySummaryProvider.overrideWith((_) async => _kSummary),
       weeklyTrendsProvider.overrideWith((_) async => _kTrends),
       dashboardInsightProvider.overrideWith((_) async => _kInsight),
+      // Stub integrations so the rail renders immediately without real
+      // repositories or platform channels.
+      integrationsProvider.overrideWith((_) => _StubIntegrationsNotifier()),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -137,15 +189,47 @@ void main() {
       expect(find.byType(CircleAvatar), findsOneWidget);
     });
 
-    testWidgets('tapping profile avatar navigates to settings', (tester) async {
-      final paths = <String>[];
-      await tester.pumpWidget(_buildHarness(navigatedPaths: paths));
+    testWidgets(
+        'tapping profile avatar sets sidePanelOpenProvider to true',
+        (tester) async {
+      // Capture the ProviderContainer so we can inspect provider state after
+      // the tap.  The panel itself lives in AppShell (not in this isolated
+      // harness) so we verify the *intent* — that the provider was set.
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userProfileProvider.overrideWith(() => _StubProfileNotifier()),
+            dailySummaryProvider.overrideWith((_) async => _kSummary),
+            weeklyTrendsProvider.overrideWith((_) async => _kTrends),
+            dashboardInsightProvider.overrideWith((_) async => _kInsight),
+            integrationsProvider
+                .overrideWith((_) => _StubIntegrationsNotifier()),
+          ],
+          child: Consumer(
+            builder: (context, ref, _) {
+              // Capture the container so the test can read providers directly.
+              container = ProviderScope.containerOf(context);
+              return MaterialApp(
+                theme: AppTheme.light,
+                home: const DashboardScreen(),
+              );
+            },
+          ),
+        ),
+      );
+
       await tester.pump();
 
-      await tester.tap(find.byType(CircleAvatar));
-      await tester.pumpAndSettle();
+      // Panel is initially closed.
+      expect(container.read(sidePanelOpenProvider), isFalse);
 
-      expect(paths, contains('settings'));
+      await tester.tap(find.byType(CircleAvatar));
+      await tester.pump();
+
+      // Tapping the avatar should have set the provider to true.
+      expect(container.read(sidePanelOpenProvider), isTrue);
     });
 
     testWidgets('shows insight text once providers resolve', (tester) async {
@@ -177,7 +261,25 @@ void main() {
 
     testWidgets('renders "Connected Apps" section header', (tester) async {
       await tester.pumpWidget(_buildHarness());
-      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // The IntegrationsRail is at the bottom of the SliverList; it may be
+      // beyond the initial viewport and not yet built (lazy rendering).
+      // Scroll down repeatedly until the text appears or we exhaust retries.
+      const maxAttempts = 10;
+      var found = false;
+      for (var i = 0; i < maxAttempts && !found; i++) {
+        if (find.text('Connected Apps').evaluate().isNotEmpty) {
+          found = true;
+          break;
+        }
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -300),
+        );
+        await tester.pumpAndSettle();
+      }
+
       expect(find.text('Connected Apps'), findsOneWidget);
     });
   });

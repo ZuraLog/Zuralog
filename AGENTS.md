@@ -164,3 +164,30 @@ This project uses specialized **Agent Skills** for development.
 *   **OpenCode:** Use `.opencode/plans/` for your plans and ensure `.opencode/` is gitignored. DO NOT write to `.claude/plans/` or `docs/plans/` for active workspace planning.
 *   **AntiGravity:** Continue rendering artifacts exclusively in your local artifact directory. Never leak scratchpads or implementation plans into the main tracked repository.
 *   **Other Tools:** Keep your implementation plans and state tracking in your tool-specific local directories (e.g., `.cursor/`, `.claude/`) and ensure they are gitignored.
+
+### 21. Design System Consistency (UI Law)
+> [!IMPORTANT]
+> **Every screen MUST conform to the Zuralog design system defined in [`docs/plans/frontend/view-design.md`](./docs/plans/frontend/view-design.md).** Deviating from it without updating the design doc first is a bug, not a feature.
+
+#### Background & Surface Rules (Non-Negotiable)
+*   **Scaffold background:** ALL screens use `Theme.of(context).scaffoldBackgroundColor` — never override with `colorScheme.surface` or a hardcoded color. The theme defines:
+    *   *Light:* `#FAFAFA` (`AppColors.backgroundLight`)
+    *   *Dark:* `#000000` (`AppColors.backgroundDark`, OLED black)
+*   **Cards / Bottom Sheets / Modals:** Use `Theme.of(context).colorScheme.surface`:
+    *   *Light:* `#FFFFFF` (`AppColors.surfaceLight`)
+    *   *Dark:* `#1C1C1E` (`AppColors.surfaceDark`, iOS-style dark grey)
+*   **Never** hardcode hex color values in widget files. Always reference `AppColors.*` tokens or `Theme.of(context)` properties.
+
+#### Typography Rules
+*   Use only tokens from `AppTextStyles` — never create ad-hoc `TextStyle(...)` objects in widget files.
+*   Heading hierarchy must be respected: H1 (34pt Bold) → H2 (22pt Semibold) → H3 (17pt Semibold) → Body (17pt Regular) → Caption (12pt Medium).
+
+#### Component Rules
+*   **Primary actions:** Pill-shaped `FilledButton` with `AppColors.primary` (Sage Green) background.
+*   **Secondary actions / Connect:** Neutral pill (`TextButton.icon`, `StadiumBorder`, `onSurface` at 8% opacity). **Never use green on a non-active/non-connected element.**
+*   **Connected / success badges:** Green only — `AppColors.primary` or `Colors.green`.
+*   **Cards:** `borderRadius: BorderRadius.circular(24)` on all `Card`/`Container` cards. Light-mode cards use a soft shadow; dark-mode cards use a 1px `AppColors.border` stroke with no elevation.
+
+#### Enforce Before Merging
+*   Before any merge to `main`, do a visual audit: open each screen in both light and dark mode. If backgrounds, typography, or button styles deviate from the above rules, fix them first.
+*   If the design system itself needs to change, update `docs/plans/frontend/view-design.md` as part of the same PR — never let the doc drift from reality.

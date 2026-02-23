@@ -216,17 +216,19 @@ class _IntegrationPillTile extends StatelessWidget {
 // ── Logo helper ───────────────────────────────────────────────────────────────
 
 /// Renders the integration logo from [logoAsset], falling back to a two-letter
-/// initials [Text] if the asset cannot be loaded.
+/// initials [Text] if the asset cannot be loaded or if [logoAsset] is null.
 ///
 /// Parameters:
-///   logoAsset: Asset path for the integration image.
+///   logoAsset: Optional asset path for the integration image.
 ///   name: Integration name used to derive initials for the fallback.
 class _IntegrationLogo extends StatelessWidget {
   /// Creates an [_IntegrationLogo].
   const _IntegrationLogo({required this.logoAsset, required this.name});
 
-  /// Asset path for the integration logo.
-  final String logoAsset;
+  /// Optional asset path for the integration logo.
+  ///
+  /// When `null`, the initials fallback is rendered directly.
+  final String? logoAsset;
 
   /// Integration name used for the initials fallback.
   final String name;
@@ -240,20 +242,24 @@ class _IntegrationLogo extends StatelessWidget {
     return name.substring(0, name.length.clamp(0, 2)).toUpperCase();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Image.asset(
-      logoAsset,
-      width: 20,
-      height: 20,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) => Text(
+  Widget get _fallback => Text(
         _initials,
         style: AppTextStyles.labelXs.copyWith(
           color: AppColors.primary,
           fontWeight: FontWeight.w700,
         ),
-      ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = logoAsset;
+    if (asset == null) return _fallback;
+    return Image.asset(
+      asset,
+      width: 20,
+      height: 20,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => _fallback,
     );
   }
 }

@@ -25,6 +25,9 @@ class HealthKitBridge: NSObject {
         HKQuantityType(.bodyMass),
         HKCategoryType(.sleepAnalysis),
         HKWorkoutType.workoutType(),
+        HKQuantityType(.restingHeartRate),
+        HKQuantityType(.heartRateVariabilitySDNN),
+        HKQuantityType(.vo2Max),
     ]
 
     /// Data types we request write access for.
@@ -205,6 +208,94 @@ class HealthKitBridge: NSObject {
             }
             let kg = sample.quantity.doubleValue(for: HKUnit.gramUnit(with: .kilo))
             DispatchQueue.main.async { completion(kg, nil) }
+        }
+
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Resting Heart Rate
+
+    /// Fetches the most recent resting heart rate sample.
+    ///
+    /// Apple Watch measures resting HR nightly and writes it to HealthKit.
+    /// Returns the most recent sample regardless of date.
+    ///
+    /// - Parameter completion: Called with resting HR in beats-per-minute, or nil.
+    func fetchRestingHeartRate(completion: @escaping (Double?, Error?) -> Void) {
+        let rhrType = HKQuantityType(.restingHeartRate)
+
+        let query = HKSampleQuery(
+            sampleType: rhrType,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+        ) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let bpm = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            DispatchQueue.main.async { completion(bpm, nil) }
+        }
+
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: HRV
+
+    /// Fetches the most recent heart rate variability (SDNN) sample.
+    ///
+    /// Apple Watch writes HRV samples during overnight breathing sessions.
+    /// Returns the most recent sample regardless of date.
+    ///
+    /// - Parameter completion: Called with HRV in milliseconds, or nil.
+    func fetchHRV(completion: @escaping (Double?, Error?) -> Void) {
+        let hrvType = HKQuantityType(.heartRateVariabilitySDNN)
+
+        let query = HKSampleQuery(
+            sampleType: hrvType,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+        ) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            // HealthKit stores HRV in seconds; convert to milliseconds.
+            let ms = sample.quantity.doubleValue(for: HKUnit.secondUnit(with: .milli))
+            DispatchQueue.main.async { completion(ms, nil) }
+        }
+
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Cardio Fitness (VO2 Max)
+
+    /// Fetches the most recent VO2 max (cardio fitness) sample.
+    ///
+    /// Apple Watch estimates VO2 max during outdoor walks/runs (Series 3+)
+    /// and writes it to HealthKit as mL/kg/min.
+    ///
+    /// - Parameter completion: Called with VO2 max in mL/kg/min, or nil.
+    func fetchCardioFitness(completion: @escaping (Double?, Error?) -> Void) {
+        let vo2Type = HKQuantityType(.vo2Max)
+
+        let query = HKSampleQuery(
+            sampleType: vo2Type,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+        ) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            // VO2 max unit: mL/kg/min
+            let mlPerKgMin = sample.quantity.doubleValue(
+                for: HKUnit(from: "ml/kg/min")
+            )
+            DispatchQueue.main.async { completion(mlPerKgMin, nil) }
         }
 
         healthStore.execute(query)

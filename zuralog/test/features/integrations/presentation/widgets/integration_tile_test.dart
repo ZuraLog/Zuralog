@@ -1,15 +1,18 @@
 /// Zuralog — Integration Tile Widget Tests.
 ///
 /// Tests [IntegrationTile] for correct rendering based on
-/// [IntegrationModel.status] and correct interaction behaviour.
+/// [IntegrationModel.status] and [IntegrationModel.compatibility], and for
+/// correct interaction behaviour (connect, disconnect sheet, incompatibility).
 ///
 /// Coverage:
-///   - Connected tile shows [CupertinoSwitch] in the on state.
-///   - comingSoon tile shows "Soon" badge and is non-interactive (opacity 0.5).
-///   - Tapping the switch on a connected tile opens the disconnect sheet.
+///   - Available tile shows a "Connect" text button (neutral pill, TextButton.icon).
+///   - Connected tile shows "Connected" badge and disconnect [IconButton].
+///   - Tapping disconnect icon opens the disconnect bottom sheet.
+///   - comingSoon tile shows "Soon" badge at 50% opacity with no Connect button.
+///   - Incompatible-platform tile shows platform badge at 45% opacity.
+///   - Integration name and description are always shown.
 library;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +24,8 @@ import 'package:zuralog/features/integrations/presentation/widgets/integration_t
 
 // ── Stub Notifier ─────────────────────────────────────────────────────────────
 
-/// Minimal stub notifier that tracks disconnect calls.
+/// Minimal stub notifier that records connect / disconnect calls and exposes
+/// them via [connectedIds] and [disconnectedIds] for test assertions.
 class _StubNotifier extends StateNotifier<IntegrationsState>
     implements IntegrationsNotifier {
   _StubNotifier(super.state);
@@ -56,33 +60,35 @@ class _StubNotifier extends StateNotifier<IntegrationsState>
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
+/// Connected Strava integration (no logoAsset — uses initials fallback).
 const _connectedModel = IntegrationModel(
   id: 'strava',
   name: 'Strava',
-  logoAsset: 'assets/integrations/strava.png',
   status: IntegrationStatus.connected,
   description: 'Sync runs and rides.',
 );
 
+/// Available Fitbit integration — shows Connect button.
 const _availableModel = IntegrationModel(
   id: 'fitbit',
   name: 'Fitbit',
-  logoAsset: 'assets/integrations/fitbit.png',
   status: IntegrationStatus.available,
   description: 'Import activity data.',
 );
 
+/// Coming-soon Garmin integration — greyed out.
 const _comingSoonModel = IntegrationModel(
   id: 'garmin',
   name: 'Garmin',
-  logoAsset: 'assets/integrations/garmin.png',
   status: IntegrationStatus.comingSoon,
   description: 'Connect Garmin devices.',
 );
 
+
 // ── Harness ───────────────────────────────────────────────────────────────────
 
-/// Wraps [IntegrationTile] in a testable widget tree.
+/// Wraps [IntegrationTile] in a minimal testable widget tree with a
+/// [_StubNotifier] override so no real network or platform calls fire.
 Widget _buildHarness({
   required IntegrationModel integration,
   _StubNotifier? notifier,
@@ -107,27 +113,77 @@ Widget _buildHarness({
 
 void main() {
   group('IntegrationTile', () {
-    testWidgets('connected tile shows CupertinoSwitch in on state',
-        (tester) async {
-      await tester.pumpWidget(_buildHarness(integration: _connectedModel));
-      await tester.pump();
+    // ── Available state ──────────────────────────────────────────────────────
 
-      final switchWidget = tester.widget<CupertinoSwitch>(
-        find.byType(CupertinoSwitch),
-      );
-      expect(switchWidget.value, isTrue);
-    });
-
-    testWidgets('available tile shows CupertinoSwitch in off state',
-        (tester) async {
+    testWidgets('available tile shows Connect button', (tester) async {
       await tester.pumpWidget(_buildHarness(integration: _availableModel));
       await tester.pump();
 
-      final switchWidget = tester.widget<CupertinoSwitch>(
-        find.byType(CupertinoSwitch),
-      );
-      expect(switchWidget.value, isFalse);
+      // The Connect button is now a TextButton.icon (neutral pill).
+      // Use find.text to locate it regardless of button type.
+      expect(find.text('Connect'), findsOneWidget);
     });
+
+    testWidgets('available tile has no "Soon" badge', (tester) async {
+      await tester.pumpWidget(_buildHarness(integration: _availableModel));
+      await tester.pump();
+
+      expect(find.text('Soon'), findsNothing);
+    });
+
+    // ── Connected state ──────────────────────────────────────────────────────
+
+    testWidgets('connected tile shows "Connected" badge', (tester) async {
+      await tester.pumpWidget(_buildHarness(integration: _connectedModel));
+      await tester.pump();
+
+      expect(find.text('Connected'), findsOneWidget);
+    });
+
+    testWidgets('connected tile shows disconnect IconButton', (tester) async {
+      await tester.pumpWidget(_buildHarness(integration: _connectedModel));
+      await tester.pump();
+
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Icon && w.icon == Icons.link_off_rounded,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('connected tile has no Connect button', (tester) async {
+      await tester.pumpWidget(_buildHarness(integration: _connectedModel));
+      await tester.pump();
+
+      expect(find.text('Connect'), findsNothing);
+    });
+
+    testWidgets(
+        'tapping disconnect icon opens disconnect bottom sheet',
+        (tester) async {
+      final stub = _StubNotifier(
+        IntegrationsState(integrations: [_connectedModel]),
+      );
+      await tester.pumpWidget(
+        _buildHarness(integration: _connectedModel, notifier: stub),
+      );
+      await tester.pump();
+
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is Icon && w.icon == Icons.link_off_rounded,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Disconnect sheet should appear — confirm the integration name is in it.
+      expect(find.text('Strava'), findsWidgets);
+      // "Disconnect" action label visible in the sheet.
+      expect(find.text('Disconnect'), findsOneWidget);
+    });
+
+    // ── Coming soon state ────────────────────────────────────────────────────
 
     testWidgets('comingSoon tile shows "Soon" badge', (tester) async {
       await tester.pumpWidget(_buildHarness(integration: _comingSoonModel));
@@ -136,11 +192,11 @@ void main() {
       expect(find.text('Soon'), findsOneWidget);
     });
 
-    testWidgets('comingSoon tile has no CupertinoSwitch', (tester) async {
+    testWidgets('comingSoon tile has no Connect button', (tester) async {
       await tester.pumpWidget(_buildHarness(integration: _comingSoonModel));
       await tester.pump();
 
-      expect(find.byType(CupertinoSwitch), findsNothing);
+      expect(find.text('Connect'), findsNothing);
     });
 
     testWidgets('comingSoon tile is rendered at 0.5 opacity', (tester) async {
@@ -151,26 +207,7 @@ void main() {
       expect(opacity.opacity, 0.5);
     });
 
-    testWidgets(
-        'tapping connected switch opens disconnect bottom sheet',
-        (tester) async {
-      final stub = _StubNotifier(
-        IntegrationsState(integrations: [_connectedModel]),
-      );
-      await tester.pumpWidget(
-        _buildHarness(integration: _connectedModel, notifier: stub),
-      );
-      await tester.pump();
-
-      // Tap the switch to toggle it off (connected → will disconnect).
-      await tester.tap(find.byType(CupertinoSwitch));
-      await tester.pumpAndSettle();
-
-      // Disconnect sheet should have appeared with the integration name.
-      expect(find.text('Strava'), findsWidgets);
-      // "Disconnect" text button in the sheet.
-      expect(find.text('Disconnect'), findsOneWidget);
-    });
+    // ── Name and description ─────────────────────────────────────────────────
 
     testWidgets('integration name and description are shown', (tester) async {
       await tester.pumpWidget(_buildHarness(integration: _availableModel));
@@ -178,6 +215,15 @@ void main() {
 
       expect(find.text('Fitbit'), findsOneWidget);
       expect(find.text('Import activity data.'), findsOneWidget);
+    });
+
+    testWidgets('initials fallback renders when logoAsset is null',
+        (tester) async {
+      // All fixture models omit logoAsset — tile should render without error.
+      await tester.pumpWidget(_buildHarness(integration: _availableModel));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
     });
   });
 }

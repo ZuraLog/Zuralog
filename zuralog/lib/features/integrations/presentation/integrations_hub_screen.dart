@@ -41,12 +41,9 @@ class _IntegrationsHubScreenState
   @override
   void initState() {
     super.initState();
-    // Defer to avoid calling notifier during build.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(integrationsProvider.notifier).loadIntegrations();
-      }
-    });
+    // Initial load is kicked automatically by the provider factory via
+    // Future.microtask. No explicit call needed here — pull-to-refresh
+    // (_onRefresh) handles manual reloads.
   }
 
   /// Handles pull-to-refresh gesture.

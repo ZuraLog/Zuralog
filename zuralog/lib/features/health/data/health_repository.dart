@@ -73,6 +73,22 @@ class HealthRepository {
     DateTime endDate,
   ) => _bridge.getNutrition(startDate, endDate);
 
+  /// Fetches the most recent resting heart rate in beats-per-minute.
+  ///
+  /// Returns `null` if no data exists or the health platform is unavailable.
+  Future<double?> getRestingHeartRate() => _bridge.getRestingHeartRate();
+
+  /// Fetches the most recent heart rate variability in milliseconds.
+  ///
+  /// iOS surfaces SDNN; Android surfaces RMSSD. Both are in ms.
+  /// Returns `null` if no data exists or the health platform is unavailable.
+  Future<double?> getHRV() => _bridge.getHRV();
+
+  /// Fetches the most recent VO2 max (cardio fitness level) in mL/kg/min.
+  ///
+  /// Returns `null` if no data exists or the health platform is unavailable.
+  Future<double?> getCardioFitness() => _bridge.getCardioFitness();
+
   // -- Write Methods --
 
   /// Writes a workout entry to HealthKit.

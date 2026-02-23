@@ -51,6 +51,10 @@ dependencies:
   # SVG rendering (for the Zuralog brand logo asset)
   flutter_svg: ^2.0.17
 
+  # Brand logo icon packs (no bundled image assets needed)
+  simple_icons: ^14.6.1          # Strava, Garmin, Fitbit, Google, Apple icons
+  font_awesome_flutter: ^10.12.0 # Apple, additional brand icons
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,7 +1,7 @@
 /// Zuralog Settings — UserHeader Widget Tests.
 ///
-/// Verifies that [UserHeader] renders the email initial as a circular
-/// avatar and displays the email address text.
+/// Verifies that [UserHeader] renders the display name, email, and avatar
+/// correctly, and that tapping the avatar shows the coming-soon SnackBar.
 library;
 
 import 'package:flutter/material.dart';
@@ -49,7 +49,9 @@ void main() {
     testWidgets('shows the email address as text', (tester) async {
       await tester.pumpWidget(_buildHarness());
       await tester.pump();
-      expect(find.text(_kTestEmail), findsOneWidget);
+      // Email appears twice: once as the name (email-prefix fallback when
+      // no profile is loaded) and once as the secondary email label.
+      expect(find.text(_kTestEmail), findsAtLeast(1));
     });
 
     testWidgets('shows the first-letter initial in the avatar', (tester) async {
@@ -73,8 +75,9 @@ void main() {
     testWidgets('shows dash when email is empty', (tester) async {
       await tester.pumpWidget(_buildHarness(email: ''));
       await tester.pump();
-      // When email is empty, the widget shows '—' as placeholder.
-      expect(find.text('—'), findsOneWidget);
+      // When email is empty and no profile is loaded, the name column shows
+      // '—' and no secondary email label is shown. At least one '—' appears.
+      expect(find.text('—'), findsAtLeast(1));
     });
 
     testWidgets('tapping avatar shows coming-soon SnackBar', (tester) async {
@@ -86,7 +89,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.text('Profile photo coming soon'),
+        find.text('Profile photo — coming soon'),
         findsOneWidget,
       );
     });

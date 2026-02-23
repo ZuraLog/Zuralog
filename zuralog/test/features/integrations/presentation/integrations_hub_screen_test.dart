@@ -51,7 +51,6 @@ class _StubIntegrationsNotifier
 const _connectedIntegration = IntegrationModel(
   id: 'strava',
   name: 'Strava',
-  logoAsset: 'assets/integrations/strava.png',
   status: IntegrationStatus.connected,
   description: 'Sync runs and rides.',
 );
@@ -60,7 +59,6 @@ const _connectedIntegration = IntegrationModel(
 const _availableIntegration = IntegrationModel(
   id: 'fitbit',
   name: 'Fitbit',
-  logoAsset: 'assets/integrations/fitbit.png',
   status: IntegrationStatus.available,
   description: 'Import activity data.',
 );
@@ -69,7 +67,6 @@ const _availableIntegration = IntegrationModel(
 const _comingSoonIntegration = IntegrationModel(
   id: 'garmin',
   name: 'Garmin',
-  logoAsset: 'assets/integrations/garmin.png',
   status: IntegrationStatus.comingSoon,
   description: 'Connect Garmin devices.',
 );
@@ -116,7 +113,10 @@ void main() {
         _buildHarness(integrations: [_connectedIntegration]),
       );
       await tester.pump();
-      expect(find.text('Connected'), findsOneWidget);
+      // The section header AND the _ConnectedBadge on each tile both render
+      // the text "Connected", so we assert at least one match rather than
+      // exactly one.
+      expect(find.text('Connected'), findsWidgets);
     });
 
     testWidgets('shows "Available" section header when available integrations exist',
@@ -150,7 +150,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Connected'), findsOneWidget);
+      // "Connected" appears in both the section header and the tile badge.
+      expect(find.text('Connected'), findsWidgets);
       expect(find.text('Available'), findsOneWidget);
       expect(find.text('Coming Soon'), findsOneWidget);
     });
