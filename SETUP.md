@@ -131,19 +131,29 @@ Strava OAuth is implemented but registration of the Strava API application is no
 | `STRAVA_CLIENT_SECRET` | Your Strava API application's Client Secret |
 | `STRAVA_REDIRECT_URI` | Keep default: `zuralog://oauth/strava` |
 
-#### Deferred: Firebase Cloud Messaging (Push Notifications)
+#### Required: Firebase (Push Notifications + Flutter Build)
 
-FCM push notifications require a Firebase project and service account. Leave `FCM_CREDENTIALS_PATH` unset for now — the backend starts without it and push notification endpoints will return a no-op response.
+Firebase is required for the Flutter app to build. `google-services.json` and `GoogleService-Info.plist` are already committed to the repo — you get them automatically from `git clone`. The service account JSON (backend push notifications) is a private key and must be shared securely between developers.
 
-When you are ready to enable push notifications:
+**One-time project setup (already done — for reference only):**
 
-1. Create a project in the [Firebase Console](https://console.firebase.google.com/).
-2. Add an Android app (package name: `com.zuralog.zuralog`).
-3. Download `google-services.json` and place it at `zuralog/android/app/google-services.json`.
-4. In Firebase Console → Project Settings → Service Accounts, generate a new private key (JSON).
-5. Save the downloaded JSON somewhere safe (e.g., `cloud-brain/firebase-service-account.json`) and set `FCM_CREDENTIALS_PATH` to that path in `.env`.
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com/) using a `@zuralog.com` Google account
+2. Add an **Android** app (package: `com.zuralog.zuralog`) → download `google-services.json` → place at `zuralog/android/app/google-services.json`
+3. Add an **iOS** app (bundle ID: `com.zuralog.zuralog`) → download `GoogleService-Info.plist` → place at `zuralog/ios/Runner/GoogleService-Info.plist`
+4. Project Settings → **Service accounts** tab → **Generate new private key** → rename to `firebase-service-account.json` → place at `cloud-brain/firebase-service-account.json`
+5. Set `FCM_CREDENTIALS_PATH` in `.env` (see below)
 
-> **⚠️ Note:** The Google Services Gradle plugin is already wired into the Android build. If `google-services.json` is missing, the Flutter app **will not build**. You must either place the file or temporarily comment out the plugin in `zuralog/android/app/build.gradle.kts`.
+**What each developer needs to do:**
+
+- `google-services.json` and `GoogleService-Info.plist` — already in Git, no action needed
+- `firebase-service-account.json` — share securely (1Password, direct message). Place at `cloud-brain/firebase-service-account.json`. This file is gitignored and must never be committed.
+- Set in `cloud-brain/.env`:
+
+```
+FCM_CREDENTIALS_PATH=firebase-service-account.json
+```
+
+> **⚠️ Note:** `firebase-service-account.json` is a private key with admin access to Firebase. Never commit it to Git or share it publicly. The `.gitignore` already excludes it.
 
 #### Deferred: Pinecone (Vector Memory)
 
@@ -223,7 +233,7 @@ make format   # auto-fix formatting with ruff
 
 All commands in this section are run from the `zuralog/` directory unless noted.
 
-> **Before building**, you must place `google-services.json` at `zuralog/android/app/google-services.json`. The Firebase Gradle plugin is wired into the build and will fail without it. See [Deferred: Firebase Cloud Messaging](#deferred-firebase-cloud-messaging-push-notifications) for instructions, or temporarily comment out `id("com.google.gms.google-services")` in `zuralog/android/app/build.gradle.kts` to skip Firebase entirely during early development.
+> `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are already committed to the repo — you get them from `git clone`. No action needed.
 
 ### 3a. Install Flutter Dependencies
 
@@ -374,9 +384,7 @@ Verify your Supabase credentials in `cloud-brain/.env`:
 - The correct model ID is `moonshotai/kimi-k2.5` (already set as the default in `.env.example`).
 
 ### Flutter app fails to build with Google Services error
-The Google Services Gradle plugin is enabled. You must place a valid `google-services.json` at `zuralog/android/app/google-services.json`. Download it from Firebase Console → Project Settings → Your Apps (Android). See the [Deferred: Firebase Cloud Messaging](#deferred-firebase-cloud-messaging-push-notifications) section for full instructions.
-
-Alternatively, temporarily disable the plugin for early development: comment out `id("com.google.gms.google-services")` in `zuralog/android/app/build.gradle.kts`.
+`google-services.json` should already be in the repo at `zuralog/android/app/google-services.json`. If it's missing, run `git pull` — or ask the project owner for the file and place it there manually. Do not regenerate it — use the existing file from the shared Zuralog Firebase project.
 
 ### Push notifications not working
 - Ensure `FCM_CREDENTIALS_PATH` points to a valid Firebase service account JSON in `cloud-brain/.env`.

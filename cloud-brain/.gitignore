@@ -33,3 +33,7 @@ htmlcov/
 
 # uv
 .python-version
+
+# Firebase service account private key — never commit this
+firebase-service-account.json
+*-firebase-adminsdk-*.json
