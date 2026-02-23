@@ -42,9 +42,9 @@ class WelcomeScreen extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0D1F0D), // Deep forest green at the top-left.
-              Color(0xFF1A3A1A), // Mid-tone living green at the centre.
-              AppColors.primary, // Sage green at the bottom-right.
+              AppColors.gradientForestDark, // Deep forest green at the top-left.
+              AppColors.gradientForestMid,  // Mid-tone living green at the centre.
+              AppColors.primary,            // Sage green at the bottom-right.
             ],
             stops: [0.0, 0.5, 1.0],
           ),
@@ -111,23 +111,23 @@ class WelcomeScreen extends StatelessWidget {
 
 // ── Private Widgets ────────────────────────────────────────────────────────────
 
-/// Renders the circular logo container with a glow effect behind it.
+/// Renders the Zuralog logo with a radial glow effect behind it.
 ///
-/// Combines a semi-transparent glass border, a frosted sage-green fill, and
-/// a [Icons.monitor_heart_rounded] icon. A [Stack] positions a blurred radial
+/// Displays the [assets/images/zuralog_logo.png] brand asset inside a
+/// frosted glass circle container. A [Stack] positions a blurred radial
 /// glow decoration behind the main container for depth.
 class _LogoArea extends StatelessWidget {
   /// Creates a [_LogoArea].
   const _LogoArea();
 
   /// Diameter of the circular logo container.
-  static const double _logoDiameter = 100;
-
-  /// Size of the heart monitor icon inside the logo container.
-  static const double _iconSize = 56;
+  static const double _logoDiameter = 120;
 
   /// Diameter of the radial glow halo behind the logo.
-  static const double _glowDiameter = 160;
+  static const double _glowDiameter = 180;
+
+  /// Asset path for the Zuralog brand logo.
+  static const String _logoAsset = 'assets/images/zuralog_logo.png';
 
   @override
   Widget build(BuildContext context) {
@@ -158,16 +158,16 @@ class _LogoArea extends StatelessWidget {
             height: _logoDiameter,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary.withValues(alpha: 0.3),
+              color: AppColors.primary.withValues(alpha: 0.15),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.2),
                 width: 1.5,
               ),
             ),
-            child: const Icon(
-              Icons.monitor_heart_rounded,
-              size: _iconSize,
-              color: AppColors.primary,
+            padding: const EdgeInsets.all(AppDimens.spaceMd),
+            child: Image.asset(
+              _logoAsset,
+              fit: BoxFit.contain,
             ),
           ),
         ],

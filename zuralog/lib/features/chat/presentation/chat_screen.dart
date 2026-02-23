@@ -282,10 +282,10 @@ class _ConnectionDot extends StatelessWidget {
 
     switch (status) {
       case ConnectionStatus.connected:
-        dotColor = const Color(0xFF30D158); // System green
+        dotColor = AppColors.statusConnected;
         tooltip = 'Connected';
       case ConnectionStatus.connecting:
-        dotColor = const Color(0xFFFF9F0A); // System amber
+        dotColor = AppColors.statusConnecting;
         tooltip = 'Connecting…';
       case ConnectionStatus.disconnected:
       case null:

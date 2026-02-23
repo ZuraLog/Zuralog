@@ -71,11 +71,21 @@ class _DestinationStubState extends State<_DestinationStub> {
 
 void main() {
   group('WelcomeScreen', () {
-    testWidgets('renders logo icon', (tester) async {
+    testWidgets('renders Zuralog logo asset image', (tester) async {
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.monitor_heart_rounded), findsOneWidget);
+      // The _LogoArea now uses Image.asset with the Zuralog brand PNG.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Image &&
+              widget.image is AssetImage &&
+              (widget.image as AssetImage).assetName ==
+                  'assets/images/zuralog_logo.png',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('renders "Zuralog" app name', (tester) async {

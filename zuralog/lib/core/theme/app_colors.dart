@@ -99,6 +99,14 @@ abstract final class AppColors {
   /// AI message bubble — dark mode.
   static const Color aiBubbleDark = Color(0xFF2C2C2E);
 
+  // ── Status Indicators ────────────────────────────────────────────────────
+
+  /// iOS System Green — connection status "connected" dot.
+  static const Color statusConnected = Color(0xFF30D158);
+
+  /// iOS System Amber — connection status "connecting" dot.
+  static const Color statusConnecting = Color(0xFFFF9F0A);
+
   // ── Buttons ──────────────────────────────────────────────────────────────
 
   /// Primary button foreground text (always dark grey on Sage Green).
