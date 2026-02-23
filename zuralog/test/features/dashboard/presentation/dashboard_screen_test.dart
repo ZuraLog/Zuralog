@@ -15,9 +15,31 @@ import 'package:zuralog/features/analytics/domain/daily_summary.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
 
+// ── Stub notifiers ────────────────────────────────────────────────────────────
+
+/// Stub [UserProfileNotifier] that immediately exposes [_kProfile].
+///
+/// Overrides [userProfileProvider] in the test harness so that the
+/// dashboard greeting header renders the expected name without making
+/// any real network calls.
+class _StubProfileNotifier extends UserProfileNotifier {
+  @override
+  UserProfile? build() => _kProfile;
+}
+
 // ── Fixture data ───────────────────────────────────────────────────────────────
+
+/// A stub [UserProfile] with the name "Alex" used by [userProfileProvider].
+const _kProfile = UserProfile(
+  id: 'test-user-id',
+  email: 'alex@example.com',
+  displayName: 'Alex',
+  onboardingComplete: true,
+);
 
 /// A fully-populated [DailySummary] used by provider overrides.
 const _kSummary = DailySummary(
@@ -76,6 +98,8 @@ Widget _buildHarness({List<String>? navigatedPaths}) {
 
   return ProviderScope(
     overrides: [
+      // Provide a stub user profile so the greeting header shows "Alex".
+      userProfileProvider.overrideWith(() => _StubProfileNotifier()),
       // Override async providers with immediate synchronous data.
       dailySummaryProvider.overrideWith((_) async => _kSummary),
       weeklyTrendsProvider.overrideWith((_) async => _kTrends),
