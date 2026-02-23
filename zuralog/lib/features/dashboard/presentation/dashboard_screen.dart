@@ -77,7 +77,9 @@ class DashboardScreen extends ConsumerWidget {
                 insightAsync.when(
                   data: (insight) => InsightCard(
                     insight: insight,
-                    onTap: () => context.go(RouteNames.chatPath),
+                    // Use goBranch to switch tabs within the StatefulShellRoute
+                    // — preserves branch state and avoids replacing the stack.
+                    onTap: () => StatefulNavigationShell.of(context).goBranch(1),
                   ),
                   loading: () => const InsightCardShimmer(),
                   error: (e, _) => InsightCard(
@@ -85,7 +87,7 @@ class DashboardScreen extends ConsumerWidget {
                       insight:
                           'Tap to chat with your AI coach for today\'s insight.',
                     ),
-                    onTap: () => context.go(RouteNames.chatPath),
+                    onTap: () => StatefulNavigationShell.of(context).goBranch(1),
                   ),
                 ),
 
@@ -115,8 +117,10 @@ class DashboardScreen extends ConsumerWidget {
 
                 // C) Integrations Rail
                 IntegrationsRail(
+                  // goBranch(2) switches to the Integrations tab within
+                  // the StatefulShellRoute without replacing the stack.
                   onManageTap: () =>
-                      context.go(RouteNames.integrationsPath),
+                      StatefulNavigationShell.of(context).goBranch(2),
                 ),
 
                 const SizedBox(height: AppDimens.spaceLg),

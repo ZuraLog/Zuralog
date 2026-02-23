@@ -48,6 +48,9 @@ dependencies:
   flutter_markdown_plus: any   # Markdown rendering for AI chat responses (Phase 2.2.2)
   fl_chart: any           # Sparkline and trend charts for Dashboard (Phase 2.2.3)
 
+  # SVG rendering (for the Zuralog brand logo asset)
+  flutter_svg: ^2.0.17
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

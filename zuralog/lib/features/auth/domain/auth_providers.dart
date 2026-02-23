@@ -3,13 +3,42 @@
 /// Defines Riverpod providers for the authentication layer:
 /// [authRepositoryProvider] for the repository singleton and
 /// [authStateProvider] for reactive auth state management.
+///
+/// Also provides [hasSeenOnboardingProvider] for controlling first-launch
+/// onboarding display via [SharedPreferences].
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/auth/data/auth_repository.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+
+// ── Onboarding Flag ───────────────────────────────────────────────────────────
+
+/// SharedPreferences key for tracking whether the user has seen the onboarding.
+const String _kHasSeenOnboarding = 'has_seen_onboarding';
+
+/// Async provider that resolves to `true` if the user has already completed
+/// the onboarding flow, or `false` if this is their first launch.
+///
+/// The flag is persisted in [SharedPreferences] and set by calling
+/// [markOnboardingComplete]. The router reads this value to determine whether
+/// to redirect new users to `/onboarding` before `/welcome`.
+final hasSeenOnboardingProvider = FutureProvider<bool>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool(_kHasSeenOnboarding) ?? false;
+});
+
+/// Marks the onboarding as completed by writing the flag to [SharedPreferences].
+///
+/// Call this when the user taps "Skip" or "Get Started" on the last
+/// [OnboardingPageView] page.
+Future<void> markOnboardingComplete() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(_kHasSeenOnboarding, true);
+}
 
 /// Provides a singleton [AuthRepository] instance.
 ///

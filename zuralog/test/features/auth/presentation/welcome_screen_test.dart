@@ -1,16 +1,31 @@
 /// Zuralog Edge Agent — Welcome Screen Tests.
 ///
-/// Verifies that [WelcomeScreen] renders all required UI elements and that
-/// the navigation callbacks are wired correctly using a lightweight
-/// [GoRouter] test configuration.
+/// Verifies that [WelcomeScreen] (the auth home) renders all required UI
+/// elements matching the "Clean Gate" reference design:
+///   - Zuralog app name
+///   - Tagline
+///   - "Continue with Apple" button
+///   - "Continue with Google" button
+///   - "Log in with Email" link
+///   - Legal footer
+///
+/// Also verifies that the email CTA navigates to [/auth/login].
+///
+/// [SvgPicture] from the logo card is not asserted directly because SVG
+/// rendering requires the real file system in widget tests; the logo card
+/// container is asserted by its background color instead.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -18,8 +33,13 @@ import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dar
 /// and a [ProviderScope] so the widget can be pumped in isolation.
 ///
 /// [navigatedRoutes] is a mutable list that will be appended to whenever
-/// [GoRouter] completes a navigation — enabling post-tap assertions.
+/// GoRouter navigates to a stub destination screen.
 Widget _buildHarness({required List<String> navigatedRoutes}) {
+  // Mark onboarding as seen so the router does not redirect to /onboarding.
+  SharedPreferences.setMockInitialValues({
+    'has_seen_onboarding': true,
+  });
+
   final router = GoRouter(
     initialLocation: '/welcome',
     routes: [
@@ -27,12 +47,7 @@ Widget _buildHarness({required List<String> navigatedRoutes}) {
         path: '/welcome',
         builder: (context, _) => const WelcomeScreen(),
       ),
-      // Stub destination routes so GoRouter does not throw.
-      GoRoute(
-        path: '/onboarding',
-        builder: (context, _) =>
-            _DestinationStub(name: 'onboarding', routes: navigatedRoutes),
-      ),
+      // Stub destination routes so GoRouter does not throw on navigation.
       GoRoute(
         path: '/auth/login',
         builder: (context, _) =>
@@ -42,6 +57,11 @@ Widget _buildHarness({required List<String> navigatedRoutes}) {
   );
 
   return ProviderScope(
+    overrides: [
+      // Override hasSeenOnboardingProvider to avoid async SharedPreferences
+      // in the router redirect during tests.
+      hasSeenOnboardingProvider.overrideWith((ref) async => true),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -71,21 +91,12 @@ class _DestinationStubState extends State<_DestinationStub> {
 
 void main() {
   group('WelcomeScreen', () {
-    testWidgets('renders Zuralog logo asset image', (tester) async {
+    testWidgets('renders the Zuralog SVG logo card', (tester) async {
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      // The _LogoArea now uses Image.asset with the Zuralog brand PNG.
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Image &&
-              widget.image is AssetImage &&
-              (widget.image as AssetImage).assetName ==
-                  'assets/images/zuralog_logo.png',
-        ),
-        findsOneWidget,
-      );
+      // The _LogoCard contains an SvgPicture.
+      expect(find.byType(SvgPicture), findsWidgets);
     });
 
     testWidgets('renders "Zuralog" app name', (tester) async {
@@ -99,44 +110,98 @@ void main() {
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      expect(find.text('Your AI Health Coach'), findsOneWidget);
+      expect(
+        find.text('Your journey to better health starts here.'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('renders "Get Started" button', (tester) async {
+    testWidgets('renders "Continue with Apple" button', (tester) async {
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      expect(find.text('Get Started'), findsOneWidget);
+      expect(find.text('Continue with Apple'), findsOneWidget);
     });
 
-    testWidgets('renders "I already have an account" link', (tester) async {
+    testWidgets('renders "Continue with Google" button', (tester) async {
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      expect(find.text('I already have an account'), findsOneWidget);
+      expect(find.text('Continue with Google'), findsOneWidget);
     });
 
-    testWidgets('tapping "Get Started" navigates to /onboarding', (tester) async {
-      final navigatedRoutes = <String>[];
-      await tester.pumpWidget(_buildHarness(navigatedRoutes: navigatedRoutes));
+    testWidgets('renders "Log in with Email" link', (tester) async {
+      await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Get Started'));
-      await tester.pumpAndSettle();
-
-      expect(navigatedRoutes, contains('onboarding'));
+      expect(find.text('Log in with Email'), findsOneWidget);
     });
 
-    testWidgets('tapping "I already have an account" navigates to /auth/login',
+    testWidgets('renders legal footer text', (tester) async {
+      await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
+      await tester.pumpAndSettle();
+
+      // The legal footer is a RichText — check for its presence by substring.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains('By continuing'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('renders the sage green logo card container', (tester) async {
+      await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
+      await tester.pumpAndSettle();
+
+      // The _LogoCard is a Container with AppColors.primary background.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Container &&
+              widget.decoration is BoxDecoration &&
+              (widget.decoration as BoxDecoration).color == AppColors.primary,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('tapping "Log in with Email" navigates to /auth/login',
         (tester) async {
       final navigatedRoutes = <String>[];
       await tester.pumpWidget(_buildHarness(navigatedRoutes: navigatedRoutes));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('I already have an account'));
+      await tester.tap(find.text('Log in with Email'));
       await tester.pumpAndSettle();
 
       expect(navigatedRoutes, contains('login'));
+    });
+
+    testWidgets('tapping "Continue with Apple" shows coming-soon SnackBar',
+        (tester) async {
+      await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Continue with Apple'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Apple Sign In coming soon'), findsOneWidget);
+    });
+
+    testWidgets('tapping "Continue with Google" shows coming-soon SnackBar',
+        (tester) async {
+      await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Continue with Google'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Google Sign In coming soon'), findsOneWidget);
     });
   });
 }

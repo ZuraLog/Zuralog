@@ -129,20 +129,22 @@ abstract final class AppTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
+        // Inline text links (e.g. "Log in", "Sign up") must remain shrink-wrapped.
+        // Full-width filled "secondary button" style is applied explicitly by
+        // the SecondaryButton widget — NOT here — to avoid collapsing Rows.
         style: TextButton.styleFrom(
-          foregroundColor:
-              isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
-          backgroundColor:
-              isLight ? AppColors.secondaryButtonLight : AppColors.secondaryButtonDark,
-          minimumSize:
-              const Size(double.infinity, AppDimens.touchTargetMin),
+          foregroundColor: AppColors.primary,
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceSm,
+            vertical: AppDimens.spaceXs,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusButton),
           ),
-          textStyle: AppTextStyles.h3,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimens.spaceLg,
-            vertical: AppDimens.spaceMd,
+          textStyle: AppTextStyles.body.copyWith(
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

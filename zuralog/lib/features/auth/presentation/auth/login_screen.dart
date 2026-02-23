@@ -7,10 +7,16 @@
 ///
 /// **Widget type:** [ConsumerStatefulWidget] — needs Riverpod [ref] and
 /// local [TextEditingController] + form-state management.
+///
+/// **Navigation:**
+/// - Back button: [context.pop] returns to [WelcomeScreen] (auth home).
+/// - "Sign up" link: [context.pushReplacement] to [RegisterScreen] — replaces
+///   this route on the stack to prevent unbounded Login ↔ Register accumulation.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
@@ -122,6 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           SnackBar(
             content: Text(message),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
     }
@@ -129,10 +136,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log In'),
-        centerTitle: false,
+        // Explicit back button — returns to the WelcomeScreen (auth home).
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          tooltip: 'Back',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.welcomePath);
+            }
+          },
+        ),
+        // Zuralog SVG logo centered in the AppBar for brand continuity.
+        title: SvgPicture.asset(
+          'assets/images/zuralog_logo.svg',
+          height: 28,
+          colorFilter: ColorFilter.mode(
+            colorScheme.onSurface,
+            BlendMode.srcIn,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Form(
@@ -143,7 +172,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Heading ──────────────────────────────────────────────
-                Text('Welcome back', style: AppTextStyles.h2),
+                Text(
+                  'Welcome back',
+                  style: AppTextStyles.h2.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
+                ),
                 const SizedBox(height: AppDimens.spaceSm),
                 Text(
                   'Sign in to your Zuralog account.',
@@ -199,6 +233,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: AppDimens.spaceMd),
 
                 // ── Registration link ────────────────────────────────────
+                // Centered inline text + link row.
+                // pushReplacement prevents Login↔Register stack accumulation.
                 Center(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -210,7 +246,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.push(RouteNames.registerPath),
+                        onPressed: () => context.pushReplacement(
+                          RouteNames.registerPath,
+                        ),
                         child: const Text('Sign up'),
                       ),
                     ],
