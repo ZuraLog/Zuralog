@@ -175,12 +175,16 @@ class IntegrationModel {
       other is IntegrationModel &&
           runtimeType == other.runtimeType &&
           id == other.id &&
+          name == other.name &&
+          logoAsset == other.logoAsset &&
+          description == other.description &&
           status == other.status &&
           lastSynced == other.lastSynced &&
           compatibility == other.compatibility;
 
   @override
-  int get hashCode => Object.hash(id, status, lastSynced, compatibility);
+  int get hashCode =>
+      Object.hash(id, name, logoAsset, description, status, lastSynced, compatibility);
 
   @override
   String toString() =>

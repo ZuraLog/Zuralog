@@ -107,9 +107,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
-      id: 'google_fit',
-      name: 'Google Fit',
-      logoAsset: 'assets/integrations/google_fit.png',
+      id: 'google_health_connect',
+      name: 'Health Connect',
+      logoAsset: 'assets/integrations/google_health_connect.png',
       status: IntegrationStatus.available,
       description: 'Sync workouts and health data from Android.',
       compatibility: PlatformCompatibility.androidOnly,
