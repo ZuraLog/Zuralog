@@ -23,6 +23,7 @@ import 'package:zuralog/features/chat/domain/message.dart';
 import 'package:zuralog/features/chat/presentation/widgets/chat_input_bar.dart';
 import 'package:zuralog/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:zuralog/features/chat/presentation/widgets/typing_indicator.dart';
+import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── Chat Screen ───────────────────────────────────────────────────────────────
 
@@ -116,10 +117,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ),
         actions: [
-          // Connection status dot in the top-right corner.
-          Padding(
-            padding: const EdgeInsets.only(right: AppDimens.spaceMd),
-            child: _ConnectionDot(connectionAsync: connectionAsync),
+          // Connection status dot.
+          _ConnectionDot(connectionAsync: connectionAsync),
+          // Profile avatar — opens the side panel.
+          const Padding(
+            padding: EdgeInsets.only(right: AppDimens.spaceMd),
+            child: ProfileAvatarButton(),
           ),
         ],
       ),
