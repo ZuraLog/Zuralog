@@ -1,15 +1,16 @@
 # Auth Screen Fixes, Redesign, and Smoke-Test Bugfix Sprint
 
 **Date:** 2026-02-23
-**Branch:** `feat/fix-auth-screens-and-navigation`
+**Branch:** `fix/onboarding-questionnaire-null-profile`
 **Initial Commit SHA:** `14029de`
-**Latest Commit SHA:** `6a4e09c`
+**Latest Commit SHA:** `aa7af17`
 **Agent:** Claude Code (claude-sonnet-4-6)
-**Status:** Complete — all commits on branch, pending PR to main
+**Status:** Complete — merged to `main`
 
-> **This document covers two sessions on the same branch:**
+> **This document covers three sessions on the same branch:**
 > - **Session 1** (commits `14029de` → `93306dd`): Auth screen fixes and WelcomeScreen redesign
 > - **Session 2** (commits `84bd693` → `6a4e09c`): User profile system, integration tile redesign, and smoke-test bugfixes
+> - **Session 3** (commits `cdca216` → `aa7af17`): Questionnaire save failures and expired-token force-logout
 
 ---
 
@@ -362,8 +363,89 @@ Cloud Brain runs on port **8001**. See the developer-testing-bugfix-sprint doc f
 
 ## Next Steps
 
-- **Manual smoke test** — re-run all screens on device/emulator after the full rebuild
 - **Apple Sign-In** — implement when Apple Developer Program credentials are available
 - **Google Sign-In** — implement using the `google_sign_in` package
 - **Profile edit screen** — allow users to update their display name/nickname/birthday/gender post-onboarding
-- **Merge to `main`** — create PR from `feat/fix-auth-screens-and-navigation`
+
+---
+
+---
+
+# Session 3: Questionnaire Save Failures and Expired-Token Force-Logout
+
+## Overview
+
+After Session 2, manual smoke testing uncovered three chained bugs that collectively prevented the profile questionnaire from saving for any user. All three were diagnosed from live backend/Flutter logs and fixed in the same session before merging to `main`.
+
+---
+
+## What Was Fixed
+
+### Bug 5 — Questionnaire redirect fired before profile loaded (race condition)
+
+**Root cause:** The router Step-3 guard checked `profile == null` and immediately redirected to the questionnaire. On every login, `authStateProvider` flips to `authenticated` before the fire-and-forget `load()` call completes. In that window, `profile` is transiently `null` — so every returning user (including those with `onboardingComplete = true`) was sent to the questionnaire on every app launch.
+
+**Fix:**
+- Added `isLoadingProfileProvider` (`StateProvider<bool>`) to `auth_providers.dart`.
+- `UserProfileNotifier.load()` sets it `true` at the start and `false` in a `finally` block.
+- Router Step-3 guard now returns `null` (stay put) while `isLoadingProfileProvider == true`; only redirects after the load settles and `onboardingComplete` is confirmed `false`.
+- Added `isLoadingProfileProvider` to `_RouterRefreshListenable` so the guard re-evaluates when the flag clears.
+- `ProfileQuestionnaireScreen.initState()` now pre-populates all fields from any existing profile, so returning users see their data rather than blank inputs.
+- Added `debugPrint` of the actual exception in `_handleSubmit`'s catch block for future diagnostics.
+
+**Commit:** `eeb8a62`
+
+---
+
+### Bug 6 — PATCH call returned 404 (wrong API path)
+
+**Root cause:** `AuthRepository.fetchProfile()` and `updateProfile()` were calling `/api/v1/me/profile`. The FastAPI users router has `prefix="/users"`, making the real paths `/api/v1/users/me/profile`. The mismatch was masked in early development because the 404 was caught by the generic `catch(e)` and shown only as "Failed to save profile."
+
+**Fix:** Updated both path strings in `auth_repository.dart` to `/api/v1/users/me/profile`.
+
+**Commit:** `cb53ae0`
+
+---
+
+### Bug 7 — PATCH call returned 401 after app restart (expired JWT, no recovery path)
+
+**Root cause:** `isLoggedIn()` only checks whether the token *string* exists in secure storage — it does not validate the JWT with the server. After an extended session gap (Supabase access tokens expire in ~1 hour; refresh tokens rotate and expire after inactivity), the user was auto-authenticated locally on restart but every real API call returned 401. The token-refresh interceptor attempted to exchange the refresh token, which was also expired — it cleared both tokens and passed the 401 error through. The `DioException` propagated to `_handleSubmit`'s `catch(e)`, showing a SnackBar with no recovery path. The user was permanently stuck: authenticated in app state, but every API call rejected.
+
+**Fix:**
+- Added `onUnauthenticated` callback parameter to `ApiClient`. Called after refresh failure, alongside token cleanup.
+- Added `forceLogout()` to `AuthStateNotifier`: sets state to `unauthenticated`, clears profile and email providers — no backend call needed since tokens are already invalid.
+- DI provider `apiClientProvider` wires `onUnauthenticated` → `forceLogout()` via a lazy `ref.read` callback (not `ref.watch`, to avoid a circular dependency).
+
+**Result:** On unrecoverable 401, `forceLogout()` fires, `authStateProvider` flips to `unauthenticated`, the router guard redirects to `/welcome`, and the user can log in again normally.
+
+**Commit:** `aa7af17`
+
+---
+
+## Full Files Changed (Session 3)
+
+| File | Change |
+|------|--------|
+| `lib/features/auth/domain/auth_providers.dart` | Added `isLoadingProfileProvider`; `load()` sets/clears it; added `forceLogout()` to `AuthStateNotifier`; `clear()` also resets loading flag |
+| `lib/core/router/app_router.dart` | Step-3 guard holds while `isLoadingProfileProvider == true`; added `isLoadingProfileProvider` to `_RouterRefreshListenable` |
+| `lib/features/auth/presentation/onboarding/profile_questionnaire_screen.dart` | `initState()` pre-populates fields from existing profile; `debugPrint` in catch block |
+| `lib/features/auth/data/auth_repository.dart` | Fixed both API paths: `/api/v1/me/profile` → `/api/v1/users/me/profile` |
+| `lib/core/network/api_client.dart` | Added `onUnauthenticated` callback; called after refresh failure |
+| `lib/core/di/providers.dart` | Wired `onUnauthenticated` → `AuthStateNotifier.forceLogout()` in `apiClientProvider` |
+| `docs/agent-executed/frontend/post-phases/auth-screen-fixes-and-redesign.md` | This document |
+
+---
+
+## Architecture Notes Added in Session 3
+
+### `isLoadingProfileProvider` — why a separate provider and not `AsyncNotifier`
+
+Switching `UserProfileNotifier` to `AsyncNotifier<UserProfile?>` would expose the loading state natively but would require updating every consumer (`userProfileProvider` watcher) across the codebase. The `isLoadingProfileProvider` approach is an additive change — existing consumers are untouched and the router is the only reader of the flag.
+
+### `forceLogout()` vs `logout()`
+
+`logout()` calls `POST /api/v1/auth/logout` to invalidate the Supabase session server-side. `forceLogout()` skips the network call because the tokens are already invalid (the interceptor cleared them). Calling `logout()` in this scenario would itself get a 401, potentially triggering another `onUnauthenticated` call and a recursive loop.
+
+### `onUnauthenticated` uses `ref.read`, not `ref.watch`
+
+`apiClientProvider` is a `Provider` (synchronous, runs once). `ref.watch` inside a non-reactive provider would throw. The `ref.read` inside the closure is lazily evaluated at call-time, which is correct — `authStateProvider` is always initialized by the time a 401 can occur.
