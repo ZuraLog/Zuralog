@@ -10,6 +10,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'package:life_logger/core/network/api_client.dart';
+
 /// Handles top-level background messages from FCM.
 ///
 /// This must be a top-level function (not a class method) because
@@ -113,7 +115,8 @@ class FCMService {
     // Listen for token refresh
     _messaging.onTokenRefresh.listen((newToken) {
       _token = newToken;
-      // TODO(phase-1.9): Send updated token to backend
+      // TODO(phase-1.9): Re-register updated token with backend
+      debugPrint('FCM token refreshed — re-register with backend to stay current');
     });
 
     // Handle foreground messages
@@ -123,6 +126,34 @@ class FCMService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     return _token;
+  }
+
+  /// Registers this device's FCM token with the Cloud Brain backend.
+  ///
+  /// Call this after [initialize] returns a non-null token. Posts the token
+  /// to `POST /api/v1/devices/register` so the backend can send push
+  /// notifications to this specific device.
+  ///
+  /// [apiClient] is the REST client used for backend communication.
+  ///
+  /// Returns `true` if registration succeeded, `false` otherwise.
+  Future<bool> registerWithBackend(ApiClient apiClient) async {
+    if (_token == null) {
+      debugPrint('FCM: no token available — call initialize() first');
+      return false;
+    }
+
+    try {
+      await apiClient.post('/api/v1/devices/register', data: {
+        'fcm_token': _token,
+        'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+      });
+      debugPrint('FCM: device registered with backend');
+      return true;
+    } catch (e) {
+      debugPrint('FCM: device registration failed: $e');
+      return false;
+    }
   }
 
   /// Handles messages received while the app is in the foreground.

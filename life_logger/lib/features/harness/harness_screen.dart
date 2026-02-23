@@ -532,13 +532,47 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
         _log(
-          'Write trigger failed: No device registered (FCM not initialized). This is expected until Phase 1.9.',
+          '⚠️ No device registered. Tap "Init FCM" first, then retry.',
         );
       } else {
         _log('❌ ${ApiClient.friendlyError(e)}');
       }
     } catch (e) {
       _log('❌ Unexpected error: $e');
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // FCM Actions
+  // -----------------------------------------------------------------------
+
+  /// Initializes Firebase Cloud Messaging and registers this device with
+  /// the Cloud Brain backend.
+  ///
+  /// Requires google-services.json to be present and Firebase configured.
+  /// Logs step-by-step progress for developer testing.
+  Future<void> _initFcm() async {
+    _log('Initializing FCM...');
+    try {
+      final fcmService = ref.read(fcmServiceProvider);
+      final token = await fcmService.initialize();
+      if (token == null) {
+        _log('❌ FCM permission denied or init failed');
+        return;
+      }
+      _log('✅ FCM token obtained: ${token.substring(0, 20)}...');
+      _log('Registering device with backend...');
+      final apiClient = ref.read(apiClientProvider);
+      final registered = await fcmService.registerWithBackend(apiClient);
+      if (registered) {
+        _log('✅ Device registered — AI Write buttons are now ready');
+      } else {
+        _log('❌ Device registration failed — check backend logs');
+      }
+    } catch (e) {
+      _log('❌ FCM init error: $e');
+      _log('  → Ensure google-services.json is in android/app/');
+      _log('  → Tap the "Firebase Setup" button for instructions');
     }
   }
 
@@ -1254,6 +1288,37 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
           spacing: 8,
           runSpacing: 8,
           children: [
+            _ActionChip(
+              icon: Icons.notifications_active_rounded,
+              label: 'Init FCM',
+              color: _Colors.success,
+              onTap: _initFcm,
+            ),
+            _ActionChip(
+              icon: Icons.help_outline_rounded,
+              label: 'Firebase Setup',
+              color: _Colors.warning,
+              onTap: () {
+                _log('--- FIREBASE SETUP GUIDE ---');
+                _log('FCM (push notifications) requires a Firebase project:');
+                _log('');
+                _log('1. Go to https://console.firebase.google.com');
+                _log('2. Create a project (or use an existing one)');
+                _log('3. Add Android app: com.lifelogger.life_logger');
+                _log('4. Download google-services.json');
+                _log('5. Place it at: android/app/google-services.json');
+                _log('6. Rebuild the app: flutter run');
+                _log('');
+                _log('For backend FCM sends:');
+                _log('7. Firebase Console → Project Settings → Service Accounts');
+                _log('8. Generate new private key → save JSON file');
+                _log('9. Set FCM_CREDENTIALS_PATH=<path> in cloud-brain/.env');
+                _log('10. Restart the Cloud Brain');
+                _log('');
+                _log('Then tap "Init FCM" → "AI Write (Steps/Nutrition)"');
+                _log('----------------------------');
+              },
+            ),
             _ActionChip(
               icon: Icons.directions_walk_rounded,
               label: 'AI Write (Steps)',

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:life_logger/core/health/health_bridge.dart';
 import 'package:life_logger/core/network/api_client.dart';
+import 'package:life_logger/core/network/fcm_service.dart';
 import 'package:life_logger/core/network/ws_client.dart';
 import 'package:life_logger/core/storage/secure_storage.dart';
 import 'package:life_logger/core/storage/local_db.dart';
@@ -58,3 +59,10 @@ final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
 final syncStatusStoreProvider = Provider<SyncStatusStore>((ref) {
   return SyncStatusStore();
 });
+
+/// Provides the [FCMService] singleton for Firebase Cloud Messaging.
+///
+/// FCM initialization must be triggered explicitly (e.g., after login or via
+/// the harness "Init FCM" button) — it is not called automatically to avoid
+/// permission prompts before the user has consented.
+final fcmServiceProvider = Provider<FCMService>((ref) => FCMService());
