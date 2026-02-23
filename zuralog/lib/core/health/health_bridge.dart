@@ -163,36 +163,45 @@ class HealthBridge {
     }
   }
 
-  /// Fetches nutrition (dietary energy consumed) entries within a date range.
+  /// Fetches total active calories burned for a specific [date] in kcal.
   ///
-  /// Returns an empty list if no nutrition data exists or on error.
-  /// Each entry is a Map with keys:
-  /// `calories` (kcal), `date` (ISO 8601), `source` (app name).
-  ///
-  /// This reads data written by any app (e.g., CalAI, MyFitnessPal)
-  /// to the OS Health Store.
-  Future<List<Map<String, dynamic>>> getNutrition(
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
+  /// Sums all active energy records for the midnight-to-midnight window.
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getCaloriesBurned(DateTime date) async {
     try {
-      final result = await _channel
-          .invokeMethod<List<dynamic>>('getNutrition', {
-            'startDate': startDate.millisecondsSinceEpoch,
-            'endDate': endDate.millisecondsSinceEpoch,
-          });
-      if (result == null) return [];
-      return result
-          .cast<Map<dynamic, dynamic>>()
-          .map((m) => Map<String, dynamic>.from(m))
-          .toList();
+      final result = await _channel.invokeMethod<num>('getCaloriesBurned', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
         // ignore: avoid_print
-        print('HealthBridge.getNutrition PlatformException: ${e.message}');
+        print('HealthBridge.getCaloriesBurned PlatformException: ${e.message}');
         return true;
       }());
-      return [];
+      return null;
+    }
+  }
+
+  /// Fetches total dietary energy (calories consumed) for a specific [date] in kcal.
+  ///
+  /// Sums all nutrition records for the midnight-to-midnight window.
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getNutritionCalories(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getNutrition', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'HealthBridge.getNutritionCalories PlatformException: ${e.message}',
+        );
+        return true;
+      }());
+      return null;
     }
   }
 

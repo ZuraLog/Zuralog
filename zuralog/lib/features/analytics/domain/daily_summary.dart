@@ -57,6 +57,37 @@ class DailySummary {
     );
   }
 
+  /// Returns a copy of this [DailySummary] with selected fields replaced.
+  ///
+  /// Used by [dailySummaryProvider] to merge native bridge fallback values
+  /// into an API-sourced summary without constructing a full new object.
+  /// A field is only replaced when a non-null argument is supplied.
+  DailySummary copyWith({
+    String? date,
+    int? steps,
+    int? caloriesConsumed,
+    int? caloriesBurned,
+    int? workoutsCount,
+    double? sleepHours,
+    double? weightKg,
+    int? restingHeartRate,
+    double? hrv,
+    double? cardioFitnessLevel,
+  }) {
+    return DailySummary(
+      date: date ?? this.date,
+      steps: steps ?? this.steps,
+      caloriesConsumed: caloriesConsumed ?? this.caloriesConsumed,
+      caloriesBurned: caloriesBurned ?? this.caloriesBurned,
+      workoutsCount: workoutsCount ?? this.workoutsCount,
+      sleepHours: sleepHours ?? this.sleepHours,
+      weightKg: weightKg ?? this.weightKg,
+      restingHeartRate: restingHeartRate ?? this.restingHeartRate,
+      hrv: hrv ?? this.hrv,
+      cardioFitnessLevel: cardioFitnessLevel ?? this.cardioFitnessLevel,
+    );
+  }
+
   /// ISO-8601 date string (`YYYY-MM-DD`) this summary represents.
   final String date;
 

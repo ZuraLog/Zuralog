@@ -212,6 +212,69 @@ class HealthConnectBridge(private val context: Context) {
         }
     }
 
+    /// Reads total active calories burned for a given date (midnight to midnight).
+    ///
+    /// Sums all `ActiveCaloriesBurnedRecord` entries within the day window.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Total active calories burned in kcal, or null if no data.
+    suspend fun readActiveCaloriesBurned(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = ActiveCaloriesBurnedRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            val total = response.records.sumOf { it.energy.inKilocalories }
+            if (total == 0.0) null else total
+        } catch (e: Exception) {
+            Log.e(TAG, "readActiveCaloriesBurned failed", e)
+            null
+        }
+    }
+
+    /// Reads total dietary energy (calories consumed) for a given date (midnight to midnight).
+    ///
+    /// Sums all `NutritionRecord` energy entries within the day window.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Total dietary calories in kcal, or null if no data.
+    suspend fun readNutritionCalories(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = NutritionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            // energy field is nullable on NutritionRecord; sum only non-null entries.
+            val total = response.records.mapNotNull { it.energy?.inKilocalories }.sum()
+            if (total == 0.0) null else total
+        } catch (e: Exception) {
+            Log.e(TAG, "readNutritionCalories failed", e)
+            null
+        }
+    }
+
     /// Reads the most recent resting heart rate record.
     ///
     /// Health Connect receives RestingHeartRateRecord from wearables

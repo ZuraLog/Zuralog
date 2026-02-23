@@ -102,6 +102,80 @@ class HealthKitBridge: NSObject {
         healthStore.execute(query)
     }
 
+    // MARK: - Read: Active Calories Burned
+
+    /// Fetches cumulative active energy burned for a specific day.
+    ///
+    /// Queries `HKQuantityType(.activeEnergyBurned)` using a cumulative-sum
+    /// statistics query scoped to midnight-to-midnight for [date].
+    ///
+    /// - Parameters:
+    ///   - date: The day to query.
+    ///   - completion: Called with total kcal burned or nil on failure.
+    func fetchActiveCaloriesBurned(date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        let energyType = HKQuantityType(.activeEnergyBurned)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: startOfDay,
+            end: endOfDay,
+            options: .strictStartDate
+        )
+
+        let query = HKStatisticsQuery(
+            quantityType: energyType,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum
+        ) { _, result, error in
+            guard let result = result, let sum = result.sumQuantity() else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let kcal = sum.doubleValue(for: HKUnit.kilocalorie())
+            DispatchQueue.main.async { completion(kcal, nil) }
+        }
+
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Nutrition Calories Consumed
+
+    /// Fetches cumulative dietary energy consumed for a specific day.
+    ///
+    /// Queries `HKQuantityType(.dietaryEnergyConsumed)` using a cumulative-sum
+    /// statistics query scoped to midnight-to-midnight for [date].
+    ///
+    /// - Parameters:
+    ///   - date: The day to query.
+    ///   - completion: Called with total kcal consumed or nil on failure.
+    func fetchNutritionCalories(date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        let nutritionType = HKQuantityType(.dietaryEnergyConsumed)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+
+        let predicate = HKQuery.predicateForSamples(
+            withStart: startOfDay,
+            end: endOfDay,
+            options: .strictStartDate
+        )
+
+        let query = HKStatisticsQuery(
+            quantityType: nutritionType,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum
+        ) { _, result, error in
+            guard let result = result, let sum = result.sumQuantity() else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let kcal = sum.doubleValue(for: HKUnit.kilocalorie())
+            DispatchQueue.main.async { completion(kcal, nil) }
+        }
+
+        healthStore.execute(query)
+    }
+
     // MARK: - Read: Workouts
 
     /// Fetches workouts within a date range.

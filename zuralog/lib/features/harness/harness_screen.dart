@@ -340,16 +340,14 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   }
 
   Future<void> _readNutrition() async {
-    _log('Reading nutrition (last 7 days)...');
+    _log('Reading nutrition calories (today)...');
     final healthRepo = ref.read(healthRepositoryProvider);
-    final nutrition = await healthRepo.getNutrition(
-      DateTime.now().subtract(const Duration(days: 7)),
-      DateTime.now(),
+    final kcal = await healthRepo.getNutritionCalories(DateTime.now());
+    _log(
+      kcal != null && kcal > 0
+          ? '✅ Nutrition today: ${kcal.toStringAsFixed(0)} kcal'
+          : '⚠️ No nutrition data for today',
     );
-    _log('✅ Nutrition entries: ${nutrition.length}');
-    for (final entry in nutrition) {
-      _log('  - ${entry["calories"]} kcal on ${entry["date"]}');
-    }
   }
 
   // -----------------------------------------------------------------------

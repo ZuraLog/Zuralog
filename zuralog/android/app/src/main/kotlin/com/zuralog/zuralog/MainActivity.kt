@@ -206,6 +206,42 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
 
+                "getCaloriesBurned" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val kcal = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readActiveCaloriesBurned(dateMillis)
+                            }
+                            result.success(kcal)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getCaloriesBurned failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getNutrition" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val kcal = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readNutritionCalories(dateMillis)
+                            }
+                            result.success(kcal)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getNutrition failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
                 "getRestingHeartRate" -> {
                     lifecycleScope.launch {
                         try {
