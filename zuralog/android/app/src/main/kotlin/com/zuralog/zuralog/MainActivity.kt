@@ -206,6 +206,48 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
 
+                "getRestingHeartRate" -> {
+                    lifecycleScope.launch {
+                        try {
+                            val bpm = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readRestingHeartRate()
+                            }
+                            result.success(bpm)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getRestingHeartRate failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getHRV" -> {
+                    lifecycleScope.launch {
+                        try {
+                            val ms = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readHRV()
+                            }
+                            result.success(ms)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getHRV failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getCardioFitness" -> {
+                    lifecycleScope.launch {
+                        try {
+                            val vo2 = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readCardioFitness()
+                            }
+                            result.success(vo2)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getCardioFitness failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
                 "startBackgroundObservers" -> {
                     // On Android, background sync is handled by WorkManager
                     // (Phase 1.5.5), not observer queries like iOS.

@@ -16,9 +16,12 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -63,6 +66,9 @@ class HealthConnectBridge(private val context: Context) {
         HealthPermission.getWritePermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(NutritionRecord::class),
         HealthPermission.getWritePermission(NutritionRecord::class),
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+        HealthPermission.getReadPermission(Vo2MaxRecord::class),
     )
 
     // ------------------------------------------------------------------
@@ -202,6 +208,80 @@ class HealthConnectBridge(private val context: Context) {
             response.records.maxByOrNull { it.time }?.weight?.inKilograms
         } catch (e: Exception) {
             Log.e(TAG, "readWeight failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent resting heart rate record.
+    ///
+    /// Health Connect receives RestingHeartRateRecord from wearables
+    /// (e.g. Galaxy Watch, Pixel Watch) and compatible fitness apps.
+    ///
+    /// Returns: Resting HR in beats-per-minute, or null if no data.
+    suspend fun readRestingHeartRate(): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val now = Instant.now()
+            val thirtyDaysAgo = now.minusSeconds(30L * 24 * 3600)
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = RestingHeartRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(thirtyDaysAgo, now)
+                )
+            )
+            response.records.maxByOrNull { it.time }?.beatsPerMinute?.toDouble()
+        } catch (e: Exception) {
+            Log.e(TAG, "readRestingHeartRate failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent heart rate variability (RMSSD) record.
+    ///
+    /// HRV RMSSD is written by wearables after overnight sleep tracking.
+    ///
+    /// Returns: HRV in milliseconds, or null if no data.
+    suspend fun readHRV(): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val now = Instant.now()
+            val thirtyDaysAgo = now.minusSeconds(30L * 24 * 3600)
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = HeartRateVariabilityRmssdRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(thirtyDaysAgo, now)
+                )
+            )
+            response.records.maxByOrNull { it.time }?.heartRateVariabilityMillis
+        } catch (e: Exception) {
+            Log.e(TAG, "readHRV failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent VO2 max (cardio fitness) record.
+    ///
+    /// Vo2MaxRecord is written by wearables and fitness apps that
+    /// estimate maximal oxygen uptake in mL/kg/min.
+    ///
+    /// Returns: VO2 max in mL/kg/min, or null if no data.
+    suspend fun readCardioFitness(): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val now = Instant.now()
+            val ninetyDaysAgo = now.minusSeconds(90L * 24 * 3600)
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = Vo2MaxRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(ninetyDaysAgo, now)
+                )
+            )
+            response.records.maxByOrNull { it.time }?.vo2MillilitersPerMinuteKilogram
+        } catch (e: Exception) {
+            Log.e(TAG, "readCardioFitness failed", e)
             null
         }
     }

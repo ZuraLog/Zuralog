@@ -196,6 +196,60 @@ class HealthBridge {
     }
   }
 
+  /// Fetches the most recent resting heart rate in beats-per-minute.
+  ///
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getRestingHeartRate() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getRestingHeartRate');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'HealthBridge.getRestingHeartRate PlatformException: ${e.message}',
+        );
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent heart rate variability in milliseconds.
+  ///
+  /// iOS uses SDNN; Android uses RMSSD. Both are surfaced in ms.
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getHRV() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getHRV');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getHRV PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent VO2 max (cardio fitness) in mL/kg/min.
+  ///
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getCardioFitness() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getCardioFitness');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getCardioFitness PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
   /// Writes a workout entry to HealthKit.
   ///
   /// - [activityType]: e.g., "running", "cycling", "walking".
