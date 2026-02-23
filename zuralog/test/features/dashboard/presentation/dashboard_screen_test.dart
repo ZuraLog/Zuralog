@@ -185,15 +185,16 @@ void main() {
       expect(find.byType(CircleAvatar), findsOneWidget);
     });
 
-    testWidgets('tapping profile avatar navigates to settings', (tester) async {
-      final paths = <String>[];
-      await tester.pumpWidget(_buildHarness(navigatedPaths: paths));
+    testWidgets('tapping profile avatar opens the profile side panel',
+        (tester) async {
+      await tester.pumpWidget(_buildHarness());
       await tester.pump();
 
       await tester.tap(find.byType(CircleAvatar));
       await tester.pumpAndSettle();
 
-      expect(paths, contains('settings'));
+      // The panel contains a "Profile" navigation label.
+      expect(find.text('Profile'), findsOneWidget);
     });
 
     testWidgets('shows insight text once providers resolve', (tester) async {

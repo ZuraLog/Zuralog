@@ -18,8 +18,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
@@ -53,7 +53,7 @@ class DashboardScreen extends ConsumerWidget {
     final profile = ref.watch(userProfileProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -170,9 +170,9 @@ class DashboardScreen extends ConsumerWidget {
 
         const Spacer(),
 
-        // Right: profile avatar
+        // Right: profile avatar — opens side panel
         GestureDetector(
-          onTap: () => context.push(RouteNames.settingsPath),
+          onTap: () => ProfileSidePanel.show(context),
           child: CircleAvatar(
             radius: AppDimens.avatarMd / 2,
             backgroundColor: AppColors.primary.withValues(alpha: 0.2),

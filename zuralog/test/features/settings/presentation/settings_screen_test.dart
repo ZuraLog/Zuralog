@@ -122,7 +122,10 @@ void main() {
     testWidgets('shows user email in the header', (tester) async {
       await tester.pumpWidget(_buildHarness());
       await tester.pump();
-      expect(find.text(_kTestEmail), findsOneWidget);
+      // Email now appears twice in the header: once as the name fallback
+      // (no profile loaded → aiName falls back to email) and once as the
+      // secondary email label below the name.
+      expect(find.text(_kTestEmail), findsAtLeast(1));
     });
 
     testWidgets('shows Appearance section header', (tester) async {
