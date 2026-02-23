@@ -71,7 +71,7 @@ abstract final class RouteNames {
   // ── Developer Tools ───────────────────────────────────────────────────────
 
   /// Name for the design system visual catalog (dev only).
-  static const String debugCatalog = 'debug-catalog';
+  static const String debugCatalog = 'debugCatalog';
 
   /// Path for the design system catalog screen.
   static const String debugCatalogPath = '/debug/catalog';
@@ -81,6 +81,9 @@ abstract final class RouteNames {
   /// Set of paths that are accessible without authentication.
   ///
   /// Used by the auth guard to determine whether to redirect to [welcomePath].
+  ///
+  /// Note: [settingsPath] and [debugCatalogPath] are intentionally excluded —
+  /// both require the user to be authenticated before they can be accessed.
   static const Set<String> publicPaths = {
     welcomePath,
     onboardingPath,

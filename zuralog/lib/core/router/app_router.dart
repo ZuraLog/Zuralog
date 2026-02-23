@@ -1,8 +1,9 @@
 /// Zuralog Edge Agent — GoRouter Configuration.
 ///
-/// Declares [routerProvider], a Riverpod [Provider<GoRouter>] that watches
-/// [authStateProvider] and recreates the router whenever auth state changes,
-/// triggering reactive redirects (e.g., auto-navigate to dashboard on login).
+/// Declares [routerProvider], a Riverpod [Provider<GoRouter>] that creates the
+/// [GoRouter] instance ONCE and uses [refreshListenable] to re-trigger the
+/// [redirect] callback whenever auth state changes — without recreating the
+/// entire router.
 ///
 /// **Route tree:**
 /// ```
@@ -22,34 +23,59 @@
 /// subsequent phases (2.2.1–2.2.5).
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/layout/app_shell.dart';
+
+// ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
+
+/// Bridges Riverpod's [authStateProvider] to a [ChangeNotifier] that [GoRouter]
+/// can use as a [refreshListenable].
+///
+/// When [authStateProvider] emits a new [AuthState], [notifyListeners] is called
+/// so the router re-evaluates its [redirect] callback without recreating the
+/// [GoRouter] instance itself.
+class _AuthStateListenable extends ChangeNotifier {
+  /// Creates an [_AuthStateListenable] that listens to [authStateProvider]
+  /// via [ref].
+  _AuthStateListenable(Ref ref) {
+    ref.listen<AuthState>(authStateProvider, (previous, next) => notifyListeners());
+  }
+}
+
+// ── Router Provider ───────────────────────────────────────────────────────────
 
 /// Riverpod provider that exposes the configured [GoRouter] instance.
 ///
-/// Watches [authStateProvider] so the router's redirect logic is re-evaluated
-/// whenever auth state changes (login, logout, or initial auth check completes).
-///
-/// The router is recreated on auth state change because [GoRouter] reads the
-/// [redirect] callback reactively when the provider is rebuilt. This ensures
-/// that navigation happens automatically without any manual imperatives.
+/// The [GoRouter] is created **once** and kept alive for the lifetime of the
+/// provider. Auth-state changes are propagated via [refreshListenable]
+/// (an [_AuthStateListenable]) so only the [redirect] callback is
+/// re-evaluated — the navigator stack is preserved across auth transitions.
 final routerProvider = Provider<GoRouter>((ref) {
-  // Watch authStateProvider so Riverpod rebuilds this provider — and
-  // therefore the GoRouter — whenever the auth state changes.
-  final authState = ref.watch(authStateProvider);
+  final listenable = _AuthStateListenable(ref);
+  ref.onDispose(listenable.dispose);
 
   return GoRouter(
     initialLocation: RouteNames.welcomePath,
-    debugLogDiagnostics: false,
+    // refreshListenable notifies GoRouter when auth state changes, triggering
+    // redirect re-evaluation without recreating the GoRouter instance.
+    refreshListenable: listenable,
+    debugLogDiagnostics: kDebugMode,
     redirect: (BuildContext context, GoRouterState state) {
-      return authGuardRedirect(context, state, authState);
+      // ref.read is correct here — called at redirect time, not during build.
+      return authGuardRedirect(
+        authState: ref.read(authStateProvider),
+        location: state.matchedLocation,
+      );
     },
     routes: _buildRoutes(),
   );
@@ -168,6 +194,9 @@ List<RouteBase> _buildRoutes() {
 
 // ── Placeholder Screen ────────────────────────────────────────────────────────
 
+/// Icon size used by [_PlaceholderScreen].
+const double _placeholderIconSize = 64;
+
 /// Temporary screen used for routes whose real implementation is pending.
 ///
 /// Displays the route [title] and an [icon] so developers can verify routing
@@ -192,13 +221,13 @@ class _PlaceholderScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: colorScheme.primary),
-            const SizedBox(height: 16),
+            Icon(icon, size: _placeholderIconSize, color: colorScheme.primary),
+            const SizedBox(height: AppDimens.spaceMd),
             Text(
               title,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppDimens.spaceSm),
             Text(
               'Placeholder — coming soon',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(

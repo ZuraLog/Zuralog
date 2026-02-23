@@ -12,29 +12,22 @@
 /// 4. Otherwise → return `null` (allow navigation).
 library;
 
-import 'package:flutter/widgets.dart';
-import 'package:go_router/go_router.dart';
-
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/core/router/route_names.dart';
 
 /// Determines whether GoRouter should redirect the user to a different
 /// location based on the current [authState].
 ///
-/// This function is designed to be passed directly to [GoRouter.redirect].
+/// This function is designed to be called from [GoRouter.redirect].
 ///
-/// - [context] — the current [BuildContext] from the router.
-/// - [state] — the [GoRouterState] describing the intended destination.
 /// - [authState] — the current resolved [AuthState] from Riverpod.
+/// - [location] — the matched location string from [GoRouterState.matchedLocation].
 ///
 /// Returns a path string to redirect to, or `null` to allow the navigation.
-String? authGuardRedirect(
-  BuildContext context,
-  GoRouterState state,
-  AuthState authState,
-) {
-  final location = state.matchedLocation;
-
+String? authGuardRedirect({
+  required AuthState authState,
+  required String location,
+}) {
   // ── Rule 1: Loading — wait for auth to resolve ───────────────────────────
   if (authState == AuthState.loading) {
     return null;

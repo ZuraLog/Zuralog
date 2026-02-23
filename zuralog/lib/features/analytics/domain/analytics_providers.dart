@@ -27,10 +27,11 @@ import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 /// Uses [DateTime.now()] as the target date so the data always reflects
 /// the current calendar day. Auto-disposes when no widget is subscribed.
 ///
-/// Throws a [DioException] if the backend is unreachable and no cached
-/// data is available (the repository manages the cache internally).
+/// Exposes a [DioException] as [AsyncError] if the backend is unreachable
+/// and no cached data is available (the repository manages the cache internally).
+// DateTime.now() evaluated at fetch time. autoDispose ensures stale data is released when no widget is subscribed.
 final dailySummaryProvider = FutureProvider.autoDispose<DailySummary>((ref) {
-  return ref.read(analyticsRepositoryProvider).getDailySummary(DateTime.now());
+  return ref.watch(analyticsRepositoryProvider).getDailySummary(DateTime.now());
 });
 
 /// Fetches the most recent 7-day [WeeklyTrends] from the analytics repository.
@@ -38,9 +39,9 @@ final dailySummaryProvider = FutureProvider.autoDispose<DailySummary>((ref) {
 /// The backend determines the date range (trailing 7 days from today).
 /// Auto-disposes when no widget is subscribed.
 ///
-/// Throws a [DioException] on network failure.
+/// Exposes a [DioException] as [AsyncError] if the backend is unreachable.
 final weeklyTrendsProvider = FutureProvider.autoDispose<WeeklyTrends>((ref) {
-  return ref.read(analyticsRepositoryProvider).getWeeklyTrends();
+  return ref.watch(analyticsRepositoryProvider).getWeeklyTrends();
 });
 
 /// Fetches the AI-generated [DashboardInsight] from the analytics repository.
@@ -49,8 +50,8 @@ final weeklyTrendsProvider = FutureProvider.autoDispose<WeeklyTrends>((ref) {
 /// produced by the Cloud Brain AI layer. Auto-disposes when no widget
 /// is subscribed.
 ///
-/// Throws a [DioException] on network failure.
+/// Exposes a [DioException] as [AsyncError] if the backend is unreachable.
 final dashboardInsightProvider =
     FutureProvider.autoDispose<DashboardInsight>((ref) {
-  return ref.read(analyticsRepositoryProvider).getDashboardInsight();
+  return ref.watch(analyticsRepositoryProvider).getDashboardInsight();
 });

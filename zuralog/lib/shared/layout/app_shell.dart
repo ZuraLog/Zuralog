@@ -19,7 +19,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 
 /// The root scaffold for all tabbed screens.
 ///
@@ -123,10 +123,13 @@ class _FrostedNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(
+          sigmaX: AppDimens.navBarBlurSigma,
+          sigmaY: AppDimens.navBarBlurSigma,
+        ),
         child: Container(
           // Translucent tint overlay — blends with the blurred background.
-          color: surfaceColor.withValues(alpha: 0.85),
+          color: surfaceColor.withValues(alpha: AppDimens.navBarFrostOpacity),
           child: NavigationBar(
             // Transparent so the frosted-glass container's color shows through.
             backgroundColor: Colors.transparent,
@@ -136,7 +139,7 @@ class _FrostedNavigationBar extends StatelessWidget {
             elevation: 0,
             selectedIndex: currentIndex,
             onDestinationSelected: onDestinationSelected,
-            indicatorColor: AppColors.primary.withValues(alpha: 0.3),
+            // indicatorColor deferred to NavigationBarTheme in AppTheme (AppColors.primary at 0.2 opacity).
             destinations: AppShell._destinations,
           ),
         ),
