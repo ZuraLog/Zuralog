@@ -586,13 +586,15 @@ class _CompactInsightStrip extends StatelessWidget {
 
 // ── Quick Stat Chips ──────────────────────────────────────────────────────────
 
-/// A compact horizontal strip of stat chips displayed below the hero row.
+/// A compact horizontal strip of cardiovascular stat chips below the hero row.
 ///
-/// Shows three supplementary metrics that are additive to the hero rings
-/// and right-column stats:
-///   - Workouts completed today.
-///   - Calories consumed (nutrition intake).
-///   - Sleep quality label (derived from [DailySummary.sleepHours]).
+/// Shows three metrics that are distinct from the hero rings and right-column
+/// stats (steps/sleep/calories), focusing on heart-health signals:
+///   - Resting Heart Rate (RHR) in bpm.
+///   - Heart Rate Variability (HRV) in ms.
+///   - Cardio Fitness Level (VO2 max estimate) in mL/kg/min.
+///
+/// Displays `'—'` for any field that has not yet been reported by the device.
 ///
 /// Parameters:
 ///   summary: Today's aggregated health metrics.
@@ -610,46 +612,45 @@ class _QuickStatChips extends StatelessWidget {
         ? AppColors.surfaceDark.withValues(alpha: 0.6)
         : AppColors.surfaceLight.withValues(alpha: 0.8);
 
+    final rhr = summary.restingHeartRate != null
+        ? '${summary.restingHeartRate} bpm'
+        : '—';
+
+    final hrv = summary.hrv != null
+        ? '${summary.hrv!.toStringAsFixed(0)} ms'
+        : '—';
+
+    final cardio = summary.cardioFitnessLevel != null
+        ? '${summary.cardioFitnessLevel!.toStringAsFixed(1)} mL/kg'
+        : '—';
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           _StatChip(
-            icon: Icons.fitness_center_rounded,
-            label: 'Workouts',
-            value: '${summary.workoutsCount}',
+            icon: Icons.favorite_rounded,
+            label: 'Resting HR',
+            value: rhr,
             bgColor: bgColor,
           ),
           const SizedBox(width: AppDimens.spaceSm),
           _StatChip(
-            icon: Icons.restaurant_rounded,
-            label: 'Nutrition',
-            value: '${summary.caloriesConsumed} kcal',
+            icon: Icons.monitor_heart_outlined,
+            label: 'HRV',
+            value: hrv,
             bgColor: bgColor,
           ),
           const SizedBox(width: AppDimens.spaceSm),
           _StatChip(
-            icon: Icons.bedtime_outlined,
-            label: 'Sleep Quality',
-            value: _sleepQualityLabel(summary.sleepHours),
+            icon: Icons.directions_run_rounded,
+            label: 'Cardio Fitness',
+            value: cardio,
             bgColor: bgColor,
           ),
         ],
       ),
     );
-  }
-
-  /// Returns a qualitative sleep label based on [hours].
-  ///
-  /// - < 5 h → 'Poor'
-  /// - 5–6 h → 'Fair'
-  /// - 6–8 h → 'Good'
-  /// - ≥ 8 h → 'Excellent'
-  static String _sleepQualityLabel(double hours) {
-    if (hours < 5) return 'Poor';
-    if (hours < 6) return 'Fair';
-    if (hours < 8) return 'Good';
-    return 'Excellent';
   }
 }
 

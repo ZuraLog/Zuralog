@@ -71,6 +71,9 @@ const _kSummary = DailySummary(
   caloriesBurned: 480,
   workoutsCount: 1,
   sleepHours: 7.5,
+  restingHeartRate: 58,
+  hrv: 42.0,
+  cardioFitnessLevel: 47.3,
 );
 
 /// A minimal [WeeklyTrends] with 7 data points per list.
