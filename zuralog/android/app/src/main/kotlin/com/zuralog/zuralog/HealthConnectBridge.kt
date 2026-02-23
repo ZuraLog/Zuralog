@@ -24,6 +24,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Energy
@@ -385,6 +386,7 @@ class HealthConnectBridge(private val context: Context) {
                 endZoneOffset = null,
                 exerciseType = exerciseType,
                 title = activityType.replaceFirstChar { it.uppercase() },
+                metadata = Metadata.manualEntry()
             )
             hcClient.insertRecords(listOf(record))
             true
@@ -410,7 +412,8 @@ class HealthConnectBridge(private val context: Context) {
                 startZoneOffset = null,
                 endTime = instant.plusSeconds(1),
                 endZoneOffset = null,
-                energy = Energy.calories(calories * 1000), // kcal -> cal
+                energy = Energy.kilocalories(calories), // kcal -> kcal
+                metadata = Metadata.manualEntry()
             )
             hcClient.insertRecords(listOf(record))
             true
@@ -434,6 +437,7 @@ class HealthConnectBridge(private val context: Context) {
                 time = Instant.ofEpochMilli(dateMillis),
                 zoneOffset = null,
                 weight = Mass.kilograms(weightKg),
+                metadata = Metadata.manualEntry()
             )
             hcClient.insertRecords(listOf(record))
             true
