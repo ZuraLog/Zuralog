@@ -1060,6 +1060,52 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ActionChip(
+              icon: Icons.help_outline_rounded,
+              label: 'Strava Guide',
+              color: _Colors.info,
+              onTap: () {
+                _log('--- STRAVA TESTING GUIDE ---');
+                _log('Prerequisites:');
+                _log(
+                  '  1. Cloud Brain must be running '
+                  '(cd cloud-brain && make dev)',
+                );
+                _log(
+                  '  2. .env must have STRAVA_CLIENT_ID '
+                  'and STRAVA_CLIENT_SECRET',
+                );
+                _log(
+                  '  3. STRAVA_REDIRECT_URI must be: '
+                  'lifelogger://oauth/strava',
+                );
+                _log('  4. You must be logged in (use AUTH section first)');
+                _log('');
+                _log('Steps:');
+                _log('  1. Log in via the AUTH section first');
+                _log(
+                  '  2. Tap "Strava" above — opens browser '
+                  'to Strava auth page',
+                );
+                _log('  3. Log into your Strava account in the browser');
+                _log('  4. Authorize "Life Logger" to access your data');
+                _log(
+                  '  5. Browser redirects to '
+                  'lifelogger://oauth/strava?code=XXX',
+                );
+                _log('  6. The app intercepts the deep link automatically');
+                _log('  7. Code is exchanged for tokens on the backend');
+                _log('  8. Check this log for exchange confirmation');
+                _log('----------------------------');
+              },
+            ),
+          ],
+        ),
       ],
     );
   }
