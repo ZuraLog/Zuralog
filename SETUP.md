@@ -32,6 +32,8 @@ cd Life-Logger
 
 ## 2. Cloud Brain (Backend)
 
+> **Windows terminal:** All `make` commands require Git Bash (not PowerShell). In AntiGravity, click the **`+`** dropdown next to your terminal tabs and select **"Git Bash"**. See the [`make` not found](#make-not-found-on-windows) troubleshooting entry if you get a command-not-found error.
+
 All commands in this section are run from the `cloud-brain/` directory unless noted.
 
 ### 2a. Start Docker Services (PostgreSQL + Redis)
@@ -248,6 +250,8 @@ make format   # auto-fix formatting with ruff
 
 ## 3. Edge Agent (Flutter Mobile App)
 
+> **Windows terminal:** Same as Section 2 — use Git Bash, not PowerShell. In AntiGravity, open a second Git Bash panel via the **`+`** dropdown next to the terminal tabs.
+
 All commands in this section are run from the **project root** (`Life-Logger/`) unless noted.
 
 > `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are already committed to the repo — you get them from `git clone`. No action needed.
@@ -406,7 +410,35 @@ All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to
 Add `C:\flutter\bin` (or wherever you extracted Flutter) to your system PATH, then restart your terminal.
 
 ### `make` not found on Windows
-Install GNU Make via [gnuwin32](http://gnuwin32.sourceforge.net/packages/make.htm) or run the underlying commands directly (listed in the Quick Reference table above). Git Bash also includes `make`.
+PowerShell does not include `make`. You have three options:
+
+**Option A — Git Bash (recommended, no install required)**
+Git Bash ships with Git for Windows and already includes `make`. Open it in one of two ways:
+- **From AntiGravity / VS Code:** Click the **`+`** dropdown arrow next to the terminal tabs → select **"Git Bash"** from the list. This opens a Git Bash panel directly inside the editor.
+- **From Windows:** Press **Win** → search **"Git Bash"** → open it.
+
+All `make` commands work immediately in Git Bash. Use this for both the Cloud Brain and Flutter terminals.
+
+**Option B — Install `make` for PowerShell (one-time)**
+```powershell
+# With Chocolatey
+choco install make
+
+# With Winget
+winget install GnuWin32.Make
+```
+Restart PowerShell after installing. `make` will then work in any PowerShell terminal.
+
+**Option C — Run the underlying commands directly in PowerShell**
+Every `make` target has a PowerShell equivalent listed in the Quick Reference table. For example:
+```powershell
+# Instead of: make dev
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+
+# Instead of: make run
+cd zuralog
+flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=616346397607-se60r20r85d24teksi3oco8ss77kol0d.apps.googleusercontent.com
+```
 
 ### `gradlew` fails with "JAVA_HOME is not set"
 You do not need to install Java separately — Android Studio bundles a JDK. Run Gradle commands with the bundled JDK:
