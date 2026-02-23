@@ -20,6 +20,18 @@ abstract final class AppColors {
   /// Same value in both light and dark modes.
   static const Color primary = Color(0xFFCFE1B9);
 
+  /// Deep forest green — top-left stop of the Welcome Screen gradient.
+  static const Color gradientForestDark = Color(0xFF0D1F0D);
+
+  /// Mid-tone living green — centre stop of the Welcome Screen gradient.
+  static const Color gradientForestMid = Color(0xFF1A3A1A);
+
+  /// Pure black — used for Apple Sign In button background.
+  static const Color black = Color(0xFF000000);
+
+  /// Google brand blue — placeholder "G" text in Google Sign In button.
+  static const Color googleBlue = Color(0xFF4285F4);
+
   /// Muted Slate — Secondary buttons, info icons, graphs (light mode).
   static const Color secondaryLight = Color(0xFF5B7C99);
 
@@ -31,6 +43,12 @@ abstract final class AppColors {
 
   /// Soft Coral — Alerts, destructive actions (dark mode).
   static const Color accentDark = Color(0xFFFF8E72);
+
+  /// Nutrition / food accent color.
+  ///
+  /// Used for the Nutrition metric card on the Dashboard.
+  /// Muted purple to visually distinguish food/dietary metrics.
+  static const Color nutrition = Color(0xFF9B59B6);
 
   // ── Backgrounds ──────────────────────────────────────────────────────────
 
@@ -80,6 +98,14 @@ abstract final class AppColors {
 
   /// AI message bubble — dark mode.
   static const Color aiBubbleDark = Color(0xFF2C2C2E);
+
+  // ── Status Indicators ────────────────────────────────────────────────────
+
+  /// iOS System Green — connection status "connected" dot.
+  static const Color statusConnected = Color(0xFF30D158);
+
+  /// iOS System Amber — connection status "connecting" dot.
+  static const Color statusConnecting = Color(0xFFFF9F0A);
 
   // ── Buttons ──────────────────────────────────────────────────────────────
 

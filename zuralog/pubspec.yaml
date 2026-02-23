@@ -44,6 +44,10 @@ dependencies:
   purchases_ui_flutter: ^8.0.0
   http: ^1.6.0
 
+  # Phase 2.2 — Screen Implementation
+  flutter_markdown_plus: any   # Markdown rendering for AI chat responses (Phase 2.2.2)
+  fl_chart: any           # Sparkline and trend charts for Dashboard (Phase 2.2.3)
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

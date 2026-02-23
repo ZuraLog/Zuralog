@@ -87,4 +87,12 @@ abstract final class AppDimens {
 
   /// Health ring outer diameter.
   static const double ringDiameter = 180;
+
+  // ── Navigation Bar ────────────────────────────────────────────────────────
+
+  /// Navigation bar backdrop blur intensity (sigmaX and sigmaY).
+  static const double navBarBlurSigma = 20;
+
+  /// Navigation bar frosted glass background opacity.
+  static const double navBarFrostOpacity = 0.85;
 }

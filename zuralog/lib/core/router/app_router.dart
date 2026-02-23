@@ -1,0 +1,174 @@
+/// Zuralog Edge Agent — GoRouter Configuration.
+///
+/// Declares [routerProvider], a Riverpod [Provider<GoRouter>] that creates the
+/// [GoRouter] instance ONCE and uses [refreshListenable] to re-trigger the
+/// [redirect] callback whenever auth state changes — without recreating the
+/// entire router.
+///
+/// **Route tree:**
+/// ```
+/// /welcome              → WelcomeScreen
+/// /onboarding           → OnboardingPageView
+/// /auth/login           → LoginScreen
+/// /auth/register        → RegisterScreen
+/// / (StatefulShellRoute) → AppShell
+///   /dashboard          → DashboardScreen (tab 0)
+///   /chat               → ChatScreen (placeholder, tab 1)
+///   /integrations       → IntegrationsHubScreen (tab 2)
+/// /settings             → SettingsScreen (pushed over shell)
+/// /debug/catalog        → CatalogScreen (dev-only)
+/// ```
+library;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
+import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
+import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
+import 'package:zuralog/features/catalog/catalog_screen.dart';
+import 'package:zuralog/core/router/auth_guard.dart';
+import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/features/chat/presentation/chat_screen.dart';
+import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:zuralog/features/integrations/presentation/integrations_hub_screen.dart';
+import 'package:zuralog/features/settings/presentation/settings_screen.dart';
+import 'package:zuralog/shared/layout/app_shell.dart';
+
+// ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
+
+/// Bridges Riverpod's [authStateProvider] to a [ChangeNotifier] that [GoRouter]
+/// can use as a [refreshListenable].
+///
+/// When [authStateProvider] emits a new [AuthState], [notifyListeners] is called
+/// so the router re-evaluates its [redirect] callback without recreating the
+/// [GoRouter] instance itself.
+class _AuthStateListenable extends ChangeNotifier {
+  /// Creates an [_AuthStateListenable] that listens to [authStateProvider]
+  /// via [ref].
+  _AuthStateListenable(Ref ref) {
+    ref.listen<AuthState>(authStateProvider, (previous, next) => notifyListeners());
+  }
+}
+
+// ── Router Provider ───────────────────────────────────────────────────────────
+
+/// Riverpod provider that exposes the configured [GoRouter] instance.
+///
+/// The [GoRouter] is created **once** and kept alive for the lifetime of the
+/// provider. Auth-state changes are propagated via [refreshListenable]
+/// (an [_AuthStateListenable]) so only the [redirect] callback is
+/// re-evaluated — the navigator stack is preserved across auth transitions.
+final routerProvider = Provider<GoRouter>((ref) {
+  final listenable = _AuthStateListenable(ref);
+  ref.onDispose(listenable.dispose);
+
+  return GoRouter(
+    initialLocation: RouteNames.welcomePath,
+    // refreshListenable notifies GoRouter when auth state changes, triggering
+    // redirect re-evaluation without recreating the GoRouter instance.
+    refreshListenable: listenable,
+    debugLogDiagnostics: kDebugMode,
+    redirect: (BuildContext context, GoRouterState state) {
+      // ref.read is correct here — called at redirect time, not during build.
+      return authGuardRedirect(
+        authState: ref.read(authStateProvider),
+        location: state.matchedLocation,
+      );
+    },
+    routes: _buildRoutes(),
+  );
+});
+
+/// Constructs the complete route list for the application.
+///
+/// Returns a flat list of [RouteBase] objects that includes both top-level
+/// routes (welcome, onboarding, auth, settings, debug) and the tabbed shell.
+List<RouteBase> _buildRoutes() {
+  return [
+    // ── Onboarding ────────────────────────────────────────────────────────
+    GoRoute(
+      path: RouteNames.welcomePath,
+      name: RouteNames.welcome,
+      builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: RouteNames.onboardingPath,
+      name: RouteNames.onboarding,
+      builder: (context, state) => const OnboardingPageView(),
+    ),
+
+    // ── Auth ─────────────────────────────────────────────────────────────
+    GoRoute(
+      path: RouteNames.loginPath,
+      name: RouteNames.login,
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: RouteNames.registerPath,
+      name: RouteNames.register,
+      builder: (context, state) => const RegisterScreen(),
+    ),
+
+    // ── Settings (pushed over shell) ──────────────────────────────────────
+    GoRoute(
+      path: RouteNames.settingsPath,
+      name: RouteNames.settings,
+      builder: (context, state) => const SettingsScreen(),
+    ),
+
+    // ── Developer Tools ───────────────────────────────────────────────────
+    GoRoute(
+      path: RouteNames.debugCatalogPath,
+      name: RouteNames.debugCatalog,
+      builder: (context, state) => const CatalogScreen(),
+    ),
+
+    // ── Main App Shell (StatefulShellRoute with 3 tab branches) ──────────
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) {
+        return AppShell(navigationShell: navigationShell);
+      },
+      branches: [
+        // Tab 0 — Dashboard
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RouteNames.dashboardPath,
+              name: RouteNames.dashboard,
+              builder: (context, state) => const DashboardScreen(),
+            ),
+          ],
+        ),
+
+        // Tab 1 — AI Coach Chat
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RouteNames.chatPath,
+              name: RouteNames.chat,
+              builder: (context, state) => const ChatScreen(),
+            ),
+          ],
+        ),
+
+        // Tab 2 — Integrations Hub
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RouteNames.integrationsPath,
+              name: RouteNames.integrations,
+              builder: (context, state) => const IntegrationsHubScreen(),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ];
+}
+
