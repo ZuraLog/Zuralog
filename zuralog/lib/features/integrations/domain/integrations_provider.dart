@@ -80,7 +80,14 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     // Reload connected states from disk without blocking the constructor.
     // This ensures integration tiles show the correct connected status
     // immediately on app launch without re-requesting permissions.
-    unawaited(_loadPersistedStates());
+    unawaited(
+      _loadPersistedStates().catchError((Object e, StackTrace st) {
+        // TODO(dev): Replace with structured logger when logging is introduced.
+        debugPrint(
+          '[IntegrationsNotifier] Failed to load persisted states: $e\n$st',
+        );
+      }),
+    );
   }
 
   final OAuthRepository _oauthRepository;
@@ -239,7 +246,8 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
             _showSnackBar(context, 'Coming soon!');
           }
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[IntegrationsNotifier] connect($integrationId) failed: $e\n$st');
       _setStatus(integrationId, IntegrationStatus.error);
     }
   }
@@ -253,7 +261,16 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   ///   integrationId: The [IntegrationModel.id] of the service to disconnect.
   void disconnect(String integrationId) {
     // Clear persisted state so the integration shows as Available after restart.
-    unawaited(_saveConnectedState(integrationId, connected: false));
+    unawaited(
+      _saveConnectedState(integrationId, connected: false).catchError(
+        (Object e, StackTrace st) {
+          debugPrint(
+            '[IntegrationsNotifier] Failed to clear persisted state for '
+            '$integrationId: $e\n$st',
+          );
+        },
+      ),
+    );
     state = state.copyWith(
       integrations: state.integrations.map((integration) {
         if (integration.id == integrationId) {

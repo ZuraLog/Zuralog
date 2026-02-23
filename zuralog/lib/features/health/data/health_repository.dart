@@ -35,6 +35,9 @@ class HealthRepository {
   ///
   /// On iOS, shows the HealthKit permission dialog.
   /// On Android, checks Health Connect permissions.
+  ///
+  /// Returns:
+  ///   `true` if the user granted all required permissions, `false` otherwise.
   Future<bool> requestAuthorization() => _bridge.requestAuthorization();
 
   // -- Read Methods --
