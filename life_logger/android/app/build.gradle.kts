@@ -37,6 +37,16 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Ensure native .so files (sqlite3, etc.) are extracted from the APK
+    // at install time rather than loaded directly from compressed storage.
+    // Required for sqlite3_flutter_libs 0.5.x on AGP 8.x+ where the
+    // default behaviour changed to store libs compressed (useLegacyPackaging=false).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 flutter {
