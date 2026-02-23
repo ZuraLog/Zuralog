@@ -60,7 +60,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
     // Google Health Connect client (Phase 1.5.2).
-    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
+    implementation("androidx.health.connect:connect-client:1.1.0")
 
     // Android WorkManager for periodic background sync (Phase 1.5.5).
     implementation("androidx.work:work-runtime-ktx:2.9.0")
