@@ -37,6 +37,7 @@ import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/chat/presentation/chat_screen.dart';
 import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:zuralog/shared/layout/app_shell.dart';
 
@@ -155,10 +156,7 @@ List<RouteBase> _buildRoutes() {
             GoRoute(
               path: RouteNames.chatPath,
               name: RouteNames.chat,
-              builder: (context, state) => const _PlaceholderScreen(
-                title: 'Coach',
-                icon: Icons.chat_bubble_rounded,
-              ),
+              builder: (context, state) => const ChatScreen(),
             ),
           ],
         ),
