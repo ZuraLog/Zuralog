@@ -1,36 +1,62 @@
 /// Zuralog Edge Agent — Root Application Widget.
 ///
-/// Configures the [MaterialApp] with the Zuralog design system themes
-/// (light/dark/system-native) and connects the [themeModeProvider] so
-/// the UI responds to both system preference changes and user overrides
-/// from the Settings screen.
+/// Configures [MaterialApp.router] with the Zuralog design system themes
+/// (light/dark/system-native), connects [themeModeProvider] for reactive
+/// theme switching, and uses [routerProvider] to power GoRouter-based
+/// declarative navigation.
 ///
-/// During Phase 2.1, the home screen remains the [HarnessScreen] for
-/// design system verification. Production routing (GoRouter + screens)
-/// will replace this in Phase 2.2 / 2.3.
+/// [ZuralogApp] is a [ConsumerStatefulWidget] so it can call
+/// [AuthStateNotifier.checkAuthStatus] once in [initState], triggering the
+/// initial auth token validation without requiring an imperative post-frame
+/// callback on every rebuild.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/router/app_router.dart';
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/features/harness/harness_screen.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 
 /// The root widget of the Zuralog application.
 ///
-/// Extends [ConsumerWidget] (not [StatelessWidget]) to watch the
-/// [themeModeProvider] and rebuild [MaterialApp] when the theme mode
-/// changes. This is the correct Riverpod pattern — only the widget that
-/// needs the state rebuilds.
-class ZuralogApp extends ConsumerWidget {
+/// Extends [ConsumerStatefulWidget] to:
+/// 1. Watch [themeModeProvider] and rebuild [MaterialApp.router] on change.
+/// 2. Trigger [AuthStateNotifier.checkAuthStatus] exactly once in [initState],
+///    initiating the startup auth token check that determines initial routing.
+class ZuralogApp extends ConsumerStatefulWidget {
   /// Creates the root [ZuralogApp] widget.
   const ZuralogApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+  ConsumerState<ZuralogApp> createState() => _ZuralogAppState();
+}
 
-    return MaterialApp(
+/// State for [ZuralogApp].
+///
+/// Calls [AuthStateNotifier.checkAuthStatus] in [initState] to determine
+/// whether a stored session exists. The result transitions [authStateProvider]
+/// from [AuthState.unauthenticated] (initial) to either [AuthState.authenticated]
+/// or back to [AuthState.unauthenticated], which the GoRouter redirect callback
+/// then reacts to automatically.
+class _ZuralogAppState extends ConsumerState<ZuralogApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Perform the startup auth token check asynchronously.
+    // We use addPostFrameCallback so the first frame renders (with the loading
+    // state) before the async work begins, avoiding a race with the widget tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authStateProvider.notifier).checkAuthStatus();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: 'Zuralog',
       debugShowCheckedModeBanner: false,
       // Light and dark themes from the design system.
@@ -39,7 +65,8 @@ class ZuralogApp extends ConsumerWidget {
       // Defaults to ThemeMode.system — follows the device's OS setting.
       // Overridable from the Settings screen via themeModeProvider.
       themeMode: themeMode,
-      home: const HarnessScreen(),
+      // GoRouter-backed declarative navigation.
+      routerConfig: router,
     );
   }
 }
