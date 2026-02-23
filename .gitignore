@@ -48,4 +48,4 @@ nul
 .claudeplans/
 
 # Git Worktrees
-.worktrees/
+.worktrees/.Claude/

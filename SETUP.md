@@ -13,7 +13,7 @@ Install the following before proceeding:
 | **Docker Desktop** | Latest | [docs.docker.com/desktop](https://docs.docker.com/desktop/setup/install/windows-install/) |
 | **Flutter SDK** | 3.32+ (Dart 3.11+) | [docs.flutter.dev/install/manual](https://docs.flutter.dev/install/manual) |
 | **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (needed for Android SDK, Emulator, and Java) |
-| **GNU Make** | Any | Pre-installed on macOS/Linux. Windows: [gnuwin32.sourceforge.net/packages/make.htm](http://gnuwin32.sourceforge.net/packages/make.htm) or use Git Bash |
+| **GNU Make** | 4.4+ | Pre-installed on macOS/Linux. Windows: `scoop install make` (recommended) — see [`make` not found](#make-not-found) |
 
 After installing Flutter, run `flutter doctor` to verify your setup and accept any Android SDK licenses.
 
@@ -413,19 +413,39 @@ All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to
 Add `C:\flutter\bin` (or wherever you extracted Flutter) to your system PATH, then restart your terminal.
 
 ### `make` not found
+
 `make` is not available in PowerShell or Git Bash on Windows by default. It is pre-installed on macOS and most Linux distros.
 
-**Windows — Install `make` (one-time, required)**
+**Windows — Recommended: Install via Scoop**
 
-Run this in PowerShell (not Git Bash):
+[Scoop](https://scoop.sh) is a Windows package manager that automatically manages PATH — no manual PATH editing required. Run this in PowerShell:
+
+```powershell
+# Install Scoop if you don't have it yet
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+# Then install make
+scoop install make
+```
+
+If Scoop is already installed, just run `scoop install make`. Open a **new** Git Bash terminal after installing and `make --version` will work immediately.
+
+**Windows — Alternative: GnuWin32 (more steps)**
+
 ```powershell
 winget install GnuWin32.Make
 ```
-Or with Chocolatey:
-```powershell
-choco install make
-```
-After installing, **close and reopen Git Bash** — the new `make` binary will then be on your PATH and `make dev` / `make run` will work.
+
+After installing you must do **all three** of these steps or it won't work:
+
+1. Manually add `C:\Program Files (x86)\GnuWin32\bin` to your **system** PATH (Start → "Edit the system environment variables" → Environment Variables → System variables → Path → New)
+2. **Fully close your editor/terminal app** (not just a new tab — the entire process must restart to inherit the new PATH)
+3. Verify with `make --version` in a fresh Git Bash terminal
+
+> **Why so many steps?** `winget` installs the binary but does not update PATH. And changing PATH in Windows registry does not affect already-running processes — every terminal tab you open inherits the PATH from the parent app at launch time. If you add `GnuWin32\bin` to PATH but don't fully restart AntiGravity (or VS Code, or whatever IDE), Git Bash will still report `command not found`.
+
+> **GnuWin32 caveat:** `winget install GnuWin32.Make` installs `make` 3.81 from 2006. If you encounter issues with Makefile recipes, use the Scoop method instead (installs `make` 4.4+, which this project's Makefile is tested against).
 
 **Linux — `make` missing**
 ```bash
@@ -441,7 +461,7 @@ Every `make` target has a direct equivalent listed in the Quick Reference table.
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 
 # Instead of: make run
-cd zuralog && flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=616346397607-se60r20r85d24teksi3oco8ss77kol0d.apps.googleusercontent.com
+cd zuralog && flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=<your_client_id>
 ```
 
 ### `gradlew` fails with "JAVA_HOME is not set"
