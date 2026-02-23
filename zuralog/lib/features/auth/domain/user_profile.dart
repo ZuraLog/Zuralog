@@ -38,6 +38,12 @@ class UserProfile {
   /// Whether the user has completed the onboarding flow.
   final bool onboardingComplete;
 
+  /// Timestamp when the account was created (set by the server).
+  ///
+  /// `null` when the backend has not yet returned this field (e.g. legacy
+  /// sessions where the profile was fetched before the schema update).
+  final DateTime? createdAt;
+
   /// Creates an immutable [UserProfile].
   ///
   /// [id] and [email] are required; all other fields are optional.
@@ -49,6 +55,7 @@ class UserProfile {
     this.birthday,
     this.gender,
     required this.onboardingComplete,
+    this.createdAt,
   });
 
   /// The name shown in AI greetings.
@@ -77,6 +84,9 @@ class UserProfile {
           : null,
       gender: json['gender'] as String?,
       onboardingComplete: json['onboarding_complete'] as bool? ?? false,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
     );
   }
 
@@ -112,6 +122,7 @@ class UserProfile {
           : birthday as DateTime?,
       gender: gender ?? this.gender,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+      createdAt: createdAt,
     );
   }
 
@@ -126,7 +137,8 @@ class UserProfile {
           nickname == other.nickname &&
           birthday == other.birthday &&
           gender == other.gender &&
-          onboardingComplete == other.onboardingComplete;
+          onboardingComplete == other.onboardingComplete &&
+          createdAt == other.createdAt;
 
   @override
   int get hashCode => Object.hash(
@@ -137,5 +149,6 @@ class UserProfile {
         birthday,
         gender,
         onboardingComplete,
+        createdAt,
       );
 }

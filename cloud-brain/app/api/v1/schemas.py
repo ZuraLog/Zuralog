@@ -5,7 +5,7 @@ Pydantic models for request validation and response serialization
 on the authentication endpoints.
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr
@@ -86,6 +86,7 @@ class UserProfileResponse(BaseModel):
         birthday: Date of birth for age calculation (optional).
         gender: Self-identified gender, free text (optional).
         onboarding_complete: True once the profile questionnaire is done.
+        created_at: Timestamp when the account was created (optional).
     """
 
     id: str
@@ -95,6 +96,7 @@ class UserProfileResponse(BaseModel):
     birthday: Optional[date]
     gender: Optional[str]
     onboarding_complete: bool
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

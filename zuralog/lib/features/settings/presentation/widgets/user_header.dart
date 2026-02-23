@@ -19,8 +19,8 @@ const double _kAvatarSize = 72;
 /// Header widget that displays the current user's identity information.
 ///
 /// Renders a circular avatar using the first letter of the user's email
-/// on a Sage Green background, the full email address, and a static
-/// "Member since" date below.
+/// on a Sage Green background, the full email address, and a dynamic
+/// "Member since" date derived from the user's [UserProfile.createdAt].
 ///
 /// Tapping the avatar shows a [SnackBar] informing the user that profile
 /// photo customisation is coming in a future update.
@@ -33,11 +33,27 @@ class UserHeader extends ConsumerWidget {
   /// Creates a [UserHeader].
   const UserHeader({super.key});
 
+  /// Formats a [DateTime] as "Month YYYY" (e.g. "March 2025").
+  ///
+  /// Returns the month name and four-digit year separated by a space.
+  String _formatDate(DateTime dt) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${months[dt.month - 1]} ${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final email = ref.watch(userEmailProvider);
+    final profile = ref.watch(userProfileProvider);
     final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
     final colorScheme = Theme.of(context).colorScheme;
+
+    final memberSince = profile?.createdAt != null
+        ? 'Member since ${_formatDate(profile!.createdAt!)}'
+        : 'Member since —';
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -62,7 +78,7 @@ class UserHeader extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppDimens.spaceXs),
                 Text(
-                  'Member since January 2025',
+                  memberSince,
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.textSecondary,
                   ),
