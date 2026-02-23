@@ -190,6 +190,16 @@ final userProfileProvider =
       UserProfileNotifier.new,
     );
 
+/// Whether the user profile is currently being fetched from the backend.
+///
+/// The router guard watches this to avoid redirecting to the questionnaire
+/// while [UserProfileNotifier.load] is still in-flight. Without this flag,
+/// any authenticated user whose profile hasn't loaded yet (e.g., on a fast
+/// login) would be incorrectly sent to the questionnaire.
+///
+/// `true` only while [UserProfileNotifier.load] is executing.
+final isLoadingProfileProvider = StateProvider<bool>((ref) => false);
+
 /// Notifier that manages the current user's [UserProfile] state.
 ///
 /// Loaded on login/register/startup and updated after profile edits.
@@ -200,15 +210,21 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
 
   /// Fetches the profile from the backend and updates state.
   ///
-  /// Intended to be called fire-and-forget from [AuthStateNotifier].
+  /// Sets [isLoadingProfileProvider] to `true` while fetching and `false`
+  /// when done (success or failure). The router guard reads this flag to
+  /// avoid redirecting to the questionnaire during the in-flight load.
+  ///
   /// Errors are logged via [debugPrint] and the state remains `null`,
   /// allowing the UI to degrade gracefully (e.g., fallback greeting).
   Future<void> load() async {
+    ref.read(isLoadingProfileProvider.notifier).state = true;
     try {
       final repo = ref.read(authRepositoryProvider);
       state = await repo.fetchProfile();
     } catch (e, st) {
       debugPrint('[UserProfileNotifier.load] Profile fetch failed: $e\n$st');
+    } finally {
+      ref.read(isLoadingProfileProvider.notifier).state = false;
     }
   }
 
@@ -243,5 +259,9 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
   }
 
   /// Clears the cached profile state (called on logout).
-  void clear() => state = null;
+  void clear() {
+    state = null;
+    // Also reset the loading flag so the router guard starts fresh.
+    ref.read(isLoadingProfileProvider.notifier).state = false;
+  }
 }

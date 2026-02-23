@@ -50,17 +50,17 @@ import 'package:zuralog/shared/layout/app_shell.dart';
 
 // ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
 
-/// Bridges Riverpod's [authStateProvider], [hasSeenOnboardingProvider], and
-/// [userProfileProvider] to a single [ChangeNotifier] that [GoRouter] can use
-/// as a [refreshListenable].
+/// Bridges Riverpod's [authStateProvider], [hasSeenOnboardingProvider],
+/// [userProfileProvider], and [isLoadingProfileProvider] to a single
+/// [ChangeNotifier] that [GoRouter] can use as a [refreshListenable].
 ///
 /// When any of these providers emits a new value, [notifyListeners] is called
 /// so the router re-evaluates its [redirect] callback without recreating the
-/// [GoRouter]. [userProfileProvider] is included so that the onboarding guard
-/// can react as soon as the profile loads after login/register.
+/// [GoRouter]. [isLoadingProfileProvider] is included so the guard can hold
+/// off the questionnaire redirect while the profile fetch is still in-flight.
 class _RouterRefreshListenable extends ChangeNotifier {
   /// Creates a [_RouterRefreshListenable] that listens to auth, onboarding
-  /// flag, and profile state changes via [ref].
+  /// flag, profile state, and profile-loading flag changes via [ref].
   _RouterRefreshListenable(Ref ref) {
     // Listen to auth state changes.
     ref.listen<AuthState>(
@@ -76,6 +76,13 @@ class _RouterRefreshListenable extends ChangeNotifier {
     // [onboardingComplete] is set to true after the questionnaire.
     ref.listen<UserProfile?>(
       userProfileProvider,
+      (prev, next) => notifyListeners(),
+    );
+    // Listen to the profile-loading flag so the guard re-evaluates once
+    // [load()] completes — preventing a premature questionnaire redirect
+    // while the profile fetch is still in-flight.
+    ref.listen<bool>(
+      isLoadingProfileProvider,
       (prev, next) => notifyListeners(),
     );
   }
@@ -125,19 +132,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If the user is authenticated but has not completed the profile
       // questionnaire, redirect them to it — unless they are already there.
       //
-      // We also redirect when [profile] is null (still loading). A null
-      // profile after authentication means the user is either brand-new
-      // (no row yet) or the load hasn't resolved yet — both cases require
-      // the questionnaire. The questionnaire itself is the escape hatch:
-      // once [UserProfileNotifier.update(onboardingComplete: true)] is
-      // called, the provider emits a non-null profile with
-      // [onboardingComplete == true] and the guard clears automatically.
+      // Important: while [isLoadingProfileProvider] is true, the profile
+      // fetch is still in-flight. We must NOT redirect during this window
+      // because [profile] is transiently null even for returning users who
+      // have already completed onboarding. Redirecting here would force
+      // every returning user to re-do the questionnaire on every login.
       //
-      // This prevents the race-condition window where [load()] is still
-      // in-flight (or has failed silently), [profile] stays null, and the
-      // user gets dropped onto the dashboard permanently.
+      // Once [load()] completes:
+      //   - profile != null && onboardingComplete == true  → allow through
+      //   - profile != null && onboardingComplete == false → questionnaire
+      //   - profile == null (load failed)                  → questionnaire
+      //     (user can retry; the questionnaire upserts the profile row)
       if (authState == AuthState.authenticated &&
           location != RouteNames.profileQuestionnairePath) {
+        final isLoadingProfile = ref.read(isLoadingProfileProvider);
+        if (isLoadingProfile) {
+          // Profile fetch still in-flight — stay put, guard will re-fire
+          // when [isLoadingProfileProvider] flips to false.
+          return null;
+        }
         final profile = ref.read(userProfileProvider);
         if (profile == null || !profile.onboardingComplete) {
           return RouteNames.profileQuestionnairePath;

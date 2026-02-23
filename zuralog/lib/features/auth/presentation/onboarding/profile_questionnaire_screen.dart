@@ -96,6 +96,30 @@ class _ProfileQuestionnaireScreenState
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-populate fields from any existing profile data so returning users
+    // don't have to re-type information they already submitted.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final profile = ref.read(userProfileProvider);
+      if (profile != null) {
+        if (profile.displayName != null) {
+          _displayNameController.text = profile.displayName!;
+        }
+        if (profile.nickname != null) {
+          _nicknameController.text = profile.nickname!;
+        }
+        if (profile.birthday != null || profile.gender != null) {
+          setState(() {
+            _birthday = profile.birthday;
+            _gender = profile.gender;
+          });
+        }
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _displayNameController.dispose();
     _nicknameController.dispose();
@@ -157,7 +181,8 @@ class _ProfileQuestionnaireScreenState
 
       if (!mounted) return;
       context.go(RouteNames.dashboardPath);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[ProfileQuestionnaire] Save failed: $e\n$st');
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
