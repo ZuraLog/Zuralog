@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — End-to-End Integration Test.
+/// Zuralog Edge Agent — End-to-End Integration Test.
 ///
 /// Validates that the application launches without crashing,
 /// renders the developer test harness (HarnessScreen), and
@@ -17,7 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:life_logger/app.dart';
+import 'package:zuralog/app.dart';
 
 /// Entry point for the integration test suite.
 ///
@@ -37,7 +37,7 @@ void main() {
         // is skipped here because it requires native platform config;
         // the production main() wraps it in try-catch for this reason.
         await tester.pumpWidget(
-          const ProviderScope(child: LifeLoggerApp()),
+          const ProviderScope(child: ZuralogApp()),
         );
 
         // Allow any post-frame callbacks and animations to settle.
@@ -56,7 +56,7 @@ void main() {
       'harness displays the app title in the AppBar',
       (WidgetTester tester) async {
         await tester.pumpWidget(
-          const ProviderScope(child: LifeLoggerApp()),
+          const ProviderScope(child: ZuralogApp()),
         );
         await tester.pumpAndSettle();
 
@@ -73,7 +73,7 @@ void main() {
       'harness contains interactive tap targets',
       (WidgetTester tester) async {
         await tester.pumpWidget(
-          const ProviderScope(child: LifeLoggerApp()),
+          const ProviderScope(child: ZuralogApp()),
         );
         await tester.pumpAndSettle();
 

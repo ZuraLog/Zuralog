@@ -1,6 +1,6 @@
-/// Life Logger Edge Agent — Deep Link Handler (Phase 1.6).
+/// Zuralog Edge Agent — Deep Link Handler (Phase 1.6).
 ///
-/// Listens for incoming custom URL scheme links (`lifelogger://`) and
+/// Listens for incoming custom URL scheme links (`zuralog://`) and
 /// dispatches them to the appropriate handler. Currently handles Strava
 /// OAuth callbacks; additional integrations can be added here in future
 /// phases by extending the switch on [Uri.host].
@@ -14,12 +14,12 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:life_logger/core/di/providers.dart';
+import 'package:zuralog/core/di/providers.dart';
 
 /// Handles incoming deep links for OAuth callback interception.
 ///
 /// Subscribes to the [AppLinks] URI stream and routes recognised
-/// `lifelogger://` links to the correct handler method.
+/// `zuralog://` links to the correct handler method.
 class DeeplinkHandler {
   DeeplinkHandler._();
 
@@ -62,7 +62,7 @@ class DeeplinkHandler {
     WidgetRef ref, {
     required void Function(String) onLog,
   }) async {
-    if (uri.scheme != 'lifelogger') return;
+    if (uri.scheme != 'zuralog') return;
 
     switch (uri.host) {
       case 'oauth':
@@ -72,7 +72,7 @@ class DeeplinkHandler {
     }
   }
 
-  /// Handle `lifelogger://oauth/<provider>?code=XXX` callbacks.
+  /// Handle `zuralog://oauth/<provider>?code=XXX` callbacks.
   ///
   /// Extracts the `code` query parameter and dispatches to the
   /// appropriate OAuth repository based on the path segment.

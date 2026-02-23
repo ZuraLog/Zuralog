@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Dashboard Insight Domain Model.
+/// Zuralog Edge Agent — Dashboard Insight Domain Model.
 ///
 /// Represents the AI-generated insight returned by the Cloud Brain
 /// endpoint `/analytics/dashboard-insight`. Contains a natural-language

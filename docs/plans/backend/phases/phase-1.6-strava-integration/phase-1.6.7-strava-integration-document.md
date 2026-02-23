@@ -39,14 +39,14 @@ Create `strava-integration.md` in the integrations folder.
 # Strava Integration Reference
 
 ## Overview
-Connects Life Logger to Strava to read activities and write manual entries.
+Connects Zuralog to Strava to read activities and write manual entries.
 
 ## Auth Flow (OAuth 2.0)
 1. **User** clicks "Connect Strava" in App.
 2. **App** requests Auth URL from Backend (`/integrations/strava/authorize`).
 3. **App** opens URL in System Browser.
 4. **User** logs in to Strava and approves.
-5. **Strava** redirects to `lifelogger://oauth/strava?code=XXX`.
+5. **Strava** redirects to `zuralog://oauth/strava?code=XXX`.
 6. **App** intercepts Deep Link.
 7. **App** sends `code` to Backend (`/integrations/strava/exchange`).
 8. **Backend** swaps `code` for `access_token` and `refresh_token`.
@@ -61,11 +61,11 @@ Connects Life Logger to Strava to read activities and write manual entries.
 ## Configuration
 - `STRAVA_CLIENT_ID`: From Strava Settings.
 - `STRAVA_CLIENT_SECRET`: From Strava Settings.
-- `STRAVA_REDIRECT_URI`: Must match `lifelogger://oauth/strava`.
+- `STRAVA_REDIRECT_URI`: Must match `zuralog://oauth/strava`.
 
 ## Troubleshooting
 - **400 Error on Exchange:** Code is invalid or expired (codes expire fast!).
-- **Redirect fails:** Scheme `lifelogger` not registered in Info.plist/Manifest.
+- **Redirect fails:** Scheme `zuralog` not registered in Info.plist/Manifest.
 ```
 
 ## Exit Criteria

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — InMemoryStore Tests.
+Zuralog Cloud Brain — InMemoryStore Tests.
 
 Verifies that the in-memory MemoryStore stub correctly stores and
 retrieves user context entries with proper isolation between users.

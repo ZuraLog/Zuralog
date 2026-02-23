@@ -30,7 +30,7 @@ We will use **Dio Interceptors**. Specifically, the `onError` interceptor.
 
 ## Files
 - Modify: `cloud-brain/app/api/v1/auth.py`
-- Modify: `life_logger/lib/core/network/api_client.dart`
+- Modify: `zuralog/lib/core/network/api_client.dart`
 
 ## Steps
 
@@ -51,7 +51,7 @@ async def refresh_token(request: RefreshRequest):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 ```
 
-2. **Update API Client with Refresh Logic (`life_logger/lib/core/network/api_client.dart`)**
+2. **Update API Client with Refresh Logic (`zuralog/lib/core/network/api_client.dart`)**
 
 ```dart
 // Inside ApiClient constructor

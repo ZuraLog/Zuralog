@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — User Preferences API.
+Zuralog Cloud Brain — User Preferences API.
 
 Endpoints for reading and updating user profile preferences
 such as coaching persona and subscription tier.

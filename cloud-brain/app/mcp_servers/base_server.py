@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Abstract MCP Server Base Class.
+Zuralog Cloud Brain — Abstract MCP Server Base Class.
 
 All external integrations (Strava, Apple Health, Google Health Connect,
 etc.) must inherit from ``BaseMCPServer`` and implement its abstract

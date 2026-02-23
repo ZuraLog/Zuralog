@@ -103,10 +103,10 @@ Implemented the full analytics engine for Phase 1.11 spanning both Cloud Brain (
 | `cloud-brain/tests/test_goal_tracker.py` | 7 goal tracker tests |
 | `cloud-brain/tests/test_insight_generator.py` | 6 insight generator tests |
 | `cloud-brain/tests/test_analytics_api.py` | 16 schema validation tests (includes extra edge cases) |
-| `life_logger/lib/features/analytics/domain/daily_summary.dart` | Daily summary domain model |
-| `life_logger/lib/features/analytics/domain/weekly_trends.dart` | Weekly trends domain model |
-| `life_logger/lib/features/analytics/domain/dashboard_insight.dart` | Dashboard insight domain model |
-| `life_logger/lib/features/analytics/data/analytics_repository.dart` | Analytics API repository with caching |
+| `zuralog/lib/features/analytics/domain/daily_summary.dart` | Daily summary domain model |
+| `zuralog/lib/features/analytics/domain/weekly_trends.dart` | Weekly trends domain model |
+| `zuralog/lib/features/analytics/domain/dashboard_insight.dart` | Dashboard insight domain model |
+| `zuralog/lib/features/analytics/data/analytics_repository.dart` | Analytics API repository with caching |
 
 ## Files Modified (5)
 
@@ -115,9 +115,9 @@ Implemented the full analytics engine for Phase 1.11 spanning both Cloud Brain (
 | `cloud-brain/app/models/__init__.py` | Added health data + user goal exports |
 | `cloud-brain/app/main.py` | Registered analytics router |
 | `cloud-brain/pyproject.toml` | Added numpy>=2.0.0 dependency |
-| `life_logger/lib/core/network/api_client.dart` | Added queryParameters to get() |
-| `life_logger/lib/core/di/providers.dart` | Added analyticsRepositoryProvider |
-| `life_logger/lib/features/harness/harness_screen.dart` | Added Analytics section with 3 buttons |
+| `zuralog/lib/core/network/api_client.dart` | Added queryParameters to get() |
+| `zuralog/lib/core/di/providers.dart` | Added analyticsRepositoryProvider |
+| `zuralog/lib/features/harness/harness_screen.dart` | Added Analytics section with 3 buttons |
 
 ---
 

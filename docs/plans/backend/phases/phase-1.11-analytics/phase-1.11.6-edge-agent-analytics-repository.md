@@ -26,12 +26,12 @@ Standard Repository pattern using `ApiClient`.
 - **Error Handling:** Return cached data if offline.
 
 ## Files
-- Create: `life_logger/lib/features/analytics/data/analytics_repository.dart`
-- Create: `life_logger/lib/features/analytics/domain/daily_summary.dart` (Model)
+- Create: `zuralog/lib/features/analytics/data/analytics_repository.dart`
+- Create: `zuralog/lib/features/analytics/domain/daily_summary.dart` (Model)
 
 ## Steps
 
-1. **Create repository (`life_logger/lib/features/analytics/data/analytics_repository.dart`)**
+1. **Create repository (`zuralog/lib/features/analytics/data/analytics_repository.dart`)**
 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';

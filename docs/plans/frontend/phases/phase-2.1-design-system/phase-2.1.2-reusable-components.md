@@ -22,13 +22,13 @@ Create standalone widgets in `shared/widgets`.
 - **AppTextField:** Custom styled input with validation support.
 
 ## Files
-- Create: `life_logger/lib/shared/widgets/buttons/primary_button.dart`
-- Create: `life_logger/lib/shared/widgets/cards/glass_card.dart`
-- Create: `life_logger/lib/shared/widgets/inputs/app_text_field.dart`
+- Create: `zuralog/lib/shared/widgets/buttons/primary_button.dart`
+- Create: `zuralog/lib/shared/widgets/cards/glass_card.dart`
+- Create: `zuralog/lib/shared/widgets/inputs/app_text_field.dart`
 
 ## Steps
 
-1. **Create PrimaryButton (`life_logger/lib/shared/widgets/buttons/primary_button.dart`)**
+1. **Create PrimaryButton (`zuralog/lib/shared/widgets/buttons/primary_button.dart`)**
 
 ```dart
 class PrimaryButton extends StatelessWidget {
@@ -41,7 +41,7 @@ class PrimaryButton extends StatelessWidget {
 }
 ```
 
-2. **Create GlassCard (`life_logger/lib/shared/widgets/cards/glass_card.dart`)**
+2. **Create GlassCard (`zuralog/lib/shared/widgets/cards/glass_card.dart`)**
 
 ```dart
 class GlassCard extends StatelessWidget {

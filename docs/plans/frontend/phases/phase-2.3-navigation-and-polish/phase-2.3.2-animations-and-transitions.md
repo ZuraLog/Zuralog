@@ -23,8 +23,8 @@ Use `PageTransitionsTheme` and `flutter_animate`.
 - **Micro-interactions:** Buttons scale down slightly when pressed.
 
 ## Files
-- Modify: `life_logger/lib/core/theme/app_theme.dart`
-- Create: `life_logger/lib/shared/animations/scale_button.dart`
+- Modify: `zuralog/lib/core/theme/app_theme.dart`
+- Create: `zuralog/lib/shared/animations/scale_button.dart`
 
 ## Steps
 

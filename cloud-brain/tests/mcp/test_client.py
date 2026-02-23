@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP Client Tests.
+Zuralog Cloud Brain — MCP Client Tests.
 
 Verifies tool routing through the registry, error handling for
 unknown tools, exception wrapping, and tool aggregation delegation.

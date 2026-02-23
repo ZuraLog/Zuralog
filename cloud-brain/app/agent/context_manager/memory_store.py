@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Memory Store Abstraction.
+Zuralog Cloud Brain — Memory Store Abstraction.
 
 Defines the ``MemoryStore`` protocol (abstract interface) for long-term
 user context storage, and an ``InMemoryStore`` implementation for

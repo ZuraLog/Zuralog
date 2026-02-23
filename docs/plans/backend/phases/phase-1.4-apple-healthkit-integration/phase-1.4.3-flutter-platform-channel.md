@@ -21,7 +21,7 @@ This is the "glue" that exposes native iOS capabilities to our cross-platform bu
 
 ## How
 We will use:
-- **Flutter MethodChannel:** `com.lifelogger/health`
+- **Flutter MethodChannel:** `com.zuralog/health`
 - **Serialization:** Maps and Timestamps (millisecondsSinceEpoch) for data transfer.
 
 ## Features
@@ -29,18 +29,18 @@ We will use:
 - **Error Handling:** Native errors are caught and returned as defaults or re-thrown safely.
 
 ## Files
-- Create: `life_logger/lib/core/health/health_bridge.dart`
-- Modify: `life_logger/ios/Runner/AppDelegate.swift`
+- Create: `zuralog/lib/core/health/health_bridge.dart`
+- Modify: `zuralog/ios/Runner/AppDelegate.swift`
 
 ## Steps
 
-1. **Create Dart platform channel wrapper (`life_logger/lib/core/health/health_bridge.dart`)**
+1. **Create Dart platform channel wrapper (`zuralog/lib/core/health/health_bridge.dart`)**
 
 ```dart
 import 'package:flutter/services.dart';
 
 class HealthBridge {
-  static const _channel = MethodChannel('com.lifelogger/health');
+  static const _channel = MethodChannel('com.zuralog/health');
   
   static Future<bool> isAvailable() async {
     try {
@@ -102,7 +102,7 @@ import UIKit
         
         let controller = window?.rootViewController as! FlutterViewController
         let healthChannel = FlutterMethodChannel(
-            name: "com.lifelogger/health",
+            name: "com.zuralog/health",
             binaryMessenger: controller.binaryMessenger
         )
         

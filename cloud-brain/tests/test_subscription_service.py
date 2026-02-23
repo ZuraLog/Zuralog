@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Subscription Service Tests.
+Zuralog Cloud Brain — Subscription Service Tests.
 
 Tests the business logic for processing RevenueCat webhook events
 and updating user subscription status.

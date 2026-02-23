@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — LLM Client Tests.
+Zuralog Cloud Brain — LLM Client Tests.
 
 Unit tests for the LLMClient wrapper around AsyncOpenAI.
 All tests mock the OpenAI SDK to avoid real API calls.

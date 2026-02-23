@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Developer-Only Endpoints.
+Zuralog Cloud Brain — Developer-Only Endpoints.
 
 Provides test endpoints for the developer harness. These endpoints
 simulate AI-initiated actions (like health data writes) without

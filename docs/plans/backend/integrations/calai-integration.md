@@ -9,7 +9,7 @@ We integrate with CalAI using a **"Zero-Friction"** approach that relies on OS-l
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant LL as Life Logger
+    participant LL as Zuralog
     participant CA as CalAI
     participant HS as Apple Health / Health Connect
 
@@ -21,11 +21,11 @@ sequenceDiagram
     HS-->>LL: Returns dietary energy entries
 ```
 
-1. **User** clicks "Log Food" in Life Logger.
+1. **User** clicks "Log Food" in Zuralog.
 2. **App** deep links to CalAI (`calai://camera`).
 3. **User** takes photo in CalAI.
 4. **CalAI** processes photo and writes Calories/Macros to Apple Health / Health Connect.
-5. **Life Logger** reads new nutrition data from Apple Health / Health Connect via the MCP server `read_metrics` tool with `data_type: "nutrition"`.
+5. **Zuralog** reads new nutrition data from Apple Health / Health Connect via the MCP server `read_metrics` tool with `data_type: "nutrition"`.
 
 ## Advantages
 
@@ -37,16 +37,16 @@ sequenceDiagram
 ## Requirements
 
 - User must grant **"Write"** permissions to CalAI in their OS Health settings.
-- User must grant **"Read"** permissions to Life Logger in their OS Health settings.
+- User must grant **"Read"** permissions to Zuralog in their OS Health settings.
 - CalAI must be installed, or user will be directed to the CalAI website/App Store.
 
 ## Implementation Details
 
 | Component | File | Change |
 |-----------|------|--------|
-| Deep link launcher | `life_logger/lib/core/deeplink/deeplink_launcher.dart` | New — launches CalAI with fallback |
+| Deep link launcher | `zuralog/lib/core/deeplink/deeplink_launcher.dart` | New — launches CalAI with fallback |
 | Apple Health MCP | `cloud-brain/app/mcp_servers/apple_health_server.py` | Added `nutrition` to `read_metrics` enum |
 | Health Connect MCP | `cloud-brain/app/mcp_servers/health_connect_server.py` | Added `nutrition` to `read_metrics` enum |
-| Health Bridge | `life_logger/lib/core/health/health_bridge.dart` | Added `getNutrition()` method |
-| Health Repository | `life_logger/lib/features/health/data/health_repository.dart` | Added `getNutrition()` method |
-| Harness | `life_logger/lib/features/harness/harness_screen.dart` | Added CalAI + Read Nutrition buttons |
+| Health Bridge | `zuralog/lib/core/health/health_bridge.dart` | Added `getNutrition()` method |
+| Health Repository | `zuralog/lib/features/health/data/health_repository.dart` | Added `getNutrition()` method |
+| Harness | `zuralog/lib/features/harness/harness_screen.dart` | Added CalAI + Read Nutrition buttons |

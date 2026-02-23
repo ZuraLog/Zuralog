@@ -1,6 +1,6 @@
-/// Life Logger Edge Agent -- iOS Application Delegate.
+/// Zuralog Edge Agent -- iOS Application Delegate.
 ///
-/// Registers the HealthKit platform channel (`com.lifelogger/health`)
+/// Registers the HealthKit platform channel (`com.zuralog/health`)
 /// that bridges Flutter Dart calls to the native `HealthKitBridge`.
 ///
 /// Uses Scene-based lifecycle with `FlutterImplicitEngineBridge`.
@@ -27,7 +27,7 @@ import UIKit
         // Use engine.binaryMessenger directly (not viewController) to avoid
         // force-unwrap crashes during background delivery wakeups.
         let healthChannel = FlutterMethodChannel(
-            name: "com.lifelogger/health",
+            name: "com.zuralog/health",
             binaryMessenger: engineBridge.applicationRegistrar.messenger()
         )
 

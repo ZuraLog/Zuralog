@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD): Life Logger
+# Product Requirements Document (PRD): Zuralog
 
 **Version:** 2.1
 **Status:** Draft
@@ -9,12 +9,12 @@
 
 ## 1. Executive Summary
 
-**Life Logger** is a mobile AI health assistant that turns the fragmented landscape of fitness apps into a single, intelligent system. Today, users juggle CalAI for nutrition, Strava for runs, Fitbit for steps, Oura for sleep — and none of these apps talk to each other. Platform hubs like Apple Health and Google Health Connect collect this data, but they are "dumb databases": they store numbers without providing any intelligence, reasoning, or automation.
+**Zuralog** is a mobile AI health assistant that turns the fragmented landscape of fitness apps into a single, intelligent system. Today, users juggle CalAI for nutrition, Strava for runs, Fitbit for steps, Oura for sleep — and none of these apps talk to each other. Platform hubs like Apple Health and Google Health Connect collect this data, but they are "dumb databases": they store numbers without providing any intelligence, reasoning, or automation.
 
-Life Logger solves this by acting as a **Zero-Friction Connector** on top of the user's existing fitness ecosystem. It connects the apps users already love, reads their data, and uses an AI agent to deliver:
+Zuralog solves this by acting as a **Zero-Friction Connector** on top of the user's existing fitness ecosystem. It connects the apps users already love, reads their data, and uses an AI agent to deliver:
 
 1.  **Cross-App Reasoning** — "You're eating above your maintenance calories (CalAI) and your running frequency dropped 50% (Strava). That's why the scale isn't moving."
-2.  **Autonomous Task Execution** — "Start a run for me" → Life Logger deep-links to Strava's recording screen. "Log yesterday's 5K" → creates a manual Strava activity via API.
+2.  **Autonomous Task Execution** — "Start a run for me" → Zuralog deep-links to Strava's recording screen. "Log yesterday's 5K" → creates a manual Strava activity via API.
 3.  **Centralized Intelligence** — One conversational interface to see, reason about, and act on all health data.
 
 **Core Philosophy:** We do NOT rebuild features (like food logging or workout tracking). We **connect** the best-in-class apps that users already use.
@@ -39,7 +39,7 @@ Regular people who use 2-3 fitness apps and want them to work together. They tra
 Wears Oura/Whoop, tracks macros meticulously, wants deep correlation analysis.
 
 ### Tertiary (Phase 3): The Life Quantifier
-Tracks health, time, and money. Wants Life Logger to integrate with YNAB and Todoist.
+Tracks health, time, and money. Wants Zuralog to integrate with YNAB and Todoist.
 
 ---
 
@@ -48,38 +48,38 @@ Tracks health, time, and money. Wants Life Logger to integrate with YNAB and Tod
 ### Scenario 1: "Why Am I Not Losing Weight?"
 > **Maria** has CalAI and Strava connected.
 > Maria: *"Why am I not losing weight?"*
-> Life Logger: *"Over the last 4 weeks: Your CalAI data shows an average daily intake of 2,180 cal, but your maintenance based on Strava activity is ~1,950 cal. You're in a ~230 cal surplus. Your Strava runs dropped from 8 sessions last month to 3 this month. Would you like me to set a daily calorie target?"*
+> Zuralog: *"Over the last 4 weeks: Your CalAI data shows an average daily intake of 2,180 cal, but your maintenance based on Strava activity is ~1,950 cal. You're in a ~230 cal surplus. Your Strava runs dropped from 8 sessions last month to 3 this month. Would you like me to set a daily calorie target?"*
 
 ### Scenario 2: "Start a Run For Me"
 > **Jake** has Strava connected.
 > Jake: *"Start a run for me"*
-> Life Logger: *Opens Strava to the recording screen via deep link. Jake taps "Start."*
+> Zuralog: *Opens Strava to the recording screen via deep link. Jake taps "Start."*
 
 ### Scenario 3: "I Forgot to Log Yesterday"
 > **User:** *"I forgot to log yesterday. I had a burrito for lunch and ran 3 miles."*
-> Life Logger: *"Logging specific entries: Burrito (~750 cal) back-dated to yesterday noon via Apple Health. 3-mile run (~30 min) posted to Strava for yesterday at 6 PM. Done."*
+> Zuralog: *"Logging specific entries: Burrito (~750 cal) back-dated to yesterday noon via Apple Health. 3-mile run (~30 min) posted to Strava for yesterday at 6 PM. Done."*
 
 ### Scenario 4: "What Should I Eat?"
 > **Priya** has CalAI connected.
 > Priya: *"I've hit 1,400 cal today. What should I eat for dinner to stay in deficit?"*
-> Life Logger: *"You've had 85g protein so far. Budget left: 400 cal. I see you usually log chicken salads in CalAI around this time — that would fit perfectly."*
+> Zuralog: *"You've had 85g protein so far. Budget left: 400 cal. I see you usually log chicken salads in CalAI around this time — that would fit perfectly."*
 
 ### Scenario 5: "Show Me Everything"
-> User opens Life Logger and sees a chat-first interface with an AI insight pinned at top:
+> User opens Zuralog and sees a chat-first interface with an AI insight pinned at top:
 > *"You've been consistent with runs this week but calorie intake increased 15% vs last week."*
 > Below: quick-glance cards showing today's calories (from CalAI), this week's activities (from Strava), weight trend.
 
 ### Scenario 6: "Seamless Food Logging" (CalAI Integration)
 > User takes a photo of their lunch in **CalAI**.
-> Life Logger (background): *Detects new nutrition entry in Apple Health/Health Connect.*
-> Life Logger (notification): *"Saw that Grilled Chicken Salad (420 cal) from CalAI. Nice protein hit! You're still 300 cal under your daily limit."*
+> Zuralog (background): *Detects new nutrition entry in Apple Health/Health Connect.*
+> Zuralog (notification): *"Saw that Grilled Chicken Salad (420 cal) from CalAI. Nice protein hit! You're still 300 cal under your daily limit."*
 
 ---
 
 ## 5. Core Features (MVP)
 
 ### 5.1 AI Chat Interface (Chat-First Design)
-The primary interaction model. Users talk to Life Logger like a personal health assistant.
+The primary interaction model. Users talk to Zuralog like a personal health assistant.
 - Text input with streaming AI responses
 - Voice input (Whisper STT on Cloud Brain)
 - **Zero-Friction Context:** The AI knows everything your other apps know.
@@ -146,7 +146,7 @@ All external app integrations are implemented as **MCP Servers**. This allows pl
 ### 6.3 CalAI Strategy (The "Zero-Friction" Approach)
 - **Primary Data Flow:** User logs food in CalAI (or any nutrition app).
 - **Sync:** CalAI writes to Apple Health / Health Connect.
-- **Read:** Life Logger reads from Apple Health / Health Connect.
+- **Read:** Zuralog reads from Apple Health / Health Connect.
 - **Benefit:** We don't rebuild complex computer vision features. We let CalAI do what it does best, and we act as the intelligence layer on top of it.
 - **Future:** If CalAI exposes a public API for richer data (meal photos, timestamps) that isn't in HealthKit, we can integrate directly.
 
@@ -163,7 +163,7 @@ All external app integrations are implemented as **MCP Servers**. This allows pl
 
 ## 8. Technical Architecture Overview
 
-See the companion [Architecture Design Document](file:///c:/Projects/life-logger/docs/plans/architecture-design.md).
+See the companion [Architecture Design Document](file:///c:/Projects/zuralog/docs/plans/architecture-design.md).
 - **Hybrid Hub Architecture:** Cloud Brain (Python/FastAPI) + Edge Agent (Flutter/Dart).
 - **MCP-First:** All integrations via MCP servers.
 - **Connector Philosophy:** We build "bridges", not "islands".

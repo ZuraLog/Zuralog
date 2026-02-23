@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Application Entry Point.
+/// Zuralog Edge Agent — Application Entry Point.
 ///
 /// Initializes Flutter bindings, sets up Firebase, registers
 /// the FCM background message handler, and wraps the app in a
@@ -11,8 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
-import 'package:life_logger/app.dart';
-import 'package:life_logger/core/network/fcm_service.dart';
+import 'package:zuralog/app.dart';
+import 'package:zuralog/core/network/fcm_service.dart';
 
 /// RevenueCat public API key (dev key by default).
 ///
@@ -50,5 +50,5 @@ void main() async {
     debugPrint('RevenueCat init skipped: $e');
   }
 
-  runApp(const ProviderScope(child: LifeLoggerApp()));
+  runApp(const ProviderScope(child: ZuralogApp()));
 }

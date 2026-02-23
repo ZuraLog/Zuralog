@@ -1,5 +1,5 @@
-name: life_logger
-description: "Life Logger — AI Health Assistant Edge Agent"
+name: zuralog
+description: "Zuralog — AI Health Assistant Edge Agent"
 publish_to: 'none'
 version: 1.0.0+1
 

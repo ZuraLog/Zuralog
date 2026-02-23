@@ -2,14 +2,14 @@
 
 ## Overview
 
-Life Logger uses Google Health Connect (built-in on Android 14+, available via APK on Android 9–13) to read and write health data on Android devices. This mirrors the Apple HealthKit integration (Phase 1.4) and shares the same Flutter platform channel (`com.lifelogger/health`).
+Zuralog uses Google Health Connect (built-in on Android 14+, available via APK on Android 9–13) to read and write health data on Android devices. This mirrors the Apple HealthKit integration (Phase 1.4) and shares the same Flutter platform channel (`com.zuralog/health`).
 
 ## Architecture
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │  Flutter (Dart)                                               │
-│  HealthBridge → MethodChannel("com.lifelogger/health")        │
+│  HealthBridge → MethodChannel("com.zuralog/health")        │
 │  HealthRepository (Riverpod)                                  │
 └──────────────────────────┬────────────────────────────────────┘
                            │ Platform Channel
@@ -75,7 +75,7 @@ Android does not provide a push-based observer like iOS's `HKObserverQuery`. Ins
 
 1. Use an API 34+ (Android 14) system image **with Google Play Store**.
 2. Health Connect is built into Android 14+. On older images, install the "Health Connect" app from Play Store.
-3. Launch Life Logger → it will request Health Connect permissions.
+3. Launch Zuralog → it will request Health Connect permissions.
 4. To pre-populate test data: Open Health Connect app → Data and Access → Add test data.
 5. Verify WorkManager scheduling: Android Studio → App Inspection → Background Task Inspector.
 

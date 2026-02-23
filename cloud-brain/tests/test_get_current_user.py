@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — get_current_user Dependency Tests.
+Zuralog Cloud Brain — get_current_user Dependency Tests.
 
 Tests the shared authentication dependency that validates tokens
 and returns the User ORM instance.

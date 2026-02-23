@@ -66,7 +66,7 @@ This document covers the AI Brain implementation using **OpenRouter** as the uni
 ## System Prompt
 
 ```python
-SYSTEM_PROMPT = """You are Life Logger, an AI health assistant 
+SYSTEM_PROMPT = """You are Zuralog, an AI health assistant 
 with a "Tough Love Coach" persona.
 
 ## Your Capabilities
@@ -272,8 +272,8 @@ async def validate_request(user_id: str, model: str, estimated_tokens: int) -> b
 # cloud-brain/app/config.py
 class Settings(BaseSettings):
     openrouter_api_key: str
-    openrouter_referer: str = "https://lifelogger.app"
-    openrouter_title: str = "Life Logger"
+    openrouter_referer: str = "https://zuralog.app"
+    openrouter_title: str = "Zuralog"
 ```
 
 **Client Initialization:**

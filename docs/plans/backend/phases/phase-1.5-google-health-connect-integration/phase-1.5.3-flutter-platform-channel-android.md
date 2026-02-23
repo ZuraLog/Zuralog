@@ -13,7 +13,7 @@
 ---
 
 ## What
-Hook up the Android side of the existing `com.lifelogger/health` method channel.
+Hook up the Android side of the existing `com.zuralog/health` method channel.
 
 ## Why
 So that the exact same Dart code we wrote in Phase 1.4 (`HealthBridge.getSteps()`) works on Android devices too.
@@ -26,22 +26,22 @@ Modify `MainActivity.kt` to intercept the method channel calls and route them to
 - **Unified Logic:** The rest of the app doesn't know it's talking to Health Connect vs HealthKit.
 
 ## Files
-- Modify: `life_logger/android/app/src/main/kotlin/com/lifelogger/MainActivity.kt`
-- Review: `life_logger/lib/core/health/health_bridge.dart` (ensure no iOS-specific assumptions)
+- Modify: `zuralog/android/app/src/main/kotlin/com/zuralog/MainActivity.kt`
+- Review: `zuralog/lib/core/health/health_bridge.dart` (ensure no iOS-specific assumptions)
 
 ## Steps
 
 1. **Add Android method channel handler (`MainActivity.kt`)**
 
 ```kotlin
-package com.lifelogger
+package com.zuralog
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.lifelogger/health"
+    private val CHANNEL = "com.zuralog/health"
     private lateinit var healthConnectBridge: HealthConnectBridge
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

@@ -26,11 +26,11 @@ Use `OAuthRepository` to talk to the backend.
 - **Secure:** Auth code is passed via secure channel (Deep Link -> API call).
 
 ## Files
-- Create: `life_logger/lib/features/integrations/data/oauth_repository.dart`
+- Create: `zuralog/lib/features/integrations/data/oauth_repository.dart`
 
 ## Steps
 
-1. **Create OAuth repository (`life_logger/lib/features/integrations/data/oauth_repository.dart`)**
+1. **Create OAuth repository (`zuralog/lib/features/integrations/data/oauth_repository.dart`)**
 
 ```dart
 import 'package:dio/dio.dart';

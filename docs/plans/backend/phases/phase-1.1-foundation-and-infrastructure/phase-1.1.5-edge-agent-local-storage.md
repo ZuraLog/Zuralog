@@ -29,8 +29,8 @@ We will use:
 - **Reactive Data:** UI updates automatically when DB changes.
 
 ## Files
-- Create: `life_logger/lib/core/storage/secure_storage.dart`
-- Create: `life_logger/lib/core/storage/local_db.dart`
+- Create: `zuralog/lib/core/storage/secure_storage.dart`
+- Create: `zuralog/lib/core/storage/local_db.dart`
 
 ## Steps
 
@@ -94,7 +94,7 @@ class LocalDb extends _$LocalDb {
 3. **Run build_runner for Drift**
 
 ```bash
-cd life_logger
+cd zuralog
 flutter pub run build_runner build
 ```
 

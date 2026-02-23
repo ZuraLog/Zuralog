@@ -1,4 +1,4 @@
-# Life Logger — Developer Setup Guide
+# Zuralog — Developer Setup Guide
 
 Get the Cloud Brain (backend) and Edge Agent (mobile) running locally from a fresh clone.
 
@@ -44,7 +44,7 @@ Verify both containers are healthy:
 docker compose ps
 ```
 
-You should see `lifelogger-postgres` and `lifelogger-redis` both running.
+You should see `zuralog-postgres` and `zuralog-redis` both running.
 
 ### 2b. Install Python Dependencies
 
@@ -109,13 +109,13 @@ Strava OAuth is implemented but registration of the Strava API application is no
 2. Set the **Authorization Callback Domain** to `localhost` (for development).
 3. Copy the **Client ID** and **Client Secret** into `.env`.
 
-> **Note:** This follows the same model as "Sign in with Google." You (the developer) register one Strava API application. Users never need their own Strava API keys — they just log in via OAuth using the app's credentials. The `STRAVA_REDIRECT_URI` default (`lifelogger://oauth/strava`) is a deep link handled by the Flutter app.
+> **Note:** This follows the same model as "Sign in with Google." You (the developer) register one Strava API application. Users never need their own Strava API keys — they just log in via OAuth using the app's credentials. The `STRAVA_REDIRECT_URI` default (`zuralog://oauth/strava`) is a deep link handled by the Flutter app.
 
 | Variable | Description |
 |---|---|
 | `STRAVA_CLIENT_ID` | Your Strava API application's numeric Client ID |
 | `STRAVA_CLIENT_SECRET` | Your Strava API application's Client Secret |
-| `STRAVA_REDIRECT_URI` | Keep default: `lifelogger://oauth/strava` |
+| `STRAVA_REDIRECT_URI` | Keep default: `zuralog://oauth/strava` |
 
 #### Deferred: Firebase Cloud Messaging (Push Notifications)
 
@@ -124,12 +124,12 @@ FCM push notifications require a Firebase project and service account. Leave `FC
 When you are ready to enable push notifications:
 
 1. Create a project in the [Firebase Console](https://console.firebase.google.com/).
-2. Add an Android app (package name: `com.lifelogger.life_logger`).
-3. Download `google-services.json` and place it at `life_logger/android/app/google-services.json`.
+2. Add an Android app (package name: `com.zuralog.zuralog`).
+3. Download `google-services.json` and place it at `zuralog/android/app/google-services.json`.
 4. In Firebase Console → Project Settings → Service Accounts, generate a new private key (JSON).
 5. Save the downloaded JSON somewhere safe (e.g., `cloud-brain/firebase-service-account.json`) and set `FCM_CREDENTIALS_PATH` to that path in `.env`.
 
-> **⚠️ Note:** The Google Services Gradle plugin is already wired into the Android build. If `google-services.json` is missing, the Flutter app **will not build**. You must either place the file or temporarily comment out the plugin in `life_logger/android/app/build.gradle.kts`.
+> **⚠️ Note:** The Google Services Gradle plugin is already wired into the Android build. If `google-services.json` is missing, the Flutter app **will not build**. You must either place the file or temporarily comment out the plugin in `zuralog/android/app/build.gradle.kts`.
 
 #### Deferred: Pinecone (Vector Memory)
 
@@ -193,7 +193,7 @@ uv run pytest tests/ -v
 ### 3a. Install Flutter Dependencies
 
 ```bash
-cd life_logger
+cd zuralog
 flutter pub get
 ```
 
@@ -252,10 +252,10 @@ flutter run --dart-define=BASE_URL=http://192.168.1.100:8001
 | Lint backend | `uv run ruff check app/ tests/` (in `cloud-brain/`) |
 | Run new migration | `uv run alembic revision --autogenerate -m "description"` (in `cloud-brain/`) |
 | Apply migrations | `uv run alembic upgrade head` (in `cloud-brain/`) |
-| Install Flutter deps | `flutter pub get` (in `life_logger/`) |
-| Drift code gen | `dart run build_runner build --delete-conflicting-outputs` (in `life_logger/`) |
-| Flutter analysis | `flutter analyze` (in `life_logger/`) |
-| Run Flutter app | `flutter run` (in `life_logger/`) |
+| Install Flutter deps | `flutter pub get` (in `zuralog/`) |
+| Drift code gen | `dart run build_runner build --delete-conflicting-outputs` (in `zuralog/`) |
+| Flutter analysis | `flutter analyze` (in `zuralog/`) |
+| Run Flutter app | `flutter run` (in `zuralog/`) |
 
 ---
 
@@ -285,11 +285,11 @@ Verify your Supabase credentials in `.env`:
 - The correct model ID is `moonshotai/kimi-k2.5` (already set as the default in `.env.example`).
 
 ### Flutter app fails to build with Google Services error
-The Google Services Gradle plugin is enabled. You must place a valid `google-services.json` at `life_logger/android/app/google-services.json`. Download it from Firebase Console → Project Settings → Your Apps (Android). See the [Deferred: Firebase Cloud Messaging](#deferred-firebase-cloud-messaging-push-notifications) section for full instructions.
+The Google Services Gradle plugin is enabled. You must place a valid `google-services.json` at `zuralog/android/app/google-services.json`. Download it from Firebase Console → Project Settings → Your Apps (Android). See the [Deferred: Firebase Cloud Messaging](#deferred-firebase-cloud-messaging-push-notifications) section for full instructions.
 
 ### Push notifications not working
 - Ensure `FCM_CREDENTIALS_PATH` points to a valid Firebase service account JSON in `cloud-brain/.env`.
 - The Flutter app must call "Init FCM" in the harness (or the equivalent production flow) to register the device token with the backend before push notifications can be sent.
 
 ### `sqlite3` / Drift build errors on Android
-The project pins `sqlite3_flutter_libs: ^0.5.0`. Do **not** upgrade this to `0.6.x` — that version is an empty tombstone and Drift 2.28.x is not yet compatible with sqlite3 v3.x. If you see JNI errors, ensure `jniLibs.useLegacyPackaging = true` is set in `life_logger/android/app/build.gradle.kts`.
+The project pins `sqlite3_flutter_libs: ^0.5.0`. Do **not** upgrade this to `0.6.x` — that version is an empty tombstone and Drift 2.28.x is not yet compatible with sqlite3 v3.x. If you see JNI errors, ensure `jniLibs.useLegacyPackaging = true` is set in `zuralog/android/app/build.gradle.kts`.

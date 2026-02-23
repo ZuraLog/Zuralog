@@ -24,12 +24,12 @@ List items with toggle switches calling `OAuthRepository.connect()`.
 - **Webview Flow:** Strava OAuth opens in-app webview or external browser (via `deep_link_handler`).
 
 ## Files
-- Create: `life_logger/lib/features/integrations/presentation/integrations_hub_screen.dart`
-- Create: `life_logger/lib/features/integrations/presentation/widgets/integration_tile.dart`
+- Create: `zuralog/lib/features/integrations/presentation/integrations_hub_screen.dart`
+- Create: `zuralog/lib/features/integrations/presentation/widgets/integration_tile.dart`
 
 ## Steps
 
-1. **Create Hub Screen (`life_logger/lib/features/integrations/presentation/integrations_hub_screen.dart`)**
+1. **Create Hub Screen (`zuralog/lib/features/integrations/presentation/integrations_hub_screen.dart`)**
 
 ```dart
 class IntegrationsHubScreen extends ConsumerWidget {

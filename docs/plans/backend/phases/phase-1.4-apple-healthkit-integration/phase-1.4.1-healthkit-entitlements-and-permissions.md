@@ -27,21 +27,21 @@ We will modify the `Runner.entitlements` and `Info.plist` XML files directly (or
 - **Background Access:** Allows the app to wake up and sync data even when closed.
 
 ## Files
-- Modify: `life_logger/ios/Runner/Runner.entitlements`
-- Modify: `life_logger/ios/Runner/Info.plist`
+- Modify: `zuralog/ios/Runner/Runner.entitlements`
+- Modify: `zuralog/ios/Runner/Info.plist`
 
 ## Steps
 
 1. **Enable HealthKit capability**
 
 In Xcode (manual step usually, but here is the file representation):
-- Open `life_logger/ios/Runner.xcworkspace`
+- Open `zuralog/ios/Runner.xcworkspace`
 - Select Runner target → Signing & Capabilities
 - Add HealthKit capability
 - Check "Background Modes" → "Background fetch"
 - Check "Background Modes" → "Background processing"
 
-2. **Configure entitlements file (`life_logger/ios/Runner/Runner.entitlements`)**
+2. **Configure entitlements file (`zuralog/ios/Runner/Runner.entitlements`)**
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -58,13 +58,13 @@ In Xcode (manual step usually, but here is the file representation):
 </plist>
 ```
 
-3. **Configure Info.plist permissions (`life_logger/ios/Runner/Info.plist`)**
+3. **Configure Info.plist permissions (`zuralog/ios/Runner/Info.plist`)**
 
 ```xml
 <key>NSHealthShareUsageDescription</key>
-<string>Life Logger needs access to your health data (steps, workouts, nutrition) to provide personalized AI coaching and track your fitness goals.</string>
+<string>Zuralog needs access to your health data (steps, workouts, nutrition) to provide personalized AI coaching and track your fitness goals.</string>
 <key>NSHealthUpdateUsageDescription</key>
-<string>Life Logger needs to write health data (like workouts and nutrition) to Apple Health based on your requests.</string>
+<string>Zuralog needs to write health data (like workouts and nutrition) to Apple Health based on your requests.</string>
 ```
 
 ## Exit Criteria

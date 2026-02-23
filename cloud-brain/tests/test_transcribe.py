@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Transcribe Endpoint Tests.
+Zuralog Cloud Brain — Transcribe Endpoint Tests.
 
 Tests for the voice transcription endpoint. Uses mock STT
 since the endpoint is scaffolded with mock transcription.

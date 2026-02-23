@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Webhook Handlers.
+Zuralog Cloud Brain — Webhook Handlers.
 
 Receives and processes server-to-server notifications from
 RevenueCat for subscription lifecycle events.

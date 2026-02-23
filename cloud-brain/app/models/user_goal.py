@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — User Goal Model.
+Zuralog Cloud Brain — User Goal Model.
 
 SQLAlchemy ORM model for user-defined health and fitness goals.
 Goals provide essential context for the analytics engine — raw metric

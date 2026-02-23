@@ -30,7 +30,7 @@ We will create a `HealthKitBridge` class that:
 - **Bi-directional:** Can both read analytics and write entries created by the AI.
 
 ## Files
-- Create: `life_logger/ios/Runner/HealthKitBridge.swift`
+- Create: `zuralog/ios/Runner/HealthKitBridge.swift`
 
 ## Steps
 

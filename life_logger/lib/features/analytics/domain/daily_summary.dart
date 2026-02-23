@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Daily Summary Domain Model.
+/// Zuralog Edge Agent — Daily Summary Domain Model.
 ///
 /// Represents a single day's aggregated health data as returned by the
 /// Cloud Brain analytics API (`/analytics/daily-summary`). Used by the

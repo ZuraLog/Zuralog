@@ -23,11 +23,11 @@ Add buttons for each key app (Strava, CalAI) in the Harness.
 - **Status Feedback:** "Launched" vs "App not found".
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
-1. **Add deep link tests (`life_logger/lib/features/harness/harness_screen.dart`)**
+1. **Add deep link tests (`zuralog/lib/features/harness/harness_screen.dart`)**
 
 ```dart
 // In build()

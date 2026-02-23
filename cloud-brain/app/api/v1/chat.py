@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Chat API Router.
+Zuralog Cloud Brain — Chat API Router.
 
 WebSocket endpoint for real-time AI chat streaming and REST endpoints
 for chat history retrieval. Handles authentication, message routing

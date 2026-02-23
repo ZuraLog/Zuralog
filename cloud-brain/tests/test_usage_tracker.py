@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Usage Tracker Service Tests.
+Zuralog Cloud Brain — Usage Tracker Service Tests.
 """
 
 from unittest.mock import AsyncMock, MagicMock

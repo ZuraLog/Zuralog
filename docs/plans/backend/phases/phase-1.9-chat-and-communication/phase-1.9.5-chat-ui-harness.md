@@ -25,11 +25,11 @@ Replace the HTTP-based "Send" button logic in `HarnessScreen` with `ChatReposito
 - **Real-time:** Messages appear instantly as they arrive from WS.
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
-1. **Update harness (`life_logger/lib/features/harness/harness_screen.dart`)**
+1. **Update harness (`zuralog/lib/features/harness/harness_screen.dart`)**
 
 ```dart
 // inside _HarnessScreenState

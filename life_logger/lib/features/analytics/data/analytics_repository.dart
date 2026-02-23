@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Analytics Repository.
+/// Zuralog Edge Agent — Analytics Repository.
 ///
 /// Client-side repository that fetches aggregated health analytics from
 /// the Cloud Brain backend. Provides daily summaries, weekly trends,
@@ -14,10 +14,10 @@ library;
 
 import 'package:dio/dio.dart';
 
-import 'package:life_logger/core/network/api_client.dart';
-import 'package:life_logger/features/analytics/domain/daily_summary.dart';
-import 'package:life_logger/features/analytics/domain/weekly_trends.dart';
-import 'package:life_logger/features/analytics/domain/dashboard_insight.dart';
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/features/analytics/domain/daily_summary.dart';
+import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
+import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 
 /// Placeholder user ID used until authentication is fully wired.
 const String _mockUserId = 'mock-user';

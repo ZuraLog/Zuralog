@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Alembic Environment Configuration.
+Zuralog Cloud Brain — Alembic Environment Configuration.
 
 Configured for async SQLAlchemy engine to support asyncpg driver.
 Imports all models from app.models for autogenerate support.

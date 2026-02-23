@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Application Entry Point.
+Zuralog Cloud Brain — Application Entry Point.
 
 Initializes the FastAPI application with CORS middleware,
 the health check endpoint, and the auth API router.
@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app: The FastAPI application instance.
     """
     # --- Startup ---
-    print(f"🚀 Life Logger Cloud Brain starting in {settings.app_env} mode")
+    print(f"🚀 Zuralog Cloud Brain starting in {settings.app_env} mode")
 
     # HTTP client (shared across services)
     http_client = httpx.AsyncClient(timeout=30.0)
@@ -79,11 +79,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if getattr(app.state, "rate_limiter", None) is not None:
         await app.state.rate_limiter.close()
     await http_client.aclose()
-    print("👋 Life Logger Cloud Brain shutting down")
+    print("👋 Zuralog Cloud Brain shutting down")
 
 
 app = FastAPI(
-    title="Life Logger Cloud Brain",
+    title="Zuralog Cloud Brain",
     description="AI Health Assistant Backend — Cross-app reasoning and autonomous actions.",
     version="0.1.0",
     lifespan=lifespan,

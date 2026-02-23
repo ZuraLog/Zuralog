@@ -27,11 +27,11 @@ The `HealthRepository` will wrap `HealthBridge` calls. It will be provided via `
 - **Data Transformation:** Converts raw Maps from the platform channel into strongly typed Dart objects (if needed in future).
 
 ## Files
-- Create: `life_logger/lib/features/health/data/health_repository.dart`
+- Create: `zuralog/lib/features/health/data/health_repository.dart`
 
 ## Steps
 
-1. **Create health repository (`life_logger/lib/features/health/data/health_repository.dart`)**
+1. **Create health repository (`zuralog/lib/features/health/data/health_repository.dart`)**
 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';

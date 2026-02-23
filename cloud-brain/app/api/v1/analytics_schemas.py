@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Analytics API Schemas.
+Zuralog Cloud Brain — Analytics API Schemas.
 
 Pydantic models for analytics endpoint request validation
 and response serialization. Used by the analytics router to

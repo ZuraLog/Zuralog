@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP + AI Flow Integration Tests.
+Zuralog Cloud Brain — MCP + AI Flow Integration Tests.
 
 Validates the MCP framework components in isolation: the server
 registry, tool discovery, client routing, and the in-memory

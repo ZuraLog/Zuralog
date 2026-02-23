@@ -22,11 +22,11 @@
 
 | Component | File | Description |
 |---|---|---|
-| Auth State | `life_logger/lib/features/auth/domain/auth_state.dart` | Sealed `AuthResult` class + `AuthState` enum |
-| Auth Repository | `life_logger/lib/features/auth/data/auth_repository.dart` | Typed `AuthResult` returns, token management |
-| Auth Providers | `life_logger/lib/features/auth/domain/auth_providers.dart` | Riverpod 3.x `Notifier`/`NotifierProvider` |
-| Harness Screen | `life_logger/lib/features/harness/harness_screen.dart` | Auth UI with email/password fields, login/register/logout buttons, live auth status indicator |
-| API Client | `life_logger/lib/core/network/api_client.dart` | Silent token refresh interceptor (401 → refresh → retry) |
+| Auth State | `zuralog/lib/features/auth/domain/auth_state.dart` | Sealed `AuthResult` class + `AuthState` enum |
+| Auth Repository | `zuralog/lib/features/auth/data/auth_repository.dart` | Typed `AuthResult` returns, token management |
+| Auth Providers | `zuralog/lib/features/auth/domain/auth_providers.dart` | Riverpod 3.x `Notifier`/`NotifierProvider` |
+| Harness Screen | `zuralog/lib/features/harness/harness_screen.dart` | Auth UI with email/password fields, login/register/logout buttons, live auth status indicator |
+| API Client | `zuralog/lib/core/network/api_client.dart` | Silent token refresh interceptor (401 → refresh → retry) |
 
 ## Deviations from Original Plan
 

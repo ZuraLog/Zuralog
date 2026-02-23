@@ -9,7 +9,7 @@
 ---
 
 ## What
-Implement a strategy to seamlessly launch the external "CalAI" application from within Life Logger.
+Implement a strategy to seamlessly launch the external "CalAI" application from within Zuralog.
 
 ## Why
 CalAI is the best-in-class tool for logging food via photos. Instead of rebuilding this complex AI feature, we leverage it. To the user, it should feel like "opening the food camera."
@@ -22,11 +22,11 @@ Use `url_launcher` to open `calai://` scheme. If not installed, fallback to thei
 - **Context Preservation:** (Future) Pass date/meal context via query params if supported by CalAI.
 
 ## Files
-- Modify: `life_logger/lib/core/deeplink/deeplink_launcher.dart`
+- Modify: `zuralog/lib/core/deeplink/deeplink_launcher.dart`
 
 ## Steps
 
-1. **Create deep link launcher (`life_logger/lib/core/deeplink/deeplink_launcher.dart`)**
+1. **Create deep link launcher (`zuralog/lib/core/deeplink/deeplink_launcher.dart`)**
 
 ```dart
 import 'package:url_launcher/url_launcher.dart';

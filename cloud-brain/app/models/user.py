@@ -1,7 +1,7 @@
 """
-Life Logger Cloud Brain — User Model.
+Zuralog Cloud Brain — User Model.
 
-Represents a registered Life Logger user. The primary key is the
+Represents a registered Zuralog user. The primary key is the
 Supabase UID, ensuring a single source of truth for identity.
 Subscription fields track tier, expiration, and RevenueCat linkage.
 """
@@ -38,7 +38,7 @@ class SubscriptionTier(enum.Enum):
 
 
 class User(Base):
-    """A Life Logger user account.
+    """A Zuralog user account.
 
     Attributes:
         id: Unique identifier, matches the Supabase Auth UID.

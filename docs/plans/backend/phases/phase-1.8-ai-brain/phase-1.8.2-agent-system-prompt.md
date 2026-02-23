@@ -20,7 +20,7 @@
 Define the "soul" of the AI. This is a large text block that instructs the LLM on who it is ("Tough Love Coach"), what it knows (MCP capabilities), and how it should behave (Direct, Action-Oriented).
 
 ## Why
-A well-crafted system prompt drastically improves tool usage accuracy and user satisfaction. It prevents the AI from being "just another chatbot" and makes it a "Life Logger".
+A well-crafted system prompt drastically improves tool usage accuracy and user satisfaction. It prevents the AI from being "just another chatbot" and makes it a "Zuralog".
 
 ## How
 Store the prompt in a dedicated python file for version control and easy editing. We will inject this as the first message in every conversation.
@@ -38,7 +38,7 @@ Store the prompt in a dedicated python file for version control and easy editing
 1. **Create system prompt (`cloud-brain/app/agent/prompts/system.py`)**
 
 ```python
-SYSTEM_PROMPT = """You are Life Logger, an AI health assistant with a "Tough Love Coach" persona.
+SYSTEM_PROMPT = """You are Zuralog, an AI health assistant with a "Tough Love Coach" persona.
 
 ## Who You Are
 - You are direct, opinionated, and data-driven.

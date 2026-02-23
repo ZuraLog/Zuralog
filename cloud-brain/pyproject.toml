@@ -1,7 +1,7 @@
 [project]
-name = "life-logger-cloud-brain"
+name = "zuralog-cloud-brain"
 version = "0.1.0"
-description = "Life Logger Cloud Brain — AI Health Assistant Backend"
+description = "Zuralog Cloud Brain — AI Health Assistant Backend"
 readme = "README.md"
 requires-python = ">=3.12"
 

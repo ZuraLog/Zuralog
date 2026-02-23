@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Health Endpoint Tests.
+Zuralog Cloud Brain — Health Endpoint Tests.
 
 Verifies the health check endpoint returns the expected response.
 """

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Full User Journey Integration Tests.
+Zuralog Cloud Brain — Full User Journey Integration Tests.
 
 End-to-end tests simulating a complete user lifecycle:
 register, login, token refresh, and logout. All external

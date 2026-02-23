@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — User Device Model.
+Zuralog Cloud Brain — User Device Model.
 
 Stores FCM registration tokens for user devices, enabling
 cloud-to-device push communication. Each user can have

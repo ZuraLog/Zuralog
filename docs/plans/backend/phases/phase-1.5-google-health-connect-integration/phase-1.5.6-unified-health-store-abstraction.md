@@ -26,12 +26,12 @@ Use `Platform.isAndroid` and `Platform.isIOS` checks within the repository layer
 - **Fail-safe:** If on Web or Desktop, returns empty data instead of crashing.
 
 ## Files
-- Create: `life_logger/lib/core/health/health_observer.dart`
-- Modify: `life_logger/lib/features/health/data/health_repository.dart`
+- Create: `zuralog/lib/core/health/health_observer.dart`
+- Modify: `zuralog/lib/features/health/data/health_repository.dart`
 
 ## Steps
 
-1. **Create unified health observer (`life_logger/lib/core/health/health_observer.dart`)**
+1. **Create unified health observer (`zuralog/lib/core/health/health_observer.dart`)**
 
 ```dart
 import 'dart:io';
@@ -62,7 +62,7 @@ class HealthObserver {
 }
 ```
 
-2. **Update HealthRepository (`life_logger/lib/features/health/data/health_repository.dart`)**
+2. **Update HealthRepository (`zuralog/lib/features/health/data/health_repository.dart`)**
 
 ```dart
 // Ensure methods handle platform specifics if they diverge.

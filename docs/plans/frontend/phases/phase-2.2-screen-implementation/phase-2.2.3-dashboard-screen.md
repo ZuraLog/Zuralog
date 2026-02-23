@@ -25,13 +25,13 @@ Fetch data from `AnalyticsRepository` (created in 1.11.6).
 - **Trend Charts:** Small sparkline charts for weekly trends (using `fl_chart`).
 
 ## Files
-- Create: `life_logger/lib/features/dashboard/presentation/dashboard_screen.dart`
-- Create: `life_logger/lib/features/dashboard/presentation/widgets/insight_card.dart`
-- Create: `life_logger/lib/features/dashboard/presentation/widgets/activity_rings.dart`
+- Create: `zuralog/lib/features/dashboard/presentation/dashboard_screen.dart`
+- Create: `zuralog/lib/features/dashboard/presentation/widgets/insight_card.dart`
+- Create: `zuralog/lib/features/dashboard/presentation/widgets/activity_rings.dart`
 
 ## Steps
 
-1. **Create Dashboard (`life_logger/lib/features/dashboard/presentation/dashboard_screen.dart`)**
+1. **Create Dashboard (`zuralog/lib/features/dashboard/presentation/dashboard_screen.dart`)**
 
 ```dart
 class DashboardScreen extends ConsumerWidget {

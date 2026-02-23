@@ -26,11 +26,11 @@ Standard List View.
 - **Logout:** Clears tokens and redirects to Welcome.
 
 ## Files
-- Create: `life_logger/lib/features/settings/presentation/settings_screen.dart`
+- Create: `zuralog/lib/features/settings/presentation/settings_screen.dart`
 
 ## Steps
 
-1. **Create Settings Screen (`life_logger/lib/features/settings/presentation/settings_screen.dart`)**
+1. **Create Settings Screen (`zuralog/lib/features/settings/presentation/settings_screen.dart`)**
 
 ```dart
 class SettingsScreen extends ConsumerWidget {

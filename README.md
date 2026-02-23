@@ -144,7 +144,7 @@ ZuraLog/
 │   ├── Dockerfile
 │   └── docker-compose.yml       # PostgreSQL + Redis
 │
-├── life_logger/                 # Flutter mobile app
+├── zuralog/                 # Flutter mobile app
 │   └── lib/
 │       ├── core/
 │       │   ├── network/         # API client, WebSocket, FCM
@@ -211,7 +211,7 @@ uv run alembic upgrade head    # Run migrations
 make dev                       # Start dev server → http://localhost:8000
 
 # Mobile
-cd ../life_logger
+cd ../zuralog
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter run                    # Launch on emulator/device
@@ -253,7 +253,7 @@ python -m pytest tests/ --co -q
 ### Flutter
 
 ```bash
-cd life_logger
+cd zuralog
 
 # Run all unit/widget tests
 flutter test

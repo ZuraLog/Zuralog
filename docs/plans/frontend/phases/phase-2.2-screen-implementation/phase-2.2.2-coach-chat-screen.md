@@ -26,13 +26,13 @@ Use `ListView.builder` with `MessageBubble` widgets. Connect to `ChatRepository`
 - **Tool UI:** If AI triggers a "Deep Link", show a distinct UI card ("Open Strava" button) inside the chat stream.
 
 ## Files
-- Create: `life_logger/lib/features/chat/presentation/chat_screen.dart`
-- Create: `life_logger/lib/features/chat/presentation/widgets/message_bubble.dart`
-- Create: `life_logger/lib/features/chat/presentation/widgets/chat_input_bar.dart`
+- Create: `zuralog/lib/features/chat/presentation/chat_screen.dart`
+- Create: `zuralog/lib/features/chat/presentation/widgets/message_bubble.dart`
+- Create: `zuralog/lib/features/chat/presentation/widgets/chat_input_bar.dart`
 
 ## Steps
 
-1. **Create Chat Screen (`life_logger/lib/features/chat/presentation/chat_screen.dart`)**
+1. **Create Chat Screen (`zuralog/lib/features/chat/presentation/chat_screen.dart`)**
 
 ```dart
 class ChatScreen extends ConsumerWidget {

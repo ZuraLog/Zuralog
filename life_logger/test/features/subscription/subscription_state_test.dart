@@ -1,10 +1,10 @@
-/// Life Logger Edge Agent — Subscription State Tests.
+/// Zuralog Edge Agent — Subscription State Tests.
 ///
 /// Validates the SubscriptionState model and SubscriptionTier enum.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:life_logger/features/subscription/domain/subscription_state.dart';
+import 'package:zuralog/features/subscription/domain/subscription_state.dart';
 
 void main() {
   group('SubscriptionTier', () {

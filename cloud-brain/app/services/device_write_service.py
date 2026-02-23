@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Device Write Service.
+Zuralog Cloud Brain — Device Write Service.
 
 Bridges server-side AI decisions to on-device health data writes
 via Firebase Cloud Messaging (FCM) silent data messages.

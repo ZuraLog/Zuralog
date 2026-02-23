@@ -8,11 +8,11 @@
 
 ## Overview
 
-Life Logger integrates with Apple HealthKit on iOS to read and write health metrics. The architecture spans three layers:
+Zuralog integrates with Apple HealthKit on iOS to read and write health metrics. The architecture spans three layers:
 
 ```
 Swift HealthKitBridge  ->  Flutter MethodChannel  ->  Dart HealthBridge  ->  HealthRepository  ->  MCP Server
-     (iOS native)          (com.lifelogger/health)      (platform channel)     (Riverpod DI)       (Cloud Brain)
+     (iOS native)          (com.zuralog/health)      (platform channel)     (Riverpod DI)       (Cloud Brain)
 ```
 
 - **Swift layer** (`HealthKitBridge.swift`): Direct `HKHealthStore` interactions — reads, writes, and background observers.
@@ -53,9 +53,9 @@ Swift HealthKitBridge  ->  Flutter MethodChannel  ->  Dart HealthBridge  ->  Hea
 
 ```xml
 <key>NSHealthShareUsageDescription</key>
-<string>Life Logger needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
+<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
 <key>NSHealthUpdateUsageDescription</key>
-<string>Life Logger needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
+<string>Zuralog needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
 <key>UIBackgroundModes</key>
 <array>
     <string>fetch</string>
@@ -74,7 +74,7 @@ The Runner target must have:
 
 ## Platform Channel Methods
 
-Channel name: `com.lifelogger/health`
+Channel name: `com.zuralog/health`
 
 | Method | Arguments | Returns | Description |
 |--------|-----------|---------|-------------|

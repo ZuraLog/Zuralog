@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP Servers Package.
+Zuralog Cloud Brain — MCP Servers Package.
 
 Public API for the MCP server abstractions. Import the base class
 and shared models from here rather than reaching into sub-modules.

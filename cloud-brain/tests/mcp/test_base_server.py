@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP Base Server Tests.
+Zuralog Cloud Brain — MCP Base Server Tests.
 
 Verifies that the ``BaseMCPServer`` ABC can be properly implemented
 and that incomplete implementations are rejected at instantiation time.

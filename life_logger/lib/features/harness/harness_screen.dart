@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Developer Test Harness.
+/// Zuralog Edge Agent — Developer Test Harness.
 ///
 /// A polished test screen for manually triggering backend
 /// functions and viewing real-time logs. Sections are organized
@@ -13,17 +13,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:life_logger/core/deeplink/deeplink_handler.dart';
-import 'package:life_logger/core/deeplink/deeplink_launcher.dart';
-import 'package:life_logger/core/di/providers.dart';
-import 'package:life_logger/core/network/api_client.dart';
-import 'package:life_logger/core/network/ws_client.dart';
-import 'package:life_logger/features/auth/domain/auth_providers.dart';
-import 'package:life_logger/features/auth/domain/auth_state.dart';
-import 'package:life_logger/features/chat/data/chat_repository.dart';
-import 'package:life_logger/features/chat/domain/message.dart';
-import 'package:life_logger/features/subscription/domain/subscription_providers.dart';
-import 'package:life_logger/features/subscription/presentation/paywall_screen.dart';
+import 'package:zuralog/core/deeplink/deeplink_handler.dart';
+import 'package:zuralog/core/deeplink/deeplink_launcher.dart';
+import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/core/network/ws_client.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/chat/data/chat_repository.dart';
+import 'package:zuralog/features/chat/domain/message.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
+import 'package:zuralog/features/subscription/presentation/paywall_screen.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 // ---------------------------------------------------------------------------
@@ -1129,7 +1129,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                 );
                 _log(
                   '  3. STRAVA_REDIRECT_URI must be: '
-                  'lifelogger://oauth/strava',
+                  'zuralog://oauth/strava',
                 );
                 _log('  4. You must be logged in (use AUTH section first)');
                 _log('');
@@ -1140,10 +1140,10 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   'to Strava auth page',
                 );
                 _log('  3. Log into your Strava account in the browser');
-                _log('  4. Authorize "Life Logger" to access your data');
+                _log('  4. Authorize "Zuralog" to access your data');
                 _log(
                   '  5. Browser redirects to '
-                  'lifelogger://oauth/strava?code=XXX',
+                  'zuralog://oauth/strava?code=XXX',
                 );
                 _log('  6. The app intercepts the deep link automatically');
                 _log('  7. Code is exchanged for tokens on the backend');
@@ -1304,7 +1304,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                 _log('');
                 _log('1. Go to https://console.firebase.google.com');
                 _log('2. Create a project (or use an existing one)');
-                _log('3. Add Android app: com.lifelogger.life_logger');
+                _log('3. Add Android app: com.zuralog.zuralog');
                 _log('4. Download google-services.json');
                 _log('5. Place it at: android/app/google-services.json');
                 _log('6. Rebuild the app: flutter run');

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Deep Link Registry (Phase 1.12).
+Zuralog Cloud Brain — Deep Link Registry (Phase 1.12).
 
 Data-driven registry that maps (app_name, action) pairs to native deep
 link URLs. The Edge Agent uses these URLs to open third-party apps

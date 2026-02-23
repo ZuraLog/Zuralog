@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Subscription State.
+/// Zuralog Edge Agent — Subscription State.
 ///
 /// Defines the subscription tier and state model used across
 /// the application to gate features and display upgrade prompts.

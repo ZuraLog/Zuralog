@@ -24,16 +24,16 @@ Use `integration_test` package.
 - **Flow:** Login Screen -> Dashboard -> Checking specific widgets exist.
 
 ## Files
-- Create: `life_logger/integration_test/app_test.dart`
+- Create: `zuralog/integration_test/app_test.dart`
 
 ## Steps
 
-1. **Write integration test (`life_logger/integration_test/app_test.dart`)**
+1. **Write integration test (`zuralog/integration_test/app_test.dart`)**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:life_logger/main.dart' as app;
+import 'package:zuralog/main.dart' as app;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

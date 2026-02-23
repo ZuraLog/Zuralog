@@ -1,4 +1,4 @@
-# Life Logger: Project Index for AI Agents
+# Zuralog: Project Index for AI Agents
 
 Unified "Hybrid Hub" agent for harmonizing health, fitness, and life data.
 

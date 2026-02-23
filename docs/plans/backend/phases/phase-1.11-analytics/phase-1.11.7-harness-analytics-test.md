@@ -25,11 +25,11 @@ Simple "Fetch Analytics" button in `HarnessScreen`.
 - **JSON Viewer:** Display the raw JSON result for inspection.
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
-1. **Add test controls (`life_logger/lib/features/harness/harness_screen.dart`)**
+1. **Add test controls (`zuralog/lib/features/harness/harness_screen.dart`)**
 
 ```dart
 ElevatedButton(

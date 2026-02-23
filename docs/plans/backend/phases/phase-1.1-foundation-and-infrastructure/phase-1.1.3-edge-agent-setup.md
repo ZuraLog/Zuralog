@@ -30,18 +30,18 @@ We will use:
 - **Routing:** Structured navigation setup.
 
 ## Files
-- Create: `life_logger/pubspec.yaml`
-- Create: `life_logger/lib/main.dart`
-- Create: `life_logger/lib/app.dart`
-- Create: `life_logger/lib/core/di/providers.dart`
+- Create: `zuralog/pubspec.yaml`
+- Create: `zuralog/lib/main.dart`
+- Create: `zuralog/lib/app.dart`
+- Create: `zuralog/lib/core/di/providers.dart`
 
 ## Steps
 
 1. **Initialize Flutter project**
 
 ```bash
-flutter create life_logger --org com.lifelogger --platforms ios,android
-cd life_logger
+flutter create zuralog --org com.zuralog --platforms ios,android
+cd zuralog
 ```
 
 2. **Configure `pubspec.yaml` with dependencies**
@@ -70,7 +70,7 @@ dev_dependencies:
   riverpod_generator: ^2.3.0
 ```
 
-3. **Create basic app shell in `life_logger/lib/main.dart`**
+3. **Create basic app shell in `zuralog/lib/main.dart`**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -81,7 +81,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     const ProviderScope(
-      child: LifeLoggerApp(),
+      child: ZuralogApp(),
     ),
   );
 }
@@ -92,15 +92,15 @@ void main() async {
 ```dart
 import 'package:flutter/material.dart';
 
-class LifeLoggerApp extends StatelessWidget {
-  const LifeLoggerApp({super.key});
+class ZuralogApp extends StatelessWidget {
+  const ZuralogApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Life Logger',
+      title: 'Zuralog',
       home: const Scaffold(
-        body: Center(child: Text('Life Logger - Test Harness')),
+        body: Center(child: Text('Zuralog - Test Harness')),
       ),
     );
   }
@@ -110,7 +110,7 @@ class LifeLoggerApp extends StatelessWidget {
 5. **Build to verify**
 
 ```bash
-cd life_logger
+cd zuralog
 flutter build ios --simulator --no-codesign
 flutter build apk --debug
 ```

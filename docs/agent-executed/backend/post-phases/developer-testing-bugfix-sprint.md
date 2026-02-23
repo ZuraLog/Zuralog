@@ -15,7 +15,7 @@ After all 14 backend and frontend phases were implemented, a full developer test
 
 ## What the Harness Screen Is
 
-`life_logger/lib/features/harness/harness_screen.dart` is a ~1,960-line developer-only test console that exposes every backend and device API as tappable buttons. It is the only screen rendered by the app at this stage (Phase 2 will replace it with the production UI). Each section corresponds to a phase of the backend implementation:
+`zuralog/lib/features/harness/harness_screen.dart` is a ~1,960-line developer-only test console that exposes every backend and device API as tappable buttons. It is the only screen rendered by the app at this stage (Phase 2 will replace it with the production UI). Each section corresponds to a phase of the backend implementation:
 
 | Section | Tests |
 |---|---|
@@ -27,7 +27,7 @@ After all 14 backend and frontend phases were implemented, a full developer test
 | BACKGROUND SYNC | FCM trigger-write, Sync status |
 | ANALYTICS | Daily summary, Weekly trends, Dashboard insight |
 | SUBSCRIPTION | RevenueCat paywall, entitlement check |
-| DEEP LINKS | lifelogger:// scheme testing |
+| DEEP LINKS | zuralog:// scheme testing |
 
 All output is streamed to a scrollable log terminal at the bottom of the screen.
 
@@ -47,7 +47,7 @@ All output is streamed to a scrollable log terminal at the bottom of the screen.
 
 ### Issue 2 — All Backend Calls Returned 404
 
-**Root cause:** A port conflict. `workspace-mcp` (an MCP tooling server) bound to `127.0.0.1:8000` and intercepted all localhost requests before the Life Logger Cloud Brain (which also bound to `0.0.0.0:8000`). Every `/health`, `/auth/*`, and `/analytics/*` call hit the wrong server.
+**Root cause:** A port conflict. `workspace-mcp` (an MCP tooling server) bound to `127.0.0.1:8000` and intercepted all localhost requests before the Zuralog Cloud Brain (which also bound to `0.0.0.0:8000`). Every `/health`, `/auth/*`, and `/analytics/*` call hit the wrong server.
 
 **Fix:** Moved the Cloud Brain to port **8001**. Updated the default base URL in `api_client.dart`, `ws_client.dart`, and the `Makefile`.
 
@@ -195,7 +195,7 @@ e848625 fix: change MainActivity to FlutterFragmentActivity for RevenueCat paywa
 
 ## Files Changed (Summary)
 
-### Flutter Frontend (`life_logger/`)
+### Flutter Frontend (`zuralog/`)
 
 | File | Change |
 |---|---|
@@ -254,7 +254,7 @@ The following features are **fully wired in code** but require external service 
 
 ### Strava OAuth
 
-**What it does:** Allows users to connect their Strava account. The app opens a browser to Strava's login page, the user authorizes "Life Logger", and Strava redirects back to `lifelogger://oauth/strava?code=XXX`. The backend exchanges the code for an access token and stores it.
+**What it does:** Allows users to connect their Strava account. The app opens a browser to Strava's login page, the user authorizes "Zuralog", and Strava redirects back to `zuralog://oauth/strava?code=XXX`. The backend exchanges the code for an access token and stores it.
 
 **How OAuth works (important):** You register **one** Strava API application as the developer/app owner. Your users never need their own Strava API keys — they simply log into their personal Strava accounts via the standard OAuth consent screen, exactly like "Sign in with Google". The `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` are *your app's* server-side credentials, never sent to the Flutter client.
 
@@ -262,16 +262,16 @@ The following features are **fully wired in code** but require external service 
 
 1. Go to https://www.strava.com/settings/api
 2. Create a new API application:
-   - **Application Name:** Life Logger (or any name)
+   - **Application Name:** Zuralog (or any name)
    - **Category:** Training (or appropriate)
-   - **Website:** `https://lifelogger.app`
+   - **Website:** `https://zuralog.app`
    - **Authorization Callback Domain:** `localhost`
 3. Note your **Client ID** (numeric) and **Client Secret** (40-char hex string)
 4. Add to `cloud-brain/.env`:
    ```
    STRAVA_CLIENT_ID=<your_numeric_client_id>
    STRAVA_CLIENT_SECRET=<your_40_char_secret>
-   STRAVA_REDIRECT_URI=lifelogger://oauth/strava
+   STRAVA_REDIRECT_URI=zuralog://oauth/strava
    ```
 5. Restart the Cloud Brain
 6. In the harness: log in via AUTH first, then tap **"Connect Strava"**
@@ -288,16 +288,16 @@ The following features are **fully wired in code** but require external service 
 3. Cloud Brain sends a silent FCM data message to the device
 4. Android receives the FCM push in the background
 5. `firebaseMessagingBackgroundHandler` runs in a headless isolate
-6. It calls the `com.lifelogger/health` MethodChannel → `backgroundWrite`
+6. It calls the `com.zuralog/health` MethodChannel → `backgroundWrite`
 7. Native Health Connect writes the data
 
 **Setup steps (client side — required for "Init FCM" to work):**
 
 1. Go to https://console.firebase.google.com
 2. Create a new Firebase project (or use existing)
-3. Add an **Android app** with package name: `com.lifelogger.life_logger`
+3. Add an **Android app** with package name: `com.zuralog.zuralog`
 4. Download `google-services.json`
-5. Place it at: `life_logger/android/app/google-services.json`
+5. Place it at: `zuralog/android/app/google-services.json`
 6. Rebuild the app: `flutter clean && flutter run`
 7. In the harness: tap **"Init FCM"** — this requests notification permission, retrieves the FCM device token, and registers it with the backend
 

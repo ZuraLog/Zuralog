@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — System Prompt Tests.
+Zuralog Cloud Brain — System Prompt Tests.
 
 Verifies the system prompt contains required persona elements,
 capability descriptions, and safety constraints.

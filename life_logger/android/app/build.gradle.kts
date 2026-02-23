@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lifelogger.life_logger"
+    namespace = "com.zuralog.zuralog"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.lifelogger.life_logger"
+        applicationId = "com.zuralog.zuralog"
         // Health Connect requires Android 9+ (API 28).
         minSdk = 28
         targetSdk = flutter.targetSdkVersion

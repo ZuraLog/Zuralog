@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Trend Detector.
+Zuralog Cloud Brain — Trend Detector.
 
 Identifies directional trends in health metric time series by comparing
 moving averages over configurable windows. Used to answer questions like

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Push Notification Service.
+Zuralog Cloud Brain — Push Notification Service.
 
 Sends push notifications via Firebase Cloud Messaging (FCM).
 Gated behind the ``fcm_credentials_path`` setting — returns None

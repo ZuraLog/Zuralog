@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Chat Repository.
+/// Zuralog Edge Agent — Chat Repository.
 ///
 /// Mediates between the WebSocket client, REST API client, and the UI.
 /// Provides typed streams for incoming messages and connection status,
@@ -9,10 +9,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:life_logger/core/di/providers.dart';
-import 'package:life_logger/core/network/api_client.dart';
-import 'package:life_logger/core/network/ws_client.dart';
-import 'package:life_logger/features/chat/domain/message.dart';
+import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/core/network/ws_client.dart';
+import 'package:zuralog/features/chat/domain/message.dart';
 
 /// Repository that manages the chat data flow.
 ///

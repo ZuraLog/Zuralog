@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP Client (Tool Router).
+Zuralog Cloud Brain — MCP Client (Tool Router).
 
 Routes incoming tool execution requests to the correct MCP server
 by querying the ``MCPServerRegistry``. This is the single entry point

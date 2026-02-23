@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Shared API Dependencies.
+Zuralog Cloud Brain — Shared API Dependencies.
 
 FastAPI dependencies for authentication, authorization, and rate limiting.
 """

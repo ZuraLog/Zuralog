@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Subscription Repository.
+/// Zuralog Edge Agent — Subscription Repository.
 ///
 /// Manages the RevenueCat SDK for in-app purchases and subscription
 /// status. The backend's user profile is the Single Source of Truth
@@ -11,8 +11,8 @@ import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
-import 'package:life_logger/core/network/api_client.dart';
-import 'package:life_logger/features/subscription/domain/subscription_state.dart';
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/features/subscription/domain/subscription_state.dart';
 
 /// The RevenueCat entitlement identifier for ZuraLog Pro.
 const kProEntitlementId = 'ZuraLog Pro';

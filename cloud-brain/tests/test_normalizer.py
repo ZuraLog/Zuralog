@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Data Normalizer Tests.
+Zuralog Cloud Brain — Data Normalizer Tests.
 
 Tests cross-source data normalization into the unified internal schema.
 """

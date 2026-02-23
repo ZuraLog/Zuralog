@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Local Database (Drift).
+/// Zuralog Edge Agent — Local Database (Drift).
 ///
 /// Provides an offline-first SQLite database for caching chat messages
 /// and health metrics locally. Built with Drift for type-safe queries,
@@ -74,7 +74,7 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(
-      '${dbFolder.path}${Platform.pathSeparator}life_logger.db',
+      '${dbFolder.path}${Platform.pathSeparator}zuralog.db',
     );
     return NativeDatabase.createInBackground(file);
   });

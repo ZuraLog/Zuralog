@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Secure Storage Wrapper.
+/// Zuralog Edge Agent — Secure Storage Wrapper.
 ///
 /// Provides a clean API over FlutterSecureStorage for persisting
 /// sensitive data (auth tokens, integration tokens) using the OS

@@ -1,4 +1,4 @@
-/// Life Logger Android — WorkManager worker for periodic Health Connect sync.
+/// Zuralog Android — WorkManager worker for periodic Health Connect sync.
 ///
 /// Scheduled every 15 minutes (WorkManager minimum interval) when
 /// the device has network connectivity and battery is not low.
@@ -6,7 +6,7 @@
 /// **MVP scope:** Reads recent steps from Health Connect and logs
 /// the result to Android logcat. Full sync to Cloud Brain API
 /// is deferred to Phase 1.10 (Background Services).
-package com.lifelogger.life_logger
+package com.zuralog.zuralog
 
 import android.content.Context
 import android.util.Log
@@ -38,7 +38,7 @@ class HealthSyncWorker(
 
     companion object {
         private const val TAG = "HealthSyncWorker"
-        private const val WORK_NAME = "life_logger_health_sync"
+        private const val WORK_NAME = "zuralog_health_sync"
 
         /// Schedules the periodic sync worker.
         ///

@@ -1,4 +1,4 @@
-# life_logger
+# zuralog
 
 A new Flutter project.
 

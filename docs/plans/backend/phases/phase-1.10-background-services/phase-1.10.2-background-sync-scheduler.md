@@ -37,7 +37,7 @@ Celery Beat kicks off a `sync_user_data` task every 15 minutes.
 from celery import Celery
 from cloudbrain.app.config import settings
 
-celery_app = Celery("life_logger", broker=settings.redis_url)
+celery_app = Celery("zuralog", broker=settings.redis_url)
 
 @celery_app.task
 def sync_user_data(user_id: str):

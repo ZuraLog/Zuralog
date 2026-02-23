@@ -23,7 +23,7 @@ Use `firebase-admin` python SDK. This requires a Service Account JSON file.
 
 ## Features
 - **Targeting:** Send to specific `device_token`.
-- **Data Payload:** Include deep links (`lifelogger://chat`).
+- **Data Payload:** Include deep links (`zuralog://chat`).
 
 ## Files
 - Create: `cloud-brain/app/services/push_service.py`

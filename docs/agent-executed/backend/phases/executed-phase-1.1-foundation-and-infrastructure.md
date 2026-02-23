@@ -25,13 +25,13 @@
 
 | Component | File | Description |
 |---|---|---|
-| API Client | `life_logger/lib/core/network/api_client.dart` | Dio-based with `--dart-define` configurable base URL |
-| WebSocket Client | `life_logger/lib/core/network/ws_client.dart` | For real-time AI chat streaming |
-| Secure Storage | `life_logger/lib/core/storage/secure_storage.dart` | FlutterSecureStorage wrapper with auth + integration token helpers |
-| Local DB (Drift) | `life_logger/lib/core/storage/local_db.dart` | SQLite with `path_provider` for sandboxed DB path |
-| Providers | `life_logger/lib/core/di/providers.dart` | Riverpod DI for all core services |
-| Test Harness | `life_logger/lib/features/harness/harness_screen.dart` | Raw testing UI with health check, storage, and DB buttons |
-| App Shell | `life_logger/lib/app.dart` + `main.dart` | ProviderScope + MaterialApp → HarnessScreen |
+| API Client | `zuralog/lib/core/network/api_client.dart` | Dio-based with `--dart-define` configurable base URL |
+| WebSocket Client | `zuralog/lib/core/network/ws_client.dart` | For real-time AI chat streaming |
+| Secure Storage | `zuralog/lib/core/storage/secure_storage.dart` | FlutterSecureStorage wrapper with auth + integration token helpers |
+| Local DB (Drift) | `zuralog/lib/core/storage/local_db.dart` | SQLite with `path_provider` for sandboxed DB path |
+| Providers | `zuralog/lib/core/di/providers.dart` | Riverpod DI for all core services |
+| Test Harness | `zuralog/lib/features/harness/harness_screen.dart` | Raw testing UI with health check, storage, and DB buttons |
+| App Shell | `zuralog/lib/app.dart` + `main.dart` | ProviderScope + MaterialApp → HarnessScreen |
 
 ## Deviations from Original Plan
 

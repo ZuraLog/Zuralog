@@ -26,11 +26,11 @@ Button on Harness Screen: "Simulate AI Write".
 - **Log Monitor:** We will need to check client logs to see if the background handler fired.
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
-1. **Add sync controls (`life_logger/lib/features/harness/harness_screen.dart`)**
+1. **Add sync controls (`zuralog/lib/features/harness/harness_screen.dart`)**
 
 ```dart
 // In build()

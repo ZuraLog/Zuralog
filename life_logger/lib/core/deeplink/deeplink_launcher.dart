@@ -1,11 +1,11 @@
-/// Life Logger — Outbound Deep Link Launcher.
+/// Zuralog — Outbound Deep Link Launcher.
 ///
 /// Provides static helpers for launching external applications via
 /// custom URL schemes. Supports both specific integrations (CalAI)
 /// and generic deep link execution for AI-driven client actions.
 ///
 /// This is distinct from [DeeplinkHandler], which handles *inbound*
-/// deep links (`lifelogger://`). This class handles *outbound* links
+/// deep links (`zuralog://`). This class handles *outbound* links
 /// to third-party apps.
 library;
 

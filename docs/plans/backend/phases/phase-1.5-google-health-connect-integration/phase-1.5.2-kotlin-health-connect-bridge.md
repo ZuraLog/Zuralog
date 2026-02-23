@@ -27,7 +27,7 @@ Use `androidx.health.connect:connect-client` library. Create a `HealthConnectBri
 - **Aggregates:** Summing steps per day.
 
 ## Files
-- Create: `life_logger/android/app/src/main/kotlin/com/lifelogger/HealthConnectBridge.kt`
+- Create: `zuralog/android/app/src/main/kotlin/com/zuralog/HealthConnectBridge.kt`
 
 ## Steps
 
@@ -39,10 +39,10 @@ dependencies {
 }
 ```
 
-2. **Create Health Connect bridge (`life_logger/android/app/src/main/kotlin/com/lifelogger/HealthConnectBridge.kt`)**
+2. **Create Health Connect bridge (`zuralog/android/app/src/main/kotlin/com/zuralog/HealthConnectBridge.kt`)**
 
 ```kotlin
-package com.lifelogger
+package com.zuralog
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient

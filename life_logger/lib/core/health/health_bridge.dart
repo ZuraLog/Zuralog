@@ -4,7 +4,7 @@
 /// - **iOS:** Swift `HealthKitBridge` via `AppDelegate`.
 /// - **Android:** Kotlin `HealthConnectBridge` via `MainActivity`.
 ///
-/// Both platforms share the same `MethodChannel('com.lifelogger/health')`
+/// Both platforms share the same `MethodChannel('com.zuralog/health')`
 /// and identical method names, so this class works transparently
 /// on either OS.
 ///
@@ -24,7 +24,7 @@ class HealthBridge {
   ///
   /// Accepts an optional [MethodChannel] for testing.
   HealthBridge({MethodChannel? channel})
-    : _channel = channel ?? const MethodChannel('com.lifelogger/health');
+    : _channel = channel ?? const MethodChannel('com.zuralog/health');
 
   final MethodChannel _channel;
 

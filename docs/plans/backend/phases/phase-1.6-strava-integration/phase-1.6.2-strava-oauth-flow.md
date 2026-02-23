@@ -47,7 +47,7 @@ async def strava_authorize():
     """Get Strava OAuth URL for the mobile app to open."""
     params = {
         'client_id': settings.strava_client_id,
-        'redirect_uri': settings.strava_redirect_uri, # e.g., lifelogger://oauth/strava
+        'redirect_uri': settings.strava_redirect_uri, # e.g., zuralog://oauth/strava
         'response_type': 'code',
         'approval_prompt': 'auto',
         'scope': 'read,activity:read,activity:write',

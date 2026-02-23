@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Rate Limit Middleware Tests.
+Zuralog Cloud Brain — Rate Limit Middleware Tests.
 """
 
 from unittest.mock import AsyncMock, MagicMock

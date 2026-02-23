@@ -1,4 +1,4 @@
-# Life Logger — Infrastructure & Deployment Guide
+# Zuralog — Infrastructure & Deployment Guide
 
 **Version:** 1.0
 **Date:** February 19, 2026
@@ -8,7 +8,7 @@
 
 ## 1. Development Environment Strategy
 
-Life Logger uses a **Hybrid Development** approach: application code runs natively on the developer's machine for maximum speed, while infrastructure services (databases, queues) run inside Docker containers for isolation.
+Zuralog uses a **Hybrid Development** approach: application code runs natively on the developer's machine for maximum speed, while infrastructure services (databases, queues) run inside Docker containers for isolation.
 
 ### 1.1 Why Hybrid (Not Full Docker)?
 
@@ -145,7 +145,7 @@ docker compose --profile full up  # Everything in containers
 |------|------|-----------|
 | Google Play Developer | $25 | One-time |
 | Apple Developer Program | $99 | Yearly |
-| Domain Name (e.g., `api.lifelogger.com`) | ~$10-15 | Yearly |
+| Domain Name (e.g., `api.zuralog.com`) | ~$10-15 | Yearly |
 | **Total Upfront** | **~$140** | |
 
 ### 4.2 Infrastructure Services (Scale-Dependent)
@@ -198,7 +198,7 @@ Most services have free tiers that cover the full MVP development and early laun
 
 ## 5. Service Reference Map
 
-Complete mapping of every external service used by Life Logger.
+Complete mapping of every external service used by Zuralog.
 
 ```mermaid
 graph TD

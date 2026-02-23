@@ -26,12 +26,12 @@ Create `ChatRepository` class using Riverpod.
 - **Status Stream:** Exposes connection status (Connected/Connecting/Offline).
 
 ## Files
-- Create: `life_logger/lib/features/chat/data/chat_repository.dart`
-- Modify: `life_logger/lib/features/chat/domain/message.dart` (Model)
+- Create: `zuralog/lib/features/chat/data/chat_repository.dart`
+- Modify: `zuralog/lib/features/chat/domain/message.dart` (Model)
 
 ## Steps
 
-1. **Create chat repository (`life_logger/lib/features/chat/data/chat_repository.dart`)**
+1. **Create chat repository (`zuralog/lib/features/chat/data/chat_repository.dart`)**
 
 ```dart
 import 'dart:async';

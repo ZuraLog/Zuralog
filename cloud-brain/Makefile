@@ -1,5 +1,5 @@
 # =============================================================================
-# Life Logger Cloud Brain — Makefile
+# Zuralog Cloud Brain — Makefile
 # =============================================================================
 # Common development commands.
 #

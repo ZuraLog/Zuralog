@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — User Sync Service.
+Zuralog Cloud Brain — User Sync Service.
 
 Ensures every user authenticated via Supabase Auth has a corresponding
 record in our local `users` table. Uses an upsert pattern for idempotency.

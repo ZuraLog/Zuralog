@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Auth Riverpod Providers.
+/// Zuralog Edge Agent — Auth Riverpod Providers.
 ///
 /// Defines Riverpod providers for the authentication layer:
 /// [authRepositoryProvider] for the repository singleton and
@@ -7,9 +7,9 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:life_logger/core/di/providers.dart';
-import 'package:life_logger/features/auth/data/auth_repository.dart';
-import 'package:life_logger/features/auth/domain/auth_state.dart';
+import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/auth/data/auth_repository.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
 
 /// Provides a singleton [AuthRepository] instance.
 ///

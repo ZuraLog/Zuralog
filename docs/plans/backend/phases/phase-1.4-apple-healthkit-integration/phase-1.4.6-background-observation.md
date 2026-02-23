@@ -14,7 +14,7 @@
 ---
 
 ## What
-Implement `HKObserverQuery` in Swift to detect when HealthKit data changes (e.g., a new workout is logged by an Apple Watch) even when the Life Logger app is not running.
+Implement `HKObserverQuery` in Swift to detect when HealthKit data changes (e.g., a new workout is logged by an Apple Watch) even when the Zuralog app is not running.
 
 ## Why
 This is critical for "Passive Tracking." We want the Cloud Brain to know about your morning run automatically, without you having to open the app and press "Sync".
@@ -27,11 +27,11 @@ We register a long-running query in `HealthKitBridge.swift` and enable "Backgrou
 - **Battery Efficient:** Uses OS-level batching instead of polling.
 
 ## Files
-- Modify: `life_logger/ios/Runner/HealthKitBridge.swift`
+- Modify: `zuralog/ios/Runner/HealthKitBridge.swift`
 
 ## Steps
 
-1. **Add observer query for background updates (`life_logger/ios/Runner/HealthKitBridge.swift`)**
+1. **Add observer query for background updates (`zuralog/ios/Runner/HealthKitBridge.swift`)**
 
 ```swift
 // Add this method to HealthKitBridge class

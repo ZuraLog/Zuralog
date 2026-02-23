@@ -13,10 +13,10 @@
 ---
 
 ## What
-Configure the Flutter app to wake up when a specific URL scheme (`lifelogger://`) is opened on the device.
+Configure the Flutter app to wake up when a specific URL scheme (`zuralog://`) is opened on the device.
 
 ## Why
-When the user finishes logging in on Strava's website, Strava redirects them to `lifelogger://oauth/strava?code=xyz`. The app must intercept this to grab the code.
+When the user finishes logging in on Strava's website, Strava redirects them to `zuralog://oauth/strava?code=xyz`. The app must intercept this to grab the code.
 
 ## How
 Use `app_links` or `uni_links` package (or native config + Flutter's routing). We'll assume native config for stability in the MVP plan documentation, integrated with Flutter's `go_router` or manual handling.
@@ -25,9 +25,9 @@ Use `app_links` or `uni_links` package (or native config + Flutter's routing). W
 - **Seamless UX:** User is bounced from Browser back to App automatically.
 
 ## Files
-- Modify: `life_logger/ios/Runner/Info.plist`
-- Modify: `life_logger/android/app/src/main/AndroidManifest.xml`
-- Create: `life_logger/lib/core/deeplink/deeplink_handler.dart`
+- Modify: `zuralog/ios/Runner/Info.plist`
+- Modify: `zuralog/android/app/src/main/AndroidManifest.xml`
+- Create: `zuralog/lib/core/deeplink/deeplink_handler.dart`
 
 ## Steps
 
@@ -38,10 +38,10 @@ Use `app_links` or `uni_links` package (or native config + Flutter's routing). W
 <array>
     <dict>
         <key>CFBundleURLName</key>
-        <string>com.lifelogger</string>
+        <string>com.zuralog</string>
         <key>CFBundleURLSchemes</key>
         <array>
-            <string>lifelogger</string>
+            <string>zuralog</string>
         </array>
     </dict>
 </array>
@@ -55,17 +55,17 @@ Inside the `<activity>` tag for MainActivity:
     <action android:name="android.intent.action.VIEW" />
     <category android:name="android.intent.category.DEFAULT" />
     <category android:name="android.intent.category.BROWSABLE" />
-    <!-- Accepts lifelogger://oauth/strava -->
-    <data android:scheme="lifelogger" android:host="oauth" />
+    <!-- Accepts zuralog://oauth/strava -->
+    <data android:scheme="zuralog" android:host="oauth" />
 </intent-filter>
 ```
 
-3. **Handle Deep Link in Dart (`life_logger/lib/core/deeplink/deeplink_handler.dart`)**
+3. **Handle Deep Link in Dart (`zuralog/lib/core/deeplink/deeplink_handler.dart`)**
 
 ```dart
 // Basic handler logic (pseudo-code, depends on router choice)
 void handleDeepLink(Uri uri, WidgetRef ref) {
-  if (uri.scheme == 'lifelogger' && uri.host == 'oauth' && uri.path == '/strava') {
+  if (uri.scheme == 'zuralog' && uri.host == 'oauth' && uri.path == '/strava') {
     final code = uri.queryParameters['code'];
     if (code != null) {
         // Call repository to exchange code
@@ -78,5 +78,5 @@ void handleDeepLink(Uri uri, WidgetRef ref) {
 ```
 
 ## Exit Criteria
-- App opens when `lifelogger://oauth/strava?code=123` is typed in Safari/Chrome.
+- App opens when `zuralog://oauth/strava?code=123` is typed in Safari/Chrome.
 - Code is extracted correctly.

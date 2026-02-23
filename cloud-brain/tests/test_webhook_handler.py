@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — RevenueCat Webhook Handler Tests.
+Zuralog Cloud Brain — RevenueCat Webhook Handler Tests.
 
 Tests the /webhooks/revenuecat endpoint for authentication,
 event parsing, and delegation to SubscriptionService.

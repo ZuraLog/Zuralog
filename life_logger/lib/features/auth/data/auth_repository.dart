@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Auth Repository.
+/// Zuralog Edge Agent — Auth Repository.
 ///
 /// Handles communication with the Cloud Brain auth endpoints and
 /// manages local persistence of authentication tokens via
@@ -8,9 +8,9 @@ library;
 
 import 'package:dio/dio.dart';
 
-import 'package:life_logger/core/network/api_client.dart';
-import 'package:life_logger/core/storage/secure_storage.dart';
-import 'package:life_logger/features/auth/domain/auth_state.dart';
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/core/storage/secure_storage.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
 
 /// Repository for authentication operations.
 ///

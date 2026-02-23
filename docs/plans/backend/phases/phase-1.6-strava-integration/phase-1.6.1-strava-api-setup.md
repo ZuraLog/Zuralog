@@ -33,7 +33,7 @@ Register on Strava's developer portal, copy the keys to our `.env` file, and loa
 
 1. **Register app in Strava Developers**
    - Go to https://www.strava.com/settings/api
-   - Create application "Life Logger"
+   - Create application "Zuralog"
    - Category: "Data Importer/Exporter" or "Club"
    - **Authorization Callback Domain:** `localhost` (for simulator testing) or your ngrok/production domain. *Note: Strava requires the redirect URI's domain to match this.*
 
@@ -42,7 +42,7 @@ Register on Strava's developer portal, copy the keys to our `.env` file, and loa
 ```
 STRAVA_CLIENT_ID=your_client_id
 STRAVA_CLIENT_SECRET=your_client_secret
-STRAVA_REDIRECT_URI=lifelogger://oauth/strava
+STRAVA_REDIRECT_URI=zuralog://oauth/strava
 ```
 
 3. **Configure Strava credentials (`cloud-brain/app/config.py`)**
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # ... existing settings ...
     strava_client_id: str = ""
     strava_client_secret: str = ""
-    strava_redirect_uri: str = "lifelogger://oauth/strava"
+    strava_redirect_uri: str = "zuralog://oauth/strava"
 
     class Config:
         env_file = ".env"

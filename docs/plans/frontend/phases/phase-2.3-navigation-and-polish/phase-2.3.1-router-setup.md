@@ -20,14 +20,14 @@ Use `go_router` with a `Riverpod` provider to listen to Auth State changes.
 ## Features
 - **Auth Guard:** Automatically redirects unauthenticated users to `/welcome`.
 - **ShellRoute:** Persist the Bottom Navigation Bar across main tabs (Dashboard, Chat, Integrations, Settings).
-- **Deep Linking:** Handle URLs like `lifelogger://chat?msg_id=123`.
+- **Deep Linking:** Handle URLs like `zuralog://chat?msg_id=123`.
 
 ## Files
-- Modify: `life_logger/lib/core/router/app_router.dart`
+- Modify: `zuralog/lib/core/router/app_router.dart`
 
 ## Steps
 
-1. **Create Router (`life_logger/lib/core/router/app_router.dart`)**
+1. **Create Router (`zuralog/lib/core/router/app_router.dart`)**
 
 ```dart
 final goRouterProvider = Provider<GoRouter>((ref) {

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Analytics Service Facade.
+Zuralog Cloud Brain — Analytics Service Facade.
 
 High-level facade that composes all four analytics modules
 (CorrelationAnalyzer, TrendDetector, GoalTracker, InsightGenerator)

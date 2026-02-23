@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Third-Party Integration Endpoints.
+Zuralog Cloud Brain — Third-Party Integration Endpoints.
 
 Exposes REST endpoints for initiating and completing OAuth 2.0 flows
 with external services. Currently supports Strava (Phase 1.6).
@@ -30,7 +30,7 @@ async def strava_authorize(request: Request) -> dict[str, str]:
     """Return the Strava OAuth authorization URL for the mobile app to open.
 
     The app opens this URL in the system browser. After the user grants
-    access, Strava redirects to ``lifelogger://oauth/strava?code=XXX``.
+    access, Strava redirects to ``zuralog://oauth/strava?code=XXX``.
     The app intercepts the deep link and calls ``/strava/exchange``.
 
     Returns:

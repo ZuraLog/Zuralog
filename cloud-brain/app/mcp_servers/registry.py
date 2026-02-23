@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP Server Registry.
+Zuralog Cloud Brain — MCP Server Registry.
 
 Central registry managing the lifecycle and discovery of all MCP
 servers. The ``MCPClient`` queries this registry to route tool calls

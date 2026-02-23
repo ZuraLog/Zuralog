@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Rate Limiter Service Tests.
+Zuralog Cloud Brain — Rate Limiter Service Tests.
 
 Tests the Redis-backed per-user rate limiting with tiered limits.
 Uses a mocked Redis client.

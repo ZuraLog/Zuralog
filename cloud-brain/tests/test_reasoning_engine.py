@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Reasoning Engine Tests.
+Zuralog Cloud Brain — Reasoning Engine Tests.
 
 Tests for cross-app analytical helpers that synthesize insights
 from multiple data sources.

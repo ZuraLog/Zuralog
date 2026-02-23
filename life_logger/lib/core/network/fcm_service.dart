@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Firebase Cloud Messaging Service.
+/// Zuralog Edge Agent — Firebase Cloud Messaging Service.
 ///
 /// Handles FCM initialization, permission requests, token retrieval,
 /// and background/foreground message handling. Scaffolded for Phase 1.9.7 —
@@ -10,7 +10,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import 'package:life_logger/core/network/api_client.dart';
+import 'package:zuralog/core/network/api_client.dart';
 
 /// Handles top-level background messages from FCM.
 ///
@@ -52,7 +52,7 @@ Future<void> _handleBackgroundHealthWrite(Map<String, dynamic> data) async {
 
     // In a background isolate, full Riverpod DI is not available.
     // Use a direct MethodChannel call for reliability.
-    const channel = MethodChannel('com.lifelogger/health');
+    const channel = MethodChannel('com.zuralog/health');
 
     await channel.invokeMethod('backgroundWrite', {
       'data_type': dataType,

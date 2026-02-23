@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Per-User Rate Limiter Service.
+Zuralog Cloud Brain — Per-User Rate Limiter Service.
 
 Redis-backed fixed-window counter for enforcing subscription-tier
 rate limits on LLM endpoints. Works alongside the existing slowapi

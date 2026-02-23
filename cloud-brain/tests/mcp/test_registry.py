@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP Server Registry Tests.
+Zuralog Cloud Brain — MCP Server Registry Tests.
 
 Verifies registration, duplicate detection, tool routing, and
 aggregated tool discovery across multiple mock servers.

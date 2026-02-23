@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Sync Scheduler Tests.
+Zuralog Cloud Brain — Sync Scheduler Tests.
 
 Tests periodic sync tasks that pull data from cloud integrations.
 All external calls are mocked.

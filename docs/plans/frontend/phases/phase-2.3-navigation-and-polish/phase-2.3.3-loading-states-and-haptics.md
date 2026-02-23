@@ -25,8 +25,8 @@ Use `shimmer` package and `HapticFeedback` class.
     - `Heavy`: Error or Success.
 
 ## Files
-- Create: `life_logger/lib/shared/widgets/loaders/skeleton_loader.dart`
-- Modify: `life_logger/lib/features/dashboard/presentation/dashboard_screen.dart`
+- Create: `zuralog/lib/shared/widgets/loaders/skeleton_loader.dart`
+- Modify: `zuralog/lib/features/dashboard/presentation/dashboard_screen.dart`
 
 ## Steps
 

@@ -1,13 +1,13 @@
-/// Life Logger Android — MainActivity with Health Connect platform channel.
+/// Zuralog Android — MainActivity with Health Connect platform channel.
 ///
-/// Routes Flutter `MethodChannel("com.lifelogger/health")` calls to the
+/// Routes Flutter `MethodChannel("com.zuralog/health")` calls to the
 /// native `HealthConnectBridge`. Uses `lifecycleScope` with
 /// `Dispatchers.IO` for all suspend bridge calls to avoid blocking
 /// the UI thread.
 ///
 /// The method names match the iOS AppDelegate handler exactly so that
 /// `HealthBridge.dart` works identically on both platforms.
-package com.lifelogger.life_logger
+package com.zuralog.zuralog
 
 import android.os.Bundle
 import android.util.Log
@@ -25,7 +25,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         /// Channel name shared with `HealthBridge.dart`.
-        private const val HEALTH_CHANNEL = "com.lifelogger/health"
+        private const val HEALTH_CHANNEL = "com.zuralog/health"
         private const val TAG = "MainActivity"
     }
 

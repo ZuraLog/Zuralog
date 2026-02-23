@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Sync Status Tracking Tests.
+Zuralog Cloud Brain — Sync Status Tracking Tests.
 
 Tests that the Integration model has the required sync status fields
 and that the SyncStatus enum values are valid.

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Health Data Models.
+Zuralog Cloud Brain — Health Data Models.
 
 SQLAlchemy ORM models for normalized health data produced by the
 DataNormalizer (Phase 1.10). These models serve as the persistent

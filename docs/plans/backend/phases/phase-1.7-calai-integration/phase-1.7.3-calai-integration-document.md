@@ -18,7 +18,7 @@ Developers might look for a "CalAI API Client" and be confused. This doc explain
 Create `calai-integration.md` in migrations folder.
 
 ## Features
-- **Architecture Diagram:** Visualizing the Life Logger -> Cal AI (Deep Link) -> OS Health Store -> Life Logger flow.
+- **Architecture Diagram:** Visualizing the Zuralog -> Cal AI (Deep Link) -> OS Health Store -> Zuralog flow.
 
 ## Files
 - Create: `docs/plans/backend/integrations/calai-integration.md`
@@ -36,11 +36,11 @@ Create `calai-integration.md` in migrations folder.
 We integrate with CalAI using a "Zero-Friction" approach that relies on OS-level data sharing rather than direct API-to-API communication.
 
 ## Flow
-1. **User** clicks "Log Food" in Life Logger.
+1. **User** clicks "Log Food" in Zuralog.
 2. **App** deep links to CalAI (`calai://`).
 3. **User** takes photo in CalAI.
 4. **CalAI** processes photo and writes Calories/Macros to Apple Health / Health Connect.
-5. **Life Logger** background sync (or manual refresh) reads new data from Apple Health / Health Connect.
+5. **Zuralog** background sync (or manual refresh) reads new data from Apple Health / Health Connect.
 
 ## Advantages
 - No API keys or OAuth needed for CalAI.
@@ -49,7 +49,7 @@ We integrate with CalAI using a "Zero-Friction" approach that relies on OS-level
 
 ## Requirements
 - User must grant "Write" permissions to CalAI.
-- User must grant "Read" permissions to Life Logger.
+- User must grant "Read" permissions to Zuralog.
 ```
 
 ## Exit Criteria

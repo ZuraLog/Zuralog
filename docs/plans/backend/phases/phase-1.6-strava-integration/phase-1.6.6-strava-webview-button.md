@@ -25,11 +25,11 @@ Add a button that calls `OAuthRepository.getStravaAuthUrl()` and then `launchUrl
 - **Launch Mode:** Uses `externalApplication` (System Browser) to ensure cookies/login state persists and deep linking works reliably.
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
-1. **Add Strava buttons to harness (`life_logger/lib/features/harness/harness_screen.dart`)**
+1. **Add Strava buttons to harness (`zuralog/lib/features/harness/harness_screen.dart`)**
 
 ```dart
 // Import url_launcher

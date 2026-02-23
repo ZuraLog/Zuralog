@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Chat Endpoint Tests.
+Zuralog Cloud Brain — Chat Endpoint Tests.
 
 Tests for the WebSocket /ws/chat endpoint and REST /chat/history endpoint.
 Uses FastAPI dependency_overrides to inject mocked services and

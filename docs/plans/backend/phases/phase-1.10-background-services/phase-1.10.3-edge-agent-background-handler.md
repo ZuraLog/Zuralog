@@ -26,12 +26,12 @@ Flutter's `FirebaseMessaging.onBackgroundMessage` handler. This runs in a separa
 - **Silent Failure:** If permission is missing, log locally; don't crash or show UI.
 
 ## Files
-- Modify: `life_logger/lib/core/network/fcm_service.dart`
-- Modify: `life_logger/lib/main.dart` (to register bg handler)
+- Modify: `zuralog/lib/core/network/fcm_service.dart`
+- Modify: `zuralog/lib/main.dart` (to register bg handler)
 
 ## Steps
 
-1. **Handle background messages (`life_logger/lib/core/network/fcm_service.dart`)**
+1. **Handle background messages (`zuralog/lib/core/network/fcm_service.dart`)**
 
 ```dart
 // Must be a top-level function
@@ -59,7 +59,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 ```
 
-2. **Register handler (`life_logger/lib/main.dart`)**
+2. **Register handler (`zuralog/lib/main.dart`)**
 
 ```dart
 void main() {

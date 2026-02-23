@@ -26,14 +26,14 @@ Create a `HealthSyncWorker` Kotlin class that reads recent data and sends it to 
 - **Battery Friendly:** Respects Android's doze mode and job scheduling optimization.
 
 ## Files
-- Create: `life_logger/android/app/src/main/kotlin/com/lifelogger/HealthSyncWorker.kt`
+- Create: `zuralog/android/app/src/main/kotlin/com/zuralog/HealthSyncWorker.kt`
 
 ## Steps
 
-1. **Create WorkManager worker (`life_logger/android/app/src/main/kotlin/com/lifelogger/HealthSyncWorker.kt`)**
+1. **Create WorkManager worker (`zuralog/android/app/src/main/kotlin/com/zuralog/HealthSyncWorker.kt`)**
 
 ```kotlin
-package com.lifelogger
+package com.zuralog
 
 import android.content.Context
 import androidx.work.*

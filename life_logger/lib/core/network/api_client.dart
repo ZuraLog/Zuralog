@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — REST API Client.
+/// Zuralog Edge Agent — REST API Client.
 ///
 /// A centralized HTTP client built on Dio with automatic authentication
 /// token injection and silent token refresh via interceptors. Provides
@@ -27,7 +27,7 @@ class ApiClient {
   ///
   /// [baseUrl] defaults to the Android emulator localhost alias.
   /// Override for iOS simulator (`http://localhost:8001`) or
-  /// production (`https://api.lifelogger.com`).
+  /// production (`https://api.zuralog.com`).
   ///
   /// [dio] and [storage] can be injected for testing.
   ApiClient({

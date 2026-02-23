@@ -29,13 +29,13 @@ We will use:
 - **Timeouts & Error Handling:** Graceful failure management.
 
 ## Files
-- Create: `life_logger/lib/core/network/api_client.dart`
-- Create: `life_logger/lib/core/network/ws_client.dart`
-- Create: `life_logger/lib/core/network/fcm_service.dart`
+- Create: `zuralog/lib/core/network/api_client.dart`
+- Create: `zuralog/lib/core/network/ws_client.dart`
+- Create: `zuralog/lib/core/network/fcm_service.dart`
 
 ## Steps
 
-1. **Create API client in `life_logger/lib/core/network/api_client.dart`**
+1. **Create API client in `zuralog/lib/core/network/api_client.dart`**
 
 ```dart
 import 'package:dio/dio.dart';
@@ -66,7 +66,7 @@ class ApiClient {
 }
 ```
 
-2. **Create WebSocket client in `life_logger/lib/core/network/ws_client.dart`**
+2. **Create WebSocket client in `zuralog/lib/core/network/ws_client.dart`**
 
 ```dart
 import 'dart:convert';
@@ -99,7 +99,7 @@ class WsClient {
 3. **Verify imports work**
 
 ```bash
-cd life_logger
+cd zuralog
 flutter analyze
 ```
 

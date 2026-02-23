@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Subscription Riverpod Providers.
+/// Zuralog Edge Agent — Subscription Riverpod Providers.
 ///
 /// Exposes subscription state and repository as Riverpod providers
 /// for consumption by UI widgets and other features.
@@ -8,11 +8,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
-import 'package:life_logger/core/di/providers.dart';
-import 'package:life_logger/features/auth/domain/auth_providers.dart';
-import 'package:life_logger/features/auth/domain/auth_state.dart';
-import 'package:life_logger/features/subscription/data/subscription_repository.dart';
-import 'package:life_logger/features/subscription/domain/subscription_state.dart';
+import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/subscription/data/subscription_repository.dart';
+import 'package:zuralog/features/subscription/domain/subscription_state.dart';
 
 /// Provides the [SubscriptionRepository] singleton.
 final subscriptionRepositoryProvider = Provider<SubscriptionRepository>((ref) {

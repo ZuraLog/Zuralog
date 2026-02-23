@@ -31,9 +31,9 @@ Implemented end-to-end Strava OAuth 2.0 integration across the full Hybrid Hub s
 - **`lib/core/di/providers.dart`** — Added `oauthRepositoryProvider`.
 - **`lib/core/network/api_client.dart`** — Extended `post()` with optional `queryParameters` parameter.
 - **`lib/features/auth/data/auth_repository.dart`** — `_saveTokens()` now also persists `user_id` to `SecureStorage` (needed by `DeeplinkHandler`); `_clearTokens()` deletes it on logout.
-- **`lib/core/deeplink/deeplink_handler.dart`** — Static `DeeplinkHandler` class subscribes to `AppLinks().uriLinkStream`, routes `lifelogger://oauth/strava?code=XXX` to `OAuthRepository.handleStravaCallback()`.
-- **`ios/Runner/Info.plist`** — Registered `CFBundleURLSchemes: [lifelogger]`.
-- **`android/app/src/main/AndroidManifest.xml`** — Added `intent-filter` for `scheme=lifelogger host=oauth`.
+- **`lib/core/deeplink/deeplink_handler.dart`** — Static `DeeplinkHandler` class subscribes to `AppLinks().uriLinkStream`, routes `zuralog://oauth/strava?code=XXX` to `OAuthRepository.handleStravaCallback()`.
+- **`ios/Runner/Info.plist`** — Registered `CFBundleURLSchemes: [zuralog]`.
+- **`android/app/src/main/AndroidManifest.xml`** — Added `intent-filter` for `scheme=zuralog host=oauth`.
 - **`lib/features/harness/harness_screen.dart`** — New STRAVA section with "Connect Strava" and "Check Strava Status" buttons; `DeeplinkHandler.init()` called in `initState`, `dispose()` in `dispose()`.
 
 ---

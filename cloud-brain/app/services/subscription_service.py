@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Subscription Service.
+Zuralog Cloud Brain — Subscription Service.
 
 Business logic for processing RevenueCat webhook events and
 updating user subscription status in the database.

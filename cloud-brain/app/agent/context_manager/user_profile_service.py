@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — User Profile Service.
+Zuralog Cloud Brain — User Profile Service.
 
 Retrieves user profile data from the local database for use by the
 Orchestrator. Reads from the ``users`` table created in Phase 1.1

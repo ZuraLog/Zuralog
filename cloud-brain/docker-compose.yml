@@ -1,5 +1,5 @@
 # =============================================================================
-# Life Logger Cloud Brain — Docker Compose (Local Development)
+# Zuralog Cloud Brain — Docker Compose (Local Development)
 # =============================================================================
 # Provides PostgreSQL and Redis for local development.
 # Usage: docker compose up -d
@@ -8,24 +8,24 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: lifelogger-postgres
+    container_name: zuralog-postgres
     environment:
-      POSTGRES_USER: lifelogger
-      POSTGRES_PASSWORD: lifelogger
-      POSTGRES_DB: lifelogger
+      POSTGRES_USER: zuralog
+      POSTGRES_PASSWORD: zuralog
+      POSTGRES_DB: zuralog
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lifelogger"]
+      test: ["CMD-SHELL", "pg_isready -U zuralog"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: lifelogger-redis
+    container_name: zuralog-redis
     ports:
       - "6379:6379"
     volumes:
@@ -38,7 +38,7 @@ services:
 
   celery-worker:
     build: .
-    container_name: lifelogger-celery-worker
+    container_name: zuralog-celery-worker
     command: celery -A app.worker worker --loglevel=info --concurrency=2
     env_file: .env
     depends_on:
@@ -51,7 +51,7 @@ services:
 
   celery-beat:
     build: .
-    container_name: lifelogger-celery-beat
+    container_name: zuralog-celery-beat
     command: celery -A app.worker beat --loglevel=info
     env_file: .env
     depends_on:

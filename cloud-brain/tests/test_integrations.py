@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Integrations Endpoint Tests.
+Zuralog Cloud Brain — Integrations Endpoint Tests.
 
 Tests for the /api/v1/integrations/* endpoints.
 """

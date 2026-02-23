@@ -26,8 +26,8 @@ We will use standard Flutter Material widgets (`ElevatedButton`, `TextField`) wi
 - **Zero-Friction Testing:** No need to navigate complex UI flows to test a specific API.
 
 ## Files
-- Modify: `life_logger/lib/app.dart`
-- Create: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/app.dart`
+- Create: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
@@ -105,8 +105,8 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen> {
 ```dart
 import 'features/harness/harness_screen.dart';
 
-class LifeLoggerApp extends StatelessWidget {
-  const LifeLoggerApp({super.key});
+class ZuralogApp extends StatelessWidget {
+  const ZuralogApp({super.key});
 
   @override
   Widget build(BuildContext context) {

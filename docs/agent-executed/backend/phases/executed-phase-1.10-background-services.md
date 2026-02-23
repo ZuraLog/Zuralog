@@ -38,7 +38,7 @@ Implemented the full Background Services & Sync Engine spanning both the Cloud B
 
 ### Edge Agent (Flutter)
 
-- **FCM Background Handler** — Implemented `firebaseMessagingBackgroundHandler` body (was empty scaffold from Phase 1.9). Handles `write_health` actions via direct `MethodChannel('com.lifelogger/health')` in the headless isolate. Granular exception handling: `PlatformException`, `MissingPluginException`.
+- **FCM Background Handler** — Implemented `firebaseMessagingBackgroundHandler` body (was empty scaffold from Phase 1.9). Handles `write_health` actions via direct `MethodChannel('com.zuralog/health')` in the headless isolate. Granular exception handling: `PlatformException`, `MissingPluginException`.
 
 - **Firebase Initialization** — `main.dart` now calls `Firebase.initializeApp()` and registers the background handler before `runApp()`. Wrapped in try-catch for environments without Firebase config.
 
@@ -94,7 +94,7 @@ Implemented the full Background Services & Sync Engine spanning both the Cloud B
 | `cloud-brain/tests/test_sync_status.py` | 4 sync status tests |
 | `cloud-brain/tests/test_device_write_service.py` | 4 write service tests |
 | `cloud-brain/tests/test_sync_scheduler.py` | 4 sync scheduler tests |
-| `life_logger/test/core/network/fcm_service_test.dart` | FCM handler compilation test |
+| `zuralog/test/core/network/fcm_service_test.dart` | FCM handler compilation test |
 
 ## Files Modified (9)
 
@@ -106,9 +106,9 @@ Implemented the full Background Services & Sync Engine spanning both the Cloud B
 | `cloud-brain/app/main.py` | Registered devices + dev routers, init PushService + DeviceWriteService |
 | `cloud-brain/pyproject.toml` | Added celery[redis] dependency |
 | `cloud-brain/docker-compose.yml` | Added celery-worker + celery-beat services |
-| `life_logger/lib/core/network/fcm_service.dart` | Implemented background handler body |
-| `life_logger/lib/main.dart` | Firebase init + FCM handler registration |
-| `life_logger/lib/features/harness/harness_screen.dart` | Added Background Sync section |
+| `zuralog/lib/core/network/fcm_service.dart` | Implemented background handler body |
+| `zuralog/lib/main.dart` | Firebase init + FCM handler registration |
+| `zuralog/lib/features/harness/harness_screen.dart` | Added Background Sync section |
 
 ---
 

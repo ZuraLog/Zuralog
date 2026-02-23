@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Goal Tracker.
+Zuralog Cloud Brain — Goal Tracker.
 
 Compares current metric values against user-defined targets and calculates
 streaks of consecutive days meeting a goal. Used to power progress

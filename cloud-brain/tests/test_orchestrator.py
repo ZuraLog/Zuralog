@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Orchestrator Tests.
+Zuralog Cloud Brain — Orchestrator Tests.
 
 Tests the ReAct-style tool execution loop in the Orchestrator.
 All LLM and MCP calls are mocked. The Orchestrator now returns

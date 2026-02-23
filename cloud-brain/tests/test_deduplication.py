@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Deduplication / Source-of-Truth Tests.
+Zuralog Cloud Brain — Deduplication / Source-of-Truth Tests.
 
 Tests overlap detection and priority-based conflict resolution
 for activities recorded by multiple sources.

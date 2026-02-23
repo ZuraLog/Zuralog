@@ -1,4 +1,4 @@
-# Life Logger — App Launch Checklist
+# Zuralog — App Launch Checklist
 
 **Document Version:** 1.0  
 **Date:** February 18, 2026  
@@ -8,15 +8,15 @@
 
 ## Introduction
 
-This document serves as the comprehensive launch checklist for the Life Logger mobile application. It covers all critical preparation work required before launching on the Apple App Store and Google Play Store, including app store optimization, website preparation, search engine optimization, marketing activities, and legal compliance.
+This document serves as the comprehensive launch checklist for the Zuralog mobile application. It covers all critical preparation work required before launching on the Apple App Store and Google Play Store, including app store optimization, website preparation, search engine optimization, marketing activities, and legal compliance.
 
-For a health-focused AI assistant like Life Logger—where users entrust sensitive personal health data—there are additional considerations beyond typical app launches. This checklist accounts for the unique requirements of health applications, including HealthKit and Health Connect permissions, HIPAA-compliant data handling, and the trust factors that influence user adoption in the health technology space.
+For a health-focused AI assistant like Zuralog—where users entrust sensitive personal health data—there are additional considerations beyond typical app launches. This checklist accounts for the unique requirements of health applications, including HealthKit and Health Connect permissions, HIPAA-compliant data handling, and the trust factors that influence user adoption in the health technology space.
 
 ---
 
 ## 1. App Store Stuff
 
-The App Store presence is your first impression on potential users. For Life Logger, the challenge is communicating complex AI capabilities in a way that feels accessible and trustworthy. Health apps face higher scrutiny from reviewers, so precision in metadata and compliance documentation is essential.
+The App Store presence is your first impression on potential users. For Zuralog, the challenge is communicating complex AI capabilities in a way that feels accessible and trustworthy. Health apps face higher scrutiny from reviewers, so precision in metadata and compliance documentation is essential.
 
 ### 1.1 App Title with Keywords
 
@@ -24,10 +24,10 @@ The App Store presence is your first impression on potential users. For Life Log
 **Priority:** Critical
 
 **Description:**  
-The app title is the most prominent element in search results and should balance brand identity with discoverable keywords. Apple and Google both index app titles, subtitles, and descriptions for search. For Life Logger, the title should clearly communicate the core value proposition while including relevant keywords that potential users would search for.
+The app title is the most prominent element in search results and should balance brand identity with discoverable keywords. Apple and Google both index app titles, subtitles, and descriptions for search. For Zuralog, the title should clearly communicate the core value proposition while including relevant keywords that potential users would search for.
 
-**Life Logger-Specific Guidance:**  
-The title "Life Logger" is distinctive and memorable, but consider whether a subtitle or keyword variant might improve discoverability. Research keywords in the health, fitness, AI, and personal assistant categories. Terms like "AI Health Coach," "Fitness Tracker," "Health Assistant," and "Activity Tracker" are competitive but relevant. The title field allows up to 30 characters on the App Store, so there is room for "Life Logger" plus a brief descriptor if needed.
+**Zuralog-Specific Guidance:**  
+The title "Zuralog" is distinctive and memorable, but consider whether a subtitle or keyword variant might improve discoverability. Research keywords in the health, fitness, AI, and personal assistant categories. Terms like "AI Health Coach," "Fitness Tracker," "Health Assistant," and "Activity Tracker" are competitive but relevant. The title field allows up to 30 characters on the App Store, so there is room for "Zuralog" plus a brief descriptor if needed.
 
 **Implementation Notes:**  
 - Run keyword research using App Store optimization tools
@@ -43,8 +43,8 @@ The title "Life Logger" is distinctive and memorable, but consider whether a sub
 **Description:**  
 The subtitle appears directly below the app title in search results and is another key indexing opportunity. Apple allows 30 characters; Google Play allows 50 characters. This is prime real estate for communicating your value proposition and including additional keywords that did not fit in the title.
 
-**Life Logger-Specific Guidance:**  
-For Life Logger, an effective subtitle might communicate the AI-powered nature of the app while hinting at the integration capabilities. Examples to consider:
+**Zuralog-Specific Guidance:**  
+For Zuralog, an effective subtitle might communicate the AI-powered nature of the app while hinting at the integration capabilities. Examples to consider:
 
 - "AI Health Assistant" — Direct and clear
 - "Your Fitness Command Center" — Value-focused
@@ -67,22 +67,22 @@ The subtitle should complement the title rather than repeat it. If the title emp
 **Description:**  
 The app description is your opportunity to tell your complete story. The first two lines are critical—they appear in search results before the "more" button is clicked. Apple allows 4,000 characters; Google Play allows 4,000 characters. The description should be scannable with clear formatting, bullet points, and emphasis on benefits.
 
-**Life Logger-Specific Guidance:**  
-The first two lines must hook the user immediately. For Life Logger, the hook should address a pain point that users feel—fragmentation across health apps—and offer the solution. Something like:
+**Zuralog-Specific Guidance:**  
+The first two lines must hook the user immediately. For Zuralog, the hook should address a pain point that users feel—fragmentation across health apps—and offer the solution. Something like:
 
-"Stop juggling multiple health apps. Life Logger connects your fitness apps and uses AI to give you personalized health insights and coaching."
+"Stop juggling multiple health apps. Zuralog connects your fitness apps and uses AI to give you personalized health insights and coaching."
 
 This immediately communicates the problem (fragmentation) and the solution (AI-powered integration).
 
 The body of the description should follow a structured format:
 
 1. **Problem Statement** (first paragraph): Acknowledge the fragmentation problem users face
-2. **Solution Overview** (2-3 sentences): Explain what Life Logger does
+2. **Solution Overview** (2-3 sentences): Explain what Zuralog does
 3. **Key Features** (bulleted list): Highlight the most compelling capabilities
 4. **Social Proof** (if available): Mention user testimonials, press mentions, or achievements
 5. **Trust Indicators** (closing): Reference privacy, security, and support
 
-**Feature Highlights to Emphasize for Life Logger:**
+**Feature Highlights to Emphasize for Zuralog:**
 
 - Connects with Apple Health, Google Health Connect, Strava, Fitbit, and Oura
 - AI-powered conversational interface for logging and insights
@@ -105,7 +105,7 @@ The body of the description should follow a structured format:
 **Description:**  
 Keywords determine your discoverability in app store search. Apple uses a dedicated 100-character keyword field (comma or pipeline separated, no spaces). Google Play uses the title, short description, and long description collectively for indexing. Thorough keyword research is essential for organic discovery.
 
-**Life Logger-Specific Guidance:**  
+**Zuralog-Specific Guidance:**  
 For a health AI assistant, keyword research should cover multiple intent categories:
 
 **Category 1: Health & Fitness**
@@ -144,8 +144,8 @@ For a health AI assistant, keyword research should cover multiple intent categor
 **Description:**  
 Screenshots are your visual advertisement. Users browse screenshot galleries to understand the app experience. Apple allows up to 10 screenshots per locale; Google Play allows up to 8. Screenshots should showcase real functionality, emphasize benefits over features, and guide users through the value journey.
 
-**Life Logger-Specific Guidance:**  
-For Life Logger, screenshots should tell a visual story that communicates the app's value proposition. The golden rule: show benefits, not features. Instead of showing "Chat Interface" (feature), show "Ask your health coach anything" (benefit).
+**Zuralog-Specific Guidance:**  
+For Zuralog, screenshots should tell a visual story that communicates the app's value proposition. The golden rule: show benefits, not features. Instead of showing "Chat Interface" (feature), show "Ask your health coach anything" (benefit).
 
 **Recommended Screenshot Sequence:**
 
@@ -200,8 +200,8 @@ For Life Logger, screenshots should tell a visual story that communicates the ap
 **Description:**  
 The app preview video plays automatically in the store listing (muted by default on Apple, configurable on Google). Videos are optional but highly recommended—they increase conversion rates significantly. Apple allows 30 seconds; Google Play allows 30 seconds (or up to 2 minutes for feature graphics).
 
-**Life Logger-Specific Guidance:**  
-The video should demonstrate the core value proposition in the first 3 seconds. For Life Logger, the video should show the AI conversation as the primary interaction, then quickly reveal the integration ecosystem.
+**Zuralog-Specific Guidance:**  
+The video should demonstrate the core value proposition in the first 3 seconds. For Zuralog, the video should show the AI conversation as the primary interaction, then quickly reveal the integration ecosystem.
 
 **Recommended Video Structure (30 seconds):**
 
@@ -209,7 +209,7 @@ The video should demonstrate the core value proposition in the first 3 seconds. 
 - **3-10 seconds:** AI Response — Screen shows AI providing sleep analysis from Oura data
 - **10-18 seconds:** Cross-App — User asks "Did my running affect my sleep?" — AI connects Strava activity with sleep data
 - **18-24 seconds:** Action — User says "Log my lunch" — AI logs to Health Connect
-- **24-30 seconds:** Close — "Life Logger — Your AI Health Command Center" with download CTA
+- **24-30 seconds:** Close — "Zuralog — Your AI Health Command Center" with download CTA
 
 **Production Tips:**  
 - Use screen recordings from actual app (not simulators for authenticity)
@@ -232,8 +232,8 @@ The video should demonstrate the core value proposition in the first 3 seconds. 
 **Description:**  
 Both Apple and Google require a publicly accessible privacy policy URL in the app store listing. For health applications, the privacy policy is especially critical—it builds trust and is required for compliance with various regulations. The policy must be hosted on a domain you control.
 
-**Life Logger-Specific Guidance:**  
-Life Logger handles sensitive health data, so the privacy policy must be comprehensive and transparent. The policy should address:
+**Zuralog-Specific Guidance:**  
+Zuralog handles sensitive health data, so the privacy policy must be comprehensive and transparent. The policy should address:
 
 **Data Collection Section:**
 - What data is collected (health metrics, app usage, device information)
@@ -262,7 +262,7 @@ Life Logger handles sensitive health data, so the privacy policy must be compreh
 - Strava, Fitbit, Oura OAuth scopes and data usage
 
 **Implementation Notes:**  
-- Host on your primary domain (e.g., lifelogger.app/privacy)
+- Host on your primary domain (e.g., zuralog.app/privacy)
 - Use HTTPS with valid SSL certificate
 - Link prominently in-app (Settings → Privacy)
 - Update policy when adding new features or integrations
@@ -277,7 +277,7 @@ Life Logger handles sensitive health data, so the privacy policy must be compreh
 **Description:**  
 A support URL is required for both app stores. This is where users go when they have questions or encounter problems. The support channel significantly impacts app store ratings—users who cannot get help often leave negative reviews.
 
-**Life Logger-Specific Guidance:**  
+**Zuralog-Specific Guidance:**  
 For a health app, support is particularly important because users may have questions about data sync, privacy, or integration issues. Consider these support options:
 
 **Minimum Viable Support:**
@@ -298,7 +298,7 @@ For a health app, support is particularly important because users may have quest
 - Privacy and data handling FAQs
 
 **Implementation Notes:**  
-- Use a custom URL (e.g., support.lifelogger.app or lifelogger.app/support)
+- Use a custom URL (e.g., support.zuralog.app or zuralog.app/support)
 - Ensure support page is mobile-responsive
 - Include your support email or contact form
 - Track support tickets to identify product issues
@@ -312,8 +312,8 @@ For a health app, support is particularly important because users may have quest
 **Description:**  
 Choosing the right category helps users find your app and affects competitive positioning. Apple allows one primary category and one secondary category. Google Play allows one primary category. Categories also affect algorithmic ranking and featured placement eligibility.
 
-**Life Logger-Specific Guidance:**  
-For Life Logger, the category selection requires balancing multiple relevant options:
+**Zuralog-Specific Guidance:**  
+For Zuralog, the category selection requires balancing multiple relevant options:
 
 **Primary Category Options:**
 
@@ -326,7 +326,7 @@ For Life Logger, the category selection requires balancing multiple relevant opt
 - **Secondary (iOS only):** Utilities or Lifestyle
 
 **Alternative Strategy:**  
-If Life Logger's AI capabilities are the differentiator, consider emphasizing the "productivity" or "utilities" aspects. However, the Health & Fitness category is most appropriate for the core value proposition.
+If Zuralog's AI capabilities are the differentiator, consider emphasizing the "productivity" or "utilities" aspects. However, the Health & Fitness category is most appropriate for the core value proposition.
 
 **Subcategories (if available):**
 - iOS: Health & Fitness → Health, Fitness, Medical (limited availability)
@@ -346,8 +346,8 @@ If Life Logger's AI capabilities are the differentiator, consider emphasizing th
 **Description:**  
 Age rating is required for both stores and affects content visibility, parental controls, and regulatory compliance. Apple uses a questionnaire; Google Play allows self-declaration. The rating must accurately reflect content to avoid removal or rating changes.
 
-**Life Logger-Specific Guidance:**  
-For Life Logger, as a health and fitness application:
+**Zuralog-Specific Guidance:**  
+For Zuralog, as a health and fitness application:
 
 **Apple App Store:**
 - Apple provides a questionnaire about content
@@ -377,7 +377,7 @@ For Life Logger, as a health and fitness application:
 **Priority:** Critical
 
 **Description:**  
-Life Logger requires HealthKit integration, which requires additional metadata in App Store Connect. Apple requires specific descriptions of what health data types you read and write, plus a marketing or usage description for the app's product page.
+Zuralog requires HealthKit integration, which requires additional metadata in App Store Connect. Apple requires specific descriptions of what health data types you read and write, plus a marketing or usage description for the app's product page.
 
 **Required Information:**
 - List of all HealthKit data types accessed (read and write)
@@ -385,7 +385,7 @@ Life Logger requires HealthKit integration, which requires additional metadata i
 - Marketing text describing HealthKit usage for the app store listing
 - Demonstration that the app provides meaningful health benefits
 
-**Life Logger HealthKit Data Types:**
+**Zuralog HealthKit Data Types:**
 
 *Read:*
 - HKQuantityTypeIdentifier.stepCount
@@ -444,12 +444,12 @@ Google Health Connect (now simply "Health Connect") requires declaration of all 
 **Priority:** High
 
 **Description:**  
-Life Logger uses a freemium model with Pro subscriptions. RevenueCat handles subscription management across Apple App Store and Google Play Store. This integration must be complete before launch, including all products configured and tested.
+Zuralog uses a freemium model with Pro subscriptions. RevenueCat handles subscription management across Apple App Store and Google Play Store. This integration must be complete before launch, including all products configured and tested.
 
 **Required Setup:**
 
 1. **RevenueCat Dashboard:**
-   - Create project for Life Logger
+   - Create project for Zuralog
    - Configure Apple App Store connection
    - Configure Google Play Store connection
    - Set up products (Free, Pro monthly, Pro annual)
@@ -489,9 +489,9 @@ The website serves as the primary owned media channel and often determines wheth
 **Priority:** Critical
 
 **Description:**  
-The landing page is your digital storefront. It must clearly communicate what Life Logger does, why it matters, and prompt visitors to download. The page should be optimized for conversion and work seamlessly on mobile devices.
+The landing page is your digital storefront. It must clearly communicate what Zuralog does, why it matters, and prompt visitors to download. The page should be optimized for conversion and work seamlessly on mobile devices.
 
-**Life Logger-Specific Guidance:**  
+**Zuralog-Specific Guidance:**  
 The landing page should follow a clear hierarchy:
 
 1. **Hero Section:**
@@ -502,7 +502,7 @@ The landing page should follow a clear hierarchy:
 
 2. **Problem/Solution Section:**
    - Acknowledge the fragmentation problem users face
-   - Introduce Life Logger as the solution
+   - Introduce Zuralog as the solution
    - Visual showing app ecosystem (connected apps)
 
 3. **Features Section:**
@@ -557,20 +557,20 @@ Open Graph tags control how your website appears when shared on social media, me
 **Required Meta Tags:**
 
 ```
-<meta property="og:title" content="Life Logger - Your AI Health Command Center">
+<meta property="og:title" content="Zuralog - Your AI Health Command Center">
 <meta property="og:description" content="Connect your fitness apps and get AI-powered health insights. The smart assistant that answers 'Why am I not losing weight?'">
-<meta property="og:image" content="https://lifelogger.app/images/og-image.png">
-<meta property="og:url" content="https://lifelogger.app">
+<meta property="og:image" content="https://zuralog.app/images/og-image.png">
+<meta property="og:url" content="https://zuralog.app">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Life Logger">
+<meta property="og:site_name" content="Zuralog">
 ```
 
-**Life Logger-Specific Guidance:**  
+**Zuralog-Specific Guidance:**  
 For a health app, the OG image is especially important as it often appears in conversations where users discuss health apps. The image should:
 
 - Be 1200 x 630 pixels (recommended)
 - Show the app interface clearly
-- Include the Life Logger logo
+- Include the Zuralog logo
 - Have text overlay with value proposition
 - Work at small sizes in messaging apps
 
@@ -599,10 +599,10 @@ The favicon appears in browser tabs, bookmarks, and mobile home screens. It's a 
 - Android Chrome Icon (192x192, 512x512)
 - Microsoft tile icon (optional)
 
-**Life Logger-Specific Guidance:**  
+**Zuralog-Specific Guidance:**  
 Design considerations:
 - Should be recognizable at small sizes
-- Ideally includes the "L" or Life Logger iconography
+- Ideally includes the "L" or Zuralog iconography
 - Works in both light and dark browser themes
 - Distinctive enough to stand among other apps
 
@@ -799,7 +799,7 @@ XML sitemaps help search engines understand your site structure and discover all
 - Proper priority and change frequency
 - Max 50,000 URLs or 50MB per sitemap
 
-**For Life Logger, sitemap should include:**
+**For Zuralog, sitemap should include:**
 - Homepage (/)
 - Features page (/features)
 - Privacy Policy (/privacy)
@@ -844,16 +844,16 @@ Meta titles and descriptions appear in search results and directly impact click-
 **Requirements for Each Page:**
 
 1. **Homepage:**
-   - Title: "Life Logger - AI Health Assistant | Connect Your Fitness Apps"
-   - Description: "Life Logger connects Apple Health, Strava, Fitbit, and more. Get AI-powered health insights and coaching. Download now."
+   - Title: "Zuralog - AI Health Assistant | Connect Your Fitness Apps"
+   - Description: "Zuralog connects Apple Health, Strava, Fitbit, and more. Get AI-powered health insights and coaching. Download now."
 
 2. **Privacy Policy:**
-   - Title: "Privacy Policy | Life Logger"
-   - Description: "Learn how Life Logger protects your health data. Our privacy-first approach keeps your information secure and private."
+   - Title: "Privacy Policy | Zuralog"
+   - Description: "Learn how Zuralog protects your health data. Our privacy-first approach keeps your information secure and private."
 
 3. **Features:**
-   - Title: "Features | Life Logger - Your AI Health Command Center"
-   - Description: "Discover how Life Logger's AI connects your fitness apps to provide personalized health insights and coaching."
+   - Title: "Features | Zuralog - Your AI Health Command Center"
+   - Description: "Discover how Zuralog's AI connects your fitness apps to provide personalized health insights and coaching."
 
 **Character Limits:**
 - Title: 50-60 characters (display varies)
@@ -879,10 +879,10 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /private/
-Sitemap: https://lifelogger.app/sitemap.xml
+Sitemap: https://zuralog.app/sitemap.xml
 ```
 
-**Life Logger-Specific Guidance:**  
+**Zuralog-Specific Guidance:**  
 Ensure the following are properly handled:
 - Allow crawling of public pages
 - Disallow admin or private directories
@@ -909,15 +909,15 @@ Marketing activities build awareness, generate downloads, and create momentum fo
 **Description:**  
 The launch announcement is the cornerstone of launch marketing. It tells your story, explains the value proposition, and provides a clear call to action. This post will be adapted for multiple channels.
 
-**Life Logger-Specific Guidance:**
+**Zuralog-Specific Guidance:**
 
 **Structure for Launch Post:**
 
 1. **Hook:** Start with the problem users face
    - "Ever feel like your fitness data is scattered across a dozen apps?"
 
-2. **Solution:** Introduce Life Logger
-   - "Meet Life Logger—your AI health command center that connects all your fitness apps."
+2. **Solution:** Introduce Zuralog
+   - "Meet Zuralog—your AI health command center that connects all your fitness apps."
 
 3. **Features:** Highlight key capabilities
    - "Ask questions like 'Why am I not losing weight?' and get answers that connect your nutrition, exercise, and sleep data."
@@ -926,10 +926,10 @@ The launch announcement is the cornerstone of launch marketing. It tells your st
    - "Zero-friction logging, personalized coaching, and privacy-first design."
 
 5. **Call to Action:** What to do next
-   - "Download Life Logger today and experience the future of health tracking."
+   - "Download Zuralog today and experience the future of health tracking."
 
 6. **Social Proof:** Add credibility
-   - "Join [X] beta testers already using Life Logger"
+   - "Join [X] beta testers already using Zuralog"
 
 **Tone:**  
 Confident but approachable. Avoid tech jargon. Focus on benefits over features.
@@ -970,11 +970,11 @@ Visual assets for social media extend your reach and make content more engaging.
    - Testimonial clips
 
 5. **Hashtag Assets:**
-   - Branded hashtag (#LifeLogger or similar)
+   - Branded hashtag (#Zuralog or similar)
    - Campaign hashtags
 
-**Life Logger-Specific Content Ideas:**
-- "Day in the Life" with Life Logger
+**Zuralog-Specific Content Ideas:**
+- "Day in the Life" with Zuralog
 - Feature spotlights (one per day leading to launch)
 - Integration reveals (showing each connected app)
 - User testimonial graphics
@@ -998,7 +998,7 @@ If you have an email list from beta testers, waitlist, or newsletter subscribers
 **Email Sequence:**
 
 1. **Launch Announcement (Day 1):**
-   - Subject: "Life Logger is live! 🚀"
+   - Subject: "Zuralog is live! 🚀"
    - Clear CTA to download
    - Unique offer if applicable
 
@@ -1045,9 +1045,9 @@ Product Hunt is a platform for discovering new products. Getting featured can dr
    - Rally supporters to upvote early
    - Have team ready to engage throughout the day
 
-**Listing Content for Life Logger:**
+**Listing Content for Zuralog:**
 - **Tagline:** "The AI health assistant that connects all your fitness apps"
-- **Description:** "Stop juggling multiple health apps. Life Logger uses AI to synthesize data from Apple Health, Strava, Fitbit, and Oura into personalized insights and coaching. Ask complex questions like 'Why am I not losing weight?' and get answers no single app can provide."
+- **Description:** "Stop juggling multiple health apps. Zuralog uses AI to synthesize data from Apple Health, Strava, Fitbit, and Oura into personalized insights and coaching. Ask complex questions like 'Why am I not losing weight?' and get answers no single app can provide."
 
 **Implementation Notes:**  
 - Research successful launches in your category
@@ -1246,7 +1246,7 @@ Terms of Service (ToS) establish the legal agreement between you and users. They
    - Eligibility (age requirements)
 
 2. **Description of Service:**
-   - What Life Logger provides
+   - What Zuralog provides
    - Service availability
    - Updates and changes
 
@@ -1288,7 +1288,7 @@ Terms of Service (ToS) establish the legal agreement between you and users. They
     - Company termination
 
 **Health App Critical Disclaimers:**
-- "Life Logger is not a medical device"
+- "Zuralog is not a medical device"
 - "Consult healthcare professionals for medical advice"
 - "User is responsible for data accuracy"
 - "Integration data accuracy depends on third parties"
@@ -1334,7 +1334,7 @@ Document how data flows through your system. This is required for compliance, he
    - Data processing agreements
    - Security certifications (SOC 2, ISO 27001)
 
-**Life Logger Data Flows:**
+**Zuralog Data Flows:**
 
 *On-Device:*
 - HealthKit/Health Connect data (read locally)
@@ -1411,7 +1411,7 @@ The General Data Protection Regulation (GDPR) applies to any app with users in t
 - [ ] Train team on GDPR requirements
 - [ ] Appoint DPO if required (depending on company size)
 
-**Life Logger-Specific Considerations:**
+**Zuralog-Specific Considerations:**
 - Health data is "special category" under GDPR (Article 9)
 - Requires explicit consent for health data processing
 - Additional safeguards required
@@ -1454,7 +1454,7 @@ If your website uses cookies or similar tracking technologies, you must provide 
    - Granular consent options
    - Easy to change preferences
 
-**Cookie Categories for Life Logger Website:**
+**Cookie Categories for Zuralog Website:**
 
 *Essential:*
 - Session management

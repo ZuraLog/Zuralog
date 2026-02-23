@@ -5,7 +5,7 @@
 **Author:** AI Solutions Architect (Senior Engineer Persona)
 
 ## Context
-The "Life Logger" project requires a highly reliable, cost-effective LLM to serve as the "Cloud Brain". The model must handle:
+The "Zuralog" project requires a highly reliable, cost-effective LLM to serve as the "Cloud Brain". The model must handle:
 1.  **Complex Orchestration:** Selecting and executing MCP tools with strict schema adherence.
 2.  **Health Data Integrity:** Writing to Apple Health/Google Health Connect without corruption.
 3.  **Reasoning:** Analyzing cross-app data (nutrition vs. sleep vs. activity) to provide "Tough Love" coaching.

@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Authentication State Models.
+/// Zuralog Edge Agent — Authentication State Models.
 ///
 /// Defines the [AuthResult] sealed class for representing authentication
 /// outcomes, and the [AuthState] enum for tracking the global auth status.

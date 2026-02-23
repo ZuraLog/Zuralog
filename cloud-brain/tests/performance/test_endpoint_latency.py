@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Endpoint Latency Performance Tests.
+Zuralog Cloud Brain — Endpoint Latency Performance Tests.
 
 Measures response latency for critical API endpoints and asserts that
 each stays within the project-wide **p95 target of 200 ms**.  Timing

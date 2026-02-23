@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Auth Endpoint Tests.
+Zuralog Cloud Brain — Auth Endpoint Tests.
 
 Tests for the /api/v1/auth/* endpoints. Uses FastAPI dependency_overrides
 to inject mocked services without needing live Supabase or a database.

@@ -1,4 +1,4 @@
-# Master Execution Plan: Life Logger
+# Master Execution Plan: Zuralog
 
 **Strategy:** Backend First, MVP Complete.
 **Goal:** Deliver a fully functional, connected, and beautiful AI Health Assistant.

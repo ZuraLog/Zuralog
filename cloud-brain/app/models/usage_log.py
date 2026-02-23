@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Usage Log Model.
+Zuralog Cloud Brain — Usage Log Model.
 
 Tracks per-request LLM token consumption for cost analysis.
 """

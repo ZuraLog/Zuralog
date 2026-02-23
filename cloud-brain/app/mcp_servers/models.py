@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — MCP Server Pydantic Models.
+Zuralog Cloud Brain — MCP Server Pydantic Models.
 
 Defines the shared data contracts used across all MCP servers.
 These models enforce type safety at the boundary between the

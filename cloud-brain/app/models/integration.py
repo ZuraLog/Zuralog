@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Integration Model.
+Zuralog Cloud Brain — Integration Model.
 
 Represents a connected third-party integration (e.g., Strava, Fitbit, Oura).
 Stores OAuth tokens and sync metadata for each user-integration pair.

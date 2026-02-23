@@ -23,11 +23,11 @@ Use `purchases_flutter` (RevenueCat SDK) for the actual purchase flow, but rely 
 - **State Management:** Riverpod provider `subscriptionProvider` exposes current tier.
 
 ## Files
-- Create: `life_logger/lib/features/subscription/data/subscription_repository.dart`
+- Create: `zuralog/lib/features/subscription/data/subscription_repository.dart`
 
 ## Steps
 
-1. **Create repository (`life_logger/lib/features/subscription/data/subscription_repository.dart`)**
+1. **Create repository (`zuralog/lib/features/subscription/data/subscription_repository.dart`)**
 
 ```dart
 import 'package:purchases_flutter/purchases_flutter.dart';

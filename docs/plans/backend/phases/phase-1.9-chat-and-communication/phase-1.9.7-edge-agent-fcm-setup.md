@@ -26,12 +26,12 @@ Use `firebase_messaging` package. Requires `google-services.json` (Android) and 
 - **Foreground Handling:** Show in-app banner or toast.
 
 ## Files
-- Modify: `life_logger/pubspec.yaml`
-- Create: `life_logger/lib/core/network/fcm_service.dart`
+- Modify: `zuralog/pubspec.yaml`
+- Create: `zuralog/lib/core/network/fcm_service.dart`
 
 ## Steps
 
-1. **Configure FCM Service (`life_logger/lib/core/network/fcm_service.dart`)**
+1. **Configure FCM Service (`zuralog/lib/core/network/fcm_service.dart`)**
 
 ```dart
 import 'package:firebase_messaging/firebase_messaging.dart';

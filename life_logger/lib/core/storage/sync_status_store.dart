@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Sync Status Store.
+/// Zuralog Edge Agent — Sync Status Store.
 ///
 /// Persists the last successful background sync timestamp using
 /// SharedPreferences. Provides a lightweight way to display sync

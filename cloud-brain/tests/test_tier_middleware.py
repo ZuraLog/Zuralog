@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Tier Middleware Tests.
+Zuralog Cloud Brain — Tier Middleware Tests.
 
 Tests the require_tier dependency factory for subscription enforcement.
 """

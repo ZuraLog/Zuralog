@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Life Logger is a health AI assistant with a **monorepo structure**:
-- `life_logger/` — Flutter mobile app (Edge Agent)
+Zuralog is a health AI assistant with a **monorepo structure**:
+- `zuralog/` — Flutter mobile app (Edge Agent)
 - `cloud-brain/` — Python FastAPI backend (Cloud Brain)
 
 ## Commands
@@ -37,7 +37,7 @@ uv run alembic revision --autogenerate -m "description"  # New migration
 # OR: make migrate / make migration
 ```
 
-### Frontend (`life_logger/`)
+### Frontend (`zuralog/`)
 
 ```bash
 flutter pub get                           # Install dependencies
@@ -104,10 +104,10 @@ The `health` Flutter package handles standard reads/writes. Custom Swift (`ios/`
 | `cloud-brain/app/agent/orchestrator.py` | LLM agent loop |
 | `cloud-brain/app/mcp_servers/registry.py` | MCP server registry |
 | `cloud-brain/app/api/v1/chat.py` | Chat + WebSocket streaming endpoint |
-| `life_logger/lib/main.dart` | Flutter entry point |
-| `life_logger/lib/core/di/providers.dart` | Global Riverpod DI providers |
-| `life_logger/lib/core/network/api_client.dart` | Dio HTTP client with auth interceptors |
-| `life_logger/lib/core/health/health_bridge.dart` | Unified platform channel API |
+| `zuralog/lib/main.dart` | Flutter entry point |
+| `zuralog/lib/core/di/providers.dart` | Global Riverpod DI providers |
+| `zuralog/lib/core/network/api_client.dart` | Dio HTTP client with auth interceptors |
+| `zuralog/lib/core/health/health_bridge.dart` | Unified platform channel API |
 | `docs/plans/architecture-design.md` | Full architecture specification |
 | `AGENTS.md` | AI agent role definitions and standards |
 | `SETUP.md` | Step-by-step local dev setup |

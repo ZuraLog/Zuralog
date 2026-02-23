@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Device Registration Endpoints.
+Zuralog Cloud Brain — Device Registration Endpoints.
 
 Manages FCM device token registration for cloud-to-device
 push communication. The Edge Agent calls these endpoints

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Global Limiter Configuration.
+Zuralog Cloud Brain — Global Limiter Configuration.
 
 Provides a shared slowapi Limiter used to protect endpoints
 from abuse and brute-force attacks.

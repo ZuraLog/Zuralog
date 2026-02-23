@@ -7,7 +7,7 @@
 
 ## Overview
 
-This document provides deep-dive technical details for integrating Strava API v3 into Life Logger.
+This document provides deep-dive technical details for integrating Strava API v3 into Zuralog.
 
 ---
 
@@ -209,7 +209,7 @@ User          Edge Agent              Cloud Brain            Strava
  │                │ launchUrl() → browser │                    │
  │   [User logs in to Strava in browser]  │                    │
  │                │                       │                    │
- │  lifelogger://oauth/strava?code=XXX (deep link)             │
+ │  zuralog://oauth/strava?code=XXX (deep link)             │
  │<───────────────│                       │                    │
  │                │ DeeplinkHandler fires │                    │
  │                │ POST /api/v1/          │                    │
@@ -234,7 +234,7 @@ User          Edge Agent              Cloud Brain            Strava
 | --- | --- |
 | `STRAVA_CLIENT_ID` | From [strava.com/settings/api](https://www.strava.com/settings/api) |
 | `STRAVA_CLIENT_SECRET` | Keep server-side only — never expose to client |
-| `STRAVA_REDIRECT_URI` | `lifelogger://oauth/strava` (must match Strava portal) |
+| `STRAVA_REDIRECT_URI` | `zuralog://oauth/strava` (must match Strava portal) |
 
 **Strava Portal Setup:** Set Authorization Callback Domain to `localhost` for dev or your production domain.
 
@@ -256,7 +256,7 @@ MVP: in-memory `dict[user_id → access_token]` on the `StravaServer` instance.
 | --- | --- | --- |
 | `400` on exchange | Code expired (~10 min TTL) | Tap "Connect Strava" again |
 | `503` unreachable | Network or Strava outage | Check connectivity, retry |
-| Deep link doesn't open (iOS) | Missing URL scheme | Check `CFBundleURLSchemes: lifelogger` in `Info.plist` |
-| Deep link doesn't open (Android) | Missing intent-filter | Check `scheme=lifelogger host=oauth` in `AndroidManifest.xml` |
+| Deep link doesn't open (iOS) | Missing URL scheme | Check `CFBundleURLSchemes: zuralog` in `Info.plist` |
+| Deep link doesn't open (Android) | Missing intent-filter | Check `scheme=zuralog host=oauth` in `AndroidManifest.xml` |
 | `no user_id in secure storage` | User not logged in | Log in via AUTH section first |
 | Token lost on restart | In-memory storage | Expected in Phase 1.6 — Phase 1.7 adds DB persistence |

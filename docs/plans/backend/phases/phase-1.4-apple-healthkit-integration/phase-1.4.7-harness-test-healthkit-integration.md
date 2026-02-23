@@ -27,11 +27,11 @@ Add three buttons to `HarnessScreen` that call methods on `HealthRepository` and
 - **Data Verification:** Confirms we can actually read data written by the Apple Health app.
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
-1. **Add HealthKit buttons to harness (`life_logger/lib/features/harness/harness_screen.dart`)**
+1. **Add HealthKit buttons to harness (`zuralog/lib/features/harness/harness_screen.dart`)**
 
 ```dart
 // ... inside the Wrap widget ...

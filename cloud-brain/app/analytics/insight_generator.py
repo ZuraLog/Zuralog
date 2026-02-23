@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Insight Generator.
+Zuralog Cloud Brain — Insight Generator.
 
 Synthesizes analytics data (goal progress, trend directions) into a single
 human-readable "Insight of the Day" string for the dashboard header.

@@ -110,7 +110,7 @@ Implemented the final quality-assurance phase for the backend MVP: shared test i
 | `cloud-brain/scripts/__init__.py` | Scripts package |
 | `cloud-brain/scripts/export_openapi.py` | OpenAPI schema export script |
 | `cloud-brain/openapi.json` | Generated OpenAPI 3.1 schema |
-| `life_logger/integration_test/app_test.dart` | Flutter E2E integration test |
+| `zuralog/integration_test/app_test.dart` | Flutter E2E integration test |
 
 ## Files Modified (10)
 
@@ -122,10 +122,10 @@ Implemented the final quality-assurance phase for the backend MVP: shared test i
 | `cloud-brain/alembic/versions/1dce1fca3cc9_initial_tables.py` | Ruff format |
 | `cloud-brain/app/api/v1/integrations.py` | Ruff format |
 | `cloud-brain/app/models/conversation.py` | Ruff format |
-| `life_logger/pubspec.yaml` | Added integration_test SDK + platform interface deps |
-| `life_logger/lib/features/harness/harness_screen.dart` | Flutter analyze fixes |
-| `life_logger/test/core/deeplink/deeplink_launcher_test.dart` | @override annotation fixes |
-| `life_logger/test/widget_test.dart` | Fixed stale text assertion |
+| `zuralog/pubspec.yaml` | Added integration_test SDK + platform interface deps |
+| `zuralog/lib/features/harness/harness_screen.dart` | Flutter analyze fixes |
+| `zuralog/test/core/deeplink/deeplink_launcher_test.dart` | @override annotation fixes |
+| `zuralog/test/widget_test.dart` | Fixed stale text assertion |
 
 ---
 

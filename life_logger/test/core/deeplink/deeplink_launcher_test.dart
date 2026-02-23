@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
-import 'package:life_logger/core/deeplink/deeplink_launcher.dart';
+import 'package:zuralog/core/deeplink/deeplink_launcher.dart';
 
 class MockUrlLauncher extends Fake
     with MockPlatformInterfaceMixin

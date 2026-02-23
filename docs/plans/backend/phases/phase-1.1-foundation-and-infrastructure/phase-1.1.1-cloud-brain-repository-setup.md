@@ -51,7 +51,7 @@ We will use:
 ```bash
 mkdir -p cloud-brain
 cd cloud-brain
-uv init --name life-logger-cloud-brain
+uv init --name zuralog-cloud-brain
 uv add fastapi uvicorn sqlalchemy asyncpg pydantic pydantic-settings python-dotenv openai pinecone celery redis httpx
 uv add --dev pytest pytest-asyncio ruff
 ```
@@ -73,8 +73,8 @@ class Settings(BaseSettings):
     supabase_anon_key: str
     supabase_service_key: str
     openrouter_api_key: str
-    openrouter_referer: str = "https://lifelogger.app"
-    openrouter_title: str = "Life Logger"
+    openrouter_referer: str = "https://zuralog.app"
+    openrouter_title: str = "Zuralog"
     pinecone_api_key: str
     redis_url: str
     strava_client_id: str
@@ -92,7 +92,7 @@ settings = Settings()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Life Logger Cloud Brain")
+app = FastAPI(title="Zuralog Cloud Brain")
 
 app.add_middleware(
     CORSMiddleware,

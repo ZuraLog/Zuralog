@@ -24,7 +24,7 @@ Implemented full Google Health Connect integration across the Hybrid Hub archite
 
 | # | Original Plan Issue | What We Did |
 |---|---|---|
-| 1 | Package namespace `com.lifelogger` (wrong) | Used `com.lifelogger.life_logger` to match actual Gradle namespace |
+| 1 | Package namespace `com.zuralog` (wrong) | Used `com.zuralog.zuralog` to match actual Gradle namespace |
 | 2 | MCP server returned raw `dict` / `list[dict]` | Returns typed `ToolDefinition`, `ToolResult`, `Resource` per Phase 1.3 contracts |
 | 3 | Import paths used `cloudbrain.app.xxx` | Used `from app.xxx` per Phase 1.3 executed docs |
 | 4 | `minSdk` used Flutter default (21) | Set `minSdk = 28` for Health Connect compatibility |
@@ -53,8 +53,8 @@ Note: iOS/Swift compilation verification still requires a macOS environment.
 
 | File | Task | Lines |
 |------|------|-------|
-| `life_logger/android/.../HealthConnectBridge.kt` | 1.5.2 | ~280 |
-| `life_logger/android/.../HealthSyncWorker.kt` | 1.5.5 | ~110 |
+| `zuralog/android/.../HealthConnectBridge.kt` | 1.5.2 | ~280 |
+| `zuralog/android/.../HealthSyncWorker.kt` | 1.5.5 | ~110 |
 | `cloud-brain/app/mcp_servers/health_connect_server.py` | 1.5.4 | ~175 |
 | `cloud-brain/tests/mcp/test_health_connect_server.py` | 1.5.4 | ~135 |
 | `docs/plans/backend/integrations/google-health-connect-integration.md` | 1.5.7 | ~90 |
@@ -63,15 +63,15 @@ Note: iOS/Swift compilation verification still requires a macOS environment.
 
 | File | Task | Change |
 |------|------|--------|
-| `life_logger/android/app/src/main/AndroidManifest.xml` | 1.5.1 | Added 14 Health Connect permissions + ViewPermissionUsageActivity alias |
-| `life_logger/android/app/build.gradle.kts` | 1.5.1 | `minSdk=28`, added connect-client, work-runtime-ktx, coroutines deps |
-| `life_logger/android/app/src/main/res/values/strings.xml` | 1.5.1 | Created with HC rationale string |
-| `life_logger/android/.../MainActivity.kt` | 1.5.3 | Full platform channel handler (10 methods) |
-| `life_logger/lib/core/health/health_bridge.dart` | 1.5.6 | Docstrings updated to cross-platform |
-| `life_logger/lib/features/health/data/health_repository.dart` | 1.5.6 | Docstrings updated to cross-platform |
+| `zuralog/android/app/src/main/AndroidManifest.xml` | 1.5.1 | Added 14 Health Connect permissions + ViewPermissionUsageActivity alias |
+| `zuralog/android/app/build.gradle.kts` | 1.5.1 | `minSdk=28`, added connect-client, work-runtime-ktx, coroutines deps |
+| `zuralog/android/app/src/main/res/values/strings.xml` | 1.5.1 | Created with HC rationale string |
+| `zuralog/android/.../MainActivity.kt` | 1.5.3 | Full platform channel handler (10 methods) |
+| `zuralog/lib/core/health/health_bridge.dart` | 1.5.6 | Docstrings updated to cross-platform |
+| `zuralog/lib/features/health/data/health_repository.dart` | 1.5.6 | Docstrings updated to cross-platform |
 | `cloud-brain/app/main.py` | 1.5.4 | Registered `HealthConnectServer()` in lifespan |
 | `cloud-brain/app/mcp_servers/__init__.py` | 1.5.4 | Added `HealthConnectServer` export |
-| `life_logger/lib/core/di/providers.dart` | 1.5.6 | Updated `healthBridgeProvider` docstring |
+| `zuralog/lib/core/di/providers.dart` | 1.5.6 | Updated `healthBridgeProvider` docstring |
 
 ---
 

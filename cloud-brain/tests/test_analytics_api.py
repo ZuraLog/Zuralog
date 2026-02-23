@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Tests for Analytics API Schemas.
+Zuralog Cloud Brain — Tests for Analytics API Schemas.
 
 Validates Pydantic models for analytics endpoint request
 and response serialization, including field defaults, type

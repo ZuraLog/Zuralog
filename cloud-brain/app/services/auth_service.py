@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Supabase Auth Service.
+Zuralog Cloud Brain — Supabase Auth Service.
 
 Handles authentication operations by calling the Supabase Auth REST API
 directly via httpx. This avoids the heavy supabase-py SDK and its

@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Chat Message Domain Model.
+/// Zuralog Edge Agent — Chat Message Domain Model.
 ///
 /// Represents a single chat message exchanged between the user
 /// and the AI assistant. Used by the ChatRepository and UI layers.

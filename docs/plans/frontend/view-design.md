@@ -1,4 +1,4 @@
-# View Design Document: Life Logger Mobile App
+# View Design Document: Zuralog Mobile App
 
 **Version:** 1.1
 **Date:** February 18, 2026

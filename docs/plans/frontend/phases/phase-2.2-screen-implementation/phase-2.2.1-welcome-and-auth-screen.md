@@ -26,13 +26,13 @@ Use `Scaffold` with a gradient background (from Design System) and `PrimaryButto
 - **Error Handling:** SnackBar displays auth errors (e.g., "Invalid credentials").
 
 ## Files
-- Create: `life_logger/lib/features/auth/presentation/welcome_screen.dart`
-- Create: `life_logger/lib/features/auth/presentation/login_form.dart`
-- Create: `life_logger/lib/features/auth/presentation/register_form.dart`
+- Create: `zuralog/lib/features/auth/presentation/welcome_screen.dart`
+- Create: `zuralog/lib/features/auth/presentation/login_form.dart`
+- Create: `zuralog/lib/features/auth/presentation/register_form.dart`
 
 ## Steps
 
-1. **Create Welcome Screen (`life_logger/lib/features/auth/presentation/welcome_screen.dart`)**
+1. **Create Welcome Screen (`zuralog/lib/features/auth/presentation/welcome_screen.dart`)**
 
 ```dart
 class WelcomeScreen extends StatelessWidget {

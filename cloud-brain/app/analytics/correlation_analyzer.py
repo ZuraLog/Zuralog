@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Correlation Analyzer.
+Zuralog Cloud Brain — Correlation Analyzer.
 
 Finds statistical relationships between different health metrics
 (e.g., "Does better sleep lead to higher activity the next day?").

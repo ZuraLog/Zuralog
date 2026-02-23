@@ -23,11 +23,11 @@ Use `url_launcher` package.
 - **Fallback:** If app is not installed (can check on Android, harder on iOS), open App Store or Web fallback.
 
 ## Files
-- Modify: `life_logger/lib/core/deeplink/deep_link_handler.dart`
+- Modify: `zuralog/lib/core/deeplink/deep_link_handler.dart`
 
 ## Steps
 
-1. **Create Deep Link handler (`life_logger/lib/core/deeplink/deep_link_handler.dart`)**
+1. **Create Deep Link handler (`zuralog/lib/core/deeplink/deep_link_handler.dart`)**
 
 ```dart
 import 'package:url_launcher/url_launcher.dart';

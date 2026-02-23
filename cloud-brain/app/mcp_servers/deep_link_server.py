@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Deep Link MCP Server (Phase 1.12).
+Zuralog Cloud Brain — Deep Link MCP Server (Phase 1.12).
 
 Exposes a single ``open_external_app`` tool so the LLM agent can
 instruct the Edge Agent to launch third-party apps (Strava, Cal.ai,

@@ -957,7 +957,7 @@ redis = [
 ]
 
 [[package]]
-name = "life-logger-cloud-brain"
+name = "zuralog-cloud-brain"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Health Data Models Tests.
+Zuralog Cloud Brain — Health Data Models Tests.
 
 Tests for the normalized health data SQLAlchemy ORM models:
 UnifiedActivity, SleepRecord, NutritionEntry, WeightMeasurement.

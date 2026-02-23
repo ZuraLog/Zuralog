@@ -26,16 +26,16 @@ Add `<uses-permission>` tags to the manifest for every data type we need (Steps,
 - **Privacy Compliance:** Adheres to Google Play policies for health apps.
 
 ## Files
-- Modify: `life_logger/android/app/src/main/AndroidManifest.xml`
-- Create: `life_logger/android/app/src/main/res/values/health_permissions.xml` (Note: sometimes `res/xml` depending on config, but usually `res/values` for strings or `res/xml` for config. Standard is `res/values/health_permissions.xml` for rationale strings or strictly manifest declarations). *Correction: Health Connect actually just needs Manifest declarations + runtime request. The `health_permissions.xml` is often a custom file for internal organization or specific rationale strings.*
+- Modify: `zuralog/android/app/src/main/AndroidManifest.xml`
+- Create: `zuralog/android/app/src/main/res/values/health_permissions.xml` (Note: sometimes `res/xml` depending on config, but usually `res/values` for strings or `res/xml` for config. Standard is `res/values/health_permissions.xml` for rationale strings or strictly manifest declarations). *Correction: Health Connect actually just needs Manifest declarations + runtime request. The `health_permissions.xml` is often a custom file for internal organization or specific rationale strings.*
 
 ## Steps
 
-1. **Add permissions to AndroidManifest (`life_logger/android/app/src/main/AndroidManifest.xml`)**
+1. **Add permissions to AndroidManifest (`zuralog/android/app/src/main/AndroidManifest.xml`)**
 
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.lifelogger">
+    package="com.zuralog">
     
     <!-- Health Connect Permissions -->
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
@@ -68,11 +68,11 @@ Add `<uses-permission>` tags to the manifest for every data type we need (Steps,
 </manifest>
 ```
 
-2. **Create rationale strings (`life_logger/android/app/src/main/res/values/strings.xml`)**
+2. **Create rationale strings (`zuralog/android/app/src/main/res/values/strings.xml`)**
 
 (Optional but recommended for UI)
 ```xml
-<string name="health_connect_rationale">Life Logger needs access to your health data to provide AI coaching.</string>
+<string name="health_connect_rationale">Zuralog needs access to your health data to provide AI coaching.</string>
 ```
 
 ## Exit Criteria

@@ -22,16 +22,16 @@ Use `integration_test` package (part of Flutter SDK).
 - **Settings Flow:** Tap Settings -> Tap Logout -> Verify Welcome screen appears.
 
 ## Files
-- Create: `life_logger/integration_test/app_test.dart`
+- Create: `zuralog/integration_test/app_test.dart`
 
 ## Steps
 
-1. **Create Test File (`life_logger/integration_test/app_test.dart`)**
+1. **Create Test File (`zuralog/integration_test/app_test.dart`)**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:life_logger/main.dart' as app;
+import 'package:zuralog/main.dart' as app;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

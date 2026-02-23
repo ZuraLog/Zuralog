@@ -26,11 +26,11 @@ Use `web_socket_channel` package. Wrap it in a `WsClient` class that exposes a `
 - **Heartbeat:** (Optional) Pings server to keep connection alive.
 
 ## Files
-- Modify: `life_logger/lib/core/network/ws_client.dart` (created in Phase 1.1, now expanding)
+- Modify: `zuralog/lib/core/network/ws_client.dart` (created in Phase 1.1, now expanding)
 
 ## Steps
 
-1. **Update WebSocket client (`life_logger/lib/core/network/ws_client.dart`)**
+1. **Update WebSocket client (`zuralog/lib/core/network/ws_client.dart`)**
 
 ```dart
 import 'package:web_socket_channel/web_socket_channel.dart';

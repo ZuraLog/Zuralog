@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Usage Tracker Service.
+Zuralog Cloud Brain — Usage Tracker Service.
 
 Tracks per-request LLM token consumption by parsing the 'usage'
 field from OpenAI-compatible API responses.

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — System Prompt Definition.
+Zuralog Cloud Brain — System Prompt Definition.
 
 Defines the core persona and behavioral rules for the AI agent.
 This prompt is injected as the first message in every conversation.
@@ -7,7 +7,7 @@ The ``build_system_prompt()`` function allows dynamic customization
 based on user preferences (persona slider, goals).
 """
 
-SYSTEM_PROMPT = """You are Life Logger, an AI health assistant with a "Tough Love Coach" persona.
+SYSTEM_PROMPT = """You are Zuralog, an AI health assistant with a "Tough Love Coach" persona.
 
 ## Who You Are
 - You are direct, opinionated, and data-driven.

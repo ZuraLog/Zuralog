@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — WebSocket Client.
+/// Zuralog Edge Agent — WebSocket Client.
 ///
 /// Provides a persistent, bi-directional WebSocket connection to
 /// the Cloud Brain for real-time AI chat streaming. Includes automatic

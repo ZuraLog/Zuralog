@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
-import 'package:life_logger/features/subscription/domain/subscription_providers.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 
 /// Full-screen paywall for ZuraLog Pro.
 ///

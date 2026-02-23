@@ -1,4 +1,4 @@
-/// Life Logger Android — Kotlin bridge for Google Health Connect.
+/// Zuralog Android — Kotlin bridge for Google Health Connect.
 ///
 /// Provides suspend functions to read and write health data via the
 /// `androidx.health.connect:connect-client` SDK. All public methods
@@ -8,7 +8,7 @@
 /// This class mirrors the Swift `HealthKitBridge` so that the Flutter
 /// platform channel handler in `MainActivity` can route identical
 /// method names to either native implementation.
-package com.lifelogger.life_logger
+package com.zuralog.zuralog
 
 import android.content.Context
 import android.util.Log

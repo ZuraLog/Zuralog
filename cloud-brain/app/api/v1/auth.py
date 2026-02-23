@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Auth API Router.
+Zuralog Cloud Brain — Auth API Router.
 
 RESTful endpoints for user authentication (register, login, logout, refresh).
 All auth operations proxy to Supabase Auth via httpx, and new users are

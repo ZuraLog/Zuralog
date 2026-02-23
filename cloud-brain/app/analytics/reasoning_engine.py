@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Cross-App Reasoning Engine.
+Zuralog Cloud Brain — Cross-App Reasoning Engine.
 
 Provides deterministic analytical helpers that synthesize data from
 multiple MCP sources (Apple Health, Strava, CalAI) into higher-order

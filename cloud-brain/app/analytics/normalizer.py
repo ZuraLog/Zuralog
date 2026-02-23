@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Cross-Source Data Normalizer.
+Zuralog Cloud Brain — Cross-Source Data Normalizer.
 
 Transforms incoming activity data from Strava, Apple HealthKit,
 Google Health Connect, and other sources into a uniform internal

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — User Subscription Field Tests.
+Zuralog Cloud Brain — User Subscription Field Tests.
 
 Validates that the User model has the required subscription fields
 and that default values are correct.

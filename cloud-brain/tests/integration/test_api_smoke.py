@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — API Smoke Tests.
+Zuralog Cloud Brain — API Smoke Tests.
 
 Quick validation that all critical API surfaces are responsive
 and enforce input validation correctly. These tests do NOT verify
@@ -118,7 +118,7 @@ class TestAPISmokeTests:
         response = self.client.get("/openapi.json")
         assert response.status_code == 200
         schema = response.json()
-        assert schema["info"]["title"] == "Life Logger Cloud Brain"
+        assert schema["info"]["title"] == "Zuralog Cloud Brain"
         assert "/health" in schema["paths"]
         assert "/api/v1/auth/register" in schema["paths"]
 

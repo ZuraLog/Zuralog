@@ -46,7 +46,7 @@ class MemoryManager:
         # Initialize only if key is present to allow offline dev without crashing
         if settings.pinecone_api_key:
             self._client = Pinecone(api_key=settings.pinecone_api_key)
-            self._index = self._client.Index("life-logger-context")
+            self._index = self._client.Index("zuralog-context")
         else:
             self._client = None
     

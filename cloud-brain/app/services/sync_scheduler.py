@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Background Sync Scheduler.
+Zuralog Cloud Brain — Background Sync Scheduler.
 
 Implements periodic background tasks to pull data from cloud
 integrations (Strava, Fitbit, Oura) without user intervention.

@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Life Logger Cloud Brain",
+    "title": "Zuralog Cloud Brain",
     "description": "AI Health Assistant Backend \u2014 Cross-app reasoning and autonomous actions.",
     "version": "0.1.0"
   },
@@ -197,7 +197,7 @@
           "integrations"
         ],
         "summary": "Strava Authorize",
-        "description": "Return the Strava OAuth authorization URL for the mobile app to open.\n\nThe app opens this URL in the system browser. After the user grants\naccess, Strava redirects to ``lifelogger://oauth/strava?code=XXX``.\nThe app intercepts the deep link and calls ``/strava/exchange``.\n\nReturns:\n    dict: ``{\"auth_url\": \"<strava_oauth_url>\"}``",
+        "description": "Return the Strava OAuth authorization URL for the mobile app to open.\n\nThe app opens this URL in the system browser. After the user grants\naccess, Strava redirects to ``zuralog://oauth/strava?code=XXX``.\nThe app intercepts the deep link and calls ``/strava/exchange``.\n\nReturns:\n    dict: ``{\"auth_url\": \"<strava_oauth_url>\"}``",
         "operationId": "strava_authorize_api_v1_integrations_strava_authorize_get",
         "responses": {
           "200": {

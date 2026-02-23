@@ -53,12 +53,12 @@ Note: This phase was implemented on a Windows machine. Swift/iOS compilation ver
 
 | File | Task | Lines |
 |------|------|-------|
-| `life_logger/ios/Runner/Runner.entitlements` | 1 | 12 |
-| `life_logger/ios/Runner/HealthKitBridge.swift` | 2 | 388 |
-| `life_logger/lib/core/health/health_bridge.dart` | 3 | 278 |
+| `zuralog/ios/Runner/Runner.entitlements` | 1 | 12 |
+| `zuralog/ios/Runner/HealthKitBridge.swift` | 2 | 388 |
+| `zuralog/lib/core/health/health_bridge.dart` | 3 | 278 |
 | `cloud-brain/app/mcp_servers/apple_health_server.py` | 4 | ~100 |
 | `cloud-brain/tests/mcp/test_apple_health_server.py` | 4 | ~100 |
-| `life_logger/lib/features/health/data/health_repository.dart` | 5 | 93 |
+| `zuralog/lib/features/health/data/health_repository.dart` | 5 | 93 |
 | `docs/plans/backend/integrations/apple-health-integration.md` | 7 | ~160 |
 | `docs/agent-executed/backend/phases/executed-phase-1.4-apple-healthkit-integration.md` | 8 | This file |
 
@@ -66,12 +66,12 @@ Note: This phase was implemented on a Windows machine. Swift/iOS compilation ver
 
 | File | Task | Change |
 |------|------|--------|
-| `life_logger/ios/Runner/Info.plist` | 1 | Added 3 HealthKit keys |
-| `life_logger/ios/Runner/AppDelegate.swift` | 3 | Replaced with full method channel handler (184 lines) |
+| `zuralog/ios/Runner/Info.plist` | 1 | Added 3 HealthKit keys |
+| `zuralog/ios/Runner/AppDelegate.swift` | 3 | Replaced with full method channel handler (184 lines) |
 | `cloud-brain/app/main.py` | 4 | Registered `AppleHealthServer()` in lifespan |
 | `cloud-brain/app/mcp_servers/__init__.py` | 4 | Added `AppleHealthServer` export |
-| `life_logger/lib/core/di/providers.dart` | 5 | Added `healthBridgeProvider` + `healthRepositoryProvider` |
-| `life_logger/lib/features/harness/harness_screen.dart` | 6 | Added 6 HealthKit buttons in HEALTHKIT section |
+| `zuralog/lib/core/di/providers.dart` | 5 | Added `healthBridgeProvider` + `healthRepositoryProvider` |
+| `zuralog/lib/features/harness/harness_screen.dart` | 6 | Added 6 HealthKit buttons in HEALTHKIT section |
 
 ---
 

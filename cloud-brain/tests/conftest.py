@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Shared Test Fixtures.
+Zuralog Cloud Brain — Shared Test Fixtures.
 
 Provides reusable pytest fixtures for integration and new unit tests.
 Existing per-file fixtures (e.g. ``client`` in ``test_auth.py``) take

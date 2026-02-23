@@ -1,1 +1,1 @@
-"""Life Logger Cloud Brain — Agent Prompt Templates."""
+"""Zuralog Cloud Brain — Agent Prompt Templates."""

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Application Configuration.
+Zuralog Cloud Brain — Application Configuration.
 
 Type-safe settings management using Pydantic v2 BaseSettings.
 All values are loaded from environment variables or a .env file.
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         app_debug: Enable debug mode.
     """
 
-    database_url: str = "postgresql+asyncpg://lifelogger:lifelogger@localhost:5432/lifelogger"
+    database_url: str = "postgresql+asyncpg://zuralog:zuralog@localhost:5432/zuralog"
     redis_url: str = "redis://localhost:6379/0"
     supabase_url: str = ""
     supabase_anon_key: str = ""
@@ -37,12 +37,12 @@ class Settings(BaseSettings):
     pinecone_api_key: str = ""
     openai_api_key: str = ""
     openrouter_api_key: str = ""
-    openrouter_referer: str = "https://lifelogger.app"
-    openrouter_title: str = "Life Logger"
+    openrouter_referer: str = "https://zuralog.app"
+    openrouter_title: str = "Zuralog"
     openrouter_model: str = "moonshotai/kimi-k2.5"
     strava_client_id: str = ""
     strava_client_secret: str = ""
-    strava_redirect_uri: str = "lifelogger://oauth/strava"
+    strava_redirect_uri: str = "zuralog://oauth/strava"
     fcm_credentials_path: str = ""
     revenuecat_webhook_secret: str = ""
     revenuecat_api_key: str = ""

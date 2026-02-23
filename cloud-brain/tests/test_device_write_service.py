@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Device Write Service Tests.
+Zuralog Cloud Brain — Device Write Service Tests.
 
 Tests the cloud-to-device write flow: constructing FCM payloads,
 sending silent pushes, and handling offline devices.

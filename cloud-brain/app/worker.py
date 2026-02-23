@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Celery Worker Configuration.
+Zuralog Cloud Brain — Celery Worker Configuration.
 
 Configures the Celery application for background task processing.
 Uses Redis as the message broker (already provisioned in docker-compose).
@@ -18,7 +18,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 celery_app = Celery(
-    "life_logger",
+    "zuralog",
     broker=settings.redis_url,
     backend=settings.redis_url,
 )

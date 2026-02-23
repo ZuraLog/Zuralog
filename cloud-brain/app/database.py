@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Database Engine and Session Management.
+Zuralog Cloud Brain — Database Engine and Session Management.
 
 Provides the async SQLAlchemy engine, session factory, and declarative
 base for all ORM models. Uses the modern SQLAlchemy 2.0 API.

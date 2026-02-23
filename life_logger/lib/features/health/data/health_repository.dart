@@ -9,7 +9,7 @@
 /// Injected via Riverpod (`healthRepositoryProvider`).
 library;
 
-import 'package:life_logger/core/health/health_bridge.dart';
+import 'package:zuralog/core/health/health_bridge.dart';
 
 /// Repository for reading and writing health data.
 ///

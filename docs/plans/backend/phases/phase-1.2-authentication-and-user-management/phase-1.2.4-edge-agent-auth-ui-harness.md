@@ -25,7 +25,7 @@ Add Material `TextField` widgets for email and password, and `ElevatedButton` wi
 - **State Testing:** Verify that "isLoggedIn" state updates correctly.
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 

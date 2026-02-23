@@ -1,4 +1,4 @@
-# Life Logger — Final Implementation Plan
+# Zuralog — Final Implementation Plan
 
 **Document Version:** 1.0  
 **Date:** February 18, 2026  
@@ -8,13 +8,13 @@
 
 ## 1. Executive Summary
 
-### 1.1 What is Life Logger?
+### 1.1 What is Zuralog?
 
-Life Logger is a mobile AI health assistant that transforms the fragmented landscape of fitness applications into a unified, intelligent system. The application serves as a "Zero-Friction Connector" that integrates with the fitness apps users already love—including Apple Health, Google Health Connect, Strava, Fitbit, and Oura—delivering cross-app reasoning and autonomous task execution through a conversational AI interface.
+Zuralog is a mobile AI health assistant that transforms the fragmented landscape of fitness applications into a unified, intelligent system. The application serves as a "Zero-Friction Connector" that integrates with the fitness apps users already love—including Apple Health, Google Health Connect, Strava, Fitbit, and Oura—delivering cross-app reasoning and autonomous task execution through a conversational AI interface.
 
 ### 1.2 Core Value Proposition
 
-- **Unified Intelligence:** Users no longer need to manually check multiple apps. Life Logger synthesizes data from all connected sources into coherent insights.
+- **Unified Intelligence:** Users no longer need to manually check multiple apps. Zuralog synthesizes data from all connected sources into coherent insights.
 - **Cross-App Reasoning:** The AI connects the dots between nutrition, exercise, sleep, and weight—answering questions like "Why am I not losing weight?" with data from CalAI, Strava, and Apple Health combined.
 - **Zero-Friction Actions:** Users can log workouts, track nutrition, and start activities through simple voice or text commands. The AI handles the heavy lifting.
 - **Personalized Coaching:** The AI adopts a "Tough Love Coach" persona—opinionated, direct, and proactive about user health goals.
@@ -40,9 +40,9 @@ The fitness app ecosystem is severely fragmented:
 
 ### 2.2 The Solution
 
-Life Logger sits between the user and their existing app ecosystem:
+Zuralog sits between the user and their existing app ecosystem:
 
-- **Connects, Doesn't Replace:** Life Logger does NOT rebuild food logging or workout tracking. It connects to the best-in-class apps users already use.
+- **Connects, Doesn't Replace:** Zuralog does NOT rebuild food logging or workout tracking. It connects to the best-in-class apps users already use.
 - **Intelligent Layer:** The AI analyzes data across all sources, finding correlations humans miss.
 - **Action-Oriented:** Beyond insights, the AI executes tasks—logging workouts, writing to Health Stores, creating Strava activities.
 
@@ -83,7 +83,7 @@ The MVP delivers the core "Smart Hub" experience:
 
 ### 4.1 Hybrid Hub Architecture
 
-Life Logger uses a **Hybrid Hub** architecture combining cloud intelligence with on-device edge processing:
+Zuralog uses a **Hybrid Hub** architecture combining cloud intelligence with on-device edge processing:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -276,7 +276,7 @@ Sleep and recovery tracking:
 
 Instead of direct API integration, CalAI data is read via Health Stores:
 
-- User logs food in CalAI → CalAI writes to Apple Health/Health Connect → Life Logger reads from Health Store
+- User logs food in CalAI → CalAI writes to Apple Health/Health Connect → Zuralog reads from Health Store
 - No OAuth required
 - Deep link support: `calai://camera` for quick logging
 - MyFitnessPal follows same pattern
@@ -563,7 +563,7 @@ The project uses a **hybrid development** strategy: Python code runs natively vi
 
 ## 17. Approval Request
 
-This document represents the comprehensive implementation plan for the Life Logger MVP. The plan covers:
+This document represents the comprehensive implementation plan for the Zuralog MVP. The plan covers:
 
 1. **Product vision** — Unified AI health assistant connecting fragmented fitness apps
 2. **Technical architecture** — Hybrid Hub with Cloud Brain + Edge Agent

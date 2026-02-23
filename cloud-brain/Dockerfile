@@ -1,5 +1,5 @@
 # =============================================================================
-# Life Logger Cloud Brain — Production Dockerfile
+# Zuralog Cloud Brain — Production Dockerfile
 # =============================================================================
 # Multi-stage build: uv install → slim runtime.
 # =============================================================================

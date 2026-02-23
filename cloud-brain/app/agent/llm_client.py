@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — LLM Client.
+Zuralog Cloud Brain — LLM Client.
 
 Async wrapper around the OpenAI SDK configured for OpenRouter.
 Provides a model-agnostic interface for chat completions with

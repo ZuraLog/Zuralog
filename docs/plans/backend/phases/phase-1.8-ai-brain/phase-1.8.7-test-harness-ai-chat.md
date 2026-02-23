@@ -30,11 +30,11 @@ Add a `TextField` and a `ListView` of messages to `HarnessScreen`.
 - **Voice Test:** Button to upload a sample audio file.
 
 ## Files
-- Modify: `life_logger/lib/features/harness/harness_screen.dart`
+- Modify: `zuralog/lib/features/harness/harness_screen.dart`
 
 ## Steps
 
-1. **Add AI chat test to harness (`life_logger/lib/features/harness/harness_screen.dart`)**
+1. **Add AI chat test to harness (`zuralog/lib/features/harness/harness_screen.dart`)**
 
 ```dart
 // Basic Chat UI in Harness

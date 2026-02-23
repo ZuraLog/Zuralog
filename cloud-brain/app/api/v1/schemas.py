@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Auth API Schemas.
+Zuralog Cloud Brain — Auth API Schemas.
 
 Pydantic models for request validation and response serialization
 on the authentication endpoints.

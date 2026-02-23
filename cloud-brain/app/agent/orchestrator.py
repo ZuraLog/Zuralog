@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Orchestrator (AI Brain).
+Zuralog Cloud Brain — Orchestrator (AI Brain).
 
 The Orchestrator is the central "AI Brain" that manages the LLM
 conversation loop with ReAct-style function-calling. It:

@@ -21,14 +21,14 @@ Create `AppColors`, `AppTextStyles`, `AppDimens` classes and a central `AppTheme
 - **Typography:** Custom font family (e.g., 'Inter' or 'SF Pro') configured globally.
 
 ## Files
-- Create: `life_logger/lib/core/theme/app_colors.dart`
-- Create: `life_logger/lib/core/theme/app_text_styles.dart`
-- Create: `life_logger/lib/core/theme/app_dimens.dart`
-- Create: `life_logger/lib/core/theme/app_theme.dart`
+- Create: `zuralog/lib/core/theme/app_colors.dart`
+- Create: `zuralog/lib/core/theme/app_text_styles.dart`
+- Create: `zuralog/lib/core/theme/app_dimens.dart`
+- Create: `zuralog/lib/core/theme/app_theme.dart`
 
 ## Steps
 
-1. **Define Colors (`life_logger/lib/core/theme/app_colors.dart`)**
+1. **Define Colors (`zuralog/lib/core/theme/app_colors.dart`)**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -50,7 +50,7 @@ class AppColors {
 }
 ```
 
-2. **Create Theme Factory (`life_logger/lib/core/theme/app_theme.dart`)**
+2. **Create Theme Factory (`zuralog/lib/core/theme/app_theme.dart`)**
 
 ```dart
 import 'package:flutter/material.dart';

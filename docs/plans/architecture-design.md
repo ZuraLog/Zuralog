@@ -1,4 +1,4 @@
-# Life Logger — Architecture Design Document
+# Zuralog — Architecture Design Document
 
 **Version:** 2.1
 **Date:** February 18, 2026
@@ -78,7 +78,7 @@ Flutter Web is not suitable for a production website. The future website will be
 **Directory Structure:**
 
 ```
-life_logger/
+zuralog/
 ├── lib/
 │   ├── main.dart
 │   ├── app.dart
@@ -292,7 +292,7 @@ class BaseMCPServer:
 
 ### 3.1 Cloud-to-Device Write ("I ate a banana")
 
-*Zero-Friction Vision: This flow assumes user manually logs via Life Logger text input, or we receive data from CalAI.*
+*Zero-Friction Vision: This flow assumes user manually logs via Zuralog text input, or we receive data from CalAI.*
 
 ```
 1. User → Flutter chat (text): "I ate a banana"

@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Voice Transcription Endpoint.
+Zuralog Cloud Brain — Voice Transcription Endpoint.
 
 Accepts audio file uploads and returns transcribed text via
 OpenAI's Whisper model. Requires OPENAI_API_KEY to be set

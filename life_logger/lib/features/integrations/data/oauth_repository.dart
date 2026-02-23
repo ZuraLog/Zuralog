@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — OAuth Repository (Phase 1.6).
+/// Zuralog Edge Agent — OAuth Repository (Phase 1.6).
 ///
 /// Handles the client-side steps of the Strava OAuth 2.0 flow:
 /// fetching the authorization URL from the Cloud Brain and forwarding
@@ -8,7 +8,7 @@
 /// the short-lived [code] and [userId] to complete the handshake.
 library;
 
-import 'package:life_logger/core/network/api_client.dart';
+import 'package:zuralog/core/network/api_client.dart';
 
 /// Repository responsible for initiating and completing OAuth flows
 /// with third-party integrations (currently Strava).
@@ -46,7 +46,7 @@ class OAuthRepository {
   /// for server-side token exchange.
   ///
   /// Called automatically by [DeeplinkHandler] after the app intercepts
-  /// the `lifelogger://oauth/strava?code=XXX` deep link.
+  /// the `zuralog://oauth/strava?code=XXX` deep link.
   ///
   /// Args:
   ///   code: The short-lived authorization code from Strava (expires quickly).

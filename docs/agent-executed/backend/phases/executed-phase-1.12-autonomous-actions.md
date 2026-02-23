@@ -92,12 +92,12 @@ Implemented the "Autonomous Task Execution" feature for Phase 1.12, enabling the
 | `cloud-brain/app/agent/orchestrator.py` | Returns `AgentResponse`, extracts `client_action` from tool results |
 | `cloud-brain/app/api/v1/chat.py` | Propagates `client_action` in WebSocket payload |
 | `cloud-brain/tests/test_orchestrator.py` | 6 tests updated + 2 new tests for client_action |
-| `life_logger/lib/core/deeplink/deeplink_launcher.dart` | Added generic `executeDeepLink()` method |
-| `life_logger/lib/features/chat/domain/message.dart` | Added `clientAction` field |
-| `life_logger/lib/features/harness/harness_screen.dart` | Deep link auto-execution + 3 test buttons |
-| `life_logger/ios/Runner/Info.plist` | `LSApplicationQueriesSchemes` for strava/calai |
-| `life_logger/android/app/src/main/AndroidManifest.xml` | `<queries>` for strava/calai/https schemes |
-| `life_logger/test/core/deeplink/deeplink_launcher_test.dart` | 5 new `executeDeepLink` tests |
+| `zuralog/lib/core/deeplink/deeplink_launcher.dart` | Added generic `executeDeepLink()` method |
+| `zuralog/lib/features/chat/domain/message.dart` | Added `clientAction` field |
+| `zuralog/lib/features/harness/harness_screen.dart` | Deep link auto-execution + 3 test buttons |
+| `zuralog/ios/Runner/Info.plist` | `LSApplicationQueriesSchemes` for strava/calai |
+| `zuralog/android/app/src/main/AndroidManifest.xml` | `<queries>` for strava/calai/https schemes |
+| `zuralog/test/core/deeplink/deeplink_launcher_test.dart` | 5 new `executeDeepLink` tests |
 
 ---
 

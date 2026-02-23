@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — User Profile Manager Tests.
+Zuralog Cloud Brain — User Profile Manager Tests.
 
 Tests for the dynamic system prompt suffix generation.
 """

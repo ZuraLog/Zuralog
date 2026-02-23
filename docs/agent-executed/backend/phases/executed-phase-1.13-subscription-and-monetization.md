@@ -86,10 +86,10 @@ Implemented a 2-tier (Free / Pro) subscription system using RevenueCat, spanning
 | `cloud-brain/tests/test_tier_middleware.py` | Tier enforcement tests |
 | `cloud-brain/tests/test_subscription_service.py` | Subscription service unit tests |
 | `cloud-brain/tests/test_webhook_handler.py` | Webhook endpoint tests |
-| `life_logger/lib/features/subscription/data/subscription_repository.dart` | RevenueCat SDK wrapper |
-| `life_logger/lib/features/subscription/domain/subscription_state.dart` | Subscription state model |
-| `life_logger/lib/features/subscription/domain/subscription_providers.dart` | Riverpod providers |
-| `life_logger/test/features/subscription/subscription_state_test.dart` | Flutter state model tests |
+| `zuralog/lib/features/subscription/data/subscription_repository.dart` | RevenueCat SDK wrapper |
+| `zuralog/lib/features/subscription/domain/subscription_state.dart` | Subscription state model |
+| `zuralog/lib/features/subscription/domain/subscription_providers.dart` | Riverpod providers |
+| `zuralog/test/features/subscription/subscription_state_test.dart` | Flutter state model tests |
 
 ## Files Modified (9)
 
@@ -105,8 +105,8 @@ Implemented a 2-tier (Free / Pro) subscription system using RevenueCat, spanning
 | `cloud-brain/app/services/user_service.py` | Upsert uses subscription_tier |
 | `cloud-brain/app/agent/context_manager/user_profile_service.py` | Query subscription_tier |
 | `cloud-brain/tests/test_user_profile.py` | Updated mocks for subscription_tier |
-| `life_logger/pubspec.yaml` | Added purchases_flutter dependency |
-| `life_logger/lib/features/harness/harness_screen.dart` | Subscription test section |
+| `zuralog/pubspec.yaml` | Added purchases_flutter dependency |
+| `zuralog/lib/features/harness/harness_screen.dart` | Subscription test section |
 
 ---
 

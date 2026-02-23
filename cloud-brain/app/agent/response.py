@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Agent Response Model.
+Zuralog Cloud Brain — Agent Response Model.
 
 Defines the structured response returned by the Orchestrator.
 Replaces the previous plain ``str`` return with a Pydantic model

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Life Logger</string>
+	<string>Zuralog</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>life_logger</string>
+	<string>zuralog</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -67,15 +67,15 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<!-- Custom URL scheme for OAuth deep-link callbacks (Phase 1.6) -->
-	<!-- e.g. lifelogger://oauth/strava?code=XXX returned by Strava after login -->
+	<!-- e.g. zuralog://oauth/strava?code=XXX returned by Strava after login -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.lifelogger</string>
+			<string>com.zuralog</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>lifelogger</string>
+				<string>zuralog</string>
 			</array>
 		</dict>
 	</array>
@@ -86,9 +86,9 @@
 		<string>calai</string>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Life Logger needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
+	<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Life Logger needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
+	<string>Zuralog needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

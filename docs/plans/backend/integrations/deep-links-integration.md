@@ -43,7 +43,7 @@ Add `LSApplicationQueriesSchemes` to allow `canLaunchUrl()` to detect installed 
 </array>
 ```
 
-**Location:** `life_logger/ios/Runner/Info.plist`
+**Location:** `zuralog/ios/Runner/Info.plist`
 
 ### Android (AndroidManifest.xml)
 
@@ -66,7 +66,7 @@ Add `<queries>` to allow package visibility on Android 11+:
 </queries>
 ```
 
-**Location:** `life_logger/android/app/src/main/AndroidManifest.xml`
+**Location:** `zuralog/android/app/src/main/AndroidManifest.xml`
 
 ---
 

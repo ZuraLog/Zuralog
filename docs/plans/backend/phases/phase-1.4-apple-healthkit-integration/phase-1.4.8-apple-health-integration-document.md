@@ -44,7 +44,7 @@ We integrate with HealthKit to read passive activity data (Steps, Workouts) and 
 
 ## Architecture
 - **Swift Bridge:** Direct HKHealthStore access.
-- **Platform Channel:** `com.lifelogger/health`
+- **Platform Channel:** `com.zuralog/health`
 - **MCP Server:** `apple_health` (Cloud Brain) -> Edge Agent
 
 ## Data Types Supported

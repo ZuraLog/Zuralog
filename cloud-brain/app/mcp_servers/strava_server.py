@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Strava MCP Server (Phase 1.6).
+Zuralog Cloud Brain — Strava MCP Server (Phase 1.6).
 
 Wraps the Strava API so the LLM agent can read recent activities and
 create manual entries via standard MCP tool calls. Token storage is

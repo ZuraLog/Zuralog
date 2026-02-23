@@ -29,8 +29,8 @@ We will use:
 - **Logout:** Clears local tokens and invalidates server session.
 
 ## Files
-- Create: `life_logger/lib/features/auth/data/auth_repository.dart`
-- Create: `life_logger/lib/features/auth/domain/auth_service.dart`
+- Create: `zuralog/lib/features/auth/data/auth_repository.dart`
+- Create: `zuralog/lib/features/auth/domain/auth_service.dart`
 
 ## Steps
 

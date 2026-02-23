@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — API Package.
+Zuralog Cloud Brain — API Package.
 
 Contains versioned API route definitions.
 """

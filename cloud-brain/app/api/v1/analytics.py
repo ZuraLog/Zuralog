@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Analytics API Router.
+Zuralog Cloud Brain — Analytics API Router.
 
 RESTful endpoints for health analytics: daily summaries, weekly trends,
 sleep-activity correlation, metric trend detection, goal progress

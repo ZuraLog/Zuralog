@@ -1,4 +1,4 @@
-/// Life Logger Edge Agent — Weekly Trends Domain Model.
+/// Zuralog Edge Agent — Weekly Trends Domain Model.
 ///
 /// Represents seven consecutive days of health metrics for trend-line
 /// charts on the dashboard. Returned by the Cloud Brain analytics API

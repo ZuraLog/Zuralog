@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Conversation and Message Models.
+Zuralog Cloud Brain — Conversation and Message Models.
 
 Stores chat history between users and the AI assistant. Each user
 can have multiple conversations, and each conversation contains

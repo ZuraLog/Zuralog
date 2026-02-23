@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — Source-of-Truth & Deduplication Engine.
+Zuralog Cloud Brain — Source-of-Truth & Deduplication Engine.
 
 Detects and resolves conflicting activity records from multiple
 data sources (e.g., a run recorded by both Apple Watch and Strava).

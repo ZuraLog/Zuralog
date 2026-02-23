@@ -42,7 +42,7 @@ We use Google Health Connect (Android 14+ built-in, Android 9+ via APK) to store
 
 ## Architecture
 - **Kotlin Bridge:** Uses `androidx.health.connect:connect-client`.
-- **Method Channel:** `com.lifelogger/health`.
+- **Method Channel:** `com.zuralog/health`.
 - **Background:** `WorkManager` (Periodic 15m).
 
 ## Data Types
@@ -60,7 +60,7 @@ At runtime, we launch an intent. The user sees a system sheet to toggle category
 ## Testing on Emulator
 1. Use an image with Play Store (API 34+ recommended).
 2. Install "Health Connect" app if not present.
-3. Open Health Connect -> Data and Access -> Life Logger -> Allow All.
+3. Open Health Connect -> Data and Access -> Zuralog -> Allow All.
 ```
 
 ## Exit Criteria

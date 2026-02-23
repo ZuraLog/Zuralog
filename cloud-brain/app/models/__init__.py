@@ -1,5 +1,5 @@
 """
-Life Logger Cloud Brain — ORM Models Package.
+Zuralog Cloud Brain — ORM Models Package.
 
 Re-exports Base and all model classes for convenient imports.
 Alembic's env.py imports from here to discover all models.
