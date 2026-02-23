@@ -12,7 +12,12 @@
           "package_name": "com.zuralog.zuralog"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "616346397607-se60r20r85d24teksi3oco8ss77kol0d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBkKsmA2R4qF5ImOIw59iD4OhAsR_Sma1w"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "616346397607-se60r20r85d24teksi3oco8ss77kol0d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "616346397607-virjdumer2q771env27qjajjhmqtsia2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.zuralog.zuralog"
+              }
+            }
+          ]
         }
       }
     }

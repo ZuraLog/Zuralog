@@ -66,8 +66,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- Custom URL scheme for OAuth deep-link callbacks (Phase 1.6) -->
-	<!-- e.g. zuralog://oauth/strava?code=XXX returned by Strava after login -->
+	<!-- Custom URL schemes for OAuth deep-link callbacks -->
+	<!-- 1. App deep links (Phase 1.6): e.g. zuralog://oauth/strava?code=XXX -->
+	<!-- 2. Google Sign In reversed client ID (social-oauth phase):
+	        Replace REPLACE_WITH_REVERSED_GOOGLE_CLIENT_ID with the value from
+	        your GoogleService-Info.plist REVERSED_CLIENT_ID key once you add
+	        an iOS OAuth 2.0 client ID in Google Cloud Console.
+	        Format: com.googleusercontent.apps.<YOUR_CLIENT_ID_REVERSED>
+	        See: docs/plans/2026-02-23-social-oauth-design.md -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -76,6 +82,16 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>zuralog</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.zuralog.google-signin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- TODO(dev): Replace with REVERSED_CLIENT_ID from GoogleService-Info.plist
+				     after adding an iOS OAuth 2.0 client in Google Cloud Console. -->
+				<string>com.googleusercontent.apps.616346397607-virjdumer2q771env27qjajjhmqtsia2</string>
 			</array>
 		</dict>
 	</array>

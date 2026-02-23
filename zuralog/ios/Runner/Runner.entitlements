@@ -2,11 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- HealthKit capabilities -->
     <key>com.apple.developer.healthkit</key>
     <true/>
     <key>com.apple.developer.healthkit.access</key>
     <array/>
     <key>com.apple.developer.healthkit.background-delivery</key>
     <true/>
+    <!-- Sign in with Apple (social-oauth phase)
+         Requires: Apple Developer Program membership ($99/year).
+         Activate this entitlement in Xcode > Signing & Capabilities
+         once you have a paid developer account and have configured:
+           - App ID with Sign in with Apple capability
+           - Services ID for web/Android redirect flow
+           - A private key in the Apple Developer Portal
+         See: docs/plans/2026-02-23-social-oauth-design.md -->
+    <key>com.apple.developer.applesignin</key>
+    <array>
+        <string>Default</string>
+    </array>
 </dict>
 </plist>

@@ -48,6 +48,11 @@ dependencies:
   flutter_markdown_plus: any   # Markdown rendering for AI chat responses (Phase 2.2.2)
   fl_chart: any           # Sparkline and trend charts for Dashboard (Phase 2.2.3)
 
+  # Social OAuth Sign-In (Phase social-oauth)
+  google_sign_in: ^6.2.2          # Native Google Sign In (iOS + Android)
+  sign_in_with_apple: ^6.1.4      # Native Apple Sign In (iOS; web-based on Android)
+  crypto: ^3.0.6                  # SHA-256 nonce hashing for Apple Sign In
+
   # SVG rendering (for the Zuralog brand logo asset)
   flutter_svg: ^2.0.17
 

@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/auth/data/auth_repository.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/auth/domain/social_auth_credentials.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
 
 // ── Onboarding Flag ───────────────────────────────────────────────────────────
@@ -125,6 +126,43 @@ class AuthStateNotifier extends Notifier<AuthState> {
       case AuthSuccess():
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
+        // ignore: discarded_futures
+        ref.read(userProfileProvider.notifier).load();
+      case AuthFailure():
+        state = AuthState.unauthenticated;
+    }
+
+    return result;
+  }
+
+  /// Authenticates via a native OAuth provider (Google or Apple).
+  ///
+  /// Delegates to [AuthRepository.socialLogin] with the token payload
+  /// from [SocialAuthCredentials]. On success, updates auth state to
+  /// [AuthState.authenticated] and eagerly loads the user profile.
+  ///
+  /// The [email] is not available from the SDK layer — the backend
+  /// extracts it from the ID token claims after Supabase validation.
+  /// Therefore [userEmailProvider] is not updated here; instead the
+  /// profile load will populate it once [userProfileProvider] resolves.
+  ///
+  /// Args:
+  ///   [credentials]: Token payload from the native OAuth SDK.
+  ///
+  /// Returns:
+  ///   [AuthResult] — [AuthSuccess] on success, [AuthFailure] on failure.
+  Future<AuthResult> socialLogin(SocialAuthCredentials credentials) async {
+    state = AuthState.loading;
+    final result = await _authRepository.socialLogin(
+      provider: credentials.provider.name,
+      idToken: credentials.idToken,
+      accessToken: credentials.accessToken,
+      nonce: credentials.nonce,
+    );
+
+    switch (result) {
+      case AuthSuccess():
+        state = AuthState.authenticated;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
       case AuthFailure():

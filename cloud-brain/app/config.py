@@ -19,6 +19,8 @@ class Settings(BaseSettings):
         supabase_service_key: Supabase service role key.
         pinecone_api_key: Pinecone vector DB key (Phase 1.8).
         openai_api_key: OpenAI API key for embeddings/LLM (Phase 1.8).
+        google_web_client_id: Google OAuth 2.0 Web Application client ID.
+        google_web_client_secret: Google OAuth 2.0 Web Application client secret.
         strava_client_id: Strava application Client ID (Phase 1.6).
         strava_client_secret: Strava application Client Secret (Phase 1.6).
         strava_redirect_uri: OAuth callback URI registered with Strava (Phase 1.6).
@@ -40,6 +42,8 @@ class Settings(BaseSettings):
     openrouter_referer: str = "https://zuralog.app"
     openrouter_title: str = "Zuralog"
     openrouter_model: str = "moonshotai/kimi-k2.5"
+    google_web_client_id: str = ""
+    google_web_client_secret: str = ""
     strava_client_id: str = ""
     strava_client_secret: str = ""
     strava_redirect_uri: str = "zuralog://oauth/strava"
