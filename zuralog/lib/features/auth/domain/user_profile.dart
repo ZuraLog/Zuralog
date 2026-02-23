@@ -1,0 +1,98 @@
+/// Zuralog Edge Agent — UserProfile Domain Model.
+///
+/// Represents the authenticated user's profile data as returned by the
+/// Cloud Brain `GET /api/v1/me/profile` endpoint. Immutable value object
+/// with helpers for AI greeting name resolution.
+library;
+
+/// Immutable domain model for a Zuralog user profile.
+///
+/// Fields mirror the Cloud Brain profile schema. Use [fromJson] to
+/// deserialize a backend response and [copyWith] to produce updated
+/// instances without mutation.
+class UserProfile {
+  /// Supabase user UUID.
+  final String id;
+
+  /// User's email address.
+  final String email;
+
+  /// Optional display name set by the user.
+  final String? displayName;
+
+  /// Optional short nickname preferred for AI greetings.
+  final String? nickname;
+
+  /// Optional date of birth.
+  final DateTime? birthday;
+
+  /// Optional gender identifier.
+  final String? gender;
+
+  /// Whether the user has completed the onboarding flow.
+  final bool onboardingComplete;
+
+  /// Creates an immutable [UserProfile].
+  ///
+  /// [id] and [email] are required; all other fields are optional.
+  const UserProfile({
+    required this.id,
+    required this.email,
+    this.displayName,
+    this.nickname,
+    this.birthday,
+    this.gender,
+    required this.onboardingComplete,
+  });
+
+  /// The name shown in AI greetings.
+  ///
+  /// Resolution order: [nickname] → [displayName] → email prefix.
+  String get aiName {
+    if (nickname != null && nickname!.isNotEmpty) return nickname!;
+    if (displayName != null && displayName!.isNotEmpty) return displayName!;
+    return email.split('@').first;
+  }
+
+  /// Deserializes a [UserProfile] from a Cloud Brain JSON response map.
+  ///
+  /// [json] must contain `id` (String) and `email` (String).
+  /// All other keys are optional and will be `null` if absent.
+  ///
+  /// Returns a fully populated [UserProfile] instance.
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      displayName: json['display_name'] as String?,
+      nickname: json['nickname'] as String?,
+      birthday: json['birthday'] != null
+          ? DateTime.parse(json['birthday'] as String)
+          : null,
+      gender: json['gender'] as String?,
+      onboardingComplete: json['onboarding_complete'] as bool? ?? false,
+    );
+  }
+
+  /// Returns a new [UserProfile] with the specified fields replaced.
+  ///
+  /// Fields not passed to [copyWith] retain their current values.
+  /// [id] and [email] are immutable and cannot be changed via [copyWith].
+  UserProfile copyWith({
+    String? displayName,
+    String? nickname,
+    DateTime? birthday,
+    String? gender,
+    bool? onboardingComplete,
+  }) {
+    return UserProfile(
+      id: id,
+      email: email,
+      displayName: displayName ?? this.displayName,
+      nickname: nickname ?? this.nickname,
+      birthday: birthday ?? this.birthday,
+      gender: gender ?? this.gender,
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
+    );
+  }
+}

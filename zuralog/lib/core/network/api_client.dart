@@ -144,6 +144,19 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
   }) => _dio.post(path, data: data, queryParameters: queryParameters);
 
+  /// Sends a PATCH request to the given [path] with optional [body].
+  ///
+  /// Used for partial resource updates where only provided fields should
+  /// be modified on the server. Unlike PUT, fields absent from [body]
+  /// remain unchanged on the backend.
+  ///
+  /// [body] is serialised as JSON and sent as the request body.
+  /// Returns the Dio [Response] containing the server's response.
+  Future<Response<dynamic>> patch(
+    String path, {
+    Map<String, dynamic>? body,
+  }) => _dio.patch(path, data: body);
+
   // -------------------------------------------------------------------------
   // Error Helpers
   // -------------------------------------------------------------------------

@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/auth/data/auth_repository.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
 
 // ── Onboarding Flag ───────────────────────────────────────────────────────────
 
@@ -74,10 +75,16 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// Checks if the user has stored tokens and updates state.
   ///
   /// Called once on app startup to determine initial routing.
+  /// If the user has valid stored tokens, also fires a profile load
+  /// (fire-and-forget) so [userProfileProvider] is populated eagerly.
   Future<void> checkAuthStatus() async {
     state = AuthState.loading;
     final isLoggedIn = await _authRepository.isLoggedIn();
     state = isLoggedIn ? AuthState.authenticated : AuthState.unauthenticated;
+    if (isLoggedIn) {
+      // ignore: discarded_futures
+      ref.read(userProfileProvider.notifier).load();
+    }
   }
 
   /// Attempts to log in with the given credentials.
@@ -85,6 +92,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// Returns the [AuthResult] for the UI to display.
   /// Updates state to [AuthState.authenticated] on success and stores the
   /// [email] in [userEmailProvider] for display in the Settings screen.
+  /// On success also fires a profile load (fire-and-forget).
   Future<AuthResult> login(String email, String password) async {
     state = AuthState.loading;
     final result = await _authRepository.login(email, password);
@@ -93,6 +101,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
       case AuthSuccess():
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
+        // ignore: discarded_futures
+        ref.read(userProfileProvider.notifier).load();
       case AuthFailure():
         state = AuthState.unauthenticated;
     }
@@ -105,6 +115,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// Returns the [AuthResult] for the UI to display.
   /// Updates state to [AuthState.authenticated] on success and stores the
   /// [email] in [userEmailProvider] for display in the Settings screen.
+  /// On success also fires a profile load (fire-and-forget).
   Future<AuthResult> register(String email, String password) async {
     state = AuthState.loading;
     final result = await _authRepository.register(email, password);
@@ -113,6 +124,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
       case AuthSuccess():
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
+        // ignore: discarded_futures
+        ref.read(userProfileProvider.notifier).load();
       case AuthFailure():
         state = AuthState.unauthenticated;
     }
@@ -123,11 +136,13 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// Logs out the current user.
   ///
   /// Always transitions to [AuthState.unauthenticated] and clears the
-  /// stored email from [userEmailProvider].
+  /// stored email from [userEmailProvider]. Also clears the cached
+  /// [userProfileProvider] state.
   Future<void> logout() async {
     state = AuthState.loading;
     await _authRepository.logout();
     ref.read(userEmailProvider.notifier).state = '';
+    ref.read(userProfileProvider.notifier).clear();
     state = AuthState.unauthenticated;
   }
 }
@@ -153,3 +168,79 @@ final userEmailProvider = StateProvider<String>(
   (ref) => '',
   name: 'userEmailProvider',
 );
+
+// ── User Profile ──────────────────────────────────────────────────────────────
+
+/// Provides the current user's [UserProfile], or `null` before the profile
+/// has been loaded.
+///
+/// The profile is populated automatically (fire-and-forget) after a
+/// successful [AuthStateNotifier.login], [AuthStateNotifier.register], or
+/// [AuthStateNotifier.checkAuthStatus] call. Widgets can watch this provider
+/// to access profile data (e.g., AI greeting name, onboarding status).
+///
+/// Consumer example:
+/// ```dart
+/// final profile = ref.watch(userProfileProvider);
+/// final name = profile?.aiName ?? 'there';
+/// ```
+final userProfileProvider =
+    NotifierProvider<UserProfileNotifier, UserProfile?>(
+      UserProfileNotifier.new,
+    );
+
+/// Notifier that manages the current user's [UserProfile] state.
+///
+/// Loaded on login/register/startup and updated after profile edits.
+/// State is `null` when unauthenticated or before the first fetch.
+class UserProfileNotifier extends Notifier<UserProfile?> {
+  @override
+  UserProfile? build() => null;
+
+  /// Fetches the profile from the backend and updates state.
+  ///
+  /// Intended to be called fire-and-forget from [AuthStateNotifier].
+  /// Errors are silently swallowed — the UI degrades gracefully to
+  /// `null` state (e.g., fallback greeting).
+  Future<void> load() async {
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      state = await repo.fetchProfile();
+    } catch (_) {
+      // Non-critical — UI falls back to null state gracefully.
+    }
+  }
+
+  /// Updates profile fields on the backend and refreshes local state.
+  ///
+  /// Only non-null arguments are sent in the PATCH request.
+  ///
+  /// Args:
+  ///   [displayName]: New display name (optional).
+  ///   [nickname]: New nickname for AI greetings (optional).
+  ///   [birthday]: New date of birth (optional).
+  ///   [gender]: New gender identifier (optional).
+  ///   [onboardingComplete]: Marks onboarding as complete (optional).
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails — callers should handle this.
+  Future<void> update({
+    String? displayName,
+    String? nickname,
+    DateTime? birthday,
+    String? gender,
+    bool? onboardingComplete,
+  }) async {
+    final repo = ref.read(authRepositoryProvider);
+    state = await repo.updateProfile(
+      displayName: displayName,
+      nickname: nickname,
+      birthday: birthday,
+      gender: gender,
+      onboardingComplete: onboardingComplete,
+    );
+  }
+
+  /// Clears the cached profile state (called on logout).
+  void clear() => state = null;
+}
