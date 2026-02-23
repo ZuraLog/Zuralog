@@ -91,7 +91,7 @@
 			<array>
 				<!-- TODO(dev): Replace with REVERSED_CLIENT_ID from GoogleService-Info.plist
 				     after adding an iOS OAuth 2.0 client in Google Cloud Console. -->
-				<string>REPLACE_WITH_REVERSED_GOOGLE_CLIENT_ID</string>
+				<string>com.googleusercontent.apps.616346397607-virjdumer2q771env27qjajjhmqtsia2</string>
 			</array>
 		</dict>
 	</array>
