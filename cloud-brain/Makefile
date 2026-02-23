@@ -7,8 +7,10 @@
 .PHONY: dev test lint migrate docker-up docker-down
 
 ## Start the development server with hot-reload
+## Uses port 8001 to avoid conflict with workspace-mcp on port 8000.
+## Android emulator connects via http://10.0.2.2:8001
 dev:
-	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 
 ## Run the test suite
 test:

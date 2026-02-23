@@ -26,14 +26,14 @@ class ApiClient {
   /// Creates a new [ApiClient].
   ///
   /// [baseUrl] defaults to the Android emulator localhost alias.
-  /// Override for iOS simulator (`http://localhost:8000`) or
+  /// Override for iOS simulator (`http://localhost:8001`) or
   /// production (`https://api.lifelogger.com`).
   ///
   /// [dio] and [storage] can be injected for testing.
   ApiClient({
     String baseUrl = const String.fromEnvironment(
       'BASE_URL',
-      defaultValue: 'http://10.0.2.2:8000',
+      defaultValue: 'http://10.0.2.2:8001',
     ),
     Dio? dio,
     FlutterSecureStorage? storage,
