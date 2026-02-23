@@ -40,6 +40,12 @@ abstract final class RouteNames {
   /// Path for the registration screen.
   static const String registerPath = '/auth/register';
 
+  /// Name for the post-registration profile questionnaire screen.
+  static const String profileQuestionnaire = 'profileQuestionnaire';
+
+  /// Path for the profile questionnaire screen.
+  static const String profileQuestionnairePath = '/auth/profile-questionnaire';
+
   // ── Main Shell (Tabbed) ───────────────────────────────────────────────────
 
   /// Name for the dashboard tab (shell root).
@@ -89,5 +95,6 @@ abstract final class RouteNames {
     onboardingPath,
     loginPath,
     registerPath,
+    profileQuestionnairePath,
   };
 }

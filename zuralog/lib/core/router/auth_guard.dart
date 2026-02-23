@@ -7,8 +7,11 @@
 /// 1. If [AuthState.loading] → return `null` (stay put while auth resolves).
 /// 2. If [AuthState.unauthenticated] and the destination is a protected route
 ///    → redirect to [RouteNames.welcomePath].
-/// 3. If [AuthState.authenticated] and the destination is a public auth route
-///    → redirect to [RouteNames.dashboardPath] (prevent back-navigation to login).
+/// 3. If [AuthState.authenticated] and the destination is a public auth route,
+///    **except** [RouteNames.profileQuestionnairePath] → redirect to
+///    [RouteNames.dashboardPath] (prevent back-navigation to login).
+///    The questionnaire is excluded because authenticated new users must be
+///    allowed to stay on it until [UserProfile.onboardingComplete] is `true`.
 /// 4. Otherwise → return `null` (allow navigation).
 library;
 
@@ -41,7 +44,13 @@ String? authGuardRedirect({
   }
 
   // ── Rule 3: Authenticated — prevent back-navigation to auth screens ──────
-  if (authState == AuthState.authenticated && isPublicPath) {
+  // Exception: profileQuestionnairePath is in publicPaths but must remain
+  // reachable for authenticated users who haven't completed onboarding yet.
+  // The onboarding guard in app_router.dart (Step 3) handles the redirect
+  // to dashboard once onboardingComplete flips to true.
+  if (authState == AuthState.authenticated &&
+      isPublicPath &&
+      location != RouteNames.profileQuestionnairePath) {
     return RouteNames.dashboardPath;
   }
 

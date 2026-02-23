@@ -13,13 +13,26 @@ import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/core/storage/local_db.dart';
 import 'package:zuralog/core/storage/sync_status_store.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 import 'package:zuralog/features/analytics/data/analytics_repository.dart';
 import 'package:zuralog/features/integrations/data/oauth_repository.dart';
 
 /// Provides a singleton [ApiClient] for REST API communication.
+///
+/// Wires [ApiClient.onUnauthenticated] to [AuthStateNotifier.forceLogout]
+/// so that an expired-token 401 (after a failed refresh) automatically
+/// transitions the app to the unauthenticated state and redirects the
+/// user to the login screen — rather than leaving them stranded with a
+/// SnackBar error on an authenticated-only screen.
+///
+/// The callback uses [ref.read] lazily (not [ref.watch]) to avoid a
+/// circular provider dependency between [apiClientProvider] and
+/// [authStateProvider].
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
+  return ApiClient(
+    onUnauthenticated: () => ref.read(authStateProvider.notifier).forceLogout(),
+  );
 });
 
 /// Provides a singleton [WsClient] for WebSocket communication.

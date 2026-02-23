@@ -10,10 +10,16 @@
 ///
 /// **Widget type:** [ConsumerStatefulWidget] — needs Riverpod [ref] and
 /// local [TextEditingController] + form-state management.
+///
+/// **Navigation:**
+/// - Back button: [context.pop] or [context.go] to [WelcomeScreen].
+/// - "Log in" link: [context.pushReplacement] to [LoginScreen] — replaces
+///   this route on the stack to prevent unbounded Register ↔ Login accumulation.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
@@ -118,13 +124,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     switch (result) {
       case AuthSuccess():
-        // GoRouter auth guard navigates to dashboard automatically.
+        // The router guard (in app_router.dart Step 3) redirects authenticated
+        // users with onboardingComplete == false to the profile questionnaire
+        // automatically. No explicit navigation call is needed here.
         break;
       case AuthFailure(:final message):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
     }
@@ -132,10 +141,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
-        centerTitle: false,
+        // Explicit back button — returns to the WelcomeScreen (auth home).
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          tooltip: 'Back',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteNames.welcomePath);
+            }
+          },
+        ),
+        // Zuralog SVG logo centered in the AppBar for brand continuity.
+        title: SvgPicture.asset(
+          'assets/images/zuralog_logo.svg',
+          height: 28,
+          colorFilter: ColorFilter.mode(
+            colorScheme.onSurface,
+            BlendMode.srcIn,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Form(
@@ -146,7 +177,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Heading ──────────────────────────────────────────────
-                Text('Join Zuralog', style: AppTextStyles.h2),
+                Text(
+                  'Create your account',
+                  style: AppTextStyles.h2.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
+                ),
                 const SizedBox(height: AppDimens.spaceSm),
                 Text(
                   'Start your AI-powered health journey.',
@@ -202,6 +238,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: AppDimens.spaceMd),
 
                 // ── Login link ───────────────────────────────────────────
+                // Centered inline text + link row.
+                // pushReplacement prevents Register↔Login stack accumulation.
                 Center(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -213,7 +251,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                       ),
                       TextButton(
-                        // pushReplacement prevents stacking register on top of itself.
                         onPressed: () => context.pushReplacement(
                           RouteNames.loginPath,
                         ),

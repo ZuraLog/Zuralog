@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
 
 /// Repository for authentication operations.
 ///
@@ -118,6 +119,61 @@ class AuthRepository {
       // Local token cleanup is what matters for the client.
     }
     await _clearTokens();
+  }
+
+  /// Fetches the current user's profile from the backend.
+  ///
+  /// Calls `GET /api/v1/users/me/profile` using the stored auth token.
+  ///
+  /// Returns:
+  ///   A fully populated [UserProfile] on success.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<UserProfile> fetchProfile() async {
+    final response = await _apiClient.get('/api/v1/users/me/profile');
+    return UserProfile.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Updates the current user's profile. Only non-null fields are sent.
+  ///
+  /// Calls `PATCH /api/v1/users/me/profile` with only the provided fields, so
+  /// omitted parameters retain their current server-side values.
+  ///
+  /// Args:
+  ///   [displayName]: New display name (optional).
+  ///   [nickname]: New nickname for AI greetings (optional).
+  ///   [birthday]: New date of birth (optional). Sent as `YYYY-MM-DD`.
+  ///   [gender]: New gender identifier (optional).
+  ///   [onboardingComplete]: Marks onboarding as done (optional).
+  ///
+  /// Returns:
+  ///   The updated [UserProfile] as returned by the server.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<UserProfile> updateProfile({
+    String? displayName,
+    String? nickname,
+    DateTime? birthday,
+    String? gender,
+    bool? onboardingComplete,
+  }) async {
+    final body = <String, dynamic>{};
+    if (displayName != null) body['display_name'] = displayName;
+    if (nickname != null) body['nickname'] = nickname;
+    if (birthday != null) {
+      body['birthday'] = birthday.toIso8601String().split('T').first;
+    }
+    if (gender != null) body['gender'] = gender;
+    if (onboardingComplete != null) {
+      body['onboarding_complete'] = onboardingComplete;
+    }
+    final response = await _apiClient.patch(
+      '/api/v1/users/me/profile',
+      body: body,
+    );
+    return UserProfile.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Checks if the user has a stored auth token.

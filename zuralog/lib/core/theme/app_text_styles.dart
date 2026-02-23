@@ -84,4 +84,16 @@ abstract final class AppTextStyles {
         letterSpacing: 0,
         height: 1.33,
       );
+
+  /// Label XS — 10pt Medium.
+  ///
+  /// Used for densely-packed labels in constrained spaces such as integration
+  /// rail pill tiles, where the standard caption is too large.
+  static TextStyle get labelXs => TextStyle(
+        fontFamily: _fontFamily,
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0,
+        height: 1.3,
+      );
 }

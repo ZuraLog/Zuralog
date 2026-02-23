@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 import 'package:zuralog/features/analytics/domain/daily_summary.dart';
 import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
@@ -44,6 +45,7 @@ class DashboardScreen extends ConsumerWidget {
     final insightAsync = ref.watch(dashboardInsightProvider);
     final summaryAsync = ref.watch(dailySummaryProvider);
     final trendsAsync = ref.watch(weeklyTrendsProvider);
+    final profile = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -63,7 +65,7 @@ class DashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
                 ),
-                child: _buildHeader(context),
+                child: _buildHeader(context, profile?.aiName ?? '...'),
               ),
             ),
           ),
@@ -77,7 +79,9 @@ class DashboardScreen extends ConsumerWidget {
                 insightAsync.when(
                   data: (insight) => InsightCard(
                     insight: insight,
-                    onTap: () => context.go(RouteNames.chatPath),
+                    // Use goBranch to switch tabs within the StatefulShellRoute
+                    // — preserves branch state and avoids replacing the stack.
+                    onTap: () => StatefulNavigationShell.of(context).goBranch(1),
                   ),
                   loading: () => const InsightCardShimmer(),
                   error: (e, _) => InsightCard(
@@ -85,7 +89,7 @@ class DashboardScreen extends ConsumerWidget {
                       insight:
                           'Tap to chat with your AI coach for today\'s insight.',
                     ),
-                    onTap: () => context.go(RouteNames.chatPath),
+                    onTap: () => StatefulNavigationShell.of(context).goBranch(1),
                   ),
                 ),
 
@@ -115,8 +119,10 @@ class DashboardScreen extends ConsumerWidget {
 
                 // C) Integrations Rail
                 IntegrationsRail(
+                  // goBranch(2) switches to the Integrations tab within
+                  // the StatefulShellRoute without replacing the stack.
                   onManageTap: () =>
-                      context.go(RouteNames.integrationsPath),
+                      StatefulNavigationShell.of(context).goBranch(2),
                 ),
 
                 const SizedBox(height: AppDimens.spaceLg),
@@ -140,7 +146,7 @@ class DashboardScreen extends ConsumerWidget {
   ///
   /// Shows a time-sensitive greeting on the left and a profile avatar on the
   /// right. Tapping the avatar navigates to the settings screen.
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, String name) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Good Morning'
@@ -163,7 +169,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             Text(
-              'Alex',
+              name,
               style: AppTextStyles.h2.copyWith(
                 color: AppColors.primary,
               ),

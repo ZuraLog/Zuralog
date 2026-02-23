@@ -2,13 +2,13 @@
 ///
 /// Declares [routerProvider], a Riverpod [Provider<GoRouter>] that creates the
 /// [GoRouter] instance ONCE and uses [refreshListenable] to re-trigger the
-/// [redirect] callback whenever auth state changes — without recreating the
-/// entire router.
+/// [redirect] callback whenever auth state or first-launch flag changes —
+/// without recreating the entire router.
 ///
 /// **Route tree:**
 /// ```
-/// /welcome              → WelcomeScreen
-/// /onboarding           → OnboardingPageView
+/// /welcome              → WelcomeScreen (Auth Home — Apple/Google/Email)
+/// /onboarding           → OnboardingPageView (shown only on first launch)
 /// /auth/login           → LoginScreen
 /// /auth/register        → RegisterScreen
 /// / (StatefulShellRoute) → AppShell
@@ -18,6 +18,12 @@
 /// /settings             → SettingsScreen (pushed over shell)
 /// /debug/catalog        → CatalogScreen (dev-only)
 /// ```
+///
+/// **First-launch redirect rule:**
+/// On the very first launch (before [markOnboardingComplete] is called),
+/// any navigation to [welcomePath] is intercepted and redirected to
+/// [onboardingPath]. After completing/skipping onboarding the flag is set
+/// and subsequent launches go directly to [welcomePath].
 library;
 
 import 'package:flutter/foundation.dart';
@@ -27,9 +33,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
+import 'package:zuralog/features/auth/presentation/onboarding/profile_questionnaire_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
@@ -42,17 +50,41 @@ import 'package:zuralog/shared/layout/app_shell.dart';
 
 // ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
 
-/// Bridges Riverpod's [authStateProvider] to a [ChangeNotifier] that [GoRouter]
-/// can use as a [refreshListenable].
+/// Bridges Riverpod's [authStateProvider], [hasSeenOnboardingProvider],
+/// [userProfileProvider], and [isLoadingProfileProvider] to a single
+/// [ChangeNotifier] that [GoRouter] can use as a [refreshListenable].
 ///
-/// When [authStateProvider] emits a new [AuthState], [notifyListeners] is called
+/// When any of these providers emits a new value, [notifyListeners] is called
 /// so the router re-evaluates its [redirect] callback without recreating the
-/// [GoRouter] instance itself.
-class _AuthStateListenable extends ChangeNotifier {
-  /// Creates an [_AuthStateListenable] that listens to [authStateProvider]
-  /// via [ref].
-  _AuthStateListenable(Ref ref) {
-    ref.listen<AuthState>(authStateProvider, (previous, next) => notifyListeners());
+/// [GoRouter]. [isLoadingProfileProvider] is included so the guard can hold
+/// off the questionnaire redirect while the profile fetch is still in-flight.
+class _RouterRefreshListenable extends ChangeNotifier {
+  /// Creates a [_RouterRefreshListenable] that listens to auth, onboarding
+  /// flag, profile state, and profile-loading flag changes via [ref].
+  _RouterRefreshListenable(Ref ref) {
+    // Listen to auth state changes.
+    ref.listen<AuthState>(
+      authStateProvider,
+      (prev, next) => notifyListeners(),
+    );
+    // Listen to the onboarding flag to redirect first-timers.
+    ref.listen<AsyncValue<bool>>(
+      hasSeenOnboardingProvider,
+      (prev, next) => notifyListeners(),
+    );
+    // Listen to profile changes so the onboarding guard fires as soon as
+    // [onboardingComplete] is set to true after the questionnaire.
+    ref.listen<UserProfile?>(
+      userProfileProvider,
+      (prev, next) => notifyListeners(),
+    );
+    // Listen to the profile-loading flag so the guard re-evaluates once
+    // [load()] completes — preventing a premature questionnaire redirect
+    // while the profile fetch is still in-flight.
+    ref.listen<bool>(
+      isLoadingProfileProvider,
+      (prev, next) => notifyListeners(),
+    );
   }
 }
 
@@ -61,25 +93,71 @@ class _AuthStateListenable extends ChangeNotifier {
 /// Riverpod provider that exposes the configured [GoRouter] instance.
 ///
 /// The [GoRouter] is created **once** and kept alive for the lifetime of the
-/// provider. Auth-state changes are propagated via [refreshListenable]
-/// (an [_AuthStateListenable]) so only the [redirect] callback is
-/// re-evaluated — the navigator stack is preserved across auth transitions.
+/// provider. Auth-state and onboarding-flag changes are propagated via
+/// [refreshListenable] so only the [redirect] callback is re-evaluated.
 final routerProvider = Provider<GoRouter>((ref) {
-  final listenable = _AuthStateListenable(ref);
+  final listenable = _RouterRefreshListenable(ref);
   ref.onDispose(listenable.dispose);
 
   return GoRouter(
     initialLocation: RouteNames.welcomePath,
-    // refreshListenable notifies GoRouter when auth state changes, triggering
-    // redirect re-evaluation without recreating the GoRouter instance.
     refreshListenable: listenable,
     debugLogDiagnostics: kDebugMode,
     redirect: (BuildContext context, GoRouterState state) {
-      // ref.read is correct here — called at redirect time, not during build.
-      return authGuardRedirect(
-        authState: ref.read(authStateProvider),
-        location: state.matchedLocation,
+      final authState = ref.read(authStateProvider);
+      final location = state.matchedLocation;
+
+      // ── Step 1: Run the auth guard first. ───────────────────────────────
+      final authRedirect = authGuardRedirect(
+        authState: authState,
+        location: location,
       );
+      if (authRedirect != null) return authRedirect;
+
+      // ── Step 2: First-launch onboarding redirect. ────────────────────────
+      // Only relevant when the user is unauthenticated and heading to /welcome.
+      // If the onboarding flag is still loading, stay put.
+      final onboardingAsync = ref.read(hasSeenOnboardingProvider);
+      if (location == RouteNames.welcomePath) {
+        // While the async flag is loading, stay on /welcome (no redirect).
+        if (onboardingAsync.isLoading) return null;
+        final hasSeen = onboardingAsync.valueOrNull ?? true;
+        if (!hasSeen) {
+          // First launch — show onboarding before the auth home.
+          return RouteNames.onboardingPath;
+        }
+      }
+
+      // ── Step 3: Post-registration profile questionnaire guard. ───────────
+      // If the user is authenticated but has not completed the profile
+      // questionnaire, redirect them to it — unless they are already there.
+      //
+      // Important: while [isLoadingProfileProvider] is true, the profile
+      // fetch is still in-flight. We must NOT redirect during this window
+      // because [profile] is transiently null even for returning users who
+      // have already completed onboarding. Redirecting here would force
+      // every returning user to re-do the questionnaire on every login.
+      //
+      // Once [load()] completes:
+      //   - profile != null && onboardingComplete == true  → allow through
+      //   - profile != null && onboardingComplete == false → questionnaire
+      //   - profile == null (load failed)                  → questionnaire
+      //     (user can retry; the questionnaire upserts the profile row)
+      if (authState == AuthState.authenticated &&
+          location != RouteNames.profileQuestionnairePath) {
+        final isLoadingProfile = ref.read(isLoadingProfileProvider);
+        if (isLoadingProfile) {
+          // Profile fetch still in-flight — stay put, guard will re-fire
+          // when [isLoadingProfileProvider] flips to false.
+          return null;
+        }
+        final profile = ref.read(userProfileProvider);
+        if (profile == null || !profile.onboardingComplete) {
+          return RouteNames.profileQuestionnairePath;
+        }
+      }
+
+      return null;
     },
     routes: _buildRoutes(),
   );
@@ -91,7 +169,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 /// routes (welcome, onboarding, auth, settings, debug) and the tabbed shell.
 List<RouteBase> _buildRoutes() {
   return [
-    // ── Onboarding ────────────────────────────────────────────────────────
+    // ── Onboarding & Auth Home ────────────────────────────────────────────
     GoRoute(
       path: RouteNames.welcomePath,
       name: RouteNames.welcome,
@@ -103,7 +181,7 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) => const OnboardingPageView(),
     ),
 
-    // ── Auth ─────────────────────────────────────────────────────────────
+    // ── Auth Forms ────────────────────────────────────────────────────────
     GoRoute(
       path: RouteNames.loginPath,
       name: RouteNames.login,
@@ -113,6 +191,13 @@ List<RouteBase> _buildRoutes() {
       path: RouteNames.registerPath,
       name: RouteNames.register,
       builder: (context, state) => const RegisterScreen(),
+    ),
+
+    // ── Post-registration Profile Questionnaire ───────────────────────────
+    GoRoute(
+      path: RouteNames.profileQuestionnairePath,
+      name: RouteNames.profileQuestionnaire,
+      builder: (context, state) => const ProfileQuestionnaireScreen(),
     ),
 
     // ── Settings (pushed over shell) ──────────────────────────────────────
@@ -171,4 +256,3 @@ List<RouteBase> _buildRoutes() {
     ),
   ];
 }
-

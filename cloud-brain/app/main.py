@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app: The FastAPI application instance.
     """
     # --- Startup ---
-    print(f"🚀 Zuralog Cloud Brain starting in {settings.app_env} mode")
+    print(f"Zuralog Cloud Brain starting in {settings.app_env} mode")
 
     # HTTP client (shared across services)
     http_client = httpx.AsyncClient(timeout=30.0)
@@ -79,7 +79,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if getattr(app.state, "rate_limiter", None) is not None:
         await app.state.rate_limiter.close()
     await http_client.aclose()
-    print("👋 Zuralog Cloud Brain shutting down")
+    print("Zuralog Cloud Brain shutting down")
 
 
 app = FastAPI(

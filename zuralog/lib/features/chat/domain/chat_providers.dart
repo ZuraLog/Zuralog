@@ -5,12 +5,13 @@
 /// - [connectionStatusProvider] for live WebSocket connection status.
 ///
 /// The [ChatNotifier] delegates all I/O to [ChatRepository] and exposes
-/// a clean command interface ([connect], [sendMessage], [loadHistory],
-/// [setTyping]) for the UI layer to drive.
+/// a clean command interface ([connect], [reconnect], [sendMessage],
+/// [loadHistory], [setTyping]) for the UI layer to drive.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/features/chat/data/chat_repository.dart';
 import 'package:zuralog/features/chat/domain/message.dart';
@@ -67,13 +68,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// The chat repository for WebSocket and REST operations.
   final ChatRepository _repository;
 
+  /// Riverpod ref used to read other providers (e.g. [secureStorageProvider]).
+  final Ref _ref;
+
   /// Tracks the stream subscription so it can be cancelled on dispose.
   Object? _messageSub;
 
-  /// Creates a [ChatNotifier] with the given [repository].
+  /// Creates a [ChatNotifier] with the given [repository] and [ref].
   ///
   /// Initial state has no messages, not typing, and no error.
-  ChatNotifier(this._repository) : super(const ChatState());
+  ChatNotifier(this._repository, this._ref) : super(const ChatState());
 
   @override
   void dispose() {
@@ -89,6 +93,20 @@ class ChatNotifier extends StateNotifier<ChatState> {
   void _cancelSub(Object sub) {
     // ignore: avoid_dynamic_calls
     (sub as dynamic).cancel();
+  }
+
+  /// Reconnects the WebSocket using the token stored in [SecureStorage].
+  ///
+  /// Reads the auth token from [secureStorageProvider] and calls [connect].
+  /// This is the correct handler for pull-to-refresh — it re-authenticates
+  /// and resets the [WsClient] retry state before opening a fresh connection.
+  /// Does nothing when no token is available.
+  Future<void> reconnect() async {
+    final token =
+        await _ref.read(secureStorageProvider).getAuthToken();
+    if (token != null && token.isNotEmpty) {
+      connect(token);
+    }
   }
 
   /// Opens the WebSocket connection and begins accumulating messages.
@@ -182,7 +200,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 final chatNotifierProvider =
     StateNotifierProvider.autoDispose<ChatNotifier, ChatState>((ref) {
   final repository = ref.watch(chatRepositoryProvider);
-  return ChatNotifier(repository);
+  return ChatNotifier(repository, ref);
 });
 
 /// Provides a reactive stream of [ConnectionStatus] from the WebSocket.

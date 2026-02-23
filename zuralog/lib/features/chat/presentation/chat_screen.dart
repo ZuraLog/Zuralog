@@ -6,7 +6,7 @@
 /// with smooth scroll-to-bottom on new messages.
 ///
 /// Key features:
-/// - [RefreshIndicator] for pull-to-refresh history loading.
+/// - [RefreshIndicator] for pull-to-refresh WebSocket reconnection.
 /// - [TypingIndicator] shown while the AI is composing a response.
 /// - Connection status banner at the top when disconnected or reconnecting.
 /// - Frosted-glass [ChatInputBar] floating at the bottom.
@@ -30,7 +30,7 @@ import 'package:zuralog/features/chat/presentation/widgets/typing_indicator.dart
 ///
 /// Connects to the Cloud Brain via WebSocket on init, accumulates streaming
 /// messages into a [ListView], and provides [ChatInputBar] for user input.
-/// Supports pull-to-refresh history loading via [RefreshIndicator].
+/// Supports pull-to-refresh reconnection via [RefreshIndicator].
 class ChatScreen extends ConsumerStatefulWidget {
   /// Creates a [ChatScreen].
   const ChatScreen({super.key});
@@ -128,12 +128,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // ── Connection status banner ──────────────────────────────────
           _ConnectionBanner(connectionAsync: connectionAsync),
 
-          // ── Message list with pull-to-refresh ────────────────────────
+          // ── Message list with pull-to-reconnect ──────────────────────
           Expanded(
             child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: () =>
-                  ref.read(chatNotifierProvider.notifier).loadHistory(),
+                  ref.read(chatNotifierProvider.notifier).reconnect(),
               child: _MessageList(
                 messages: chatState.messages,
                 isTyping: chatState.isTyping,

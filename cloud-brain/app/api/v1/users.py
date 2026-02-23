@@ -2,7 +2,7 @@
 Zuralog Cloud Brain — User Preferences API.
 
 Endpoints for reading and updating user profile preferences
-such as coaching persona and subscription tier.
+such as coaching persona, subscription tier, and onboarding profile fields.
 """
 
 import logging
@@ -10,10 +10,12 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.schemas import UpdateProfileRequest, UserProfileResponse
 from app.database import get_db
+from app.models.user import User
 from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
@@ -124,3 +126,82 @@ async def update_preferences(
     await db.commit()
 
     return {"message": "Preferences updated", "coach_persona": body.coach_persona}
+
+
+@router.get("/me/profile", response_model=UserProfileResponse)
+async def get_profile(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> UserProfileResponse:
+    """Get the current user's profile.
+
+    Args:
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for token validation.
+        db: Injected async database session.
+
+    Returns:
+        UserProfileResponse with all profile fields.
+
+    Raises:
+        HTTPException: 404 if the user is not found in the database.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    db_user = result.scalars().first()
+
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return UserProfileResponse.model_validate(db_user)
+
+
+@router.patch("/me/profile", response_model=UserProfileResponse)
+async def update_profile(
+    body: UpdateProfileRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> UserProfileResponse:
+    """Update the current user's profile.
+
+    Only fields with non-None values in the request body are applied.
+
+    Args:
+        body: Partial profile update payload.
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for token validation.
+        db: Injected async database session.
+
+    Returns:
+        UserProfileResponse reflecting the updated state.
+
+    Raises:
+        HTTPException: 404 if the user is not found in the database.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    db_user = result.scalars().first()
+
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    update_data = body.model_dump(exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
+    for field, value in update_data.items():
+        setattr(db_user, field, value)
+
+    await db.commit()
+    await db.refresh(db_user)
+
+    return UserProfileResponse.model_validate(db_user)

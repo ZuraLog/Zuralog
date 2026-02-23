@@ -2,17 +2,23 @@
 ///
 /// A 2-page horizontal page view that tells the product story using editorial
 /// illustration cards and value-prop copy. Users can swipe or tap the Next /
-/// Create Account button to advance. The "Skip" link bypasses to registration.
+/// Get Started button to advance. The "Skip" link bypasses to the auth home.
+///
+/// Shown only on the **first launch** of the app. After the user completes or
+/// skips onboarding, [markOnboardingComplete] is called to persist the flag so
+/// subsequent launches go directly to [WelcomeScreen] (the auth home).
 ///
 /// **Design direction:** "Editorial Storytelling" — full-screen scaffold,
 /// large illustration containers, clean page-dot indicator row.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -65,18 +71,18 @@ const List<_PageData> _pages = [
 /// Manages a [PageController] to drive a horizontal [PageView].
 /// Provides page-dot indicators and an adaptive Next / Create Account button.
 /// A "Skip" link is available in the top-right corner throughout.
-class OnboardingPageView extends StatefulWidget {
+class OnboardingPageView extends ConsumerStatefulWidget {
   /// Creates an [OnboardingPageView].
   const OnboardingPageView({super.key});
 
   @override
-  State<OnboardingPageView> createState() => _OnboardingPageViewState();
+  ConsumerState<OnboardingPageView> createState() => _OnboardingPageViewState();
 }
 
 /// State for [OnboardingPageView].
 ///
 /// Tracks [_currentPage] and drives the [PageController].
-class _OnboardingPageViewState extends State<OnboardingPageView> {
+class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
   /// Controls animated page transitions.
   final PageController _pageController = PageController();
 
@@ -107,16 +113,32 @@ class _OnboardingPageViewState extends State<OnboardingPageView> {
   /// Returns `true` when the user is on the final page.
   bool get _isLastPage => _currentPage == _pages.length - 1;
 
-  /// Advances to the next page or navigates to register if on the last page.
-  void _handleNextOrFinish() {
+  /// Advances to the next page, or completes onboarding and navigates to the
+  /// auth home ([WelcomeScreen]) when on the last page.
+  Future<void> _handleNextOrFinish() async {
     if (_isLastPage) {
-      context.go(RouteNames.registerPath);
+      await markOnboardingComplete();
+      if (!mounted) return;
+      // Invalidate so GoRouter's refreshListenable re-reads the updated flag.
+      ref.invalidate(hasSeenOnboardingProvider);
+      // go() replaces the onboarding stack — the user cannot go "back" to
+      // onboarding after completing it.
+      context.go(RouteNames.welcomePath);
     } else {
       _pageController.nextPage(
         duration: _animationDuration,
         curve: _animationCurve,
       );
     }
+  }
+
+  /// Skips onboarding and navigates immediately to the auth home.
+  Future<void> _handleSkip() async {
+    await markOnboardingComplete();
+    if (!mounted) return;
+    // Invalidate so GoRouter's refreshListenable re-reads the updated flag.
+    ref.invalidate(hasSeenOnboardingProvider);
+    context.go(RouteNames.welcomePath);
   }
 
   @override
@@ -135,7 +157,7 @@ class _OnboardingPageViewState extends State<OnboardingPageView> {
                   right: AppDimens.spaceMd,
                 ),
                 child: TextButton(
-                  onPressed: () => context.go(RouteNames.registerPath),
+                  onPressed: _handleSkip,
                   child: Text(
                     'Skip',
                     style: AppTextStyles.body.copyWith(
@@ -199,7 +221,7 @@ class _OnboardingPageViewState extends State<OnboardingPageView> {
                   SizedBox(
                     width: _buttonWidth,
                     child: PrimaryButton(
-                      label: _isLastPage ? 'Create Account' : 'Next',
+                      label: _isLastPage ? 'Get Started' : 'Next',
                       onPressed: _handleNextOrFinish,
                     ),
                   ),

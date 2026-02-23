@@ -14,6 +14,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// via a Dio interceptor. On 401 responses, transparently refreshes
 /// the token using the stored refresh token and retries the request.
 ///
+/// If the refresh token is also expired (i.e., the refresh call itself
+/// fails), [onUnauthenticated] is invoked so the app can force-logout
+/// the user and redirect them to the login screen.
+///
 /// Base URL is configurable for different environments (Android emulator,
 /// iOS simulator, production).
 class ApiClient {
@@ -23,11 +27,20 @@ class ApiClient {
   /// Secure storage for reading/writing auth tokens.
   final FlutterSecureStorage _storage;
 
+  /// Optional callback invoked when a 401 cannot be recovered by token
+  /// refresh (i.e., both the access token and the refresh token are
+  /// expired or invalid). Wire this to [AuthStateNotifier.forceLogout]
+  /// via the DI provider so the app redirects to the login screen.
+  final void Function()? onUnauthenticated;
+
   /// Creates a new [ApiClient].
   ///
   /// [baseUrl] defaults to the Android emulator localhost alias.
   /// Override for iOS simulator (`http://localhost:8001`) or
   /// production (`https://api.zuralog.com`).
+  ///
+  /// [onUnauthenticated] is called when both the access token and the
+  /// refresh token are expired, signalling the app to force-logout.
   ///
   /// [dio] and [storage] can be injected for testing.
   ApiClient({
@@ -35,6 +48,7 @@ class ApiClient {
       'BASE_URL',
       defaultValue: 'http://10.0.2.2:8001',
     ),
+    this.onUnauthenticated,
     Dio? dio,
     FlutterSecureStorage? storage,
   }) : _dio = dio ?? Dio(),
@@ -117,9 +131,12 @@ class ApiClient {
       );
       return handler.resolve(retryResponse);
     } catch (_) {
-      // Refresh failed — clear tokens to force re-login
+      // Refresh failed — clear tokens and notify the app to force-logout.
+      // This happens when both the access token and refresh token are
+      // expired (e.g., user hasn't opened the app in >7 days).
       await _storage.delete(key: 'auth_token');
       await _storage.delete(key: 'refresh_token');
+      onUnauthenticated?.call();
       return handler.next(error);
     }
   }
@@ -143,6 +160,19 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
   }) => _dio.post(path, data: data, queryParameters: queryParameters);
+
+  /// Sends a PATCH request to the given [path] with optional [body].
+  ///
+  /// Used for partial resource updates where only provided fields should
+  /// be modified on the server. Unlike PUT, fields absent from [body]
+  /// remain unchanged on the backend.
+  ///
+  /// [body] is serialised as JSON and sent as the request body.
+  /// Returns the Dio [Response] containing the server's response.
+  Future<Response<dynamic>> patch(
+    String path, {
+    Map<String, dynamic>? body,
+  }) => _dio.patch(path, data: body);
 
   // -------------------------------------------------------------------------
   // Error Helpers

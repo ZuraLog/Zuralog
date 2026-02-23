@@ -88,6 +88,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/strava.png',
       status: IntegrationStatus.available,
       description: 'Sync runs, rides, and workouts automatically.',
+      compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
       id: 'apple_health',
@@ -95,6 +96,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/apple_health.png',
       status: IntegrationStatus.available,
       description: 'Read steps, sleep, and vitals from HealthKit.',
+      compatibility: PlatformCompatibility.iosOnly,
     ),
     IntegrationModel(
       id: 'fitbit',
@@ -102,13 +104,15 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/fitbit.png',
       status: IntegrationStatus.available,
       description: 'Import daily activity, heart rate, and sleep.',
+      compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
-      id: 'google_fit',
-      name: 'Google Fit',
-      logoAsset: 'assets/integrations/google_fit.png',
+      id: 'google_health_connect',
+      name: 'Health Connect',
+      logoAsset: 'assets/integrations/google_health_connect.png',
       status: IntegrationStatus.available,
       description: 'Sync workouts and health data from Android.',
+      compatibility: PlatformCompatibility.androidOnly,
     ),
     IntegrationModel(
       id: 'garmin',
@@ -116,6 +120,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/garmin.png',
       status: IntegrationStatus.comingSoon,
       description: 'Connect your Garmin device for detailed metrics.',
+      compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
       id: 'whoop',
@@ -123,6 +128,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/whoop.png',
       status: IntegrationStatus.comingSoon,
       description: 'Strain, recovery, and sleep from your WHOOP strap.',
+      compatibility: PlatformCompatibility.all,
     ),
   ];
 
@@ -130,9 +136,15 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   /// Populates the integration list with default mock data.
   ///
+  /// Sets [IntegrationsState.isLoading] to `true` at the start and `false`
+  /// once the list has been written, so the UI can show a meaningful spinner
+  /// while the (synchronous) merge is in progress.
+  ///
   /// Preserves the [IntegrationStatus] of already-connected integrations
   /// so toggling the switch and then pulling to refresh does not reset state.
   void loadIntegrations() {
+    state = state.copyWith(isLoading: true, clearError: true);
+
     final existing = {
       for (final i in state.integrations) i.id: i,
     };
@@ -146,7 +158,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       return defaults;
     }).toList();
 
-    state = state.copyWith(integrations: merged, clearError: true);
+    state = state.copyWith(integrations: merged, isLoading: false);
   }
 
   /// Connects the integration identified by [integrationId].
@@ -252,10 +264,20 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 ///
 /// Auto-disposes to free resources when the Integrations Hub screen
 /// is removed from the widget tree.
+///
+/// [loadIntegrations] is triggered automatically via [Future.microtask] on
+/// first watch, so widgets that observe this provider do not need to call
+/// [IntegrationsNotifier.loadIntegrations] explicitly.
 final integrationsProvider =
     StateNotifierProvider.autoDispose<IntegrationsNotifier, IntegrationsState>(
-  (ref) => IntegrationsNotifier(
-    oauthRepository: ref.watch(oauthRepositoryProvider),
-    healthRepository: ref.watch(healthRepositoryProvider),
-  ),
+  (ref) {
+    final notifier = IntegrationsNotifier(
+      oauthRepository: ref.watch(oauthRepositoryProvider),
+      healthRepository: ref.watch(healthRepositoryProvider),
+    );
+    // Kick off the initial load after the current frame so the provider is
+    // fully initialised before any state mutation occurs.
+    Future.microtask(notifier.loadIntegrations);
+    return notifier;
+  },
 );
