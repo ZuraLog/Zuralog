@@ -11,10 +11,13 @@ Install the following before proceeding:
 | **Python** | 3.12+ | [python.org/downloads](https://www.python.org/downloads/) |
 | **uv** | Latest | `pip install uv` or [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
 | **Docker Desktop** | Latest | [docs.docker.com/desktop](https://docs.docker.com/desktop/setup/install/windows-install/) |
-| **Flutter SDK** | 3.32+ | [docs.flutter.dev/install/manual](https://docs.flutter.dev/install/manual) |
-| **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (needed for Android SDK + Emulator) |
+| **Flutter SDK** | 3.32+ (Dart 3.11+) | [docs.flutter.dev/install/manual](https://docs.flutter.dev/install/manual) |
+| **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (needed for Android SDK, Emulator, and Java 17) |
+| **GNU Make** | Any | Pre-installed on macOS/Linux. Windows: [gnuwin32.sourceforge.net/packages/make.htm](http://gnuwin32.sourceforge.net/packages/make.htm) or use Git Bash |
 
 After installing Flutter, run `flutter doctor` to verify your setup and accept any Android SDK licenses.
+
+> **Android minSdk is 28 (Android 9).** This is required by the Health Connect API. Emulators and physical test devices must run Android 9 or later.
 
 ---
 
@@ -29,6 +32,8 @@ cd Life-Logger
 
 ## 2. Cloud Brain (Backend)
 
+All commands in this section are run from the `cloud-brain/` directory unless noted.
+
 ### 2a. Start Docker Services (PostgreSQL + Redis)
 
 Make sure Docker Desktop is running, then:
@@ -38,13 +43,22 @@ cd cloud-brain
 docker compose up -d
 ```
 
-Verify both containers are healthy:
+This starts four containers: `zuralog-postgres` (port 5432), `zuralog-redis` (port 6379), `zuralog-celery-worker`, and `zuralog-celery-beat`. For initial development you only need Postgres and Redis healthy.
+
+Verify the containers are running:
 
 ```bash
 docker compose ps
 ```
 
-You should see `zuralog-postgres` and `zuralog-redis` both running.
+You should see `zuralog-postgres` and `zuralog-redis` with status `healthy`. The two Celery containers will start once both datastores are healthy.
+
+Makefile shortcut (equivalent):
+
+```bash
+make docker-up   # start
+make docker-down # stop
+```
 
 ### 2b. Install Python Dependencies
 
@@ -169,6 +183,8 @@ make dev
 ```
 
 > **Why port 8001?** Port 8000 is reserved by the `workspace-mcp` service on developer machines. The Cloud Brain uses 8001 to avoid conflicts.
+>
+> **`--host 0.0.0.0` is required** so the Android emulator can reach the server via `http://10.0.2.2:8001`. Binding to `127.0.0.1` only (the default) will make the emulator unable to connect.
 
 ### 2f. Verify It Works
 
@@ -178,7 +194,9 @@ Open [http://localhost:8001/health](http://localhost:8001/health) in your browse
 {"status": "healthy"}
 ```
 
-API docs are available at [http://localhost:8001/docs](http://localhost:8001/docs).
+Full interactive API docs (Swagger UI) are available at [http://localhost:8001/docs](http://localhost:8001/docs).
+
+All API routes are under the `/api/v1` prefix (e.g., `/api/v1/auth/login`, `/api/v1/chat/message`).
 
 ### 2g. Run Backend Tests
 
@@ -186,9 +204,26 @@ API docs are available at [http://localhost:8001/docs](http://localhost:8001/doc
 uv run pytest tests/ -v
 ```
 
+Makefile shortcut:
+
+```bash
+make test
+```
+
+### 2h. Lint and Format
+
+```bash
+make lint     # ruff check + format check (read-only)
+make format   # auto-fix formatting with ruff
+```
+
 ---
 
 ## 3. Edge Agent (Flutter Mobile App)
+
+All commands in this section are run from the `zuralog/` directory unless noted.
+
+> **Before building**, you must place `google-services.json` at `zuralog/android/app/google-services.json`. The Firebase Gradle plugin is wired into the build and will fail without it. See [Deferred: Firebase Cloud Messaging](#deferred-firebase-cloud-messaging-push-notifications) for instructions, or temporarily comment out `id("com.google.gms.google-services")` in `zuralog/android/app/build.gradle.kts` to skip Firebase entirely during early development.
 
 ### 3a. Install Flutter Dependencies
 
@@ -213,49 +248,95 @@ dart run build_runner build --delete-conflicting-outputs
 flutter analyze
 ```
 
-This should report **No issues found**.
+This should report **No issues found**. The project enforces a zero-warning policy — all warnings are treated as errors.
 
-### 3d. Launch on an Emulator
+### 3d. Run Flutter Tests
 
-1. Open Android Studio → **Virtual Device Manager** → Create/start an Android emulator
-2. Run the app:
+```bash
+flutter test
+```
+
+All tests should pass. The test suite currently covers 201 tests across unit, widget, and provider layers.
+
+### 3e. Launch on an Emulator
+
+1. Open Android Studio → **Virtual Device Manager** → create and start an Android emulator running **API 28 or higher** (Android 9+)
+2. Confirm the emulator is visible:
+
+```bash
+flutter devices
+```
+
+3. Run the app:
 
 ```bash
 flutter run
 ```
 
-You should see the **TEST HARNESS** screen with buttons for Health Check, Secure Storage, Local DB, and more.
+You should see the **Zuralog Welcome screen** — the animated entry screen with the Zuralog logo. From there you can proceed through onboarding and log in. The auth guard will redirect authenticated users directly to the Dashboard on subsequent launches.
 
-### 3e. Configuring the API URL
+**Screen map (post Phase 2.2):**
 
-The app connects to `http://10.0.2.2:8001` by default (Android emulator's alias for host `localhost`). Override for different environments:
+| Screen | Route | Notes |
+|---|---|---|
+| Welcome | `/welcome` | Entry point, animated logo |
+| Onboarding | `/onboarding` | 2-page PageView for new users |
+| Login | `/auth/login` | Email + password |
+| Register | `/auth/register` | Email + password |
+| Dashboard | `/dashboard` | Home tab — activity rings, metrics, AI insight |
+| Coach Chat | `/chat` | AI Coach tab — WebSocket chat |
+| Integrations | `/integrations` | Apps tab — connect Strava, Apple Health, etc. |
+| Settings | `/settings` | Pushed over shell — theme, subscription, logout |
+
+### 3f. Configuring the API URL
+
+The app connects to `http://10.0.2.2:8001` by default — `10.0.2.2` is the Android emulator's alias for the host machine's `localhost`. The WebSocket URL is derived automatically (`ws://10.0.2.2:8001`).
+
+Override for different environments:
 
 ```bash
-# iOS Simulator
+# iOS Simulator (localhost resolves correctly)
 flutter run --dart-define=BASE_URL=http://localhost:8001
 
-# Physical device (use your machine's LAN IP)
+# Physical Android/iOS device (use your machine's LAN IP)
 flutter run --dart-define=BASE_URL=http://192.168.1.100:8001
 ```
+
+> Make sure the backend server is bound to `0.0.0.0:8001` (not `127.0.0.1`) so it is reachable from the emulator.
 
 ---
 
 ## Quick Reference
 
+### Cloud Brain (`cloud-brain/`)
+
 | Action | Command |
 |---|---|
-| Start Docker services | `docker compose up -d` (in `cloud-brain/`) |
-| Stop Docker services | `docker compose down` (in `cloud-brain/`) |
-| Start backend server | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001` (in `cloud-brain/`) |
-| Start backend (shortcut) | `make dev` (in `cloud-brain/`) |
-| Run backend tests | `uv run pytest tests/ -v` (in `cloud-brain/`) |
-| Lint backend | `uv run ruff check app/ tests/` (in `cloud-brain/`) |
-| Run new migration | `uv run alembic revision --autogenerate -m "description"` (in `cloud-brain/`) |
-| Apply migrations | `uv run alembic upgrade head` (in `cloud-brain/`) |
-| Install Flutter deps | `flutter pub get` (in `zuralog/`) |
-| Drift code gen | `dart run build_runner build --delete-conflicting-outputs` (in `zuralog/`) |
-| Flutter analysis | `flutter analyze` (in `zuralog/`) |
-| Run Flutter app | `flutter run` (in `zuralog/`) |
+| Start Docker services | `docker compose up -d` — or `make docker-up` |
+| Stop Docker services | `docker compose down` — or `make docker-down` |
+| Install Python deps | `uv sync --all-extras` |
+| Apply migrations | `uv run alembic upgrade head` — or `make migrate` |
+| Create new migration | `uv run alembic revision --autogenerate -m "description"` — or `make migration msg="description"` |
+| Start backend server | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001` — or `make dev` |
+| Run backend tests | `uv run pytest tests/ -v` — or `make test` |
+| Lint backend | `uv run ruff check app/ tests/` — or `make lint` |
+| Format backend | `uv run ruff format app/ tests/` — or `make format` |
+| Health check | `curl http://localhost:8001/health` |
+| API docs (browser) | [http://localhost:8001/docs](http://localhost:8001/docs) |
+
+### Edge Agent (`zuralog/`)
+
+| Action | Command |
+|---|---|
+| Install Flutter deps | `flutter pub get` |
+| Drift + Riverpod code gen | `dart run build_runner build --delete-conflicting-outputs` |
+| Flutter static analysis | `flutter analyze` |
+| Flutter tests | `flutter test` |
+| List connected devices | `flutter devices` |
+| Run on emulator (default) | `flutter run` |
+| Run on iOS Simulator | `flutter run --dart-define=BASE_URL=http://localhost:8001` |
+| Run on physical device | `flutter run --dart-define=BASE_URL=http://192.168.1.100:8001` |
+| Build release APK | `flutter build apk --release` |
 
 ---
 
@@ -264,6 +345,9 @@ flutter run --dart-define=BASE_URL=http://192.168.1.100:8001
 ### `flutter` not found after install
 Add `C:\flutter\bin` (or wherever you extracted Flutter) to your system PATH, then restart your terminal.
 
+### `make` not found on Windows
+Install GNU Make via [gnuwin32](http://gnuwin32.sourceforge.net/packages/make.htm) or run the underlying commands directly (listed in the Quick Reference table above). Git Bash also includes `make`.
+
 ### Docker Compose fails with "unable to get image"
 Make sure Docker Desktop is running before executing `docker compose up -d`.
 
@@ -271,10 +355,15 @@ Make sure Docker Desktop is running before executing `docker compose up -d`.
 Try `flutter pub upgrade --major-versions` to resolve dependency conflicts.
 
 ### Android emulator can't reach backend
-Ensure the Cloud Brain server is running on `0.0.0.0:8001` (not `127.0.0.1:8001`) and use `http://10.0.2.2:8001` as the base URL from the emulator.
+- Ensure the Cloud Brain server is running on `0.0.0.0:8001` (not `127.0.0.1:8001`). Use `make dev` or add `--host 0.0.0.0` explicitly.
+- Use `http://10.0.2.2:8001` as the base URL — this is the emulator's alias for host `localhost`. Do not use `127.0.0.1` or `localhost` from inside the emulator.
+- If using a physical device, pass your machine's LAN IP: `--dart-define=BASE_URL=http://192.168.x.x:8001`.
+
+### Chat WebSocket not connecting
+The WebSocket URL is automatically derived from `BASE_URL` by swapping `http://` → `ws://`. Ensure the backend is running and the `BASE_URL` override is correct for your environment. WebSocket connections go to `ws://10.0.2.2:8001/api/v1/chat/ws` by default.
 
 ### Auth endpoints return 500 / connection errors
-Verify your Supabase credentials in `.env`:
+Verify your Supabase credentials in `cloud-brain/.env`:
 - `SUPABASE_URL` should be `https://xxxxx.supabase.co` (no trailing slash)
 - `SUPABASE_ANON_KEY` is the JWT token (starts with `eyJ...`)
 - `SUPABASE_SERVICE_KEY` is the secret key (starts with `sb_secret_...`)
@@ -287,9 +376,14 @@ Verify your Supabase credentials in `.env`:
 ### Flutter app fails to build with Google Services error
 The Google Services Gradle plugin is enabled. You must place a valid `google-services.json` at `zuralog/android/app/google-services.json`. Download it from Firebase Console → Project Settings → Your Apps (Android). See the [Deferred: Firebase Cloud Messaging](#deferred-firebase-cloud-messaging-push-notifications) section for full instructions.
 
+Alternatively, temporarily disable the plugin for early development: comment out `id("com.google.gms.google-services")` in `zuralog/android/app/build.gradle.kts`.
+
 ### Push notifications not working
 - Ensure `FCM_CREDENTIALS_PATH` points to a valid Firebase service account JSON in `cloud-brain/.env`.
-- The Flutter app must call "Init FCM" in the harness (or the equivalent production flow) to register the device token with the backend before push notifications can be sent.
+- The Flutter app registers the device FCM token with the backend automatically on first launch once Firebase is configured.
 
 ### `sqlite3` / Drift build errors on Android
 The project pins `sqlite3_flutter_libs: ^0.5.0`. Do **not** upgrade this to `0.6.x` — that version is an empty tombstone and Drift 2.28.x is not yet compatible with sqlite3 v3.x. If you see JNI errors, ensure `jniLibs.useLegacyPackaging = true` is set in `zuralog/android/app/build.gradle.kts`.
+
+### Emulator screen looks wrong / minSdk errors
+The project requires **minSdk 28** (Android 9) due to the Health Connect dependency. Create your emulator with a system image of API 28 or higher. API 34 (Android 14) is recommended for the best Health Connect support.
