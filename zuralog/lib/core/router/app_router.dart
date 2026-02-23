@@ -33,9 +33,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
+import 'package:zuralog/features/auth/presentation/onboarding/profile_questionnaire_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
@@ -48,14 +50,17 @@ import 'package:zuralog/shared/layout/app_shell.dart';
 
 // ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
 
-/// Bridges Riverpod's [authStateProvider] and [hasSeenOnboardingProvider]
-/// to a single [ChangeNotifier] that [GoRouter] can use as a [refreshListenable].
+/// Bridges Riverpod's [authStateProvider], [hasSeenOnboardingProvider], and
+/// [userProfileProvider] to a single [ChangeNotifier] that [GoRouter] can use
+/// as a [refreshListenable].
 ///
-/// When either provider emits a new value, [notifyListeners] is called so the
-/// router re-evaluates its [redirect] callback without recreating the [GoRouter].
+/// When any of these providers emits a new value, [notifyListeners] is called
+/// so the router re-evaluates its [redirect] callback without recreating the
+/// [GoRouter]. [userProfileProvider] is included so that the onboarding guard
+/// can react as soon as the profile loads after login/register.
 class _RouterRefreshListenable extends ChangeNotifier {
-  /// Creates a [_RouterRefreshListenable] that listens to auth and onboarding
-  /// state changes via [ref].
+  /// Creates a [_RouterRefreshListenable] that listens to auth, onboarding
+  /// flag, and profile state changes via [ref].
   _RouterRefreshListenable(Ref ref) {
     // Listen to auth state changes.
     ref.listen<AuthState>(
@@ -65,6 +70,12 @@ class _RouterRefreshListenable extends ChangeNotifier {
     // Listen to the onboarding flag to redirect first-timers.
     ref.listen<AsyncValue<bool>>(
       hasSeenOnboardingProvider,
+      (prev, next) => notifyListeners(),
+    );
+    // Listen to profile changes so the onboarding guard fires as soon as
+    // [onboardingComplete] is set to true after the questionnaire.
+    ref.listen<UserProfile?>(
+      userProfileProvider,
       (prev, next) => notifyListeners(),
     );
   }
@@ -110,6 +121,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
       }
 
+      // ── Step 3: Post-registration profile questionnaire guard. ───────────
+      // If the user is authenticated but has not completed the profile
+      // questionnaire, redirect them to it — unless they are already there.
+      if (authState == AuthState.authenticated &&
+          location != RouteNames.profileQuestionnairePath) {
+        final profile = ref.read(userProfileProvider);
+        if (profile != null && !profile.onboardingComplete) {
+          return RouteNames.profileQuestionnairePath;
+        }
+      }
+
       return null;
     },
     routes: _buildRoutes(),
@@ -144,6 +166,13 @@ List<RouteBase> _buildRoutes() {
       path: RouteNames.registerPath,
       name: RouteNames.register,
       builder: (context, state) => const RegisterScreen(),
+    ),
+
+    // ── Post-registration Profile Questionnaire ───────────────────────────
+    GoRoute(
+      path: RouteNames.profileQuestionnairePath,
+      name: RouteNames.profileQuestionnaire,
+      builder: (context, state) => const ProfileQuestionnaireScreen(),
     ),
 
     // ── Settings (pushed over shell) ──────────────────────────────────────

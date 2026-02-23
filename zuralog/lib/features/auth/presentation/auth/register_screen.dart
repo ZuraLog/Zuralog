@@ -124,8 +124,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     switch (result) {
       case AuthSuccess():
-        // GoRouter auth guard navigates to dashboard automatically.
-        break;
+        // Navigate to the profile questionnaire so the user can set up
+        // their profile. The router guard also enforces this redirect, but
+        // being explicit here avoids a round-trip through the redirect logic.
+        if (mounted) {
+          context.go(RouteNames.profileQuestionnairePath);
+        }
       case AuthFailure(:final message):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
