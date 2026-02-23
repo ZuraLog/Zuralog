@@ -5,6 +5,9 @@ Pydantic models for request validation and response serialization
 on the authentication endpoints.
 """
 
+from datetime import date
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr
 
 
@@ -68,3 +71,50 @@ class MessageResponse(BaseModel):
     """
 
     message: str
+
+
+class UserProfileResponse(BaseModel):
+    """Response model for a user's profile.
+
+    Returned by GET /me/profile and PATCH /me/profile.
+
+    Attributes:
+        id: Supabase UID of the user.
+        email: User's email address.
+        display_name: Full display name (optional).
+        nickname: Name the AI coach uses (optional).
+        birthday: Date of birth for age calculation (optional).
+        gender: Self-identified gender, free text (optional).
+        onboarding_complete: True once the profile questionnaire is done.
+    """
+
+    id: str
+    email: str
+    display_name: Optional[str]
+    nickname: Optional[str]
+    birthday: Optional[date]
+    gender: Optional[str]
+    onboarding_complete: bool
+
+    class Config:
+        from_attributes = True
+
+
+class UpdateProfileRequest(BaseModel):
+    """Request body for a partial profile update.
+
+    All fields are optional; only non-None fields are applied.
+
+    Attributes:
+        display_name: New full display name.
+        nickname: New coach-facing nickname.
+        birthday: New date of birth.
+        gender: New self-identified gender.
+        onboarding_complete: Mark onboarding as done or undone.
+    """
+
+    display_name: Optional[str] = None
+    nickname: Optional[str] = None
+    birthday: Optional[date] = None
+    gender: Optional[str] = None
+    onboarding_complete: Optional[bool] = None
