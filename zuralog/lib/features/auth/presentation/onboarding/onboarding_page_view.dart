@@ -13,6 +13,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
@@ -70,18 +71,18 @@ const List<_PageData> _pages = [
 /// Manages a [PageController] to drive a horizontal [PageView].
 /// Provides page-dot indicators and an adaptive Next / Create Account button.
 /// A "Skip" link is available in the top-right corner throughout.
-class OnboardingPageView extends StatefulWidget {
+class OnboardingPageView extends ConsumerStatefulWidget {
   /// Creates an [OnboardingPageView].
   const OnboardingPageView({super.key});
 
   @override
-  State<OnboardingPageView> createState() => _OnboardingPageViewState();
+  ConsumerState<OnboardingPageView> createState() => _OnboardingPageViewState();
 }
 
 /// State for [OnboardingPageView].
 ///
 /// Tracks [_currentPage] and drives the [PageController].
-class _OnboardingPageViewState extends State<OnboardingPageView> {
+class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
   /// Controls animated page transitions.
   final PageController _pageController = PageController();
 
@@ -118,6 +119,8 @@ class _OnboardingPageViewState extends State<OnboardingPageView> {
     if (_isLastPage) {
       await markOnboardingComplete();
       if (!mounted) return;
+      // Invalidate so GoRouter's refreshListenable re-reads the updated flag.
+      ref.invalidate(hasSeenOnboardingProvider);
       // go() replaces the onboarding stack — the user cannot go "back" to
       // onboarding after completing it.
       context.go(RouteNames.welcomePath);
@@ -133,6 +136,8 @@ class _OnboardingPageViewState extends State<OnboardingPageView> {
   Future<void> _handleSkip() async {
     await markOnboardingComplete();
     if (!mounted) return;
+    // Invalidate so GoRouter's refreshListenable re-reads the updated flag.
+    ref.invalidate(hasSeenOnboardingProvider);
     context.go(RouteNames.welcomePath);
   }
 
