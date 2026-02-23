@@ -12,7 +12,7 @@ Install the following before proceeding:
 | **uv** | Latest | `pip install uv` or [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
 | **Docker Desktop** | Latest | [docs.docker.com/desktop](https://docs.docker.com/desktop/setup/install/windows-install/) |
 | **Flutter SDK** | 3.32+ (Dart 3.11+) | [docs.flutter.dev/install/manual](https://docs.flutter.dev/install/manual) |
-| **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (needed for Android SDK, Emulator, and Java 17) |
+| **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (needed for Android SDK, Emulator, and Java) |
 | **GNU Make** | Any | Pre-installed on macOS/Linux. Windows: [gnuwin32.sourceforge.net/packages/make.htm](http://gnuwin32.sourceforge.net/packages/make.htm) or use Git Bash |
 
 After installing Flutter, run `flutter doctor` to verify your setup and accept any Android SDK licenses.
@@ -96,6 +96,23 @@ Open `.env` and fill in credentials for each service below.
 
 1. **Shared dev project** (simpler): All developers use the same Supabase project URL and anon key. Distribute keys securely (e.g., via 1Password).
 2. **Individual free-tier projects** (isolated): Each developer creates their own free Supabase project. Free tier is more than enough for development.
+
+#### Required: Google OAuth (Social Sign-In)
+
+Google Sign-In uses a **Web Application** OAuth 2.0 client from Google Cloud Console. This is distinct from Firebase — Firebase (used for push notifications) does not provide the OAuth credentials needed for Sign-In.
+
+| Variable | Where to find it | Description |
+|---|---|---|
+| `GOOGLE_WEB_CLIENT_ID` | [console.cloud.google.com](https://console.cloud.google.com) → project `zuralog-8311a` → APIs & Services → Credentials → Web Application client | Ends in `.apps.googleusercontent.com` |
+| `GOOGLE_WEB_CLIENT_SECRET` | Same credentials page → Client Secret | Starts with `GOCSPX-` |
+
+> **⚠️ Note:** The client secret lives only in `cloud-brain/.env` (gitignored). Never commit it.
+
+**Supabase setup (one-time, already done):**
+- Supabase Dashboard → Authentication → Providers → Google → Enable → paste Web Client ID + Secret.
+
+**Flutter setup:**
+- The Flutter app reads `GOOGLE_WEB_CLIENT_ID` at build time via `--dart-define`. Use `make run` (see Section 3e) — it injects this automatically from `cloud-brain/.env`. Do **not** use bare `flutter run` if you need Google Sign-In to work.
 
 #### Required: OpenRouter (AI Brain)
 
@@ -231,7 +248,7 @@ make format   # auto-fix formatting with ruff
 
 ## 3. Edge Agent (Flutter Mobile App)
 
-All commands in this section are run from the `zuralog/` directory unless noted.
+All commands in this section are run from the **project root** (`Life-Logger/`) unless noted.
 
 > `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are already committed to the repo — you get them from `git clone`. No action needed.
 
@@ -277,11 +294,16 @@ All tests should pass. The test suite currently covers 201 tests across unit, wi
 flutter devices
 ```
 
-3. Run the app:
+3. Run the app using `make` from the project root (required for Google Sign-In):
 
 ```bash
-flutter run
+# From Life-Logger/ (project root)
+make run          # Android emulator
+make run-ios      # iOS Simulator
+make run-device   # Physical device (update IP in Makefile first)
 ```
+
+> **Why `make run` instead of `flutter run`?** The app requires `GOOGLE_WEB_CLIENT_ID` to be injected at build time via `--dart-define`. `make run` reads this automatically from `cloud-brain/.env` and passes it through. Bare `flutter run` skips this and Google Sign-In will return a null token at runtime.
 
 You should see the **Zuralog Welcome screen** — the animated entry screen with the Zuralog logo. From there you can proceed through onboarding and log in. The auth guard will redirect authenticated users directly to the Dashboard on subsequent launches.
 
@@ -302,17 +324,42 @@ You should see the **Zuralog Welcome screen** — the animated entry screen with
 
 The app connects to `http://10.0.2.2:8001` by default — `10.0.2.2` is the Android emulator's alias for the host machine's `localhost`. The WebSocket URL is derived automatically (`ws://10.0.2.2:8001`).
 
-Override for different environments:
+Override for different environments using `make`:
 
 ```bash
-# iOS Simulator (localhost resolves correctly)
-flutter run --dart-define=BASE_URL=http://localhost:8001
+make run-ios     # iOS Simulator — uses http://localhost:8001
+make run-device  # Physical device — update BASE_URL in Makefile to your LAN IP first
+```
 
-# Physical Android/iOS device (use your machine's LAN IP)
-flutter run --dart-define=BASE_URL=http://192.168.1.100:8001
+Or manually if needed:
+
+```bash
+# iOS Simulator
+flutter run --dart-define=BASE_URL=http://localhost:8001 \
+            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id>
+
+# Physical device
+flutter run --dart-define=BASE_URL=http://192.168.1.100:8001 \
+            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id>
 ```
 
 > Make sure the backend server is bound to `0.0.0.0:8001` (not `127.0.0.1`) so it is reachable from the emulator.
+
+### 3g. AntiGravity / VS Code Launch Configs
+
+A `.vscode/launch.json` is automatically available if you open the project in AntiGravity (or VS Code). It is **gitignored** — each developer has their own local copy with their own credentials.
+
+The file is pre-populated at `.vscode/launch.json` with three configurations:
+
+| Configuration | Use case |
+|---|---|
+| **Zuralog (Android Emulator)** | Default — hits `http://10.0.2.2:8001` |
+| **Zuralog (iOS Simulator)** | Uses `http://localhost:8001` |
+| **Zuralog (Physical Device)** | Update `BASE_URL` IP to your machine's LAN address |
+
+All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to launch.
+
+> If `.vscode/launch.json` is missing (e.g., fresh clone), create it manually or run `make run` from the terminal instead.
 
 ---
 
@@ -334,19 +381,22 @@ flutter run --dart-define=BASE_URL=http://192.168.1.100:8001
 | Health check | `curl http://localhost:8001/health` |
 | API docs (browser) | [http://localhost:8001/docs](http://localhost:8001/docs) |
 
-### Edge Agent (`zuralog/`)
+### Edge Agent (`zuralog/`) — run from project root
 
 | Action | Command |
 |---|---|
-| Install Flutter deps | `flutter pub get` |
-| Drift + Riverpod code gen | `dart run build_runner build --delete-conflicting-outputs` |
-| Flutter static analysis | `flutter analyze` |
-| Flutter tests | `flutter test` |
+| Install Flutter deps | `cd zuralog && flutter pub get` |
+| Drift + Riverpod code gen | `cd zuralog && dart run build_runner build --delete-conflicting-outputs` |
+| Flutter static analysis | `cd zuralog && flutter analyze` — or `make analyze` |
+| Flutter tests | `cd zuralog && flutter test` — or `make test` |
 | List connected devices | `flutter devices` |
-| Run on emulator (default) | `flutter run` |
-| Run on iOS Simulator | `flutter run --dart-define=BASE_URL=http://localhost:8001` |
-| Run on physical device | `flutter run --dart-define=BASE_URL=http://192.168.1.100:8001` |
-| Build release APK | `flutter build apk --release` |
+| Run on Android emulator | `make run` |
+| Run on iOS Simulator | `make run-ios` |
+| Run on physical device | `make run-device` |
+| Build debug APK | `make build-apk` |
+| Build release App Bundle | `make build-appbundle` |
+
+> All `make` targets for Flutter automatically inject `GOOGLE_WEB_CLIENT_ID` from `cloud-brain/.env`. Never use bare `flutter run` if Google Sign-In needs to work.
 
 ---
 
@@ -357,6 +407,13 @@ Add `C:\flutter\bin` (or wherever you extracted Flutter) to your system PATH, th
 
 ### `make` not found on Windows
 Install GNU Make via [gnuwin32](http://gnuwin32.sourceforge.net/packages/make.htm) or run the underlying commands directly (listed in the Quick Reference table above). Git Bash also includes `make`.
+
+### `gradlew` fails with "JAVA_HOME is not set"
+You do not need to install Java separately — Android Studio bundles a JDK. Run Gradle commands with the bundled JDK:
+```bash
+# From zuralog/android/
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" PATH="$JAVA_HOME/bin:$PATH" ./gradlew <task>
+```
 
 ### Docker Compose fails with "unable to get image"
 Make sure Docker Desktop is running before executing `docker compose up -d`.
@@ -378,6 +435,14 @@ Verify your Supabase credentials in `cloud-brain/.env`:
 - `SUPABASE_ANON_KEY` is the JWT token (starts with `eyJ...`)
 - `SUPABASE_SERVICE_KEY` is the secret key (starts with `sb_secret_...`)
 - Make sure the Email auth provider is enabled in Supabase → Authentication → Providers
+
+### Google Sign-In returns null token / silently fails
+This means `GOOGLE_WEB_CLIENT_ID` was not injected at build time. Use `make run` instead of bare `flutter run`. The `make` target reads the client ID from `cloud-brain/.env` automatically.
+
+If you must use `flutter run` directly:
+```bash
+flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=616346397607-se60r20r85d24teksi3oco8ss77kol0d.apps.googleusercontent.com
+```
 
 ### AI features return "LLM unavailable" or model errors
 - Ensure `OPENROUTER_API_KEY` is set in `cloud-brain/.env`.
