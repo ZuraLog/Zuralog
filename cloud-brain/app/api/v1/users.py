@@ -148,7 +148,9 @@ async def get_profile(
         HTTPException: 404 if the user is not found in the database.
     """
     user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     result = await db.execute(select(User).where(User.id == user_id))
     db_user = result.scalars().first()
@@ -183,7 +185,9 @@ async def update_profile(
         HTTPException: 404 if the user is not found in the database.
     """
     user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     result = await db.execute(select(User).where(User.id == user_id))
     db_user = result.scalars().first()
@@ -192,6 +196,8 @@ async def update_profile(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     update_data = body.model_dump(exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
     for field, value in update_data.items():
         setattr(db_user, field, value)
 
