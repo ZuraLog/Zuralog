@@ -12,14 +12,14 @@
 /// /auth/login           → LoginScreen
 /// /auth/register        → RegisterScreen
 /// / (StatefulShellRoute) → AppShell
-///   /dashboard          → DashboardScreen (placeholder, tab 0)
+///   /dashboard          → DashboardScreen (tab 0)
 ///   /chat               → ChatScreen (placeholder, tab 1)
 ///   /integrations       → IntegrationsHubScreen (placeholder, tab 2)
 /// /settings             → SettingsScreen (placeholder, pushed over shell)
 /// /debug/catalog        → CatalogScreen (dev-only)
 /// ```
 ///
-/// Placeholder screens are used for routes pending Phase 2.2.2+.
+/// Placeholder screens are used for routes pending Phase 2.2.4+.
 library;
 
 import 'package:flutter/foundation.dart';
@@ -37,6 +37,7 @@ import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:zuralog/shared/layout/app_shell.dart';
 
 // ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
@@ -143,10 +144,7 @@ List<RouteBase> _buildRoutes() {
             GoRoute(
               path: RouteNames.dashboardPath,
               name: RouteNames.dashboard,
-              builder: (context, state) => const _PlaceholderScreen(
-                title: 'Dashboard',
-                icon: Icons.home_rounded,
-              ),
+              builder: (context, state) => const DashboardScreen(),
             ),
           ],
         ),

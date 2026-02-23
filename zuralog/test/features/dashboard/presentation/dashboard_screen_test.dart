@@ -1,0 +1,184 @@
+/// Zuralog Dashboard — Dashboard Screen Tests.
+///
+/// Smoke-tests [DashboardScreen] with mocked Riverpod providers so that
+/// no real network requests are made. Verifies the greeting header, the
+/// profile avatar, and that the screen renders without throwing.
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
+import 'package:zuralog/features/analytics/domain/daily_summary.dart';
+import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
+import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
+import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
+
+// ── Fixture data ───────────────────────────────────────────────────────────────
+
+/// A fully-populated [DailySummary] used by provider overrides.
+const _kSummary = DailySummary(
+  date: '2026-02-23',
+  steps: 8432,
+  caloriesConsumed: 2100,
+  caloriesBurned: 480,
+  workoutsCount: 1,
+  sleepHours: 7.5,
+);
+
+/// A minimal [WeeklyTrends] with 7 data points per list.
+final _kTrends = WeeklyTrends(
+  dates: List.generate(7, (i) => '2026-02-${17 + i}'),
+  steps: const [7200, 7800, 8100, 7500, 8200, 8000, 8432],
+  caloriesIn: const [2000, 2100, 1950, 2200, 2050, 2100, 2100],
+  caloriesOut: const [400, 430, 460, 420, 500, 480, 480],
+  sleepHours: const [6.5, 7.0, 8.0, 7.5, 6.8, 7.2, 7.5],
+);
+
+/// An AI insight fixture.
+const _kInsight = DashboardInsight(
+  insight: 'Great work this week! You hit your step goal 5 days in a row.',
+);
+
+// ── Test harness ───────────────────────────────────────────────────────────────
+
+/// Builds a [ProviderScope] with all three analytics providers overridden to
+/// return fixture data synchronously, and a [GoRouter] stub for navigation.
+///
+/// [navigatedPaths] is populated when GoRouter completes a navigation.
+Widget _buildHarness({List<String>? navigatedPaths}) {
+  final router = GoRouter(
+    initialLocation: '/dashboard',
+    routes: [
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, _) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        builder: (context, _) => _Stub(name: 'chat', paths: navigatedPaths),
+      ),
+      GoRoute(
+        path: '/integrations',
+        builder: (context, _) =>
+            _Stub(name: 'integrations', paths: navigatedPaths),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, _) =>
+            _Stub(name: 'settings', paths: navigatedPaths),
+      ),
+    ],
+  );
+
+  return ProviderScope(
+    overrides: [
+      // Override async providers with immediate synchronous data.
+      dailySummaryProvider.overrideWith((_) async => _kSummary),
+      weeklyTrendsProvider.overrideWith((_) async => _kTrends),
+      dashboardInsightProvider.overrideWith((_) async => _kInsight),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
+/// A minimal stub screen that records its name in [paths].
+class _Stub extends StatelessWidget {
+  const _Stub({required this.name, this.paths});
+  final String name;
+  final List<String>? paths;
+
+  @override
+  Widget build(BuildContext context) {
+    paths?.add(name);
+    return Text('stub:$name');
+  }
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────────
+
+void main() {
+  group('DashboardScreen', () {
+    testWidgets('smoke test — renders without throwing', (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      // Initial frame may show loading indicators; pump again for data.
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('shows greeting header (Good Morning / Afternoon / Evening)',
+        (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      await tester.pump();
+
+      // One of the three greetings must be present.
+      final greetingFinder = find.byWidgetPredicate((widget) {
+        if (widget is! Text) return false;
+        final text = widget.data ?? '';
+        return text == 'Good Morning' ||
+            text == 'Good Afternoon' ||
+            text == 'Good Evening';
+      });
+      expect(greetingFinder, findsOneWidget);
+    });
+
+    testWidgets('shows user name "Alex"', (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      await tester.pump();
+      expect(find.text('Alex'), findsOneWidget);
+    });
+
+    testWidgets('renders profile avatar (CircleAvatar)', (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      await tester.pump();
+      expect(find.byType(CircleAvatar), findsOneWidget);
+    });
+
+    testWidgets('tapping profile avatar navigates to settings', (tester) async {
+      final paths = <String>[];
+      await tester.pumpWidget(_buildHarness(navigatedPaths: paths));
+      await tester.pump();
+
+      await tester.tap(find.byType(CircleAvatar));
+      await tester.pumpAndSettle();
+
+      expect(paths, contains('settings'));
+    });
+
+    testWidgets('shows insight text once providers resolve', (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      // Pump until all async futures complete.
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('step goal'), findsOneWidget);
+    });
+
+    testWidgets('shows activity rings section once summary resolves',
+        (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      await tester.pumpAndSettle();
+
+      // ActivityRings renders a CustomPaint with the ring diameter.
+      // Multiple CustomPaints may exist (fl_chart, nav bar etc.), so we
+      // look for the one with the ring-specific size.
+      final ringsPaints = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .where(
+            (cp) =>
+                cp.size ==
+                const Size(AppDimens.ringDiameter, AppDimens.ringDiameter),
+          )
+          .toList();
+      expect(ringsPaints, isNotEmpty);
+    });
+
+    testWidgets('renders "Connected Apps" section header', (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      await tester.pump();
+      expect(find.text('Connected Apps'), findsOneWidget);
+    });
+  });
+}
