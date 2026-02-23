@@ -5,7 +5,7 @@
 /// correct interaction behaviour (connect, disconnect sheet, incompatibility).
 ///
 /// Coverage:
-///   - Available tile shows [OutlinedButton] labelled "Connect".
+///   - Available tile shows a "Connect" text button (neutral pill, TextButton.icon).
 ///   - Connected tile shows "Connected" badge and disconnect [IconButton].
 ///   - Tapping disconnect icon opens the disconnect bottom sheet.
 ///   - comingSoon tile shows "Soon" badge at 50% opacity with no Connect button.
@@ -115,15 +115,13 @@ void main() {
   group('IntegrationTile', () {
     // ── Available state ──────────────────────────────────────────────────────
 
-    testWidgets('available tile shows OutlinedButton labelled Connect',
-        (tester) async {
+    testWidgets('available tile shows Connect button', (tester) async {
       await tester.pumpWidget(_buildHarness(integration: _availableModel));
       await tester.pump();
 
-      expect(
-        find.widgetWithText(OutlinedButton, 'Connect'),
-        findsOneWidget,
-      );
+      // The Connect button is now a TextButton.icon (neutral pill).
+      // Use find.text to locate it regardless of button type.
+      expect(find.text('Connect'), findsOneWidget);
     });
 
     testWidgets('available tile has no "Soon" badge', (tester) async {
@@ -158,10 +156,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(integration: _connectedModel));
       await tester.pump();
 
-      expect(
-        find.widgetWithText(OutlinedButton, 'Connect'),
-        findsNothing,
-      );
+      expect(find.text('Connect'), findsNothing);
     });
 
     testWidgets(
@@ -201,10 +196,7 @@ void main() {
       await tester.pumpWidget(_buildHarness(integration: _comingSoonModel));
       await tester.pump();
 
-      expect(
-        find.widgetWithText(OutlinedButton, 'Connect'),
-        findsNothing,
-      );
+      expect(find.text('Connect'), findsNothing);
     });
 
     testWidgets('comingSoon tile is rendered at 0.5 opacity', (tester) async {

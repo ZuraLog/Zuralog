@@ -91,7 +91,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   ///   - Apple Health: [available] on iOS (HealthKit); greys out on Android via
   ///     [PlatformCompatibility.iosOnly].
   ///   - Fitbit: [comingSoon] — OAuth not yet wired.
-  ///   - Health Connect: [comingSoon] — Android Health Connect API not yet wired.
+  ///   - Google Health Connect: [comingSoon] — Android Health Connect API not yet wired.
   ///   - Garmin / WHOOP: [comingSoon] — future integrations.
   static const List<IntegrationModel> _defaultIntegrations = [
     IntegrationModel(
@@ -117,7 +117,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     ),
     IntegrationModel(
       id: 'google_health_connect',
-      name: 'Health Connect',
+      name: 'Google Health Connect',
       status: IntegrationStatus.comingSoon,
       description: 'Sync workouts and health data from Android.',
       compatibility: PlatformCompatibility.androidOnly,

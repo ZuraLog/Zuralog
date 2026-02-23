@@ -1,14 +1,17 @@
 /// Zuralog Dashboard — Dashboard Screen.
 ///
 /// The hero "Command Center" screen of the Zuralog app.
-/// Displays a greeting header, an AI insight card, Apple Health-style activity
-/// rings, a connected-apps integration rail, and a 2-column bento-grid of
-/// metric cards with 7-day sparkline trends.
+///
+/// Layout order (top → bottom):
+///   A) Compact AI Insight strip — left-border accent, italic text, tap to chat.
+///   B) Hero row — ActivityRings (left, ~130 px) + 3 key stats (right column).
+///   C) 2-column bento metric grid with 7-day sparklines.
+///   D) Connected-apps IntegrationsRail at the very bottom.
 ///
 /// Data is sourced from three Riverpod providers:
-/// - [dailySummaryProvider] — today's aggregated health metrics.
-/// - [weeklyTrendsProvider] — 7-day sparkline data.
-/// - [dashboardInsightProvider] — AI-generated natural-language insight.
+///   - [dailySummaryProvider]     — today's aggregated health metrics.
+///   - [weeklyTrendsProvider]     — 7-day sparkline data.
+///   - [dashboardInsightProvider] — AI-generated natural-language insight.
 library;
 
 import 'package:flutter/material.dart';
@@ -23,19 +26,21 @@ import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 import 'package:zuralog/features/analytics/domain/daily_summary.dart';
 import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/activity_rings.dart';
-import 'package:zuralog/features/dashboard/presentation/widgets/insight_card.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/integrations_rail.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/metric_card.dart';
+
+// ── Internal constants ────────────────────────────────────────────────────────
+
+/// Left-border accent thickness on the compact insight strip.
+const double _kInsightBorderWidth = 3.0;
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 /// The main Dashboard screen — the app's command centre.
 ///
 /// Uses a [CustomScrollView] with a floating [SliverAppBar] header and a
-/// [SliverList] body containing all dashboard content sections.
-///
-/// All async data sections use `.when(data:, loading:, error:)` to handle
-/// network/cache loading states gracefully.
+/// [SliverList] body.  All async data sections use `.when(data:, loading:,
+/// error:)` to handle loading states gracefully.
 class DashboardScreen extends ConsumerWidget {
   /// Creates a [DashboardScreen].
   const DashboardScreen({super.key});
@@ -52,7 +57,7 @@ class DashboardScreen extends ConsumerWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── Floating App Bar ──────────────────────────────────────────
+          // ── Floating App Bar ────────────────────────────────────────────
           SliverAppBar(
             floating: true,
             snap: true,
@@ -70,65 +75,51 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
 
-          // ── Main Content ──────────────────────────────────────────────
+          // ── Main Content ────────────────────────────────────────────────
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // A) AI Insight Card
+                // A) Compact AI Insight strip
                 insightAsync.when(
-                  data: (insight) => InsightCard(
+                  data: (insight) => _CompactInsightStrip(
                     insight: insight,
-                    // Use goBranch to switch tabs within the StatefulShellRoute
-                    // — preserves branch state and avoids replacing the stack.
-                    onTap: () => StatefulNavigationShell.of(context).goBranch(1),
+                    onTap: () =>
+                        StatefulNavigationShell.of(context).goBranch(1),
                   ),
-                  loading: () => const InsightCardShimmer(),
-                  error: (e, _) => InsightCard(
+                  loading: () => const _InsightStripShimmer(),
+                  error: (e, _) => _CompactInsightStrip(
                     insight: const DashboardInsight(
                       insight:
                           'Tap to chat with your AI coach for today\'s insight.',
                     ),
-                    onTap: () => StatefulNavigationShell.of(context).goBranch(1),
+                    onTap: () =>
+                        StatefulNavigationShell.of(context).goBranch(1),
                   ),
                 ),
 
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // B) Health Activity Rings
+                // B) Hero row — rings + key stats side-by-side
                 summaryAsync.when(
-                  data: (summary) => Center(
-                    child: ActivityRings(
-                      rings: _buildRings(summary),
-                    ),
-                  ),
-                  loading: () => Center(
-                    child: SizedBox(
-                      height: AppDimens.ringDiameter,
-                      width: AppDimens.ringDiameter,
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 3,
-                      ),
-                    ),
-                  ),
+                  data: (summary) => _HeroRow(summary: summary),
+                  loading: () => const _HeroRowShimmer(),
                   error: (e, _) => const SizedBox.shrink(),
                 ),
 
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // C) Integrations Rail
-                IntegrationsRail(
-                  // goBranch(2) switches to the Integrations tab within
-                  // the StatefulShellRoute without replacing the stack.
-                  onManageTap: () =>
-                      StatefulNavigationShell.of(context).goBranch(2),
-                ),
+                // C) Metrics grid — requires both summary and trends
+                _buildMetricsGrid(context, summaryAsync, trendsAsync),
 
                 const SizedBox(height: AppDimens.spaceLg),
 
-                // D) Metrics Grid — requires both summary and trends
-                _buildMetricsGrid(context, summaryAsync, trendsAsync),
+                // D) Connected-apps rail at the very bottom
+                IntegrationsRail(
+                  // goBranch(2) switches to the Integrations tab.
+                  onManageTap: () =>
+                      StatefulNavigationShell.of(context).goBranch(2),
+                ),
 
                 // E) Bottom padding for nav bar clearance
                 const SizedBox(height: AppDimens.spaceXxl),
@@ -140,12 +131,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  // ── Header ─────────────────────────────────────────────────────────────────
+  // ── Header ──────────────────────────────────────────────────────────────────
 
   /// Builds the top greeting header row.
   ///
   /// Shows a time-sensitive greeting on the left and a profile avatar on the
-  /// right. Tapping the avatar navigates to the settings screen.
+  /// right.  Tapping the avatar navigates to the settings screen.
   Widget _buildHeader(BuildContext context, String name) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12
@@ -196,36 +187,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  // ── Ring builder ────────────────────────────────────────────────────────────
-
-  /// Converts a [DailySummary] into the three [RingData] entries for [ActivityRings].
-  List<RingData> _buildRings(DailySummary summary) {
-    return [
-      RingData(
-        value: summary.steps.toDouble(),
-        maxValue: 10000,
-        color: AppColors.primary,
-        label: 'Steps',
-        unit: 'steps',
-      ),
-      RingData(
-        value: summary.sleepHours,
-        maxValue: 8.0,
-        color: AppColors.secondaryLight,
-        label: 'Sleep',
-        unit: 'hrs',
-      ),
-      RingData(
-        value: summary.caloriesBurned.toDouble(),
-        maxValue: 600,
-        color: AppColors.accentLight,
-        label: 'Calories',
-        unit: 'kcal',
-      ),
-    ];
-  }
-
-  // ── Metrics grid ────────────────────────────────────────────────────────────
+  // ── Metrics grid ─────────────────────────────────────────────────────────────
 
   /// Builds the 2-column bento metric grid.
   ///
@@ -297,7 +259,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────────
 
   /// Formats an integer with comma thousands separators (e.g., 8432 → "8,432").
   String _formatNumber(int n) {
@@ -305,5 +267,333 @@ class DashboardScreen extends ConsumerWidget {
     final thousands = n ~/ 1000;
     final remainder = n % 1000;
     return '$thousands,${remainder.toString().padLeft(3, '0')}';
+  }
+}
+
+// ── Hero Row ──────────────────────────────────────────────────────────────────
+
+/// Compact hero row that shows the activity rings on the left and the three
+/// key stats (Steps / Sleep / Calories Burned) in a stacked column on the
+/// right.  This ensures the most important data is visible without scrolling.
+///
+/// Parameters:
+///   summary: Today's aggregated health metrics.
+class _HeroRow extends StatelessWidget {
+  /// Creates a [_HeroRow] for [summary].
+  const _HeroRow({required this.summary});
+
+  /// Today's aggregated health metrics.
+  final DailySummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // ── Activity Rings (left) ───────────────────────────────────────────
+        // ActivityRings renders a pill row at the bottom that needs at least
+        // ringDiameter px.  We constrain the Column to fit within the left
+        // half of the hero row by using a fixed width equal to ringDiameter,
+        // which is 180 px — sufficient for the three narrow pills.
+        SizedBox(
+          width: AppDimens.ringDiameter,
+          child: ActivityRings(
+            rings: [
+              RingData(
+                value: summary.steps.toDouble(),
+                maxValue: 10000,
+                color: AppColors.primary,
+                label: 'Steps',
+                unit: 'steps',
+              ),
+              RingData(
+                value: summary.sleepHours,
+                maxValue: 8.0,
+                color: AppColors.secondaryLight,
+                label: 'Sleep',
+                unit: 'hrs',
+              ),
+              RingData(
+                value: summary.caloriesBurned.toDouble(),
+                maxValue: 600,
+                color: AppColors.accentLight,
+                label: 'Calories',
+                unit: 'kcal',
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: AppDimens.spaceMd),
+
+        // ── Key stats column (right) ────────────────────────────────────────
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _KeyStatRow(
+                icon: Icons.directions_walk_rounded,
+                color: AppColors.primary,
+                label: 'Steps',
+                value: _formatSteps(summary.steps),
+                unit: 'steps',
+              ),
+              const SizedBox(height: AppDimens.spaceSm),
+              _KeyStatRow(
+                icon: Icons.bedtime_rounded,
+                color: AppColors.secondaryLight,
+                label: 'Sleep',
+                value: summary.sleepHours.toStringAsFixed(1),
+                unit: 'hrs',
+              ),
+              const SizedBox(height: AppDimens.spaceSm),
+              _KeyStatRow(
+                icon: Icons.local_fire_department_rounded,
+                color: AppColors.accentLight,
+                label: 'Calories',
+                value: '${summary.caloriesBurned}',
+                unit: 'kcal',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Formats step count with comma separator.
+  static String _formatSteps(int n) {
+    if (n < 1000) return '$n';
+    final thousands = n ~/ 1000;
+    final remainder = n % 1000;
+    return '$thousands,${remainder.toString().padLeft(3, '0')}';
+  }
+}
+
+// ── Key Stat Row ──────────────────────────────────────────────────────────────
+
+/// A single stat row inside the [_HeroRow] right column.
+///
+/// Shows a coloured icon, a bold value + unit, and a muted label.
+///
+/// Parameters:
+///   icon:  Material icon glyph.
+///   color: Accent colour for the icon and value text.
+///   label: Human-readable metric name (e.g. `'Steps'`).
+///   value: Formatted current value (e.g. `'8,432'`).
+///   unit:  Unit abbreviation (e.g. `'steps'`).
+class _KeyStatRow extends StatelessWidget {
+  /// Creates a [_KeyStatRow].
+  const _KeyStatRow({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+    required this.unit,
+  });
+
+  /// Icon glyph.
+  final IconData icon;
+
+  /// Accent colour.
+  final Color color;
+
+  /// Metric label.
+  final String label;
+
+  /// Formatted value string.
+  final String value;
+
+  /// Unit abbreviation.
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        // Coloured icon in a small tinted circle.
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: AppDimens.iconSm),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$value $unit',
+                style: AppTextStyles.h3.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Hero Row Shimmer ──────────────────────────────────────────────────────────
+
+/// Placeholder rendered while [dailySummaryProvider] is loading.
+class _HeroRowShimmer extends StatelessWidget {
+  /// Creates a [_HeroRowShimmer].
+  const _HeroRowShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return Row(
+      children: [
+        // Rings placeholder circle.
+        Container(
+          width: AppDimens.ringDiameter,
+          height: AppDimens.ringDiameter,
+          decoration: BoxDecoration(
+            color: surface.withValues(alpha: 0.5),
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: AppDimens.spaceMd),
+        // Stats placeholder bars.
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(3, (i) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
+                child: Container(
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: surface.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Compact Insight Strip ─────────────────────────────────────────────────────
+
+/// A compact, left-border accent insight strip that replaces the heavy
+/// gradient [InsightCard] hero for the redesigned dashboard layout.
+///
+/// Uses a 3px left border in [AppColors.primary] with an italic insight
+/// snippet.  Tapping navigates to the chat screen.
+///
+/// Parameters:
+///   insight: The AI-generated insight to display.
+///   onTap:   Callback to navigate to the chat screen.
+class _CompactInsightStrip extends StatelessWidget {
+  /// Creates a [_CompactInsightStrip].
+  const _CompactInsightStrip({
+    required this.insight,
+    this.onTap,
+  });
+
+  /// The AI-generated insight.
+  final DashboardInsight insight;
+
+  /// Called when the strip is tapped.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceSm,
+        ),
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: AppColors.primary,
+              width: _kInsightBorderWidth,
+            ),
+          ),
+          color: AppColors.primary.withValues(alpha: 0.05),
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(AppDimens.radiusSm),
+            bottomRight: Radius.circular(AppDimens.radiusSm),
+          ),
+        ),
+        child: Row(
+          children: [
+            // AI sparkle icon.
+            Icon(
+              Icons.auto_awesome_rounded,
+              size: AppDimens.iconSm,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: AppDimens.spaceSm),
+            // Italic insight text.
+            Expanded(
+              child: Text(
+                insight.insight,
+                style: AppTextStyles.body.copyWith(
+                  color: cs.onSurface,
+                  fontStyle: FontStyle.italic,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: AppDimens.spaceXs),
+            // Chevron tap hint.
+            Icon(
+              Icons.chevron_right_rounded,
+              size: AppDimens.iconMd,
+              color: cs.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Insight Strip Shimmer ─────────────────────────────────────────────────────
+
+/// Loading placeholder for [_CompactInsightStrip].
+class _InsightStripShimmer extends StatelessWidget {
+  /// Creates an [_InsightStripShimmer].
+  const _InsightStripShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+      ),
+    );
   }
 }

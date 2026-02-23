@@ -99,6 +99,7 @@ class _DisconnectSheetContent extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IntegrationLogo(
+                  id: integration.id,
                   logoAsset: integration.logoAsset,
                   name: integration.name,
                   size: 44,

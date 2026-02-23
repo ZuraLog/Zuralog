@@ -18,6 +18,7 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 
 // ── Stub notifiers ────────────────────────────────────────────────────────────
 
@@ -29,6 +30,26 @@ import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
 class _StubProfileNotifier extends UserProfileNotifier {
   @override
   UserProfile? build() => _kProfile;
+}
+
+/// Minimal stub [IntegrationsNotifier] that returns an empty integrations list
+/// with no loading state, so [IntegrationsRail] renders the "Connected Apps"
+/// section header immediately without depending on real repositories.
+class _StubIntegrationsNotifier extends StateNotifier<IntegrationsState>
+    implements IntegrationsNotifier {
+  _StubIntegrationsNotifier() : super(const IntegrationsState());
+
+  @override
+  void loadIntegrations() {}
+
+  @override
+  Future<void> connect(String integrationId, BuildContext context) async {}
+
+  @override
+  void disconnect(String integrationId) {}
+
+  @override
+  Future<bool> requestHealthPermissions() async => false;
 }
 
 // ── Fixture data ───────────────────────────────────────────────────────────────
@@ -104,6 +125,9 @@ Widget _buildHarness({List<String>? navigatedPaths}) {
       dailySummaryProvider.overrideWith((_) async => _kSummary),
       weeklyTrendsProvider.overrideWith((_) async => _kTrends),
       dashboardInsightProvider.overrideWith((_) async => _kInsight),
+      // Stub integrations so the rail renders immediately without real
+      // repositories or platform channels.
+      integrationsProvider.overrideWith((_) => _StubIntegrationsNotifier()),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -201,7 +225,25 @@ void main() {
 
     testWidgets('renders "Connected Apps" section header', (tester) async {
       await tester.pumpWidget(_buildHarness());
-      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // The IntegrationsRail is at the bottom of the SliverList; it may be
+      // beyond the initial viewport and not yet built (lazy rendering).
+      // Scroll down repeatedly until the text appears or we exhaust retries.
+      const maxAttempts = 10;
+      var found = false;
+      for (var i = 0; i < maxAttempts && !found; i++) {
+        if (find.text('Connected Apps').evaluate().isNotEmpty) {
+          found = true;
+          break;
+        }
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -300),
+        );
+        await tester.pumpAndSettle();
+      }
+
       expect(find.text('Connected Apps'), findsOneWidget);
     });
   });

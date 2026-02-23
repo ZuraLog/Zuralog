@@ -110,8 +110,13 @@ class ActivityRings extends StatelessWidget {
         const SizedBox(height: AppDimens.spaceMd),
 
         // ── Pill row ──────────────────────────────────────────────────────
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Use Wrap instead of Row so that pills can flow onto a second line
+        // when the widget is constrained to a narrow width (e.g. inside the
+        // dashboard hero row where ActivityRings shares space with stats).
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppDimens.spaceXs,
+          runSpacing: AppDimens.spaceXs,
           children: rings.map((r) => _RingPill(ring: r)).toList(),
         ),
       ],
