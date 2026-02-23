@@ -46,7 +46,7 @@ class RingData {
 
 // ── Widget ────────────────────────────────────────────────────────────────────
 
-/// Three concentric activity rings with a summary pill row.
+/// Three concentric activity rings with an optional summary pill row.
 ///
 /// Expects exactly three [RingData] entries in [rings]:
 /// - index 0 → outer ring (typically steps, sage green)
@@ -54,15 +54,30 @@ class RingData {
 /// - index 2 → inner ring (typically calories, coral)
 ///
 /// Sized to [AppDimens.ringDiameter] × [AppDimens.ringDiameter].
+///
+/// Set [showPillRow] to `false` when the parent already displays the same
+/// metrics elsewhere (e.g. the dashboard hero row right-column stats) to
+/// avoid duplication.
 class ActivityRings extends StatelessWidget {
   /// Creates an [ActivityRings] widget.
   ///
   /// [rings] must have exactly three entries.
-  const ActivityRings({super.key, required this.rings})
-      : assert(rings.length == 3, 'ActivityRings requires exactly 3 RingData entries.');
+  /// [showPillRow] controls whether the colour-coded pill summary row is
+  /// rendered below the rings circle.  Defaults to `true`.
+  const ActivityRings({
+    super.key,
+    required this.rings,
+    this.showPillRow = true,
+  }) : assert(rings.length == 3, 'ActivityRings requires exactly 3 RingData entries.');
 
   /// The three rings to render, ordered outer → middle → inner.
   final List<RingData> rings;
+
+  /// Whether to render the pill summary row below the rings.
+  ///
+  /// Set to `false` when the parent already shows the same metrics (e.g. the
+  /// dashboard hero row right-column stats) to eliminate duplication.
+  final bool showPillRow;
 
   @override
   Widget build(BuildContext context) {
@@ -107,18 +122,20 @@ class ActivityRings extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: AppDimens.spaceMd),
+        if (showPillRow) ...[
+          const SizedBox(height: AppDimens.spaceMd),
 
-        // ── Pill row ──────────────────────────────────────────────────────
-        // Use Wrap instead of Row so that pills can flow onto a second line
-        // when the widget is constrained to a narrow width (e.g. inside the
-        // dashboard hero row where ActivityRings shares space with stats).
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: AppDimens.spaceXs,
-          runSpacing: AppDimens.spaceXs,
-          children: rings.map((r) => _RingPill(ring: r)).toList(),
-        ),
+          // ── Pill row ────────────────────────────────────────────────────
+          // Use Wrap instead of Row so that pills can flow onto a second line
+          // when the widget is constrained to a narrow width (e.g. inside the
+          // dashboard hero row where ActivityRings shares space with stats).
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppDimens.spaceXs,
+            runSpacing: AppDimens.spaceXs,
+            children: rings.map((r) => _RingPill(ring: r)).toList(),
+          ),
+        ],
       ],
     );
   }

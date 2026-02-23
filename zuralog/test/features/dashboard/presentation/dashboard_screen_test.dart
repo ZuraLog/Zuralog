@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/state/side_panel_provider.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/analytics/domain/daily_summary.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
@@ -185,16 +186,47 @@ void main() {
       expect(find.byType(CircleAvatar), findsOneWidget);
     });
 
-    testWidgets('tapping profile avatar opens the profile side panel',
+    testWidgets(
+        'tapping profile avatar sets sidePanelOpenProvider to true',
         (tester) async {
-      await tester.pumpWidget(_buildHarness());
+      // Capture the ProviderContainer so we can inspect provider state after
+      // the tap.  The panel itself lives in AppShell (not in this isolated
+      // harness) so we verify the *intent* — that the provider was set.
+      late ProviderContainer container;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userProfileProvider.overrideWith(() => _StubProfileNotifier()),
+            dailySummaryProvider.overrideWith((_) async => _kSummary),
+            weeklyTrendsProvider.overrideWith((_) async => _kTrends),
+            dashboardInsightProvider.overrideWith((_) async => _kInsight),
+            integrationsProvider
+                .overrideWith((_) => _StubIntegrationsNotifier()),
+          ],
+          child: Consumer(
+            builder: (context, ref, _) {
+              // Capture the container so the test can read providers directly.
+              container = ProviderScope.containerOf(context);
+              return MaterialApp(
+                theme: AppTheme.light,
+                home: const DashboardScreen(),
+              );
+            },
+          ),
+        ),
+      );
+
       await tester.pump();
 
-      await tester.tap(find.byType(CircleAvatar));
-      await tester.pumpAndSettle();
+      // Panel is initially closed.
+      expect(container.read(sidePanelOpenProvider), isFalse);
 
-      // The panel contains a "Profile" navigation label.
-      expect(find.text('Profile'), findsOneWidget);
+      await tester.tap(find.byType(CircleAvatar));
+      await tester.pump();
+
+      // Tapping the avatar should have set the provider to true.
+      expect(container.read(sidePanelOpenProvider), isTrue);
     });
 
     testWidgets('shows insight text once providers resolve', (tester) async {

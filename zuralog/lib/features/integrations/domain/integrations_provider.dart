@@ -118,7 +118,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     IntegrationModel(
       id: 'google_health_connect',
       name: 'Google Health Connect',
-      status: IntegrationStatus.comingSoon,
+      // Available on Android; shown in the Available section with a platform
+      // badge on iOS so users can see it exists even on incompatible devices.
+      status: IntegrationStatus.available,
       description: 'Sync workouts and health data from Android.',
       compatibility: PlatformCompatibility.androidOnly,
     ),

@@ -18,8 +18,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/state/side_panel_provider.dart';
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
@@ -70,7 +70,7 @@ class DashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
                 ),
-                child: _buildHeader(context, profile?.aiName ?? '...'),
+                child: _buildHeader(context, ref, profile?.aiName ?? '...'),
               ),
             ),
           ),
@@ -107,6 +107,13 @@ class DashboardScreen extends ConsumerWidget {
                   error: (e, _) => const SizedBox.shrink(),
                 ),
 
+                // B2) Quick stat chips — workouts, nutrition, sleep quality
+                summaryAsync.when(
+                  data: (summary) => _QuickStatChips(summary: summary),
+                  loading: () => const SizedBox.shrink(),
+                  error: (e, _) => const SizedBox.shrink(),
+                ),
+
                 const SizedBox(height: AppDimens.spaceLg),
 
                 // C) Metrics grid — requires both summary and trends
@@ -137,7 +144,7 @@ class DashboardScreen extends ConsumerWidget {
   ///
   /// Shows a time-sensitive greeting on the left and a profile avatar on the
   /// right.  Tapping the avatar navigates to the settings screen.
-  Widget _buildHeader(BuildContext context, String name) {
+  Widget _buildHeader(BuildContext context, WidgetRef ref, String name) {
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Good Morning'
@@ -172,7 +179,7 @@ class DashboardScreen extends ConsumerWidget {
 
         // Right: profile avatar — opens side panel
         GestureDetector(
-          onTap: () => ProfileSidePanel.show(context),
+          onTap: () => ref.read(sidePanelOpenProvider.notifier).state = true,
           child: CircleAvatar(
             radius: AppDimens.avatarMd / 2,
             backgroundColor: AppColors.primary.withValues(alpha: 0.2),
@@ -291,13 +298,12 @@ class _HeroRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // ── Activity Rings (left) ───────────────────────────────────────────
-        // ActivityRings renders a pill row at the bottom that needs at least
-        // ringDiameter px.  We constrain the Column to fit within the left
-        // half of the hero row by using a fixed width equal to ringDiameter,
-        // which is 180 px — sufficient for the three narrow pills.
+        // Constrained to ringDiameter width so the rings circle fits neatly
+        // in the left portion of the hero row.
         SizedBox(
           width: AppDimens.ringDiameter,
           child: ActivityRings(
+            showPillRow: false,
             rings: [
               RingData(
                 value: summary.steps.toDouble(),
@@ -573,6 +579,149 @@ class _CompactInsightStrip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Quick Stat Chips ──────────────────────────────────────────────────────────
+
+/// A compact horizontal strip of stat chips displayed below the hero row.
+///
+/// Shows three supplementary metrics that are additive to the hero rings
+/// and right-column stats:
+///   - Workouts completed today.
+///   - Calories consumed (nutrition intake).
+///   - Sleep quality label (derived from [DailySummary.sleepHours]).
+///
+/// Parameters:
+///   summary: Today's aggregated health metrics.
+class _QuickStatChips extends StatelessWidget {
+  /// Creates a [_QuickStatChips] strip.
+  const _QuickStatChips({required this.summary});
+
+  /// Today's aggregated health metrics.
+  final DailySummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark
+        ? AppColors.surfaceDark.withValues(alpha: 0.6)
+        : AppColors.surfaceLight.withValues(alpha: 0.8);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _StatChip(
+            icon: Icons.fitness_center_rounded,
+            label: 'Workouts',
+            value: '${summary.workoutsCount}',
+            bgColor: bgColor,
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          _StatChip(
+            icon: Icons.restaurant_rounded,
+            label: 'Nutrition',
+            value: '${summary.caloriesConsumed} kcal',
+            bgColor: bgColor,
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          _StatChip(
+            icon: Icons.bedtime_outlined,
+            label: 'Sleep Quality',
+            value: _sleepQualityLabel(summary.sleepHours),
+            bgColor: bgColor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Returns a qualitative sleep label based on [hours].
+  ///
+  /// - < 5 h → 'Poor'
+  /// - 5–6 h → 'Fair'
+  /// - 6–8 h → 'Good'
+  /// - ≥ 8 h → 'Excellent'
+  static String _sleepQualityLabel(double hours) {
+    if (hours < 5) return 'Poor';
+    if (hours < 6) return 'Fair';
+    if (hours < 8) return 'Good';
+    return 'Excellent';
+  }
+}
+
+// ── Stat Chip ─────────────────────────────────────────────────────────────────
+
+/// A single chip in the [_QuickStatChips] strip.
+///
+/// Displays an icon, a bold value, and a muted label in a compact rounded card.
+class _StatChip extends StatelessWidget {
+  /// Creates a [_StatChip].
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.bgColor,
+  });
+
+  /// Icon glyph.
+  final IconData icon;
+
+  /// Human-readable metric name.
+  final String label;
+
+  /// Formatted value string.
+  final String value;
+
+  /// Background fill colour for the chip.
+  final Color bgColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceSm,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+        border: Border.all(
+          color: cs.onSurface.withValues(alpha: 0.08),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: AppDimens.iconSm, color: cs.onSurfaceVariant),
+          const SizedBox(width: AppDimens.spaceXs),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: AppTextStyles.caption.copyWith(
+                  color: cs.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  fontSize: 10,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
