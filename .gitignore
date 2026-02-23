@@ -46,3 +46,6 @@ nul
 .cursor/
 .antigravity/
 .claudeplans/
+
+# Git Worktrees
+.worktrees/
