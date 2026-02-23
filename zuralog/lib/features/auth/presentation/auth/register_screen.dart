@@ -124,12 +124,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     switch (result) {
       case AuthSuccess():
-        // Navigate to the profile questionnaire so the user can set up
-        // their profile. The router guard also enforces this redirect, but
-        // being explicit here avoids a round-trip through the redirect logic.
-        if (mounted) {
-          context.go(RouteNames.profileQuestionnairePath);
-        }
+        // The router guard (in app_router.dart Step 3) redirects authenticated
+        // users with onboardingComplete == false to the profile questionnaire
+        // automatically. No explicit navigation call is needed here.
+        break;
       case AuthFailure(:final message):
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
