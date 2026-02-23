@@ -85,6 +85,12 @@ abstract final class AppDimens {
   /// Integration rail item width (pill-shaped cards).
   static const double integrationPillWidth = 120;
 
+  /// Integration rail pill tile height.
+  static const double integrationPillHeight = 64;
+
+  /// Integration rail scrollable row height (pill + breathing room).
+  static const double integrationRailHeight = 72;
+
   /// Health ring outer diameter.
   static const double ringDiameter = 180;
 

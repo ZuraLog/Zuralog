@@ -51,7 +51,7 @@ class IntegrationsRail extends ConsumerWidget {
       child: connected.isEmpty
           ? const _EmptyState()
           : SizedBox(
-              height: 72,
+              height: AppDimens.integrationRailHeight,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: connected.length,
@@ -110,7 +110,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 72,
+      height: AppDimens.integrationRailHeight,
       child: Row(
         children: [
           Icon(
@@ -148,16 +148,13 @@ class _IntegrationPillTile extends StatelessWidget {
   // Status dot size constant.
   static const double _dotSize = 8.0;
 
-  // Connected status colour — iOS system green.
-  static const Color _connectedColor = Color(0xFF34C759);
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: AppDimens.integrationPillWidth,
-      height: 64,
+      height: AppDimens.integrationPillHeight,
       margin: const EdgeInsets.only(right: AppDimens.spaceSm),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
@@ -186,9 +183,8 @@ class _IntegrationPillTile extends StatelessWidget {
                 const SizedBox(height: AppDimens.spaceXs),
                 Text(
                   integration.name,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.labelXs.copyWith(
                     color: AppColors.primary,
-                    fontSize: 10,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -202,11 +198,11 @@ class _IntegrationPillTile extends StatelessWidget {
           Positioned(
             top: AppDimens.spaceXs,
             right: AppDimens.spaceXs,
-            child: Container(
+              child: Container(
               width: _dotSize,
               height: _dotSize,
               decoration: const BoxDecoration(
-                color: _connectedColor,
+                color: AppColors.statusConnected,
                 shape: BoxShape.circle,
               ),
             ),
@@ -253,9 +249,8 @@ class _IntegrationLogo extends StatelessWidget {
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) => Text(
         _initials,
-        style: AppTextStyles.caption.copyWith(
+        style: AppTextStyles.labelXs.copyWith(
           color: AppColors.primary,
-          fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
       ),
