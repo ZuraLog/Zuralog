@@ -180,28 +180,37 @@ void main() {
       expect(navigatedRoutes, contains('login'));
     });
 
-    testWidgets('tapping "Continue with Apple" shows coming-soon SnackBar',
+    testWidgets(
+        'tapping "Continue with Apple" shows coming-soon AlertDialog',
         (tester) async {
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Continue with Apple'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Apple Sign In coming soon'), findsOneWidget);
+      // Apple Sign In is stubbed — an AlertDialog is shown explaining that
+      // an Apple Developer Program membership is required.
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Apple Sign In'), findsOneWidget);
     });
 
-    testWidgets('tapping "Continue with Google" shows coming-soon SnackBar',
+    testWidgets(
+        '"Continue with Google" button is present and enabled',
         (tester) async {
+      // Google Sign In triggers native OAuth — we cannot assert UI side-effects
+      // without mocking SocialAuthService. This test verifies the button is
+      // rendered and enabled so it can be tapped (functional smoke test).
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Continue with Google'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      expect(find.text('Google Sign In coming soon'), findsOneWidget);
+      final googleButton = tester.widget<OutlinedButton>(
+        find.ancestor(
+          of: find.text('Continue with Google'),
+          matching: find.byType(OutlinedButton),
+        ),
+      );
+      expect(googleButton.onPressed, isNotNull);
     });
   });
 }
