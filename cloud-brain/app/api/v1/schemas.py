@@ -6,7 +6,7 @@ on the authentication endpoints.
 """
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, EmailStr
 
@@ -43,6 +43,32 @@ class RefreshRequest(BaseModel):
     """
 
     refresh_token: str
+
+
+class SocialAuthRequest(BaseModel):
+    """Request body for native OAuth social sign-in.
+
+    Used by both Apple and Google native SDK flows. The Flutter Edge Agent
+    obtains the ID token (and optionally access token / nonce) from the
+    respective provider SDK and sends them here for backend validation.
+
+    Attributes:
+        provider: The OAuth provider — either "apple" or "google".
+        id_token: The identity token issued by the provider. For Google
+            this is the JWT from GoogleSignIn; for Apple it is the
+            identityToken from Sign in with Apple.
+        access_token: The provider's access token. Required for Google;
+            not used for Apple.
+        nonce: The raw (un-hashed) nonce generated on the client before
+            calling Apple's Sign In SDK. Apple embeds the SHA-256 hash
+            of this nonce in the identity token for server-side replay
+            prevention. Required for Apple; omitted for Google.
+    """
+
+    provider: Literal["apple", "google"]
+    id_token: str
+    access_token: Optional[str] = None
+    nonce: Optional[str] = None
 
 
 class AuthResponse(BaseModel):

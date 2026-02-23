@@ -4,15 +4,15 @@
 /// full account-access menu in a single "Clean Gate" design:
 ///   - Brand logo in a Sage Green rounded-square card
 ///   - App name + tagline
-///   - Continue with Apple (stub)
-///   - Continue with Google (stub)
+///   - Continue with Apple (stubbed — requires Apple Developer Program)
+///   - Continue with Google (fully wired)
 ///   - "or" divider
 ///   - Log in with Email (navigates to LoginScreen)
 ///   - Legal footer (Terms of Service / Privacy Policy)
 ///
-/// This screen replaces the previous gradient "Living Brand Moment" welcome
-/// and the previously-orphaned [AuthSelectionScreen], merging them into one
-/// cohesive entry point that matches the reference design.
+/// Social auth buttons are connected to the [SocialAuthService] via
+/// [AuthStateNotifier.socialLogin]. A loading overlay is shown during
+/// the sign-in flow. Errors are surfaced as [SnackBar]s.
 ///
 /// On first launch the [OnboardingPageView] is shown before this screen,
 /// controlled by the [hasSeenOnboardingProvider] flag.
@@ -20,18 +20,22 @@ library;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/auth/data/social_auth_service.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/auth_state.dart';
 
 /// The auth home screen — entry point for unauthenticated users.
 ///
-/// Presents all account-access options (Apple, Google, email) in a minimal,
-/// light-themed layout. Social auth buttons trigger a "coming soon" snackbar
-/// until OAuth integration is implemented in a future phase.
-class WelcomeScreen extends StatelessWidget {
+/// A [ConsumerStatefulWidget] so it can hold the [_isLoading] flag for
+/// the social-auth loading overlay, without rebuilding the entire tree.
+class WelcomeScreen extends ConsumerStatefulWidget {
   /// Creates a [WelcomeScreen].
   const WelcomeScreen({super.key});
 
@@ -44,116 +48,215 @@ class WelcomeScreen extends StatelessWidget {
   static const double _logoPadding = 22;
 
   @override
+  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
+  /// Whether a social sign-in flow is currently in progress.
+  bool _isLoading = false;
+
+  // ── Google Sign In ─────────────────────────────────────────────────────────
+
+  /// Initiates the Google Sign In native flow.
+  ///
+  /// Shows a loading overlay, calls [SocialAuthService.signInWithGoogle],
+  /// then delegates to [AuthStateNotifier.socialLogin]. Navigates to the
+  /// dashboard on success, or shows an error [SnackBar] on failure.
+  ///
+  /// Silently swallows [SocialAuthCancelledException] — the user changed
+  /// their mind and we should not show an error.
+  Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final socialService = ref.read(socialAuthServiceProvider);
+      final credentials = await socialService.signInWithGoogle();
+      if (!mounted) return;
+
+      final result = await ref
+          .read(authStateProvider.notifier)
+          .socialLogin(credentials);
+
+      if (!mounted) return;
+      switch (result) {
+        case AuthSuccess():
+          // Navigation is handled by GoRouter's auth guard — no push needed.
+          break;
+        case AuthFailure(:final message):
+          _showError(message);
+      }
+    } on SocialAuthCancelledException {
+      // User cancelled the Google account picker — no error shown.
+    } on SocialAuthException catch (e) {
+      if (mounted) _showError(e.message);
+    } catch (e) {
+      if (mounted) _showError('Google Sign In failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // ── Apple Sign In ──────────────────────────────────────────────────────────
+
+  /// Initiates the Apple Sign In native flow.
+  ///
+  /// Currently shows a "coming soon" dialog because Apple Sign In
+  /// requires an Apple Developer Program membership. Once configured,
+  /// this method uses the same pattern as [_handleGoogleSignIn].
+  Future<void> _handleAppleSignIn() async {
+    if (_isLoading) return;
+    // Apple Sign In is stubbed until Apple Developer credentials are
+    // configured. Show an informative dialog instead of an error.
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Apple Sign In'),
+        content: const Text(
+          'Apple Sign In requires an Apple Developer Program membership '
+          '(\$99/year). Configuration is in progress — use Google or Email '
+          'sign-in in the meantime.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /// Shows a floating error [SnackBar] with the given [message].
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       // No AppBar — full-screen immersive auth experience.
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
-          child: Column(
-            children: [
-              // ── Brand area — centred in the upper portion ──────────────────
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo card — sage green rounded square, matching reference.
-                    _LogoCard(
-                      size: _logoCardSize,
-                      radius: _logoCardRadius,
-                      padding: _logoPadding,
-                      logoAsset: _logoAsset,
-                    ),
-
-                    const SizedBox(height: AppDimens.spaceLg),
-
-                    // App name
-                    Text(
-                      'Zuralog',
-                      style: AppTextStyles.h1.copyWith(
-                        color: colorScheme.onSurface,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppDimens.spaceSm),
-
-                    // Tagline
-                    Text(
-                      'Your journey to better health starts here.',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── Auth actions — pinned to the bottom ────────────────────────
-              Column(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
+              child: Column(
                 children: [
-                  // Continue with Apple
-                  _AppleButton(
-                    onPressed: () => _showComingSoon(context, 'Apple Sign In'),
+                  // ── Brand area — centred in the upper portion ──────────────
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Logo card — sage green rounded square.
+                        _LogoCard(
+                          size: WelcomeScreen._logoCardSize,
+                          radius: WelcomeScreen._logoCardRadius,
+                          padding: WelcomeScreen._logoPadding,
+                          logoAsset: WelcomeScreen._logoAsset,
+                        ),
+
+                        const SizedBox(height: AppDimens.spaceLg),
+
+                        // App name
+                        Text(
+                          'Zuralog',
+                          style: AppTextStyles.h1.copyWith(
+                            color: colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+
+                        const SizedBox(height: AppDimens.spaceSm),
+
+                        // Tagline
+                        Text(
+                          'Your journey to better health starts here.',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: AppDimens.spaceSm),
+                  // ── Auth actions — pinned to the bottom ──────────────────
+                  Column(
+                    children: [
+                      // Continue with Apple
+                      _AppleButton(
+                        onPressed: _isLoading ? null : _handleAppleSignIn,
+                      ),
 
-                  // Continue with Google
-                  _GoogleButton(
-                    onPressed: () => _showComingSoon(context, 'Google Sign In'),
-                  ),
+                      const SizedBox(height: AppDimens.spaceSm),
 
-                  const SizedBox(height: AppDimens.spaceMd),
+                      // Continue with Google
+                      _GoogleButton(
+                        onPressed: _isLoading ? null : _handleGoogleSignIn,
+                      ),
 
-                  // ── "or" divider ─────────────────────────────────────────
-                  const _OrDivider(),
+                      const SizedBox(height: AppDimens.spaceMd),
 
-                  const SizedBox(height: AppDimens.spaceMd),
+                      // ── "or" divider ───────────────────────────────────
+                      const _OrDivider(),
 
-                  // Log in with Email — navigates to the unified login screen.
-                  // Email-only users can switch to registration from LoginScreen.
-                  SizedBox(
-                    width: double.infinity,
-                    height: AppDimens.touchTargetMin,
-                    child: TextButton(
-                      onPressed: () => context.push(RouteNames.loginPath),
-                      style: TextButton.styleFrom(
-                        foregroundColor: colorScheme.onSurface,
-                        textStyle: AppTextStyles.h3,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppDimens.radiusButton),
+                      const SizedBox(height: AppDimens.spaceMd),
+
+                      // Log in with Email
+                      SizedBox(
+                        width: double.infinity,
+                        height: AppDimens.touchTargetMin,
+                        child: TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () => context.push(RouteNames.loginPath),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colorScheme.onSurface,
+                            textStyle: AppTextStyles.h3,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppDimens.radiusButton,
+                              ),
+                            ),
+                          ),
+                          child: const Text('Log in with Email'),
                         ),
                       ),
-                      child: const Text('Log in with Email'),
-                    ),
+
+                      const SizedBox(height: AppDimens.spaceMd),
+
+                      // Legal footer
+                      _LegalFooter(textTheme: textTheme),
+
+                      const SizedBox(height: AppDimens.spaceLg),
+                    ],
                   ),
-
-                  const SizedBox(height: AppDimens.spaceMd),
-
-                  // Legal footer
-                  _LegalFooter(textTheme: textTheme),
-
-                  const SizedBox(height: AppDimens.spaceLg),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
 
-  /// Shows a "coming soon" [SnackBar] for a given [featureName].
-  void _showComingSoon(BuildContext context, String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$featureName coming soon'),
-        behavior: SnackBarBehavior.floating,
+          // ── Loading overlay — blocks input during social auth ──────────
+          if (_isLoading)
+            const ColoredBox(
+              color: Colors.black38,
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }

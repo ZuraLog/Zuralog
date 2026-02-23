@@ -13,6 +13,7 @@ import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/core/storage/local_db.dart';
 import 'package:zuralog/core/storage/sync_status_store.dart';
+import 'package:zuralog/features/auth/data/social_auth_service.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 import 'package:zuralog/features/analytics/data/analytics_repository.dart';
@@ -79,3 +80,20 @@ final syncStatusStoreProvider = Provider<SyncStatusStore>((ref) {
 /// the harness "Init FCM" button) — it is not called automatically to avoid
 /// permission prompts before the user has consented.
 final fcmServiceProvider = Provider<FCMService>((ref) => FCMService());
+
+/// Provides the [SocialAuthService] singleton for native OAuth sign-in.
+///
+/// Reads the Google Web Client ID from the `--dart-define` build configuration
+/// variable `GOOGLE_WEB_CLIENT_ID`. This is the OAuth 2.0 **Web Application**
+/// client ID from Google Cloud Console — NOT the Firebase iOS/Android client ID.
+/// See the setup guide in docs/plans/2026-02-23-social-oauth-design.md.
+///
+/// If the variable is absent (e.g., during CI), an empty string is passed and
+/// the service's assert will fire in debug mode to surface the misconfiguration.
+final socialAuthServiceProvider = Provider<SocialAuthService>((ref) {
+  const googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue: '',
+  );
+  return SocialAuthService(googleWebClientId: googleWebClientId);
+});

@@ -207,6 +207,76 @@ class AuthService:
             "expires_in": data.get("expires_in", 3600),
         }
 
+    async def sign_in_with_id_token(
+        self,
+        provider: str,
+        id_token: str,
+        access_token: str | None = None,
+        nonce: str | None = None,
+    ) -> dict:
+        """Authenticates a user via a native OAuth provider ID token.
+
+        Calls Supabase GoTrue's token endpoint with grant_type=id_token.
+        Supabase validates the ID token against the provider's JWKS, then
+        creates or links the user in auth.users / auth.identities automatically.
+
+        The email is extracted from the Supabase user response (which in turn
+        reads it from the ID token claims). For Apple "Hide My Email" users,
+        this will be the relay address assigned by Apple.
+
+        Args:
+            provider: Provider name — "google" or "apple".
+            id_token: The JWT identity token from the provider SDK.
+            access_token: Provider access token (required for Google, unused
+                for Apple).
+            nonce: The raw nonce generated client-side before calling
+                Sign in with Apple. Apple embeds its SHA-256 hash in the
+                identity token; Supabase re-hashes and compares.
+                Required for Apple, omitted for Google.
+
+        Returns:
+            A dict with keys: user_id, email, access_token, refresh_token,
+            expires_in.
+
+        Raises:
+            HTTPException: 401 if the ID token is invalid or provider is
+                not configured in Supabase.
+            HTTPException: 400 for other authentication failures.
+        """
+        payload: dict[str, str] = {
+            "provider": provider,
+            "id_token": id_token,
+        }
+        if access_token is not None:
+            payload["access_token"] = access_token
+        if nonce is not None:
+            payload["nonce"] = nonce
+
+        response = await self._client.post(
+            self._auth_url("/token?grant_type=id_token"),
+            headers=self._headers(),
+            json=payload,
+        )
+
+        if response.status_code != 200:
+            detail = self._extract_error(response)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Social sign-in failed: {detail}",
+            )
+
+        data = response.json()
+        user = data.get("user", {})
+        email: str = user.get("email") or ""
+
+        return {
+            "user_id": user["id"],
+            "email": email,
+            "access_token": data["access_token"],
+            "refresh_token": data["refresh_token"],
+            "expires_in": data.get("expires_in", 3600),
+        }
+
     async def get_user(self, access_token: str) -> dict:
         """Retrieves and validates the user profile using their access token.
 

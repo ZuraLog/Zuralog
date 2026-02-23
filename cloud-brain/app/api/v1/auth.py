@@ -16,6 +16,7 @@ from app.api.v1.schemas import (
     MessageResponse,
     RefreshRequest,
     RegisterRequest,
+    SocialAuthRequest,
 )
 from app.database import get_db
 from app.limiter import limiter
@@ -136,6 +137,58 @@ async def logout(
     """
     await auth_service.sign_out(credentials.credentials)
     return MessageResponse(message="Logged out successfully")
+
+
+@router.post("/social", response_model=AuthResponse)
+@limiter.limit("10/minute")
+async def social_login(
+    request: Request,
+    body: SocialAuthRequest,
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> AuthResponse:
+    """Authenticate via a native OAuth provider (Google or Apple).
+
+    The Flutter Edge Agent obtains an ID token (and, for Google, an access
+    token) directly from the provider's native SDK, then sends them here.
+    The backend validates the tokens via Supabase GoTrue's id_token grant,
+    which in turn verifies the token against the provider's JWKS endpoint.
+
+    On first sign-in the user is created in Supabase Auth and then synced
+    to our local `users` table (idempotent upsert). On subsequent sign-ins
+    the existing user is retrieved and the local record is refreshed.
+
+    Args:
+        body: Provider, id_token, optional access_token and nonce.
+        auth_service: Injected Supabase auth service.
+        db: Injected async database session.
+
+    Returns:
+        AuthResponse with user_id, access_token, refresh_token, expires_in.
+
+    Raises:
+        HTTPException: 401 if the ID token is invalid or the provider is
+            not enabled in the Supabase project settings.
+    """
+    result = await auth_service.sign_in_with_id_token(
+        provider=body.provider,
+        id_token=body.id_token,
+        access_token=body.access_token,
+        nonce=body.nonce,
+    )
+
+    # Sync the user to our local DB. email may be empty for Apple "Hide My
+    # Email" users whose relay address Supabase doesn't always return; fall
+    # back to the provider user_id as an identifier in that edge case.
+    email = result["email"] or f"{body.provider}:{result['user_id']}"
+    await sync_user_to_db(db, result["user_id"], email)
+
+    return AuthResponse(
+        user_id=result["user_id"],
+        access_token=result["access_token"],
+        refresh_token=result["refresh_token"],
+        expires_in=result["expires_in"],
+    )
 
 
 @router.post("/refresh", response_model=AuthResponse)

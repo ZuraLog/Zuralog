@@ -107,6 +107,58 @@ class AuthRepository {
     }
   }
 
+  /// Authenticates via a native OAuth provider (Google or Apple).
+  ///
+  /// Sends the provider's token payload to `POST /api/v1/auth/social`.
+  /// The backend validates the ID token with Supabase GoTrue and returns
+  /// standard session tokens. On success, tokens are persisted to secure
+  /// storage exactly as in [login].
+  ///
+  /// Args:
+  ///   [provider]: Provider name — "google" or "apple".
+  ///   [idToken]: The JWT identity token from the provider SDK.
+  ///   [accessToken]: Provider access token (required for Google).
+  ///   [nonce]: Raw nonce for Apple replay prevention (required for Apple).
+  ///
+  /// Returns:
+  ///   [AuthSuccess] with user ID and tokens on success.
+  ///   [AuthFailure] with a human-readable error message on failure.
+  Future<AuthResult> socialLogin({
+    required String provider,
+    required String idToken,
+    String? accessToken,
+    String? nonce,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'provider': provider,
+        'id_token': idToken,
+      };
+      if (accessToken != null) body['access_token'] = accessToken;
+      if (nonce != null) body['nonce'] = nonce;
+
+      final response = await _apiClient.post(
+        '/api/v1/auth/social',
+        data: body,
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      await _saveTokens(
+        userId: data['user_id'] as String,
+        accessToken: data['access_token'] as String,
+        refreshToken: data['refresh_token'] as String,
+      );
+
+      return AuthSuccess(
+        userId: data['user_id'] as String,
+        accessToken: data['access_token'] as String,
+        refreshToken: data['refresh_token'] as String,
+      );
+    } on DioException catch (e) {
+      return AuthFailure(message: _extractErrorMessage(e));
+    }
+  }
+
   /// Logs out the current user.
   ///
   /// Calls `POST /api/v1/auth/logout` to invalidate the server session,
