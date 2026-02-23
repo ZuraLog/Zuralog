@@ -27,7 +27,7 @@ class LLMClient:
     chat completions with optional tool definitions for function-calling.
 
     Attributes:
-        model: The default model identifier (e.g. ``moonshot/kimi-k2.5``).
+        model: The default model identifier (e.g. ``moonshotai/kimi-k2.5``).
         _client: The underlying AsyncOpenAI client instance.
     """
 
@@ -39,6 +39,8 @@ class LLMClient:
                 Defaults to ``settings.openrouter_model``.
         """
         self.model: str = model or settings.openrouter_model
+        if not settings.openrouter_api_key:
+            logger.warning("OPENROUTER_API_KEY is not set — LLM calls will fail with 401. Set it in cloud-brain/.env")
         self._client = AsyncOpenAI(
             api_key=settings.openrouter_api_key,
             base_url="https://openrouter.ai/api/v1",

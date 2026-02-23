@@ -1,9 +1,9 @@
 """
 Life Logger Cloud Brain — Voice Transcription Endpoint.
 
-Accepts audio file uploads and returns transcribed text.
-Currently uses a mock transcription; the real Whisper STT
-integration will be added when infrastructure is ready.
+Accepts audio file uploads and returns transcribed text via
+OpenAI's Whisper model. Requires OPENAI_API_KEY to be set
+in the environment.
 
 Requires Bearer token authentication.
 
@@ -15,7 +15,9 @@ import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from openai import AsyncOpenAI
 
+from app.config import settings
 from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
@@ -48,8 +50,7 @@ async def transcribe_audio(
     """Transcribe an audio file to text.
 
     Accepts audio uploads in common formats, validates the file,
-    and returns the transcribed text. Currently uses a mock
-    transcription response.
+    and returns the transcribed text using OpenAI's Whisper model.
 
     Requires a valid Bearer token in the Authorization header.
 
@@ -100,9 +101,6 @@ async def transcribe_audio(
     )
 
     try:
-        from openai import AsyncOpenAI
-        from app.config import settings
-
         if not settings.openai_api_key:
             logger.error("openai_api_key is not configured in settings.")
             raise HTTPException(
@@ -111,20 +109,18 @@ async def transcribe_audio(
             )
 
         client = AsyncOpenAI(api_key=settings.openai_api_key)
-        
+
         # Whisper expects a tuple of (filename, file_content) or a file-like object
         # with a name attribute. We'll use the tuple format.
         file_tuple = (filename, content)
-        
+
         transcription = await client.audio.transcriptions.create(
-            model="whisper-1",
-            file=file_tuple,
-            response_format="text"
+            model="whisper-1", file=file_tuple, response_format="text"
         )
-        
+
         # When response_format="text", the API returns a string directly
         text = str(transcription)
-        
+
     except Exception as e:
         logger.exception("Error during OpenAI transcription")
         if isinstance(e, HTTPException):

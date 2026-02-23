@@ -29,7 +29,7 @@ async def test_track_usage(tracker, mock_session):
     """track() should add a usage record to the session."""
     await tracker.track(
         user_id="user-1",
-        model="moonshot/kimi-k2.5",
+        model="moonshotai/kimi-k2.5",
         input_tokens=100,
         output_tokens=50,
     )
@@ -43,7 +43,7 @@ async def test_track_extracts_from_response(tracker):
     mock_response = MagicMock()
     mock_response.usage.prompt_tokens = 200
     mock_response.usage.completion_tokens = 80
-    mock_response.model = "moonshot/kimi-k2.5"
+    mock_response.model = "moonshotai/kimi-k2.5"
 
     await tracker.track_from_response("user-1", mock_response)
     assert tracker._session.add.called
@@ -54,7 +54,7 @@ async def test_track_zero_tokens(tracker, mock_session):
     """Zero token usage should still be recorded."""
     await tracker.track(
         user_id="user-1",
-        model="moonshot/kimi-k2.5",
+        model="moonshotai/kimi-k2.5",
         input_tokens=0,
         output_tokens=0,
     )
