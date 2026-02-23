@@ -30,7 +30,10 @@ import 'package:zuralog/features/integrations/presentation/widgets/integration_l
 ///       - [IntegrationStatus.comingSoon] → grey "Soon" pill badge.
 ///       - [IntegrationStatus.error] → error icon.
 ///
-/// [comingSoon] tiles are rendered at 50% opacity and are fully non-interactive.
+/// Opacity rules:
+///   - [comingSoon] tiles are rendered at 50% opacity (non-interactive).
+///   - Incompatible-platform tiles are rendered at 45% opacity and show an
+///     [_IncompatibleBadge] instead of the Connect button.
 class IntegrationTile extends ConsumerWidget {
   /// Creates an [IntegrationTile] for the given [integration].
   const IntegrationTile({super.key, required this.integration});
@@ -41,6 +44,7 @@ class IntegrationTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isComingSoon = integration.status == IntegrationStatus.comingSoon;
+    final isIncompatible = !integration.isCompatibleWithCurrentPlatform;
 
     Widget tile = Padding(
       padding: const EdgeInsets.symmetric(
@@ -84,14 +88,22 @@ class IntegrationTile extends ConsumerWidget {
           const SizedBox(width: AppDimens.spaceSm),
 
           // ── Status control ────────────────────────────────────────────────
-          _StatusControl(integration: integration),
+          // Show incompatibility badge when the integration does not support
+          // the current platform; otherwise fall through to the normal status
+          // control.
+          if (isIncompatible)
+            _IncompatibleBadge(label: integration.incompatibilityNote ?? '')
+          else
+            _StatusControl(integration: integration),
         ],
       ),
     );
 
-    // Dim the tile when the integration is coming soon.
+    // Dim the tile when coming soon OR when incompatible with this platform.
     if (isComingSoon) {
       tile = Opacity(opacity: 0.5, child: tile);
+    } else if (isIncompatible) {
+      tile = Opacity(opacity: 0.45, child: tile);
     }
 
     return tile;
@@ -214,6 +226,47 @@ class _SoonBadge extends StatelessWidget {
       ),
       child: Text(
         'Soon',
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Incompatible Badge ─────────────────────────────────────────────────────────
+
+/// A neutral pill badge indicating that an integration is not available on
+/// the current platform (e.g. "iOS only" or "Android only").
+///
+/// Uses the same pill shape as [_SoonBadge] for visual consistency, but
+/// renders [AppColors.textSecondary] text on a [surfaceContainerHighest]
+/// background to keep it clearly distinct from the green "Connected" badge
+/// and the coral error state.
+///
+/// Parameters:
+///   label: The human-readable incompatibility note (e.g. `'iOS only'`).
+class _IncompatibleBadge extends StatelessWidget {
+  /// Creates an [_IncompatibleBadge] with the given platform [label].
+  const _IncompatibleBadge({required this.label});
+
+  /// Short platform label to display (e.g. `'iOS only'`, `'Android only'`).
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceSm,
+        vertical: AppDimens.spaceXs,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+      ),
+      child: Text(
+        label,
         style: AppTextStyles.caption.copyWith(
           color: AppColors.textSecondary,
           fontWeight: FontWeight.w600,

@@ -1,11 +1,35 @@
 /// Zuralog — Integrations Domain Model.
 ///
-/// Defines the [IntegrationStatus] enum and the immutable [IntegrationModel]
-/// data class used throughout the Integrations Hub feature.
+/// Defines the [IntegrationStatus] enum, [PlatformCompatibility] enum,
+/// and the immutable [IntegrationModel] data class used throughout the
+/// Integrations Hub feature.
 ///
-/// This layer has zero UI or platform dependencies — it is safe to import
-/// from any layer (domain, presentation, data).
+/// Imports [dart:io] for [Platform] checks and [flutter/foundation.dart] for
+/// the [kIsWeb] guard — both are safe for mobile-first builds.
 library;
+
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+
+/// Describes which mobile platform an integration is compatible with.
+///
+/// Used to visually dim incompatible tiles and show an incompatibility badge
+/// instead of the Connect button on unsupported platforms.
+///
+/// - [all]: The integration is supported on both iOS and Android.
+/// - [iosOnly]: The integration requires iOS / HealthKit (e.g. Apple Health).
+/// - [androidOnly]: The integration requires Android / Health Connect.
+enum PlatformCompatibility {
+  /// Available on all platforms.
+  all,
+
+  /// Available on iOS only (e.g. Apple Health via HealthKit).
+  iosOnly,
+
+  /// Available on Android only (e.g. Google Health Connect).
+  androidOnly,
+}
 
 /// Represents the connection state of a third-party integration.
 ///
@@ -69,6 +93,11 @@ class IntegrationModel {
   /// Short description shown below the integration name in the tile.
   final String description;
 
+  /// Which platform(s) this integration supports.
+  ///
+  /// Defaults to [PlatformCompatibility.all] when not specified.
+  final PlatformCompatibility compatibility;
+
   /// Creates an immutable [IntegrationModel].
   const IntegrationModel({
     required this.id,
@@ -77,7 +106,44 @@ class IntegrationModel {
     required this.status,
     required this.description,
     this.lastSynced,
+    this.compatibility = PlatformCompatibility.all,
   });
+
+  // ── Computed Properties ───────────────────────────────────────────────────
+
+  /// Returns `true` if this integration is usable on the current platform.
+  ///
+  /// Always returns `true` on web (where [Platform] is unavailable) so the UI
+  /// degrades gracefully in a web debug environment.
+  ///
+  /// Returns:
+  ///   `true` when [compatibility] is [PlatformCompatibility.all], or when the
+  ///   platform matches the required OS. `false` otherwise.
+  bool get isCompatibleWithCurrentPlatform {
+    if (kIsWeb) return true;
+    if (compatibility == PlatformCompatibility.all) return true;
+    if (compatibility == PlatformCompatibility.iosOnly) return Platform.isIOS;
+    if (compatibility == PlatformCompatibility.androidOnly) {
+      return Platform.isAndroid;
+    }
+    return true;
+  }
+
+  /// Returns a human-readable incompatibility note, or `null` if compatible.
+  ///
+  /// Examples: `'iOS only'`, `'Android only'`.
+  ///
+  /// Returns:
+  ///   A short platform label string when [isCompatibleWithCurrentPlatform] is
+  ///   `false`; `null` when the integration is compatible.
+  String? get incompatibilityNote {
+    if (isCompatibleWithCurrentPlatform) return null;
+    if (compatibility == PlatformCompatibility.iosOnly) return 'iOS only';
+    if (compatibility == PlatformCompatibility.androidOnly) {
+      return 'Android only';
+    }
+    return null;
+  }
 
   /// Returns a copy of this model with the specified fields replaced.
   ///
@@ -90,6 +156,7 @@ class IntegrationModel {
     DateTime? lastSynced,
     bool clearLastSynced = false,
     String? description,
+    PlatformCompatibility? compatibility,
   }) {
     return IntegrationModel(
       id: id ?? this.id,
@@ -98,6 +165,7 @@ class IntegrationModel {
       status: status ?? this.status,
       lastSynced: clearLastSynced ? null : (lastSynced ?? this.lastSynced),
       description: description ?? this.description,
+      compatibility: compatibility ?? this.compatibility,
     );
   }
 
@@ -108,10 +176,11 @@ class IntegrationModel {
           runtimeType == other.runtimeType &&
           id == other.id &&
           status == other.status &&
-          lastSynced == other.lastSynced;
+          lastSynced == other.lastSynced &&
+          compatibility == other.compatibility;
 
   @override
-  int get hashCode => Object.hash(id, status, lastSynced);
+  int get hashCode => Object.hash(id, status, lastSynced, compatibility);
 
   @override
   String toString() =>

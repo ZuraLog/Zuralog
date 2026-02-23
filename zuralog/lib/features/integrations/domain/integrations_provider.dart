@@ -88,6 +88,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/strava.png',
       status: IntegrationStatus.available,
       description: 'Sync runs, rides, and workouts automatically.',
+      compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
       id: 'apple_health',
@@ -95,6 +96,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/apple_health.png',
       status: IntegrationStatus.available,
       description: 'Read steps, sleep, and vitals from HealthKit.',
+      compatibility: PlatformCompatibility.iosOnly,
     ),
     IntegrationModel(
       id: 'fitbit',
@@ -102,6 +104,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/fitbit.png',
       status: IntegrationStatus.available,
       description: 'Import daily activity, heart rate, and sleep.',
+      compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
       id: 'google_fit',
@@ -109,6 +112,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/google_fit.png',
       status: IntegrationStatus.available,
       description: 'Sync workouts and health data from Android.',
+      compatibility: PlatformCompatibility.androidOnly,
     ),
     IntegrationModel(
       id: 'garmin',
@@ -116,6 +120,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/garmin.png',
       status: IntegrationStatus.comingSoon,
       description: 'Connect your Garmin device for detailed metrics.',
+      compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
       id: 'whoop',
@@ -123,6 +128,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       logoAsset: 'assets/integrations/whoop.png',
       status: IntegrationStatus.comingSoon,
       description: 'Strain, recovery, and sleep from your WHOOP strap.',
+      compatibility: PlatformCompatibility.all,
     ),
   ];
 
