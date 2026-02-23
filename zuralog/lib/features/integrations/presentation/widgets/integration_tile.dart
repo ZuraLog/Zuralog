@@ -123,7 +123,7 @@ class _StatusControl extends ConsumerWidget {
         );
 
       case IntegrationStatus.comingSoon:
-        return _SoonBadge();
+        return const _SoonBadge();
 
       case IntegrationStatus.error:
         return Icon(
@@ -136,7 +136,7 @@ class _StatusControl extends ConsumerWidget {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ConnectedBadge(),
+            const _ConnectedBadge(),
             IconButton(
               icon: const Icon(Icons.link_off_rounded),
               tooltip: 'Disconnect',
@@ -169,21 +169,23 @@ class _StatusControl extends ConsumerWidget {
 /// Displayed alongside the disconnect [IconButton] when an integration is
 /// in the [IntegrationStatus.connected] state.
 class _ConnectedBadge extends StatelessWidget {
+  const _ConnectedBadge();
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceSm,
-        vertical: 4,
+        vertical: AppDimens.spaceXs,
       ),
       decoration: BoxDecoration(
-        color: Colors.green.shade100,
+        color: AppColors.statusConnected.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       child: Text(
         'Connected',
         style: AppTextStyles.caption.copyWith(
-          color: Colors.green.shade800,
+          color: AppColors.statusConnected,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -197,12 +199,14 @@ class _ConnectedBadge extends StatelessWidget {
 ///
 /// Displayed on [IntegrationStatus.comingSoon] tiles instead of a switch.
 class _SoonBadge extends StatelessWidget {
+  const _SoonBadge();
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceSm,
-        vertical: 4,
+        vertical: AppDimens.spaceXs,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
