@@ -283,7 +283,7 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   Future<void> _testHealthAvailable() async {
     _log('Checking HealthKit availability...');
     final healthRepo = ref.read(healthRepositoryProvider);
-    final available = await healthRepo.isAvailable;
+    final available = await healthRepo.isAvailable();
     _log(available ? '✅ HealthKit AVAILABLE' : '❌ HealthKit UNAVAILABLE');
   }
 

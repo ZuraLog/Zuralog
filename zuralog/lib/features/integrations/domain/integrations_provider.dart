@@ -9,8 +9,11 @@
 /// show a "coming soon" SnackBar.
 library;
 
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
@@ -73,7 +76,12 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
         _healthRepository = healthRepository,
         // Start in loading state so the screen never briefly shows
         // "No integrations available." before loadIntegrations() fires.
-        super(const IntegrationsState(isLoading: true));
+        super(const IntegrationsState(isLoading: true)) {
+    // Reload connected states from disk without blocking the constructor.
+    // This ensures integration tiles show the correct connected status
+    // immediately on app launch without re-requesting permissions.
+    unawaited(_loadPersistedStates());
+  }
 
   final OAuthRepository _oauthRepository;
   final HealthRepository _healthRepository;
@@ -197,12 +205,33 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           }
         case 'apple_health':
           final granted = await _healthRepository.requestAuthorization();
-          _setStatus(
-            integrationId,
-            granted
-                ? IntegrationStatus.connected
-                : IntegrationStatus.available,
-          );
+          final newStatus =
+              granted ? IntegrationStatus.connected : IntegrationStatus.available;
+          _setStatus(integrationId, newStatus);
+          if (granted) {
+            await _saveConnectedState(integrationId, connected: true);
+          }
+        case 'google_health_connect':
+          // Android-only: Health Connect is guarded by PlatformCompatibility.androidOnly
+          // in IntegrationModel, so this branch is unreachable on iOS.
+          final isAvailable = await _healthRepository.isAvailable();
+          if (!isAvailable) {
+            _setStatus(integrationId, IntegrationStatus.available);
+            if (context.mounted) {
+              _showSnackBar(
+                context,
+                'Health Connect is not installed. Install it from the Play Store to connect.',
+              );
+            }
+            break;
+          }
+          final granted = await _healthRepository.requestAuthorization();
+          final newStatus =
+              granted ? IntegrationStatus.connected : IntegrationStatus.available;
+          _setStatus(integrationId, newStatus);
+          if (granted) {
+            await _saveConnectedState(integrationId, connected: true);
+          }
         default:
           // Not yet implemented — show coming soon feedback.
           _setStatus(integrationId, IntegrationStatus.available);
@@ -223,6 +252,8 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   /// Parameters:
   ///   integrationId: The [IntegrationModel.id] of the service to disconnect.
   void disconnect(String integrationId) {
+    // Clear persisted state so the integration shows as Available after restart.
+    unawaited(_saveConnectedState(integrationId, connected: false));
     state = state.copyWith(
       integrations: state.integrations.map((integration) {
         if (integration.id == integrationId) {
@@ -262,6 +293,44 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  // ── Persistence ────────────────────────────────────────────────────────────
+
+  static const String _connectedPrefix = 'integration_connected_';
+
+  /// Persists the [connected] state of [integrationId] to SharedPreferences.
+  ///
+  /// Used to restore connected status across app restarts without re-requesting
+  /// permissions — the platform (HealthKit/Health Connect) remembers the grant.
+  ///
+  /// Parameters:
+  ///   integrationId: The [IntegrationModel.id] of the integration.
+  ///   connected: Whether the integration is currently connected.
+  Future<void> _saveConnectedState(
+    String integrationId, {
+    required bool connected,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('$_connectedPrefix$integrationId', connected);
+  }
+
+  /// Loads persisted integration connected states from SharedPreferences
+  /// and updates the in-memory state.
+  ///
+  /// Called once from the constructor. Runs asynchronously so it does not
+  /// block the synchronous `StateNotifier` constructor.
+  Future<void> _loadPersistedStates() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = state.copyWith(
+      integrations: state.integrations.map((integration) {
+        final saved = prefs.getBool('$_connectedPrefix${integration.id}');
+        if (saved == true) {
+          return integration.copyWith(status: IntegrationStatus.connected);
+        }
+        return integration;
+      }).toList(),
     );
   }
 }
