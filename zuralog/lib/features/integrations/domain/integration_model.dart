@@ -77,11 +77,12 @@ class IntegrationModel {
   /// Human-readable service name displayed in the tile.
   final String name;
 
-  /// Asset path for the integration logo (SVG or PNG).
+  /// Asset path for the integration logo (SVG or PNG), or `null` to use
+  /// the initials fallback.
   ///
-  /// Rendered with [Image.asset]; an initials fallback is shown if the
-  /// asset cannot be loaded.
-  final String logoAsset;
+  /// Rendered with [Image.asset]; an initials fallback is shown when this
+  /// is `null` or when the asset cannot be loaded.
+  final String? logoAsset;
 
   /// Current connection / sync state of this integration.
   final IntegrationStatus status;
@@ -102,7 +103,7 @@ class IntegrationModel {
   const IntegrationModel({
     required this.id,
     required this.name,
-    required this.logoAsset,
+    this.logoAsset,
     required this.status,
     required this.description,
     this.lastSynced,
@@ -148,10 +149,12 @@ class IntegrationModel {
   /// Returns a copy of this model with the specified fields replaced.
   ///
   /// All parameters are optional; unspecified fields retain their current value.
+  /// Pass [clearLogoAsset] as `true` to explicitly set [logoAsset] to `null`.
   IntegrationModel copyWith({
     String? id,
     String? name,
     String? logoAsset,
+    bool clearLogoAsset = false,
     IntegrationStatus? status,
     DateTime? lastSynced,
     bool clearLastSynced = false,
@@ -161,7 +164,7 @@ class IntegrationModel {
     return IntegrationModel(
       id: id ?? this.id,
       name: name ?? this.name,
-      logoAsset: logoAsset ?? this.logoAsset,
+      logoAsset: clearLogoAsset ? null : (logoAsset ?? this.logoAsset),
       status: status ?? this.status,
       lastSynced: clearLastSynced ? null : (lastSynced ?? this.lastSynced),
       description: description ?? this.description,

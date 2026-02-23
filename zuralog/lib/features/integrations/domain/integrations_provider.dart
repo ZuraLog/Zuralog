@@ -71,7 +71,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     required HealthRepository healthRepository,
   })  : _oauthRepository = oauthRepository,
         _healthRepository = healthRepository,
-        super(const IntegrationsState());
+        // Start in loading state so the screen never briefly shows
+        // "No integrations available." before loadIntegrations() fires.
+        super(const IntegrationsState(isLoading: true));
 
   final OAuthRepository _oauthRepository;
   final HealthRepository _healthRepository;
@@ -80,12 +82,21 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   /// Default integration list used by [loadIntegrations].
   ///
-  /// Last two entries (Garmin, WHOOP) are marked [IntegrationStatus.comingSoon].
+  /// [logoAsset] is omitted from all entries — the [IntegrationLogo] widget
+  /// renders coloured initials when no asset path is provided. This avoids
+  /// Flutter asset-load errors for brand image files that are not yet bundled.
+  ///
+  /// Status notes:
+  ///   - Strava: [available] — OAuth flow is implemented.
+  ///   - Apple Health: [available] on iOS (HealthKit); greys out on Android via
+  ///     [PlatformCompatibility.iosOnly].
+  ///   - Fitbit: [comingSoon] — OAuth not yet wired.
+  ///   - Health Connect: [comingSoon] — Android Health Connect API not yet wired.
+  ///   - Garmin / WHOOP: [comingSoon] — future integrations.
   static const List<IntegrationModel> _defaultIntegrations = [
     IntegrationModel(
       id: 'strava',
       name: 'Strava',
-      logoAsset: 'assets/integrations/strava.png',
       status: IntegrationStatus.available,
       description: 'Sync runs, rides, and workouts automatically.',
       compatibility: PlatformCompatibility.all,
@@ -93,7 +104,6 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     IntegrationModel(
       id: 'apple_health',
       name: 'Apple Health',
-      logoAsset: 'assets/integrations/apple_health.png',
       status: IntegrationStatus.available,
       description: 'Read steps, sleep, and vitals from HealthKit.',
       compatibility: PlatformCompatibility.iosOnly,
@@ -101,23 +111,20 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     IntegrationModel(
       id: 'fitbit',
       name: 'Fitbit',
-      logoAsset: 'assets/integrations/fitbit.png',
-      status: IntegrationStatus.available,
+      status: IntegrationStatus.comingSoon,
       description: 'Import daily activity, heart rate, and sleep.',
       compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
       id: 'google_health_connect',
       name: 'Health Connect',
-      logoAsset: 'assets/integrations/google_health_connect.png',
-      status: IntegrationStatus.available,
+      status: IntegrationStatus.comingSoon,
       description: 'Sync workouts and health data from Android.',
       compatibility: PlatformCompatibility.androidOnly,
     ),
     IntegrationModel(
       id: 'garmin',
       name: 'Garmin',
-      logoAsset: 'assets/integrations/garmin.png',
       status: IntegrationStatus.comingSoon,
       description: 'Connect your Garmin device for detailed metrics.',
       compatibility: PlatformCompatibility.all,
@@ -125,7 +132,6 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     IntegrationModel(
       id: 'whoop',
       name: 'WHOOP',
-      logoAsset: 'assets/integrations/whoop.png',
       status: IntegrationStatus.comingSoon,
       description: 'Strain, recovery, and sleep from your WHOOP strap.',
       compatibility: PlatformCompatibility.all,
@@ -260,16 +266,16 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-/// Auto-disposing [StateNotifierProvider] for [IntegrationsNotifier].
+/// [StateNotifierProvider] for [IntegrationsNotifier].
 ///
-/// Auto-disposes to free resources when the Integrations Hub screen
-/// is removed from the widget tree.
+/// Not auto-disposing — the integration list is kept alive for the lifetime
+/// of the app session so that switching between tabs does not reset the list
+/// or cause a blank flash while [loadIntegrations] runs again.
 ///
 /// [loadIntegrations] is triggered automatically via [Future.microtask] on
-/// first watch, so widgets that observe this provider do not need to call
-/// [IntegrationsNotifier.loadIntegrations] explicitly.
+/// first access, so consumers do not need to call it explicitly on first mount.
 final integrationsProvider =
-    StateNotifierProvider.autoDispose<IntegrationsNotifier, IntegrationsState>(
+    StateNotifierProvider<IntegrationsNotifier, IntegrationsState>(
   (ref) {
     final notifier = IntegrationsNotifier(
       oauthRepository: ref.watch(oauthRepositoryProvider),

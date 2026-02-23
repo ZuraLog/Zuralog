@@ -149,14 +149,20 @@ abstract final class AppTheme {
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
+        // minimumSize is intentionally NOT set to double.infinity here.
+        // Full-width outlined buttons (e.g. login form) should set their own
+        // width explicitly. Setting infinity globally causes a layout crash
+        // when an OutlinedButton is placed inside a Row with an Expanded child
+        // (e.g. IntegrationTile "Connect" button) — identical to the
+        // TextButton issue fixed in the auth sprint.
         style: OutlinedButton.styleFrom(
           foregroundColor:
               isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
           side: BorderSide(
             color: isLight ? AppColors.borderLight : AppColors.borderDark,
           ),
-          minimumSize:
-              const Size(double.infinity, AppDimens.touchTargetMin),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusButton),
           ),
