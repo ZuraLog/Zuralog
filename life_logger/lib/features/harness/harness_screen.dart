@@ -1215,10 +1215,35 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               }),
             ),
             _ActionChip(
-              icon: Icons.info_outline_rounded,
+              icon: Icons.sync_rounded,
               label: 'Sync Status',
-              color: _Colors.warning,
-              onTap: () => _log('Sync status check — not yet implemented'),
+              color: _Colors.info,
+              onTap: () async {
+                _log('Checking sync status...');
+                final store = ref.read(syncStatusStoreProvider);
+                final lastSync = await store.getLastSyncTime();
+                final inProgress = await store.isSyncInProgress();
+                if (inProgress) {
+                  _log('🔄 Sync is currently in progress...');
+                } else if (lastSync != null) {
+                  final ago = DateTime.now().difference(lastSync);
+                  final String agoStr;
+                  if (ago.inMinutes < 1) {
+                    agoStr = '${ago.inSeconds}s ago';
+                  } else if (ago.inHours < 1) {
+                    agoStr = '${ago.inMinutes}m ago';
+                  } else {
+                    agoStr =
+                        '${ago.inHours}h ${ago.inMinutes % 60}m ago';
+                  }
+                  _log('✅ Last sync: $agoStr ($lastSync)');
+                } else {
+                  _log(
+                    '⚠️ Never synced. Background sync runs every '
+                    '~15 min via WorkManager.',
+                  );
+                }
+              },
             ),
           ],
         ),

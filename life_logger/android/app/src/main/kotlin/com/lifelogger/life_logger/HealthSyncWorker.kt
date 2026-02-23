@@ -102,6 +102,18 @@ class HealthSyncWorker(
             // val apiClient = HttpClient(...)
             // apiClient.post("/api/v1/health/sync", body = ...)
 
+            // Save last-sync timestamp for Flutter's SyncStatusStore.
+            // Flutter shared_preferences uses "FlutterSharedPreferences" with
+            // a "flutter." key prefix on Android.
+            val prefs = applicationContext.getSharedPreferences(
+                "FlutterSharedPreferences",
+                Context.MODE_PRIVATE,
+            )
+            prefs.edit()
+                .putLong("flutter.last_sync_timestamp", System.currentTimeMillis())
+                .putBoolean("flutter.sync_in_progress", false)
+                .apply()
+
             return@withContext Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "HealthSyncWorker failed", e)

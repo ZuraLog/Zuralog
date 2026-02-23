@@ -11,6 +11,7 @@ import 'package:life_logger/core/network/api_client.dart';
 import 'package:life_logger/core/network/ws_client.dart';
 import 'package:life_logger/core/storage/secure_storage.dart';
 import 'package:life_logger/core/storage/local_db.dart';
+import 'package:life_logger/core/storage/sync_status_store.dart';
 import 'package:life_logger/features/health/data/health_repository.dart';
 import 'package:life_logger/features/analytics/data/analytics_repository.dart';
 import 'package:life_logger/features/integrations/data/oauth_repository.dart';
@@ -51,4 +52,9 @@ final oauthRepositoryProvider = Provider<OAuthRepository>((ref) {
 /// Provides the analytics repository for dashboard data (Phase 1.11).
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
   return AnalyticsRepository(apiClient: ref.read(apiClientProvider));
+});
+
+/// Provides the [SyncStatusStore] singleton for tracking background sync status.
+final syncStatusStoreProvider = Provider<SyncStatusStore>((ref) {
+  return SyncStatusStore();
 });

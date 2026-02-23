@@ -27,6 +27,9 @@ dependencies:
   flutter_secure_storage: any
   path_provider: any
 
+  # Lightweight key-value storage (sync status timestamps)
+  shared_preferences: any
+
   # Utilities
   url_launcher: any
   app_links: any  # Deep link / custom URL scheme interception (Phase 1.6)
