@@ -50,10 +50,11 @@ class _FakeWsClient extends WsClient {
 class _StubChatNotifier extends ChatNotifier {
   _StubChatNotifier({
     required ChatRepository repository,
+    required Ref ref,
     required ChatState initialState,
     required List<String>? sent,
   })  : _sent = sent,
-        super(repository) {
+        super(repository, ref) {
     // Replace the default empty state with the provided initial state.
     state = initialState;
   }
@@ -110,6 +111,7 @@ Widget _buildHarness({
       chatNotifierProvider.overrideWith(
         (ref) => _StubChatNotifier(
           repository: fakeRepo,
+          ref: ref,
           initialState: stateToUse,
           sent: sentMessages,
         ),
