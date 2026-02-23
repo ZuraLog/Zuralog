@@ -21,6 +21,7 @@ import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -39,6 +40,31 @@ class HealthConnectBridge(private val context: Context) {
 
     companion object {
         private const val TAG = "HealthConnectBridge"
+
+        /**
+         * The set of Health Connect permissions Zuralog requires.
+         * Must match the <uses-permission> tags in AndroidManifest.xml.
+         * Used by MainActivity to launch the permission request contract.
+         */
+        val REQUIRED_PERMISSIONS: Set<String> = setOf(
+            HealthPermission.getReadPermission(StepsRecord::class),
+            HealthPermission.getWritePermission(StepsRecord::class),
+            HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+            HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class),
+            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
+            HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
+            HealthPermission.getReadPermission(SleepSessionRecord::class),
+            HealthPermission.getWritePermission(SleepSessionRecord::class),
+            HealthPermission.getReadPermission(WeightRecord::class),
+            HealthPermission.getWritePermission(WeightRecord::class),
+            HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+            HealthPermission.getWritePermission(ExerciseSessionRecord::class),
+            HealthPermission.getReadPermission(NutritionRecord::class),
+            HealthPermission.getWritePermission(NutritionRecord::class),
+            HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+            HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+            HealthPermission.getReadPermission(Vo2MaxRecord::class),
+        )
     }
 
     /// Lazily initialized Health Connect client.
@@ -51,25 +77,6 @@ class HealthConnectBridge(private val context: Context) {
             null
         }
     }
-
-    /// The full set of permissions this app requests.
-    val requiredPermissions = setOf(
-        HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getWritePermission(StepsRecord::class),
-        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
-        HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getWritePermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(WeightRecord::class),
-        HealthPermission.getWritePermission(WeightRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-        HealthPermission.getWritePermission(ExerciseSessionRecord::class),
-        HealthPermission.getReadPermission(NutritionRecord::class),
-        HealthPermission.getWritePermission(NutritionRecord::class),
-        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
-        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
-        HealthPermission.getReadPermission(Vo2MaxRecord::class),
-    )
 
     // ------------------------------------------------------------------
     // Availability & Permissions
@@ -89,7 +96,7 @@ class HealthConnectBridge(private val context: Context) {
     suspend fun hasAllPermissions(): Boolean {
         val hcClient = client ?: return false
         val granted = hcClient.permissionController.getGrantedPermissions()
-        return granted.containsAll(requiredPermissions)
+        return granted.containsAll(REQUIRED_PERMISSIONS)
     }
 
     // ------------------------------------------------------------------

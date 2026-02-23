@@ -24,16 +24,20 @@ class HealthRepository {
 
   final HealthBridge _bridge;
 
-  /// Whether the native health platform is available on this device.
+  /// Returns whether the health platform (Health Connect on Android,
+  /// HealthKit on iOS) is available on this device.
   ///
-  /// Returns `true` on iOS with HealthKit or Android with Health Connect.
-  /// Returns `false` on unsupported platforms (web, desktop).
-  Future<bool> get isAvailable => _bridge.isAvailable();
+  /// Returns:
+  ///   `true` if the platform is available, `false` otherwise.
+  Future<bool> isAvailable() => _bridge.isAvailable();
 
   /// Requests health data authorization from the user.
   ///
   /// On iOS, shows the HealthKit permission dialog.
   /// On Android, checks Health Connect permissions.
+  ///
+  /// Returns:
+  ///   `true` if the user granted all required permissions, `false` otherwise.
   Future<bool> requestAuthorization() => _bridge.requestAuthorization();
 
   // -- Read Methods --

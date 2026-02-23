@@ -114,9 +114,18 @@ class DailySummary {
   /// Typically the lowest measured BPM over a 24-hour period.
   final int? restingHeartRate;
 
-  /// Heart rate variability in milliseconds (RMSSD), or `null` if not available.
+  /// Heart rate variability in milliseconds, or `null` if not available.
   ///
   /// Higher values generally indicate better cardiovascular readiness.
+  ///
+  /// Platform note: the underlying metric differs by platform:
+  /// - **Android**: RMSSD (`HeartRateVariabilityRmssdRecord`) — measures successive
+  ///   beat-to-beat differences; typically lower values than SDNN.
+  /// - **iOS**: SDNN (`HKQuantityTypeIdentifierHeartRateVariabilitySDNN`) — measures
+  ///   standard deviation of all NN intervals; typically higher values than RMSSD.
+  ///
+  /// These are mathematically different metrics and are not directly comparable
+  /// across platforms. Future work: normalize or display with a platform-specific label.
   final double? hrv;
 
   /// VO2 max estimate (cardio fitness level) in mL/kg/min, or `null` if not available.

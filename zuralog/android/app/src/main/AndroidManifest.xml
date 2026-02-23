@@ -1,23 +1,32 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ============================================================
-         Google Health Connect Permissions (Phase 1.5.1)
+         Google Health Connect Permissions
          Declares granular read/write access for each health data type.
+         All READ permissions must match HealthConnectBridge.REQUIRED_PERMISSIONS.
          ============================================================ -->
+    <!-- Activity & Fitness -->
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED"/>
-    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
-    <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
-    <uses-permission android:name="android.permission.health.READ_BODY_WEIGHT"/>
-    <uses-permission android:name="android.permission.health.WRITE_BODY_WEIGHT"/>
     <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
     <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+    <!-- Nutrition -->
     <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION"/>
+    <!-- Sleep -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
+    <!-- Body Measurements -->
+    <uses-permission android:name="android.permission.health.READ_BODY_WEIGHT"/>
+    <uses-permission android:name="android.permission.health.WRITE_BODY_WEIGHT"/>
+    <!-- Cardiac Metrics (read-only — Zuralog does not write these) -->
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
+    <uses-permission android:name="android.permission.health.READ_VO2_MAX"/>
 
     <application
         android:label="zuralog"

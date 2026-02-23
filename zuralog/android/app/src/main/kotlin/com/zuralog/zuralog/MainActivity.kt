@@ -11,6 +11,8 @@ package com.zuralog.zuralog
 
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.result.ActivityResultLauncher
+import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.lifecycleScope
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -30,6 +32,37 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private lateinit var healthConnectBridge: HealthConnectBridge
+    private var pendingPermissionResult: MethodChannel.Result? = null
+    private lateinit var requestPermissions: ActivityResultLauncher<Set<String>>
+
+    /// Initialises the Activity and registers the Health Connect permission launcher.
+    ///
+    /// The [ActivityResultLauncher] for Health Connect permissions MUST be registered
+    /// here, before [super.onCreate], to satisfy Android's lifecycle contract.
+    /// Registering it inside [configureFlutterEngine] or a method channel handler
+    /// causes an [IllegalStateException] because the Fragment registry is already locked.
+    ///
+    /// - Parameters:
+    ///   - savedInstanceState: Bundle from the previous instance, or null on first launch.
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Register the ActivityResult launcher BEFORE super.onCreate().
+        // Health Connect permission requests require this to be registered
+        // during the activity creation lifecycle, not inside configureFlutterEngine.
+        requestPermissions = registerForActivityResult(
+            PermissionController.createRequestPermissionResultContract()
+        ) { granted ->
+            // Callback fires on the main thread when the Health Connect dialog closes
+            // (whether the user grants, denies, or presses back).
+            // - [granted]: the set of permissions the system actually granted (may be empty).
+            // - [pendingPermissionResult] is captured atomically into [pending] and cleared
+            //   to prevent a second callback from replying to a stale result.
+            val pending = pendingPermissionResult
+            pendingPermissionResult = null
+            val allGranted = granted.containsAll(HealthConnectBridge.REQUIRED_PERMISSIONS)
+            pending?.success(allGranted)
+        }
+        super.onCreate(savedInstanceState)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -46,18 +79,42 @@ class MainActivity : FlutterFragmentActivity() {
                 }
 
                 "requestAuthorization" -> {
-                    // Health Connect permissions are requested via an ActivityResult
-                    // contract. For MVP, we check if permissions are already granted.
-                    // Full interactive permission request uses registerForActivityResult
-                    // which requires the Dart side to handle the deferred response.
+                    // Guard: reject concurrent permission requests to prevent result leaking.
+                    if (pendingPermissionResult != null) {
+                        result.error(
+                            "ALREADY_PENDING",
+                            "A Health Connect permission request is already in progress.",
+                            null
+                        )
+                        return@setMethodCallHandler
+                    }
+                    // Requests Health Connect permissions interactively.
+                    // 1. Check if all required permissions are already granted (fast path).
+                    // 2. If granted → reply true immediately.
+                    // 3. If not → store [result] as [pendingPermissionResult] and launch the
+                    //    Health Connect permission dialog. The ActivityResultLauncher callback
+                    //    (registered in [onCreate]) will reply when the dialog closes.
+                    // Exceptions clear [pendingPermissionResult] to avoid dangling result references.
                     lifecycleScope.launch {
                         try {
                             val hasAll = withContext(Dispatchers.IO) {
                                 healthConnectBridge.hasAllPermissions()
                             }
-                            result.success(hasAll)
+                            if (hasAll) {
+                                // All permissions already granted — return immediately.
+                                result.success(true)
+                            } else {
+                                // Permissions not yet granted: launch the Health Connect
+                                // system permission dialog. The result will be delivered
+                                // to the ActivityResultLauncher callback registered in onCreate,
+                                // which will call pending?.success(allGranted).
+                                pendingPermissionResult = result
+                                requestPermissions.launch(HealthConnectBridge.REQUIRED_PERMISSIONS)
+                            }
                         } catch (e: Exception) {
                             Log.e(TAG, "requestAuthorization failed", e)
+                            // Clear pending result to avoid a dangling reference.
+                            pendingPermissionResult = null
                             result.error("HEALTH_CONNECT_ERROR", e.message, null)
                         }
                     }
