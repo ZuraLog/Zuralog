@@ -1,51 +1,98 @@
 /**
  * Supabase Database type definitions for the Zuralog website.
  *
- * This is a placeholder schema until the actual waitlist tables are
- * created in Phase 3.2.1. At that point, regenerate these types using:
- *   npx supabase gen types typescript --project-id enccjffwpnwkxfkhargr > src/types/database.ts
+ * These types match the actual waitlist_users table schema.
+ * Last updated: 2026-02-24
  *
- * Current tables (Phase 3.2.1 will add waitlist-specific ones):
- * - waitlist_entries: Email, referral code, referral count, position
- * - quiz_responses: User quiz answers for personalization
+ * To regenerate via Supabase CLI:
+ *   npx supabase gen types typescript --project-id enccjffwpnwkxfkhargr > src/types/database.ts
  */
 
-/** Placeholder Database type — will be replaced with generated types in Phase 3.2.1 */
 export type Database = {
   public: {
     Tables: {
-      waitlist_entries: {
+      waitlist_users: {
         Row: {
           id: string;
           email: string;
           referral_code: string;
           referred_by: string | null;
-          referral_count: number;
-          position: number;
-          created_at: string;
+          display_name: string | null;
+          show_name: boolean | null;
+          queue_position: number | null;
+          quiz_apps_used: string[] | null;
+          quiz_frustration: string | null;
+          quiz_goal: string | null;
+          tier: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
         };
         Insert: {
           id?: string;
           email: string;
           referral_code: string;
           referred_by?: string | null;
-          referral_count?: number;
-          position?: number;
-          created_at?: string;
+          display_name?: string | null;
+          show_name?: boolean | null;
+          queue_position?: number | null;
+          quiz_apps_used?: string[] | null;
+          quiz_frustration?: string | null;
+          quiz_goal?: string | null;
+          tier?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
         };
         Update: {
           id?: string;
           email?: string;
           referral_code?: string;
           referred_by?: string | null;
-          referral_count?: number;
-          position?: number;
-          created_at?: string;
+          display_name?: string | null;
+          show_name?: boolean | null;
+          queue_position?: number | null;
+          quiz_apps_used?: string[] | null;
+          quiz_frustration?: string | null;
+          quiz_goal?: string | null;
+          tier?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
         };
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Views: {
+      waitlist_stats: {
+        Row: {
+          total_signups: number | null;
+          founding_members: number | null;
+          total_referrals: number | null;
+          signups_last_24h: number | null;
+          latest_position: number | null;
+        };
+      };
+      referral_leaderboard: {
+        Row: {
+          id: string | null;
+          referral_code: string | null;
+          display_name: string | null;
+          show_name: boolean | null;
+          referral_count: number | null;
+          queue_position: number | null;
+          created_at: string | null;
+        };
+      };
+    };
+    Functions: {
+      increment_referral_count: {
+        Args: { user_id: string };
+        Returns: void;
+      };
+    };
     Enums: Record<string, never>;
   };
 };
