@@ -2,7 +2,7 @@
  * Navbar — sticky top navigation for the ZuraLog landing page.
  *
  * Design: Minimal glassmorphism bar that appears after scrolling 80px.
- * Contains logo image, nav links, a light/dark toggle, and a CTA button.
+ * Contains logo image, nav links, and a CTA button.
  */
 'use client';
 
@@ -48,7 +48,7 @@ export function Navbar() {
         >
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
             {/* Glass pill container */}
-            <div className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-black/60 px-5 py-3 backdrop-blur-xl dark:bg-black/60 light:bg-white/70">
+            <div className="flex w-full items-center justify-between rounded-2xl border border-white/8 bg-black/60 px-5 py-3 backdrop-blur-xl dark:bg-black/60">
               {/* Logo */}
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

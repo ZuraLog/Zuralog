@@ -58,7 +58,7 @@ export function WaitlistStatsBar() {
     <div className="mb-12 grid grid-cols-3 gap-4">
       {cards.map((card, i) => (
         <motion.div
-          key={i}
+          key={card.label}
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}

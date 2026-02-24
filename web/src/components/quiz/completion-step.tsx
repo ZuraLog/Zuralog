@@ -40,7 +40,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
   return (
     <>
       <ConfettiBurst trigger={true} />
-    <motion.div
+      <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -107,7 +107,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
       <p className="text-xs text-zinc-600">
         Each friend who joins moves you up one spot.
       </p>
-    </motion.div>
+      </motion.div>
     </>
   );
 }

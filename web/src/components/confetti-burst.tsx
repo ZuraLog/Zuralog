@@ -7,7 +7,7 @@
  */
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 
 interface ConfettiBurstProps {
@@ -19,8 +19,11 @@ interface ConfettiBurstProps {
  * Fires a two-stage confetti burst when trigger becomes true.
  */
 export function ConfettiBurst({ trigger }: ConfettiBurstProps) {
+  const fired = useRef(false);
+
   useEffect(() => {
-    if (!trigger) return;
+    if (!trigger || fired.current) return;
+    fired.current = true;
 
     const colors = ['#CFE1B9', '#ffffff', '#FFD700', '#A8C98A', '#D4EBB8'];
 

@@ -28,7 +28,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from('waitlist_users')
-    .select('email, referral_code, queue_position, referral_count, tier, created_at')
+    .select('email, referral_code, queue_position, tier, created_at')
     .eq('referral_code', parsed.data.code)
     .maybeSingle();
 
@@ -45,7 +45,6 @@ export async function GET(
     email: data.email,
     position: data.queue_position,
     referralCode: data.referral_code,
-    referralCount: data.referral_count,
     tier: data.tier,
     joinedAt: data.created_at,
   });

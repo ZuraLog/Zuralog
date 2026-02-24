@@ -2,13 +2,11 @@
  * GET /api/waitlist/leaderboard
  *
  * Returns the top referrers for the social proof leaderboard.
- * Results are cached for 60 seconds via Next.js route segment config.
  */
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
