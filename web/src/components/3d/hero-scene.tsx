@@ -31,10 +31,9 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
   // Scale derivation:
   //   Nested matrices: Cube.010 (scale=100) → FBX node (scale=0.01) = net 1.0 Three.js unit = 0.708 units tall.
   //   Targeting ~1.3 units tall on desktop (fills ~28% of fov-50 view at z=5), leaving room for cards.
-  const scale = isMobile ? 1.0 : 1.3;
+  const scale = isMobile ? 2.0 : 2.3;
 
-  // Configure texture synchronously in useMemo so it's ready before material creation.
-  // GLTF spec: flipY = false (UVs already flipped in GLTF format).
+  // Configure texture: flipY=false per GLTF spec (UVs are already Y-flipped in the format).
   // eslint-disable-next-line react-hooks/immutability
   screenTexture.flipY = false;
   // eslint-disable-next-line react-hooks/immutability
@@ -46,47 +45,59 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
   // eslint-disable-next-line react-hooks/immutability
   screenTexture.needsUpdate = true;
 
-  // Clone scene so we can safely modify materials without mutating the cached original.
-  const clonedScene = useMemo(() => {
-    const clone = gltf.scene.clone(true);
+  // Apply custom materials directly to the GLTF scene after load.
+  useEffect(() => {
+    // MeshBasicMaterial: unlit — bypasses lighting so texture is always visible.
+    const screenMat = new THREE.MeshBasicMaterial({
+      map: screenTexture,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    screenMat.needsUpdate = true;
 
-    clone.traverse((child) => {
+    gltf.scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
 
-      const name = (child.name || "").toLowerCase();
-      const matName = Array.isArray(child.material)
-        ? ""
-        : ((child.material as THREE.MeshStandardMaterial)?.name || "").toLowerCase();
+      // Three.js strips dots from node names: "Cube.010_screen.001_0" → "Cube010_screen001_0"
+      const nodeName = (child.name || "").toLowerCase();
+      const mat = Array.isArray(child.material) ? null : child.material as THREE.MeshStandardMaterial;
+      const matName = (mat?.name || "").toLowerCase();
 
-      const isScreen = name.includes("screen") || matName.includes("screen");
+      const isScreen =
+        nodeName === "cube010_screen001_0" ||
+        matName === "screen.001";
+
+      const isGlass =
+        nodeName === "cube010_glass002_0" ||
+        matName === "glass.002" ||
+        nodeName === "cube010_lensinglass_0" ||
+        matName === "lensinglass";
 
       if (isScreen) {
-        // Screen: solid sage-green emissive so the screen visibly glows even if the texture map is dark.
-        // Use a flat emissive colour (no emissiveMap) so the whole screen area lights up uniformly.
-        // The diffuse map provides the ZuraLog logo pattern on top.
+        child.material = screenMat;
+        child.renderOrder = 1;
+      } else if (isGlass) {
+        // Replace glass with a near-invisible transparent material so screen shows through.
         child.material = new THREE.MeshStandardMaterial({
-          map: screenTexture,
-          emissive: new THREE.Color("#CFE1B9"),
-          emissiveIntensity: 3.0,
+          transparent: true,
+          opacity: 0.05,
           roughness: 0.0,
           metalness: 0.0,
-          toneMapped: false,
+          color: new THREE.Color("#ffffff"),
         });
-      } else {
-        // Clone other materials; override the warm copper/orange hue with dark titanium grey.
-        if (!Array.isArray(child.material) && child.material instanceof THREE.MeshStandardMaterial) {
-          child.material = child.material.clone();
-          // Force a near-black titanium colour regardless of original baked texture tint
-          child.material.color.set("#1a1a1a");
-          child.material.envMapIntensity = 1.2;
-          child.material.roughness = 0.3;
-          child.material.metalness = 0.9;
-        }
+      } else if (mat instanceof THREE.MeshStandardMaterial) {
+        // Override warm copper/orange body tint with dark titanium.
+        mat.color.set("#1a1a1a");
+        mat.envMapIntensity = 1.2;
+        mat.roughness = 0.3;
+        mat.metalness = 0.9;
+        mat.needsUpdate = true;
       }
     });
-
-    return clone;
   }, [gltf.scene, screenTexture]);
+
+  // Use original scene directly (no clone needed since we manage materials via useEffect).
+  const clonedScene = gltf.scene;
 
   return (
     <Float speed={1.2} rotationIntensity={0.04} floatIntensity={0.25}>
@@ -95,8 +106,10 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
         scale={scale}
         // rotation=[0, PI/2, 0]: phone upright portrait, screen facing camera (+Z)
         rotation={[0, Math.PI / 2, 0]}
-        // Centered — slight upward offset so the phone sits in the upper half of canvas
-        position={[0, 0.1, 0]}
+        // Shift phone upward so it sits above the slogan text (anchored at bottom).
+        // Camera at z=5, FOV 50: Y=0.45 places phone center ~45% from top of viewport.
+        // X=0.28 compensates for the GLTF model's off-center pivot after 90° Y rotation.
+        position={[0.25, -0.5, 0]}
       />
     </Float>
   );
@@ -166,14 +179,14 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
   }, [scene, camera]);
   /* eslint-enable react-hooks/immutability */
 
-  // Gentle mouse parallax tilt
+  // Mouse parallax tilt — higher influence for more responsive feel
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     const mouse = getMouseParallax();
     groupRef.current.rotation.y +=
-      (mouse.x * 0.12 - groupRef.current.rotation.y) * delta * 2.5;
+      (mouse.x * 0.28 - groupRef.current.rotation.y) * delta * 4.0;
     groupRef.current.rotation.x +=
-      (mouse.y * 0.07 - groupRef.current.rotation.x) * delta * 2.5;
+      (mouse.y * 0.18 - groupRef.current.rotation.x) * delta * 4.0;
   });
 
   return (
