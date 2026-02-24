@@ -355,8 +355,7 @@ function HeadlineColumn() {
         className="text-display-section text-[var(--text-primary)] leading-[1.08]"
         style={{ fontWeight: 400 }}
       >
-        <span className="block">Your</span>
-        <span className="block">Gateway</span>
+        <span className="block">Your Gateway</span>
         <span className="block">To Health</span>
         <span className="block font-bold">Excellence</span>
       </h2>
@@ -467,12 +466,12 @@ export function FullMobileSection() {
         {/* ── 3-Column Grid ── */}
         <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-[28fr_44fr_28fr] md:gap-8">
 
-          {/* Left: Headline */}
-          <ScrollReveal y={0} className="flex items-center justify-center md:justify-start">
+          {/* Left: Headline — HeadlineColumn owns its own whileInView animation */}
+          <div className="flex items-center justify-center md:justify-start">
             <HeadlineColumn />
-          </ScrollReveal>
+          </div>
 
-          {/* Center: Phone mockup */}
+          {/* Center: Phone mockup — ScrollReveal adds a gentle y-entrance */}
           <ScrollReveal
             y={20}
             delay={0.15}
@@ -481,10 +480,10 @@ export function FullMobileSection() {
             <PhoneMockup viewMode={viewMode} />
           </ScrollReveal>
 
-          {/* Right: Description */}
-          <ScrollReveal y={0} delay={0.1} className="flex items-center justify-center md:justify-end">
+          {/* Right: Description — DescriptionColumn owns its own whileInView animation */}
+          <div className="flex items-center justify-center md:justify-end">
             <DescriptionColumn />
-          </ScrollReveal>
+          </div>
         </div>
 
         {/* ── Toggle ── */}
