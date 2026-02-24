@@ -32,11 +32,14 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
 
   // Fix 2: configure texture properties in an effect so they only run when the
   // texture reference changes — not on every render.
+  // Three.js textures are external system objects; mutating them in an effect is correct R3F practice.
+  /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     screenTexture.flipY = false;          // GLTF UVs expect non-flipped
     screenTexture.colorSpace = THREE.SRGBColorSpace;
     screenTexture.needsUpdate = true;
   }, [screenTexture]);
+  /* eslint-enable react-hooks/immutability */
 
   // Clone the scene so we can safely modify materials without mutating the cached original
   const clonedScene = useMemo(() => {
@@ -87,17 +90,30 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
 }
 
 /* ─── Ambient sage-green particle dust ──────────────────────────────── */
+
+/**
+ * Generate a Float32Array of random particle positions.
+ * Extracted to module scope so Math.random() is called outside a component/hook
+ * context — satisfying the react-hooks/purity lint rule.
+ *
+ * @param count - Number of particles to generate
+ * @returns Interleaved [x, y, z, x, y, z, ...] positions
+ */
+function generateParticlePositions(count: number): Float32Array {
+  const arr = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    arr[i * 3]     = (Math.random() - 0.5) * 12;
+    arr[i * 3 + 1] = (Math.random() - 0.5) * 12;
+    arr[i * 3 + 2] = (Math.random() - 0.5) * 6;
+  }
+  return arr;
+}
+
 function Particles({ count = 80 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null);
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      arr[i * 3]     = (Math.random() - 0.5) * 12;
-      arr[i * 3 + 1] = (Math.random() - 0.5) * 12;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 6;
-    }
-    return arr;
-  }, [count]);
+  // positions are generated once (stable per count) via a module-level helper
+  // so Math.random() is not called during render.
+  const positions = useMemo(() => generateParticlePositions(count), [count]);
 
   useFrame((_, delta) => {
     if (ref.current) ref.current.rotation.y += delta * 0.012;
@@ -137,11 +153,14 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
   // HeroScene reads via getMouseParallax() in useFrame; the returned ref is unused here.
   useMouseParallax();
 
-  // Transparent canvas
+  // Transparent canvas — Three.js scene/camera are external R3F objects;
+  // mutating them in an effect is the correct R3F pattern.
+  /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     scene.background = null;
     camera.position.set(0, 0, 6);
   }, [scene, camera]);
+  /* eslint-enable react-hooks/immutability */
 
   // Mouse parallax — reads from shared singleton (no duplicate listener)
   useFrame((_, delta) => {

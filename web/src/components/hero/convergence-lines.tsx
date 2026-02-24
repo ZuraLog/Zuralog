@@ -86,11 +86,10 @@ export function ConvergenceLines({
         className="absolute inset-0 h-full w-full"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
-        style={reducedMotion ? { animationDuration: "0.001ms" } : undefined}
       >
         {paths.map(({ item, d }, i) => (
           <g key={item.id}>
-            {/* Static faint background path */}
+            {/* Static faint background path — always visible */}
             <path
               d={d}
               fill="none"
@@ -99,43 +98,48 @@ export function ConvergenceLines({
               strokeOpacity="0.1"
             />
 
-            {/* Animated dashed flow path — dashes move toward center */}
-            <path
-              d={d}
-              fill="none"
-              stroke="#CFE1B9"
-              strokeWidth="0.12"
-              strokeOpacity="0.3"
-              strokeDasharray="1.5 3"
-              strokeLinecap="round"
-            >
-              <animate
-                attributeName="stroke-dashoffset"
-                from="20"
-                to="0"
-                dur={`${3 + i * 0.5}s`}
-                repeatCount="indefinite"
-              />
-            </path>
+            {/* Animated dashed flow path — omitted when reduced-motion is set */}
+            {!reducedMotion && (
+              <path
+                d={d}
+                fill="none"
+                stroke="#CFE1B9"
+                strokeWidth="0.12"
+                strokeOpacity="0.3"
+                strokeDasharray="1.5 3"
+                strokeLinecap="round"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="20"
+                  to="0"
+                  dur={`${3 + i * 0.5}s`}
+                  repeatCount="indefinite"
+                />
+              </path>
+            )}
 
-            {/* Primary traveling dot particle */}
-            <circle r="0.3" fill="#CFE1B9" opacity="0.55">
-              <animateMotion
-                dur={`${2.5 + i * 0.4}s`}
-                repeatCount="indefinite"
-                path={d}
-              />
-            </circle>
+            {/* Traveling dot particles — omitted when reduced-motion is set */}
+            {!reducedMotion && (
+              <>
+                <circle r="0.3" fill="#CFE1B9" opacity="0.55">
+                  <animateMotion
+                    dur={`${2.5 + i * 0.4}s`}
+                    repeatCount="indefinite"
+                    path={d}
+                  />
+                </circle>
 
-            {/* Secondary staggered dot particle */}
-            <circle r="0.2" fill="#CFE1B9" opacity="0.3">
-              <animateMotion
-                dur={`${3.2 + i * 0.3}s`}
-                repeatCount="indefinite"
-                path={d}
-                begin={`${1.2 + i * 0.2}s`}
-              />
-            </circle>
+                <circle r="0.2" fill="#CFE1B9" opacity="0.3">
+                  <animateMotion
+                    dur={`${3.2 + i * 0.3}s`}
+                    repeatCount="indefinite"
+                    path={d}
+                    begin={`${1.2 + i * 0.2}s`}
+                  />
+                </circle>
+              </>
+            )}
           </g>
         ))}
       </svg>
