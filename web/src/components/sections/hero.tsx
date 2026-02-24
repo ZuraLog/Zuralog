@@ -12,15 +12,9 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-
-const HeroSceneLoader = dynamic(
-  () =>
-    import('@/components/3d/hero-scene-loader').then((m) => m.HeroSceneLoader),
-  { ssr: false },
-);
+import { HeroGlow } from '@/components/hero-glow';
 
 interface WaitlistStats {
   totalSignups: number;
@@ -49,13 +43,11 @@ export function Hero() {
       id="hero"
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black"
     >
-      {/* 3D background — SSR disabled */}
-      <div className="absolute inset-0 -z-10">
-        <HeroSceneLoader />
-      </div>
+      {/* Atmospheric glow background */}
+      <HeroGlow />
 
-      {/* Gradient overlay — ensures text legibility over 3D */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80" />
+      {/* Bottom fade — blends into next section */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-6 px-6 text-center">
