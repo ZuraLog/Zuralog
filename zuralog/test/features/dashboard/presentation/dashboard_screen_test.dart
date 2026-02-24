@@ -41,7 +41,7 @@ class _StubIntegrationsNotifier extends StateNotifier<IntegrationsState>
   _StubIntegrationsNotifier() : super(const IntegrationsState());
 
   @override
-  void loadIntegrations() {}
+  Future<void> loadIntegrations() async {}
 
   @override
   Future<void> connect(String integrationId, BuildContext context) async {}
@@ -115,8 +115,7 @@ Widget _buildHarness({List<String>? navigatedPaths}) {
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, _) =>
-            _Stub(name: 'settings', paths: navigatedPaths),
+        builder: (context, _) => _Stub(name: 'settings', paths: navigatedPaths),
       ),
     ],
   );
@@ -161,8 +160,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('shows greeting header (Good Morning / Afternoon / Evening)',
-        (tester) async {
+    testWidgets('shows greeting header (Good Morning / Afternoon / Evening)', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildHarness());
       await tester.pump();
 
@@ -189,9 +189,9 @@ void main() {
       expect(find.byType(CircleAvatar), findsOneWidget);
     });
 
-    testWidgets(
-        'tapping profile avatar sets sidePanelOpenProvider to true',
-        (tester) async {
+    testWidgets('tapping profile avatar sets sidePanelOpenProvider to true', (
+      tester,
+    ) async {
       // Capture the ProviderContainer so we can inspect provider state after
       // the tap.  The panel itself lives in AppShell (not in this isolated
       // harness) so we verify the *intent* — that the provider was set.
@@ -204,8 +204,9 @@ void main() {
             dailySummaryProvider.overrideWith((_) async => _kSummary),
             weeklyTrendsProvider.overrideWith((_) async => _kTrends),
             dashboardInsightProvider.overrideWith((_) async => _kInsight),
-            integrationsProvider
-                .overrideWith((_) => _StubIntegrationsNotifier()),
+            integrationsProvider.overrideWith(
+              (_) => _StubIntegrationsNotifier(),
+            ),
           ],
           child: Consumer(
             builder: (context, ref, _) {
@@ -240,8 +241,9 @@ void main() {
       expect(find.textContaining('step goal'), findsOneWidget);
     });
 
-    testWidgets('shows activity rings section once summary resolves',
-        (tester) async {
+    testWidgets('shows activity rings section once summary resolves', (
+      tester,
+    ) async {
       await tester.pumpWidget(_buildHarness());
       await tester.pumpAndSettle();
 
@@ -273,10 +275,7 @@ void main() {
           found = true;
           break;
         }
-        await tester.drag(
-          find.byType(CustomScrollView),
-          const Offset(0, -300),
-        );
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
         await tester.pumpAndSettle();
       }
 

@@ -37,8 +37,7 @@ class IntegrationsHubScreen extends ConsumerStatefulWidget {
       _IntegrationsHubScreenState();
 }
 
-class _IntegrationsHubScreenState
-    extends ConsumerState<IntegrationsHubScreen> {
+class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
   @override
   void initState() {
     super.initState();
@@ -49,7 +48,7 @@ class _IntegrationsHubScreenState
 
   /// Handles pull-to-refresh gesture.
   Future<void> _onRefresh() async {
-    ref.read(integrationsProvider.notifier).loadIntegrations();
+    await ref.read(integrationsProvider.notifier).loadIntegrations();
   }
 
   @override
@@ -67,8 +66,11 @@ class _IntegrationsHubScreenState
         .toList();
 
     final available = integrations
-        .where((i) => i.status == IntegrationStatus.available ||
-            i.status == IntegrationStatus.error)
+        .where(
+          (i) =>
+              i.status == IntegrationStatus.available ||
+              i.status == IntegrationStatus.error,
+        )
         .toList();
 
     final comingSoon = integrations

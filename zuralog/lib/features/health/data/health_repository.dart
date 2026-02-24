@@ -40,6 +40,17 @@ class HealthRepository {
   ///   `true` if the user granted all required permissions, `false` otherwise.
   Future<bool> requestAuthorization() => _bridge.requestAuthorization();
 
+  /// Passively checks if health permissions are currently granted.
+  ///
+  /// Does NOT show a permission dialog. Safe to call on app resume
+  /// to verify permission state without user interaction.
+  /// On iOS, uses a write-authorization proxy; may not reflect all permission
+  /// types due to HealthKit privacy restrictions.
+  ///
+  /// Returns:
+  ///   `true` if all required permissions are granted, `false` otherwise.
+  Future<bool> checkPermissions() => _bridge.checkPermissions();
+
   // -- Read Methods --
 
   /// Fetches total step count for a specific [date].

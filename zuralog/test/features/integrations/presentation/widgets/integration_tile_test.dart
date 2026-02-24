@@ -34,7 +34,7 @@ class _StubNotifier extends StateNotifier<IntegrationsState>
   final List<String> connectedIds = [];
 
   @override
-  void loadIntegrations() {}
+  Future<void> loadIntegrations() async {}
 
   @override
   Future<void> connect(String integrationId, BuildContext context) async {
@@ -84,7 +84,6 @@ const _comingSoonModel = IntegrationModel(
   description: 'Connect Garmin devices.',
 );
 
-
 // ── Harness ───────────────────────────────────────────────────────────────────
 
 /// Wraps [IntegrationTile] in a minimal testable widget tree with a
@@ -97,14 +96,10 @@ Widget _buildHarness({
   final stub = notifier ?? _StubNotifier(state);
 
   return ProviderScope(
-    overrides: [
-      integrationsProvider.overrideWith((_) => stub),
-    ],
+    overrides: [integrationsProvider.overrideWith((_) => stub)],
     child: MaterialApp(
       theme: AppTheme.dark,
-      home: Scaffold(
-        body: IntegrationTile(integration: integration),
-      ),
+      home: Scaffold(body: IntegrationTile(integration: integration)),
     ),
   );
 }
@@ -159,9 +154,9 @@ void main() {
       expect(find.text('Connect'), findsNothing);
     });
 
-    testWidgets(
-        'tapping disconnect icon opens disconnect bottom sheet',
-        (tester) async {
+    testWidgets('tapping disconnect icon opens disconnect bottom sheet', (
+      tester,
+    ) async {
       final stub = _StubNotifier(
         IntegrationsState(integrations: [_connectedModel]),
       );
@@ -217,8 +212,9 @@ void main() {
       expect(find.text('Import activity data.'), findsOneWidget);
     });
 
-    testWidgets('initials fallback renders when logoAsset is null',
-        (tester) async {
+    testWidgets('initials fallback renders when logoAsset is null', (
+      tester,
+    ) async {
       // All fixture models omit logoAsset — tile should render without error.
       await tester.pumpWidget(_buildHarness(integration: _availableModel));
       await tester.pump();

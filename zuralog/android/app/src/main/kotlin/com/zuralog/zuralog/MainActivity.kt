@@ -58,8 +58,14 @@ class MainActivity : FlutterFragmentActivity() {
             //   to prevent a second callback from replying to a stale result.
             val pending = pendingPermissionResult
             pendingPermissionResult = null
-            val allGranted = granted.containsAll(HealthConnectBridge.REQUIRED_PERMISSIONS)
-            pending?.success(allGranted)
+            // Consider it a successful grant if the user granted at least the
+            // core read permissions. containsAll() is too strict — HC may not
+            // surface every write permission in the dialog depending on device
+            // and HC version, causing containsAll() to return false even when
+            // the user tapped "Allow all".
+            val coreReadPermissions = HealthConnectBridge.CORE_READ_PERMISSIONS
+            val success = granted.containsAll(coreReadPermissions)
+            pending?.success(success)
         }
         super.onCreate(savedInstanceState)
     }
@@ -76,6 +82,24 @@ class MainActivity : FlutterFragmentActivity() {
             when (call.method) {
                 "isAvailable" -> {
                     result.success(healthConnectBridge.isAvailable())
+                }
+
+                "checkPermissions" -> {
+                    // Passive permission check — no UI shown. Returns false on any failure
+                    // so the Dart caller always receives a Bool (never an exception).
+                    lifecycleScope.launch {
+                        try {
+                            val hasAll = withContext(Dispatchers.IO) {
+                                healthConnectBridge.hasAllPermissions()
+                            }
+                            result.success(hasAll)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "checkPermissions failed", e)
+                            // Intentionally returns success(false) rather than result.error(...)
+                            // so the Flutter caller receives a Bool in all cases (simpler API contract).
+                            result.success(false)
+                        }
+                    }
                 }
 
                 "requestAuthorization" -> {

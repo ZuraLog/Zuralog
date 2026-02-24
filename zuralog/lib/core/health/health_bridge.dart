@@ -69,6 +69,29 @@ class HealthBridge {
     }
   }
 
+  /// Passively checks if health permissions are currently granted.
+  ///
+  /// Unlike [requestAuthorization], this does NOT show a permission dialog.
+  /// On Android, checks if all Health Connect permissions are granted.
+  /// On iOS, checks HealthKit write authorization without showing a dialog.
+  ///
+  /// Returns `true` if permissions are confirmed granted, `false` otherwise.
+  /// Returns `false` on any error without throwing.
+  /// Throws nothing — returns `false` on any failure.
+  Future<bool> checkPermissions() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('checkPermissions');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.checkPermissions PlatformException: ${e.message}');
+        return true;
+      }());
+      return false;
+    }
+  }
+
   /// Fetches total step count for a specific [date].
   ///
   /// Returns `0.0` if no data exists or on error.

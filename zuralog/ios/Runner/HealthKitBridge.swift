@@ -68,6 +68,28 @@ class HealthKitBridge: NSObject {
         }
     }
 
+    /// Passively checks if HealthKit permissions were previously granted.
+    ///
+    /// Uses write authorization status for body mass (weight) as a proxy —
+    /// HealthKit only reliably reports write authorization, unlike read
+    /// authorization which is hidden for privacy.
+    ///
+    /// This method does NOT show any permission dialog.
+    ///
+    /// - Parameter completion: Called with `true` if write authorization is
+    ///   `.sharingAuthorized`, `false` if `.sharingDenied` or `.notDetermined`
+    ///   (never asked). Both non-authorized states return `false`.
+    func checkPermissionsGranted(completion: @escaping (Bool) -> Void) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            completion(false)
+            return
+        }
+        // bodyMass is in our writeTypes set — write auth is reliably reported.
+        let weightType = HKQuantityType(.bodyMass)
+        let status = healthStore.authorizationStatus(for: weightType)
+        completion(status == .sharingAuthorized)
+    }
+
     // MARK: - Read: Steps
 
     /// Fetches cumulative step count for a specific day.

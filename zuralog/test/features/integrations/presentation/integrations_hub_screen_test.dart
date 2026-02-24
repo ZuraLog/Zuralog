@@ -23,15 +23,14 @@ import 'package:zuralog/features/integrations/presentation/integrations_hub_scre
 
 /// A stub [IntegrationsNotifier] that uses a pre-set [IntegrationsState]
 /// and records [loadIntegrations] calls.
-class _StubIntegrationsNotifier
-    extends StateNotifier<IntegrationsState>
+class _StubIntegrationsNotifier extends StateNotifier<IntegrationsState>
     implements IntegrationsNotifier {
   _StubIntegrationsNotifier(super.initialState, this._loadCalls);
 
   final List<String> _loadCalls;
 
   @override
-  void loadIntegrations() {
+  Future<void> loadIntegrations() async {
     _loadCalls.add('loadIntegrations');
   }
 
@@ -107,71 +106,78 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('shows "Connected" section header when connected integrations exist',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildHarness(integrations: [_connectedIntegration]),
-      );
-      await tester.pump();
-      // The section header AND the _ConnectedBadge on each tile both render
-      // the text "Connected", so we assert at least one match rather than
-      // exactly one.
-      expect(find.text('Connected'), findsWidgets);
-    });
+    testWidgets(
+      'shows "Connected" section header when connected integrations exist',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildHarness(integrations: [_connectedIntegration]),
+        );
+        await tester.pump();
+        // The section header AND the _ConnectedBadge on each tile both render
+        // the text "Connected", so we assert at least one match rather than
+        // exactly one.
+        expect(find.text('Connected'), findsWidgets);
+      },
+    );
 
-    testWidgets('shows "Available" section header when available integrations exist',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildHarness(integrations: [_availableIntegration]),
-      );
-      await tester.pump();
-      expect(find.text('Available'), findsOneWidget);
-    });
+    testWidgets(
+      'shows "Available" section header when available integrations exist',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildHarness(integrations: [_availableIntegration]),
+        );
+        await tester.pump();
+        expect(find.text('Available'), findsOneWidget);
+      },
+    );
 
-    testWidgets('shows "Coming Soon" section header when comingSoon integrations exist',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildHarness(integrations: [_comingSoonIntegration]),
-      );
-      await tester.pump();
-      expect(find.text('Coming Soon'), findsOneWidget);
-    });
+    testWidgets(
+      'shows "Coming Soon" section header when comingSoon integrations exist',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildHarness(integrations: [_comingSoonIntegration]),
+        );
+        await tester.pump();
+        expect(find.text('Coming Soon'), findsOneWidget);
+      },
+    );
 
-    testWidgets('shows all three section headers when all groups are populated',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildHarness(
-          integrations: [
-            _connectedIntegration,
-            _availableIntegration,
-            _comingSoonIntegration,
-          ],
-        ),
-      );
-      await tester.pump();
+    testWidgets(
+      'shows all three section headers when all groups are populated',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildHarness(
+            integrations: [
+              _connectedIntegration,
+              _availableIntegration,
+              _comingSoonIntegration,
+            ],
+          ),
+        );
+        await tester.pump();
 
-      // "Connected" appears in both the section header and the tile badge.
-      expect(find.text('Connected'), findsWidgets);
-      expect(find.text('Available'), findsOneWidget);
-      expect(find.text('Coming Soon'), findsOneWidget);
-    });
+        // "Connected" appears in both the section header and the tile badge.
+        expect(find.text('Connected'), findsWidgets);
+        expect(find.text('Available'), findsOneWidget);
+        expect(find.text('Coming Soon'), findsOneWidget);
+      },
+    );
 
-    testWidgets('does not show "Connected" header when no connected integrations',
-        (tester) async {
-      await tester.pumpWidget(
-        _buildHarness(integrations: [_availableIntegration]),
-      );
-      await tester.pump();
-      expect(find.text('Connected'), findsNothing);
-    });
+    testWidgets(
+      'does not show "Connected" header when no connected integrations',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildHarness(integrations: [_availableIntegration]),
+        );
+        await tester.pump();
+        expect(find.text('Connected'), findsNothing);
+      },
+    );
 
     testWidgets('pull-to-refresh triggers loadIntegrations', (tester) async {
       final calls = <String>[];
       await tester.pumpWidget(
-        _buildHarness(
-          integrations: [_availableIntegration],
-          loadCalls: calls,
-        ),
+        _buildHarness(integrations: [_availableIntegration], loadCalls: calls),
       );
       await tester.pump();
 

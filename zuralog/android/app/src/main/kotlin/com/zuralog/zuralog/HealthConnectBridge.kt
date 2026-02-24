@@ -66,6 +66,20 @@ class HealthConnectBridge(private val context: Context) {
             HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
             HealthPermission.getReadPermission(Vo2MaxRecord::class),
         )
+
+        /**
+         * The minimum set of read permissions that must be granted for a
+         * successful connection. Write permissions and less common data types
+         * are not required — HC may not surface all REQUIRED_PERMISSIONS in the
+         * dialog depending on device and HC version, so checking containsAll()
+         * on the full set causes false negatives.
+         */
+        val CORE_READ_PERMISSIONS: Set<String> = setOf(
+            HealthPermission.getReadPermission(StepsRecord::class),
+            HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+            HealthPermission.getReadPermission(SleepSessionRecord::class),
+            HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+        )
     }
 
     /// Lazily initialized Health Connect client.
@@ -97,7 +111,9 @@ class HealthConnectBridge(private val context: Context) {
     suspend fun hasAllPermissions(): Boolean {
         val hcClient = client ?: return false
         val granted = hcClient.permissionController.getGrantedPermissions()
-        return granted.containsAll(REQUIRED_PERMISSIONS)
+        // Use CORE_READ_PERMISSIONS instead of REQUIRED_PERMISSIONS — HC may not
+        // surface all write permissions in the dialog on all devices/versions.
+        return granted.containsAll(CORE_READ_PERMISSIONS)
     }
 
     // ------------------------------------------------------------------

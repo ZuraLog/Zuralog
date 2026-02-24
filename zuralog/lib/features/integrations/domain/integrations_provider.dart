@@ -72,23 +72,11 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   IntegrationsNotifier({
     required OAuthRepository oauthRepository,
     required HealthRepository healthRepository,
-  })  : _oauthRepository = oauthRepository,
-        _healthRepository = healthRepository,
-        // Start in loading state so the screen never briefly shows
-        // "No integrations available." before loadIntegrations() fires.
-        super(const IntegrationsState(isLoading: true)) {
-    // Reload connected states from disk without blocking the constructor.
-    // This ensures integration tiles show the correct connected status
-    // immediately on app launch without re-requesting permissions.
-    unawaited(
-      _loadPersistedStates().catchError((Object e, StackTrace st) {
-        // TODO(dev): Replace with structured logger when logging is introduced.
-        debugPrint(
-          '[IntegrationsNotifier] Failed to load persisted states: $e\n$st',
-        );
-      }),
-    );
-  }
+  }) : _oauthRepository = oauthRepository,
+       _healthRepository = healthRepository,
+       // Start in loading state so the screen never briefly shows
+       // "No integrations available." before loadIntegrations() fires.
+       super(const IntegrationsState(isLoading: true));
 
   final OAuthRepository _oauthRepository;
   final HealthRepository _healthRepository;
@@ -157,28 +145,52 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   // ── Public Actions ─────────────────────────────────────────────────────────
 
-  /// Populates the integration list with default mock data.
+  /// Populates the integration list with default data, restoring persisted
+  /// connected states from SharedPreferences.
   ///
   /// Sets [IntegrationsState.isLoading] to `true` at the start and `false`
-  /// once the list has been written, so the UI can show a meaningful spinner
-  /// while the (synchronous) merge is in progress.
+  /// once the list has been finalized.
   ///
   /// Preserves the [IntegrationStatus] of already-connected integrations
   /// so toggling the switch and then pulling to refresh does not reset state.
-  void loadIntegrations() {
+  ///
+  /// Note: Health Connect's `getGrantedPermissions()` is unreliable on cold
+  /// start (returns stale/empty results until the system propagates the grant).
+  /// SharedPreferences is used as the authoritative source of truth for
+  /// connection state. The connected flag is only written after the OS
+  /// permission callback confirms a successful grant, so it is always accurate.
+  Future<void> loadIntegrations() async {
     state = state.copyWith(isLoading: true, clearError: true);
 
-    final existing = {
-      for (final i in state.integrations) i.id: i,
-    };
+    // 1. Build the existing in-memory status map (preserves live connected state
+    //    for integrations that were connected in the current session).
+    final existing = {for (final i in state.integrations) i.id: i};
 
-    final merged = _defaultIntegrations.map((defaults) {
+    // 2. Populate from defaults, preserving any live connected state.
+    var merged = _defaultIntegrations.map((defaults) {
       final current = existing[defaults.id];
       if (current != null) {
-        // Preserve live status; only refresh description / metadata.
         return defaults.copyWith(status: current.status);
       }
       return defaults;
+    }).toList();
+
+    // 3. Restore persisted connected states from SharedPreferences.
+    //    This handles the app restart case where in-memory state is empty
+    //    but SharedPreferences remembers which integrations were connected.
+    //    SharedPreferences is the authoritative source of truth — the flag is
+    //    only written after the OS confirms a successful permission grant.
+    final prefs = await SharedPreferences.getInstance();
+    merged = merged.map((integration) {
+      // Only restore persisted state if the integration isn't already connected
+      // from in-memory state (to avoid overwriting a live disconnection).
+      if (integration.status != IntegrationStatus.connected) {
+        final saved = prefs.getBool('$_connectedPrefix${integration.id}');
+        if (saved == true) {
+          return integration.copyWith(status: IntegrationStatus.connected);
+        }
+      }
+      return integration;
     }).toList();
 
     state = state.copyWith(integrations: merged, isLoading: false);
@@ -212,8 +224,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           }
         case 'apple_health':
           final granted = await _healthRepository.requestAuthorization();
-          final newStatus =
-              granted ? IntegrationStatus.connected : IntegrationStatus.available;
+          final newStatus = granted
+              ? IntegrationStatus.connected
+              : IntegrationStatus.available;
           _setStatus(integrationId, newStatus);
           if (granted) {
             await _saveConnectedState(integrationId, connected: true);
@@ -233,8 +246,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
             break;
           }
           final granted = await _healthRepository.requestAuthorization();
-          final newStatus =
-              granted ? IntegrationStatus.connected : IntegrationStatus.available;
+          final newStatus = granted
+              ? IntegrationStatus.connected
+              : IntegrationStatus.available;
           _setStatus(integrationId, newStatus);
           if (granted) {
             await _saveConnectedState(integrationId, connected: true);
@@ -247,7 +261,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           }
       }
     } catch (e, st) {
-      debugPrint('[IntegrationsNotifier] connect($integrationId) failed: $e\n$st');
+      debugPrint(
+        '[IntegrationsNotifier] connect($integrationId) failed: $e\n$st',
+      );
       _setStatus(integrationId, IntegrationStatus.error);
     }
   }
@@ -262,14 +278,15 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   void disconnect(String integrationId) {
     // Clear persisted state so the integration shows as Available after restart.
     unawaited(
-      _saveConnectedState(integrationId, connected: false).catchError(
-        (Object e, StackTrace st) {
-          debugPrint(
-            '[IntegrationsNotifier] Failed to clear persisted state for '
-            '$integrationId: $e\n$st',
-          );
-        },
-      ),
+      _saveConnectedState(integrationId, connected: false).catchError((
+        Object e,
+        StackTrace st,
+      ) {
+        debugPrint(
+          '[IntegrationsNotifier] Failed to clear persisted state for '
+          '$integrationId: $e\n$st',
+        );
+      }),
     );
     state = state.copyWith(
       integrations: state.integrations.map((integration) {
@@ -308,9 +325,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   /// Shows a brief [SnackBar] with the given [message].
   void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ── Persistence ────────────────────────────────────────────────────────────
@@ -332,24 +349,6 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('$_connectedPrefix$integrationId', connected);
   }
-
-  /// Loads persisted integration connected states from SharedPreferences
-  /// and updates the in-memory state.
-  ///
-  /// Called once from the constructor. Runs asynchronously so it does not
-  /// block the synchronous `StateNotifier` constructor.
-  Future<void> _loadPersistedStates() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = state.copyWith(
-      integrations: state.integrations.map((integration) {
-        final saved = prefs.getBool('$_connectedPrefix${integration.id}');
-        if (saved == true) {
-          return integration.copyWith(status: IntegrationStatus.connected);
-        }
-        return integration;
-      }).toList(),
-    );
-  }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -363,15 +362,13 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 /// [loadIntegrations] is triggered automatically via [Future.microtask] on
 /// first access, so consumers do not need to call it explicitly on first mount.
 final integrationsProvider =
-    StateNotifierProvider<IntegrationsNotifier, IntegrationsState>(
-  (ref) {
-    final notifier = IntegrationsNotifier(
-      oauthRepository: ref.watch(oauthRepositoryProvider),
-      healthRepository: ref.watch(healthRepositoryProvider),
-    );
-    // Kick off the initial load after the current frame so the provider is
-    // fully initialised before any state mutation occurs.
-    Future.microtask(notifier.loadIntegrations);
-    return notifier;
-  },
-);
+    StateNotifierProvider<IntegrationsNotifier, IntegrationsState>((ref) {
+      final notifier = IntegrationsNotifier(
+        oauthRepository: ref.watch(oauthRepositoryProvider),
+        healthRepository: ref.watch(healthRepositoryProvider),
+      );
+      // Kick off the initial load after the current frame so the provider is
+      // fully initialised before any state mutation occurs.
+      Future.microtask(() => notifier.loadIntegrations());
+      return notifier;
+    });

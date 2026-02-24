@@ -239,6 +239,13 @@ import UIKit
                 result(success)
             }
 
+        case "checkPermissions":
+            // Passive check — no dialog. Completion is synchronous,
+            // so no dispatch is needed.
+            healthKitBridge.checkPermissionsGranted { granted in
+                result(granted)
+            }
+
         default:
             result(FlutterMethodNotImplemented)
         }
