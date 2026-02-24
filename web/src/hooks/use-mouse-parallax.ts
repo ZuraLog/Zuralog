@@ -3,7 +3,14 @@
  *
  * Returns { x, y } in range [-1, 1] centered at viewport middle.
  * Uses requestAnimationFrame lerp for smooth tracking.
- * Returns { x: 0, y: 0 } on mobile / touch devices.
+ *
+ * On touch-only devices (no hover), `mousemove` never fires and the value
+ * stays at { x: 0, y: 0 } naturally — no explicit guard needed.
+ *
+ * ⚠️  NON-REACTIVE: The returned `MousePosition` is a mutable ref object.
+ * Do NOT read `.x` / `.y` in JSX or React render — it will NOT cause re-renders.
+ * Read values only inside animation callbacks (useFrame, requestAnimationFrame).
+ * For React-reactive consumers, use `getMouseParallax()` and manage your own state.
  */
 "use client";
 
