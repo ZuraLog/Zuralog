@@ -18,6 +18,9 @@ const badgeVariants = cva(
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
+        /* CryptoHub-inspired eyebrow pill badge — used above section headlines */
+        eyebrow:
+          "border-[var(--border-light)] bg-transparent text-[var(--text-muted)] text-xs font-medium px-3 py-1 rounded-full",
       },
     },
     defaultVariants: {
