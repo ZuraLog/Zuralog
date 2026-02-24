@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { QuizContainer } from '@/components/quiz/quiz-container';
+import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
 
 interface LeaderboardEntry {
   rank: number;
@@ -59,6 +60,9 @@ export function WaitlistSection() {
             personalize your experience before we launch.
           </p>
         </motion.div>
+
+        {/* Animated stats counters */}
+        <WaitlistStatsBar />
 
         {/* Main layout */}
         <div className="flex flex-col items-start gap-12 lg:flex-row lg:justify-between">

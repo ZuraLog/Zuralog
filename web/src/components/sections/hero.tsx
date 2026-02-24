@@ -36,6 +36,11 @@ const HeroOverlayFront = dynamic(
   { ssr: false },
 );
 
+const HeroWaitlistBadge = dynamic(
+  () => import('@/components/hero/hero-waitlist-badge').then((m) => m.HeroWaitlistBadge),
+  { ssr: false },
+);
+
 function scrollToQuiz() {
   document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
 }
@@ -118,6 +123,15 @@ export function Hero() {
           >
             See how it works
           </Button>
+        </motion.div>
+
+        {/* Live waitlist counter pill */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <HeroWaitlistBadge />
         </motion.div>
       </div>
 
