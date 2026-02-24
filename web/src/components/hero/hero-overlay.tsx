@@ -1,21 +1,19 @@
 /**
- * HeroOverlay — HTML/CSS/SVG overlay layer for the hero 3D scene.
+ * HeroOverlay — HTML/CSS/SVG overlay layers for the hero 3D scene.
  *
- * Composes three sub-layers (back → front):
- *   1. ConvergenceLines  — animated SVG bezier paths from each integration to phone center
- *   2. FloatingGraphics  — decorative ZuraLog UI elements (charts, pills, chat bubbles)
- *   3. IntegrationCards  — glassmorphic floating brand cards
+ * Split into two components for correct z-ordering relative to the phone:
  *
- * Reads the shared mouse parallax singleton reactively via a RAF loop so that
- * all three children receive the same smoothed mouse values every frame without
- * adding extra event listeners or React re-renders beyond the RAF tick.
+ *   HeroOverlayBehind — convergence lines ONLY, placed at z-[5] in hero.tsx
+ *                        (BEHIND the Three.js canvas at z-10). Lines appear to
+ *                        flow toward the phone and disappear behind it, matching
+ *                        the reference wireframe.
  *
- * Responsibilities:
- *   - Bootstrap the singleton by calling `useMouseParallax()` (required for the
- *     RAF tick to start — hero-scene.tsx uses `getMouseParallax()` directly)
- *   - Detect mobile viewport (≤768 px) and pass `isMobile` to children
- *   - Honour `prefers-reduced-motion` by freezing parallax and disabling entrance
- *     animations in all child components
+ *   HeroOverlayFront  — floating UI graphics + integration cards, placed at
+ *                        z-[15] (IN FRONT of phone canvas). Graphics overlap
+ *                        the phone edges; integration cards float at periphery.
+ *
+ * Both components share the same mouse parallax singleton via useOverlayState().
+ * The singleton tick is started once; RAF loops are trivially cheap (reads 2 floats).
  */
 "use client";
 
@@ -28,45 +26,37 @@ import { ConvergenceLines } from "./convergence-lines";
 /** Breakpoint below which we switch to a mobile-optimised layout */
 const MOBILE_BREAKPOINT = 768;
 
+/* ─── Shared state hook ──────────────────────────────────────────────── */
+
 /**
- * HeroOverlay renders the composite HTML/SVG overlay sitting between the
- * Three.js canvas and the hero text content.
+ * useOverlayState — shared logic for both overlay components.
  *
- * It owns the mouse parallax subscription and distributes the current
- * smoothed position to all child components each frame.
+ * Bootstraps the mouse parallax singleton, detects viewport size,
+ * honours prefers-reduced-motion, and provides smoothed mouse state
+ * via a lightweight RAF loop reading from the singleton.
  */
-export function HeroOverlay() {
-  // Bootstrap the singleton RAF tick — required so that hero-scene.tsx's
-  // getMouseParallax() escape hatch returns live values.
+function useOverlayState() {
+  // Bootstrap the singleton RAF tick so hero-scene.tsx's getMouseParallax() works
   useMouseParallax();
 
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
-  // Lazy initialiser: read matchMedia on first render (client-only; safe because
-  // this component is dynamically imported with ssr:false).
   const [reducedMotion, setReducedMotion] = useState(
     () =>
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const rafRef = useRef<number | null>(null);
-  // Use a ref mirror of reducedMotion so the RAF callback always reads the latest
-  // value without needing to be recreated when reducedMotion changes.
   const reducedMotionRef = useRef(false);
 
-  // Subscribe to `prefers-reduced-motion` changes and keep ref in sync
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    // Sync ref on every state change (effect re-runs when reducedMotion changes)
     reducedMotionRef.current = reducedMotion;
-    const handler = (e: MediaQueryListEvent) => {
-      setReducedMotion(e.matches);
-    };
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, [reducedMotion]);
 
-  // Viewport width detection
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     check();
@@ -74,16 +64,12 @@ export function HeroOverlay() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // RAF loop that copies the singleton smoothed values into React state.
-  // Running at rAF frequency (~60 fps) is intentional — these are CSS transforms,
-  // not layout — the browser batches them efficiently.
   useEffect(() => {
     let last = { x: 0, y: 0 };
     const loop = () => {
       const pos = getMouseParallax();
       const x = reducedMotionRef.current ? 0 : pos.x;
       const y = reducedMotionRef.current ? 0 : pos.y;
-      // Only trigger a re-render if values changed meaningfully (> 0.001)
       if (Math.abs(x - last.x) > 0.001 || Math.abs(y - last.y) > 0.001) {
         last = { x, y };
         setMouse({ x, y });
@@ -96,17 +82,46 @@ export function HeroOverlay() {
     };
   }, []);
 
+  return { mouse, isMobile, reducedMotion };
+}
+
+/* ─── HeroOverlayBehind ─────────────────────────────────────────────── */
+
+/**
+ * HeroOverlayBehind — convergence lines only, rendered BEHIND the phone.
+ *
+ * Place at z-[5] in hero.tsx so lines appear behind the z-10 phone canvas.
+ * The lines flow from integration cards toward the phone and vanish behind it.
+ */
+export function HeroOverlayBehind() {
+  const { mouse, isMobile, reducedMotion } = useOverlayState();
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      {/* Layer 1 (back): animated SVG convergence lines */}
       <ConvergenceLines
         mouseX={mouse.x}
         mouseY={mouse.y}
         isMobile={isMobile}
         reducedMotion={reducedMotion}
       />
+    </div>
+  );
+}
 
-      {/* Layer 2 (mid): floating ZuraLog UI graphic elements */}
+/* ─── HeroOverlayFront ──────────────────────────────────────────────── */
+
+/**
+ * HeroOverlayFront — floating UI graphics + integration cards, in front of phone.
+ *
+ * Place at z-[15] in hero.tsx so elements appear in front of the z-10 phone canvas.
+ * Floating graphics overlap the phone edges; integration cards orbit the periphery.
+ */
+export function HeroOverlayFront() {
+  const { mouse, isMobile, reducedMotion } = useOverlayState();
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      {/* Floating ZuraLog UI graphic elements (HRV ring, charts, AI coach, metrics) */}
       <FloatingGraphics
         mouseX={mouse.x}
         mouseY={mouse.y}
@@ -114,7 +129,41 @@ export function HeroOverlay() {
         reducedMotion={reducedMotion}
       />
 
-      {/* Layer 3 (front): glassmorphic integration brand cards */}
+      {/* Glassmorphic integration brand cards at periphery */}
+      <IntegrationCards
+        mouseX={mouse.x}
+        mouseY={mouse.y}
+        isMobile={isMobile}
+        reducedMotion={reducedMotion}
+      />
+    </div>
+  );
+}
+
+/* ─── Legacy export ─────────────────────────────────────────────────── */
+
+/**
+ * HeroOverlay — original single-layer orchestrator (all elements in one div).
+ *
+ * @deprecated Use HeroOverlayBehind + HeroOverlayFront for correct z-ordering.
+ */
+export function HeroOverlay() {
+  const { mouse, isMobile, reducedMotion } = useOverlayState();
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <ConvergenceLines
+        mouseX={mouse.x}
+        mouseY={mouse.y}
+        isMobile={isMobile}
+        reducedMotion={reducedMotion}
+      />
+      <FloatingGraphics
+        mouseX={mouse.x}
+        mouseY={mouse.y}
+        isMobile={isMobile}
+        reducedMotion={reducedMotion}
+      />
       <IntegrationCards
         mouseX={mouse.x}
         mouseY={mouse.y}

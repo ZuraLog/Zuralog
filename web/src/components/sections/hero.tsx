@@ -2,11 +2,15 @@
  * Hero section — full-screen cinematic opener for the ZuraLog landing page.
  *
  * Layer stack (back → front):
- *   z-0  : CSS radial sage glow (HeroGlow) — atmospheric underlay
- *   z-10 : Three.js Canvas (HeroSceneLoader) — transparent, phone on top of glow
- *   z-15 : HTML/CSS/SVG overlay (HeroOverlay) — integration cards, graphics, lines
- *   z-20 : bottom fade gradient
- *   z-30 : text content
+ *   z-0   : CSS radial sage glow (HeroGlow) — atmospheric underlay
+ *   z-[5] : HeroOverlayBehind — convergence lines ONLY (behind phone)
+ *   z-10  : Three.js Canvas (HeroSceneLoader) — transparent, phone
+ *   z-[15]: HeroOverlayFront — floating graphics + integration cards (in front)
+ *   z-20  : bottom fade gradient
+ *   z-30  : text content
+ *
+ * The z-[5] / z-10 / z-[15] split ensures convergence lines render BEHIND
+ * the 3D phone model while UI graphics and integration cards stay IN FRONT.
  */
 'use client';
 
@@ -20,8 +24,15 @@ const HeroSceneLoader = dynamic(
   { ssr: false },
 );
 
-const HeroOverlay = dynamic(
-  () => import('@/components/hero/hero-overlay').then((m) => m.HeroOverlay),
+/** Convergence lines layer — rendered BEHIND the phone (z-[5]) */
+const HeroOverlayBehind = dynamic(
+  () => import('@/components/hero/hero-overlay').then((m) => m.HeroOverlayBehind),
+  { ssr: false },
+);
+
+/** Graphics + integration cards — rendered IN FRONT of phone (z-[15]) */
+const HeroOverlayFront = dynamic(
+  () => import('@/components/hero/hero-overlay').then((m) => m.HeroOverlayFront),
   { ssr: false },
 );
 
@@ -40,14 +51,19 @@ export function Hero() {
         <HeroGlow />
       </div>
 
-      {/* Layer 2 — Three.js transparent canvas (phone) */}
+      {/* Layer 2 — Convergence lines BEHIND the phone (z-[5] < z-10 phone) */}
+      <div className="absolute inset-0 z-[5]">
+        <HeroOverlayBehind />
+      </div>
+
+      {/* Layer 3 — Three.js transparent canvas (phone) */}
       <div className="absolute inset-0 z-10">
         <HeroSceneLoader />
       </div>
 
-      {/* Layer 3 — HTML/CSS/SVG overlay: integration cards, floating graphics, convergence lines */}
+      {/* Layer 4 — Floating graphics + integration cards IN FRONT of phone */}
       <div className="absolute inset-0 z-[15]">
-        <HeroOverlay />
+        <HeroOverlayFront />
       </div>
 
       {/* Layer 4 — bottom fade so the scene blends into the next section */}
