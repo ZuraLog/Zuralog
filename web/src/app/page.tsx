@@ -26,6 +26,7 @@ import { Footer } from '@/components/sections/footer';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ScrollHandler } from '@/components/scroll-handler';
 import { AnimatedBackground } from '@/components/animated-background';
+import { SectionColorTransition } from '@/components/section-color-transition';
 
 export default function Home() {
   return (
@@ -39,6 +40,8 @@ export default function Home() {
         <ScrollHandler />
       </Suspense>
       <main>
+        {/* Wires GSAP scroll color morph: cream → lime between Hero and Full Mobile */}
+        <SectionColorTransition />
         <Hero />
         <FullMobileSection />
         <ProblemSection />
