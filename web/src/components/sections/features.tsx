@@ -18,7 +18,7 @@ const FEATURES = [
     icon: Brain,
     tag: "AI Reasoning",
     title: "Cross-app intelligence that actually connects the dots",
-    body: "Zuralog’s AI reads across Strava, Oura, CalAI, and more simultaneously — noticing that your recovery scores drop when you eat late, or that your best runs follow 8+ hours of deep sleep.",
+    body: "ZuraLog’s AI reads across Strava, Oura, CalAI, and more simultaneously — noticing that your recovery scores drop when you eat late, or that your best runs follow 8+ hours of deep sleep.",
     visual: "neural",
     accent: "#CFE1B9",
   },
@@ -26,7 +26,7 @@ const FEATURES = [
     icon: Zap,
     tag: "Autonomous Actions",
     title: "Your AI acts — not just advises",
-    body: "Zuralog doesn’t just tell you what to do. When your HRV is low, it adjusts your training plan. When you hit a macro goal, it celebrates and suggests a recovery meal. It works, so you don’t have to think.",
+    body: "ZuraLog doesn’t just tell you what to do. When your HRV is low, it adjusts your training plan. When you hit a macro goal, it celebrates and suggests a recovery meal. It works, so you don’t have to think.",
     visual: "actions",
     accent: "#A8D8A8",
   },
@@ -34,7 +34,7 @@ const FEATURES = [
     icon: PenLine,
     tag: "Zero-Friction Logging",
     title: "Log once, sync everywhere — or don’t log at all",
-    body: "Connect your apps and Zuralog pulls data automatically. Snap a photo of your meal with CalAI — Zuralog sees it. Finish a Strava run — Zuralog knows. Talk to it like a human. It listens.",
+    body: "Connect your apps and ZuraLog pulls data automatically. Snap a photo of your meal with CalAI — ZuraLog sees it. Finish a Strava run — ZuraLog knows. Talk to it like a human. It listens.",
     visual: "logging",
     accent: "#CFE1B9",
   },
@@ -183,7 +183,7 @@ export function FeaturesSection() {
     <section ref={sectionRef} className="py-28 md:py-40" id="features">
       <div className="mx-auto max-w-6xl px-4">
         <div className="mb-20 text-center">
-          <p className="mb-4 text-xs font-semibold tracking-[0.2em] text-sage uppercase">What Zuralog Does</p>
+          <p className="mb-4 text-xs font-semibold tracking-[0.2em] text-sage uppercase">What ZuraLog Does</p>
           <h2 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
             One AI. All your apps. Actually useful.
           </h2>

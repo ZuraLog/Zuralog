@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 /**
  * Full-screen page loader that auto-dismisses after assets load.
@@ -30,14 +31,24 @@ export function PageLoader() {
           transition={{ duration: 0.6, ease: "easeInOut" }}
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black"
         >
-          <motion.span
-            initial={{ opacity: 0, scale: 0.9 }}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
-            className="font-display text-2xl font-bold tracking-widest text-sage"
+            className="flex flex-col items-center gap-4"
           >
-            ZURALOG
-          </motion.span>
+            <Image
+              src="/logo.png"
+              alt="ZuraLog"
+              width={56}
+              height={56}
+              className="object-contain"
+              priority
+            />
+            <span className="font-display text-sm font-semibold tracking-[0.3em] text-sage/80 uppercase">
+              ZuraLog
+            </span>
+          </motion.div>
 
           {/* Loading bar */}
           <div className="mt-6 h-px w-24 overflow-hidden bg-white/10">

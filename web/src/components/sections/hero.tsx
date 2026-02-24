@@ -1,5 +1,5 @@
 /**
- * Hero section — full-screen cinematic opener for the Zuralog landing page.
+ * Hero section — full-screen cinematic opener for the ZuraLog landing page.
  *
  * Layout:
  * - Full-viewport black background
@@ -93,7 +93,7 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
           className="max-w-xl text-lg text-zinc-400 md:text-xl"
         >
-          Zuralog unifies Strava, Apple Health, Garmin, MyFitnessPal and more
+          ZuraLog unifies Strava, Apple Health, Garmin, MyFitnessPal and more
           into a single action layer — then tells you exactly what to do next.
         </motion.p>
 

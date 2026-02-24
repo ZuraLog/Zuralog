@@ -30,9 +30,10 @@ export function HeroSceneLoader() {
     >
       <Canvas
         dpr={[1, Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1, isMobile ? 1.5 : 2)]}
-        gl={{ antialias: !isMobile, alpha: true, powerPreference: "high-performance" }}
+        gl={{ antialias: !isMobile, alpha: false, powerPreference: "high-performance" }}
         camera={{ position: [0, 0, 5], fov: 45 }}
         className="absolute inset-0"
+        style={{ background: 'transparent' }}
       >
         <HeroScene isMobile={isMobile} />
       </Canvas>

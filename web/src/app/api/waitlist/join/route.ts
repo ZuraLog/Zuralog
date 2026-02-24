@@ -1,7 +1,7 @@
 /**
  * POST /api/waitlist/join
  *
- * Adds a new user to the Zuralog waitlist.
+ * Adds a new user to the ZuraLog waitlist.
  *
  * Flow:
  * 1. Rate-limit by IP (5 req / 60s)
@@ -25,7 +25,33 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+/**
+ * DEV/PREVIEW MODE
+ *
+ * Set NEXT_PUBLIC_PREVIEW_MODE=true in .env.local to bypass all Supabase
+ * calls and simulate a successful waitlist join. This lets you iterate on
+ * the UI flow without a real DB or sending real emails.
+ */
+const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
+
 export async function POST(request: NextRequest) {
+  // Preview mode: return a simulated success response immediately
+  if (IS_PREVIEW) {
+    const body = await request.json().catch(() => ({})) as { email?: string };
+    console.info('[waitlist/join] PREVIEW MODE — skipping DB + email');
+    return NextResponse.json(
+      {
+        message: 'Successfully joined the waitlist! (preview mode)',
+        position: Math.floor(Math.random() * 200) + 1,
+        referralCode: 'PREVIEW123',
+        tier: 'standard',
+        preview: true,
+      },
+      { status: 201 },
+    );
+    void body; // consumed for logging only
+  }
+
   // 1. Rate limiting
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
   const { success: allowed } = await rateLimiter.limit(ip);
@@ -121,7 +147,7 @@ export async function POST(request: NextRequest) {
       .send({
         from: FROM_EMAIL,
         to: email,
-        subject: "You're on the Zuralog waitlist!",
+        subject: "You're on the ZuraLog waitlist!",
         html: `<p>Welcome! You're #${inserted.queue_position} on the list. Your referral code is <strong>${newCode}</strong>. Share ${siteUrl}?ref=${newCode} to move up.</p>`,
       })
       .catch((err: unknown) => console.error('[waitlist/join] email send:', err));

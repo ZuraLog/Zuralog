@@ -34,7 +34,7 @@ export function GoalStep({ selected, onSelect, onNext, onBack, canProceed }: Goa
           What's your main goal?
         </h2>
         <p className="mt-2 text-zinc-400">
-          Zuralog will personalise your experience around this.
+          ZuraLog will personalise your experience around this.
         </p>
       </div>
 

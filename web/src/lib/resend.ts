@@ -27,4 +27,4 @@ export function getResendClient(): Resend | null {
 }
 
 /** Default from address for transactional emails */
-export const FROM_EMAIL = 'Zuralog <hello@zuralog.com>';
+export const FROM_EMAIL = 'ZuraLog <hello@zuralog.com>';

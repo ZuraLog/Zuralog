@@ -23,7 +23,7 @@ const STEPS = [
     number: "02",
     icon: Sparkles,
     title: "Learn",
-    body: "Zuralog’s AI studies your patterns across all connected data. It learns what works for YOUR body.",
+    body: "ZuraLog’s AI studies your patterns across all connected data. It learns what works for YOUR body.",
   },
   {
     number: "03",

@@ -2,19 +2,19 @@
  * opengraph-image.tsx — dynamically generated Open Graph image.
  *
  * Uses Next.js ImageResponse to render a 1200x630 OG image at build time.
- * Dark background with Zuralog wordmark and tagline.
+ * Dark background with ZuraLog wordmark and tagline.
  *
  * Automatically served at /opengraph-image (picked up by Next.js metadata).
  */
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Zuralog — The AI That Connects Your Fitness Apps';
+export const alt = 'ZuraLog — The AI That Connects Your Fitness Apps';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 /**
- * Generates the OG image for the Zuralog website.
+ * Generates the OG image for the ZuraLog website.
  *
  * @returns ImageResponse — a 1200x630 PNG.
  */
@@ -57,7 +57,7 @@ export default async function Image() {
             letterSpacing: '-2px',
           }}
         >
-          Zuralog
+          ZuraLog
         </div>
 
         {/* Tagline */}

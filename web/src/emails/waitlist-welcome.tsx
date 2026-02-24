@@ -46,8 +46,8 @@ export const WaitlistWelcome = ({
     <Head />
     <Preview>
       {isFoundingMember
-        ? "🎉 You're a Zuralog Founding Member — your spot is secured!"
-        : `You're #${position} on the Zuralog waitlist — refer friends to climb!`}
+        ? "🎉 You're a ZuraLog Founding Member — your spot is secured!"
+        : `You're #${position} on the ZuraLog waitlist — refer friends to climb!`}
     </Preview>
     <Body style={main}>
       <Container style={container}>
@@ -68,8 +68,8 @@ export const WaitlistWelcome = ({
           </Heading>
           <Text style={bodyText}>
             {isFoundingMember
-              ? "You're one of the first 30 people on Zuralog. You'll get lifetime early-access pricing, direct input into the product roadmap, and first access when we launch."
-              : "Zuralog is the AI fitness hub that finally connects all your apps — Strava, Apple Health, Garmin, MyFitnessPal — into one action layer. You'll be among the first to access it."}
+              ? "You're one of the first 30 people on ZuraLog. You'll get lifetime early-access pricing, direct input into the product roadmap, and first access when we launch."
+              : "ZuraLog is the AI fitness hub that finally connects all your apps — Strava, Apple Health, Garmin, MyFitnessPal — into one action layer. You'll be among the first to access it."}
           </Text>
         </Section>
 
@@ -104,7 +104,7 @@ export const WaitlistWelcome = ({
             ignore this email.
           </Text>
           <Text style={footerText}>
-            © 2026 Zuralog · <Link href={`${baseUrl}/privacy`} style={linkStyle}>Privacy</Link>
+            © 2026 ZuraLog · <Link href={`${baseUrl}/privacy`} style={linkStyle}>Privacy</Link>
           </Text>
         </Section>
       </Container>

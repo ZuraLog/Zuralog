@@ -1,5 +1,5 @@
 /**
- * Root layout for the Zuralog website.
+ * Root layout for the ZuraLog website.
  *
  * Provides:
  * - Satoshi (display), Inter (body), JetBrains Mono (code) font variables
@@ -18,6 +18,7 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SmoothScroll } from '@/components/smooth-scroll';
 import { PostHogProvider } from '@/components/analytics';
+import { CursorTrail } from '@/components/cursor-trail';
 import { satoshi, inter, jetbrainsMono } from './fonts';
 import './globals.css';
 
@@ -26,18 +27,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://zuralog.com';
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Zuralog — The AI That Connects Your Fitness Apps',
-    template: '%s | Zuralog',
+    default: 'ZuraLog — The AI That Connects Your Fitness Apps',
+    template: '%s | ZuraLog',
   },
   description:
     'The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.',
-  keywords: ['fitness AI', 'health tracker', 'fitness app', 'AI coach', 'Zuralog'],
+  keywords: ['fitness AI', 'health tracker', 'fitness app', 'AI coach', 'ZuraLog'],
   openGraph: {
     type: 'website',
     locale: 'en_US',
     url: siteUrl,
-    siteName: 'Zuralog',
-    title: 'Zuralog — The AI That Connects Your Fitness Apps',
+    siteName: 'ZuraLog',
+    title: 'ZuraLog — The AI That Connects Your Fitness Apps',
     description:
       'The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.',
     images: [
@@ -45,14 +46,14 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Zuralog — AI Fitness Hub',
+        alt: 'ZuraLog — AI Fitness Hub',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
     creator: '@zuralog',
-    title: 'Zuralog — The AI That Connects Your Fitness Apps',
+    title: 'ZuraLog — The AI That Connects Your Fitness Apps',
     description:
       'The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.',
     images: ['/og-image.png'],
@@ -91,6 +92,7 @@ export default function RootLayout({
       className={`${satoshi.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body className="font-sans antialiased">
+        <CursorTrail />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

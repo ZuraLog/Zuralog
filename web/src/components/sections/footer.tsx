@@ -1,8 +1,9 @@
 /**
- * Footer — minimal dark footer for the Zuralog landing page.
+ * Footer — minimal dark footer for the ZuraLog landing page.
  *
  * Contains logo, tagline, social links, and legal copy.
  */
+import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 
 const SOCIAL_LINKS = [
@@ -20,9 +21,18 @@ export function Footer() {
         <div className="flex flex-col gap-12 md:flex-row md:items-start md:justify-between">
           {/* Brand */}
           <div className="flex flex-col gap-3">
-            <span className="font-display text-xl font-bold tracking-widest text-sage">
-              ZURALOG
-            </span>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.png"
+                alt="ZuraLog"
+                width={28}
+                height={28}
+                className="object-contain"
+              />
+              <span className="font-display text-lg font-bold tracking-widest text-sage">
+                ZuraLog
+              </span>
+            </div>
             <p className="max-w-xs text-sm text-zinc-500">
               The AI fitness hub that connects all your apps into one action layer.
             </p>
@@ -76,7 +86,7 @@ export function Footer() {
 
         <div className="flex flex-col items-center justify-between gap-4 text-center md:flex-row md:text-left">
           <p className="text-xs text-zinc-600">
-            © {new Date().getFullYear()} Zuralog. All rights reserved.
+            © {new Date().getFullYear()} ZuraLog. All rights reserved.
           </p>
           <p className="text-xs text-zinc-700">
             Built with love for athletes who do too much.

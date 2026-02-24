@@ -65,11 +65,11 @@ function AppIcon({ position: initialPos, color, phase, converging, mobile = fals
       <meshStandardMaterial
         color={color}
         emissive={color}
-        emissiveIntensity={0.3}
+        emissiveIntensity={1.2}
         transparent
         opacity={opacity}
-        roughness={0.1}
-        metalness={0.8}
+        roughness={0.05}
+        metalness={0.9}
       />
     </mesh>
   );
@@ -222,8 +222,8 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
 
   useFrame((_, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += (mouseRef.current.x * 0.15 - groupRef.current.rotation.y) * delta * 3;
-      groupRef.current.rotation.x += (mouseRef.current.y * 0.1 - groupRef.current.rotation.x) * delta * 3;
+      groupRef.current.rotation.y += (mouseRef.current.x * 0.35 - groupRef.current.rotation.y) * delta * 4;
+      groupRef.current.rotation.x += (mouseRef.current.y * 0.25 - groupRef.current.rotation.x) * delta * 4;
     }
   });
 
@@ -231,9 +231,11 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <pointLight position={[3, 3, 3]} intensity={1.5} color="#CFE1B9" />
-      <pointLight position={[-3, -2, 2]} intensity={0.8} color="#ffffff" />
+      {/* Boosted lighting so the scene is clearly visible */}
+      <ambientLight intensity={1.2} />
+      <pointLight position={[3, 3, 3]} intensity={4} color="#CFE1B9" />
+      <pointLight position={[-3, -2, 2]} intensity={2} color="#ffffff" />
+      <pointLight position={[0, 0, 4]} intensity={2} color="#ffffff" />
       <Environment preset="city" />
 
       <group ref={groupRef}>
@@ -253,7 +255,7 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
       {!isMobile && <AmbientParticles count={60} />}
       {!isMobile && (
         <EffectComposer>
-          <Bloom intensity={0.6} luminanceThreshold={0.7} luminanceSmoothing={0.3} />
+          <Bloom intensity={1.2} luminanceThreshold={0.3} luminanceSmoothing={0.6} mipmapBlur />
         </EffectComposer>
       )}
     </>

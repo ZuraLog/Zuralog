@@ -37,7 +37,7 @@ export const ReferralNotification = ({
   <Html>
     <Head />
     <Preview>
-      {`Someone used your link — you moved up to #${newPosition} on the Zuralog waitlist!`}
+      {`Someone used your link — you moved up to #${newPosition} on the ZuraLog waitlist!`}
     </Preview>
     <Body style={main}>
       <Container style={container}>
@@ -71,7 +71,7 @@ export const ReferralNotification = ({
             Sent to <strong>{referrerEmail}</strong>
           </Text>
           <Text style={footerText}>
-            © 2026 Zuralog ·{' '}
+            © 2026 ZuraLog ·{' '}
             <Link href={`${baseUrl}/privacy`} style={dimLink}>
               Privacy
             </Link>

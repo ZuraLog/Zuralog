@@ -109,7 +109,7 @@ export function WaitlistForm({ quizAnswers, onBack }: WaitlistFormProps) {
               Secure your spot on the list
             </h2>
             <p className="mt-2 text-zinc-400">
-              We'll notify you the moment Zuralog is ready for you.
+              We'll notify you the moment ZuraLog is ready for you.
             </p>
           </div>
 
