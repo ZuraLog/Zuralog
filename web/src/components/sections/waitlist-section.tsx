@@ -55,8 +55,8 @@ export function WaitlistSection() {
             Join the waitlist
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-zinc-400">
-            Tell us about yourself — 30 seconds, 3 questions — then secure
-            your spot before we launch.
+            Secure your spot first — then answer 3 quick questions so we can
+            personalize your experience before we launch.
           </p>
         </motion.div>
 

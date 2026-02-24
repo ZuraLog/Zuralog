@@ -24,10 +24,13 @@ import { WaitlistSection } from '@/components/sections/waitlist-section';
 import { Footer } from '@/components/sections/footer';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ScrollHandler } from '@/components/scroll-handler';
+import { AnimatedBackground } from '@/components/animated-background';
 
 export default function Home() {
   return (
     <>
+      {/* Global animated background — fixed, behind all content */}
+      <AnimatedBackground />
       <PageLoader />
       <Navbar />
       {/* ScrollHandler reads ?scroll= param and scrolls to the target section */}

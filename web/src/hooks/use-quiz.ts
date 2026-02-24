@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from 'react';
 
-export type QuizStep = 'apps' | 'frustrations' | 'goal' | 'signup';
+export type QuizStep = 'signup' | 'apps' | 'frustrations' | 'goal' | 'complete';
 
 export interface QuizAnswers {
   apps: string[];
@@ -16,9 +16,16 @@ export interface QuizAnswers {
   goal: string;
 }
 
+export interface SuccessData {
+  position: number;
+  referralCode: string;
+  tier: string;
+}
+
 export interface UseQuizReturn {
   currentStep: QuizStep;
   answers: QuizAnswers;
+  signupData: SuccessData | null;
   stepIndex: number;
   totalSteps: number;
   progressPct: number;
@@ -28,30 +35,40 @@ export interface UseQuizReturn {
   toggleFrustration: (frustration: string) => void;
   /** Set the primary goal */
   setGoal: (goal: string) => void;
-  /** Advance to next step (or submit if on last step) */
+  /** Advance to next step */
   nextStep: () => void;
   /** Go back to previous step */
   prevStep: () => void;
+  /** Set signup success data and advance to next step */
+  onSignupSuccess: (data: SuccessData) => void;
   /** Whether the current step has valid answers to proceed */
   canProceed: boolean;
 }
 
-const STEPS: QuizStep[] = ['apps', 'frustrations', 'goal', 'signup'];
+/** Steps visible in the progress indicator (excludes signup and complete) */
+const QUIZ_STEPS: QuizStep[] = ['signup', 'apps', 'frustrations', 'goal', 'complete'];
 
 /**
  * Returns stateful quiz management utilities.
+ * Flow: signup (email first) → apps → frustrations → goal → complete
  */
 export function useQuiz(): UseQuizReturn {
   const [stepIndex, setStepIndex] = useState(0);
+  const [signupData, setSignupData] = useState<SuccessData | null>(null);
   const [answers, setAnswers] = useState<QuizAnswers>({
     apps: [],
     frustrations: [],
     goal: '',
   });
 
-  const currentStep = STEPS[stepIndex];
-  const totalSteps = STEPS.length;
-  const progressPct = Math.round((stepIndex / (totalSteps - 1)) * 100);
+  const currentStep = QUIZ_STEPS[stepIndex];
+  const totalSteps = QUIZ_STEPS.length;
+  // Progress excludes signup (step 0) and complete (last) — only quiz steps count
+  const quizStepIndex = stepIndex - 1; // 0-indexed within quiz steps
+  const quizTotalSteps = 3; // apps, frustrations, goal
+  const progressPct = currentStep === 'signup' || currentStep === 'complete'
+    ? 0
+    : Math.round((quizStepIndex / quizTotalSteps) * 100);
 
   const toggleApp = useCallback((app: string) => {
     setAnswers((prev) => ({
@@ -76,11 +93,20 @@ export function useQuiz(): UseQuizReturn {
   }, []);
 
   const nextStep = useCallback(() => {
-    setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
+    setStepIndex((i) => Math.min(i + 1, QUIZ_STEPS.length - 1));
   }, []);
 
   const prevStep = useCallback(() => {
     setStepIndex((i) => Math.max(i - 1, 0));
+  }, []);
+
+  /**
+   * Called by WaitlistForm on successful email signup.
+   * Stores success data and advances to quiz question steps.
+   */
+  const onSignupSuccess = useCallback((data: SuccessData) => {
+    setSignupData(data);
+    setStepIndex(1); // advance to 'apps' step
   }, []);
 
   // Validation per step
@@ -91,11 +117,12 @@ export function useQuiz(): UseQuizReturn {
         ? answers.frustrations.length > 0
         : currentStep === 'goal'
           ? answers.goal.length > 0
-          : true; // signup step handled by form validation
+          : true; // signup handled by form; complete has no proceed
 
   return {
     currentStep,
     answers,
+    signupData,
     stepIndex,
     totalSteps,
     progressPct,
@@ -104,6 +131,7 @@ export function useQuiz(): UseQuizReturn {
     setGoal,
     nextStep,
     prevStep,
+    onSignupSuccess,
     canProceed,
   };
 }
