@@ -7,8 +7,11 @@ import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 
 const SOCIAL_LINKS = [
-  { label: 'Twitter / X', href: 'https://x.com/zuralog' },
-  { label: 'Instagram', href: 'https://instagram.com/zuralog' },
+  { label: 'Twitter / X', href: 'https://x.com/ZuraLog' },
+  { label: 'Instagram', href: 'https://instagram.com/ZuraLog' },
+  { label: 'YouTube', href: 'https://youtube.com/@ZuraLog' },
+  { label: 'TikTok', href: 'https://tiktok.com/@ZuraLog' },
+  { label: 'LinkedIn', href: 'https://linkedin.com/company/ZuraLog' },
 ];
 
 /**

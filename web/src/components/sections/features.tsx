@@ -583,7 +583,7 @@ export function FeaturesSection() {
   return (
     <section ref={sectionRef} className="py-28 md:py-40" id="features">
       <div className="mx-auto max-w-6xl px-4">
-        <div className="mb-20 text-center">
+        <div className="mb-12 text-center md:mb-20">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-sage">What ZuraLog Does</p>
           <h2 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
             One AI. All your apps. Actually useful.
@@ -593,7 +593,7 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        <div className="space-y-24">
+        <div className="space-y-16 md:space-y-24">
           {FEATURES.map((feature, i) => {
             const Icon = feature.icon;
             const { Visual } = feature;
@@ -601,7 +601,7 @@ export function FeaturesSection() {
             return (
               <div
                 key={feature.tag}
-                className={`feature-block grid items-center gap-10 md:grid-cols-2 ${isReversed ? 'md:[&>*:first-child]:order-2' : ''}`}
+                className={`feature-block grid items-center gap-6 md:gap-10 md:grid-cols-2 ${isReversed ? 'md:[&>*:first-child]:order-2' : ''}`}
               >
                 {/* Text */}
                 <div className="space-y-5">
@@ -616,15 +616,15 @@ export function FeaturesSection() {
                       {feature.tag}
                     </span>
                   </div>
-                  <h3 className="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+                  <h3 className="font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl md:text-4xl">
                     {feature.title}
                   </h3>
-                  <p className="text-lg leading-relaxed text-muted-foreground">{feature.body}</p>
+                  <p className="text-base leading-relaxed text-muted-foreground md:text-lg">{feature.body}</p>
                 </div>
 
                 {/* Visual mockup */}
                 <div
-                  className="h-80 overflow-hidden rounded-3xl border border-border/20 bg-black/60 backdrop-blur-sm md:h-96 shadow-[0_0_80px_rgba(0,0,0,0.6)]"
+                  className="h-[22rem] overflow-hidden rounded-2xl border border-border/20 bg-black/60 backdrop-blur-sm sm:h-80 sm:rounded-3xl md:h-96 shadow-[0_0_80px_rgba(0,0,0,0.6)]"
                   style={{
                     boxShadow: `0 0 80px rgba(0,0,0,0.6), 0 0 40px ${feature.accent}0a`,
                   }}

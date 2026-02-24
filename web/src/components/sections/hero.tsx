@@ -87,13 +87,13 @@ export function Hero() {
       </motion.div>
 
       {/* Layer 5 — hero text content, anchored to bottom */}
-      <div className="absolute bottom-16 left-0 right-0 z-30 flex flex-col items-center gap-5 px-6 text-center">
+      <div className="absolute bottom-12 left-0 right-0 z-30 flex flex-col items-center gap-4 px-6 text-center sm:bottom-16 sm:gap-5">
         {/* Headline — two distinct lines */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
-          className="font-display max-w-xl text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-6xl"
+          className="font-display max-w-xl text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl"
         >
           <span className="block">Unified Health.</span>
           <span className="block text-sage">Made Smart.</span>

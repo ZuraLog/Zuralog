@@ -256,7 +256,7 @@ function ActVisual() {
 
         {/* Quick action buttons */}
         <motion.div
-          className="grid grid-cols-3 gap-2"
+          className="grid grid-cols-3 gap-1.5 sm:gap-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7, duration: 0.5 }}
@@ -386,7 +386,7 @@ export function HowItWorksSection() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-4">
-        <div className="mb-20 text-center">
+        <div className="mb-12 text-center md:mb-20">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-sage">How It Works</p>
           <h2 className="font-display text-4xl font-bold tracking-tight md:text-5xl">
             Three steps to your AI health hub
@@ -405,7 +405,7 @@ export function HowItWorksSection() {
             return (
               <div
                 key={step.number}
-                className={`step-item grid items-center gap-10 md:grid-cols-2 ${isReversed ? 'md:[&>*:first-child]:order-2' : ''}`}
+                className={`step-item grid items-center gap-6 md:gap-10 md:grid-cols-2 ${isReversed ? 'md:[&>*:first-child]:order-2' : ''}`}
               >
                 {/* Text */}
                 <div className="space-y-5">
@@ -431,15 +431,15 @@ export function HowItWorksSection() {
                     </span>
                   </div>
 
-                  <h3 className="font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+                  <h3 className="font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl md:text-4xl">
                     {step.title}
                   </h3>
-                  <p className="text-lg leading-relaxed text-muted-foreground">{step.body}</p>
+                  <p className="text-base leading-relaxed text-muted-foreground md:text-lg">{step.body}</p>
                 </div>
 
                 {/* Visual mockup */}
                 <div
-                  className="h-80 overflow-hidden rounded-3xl border border-border/20 bg-black/60 backdrop-blur-sm md:h-[400px]"
+                  className="h-[22rem] overflow-hidden rounded-2xl border border-border/20 bg-black/60 backdrop-blur-sm sm:h-80 sm:rounded-3xl md:h-[400px]"
                   style={{
                     boxShadow: `0 0 80px rgba(0,0,0,0.5), 0 0 30px ${step.accent}0a`,
                   }}

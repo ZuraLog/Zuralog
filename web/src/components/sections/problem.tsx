@@ -61,17 +61,16 @@ function AppChaosVisual() {
   });
 
   return (
-    <div className="flex h-full w-full items-center justify-center">
+    <div className="flex h-full w-full items-center justify-center px-2">
     <div
-      className="relative flex-shrink-0 overflow-visible"
-      style={{ width: W, height: H }}
+      className="relative w-full max-w-[280px] flex-shrink-0 overflow-visible"
+      style={{ aspectRatio: `${W} / ${H}` }}
     >
       {/* ── SVG layer: lines only ── */}
       <svg
-        className="absolute inset-0"
-        width={W}
-        height={H}
+        className="absolute inset-0 h-full w-full"
         viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid meet"
         style={{ pointerEvents: 'none' }}
       >
         <defs>
@@ -428,7 +427,7 @@ export function ProblemSection() {
 
       <div className="relative mx-auto max-w-6xl px-4">
         {/* Heading */}
-        <div className="mb-20 text-center">
+        <div className="mb-12 text-center md:mb-20">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-sage">The Problem</p>
           <h2
             ref={headingRef}
@@ -446,7 +445,7 @@ export function ProblemSection() {
         </div>
 
         {/* Pain point cards */}
-        <div ref={cardsRef} className="grid gap-6 md:grid-cols-3">
+        <div ref={cardsRef} className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
           {PAIN_POINTS.map((point) => {
             const { Visual } = point;
             return (
@@ -455,7 +454,7 @@ export function ProblemSection() {
                 className="pain-card group relative flex flex-col overflow-hidden rounded-3xl border border-border/30 bg-surface transition-all duration-500 hover:border-border/50 hover:shadow-[0_0_60px_rgba(0,0,0,0.4)]"
               >
                 {/* Visual area */}
-                <div className="h-72 w-full border-b border-border/20 bg-black/40">
+                <div className="h-56 w-full border-b border-border/20 bg-black/40 sm:h-64 md:h-72">
                   <Visual />
                 </div>
 

@@ -25,6 +25,7 @@ import { Footer } from '@/components/sections/footer';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ScrollHandler } from '@/components/scroll-handler';
 import { AnimatedBackground } from '@/components/animated-background';
+import { ScrollIndicator } from '@/components/scroll-indicator';
 
 export default function Home() {
   return (
@@ -33,6 +34,7 @@ export default function Home() {
       <AnimatedBackground />
       <PageLoader />
       <Navbar />
+      <ScrollIndicator />
       {/* ScrollHandler reads ?scroll= param and scrolls to the target section */}
       <Suspense>
         <ScrollHandler />

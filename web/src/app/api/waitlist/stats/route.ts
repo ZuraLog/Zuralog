@@ -14,7 +14,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
+
 export async function GET() {
+  // Preview mode: return simulated stats without hitting Supabase
+  if (IS_PREVIEW) {
+    return NextResponse.json({
+      totalSignups: 142,
+      foundingMembersLeft: 12,
+      totalReferrals: 38,
+    });
+  }
+
   const { data, error } = await supabase
     .from('waitlist_stats')
     .select('*')

@@ -77,17 +77,17 @@ function IntegrationCard({
   reducedMotion,
   isMobile,
 }: IntegrationCardProps) {
-  // Use a tighter radius on mobile (22 vw) to prevent cards overlapping the phone
-  const radiusVw = isMobile ? 22 : ORBIT_RADIUS_VW;
+  // Use a tighter radius on mobile (18 vw) to keep cards close to the phone
+  const radiusVw = isMobile ? 18 : ORBIT_RADIUS_VW;
   const { x, y } = polarToPercent(item.angle, item.distance, radiusVw);
 
-  const parallaxStrength = reducedMotion ? 0 : 12 * item.distance;
+  const parallaxStrength = reducedMotion ? 0 : (isMobile ? 4 : 12) * item.distance;
   const offsetX = mouseX * parallaxStrength;
   const offsetY = -mouseY * parallaxStrength;
 
-  // Larger cards (80px base) so integration logos are clearly legible
-  const baseSize = 80 * item.scale;
-  const iconSize = Math.round(32 * item.scale);
+  // Smaller cards on mobile (56px base) to avoid crowding
+  const baseSize = (isMobile ? 56 : 80) * item.scale;
+  const iconSize = Math.round((isMobile ? 22 : 32) * item.scale);
 
   // Fix 4: two-div pattern — outer plain div handles absolute positioning,
   // inner motion.div handles FM animations + parallax offset via x/y motion values.
@@ -131,7 +131,7 @@ function IntegrationCard({
         {/* Integration label */}
         <span
           className="text-center font-medium tracking-wide text-white/60 whitespace-nowrap"
-          style={{ fontSize: Math.max(10, 12 * item.scale) }}
+          style={{ fontSize: isMobile ? Math.max(8, 9 * item.scale) : Math.max(10, 12 * item.scale) }}
         >
           {item.label}
         </span>
@@ -156,12 +156,52 @@ export function IntegrationCards({
   isMobile,
   reducedMotion = false,
 }: IntegrationCardsProps) {
-  // Show fewer integrations on mobile to avoid clutter
-  const visible = isMobile ? INTEGRATIONS.slice(0, 3) : INTEGRATIONS;
+  // Mobile: clean horizontal row above the phone
+  if (isMobile) {
+    const mobileVisible = INTEGRATIONS.slice(0, 4);
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute left-1/2 top-[33%] flex -translate-x-1/2 items-end gap-4">
+          {mobileVisible.map((item, i) => {
+            const size = 44 * item.scale;
+            const iconSz = Math.round(18 * item.scale);
+            return (
+              <motion.div
+                key={item.id}
+                className="flex flex-col items-center gap-1"
+                initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={
+                  reducedMotion
+                    ? { duration: 0 }
+                    : { delay: 0.8 + i * 0.12, duration: 0.5, ease: "easeOut" }
+                }
+              >
+                <div
+                  className="flex items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-md"
+                  style={{
+                    width: size,
+                    height: size,
+                    boxShadow: `0 0 12px ${item.color}15, 0 4px 16px rgba(0,0,0,0.3)`,
+                  }}
+                >
+                  <IntegrationIcon item={item} size={iconSz} />
+                </div>
+                <span className="text-center text-[8px] font-medium tracking-wide text-white/50 whitespace-nowrap">
+                  {item.label}
+                </span>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
+  // Desktop: polar orbit layout
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {visible.map((item, i) => (
+      {INTEGRATIONS.map((item, i) => (
         <IntegrationCard
           key={item.id}
           item={item}
@@ -169,7 +209,7 @@ export function IntegrationCards({
           mouseY={mouseY}
           index={i}
           reducedMotion={reducedMotion}
-          isMobile={isMobile}
+          isMobile={false}
         />
       ))}
     </div>

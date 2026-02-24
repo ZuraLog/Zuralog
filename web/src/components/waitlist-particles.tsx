@@ -6,7 +6,7 @@
  */
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface Particle {
   id: number;
@@ -22,6 +22,12 @@ interface Particle {
  * Should be placed inside a `relative overflow-hidden` container.
  */
 export function WaitlistParticles() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const particles = useMemo<Particle[]>(
     () =>
       Array.from({ length: 18 }, (_, i) => ({
@@ -32,8 +38,25 @@ export function WaitlistParticles() {
         duration: Math.random() * 10 + 12,
         delay: Math.random() * 10,
       })),
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mounted],
   );
+
+  if (!mounted) {
+    return (
+      <>
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" />
+        <style>{`
+          @keyframes particleFloat {
+            0%   { transform: translateY(0px); opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-100vh); opacity: 0; }
+          }
+        `}</style>
+      </>
+    );
+  }
 
   return (
     <>

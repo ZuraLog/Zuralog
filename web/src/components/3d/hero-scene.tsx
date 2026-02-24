@@ -15,35 +15,32 @@
 
 import { useRef, useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, Float, useTexture, Environment } from "@react-three/drei";
+import { useGLTF, Float, Environment } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { getMouseParallax, useMouseParallax } from "@/hooks/use-mouse-parallax";
+import { createDashboardCanvas } from "./screen-dashboard";
 
 const MODEL_PATH = "/models/phone/scene.gltf";
-const SCREEN_TEXTURE_PATH = "/models/phone/screen-logo.png";
 
 /* ─── Phone Model (GLTF) ────────────────────────────────────────────── */
 function PhoneModel({ isMobile }: { isMobile: boolean }) {
   const gltf = useGLTF(MODEL_PATH);
-  const screenTexture = useTexture(SCREEN_TEXTURE_PATH);
+
+  // Build a CanvasTexture from the programmatic dashboard renderer.
+  const screenTexture = useMemo(() => {
+    const canvas = createDashboardCanvas();
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.flipY = false;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
+  }, []);
 
   // Scale derivation:
   //   Nested matrices: Cube.010 (scale=100) → FBX node (scale=0.01) = net 1.0 Three.js unit = 0.708 units tall.
   //   Targeting ~1.3 units tall on desktop (fills ~28% of fov-50 view at z=5), leaving room for cards.
   const scale = isMobile ? 2.0 : 2.3;
-
-  // Configure texture: flipY=false per GLTF spec (UVs are already Y-flipped in the format).
-  // eslint-disable-next-line react-hooks/immutability
-  screenTexture.flipY = false;
-  // eslint-disable-next-line react-hooks/immutability
-  screenTexture.colorSpace = THREE.SRGBColorSpace;
-  // eslint-disable-next-line react-hooks/immutability
-  screenTexture.wrapS = THREE.ClampToEdgeWrapping;
-  // eslint-disable-next-line react-hooks/immutability
-  screenTexture.wrapT = THREE.ClampToEdgeWrapping;
-  // eslint-disable-next-line react-hooks/immutability
-  screenTexture.needsUpdate = true;
 
   // Apply custom materials directly to the GLTF scene after load.
   useEffect(() => {
@@ -55,6 +52,7 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
     });
     screenMat.needsUpdate = true;
 
+    let screenFound = false;
     gltf.scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
 
@@ -64,18 +62,18 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
       const matName = (mat?.name || "").toLowerCase();
 
       const isScreen =
-        nodeName === "cube010_screen001_0" ||
-        matName === "screen.001";
+        nodeName.includes("screen");
 
       const isGlass =
-        nodeName === "cube010_glass002_0" ||
-        matName === "glass.002" ||
-        nodeName === "cube010_lensinglass_0" ||
-        matName === "lensinglass";
+        nodeName.includes("glass") ||
+        matName.includes("glass") ||
+        nodeName.includes("lensinglass") ||
+        matName.includes("lensinglass");
 
       if (isScreen) {
         child.material = screenMat;
         child.renderOrder = 1;
+        screenFound = true;
       } else if (isGlass) {
         // Replace glass with a near-invisible transparent material so screen shows through.
         child.material = new THREE.MeshStandardMaterial({
@@ -94,6 +92,7 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
         mat.needsUpdate = true;
       }
     });
+    if (!screenFound) console.warn("[PhoneModel] No screen mesh found");
   }, [gltf.scene, screenTexture]);
 
   // Use original scene directly (no clone needed since we manage materials via useEffect).

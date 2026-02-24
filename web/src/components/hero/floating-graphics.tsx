@@ -194,12 +194,6 @@ const DESKTOP_ELEMENTS: GraphicElement[] = [
   { id: "metrics",   x: 50, y: 62, depth: 4, delay: 1.1, content: <MetricPills /> },
 ];
 
-const MOBILE_ELEMENTS: GraphicElement[] = [
-  { id: "weekly",  x: 80, y: 28, depth: 4, delay: 0.7, content: <WeeklyChart /> },
-  { id: "coach",   x: 18, y: 55, depth: 4, delay: 0.9, content: <AICoachBubble /> },
-  { id: "metrics", x: 50, y: 78, depth: 3, delay: 1.1, content: <MetricPills /> },
-];
-
 /* ─── Component ──────────────────────────────────────────────────────── */
 
 interface FloatingGraphicsProps {
@@ -219,7 +213,10 @@ export function FloatingGraphics({
   isMobile,
   reducedMotion = false,
 }: FloatingGraphicsProps) {
-  const elements = isMobile ? MOBILE_ELEMENTS : DESKTOP_ELEMENTS;
+  // On mobile, integration cards provide enough visual context — skip floating graphics
+  if (isMobile) return null;
+
+  const elements = DESKTOP_ELEMENTS;
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-visible">
