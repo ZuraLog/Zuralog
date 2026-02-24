@@ -1,29 +1,41 @@
 /**
- * HeroSceneLoader — client-side dynamic importer for 3D scenes.
- *
- * Three.js cannot run during SSR. This client component uses next/dynamic
- * with `ssr: false` to safely lazy-load any 3D Canvas component.
- *
- * Usage in Server Components:
- * ```tsx
- * import { HeroSceneLoader } from '@/components/3d/hero-scene-loader';
- * // In JSX:
- * <HeroSceneLoader />
- * ```
+ * HeroSceneLoader — SSR-safe dynamic loader for the 3D hero scene.
+ * All Three.js code is loaded client-side only via next/dynamic.
+ * Shows a pulsing skeleton while the scene loads.
  */
-'use client';
+"use client";
 
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
+import { Canvas } from "@react-three/fiber";
+import { Suspense } from "react";
+import { useDevice } from "@/hooks/use-device";
 
-/** Lazy-load the test scene with no SSR. Shows a dark placeholder during load. */
-const TestScene = dynamic(() => import('./test-scene'), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-background" />,
-});
+const HeroScene = dynamic(
+  () => import("./hero-scene").then((m) => ({ default: m.HeroScene })),
+  { ssr: false, loading: () => null },
+);
 
 /**
- * Renders the 3D test scene (safe for Server Component parents).
+ * Renders the 3D hero scene with SSR guard and loading skeleton.
+ * Degrades gracefully if WebGL is unavailable.
  */
 export function HeroSceneLoader() {
-  return <TestScene />;
+  const { isMobile } = useDevice();
+
+  return (
+    <Suspense
+      fallback={
+        <div className="absolute inset-0 animate-pulse bg-gradient-radial from-sage/5 via-transparent to-transparent" />
+      }
+    >
+      <Canvas
+        dpr={[1, Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1, isMobile ? 1.5 : 2)]}
+        gl={{ antialias: !isMobile, alpha: true, powerPreference: "high-performance" }}
+        camera={{ position: [0, 0, 5], fov: 45 }}
+        className="absolute inset-0"
+      >
+        <HeroScene isMobile={isMobile} />
+      </Canvas>
+    </Suspense>
+  );
 }

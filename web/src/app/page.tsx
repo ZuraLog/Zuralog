@@ -1,26 +1,38 @@
 /**
- * Home page — placeholder while the full landing page is built in Phase 3.2.
- * Renders the Three.js test scene to verify the 3D pipeline.
+ * Home page — Zuralog waitlist landing page.
+ *
+ * Single-page layout composed of:
+ * 1. PageLoader  — initial fade-in overlay
+ * 2. Navbar      — sticky top nav (appears on scroll)
+ * 3. Hero        — full-screen 3D hero + headline
+ * 4. Problem     — the fragmentation problem
+ * 5. Features    — what Zuralog does
+ * 6. HowItWorks  — three-step process
+ * 7. Waitlist    — quiz funnel + email signup + leaderboard
+ * 8. Footer      — minimal footer
  */
-import { Button } from '@/components/ui/button';
-import { HeroSceneLoader } from '@/components/3d/hero-scene-loader';
+import { Navbar } from '@/components/sections/navbar';
+import { Hero } from '@/components/sections/hero';
+import { ProblemSection } from '@/components/sections/problem';
+import { FeaturesSection } from '@/components/sections/features';
+import { HowItWorksSection } from '@/components/sections/how-it-works';
+import { WaitlistSection } from '@/components/sections/waitlist-section';
+import { Footer } from '@/components/sections/footer';
+import { PageLoader } from '@/components/ui/page-loader';
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen">
-      {/* 3D background scene — loaded client-side only */}
-      <div className="absolute inset-0 -z-10">
-        <HeroSceneLoader />
-      </div>
-
-      {/* Overlay content */}
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-24">
-        <h1 className="font-display text-5xl font-bold tracking-tight">Zuralog</h1>
-        <p className="text-muted-foreground">Coming soon — your AI fitness hub.</p>
-        <Button className="rounded-full bg-primary px-8 text-primary-foreground">
-          Join the Waitlist
-        </Button>
-      </div>
-    </main>
+    <>
+      <PageLoader />
+      <Navbar />
+      <main>
+        <Hero />
+        <ProblemSection />
+        <FeaturesSection />
+        <HowItWorksSection />
+        <WaitlistSection />
+      </main>
+      <Footer />
+    </>
   );
 }
