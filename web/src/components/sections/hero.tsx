@@ -1,20 +1,25 @@
 /**
  * Hero section — full-screen cinematic opener for the ZuraLog landing page.
  *
- * Layout:
- * - Full-viewport black background
- * - 3D scene (HeroSceneLoader) fills the screen
- * - Text overlay: eyebrow badge, headline, sub-copy, CTA
- * - Animated scroll-cue indicator at bottom
- * - Waitlist stats counter (live data)
+ * Layer stack (back → front):
+ *   z-0  : CSS radial sage glow (HeroGlow) — atmospheric underlay
+ *   z-10 : Three.js Canvas (HeroSceneLoader) — transparent, phone + icons on top of glow
+ *   z-20 : bottom fade gradient
+ *   z-30 : text content
  */
 'use client';
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { HeroGlow } from '@/components/hero-glow';
+
+const HeroSceneLoader = dynamic(
+  () => import('@/components/3d/hero-scene-loader').then((m) => m.HeroSceneLoader),
+  { ssr: false },
+);
 
 interface WaitlistStats {
   totalSignups: number;
@@ -25,9 +30,6 @@ function scrollToQuiz() {
   document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-/**
- * Hero section with full-screen 3D background and text overlay.
- */
 export function Hero() {
   const [stats, setStats] = useState<WaitlistStats | null>(null);
 
@@ -43,14 +45,21 @@ export function Hero() {
       id="hero"
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black"
     >
-      {/* Atmospheric glow background */}
-      <HeroGlow />
+      {/* Layer 1 — CSS atmospheric sage glow underlay */}
+      <div className="absolute inset-0 z-0">
+        <HeroGlow />
+      </div>
 
-      {/* Bottom fade — blends into next section */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
+      {/* Layer 2 — Three.js transparent canvas (phone + orbiting icons) */}
+      <div className="absolute inset-0 z-10">
+        <HeroSceneLoader />
+      </div>
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center gap-6 px-6 text-center">
+      {/* Layer 3 — bottom fade so the scene blends into the next section */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-48 bg-gradient-to-t from-black to-transparent" />
+
+      {/* Layer 4 — hero text content */}
+      <div className="relative z-30 flex flex-col items-center gap-6 px-6 text-center">
         {/* Eyebrow badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -107,9 +116,7 @@ export function Hero() {
             variant="ghost"
             size="lg"
             onClick={() =>
-              document
-                .getElementById('problem')
-                ?.scrollIntoView({ behavior: 'smooth' })
+              document.getElementById('problem')?.scrollIntoView({ behavior: 'smooth' })
             }
             className="rounded-full px-8 py-4 text-base text-zinc-400 hover:text-white"
           >
@@ -117,7 +124,7 @@ export function Hero() {
           </Button>
         </motion.div>
 
-        {/* Stats */}
+        {/* Live signup count */}
         {stats && stats.totalSignups > 0 && (
           <motion.p
             initial={{ opacity: 0 }}
@@ -134,8 +141,8 @@ export function Hero() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        transition={{ delay: 1.4 }}
+        className="absolute bottom-8 left-1/2 z-30 -translate-x-1/2"
       >
         <motion.div
           animate={{ y: [0, 8, 0] }}

@@ -1,7 +1,11 @@
 /**
  * HeroSceneLoader — SSR-safe dynamic loader for the 3D hero scene.
- * All Three.js code is loaded client-side only via next/dynamic.
- * Shows a pulsing skeleton while the scene loads.
+ *
+ * Key rendering decisions:
+ *   - alpha: true  → WebGL canvas is transparent so the CSS background shows through
+ *   - scene.background = null  → enforced inside HeroScene via useThree
+ *   - Canvas sits at z-index 0 (not -z-10) inside an absolute inset container
+ *     that is itself positioned correctly within the hero section stack
  */
 "use client";
 
@@ -16,24 +20,27 @@ const HeroScene = dynamic(
 );
 
 /**
- * Renders the 3D hero scene with SSR guard and loading skeleton.
- * Degrades gracefully if WebGL is unavailable.
+ * Renders the transparent 3D hero Canvas with SSR guard.
  */
 export function HeroSceneLoader() {
   const { isMobile } = useDevice();
 
   return (
-    <Suspense
-      fallback={
-        <div className="absolute inset-0 animate-pulse bg-gradient-radial from-sage/5 via-transparent to-transparent" />
-      }
-    >
+    <Suspense fallback={null}>
       <Canvas
-        dpr={[1, Math.min(typeof window !== "undefined" ? window.devicePixelRatio : 1, isMobile ? 1.5 : 2)]}
-        gl={{ antialias: !isMobile, alpha: false, powerPreference: "high-performance" }}
-        camera={{ position: [0, 0, 5], fov: 45 }}
-        className="absolute inset-0"
-        style={{ background: 'transparent' }}
+        dpr={[1, isMobile ? 1.5 : 2]}
+        gl={{
+          antialias: !isMobile,
+          alpha: true,              // transparent WebGL canvas
+          powerPreference: "high-performance",
+        }}
+        camera={{ position: [0, 0, 6], fov: 50 }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+        }}
       >
         <HeroScene isMobile={isMobile} />
       </Canvas>
