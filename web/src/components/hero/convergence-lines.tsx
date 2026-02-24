@@ -47,12 +47,15 @@ interface ConvergenceLinesProps {
   /** Normalized mouse Y in range [-1, 1] */
   mouseY: number;
   isMobile: boolean;
+  /** When true, disable parallax movement and SMIL animations */
+  reducedMotion?: boolean;
 }
 
 export function ConvergenceLines({
   mouseX,
   mouseY,
   isMobile,
+  reducedMotion = false,
 }: ConvergenceLinesProps) {
   const integrations = isMobile ? INTEGRATIONS.slice(0, 3) : INTEGRATIONS;
 
@@ -62,15 +65,15 @@ export function ConvergenceLines({
     [isMobile],
   );
 
-  // Subtle parallax: the whole SVG shifts slightly with mouse
-  const parallaxX = mouseX * 3;
-  const parallaxY = -mouseY * 3;
+  // Subtle parallax: the whole SVG shifts slightly with mouse (frozen when reduced-motion)
+  const parallaxX = reducedMotion ? 0 : mouseX * 3;
+  const parallaxY = reducedMotion ? 0 : -mouseY * 3;
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={{ opacity: reducedMotion ? 1 : 0 }}
       animate={{ opacity: 1 }}
-      transition={{ delay: 1.2, duration: 1.0 }}
+      transition={reducedMotion ? { duration: 0 } : { delay: 1.2, duration: 1.0 }}
       className="absolute inset-0 pointer-events-none"
       style={{
         transform: `translate(${parallaxX}px, ${parallaxY}px)`,
@@ -83,6 +86,7 @@ export function ConvergenceLines({
         className="absolute inset-0 h-full w-full"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
+        style={reducedMotion ? { animationDuration: "0.001ms" } : undefined}
       >
         {paths.map(({ item, d }, i) => (
           <g key={item.id}>

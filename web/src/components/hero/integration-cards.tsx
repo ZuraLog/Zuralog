@@ -44,11 +44,17 @@ function IntegrationIcon({ item, size }: { item: IntegrationItem; size: number }
   }
 }
 
-/** Convert polar angle/distance config to viewport-% CSS position */
-function polarToPercent(angleDeg: number, distance: number) {
+/**
+ * Convert polar angle/distance config to viewport-% CSS position.
+ *
+ * @param angleDeg - Angle in degrees (0 = right, 90 = top, CCW)
+ * @param distance - Distance multiplier applied to radiusVw
+ * @param radiusVw - Base orbit radius as % of viewport width
+ */
+function polarToPercent(angleDeg: number, distance: number, radiusVw: number) {
   const rad = (angleDeg * Math.PI) / 180;
-  const x = 50 + Math.cos(rad) * ORBIT_RADIUS_VW * distance;
-  const y = 50 - Math.sin(rad) * ORBIT_RADIUS_VW * distance;
+  const x = 50 + Math.cos(rad) * radiusVw * distance;
+  const y = 50 - Math.sin(rad) * radiusVw * distance;
   return { x, y };
 }
 
@@ -57,12 +63,25 @@ interface IntegrationCardProps {
   mouseX: number;
   mouseY: number;
   index: number;
+  /** When true, disable entrance animations and parallax movement */
+  reducedMotion: boolean;
+  /** When true, use tighter orbit radius appropriate for narrow viewports */
+  isMobile: boolean;
 }
 
-function IntegrationCard({ item, mouseX, mouseY, index }: IntegrationCardProps) {
-  const { x, y } = polarToPercent(item.angle, item.distance);
+function IntegrationCard({
+  item,
+  mouseX,
+  mouseY,
+  index,
+  reducedMotion,
+  isMobile,
+}: IntegrationCardProps) {
+  // Use a tighter radius on mobile (22 vw) to prevent cards overlapping the phone
+  const radiusVw = isMobile ? 22 : ORBIT_RADIUS_VW;
+  const { x, y } = polarToPercent(item.angle, item.distance, radiusVw);
 
-  const parallaxStrength = 12 * item.distance;
+  const parallaxStrength = reducedMotion ? 0 : 12 * item.distance;
   const offsetX = mouseX * parallaxStrength;
   const offsetY = -mouseY * parallaxStrength;
 
@@ -83,9 +102,13 @@ function IntegrationCard({ item, mouseX, mouseY, index }: IntegrationCardProps) 
       }}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.6 }}
+        initial={reducedMotion ? false : { opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.8 + index * 0.15, duration: 0.6, ease: "easeOut" }}
+        transition={
+          reducedMotion
+            ? { duration: 0 }
+            : { delay: 0.8 + index * 0.15, duration: 0.6, ease: "easeOut" }
+        }
         className="flex flex-col items-center gap-1.5"
         style={{
           x: offsetX,
@@ -122,9 +145,16 @@ interface IntegrationCardsProps {
   /** Normalized mouse Y in range [-1, 1] */
   mouseY: number;
   isMobile: boolean;
+  /** When true, disable entrance animations and parallax movement */
+  reducedMotion?: boolean;
 }
 
-export function IntegrationCards({ mouseX, mouseY, isMobile }: IntegrationCardsProps) {
+export function IntegrationCards({
+  mouseX,
+  mouseY,
+  isMobile,
+  reducedMotion = false,
+}: IntegrationCardsProps) {
   // Show fewer integrations on mobile to avoid clutter
   const visible = isMobile ? INTEGRATIONS.slice(0, 3) : INTEGRATIONS;
 
@@ -137,6 +167,8 @@ export function IntegrationCards({ mouseX, mouseY, isMobile }: IntegrationCardsP
           mouseX={mouseX}
           mouseY={mouseY}
           index={i}
+          reducedMotion={reducedMotion}
+          isMobile={isMobile}
         />
       ))}
     </div>

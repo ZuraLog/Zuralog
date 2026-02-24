@@ -154,6 +154,8 @@ interface FloatingGraphicsProps {
   mouseY: number;
   /** Render mobile-optimised subset of elements when true */
   isMobile: boolean;
+  /** When true, disable entrance animations and parallax movement */
+  reducedMotion?: boolean;
 }
 
 /**
@@ -165,8 +167,14 @@ interface FloatingGraphicsProps {
  * @param mouseX - Normalized horizontal mouse position [-1, 1]
  * @param mouseY - Normalized vertical mouse position [-1, 1]
  * @param isMobile - When true, renders the reduced mobile element set
+ * @param reducedMotion - When true, skips entrance animations and freezes parallax
  */
-export function FloatingGraphics({ mouseX, mouseY, isMobile }: FloatingGraphicsProps) {
+export function FloatingGraphics({
+  mouseX,
+  mouseY,
+  isMobile,
+  reducedMotion = false,
+}: FloatingGraphicsProps) {
   const elements = isMobile ? MOBILE_ELEMENTS : DESKTOP_ELEMENTS;
 
   return (
@@ -186,12 +194,16 @@ export function FloatingGraphics({ mouseX, mouseY, isMobile }: FloatingGraphicsP
           }}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            initial={reducedMotion ? false : { opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: el.delay, duration: 0.7, ease: "easeOut" }}
+            transition={
+              reducedMotion
+                ? { duration: 0 }
+                : { delay: el.delay, duration: 0.7, ease: "easeOut" }
+            }
             style={{
-              x: mouseX * el.depth,
-              y: -mouseY * el.depth,
+              x: reducedMotion ? 0 : mouseX * el.depth,
+              y: reducedMotion ? 0 : -mouseY * el.depth,
               willChange: "transform",
             }}
           >

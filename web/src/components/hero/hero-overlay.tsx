@@ -14,7 +14,8 @@
  *   - Bootstrap the singleton by calling `useMouseParallax()` (required for the
  *     RAF tick to start — hero-scene.tsx uses `getMouseParallax()` directly)
  *   - Detect mobile viewport (≤768 px) and pass `isMobile` to children
- *   - Honour `prefers-reduced-motion` by freezing parallax at zero when set
+ *   - Honour `prefers-reduced-motion` by freezing parallax and disabling entrance
+ *     animations in all child components
  */
 "use client";
 
@@ -41,20 +42,29 @@ export function HeroOverlay() {
 
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  // Lazy initialiser: read matchMedia on first render (client-only; safe because
+  // this component is dynamically imported with ssr:false).
+  const [reducedMotion, setReducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const rafRef = useRef<number | null>(null);
+  // Use a ref mirror of reducedMotion so the RAF callback always reads the latest
+  // value without needing to be recreated when reducedMotion changes.
+  const reducedMotionRef = useRef(false);
 
-  // Detect `prefers-reduced-motion` once on mount
-  const reducedMotion = useRef(false);
-
+  // Subscribe to `prefers-reduced-motion` changes and keep ref in sync
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reducedMotion.current = mq.matches;
+    // Sync ref on every state change (effect re-runs when reducedMotion changes)
+    reducedMotionRef.current = reducedMotion;
     const handler = (e: MediaQueryListEvent) => {
-      reducedMotion.current = e.matches;
+      setReducedMotion(e.matches);
     };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
+  }, [reducedMotion]);
 
   // Viewport width detection
   useEffect(() => {
@@ -71,8 +81,8 @@ export function HeroOverlay() {
     let last = { x: 0, y: 0 };
     const loop = () => {
       const pos = getMouseParallax();
-      const x = reducedMotion.current ? 0 : pos.x;
-      const y = reducedMotion.current ? 0 : pos.y;
+      const x = reducedMotionRef.current ? 0 : pos.x;
+      const y = reducedMotionRef.current ? 0 : pos.y;
       // Only trigger a re-render if values changed meaningfully (> 0.001)
       if (Math.abs(x - last.x) > 0.001 || Math.abs(y - last.y) > 0.001) {
         last = { x, y };
@@ -89,13 +99,28 @@ export function HeroOverlay() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       {/* Layer 1 (back): animated SVG convergence lines */}
-      <ConvergenceLines mouseX={mouse.x} mouseY={mouse.y} isMobile={isMobile} />
+      <ConvergenceLines
+        mouseX={mouse.x}
+        mouseY={mouse.y}
+        isMobile={isMobile}
+        reducedMotion={reducedMotion}
+      />
 
       {/* Layer 2 (mid): floating ZuraLog UI graphic elements */}
-      <FloatingGraphics mouseX={mouse.x} mouseY={mouse.y} isMobile={isMobile} />
+      <FloatingGraphics
+        mouseX={mouse.x}
+        mouseY={mouse.y}
+        isMobile={isMobile}
+        reducedMotion={reducedMotion}
+      />
 
       {/* Layer 3 (front): glassmorphic integration brand cards */}
-      <IntegrationCards mouseX={mouse.x} mouseY={mouse.y} isMobile={isMobile} />
+      <IntegrationCards
+        mouseX={mouse.x}
+        mouseY={mouse.y}
+        isMobile={isMobile}
+        reducedMotion={reducedMotion}
+      />
     </div>
   );
 }

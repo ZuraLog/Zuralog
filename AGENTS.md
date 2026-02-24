@@ -34,6 +34,7 @@ This project uses specialized **Agent Skills** for development.
 - **Superpowers**: [Superpowers Skill](.agent/skills/superpowers/skills/using-superpowers/SKILL.md)
   - **Note**: This is your primary directive for high-level reasoning, cross-domain synthesis, and creative problem-solving. Review its instructions before starting any complex task.
 - **Frontend Design**: [Creative Frontend Design Skill](./.agent/skills/frontend-design/SKILL.md) — Create distinctive, production-grade frontend interfaces with high design quality.
+- **Browser Automation**: [Agent Browser Skill](./.agent/skills/agent-browser/SKILL.md) — Automate browser interactions (navigate, fill forms, click, screenshot, scrape data, test web apps) via `npx agent-browser` CLI.
 
 ## Canonical Commands
 - **Discovery**: `dir /s /b *.md` (To find documentation)
