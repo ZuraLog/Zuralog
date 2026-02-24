@@ -141,7 +141,7 @@ const DESKTOP_ELEMENTS: GraphicElement[] = [
 
 const MOBILE_ELEMENTS: GraphicElement[] = [
   { id: "bar-chart", x: 12, y: 35, depth: 5, delay: 0.6, content: <BarChart /> },
-  { id: "metric",    x: 80, y: 65, depth: 4, delay: 0.8, content: <MetricPill /> },
+  { id: "metric",    x: 80, y: 65, depth: 5, delay: 0.8, content: <MetricPill /> },
   { id: "chat",      x: 78, y: 30, depth: 6, delay: 1.0, content: <AIChatBubble /> },
 ];
 

@@ -30,6 +30,12 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
   const screenTexture = useTexture(SCREEN_TEXTURE_PATH);
   const scale = isMobile ? 0.9 : 1.2;
 
+  // Configure texture properties BEFORE useMemo so they're set before GPU upload.
+  // Setting these inside the useMemo traverse would not trigger a re-upload.
+  screenTexture.flipY = false;          // GLTF UVs expect non-flipped
+  screenTexture.colorSpace = THREE.SRGBColorSpace;
+  screenTexture.needsUpdate = true;
+
   // Clone the scene so we can safely modify materials without mutating the cached original
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true);
@@ -46,9 +52,6 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
 
       if (isScreen) {
         // Apply Zuralog logo texture to the screen mesh
-        screenTexture.flipY = false; // GLTF UVs expect non-flipped
-        screenTexture.colorSpace = THREE.SRGBColorSpace;
-
         child.material = new THREE.MeshStandardMaterial({
           map: screenTexture,
           emissive: new THREE.Color("#CFE1B9"),
