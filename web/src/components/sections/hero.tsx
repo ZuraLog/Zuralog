@@ -10,11 +10,9 @@
  */
 'use client';
 
-import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { HeroGlow } from '@/components/hero-glow';
 
 const HeroSceneLoader = dynamic(
@@ -27,25 +25,11 @@ const HeroOverlay = dynamic(
   { ssr: false },
 );
 
-interface WaitlistStats {
-  totalSignups: number;
-  foundingMembersLeft: number;
-}
-
 function scrollToQuiz() {
   document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 export function Hero() {
-  const [stats, setStats] = useState<WaitlistStats | null>(null);
-
-  useEffect(() => {
-    fetch('/api/waitlist/stats')
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => {});
-  }, []);
-
   return (
     <section
       id="hero"
@@ -67,42 +51,38 @@ export function Hero() {
       </div>
 
       {/* Layer 4 — bottom fade so the scene blends into the next section */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-48 bg-gradient-to-t from-black to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-56 bg-gradient-to-t from-black to-transparent" />
 
-      {/* Layer 5 — hero text content, anchored to bottom to stay below the 3D scene */}
-      <div className="absolute bottom-20 left-0 right-0 z-30 flex flex-col items-center gap-4 px-6 text-center">
-        {/* Eyebrow badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        >
-          <Badge
-            variant="outline"
-            className="rounded-full border-sage/30 bg-sage/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-sage"
-          >
-            {stats && stats.foundingMembersLeft > 0
-              ? `${stats.foundingMembersLeft} Founding Member spots left`
-              : 'Early Access — Join the Waitlist'}
-          </Badge>
-        </motion.div>
+      {/* ZuraLog wordmark — top-left */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="absolute left-6 top-6 z-30 flex items-center gap-2"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="ZuraLog" className="h-7 w-7" />
+        <span className="text-base font-semibold tracking-tight text-white/90">ZuraLog</span>
+      </motion.div>
 
-        {/* Headline — new slogan */}
+      {/* Layer 5 — hero text content, anchored to bottom */}
+      <div className="absolute bottom-16 left-0 right-0 z-30 flex flex-col items-center gap-5 px-6 text-center">
+        {/* Headline — two distinct lines */}
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
-          className="font-display max-w-2xl text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
+          className="font-display max-w-xl text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-6xl"
         >
-          Unified Health.{' '}
-          <span className="text-sage">Made Smart.</span>
+          <span className="block">Unified Health.</span>
+          <span className="block text-sage">Made Smart.</span>
         </motion.h1>
 
         {/* CTAs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
+          transition={{ duration: 0.7, delay: 0.25, ease: 'easeOut' }}
           className="flex flex-col items-center gap-3 sm:flex-row"
         >
           <Button
@@ -123,30 +103,6 @@ export function Hero() {
             See how it works
           </Button>
         </motion.div>
-
-        {/* Live signup count */}
-        {stats && stats.totalSignups > 0 && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-sm text-zinc-500"
-          >
-            {stats.totalSignups.toLocaleString()} people already on the list
-          </motion.p>
-        )}
-      </div>
-
-      {/* CC-BY-4.0 attribution for GLTF model (MajdyModels on Sketchfab) */}
-      <div className="absolute bottom-2 right-3 z-30">
-        <a
-          href="https://sketchfab.com/3d-models/iphone-17-pro-max-natural-titanium-56d2bffc70514bc3a5afa72396e1bda1"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[9px] text-white/20 transition-colors hover:text-white/40"
-        >
-          3D model: MajdyModels (CC BY 4.0)
-        </a>
       </div>
 
       {/* Scroll cue */}
@@ -154,7 +110,7 @@ export function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.4 }}
-        className="absolute bottom-8 left-1/2 z-30 -translate-x-1/2"
+        className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2"
       >
         <motion.div
           animate={{ y: [0, 8, 0] }}

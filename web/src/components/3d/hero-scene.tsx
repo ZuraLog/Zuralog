@@ -8,7 +8,6 @@
  *   - Mouse parallax tilts the phone group (via getMouseParallax singleton)
  *   - Float wrapper for gentle idle bobbing
  *   - Bloom post-processing for emissive glow
- *   - Particles remain as ambient atmosphere
  *
  * Attribution: iPhone 17 Pro Max by MajdyModels (Sketchfab) — CC-BY-4.0
  */
@@ -29,34 +28,25 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
   const gltf = useGLTF(MODEL_PATH);
   const screenTexture = useTexture(SCREEN_TEXTURE_PATH);
 
-  // The GLTF root node bakes a 90° X-axis rotation (Blender→GLTF axis correction).
-  // Internally the phone is stored lying on its back pointing left.
-  // We undo that baked rotation then orient the phone:
-  //   - Stand it upright:    rotate X by +Math.PI/2 (un-bake the Blender correction)
-  //   - Face screen forward: rotate Y by Math.PI    (flip 180° so screen faces +Z / camera)
-  //
   // Scale derivation:
-  //   The mesh sits inside nested matrices: Cube.010 (scale=100) → FBX node (scale=0.01)
-  //   → Sketchfab_model (rotation only). Net scale of 1.0 in Three.js = 0.708 scene units tall.
-  //   We target ~2.5 units tall so the phone fills ~55% of fov-50 view at camera z=5.
-  //   Required scale = 2.5 / 0.708 ≈ 3.53.
-  // Target phone to fill ~60% of the hero height — visible but not overwhelming.
-  // 0.708 Three.js units = phone height at scale 1.0; targeting ~1.3 units = scale 1.83.
-  const scale = isMobile ? 1.3 : 1.83;
+  //   Nested matrices: Cube.010 (scale=100) → FBX node (scale=0.01) = net 1.0 Three.js unit = 0.708 units tall.
+  //   Targeting ~1.3 units tall on desktop (fills ~28% of fov-50 view at z=5), leaving room for cards.
+  const scale = isMobile ? 1.0 : 1.3;
 
-  // Three.js textures are external system objects; mutating them in an effect is correct R3F practice.
-  /* eslint-disable react-hooks/immutability */
-  useEffect(() => {
-    screenTexture.flipY = false;              // GLTF UVs are not flipped
-    screenTexture.colorSpace = THREE.SRGBColorSpace;
-    screenTexture.wrapS = THREE.ClampToEdgeWrapping;
-    screenTexture.wrapT = THREE.ClampToEdgeWrapping;
-    screenTexture.needsUpdate = true;
-  }, [screenTexture]);
-  /* eslint-enable react-hooks/immutability */
+  // Configure texture synchronously in useMemo so it's ready before material creation.
+  // GLTF spec: flipY = false (UVs already flipped in GLTF format).
+  // eslint-disable-next-line react-hooks/immutability
+  screenTexture.flipY = false;
+  // eslint-disable-next-line react-hooks/immutability
+  screenTexture.colorSpace = THREE.SRGBColorSpace;
+  // eslint-disable-next-line react-hooks/immutability
+  screenTexture.wrapS = THREE.ClampToEdgeWrapping;
+  // eslint-disable-next-line react-hooks/immutability
+  screenTexture.wrapT = THREE.ClampToEdgeWrapping;
+  // eslint-disable-next-line react-hooks/immutability
+  screenTexture.needsUpdate = true;
 
-  // Clone the scene so we can safely modify materials without mutating the cached original.
-  // useMemo re-runs only when gltf.scene or screenTexture changes.
+  // Clone scene so we can safely modify materials without mutating the cached original.
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true);
 
@@ -71,22 +61,26 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
       const isScreen = name.includes("screen") || matName.includes("screen");
 
       if (isScreen) {
-        // Replace with Zuralog logo material — emissive so it glows
+        // Screen: solid sage-green emissive so the screen visibly glows even if the texture map is dark.
+        // Use a flat emissive colour (no emissiveMap) so the whole screen area lights up uniformly.
+        // The diffuse map provides the ZuraLog logo pattern on top.
         child.material = new THREE.MeshStandardMaterial({
           map: screenTexture,
           emissive: new THREE.Color("#CFE1B9"),
-          emissiveMap: screenTexture,
-          emissiveIntensity: 0.5,
-          roughness: 0.05,
+          emissiveIntensity: 3.0,
+          roughness: 0.0,
           metalness: 0.0,
           toneMapped: false,
         });
       } else {
-        // Clone all other materials to avoid polluting the shared cache.
-        // Boost emissive slightly so the phone body is visible on dark bg.
+        // Clone other materials; override the warm copper/orange hue with dark titanium grey.
         if (!Array.isArray(child.material) && child.material instanceof THREE.MeshStandardMaterial) {
           child.material = child.material.clone();
-          child.material.envMapIntensity = 2.5;
+          // Force a near-black titanium colour regardless of original baked texture tint
+          child.material.color.set("#1a1a1a");
+          child.material.envMapIntensity = 1.2;
+          child.material.roughness = 0.3;
+          child.material.metalness = 0.9;
         }
       }
     });
@@ -95,14 +89,14 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
   }, [gltf.scene, screenTexture]);
 
   return (
-      <Float speed={1.4} rotationIntensity={0.05} floatIntensity={0.3}>
+    <Float speed={1.2} rotationIntensity={0.04} floatIntensity={0.25}>
       <primitive
         object={clonedScene}
         scale={scale}
-        // Undo baked Blender 90° X correction, then face screen toward camera (+Z).
-        // After undoing X, screen faces +X so we rotate -90° around Y to bring it to +Z.
+        // rotation=[0, PI/2, 0]: phone upright portrait, screen facing camera (+Z)
         rotation={[0, Math.PI / 2, 0]}
-        position={[0, -0.3, 0]}
+        // Centered — slight upward offset so the phone sits in the upper half of canvas
+        position={[0, 0.1, 0]}
       />
     </Float>
   );
@@ -111,31 +105,25 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
 /* ─── Ambient sage-green particle dust ──────────────────────────────── */
 
 /**
- * Generate a Float32Array of random particle positions.
- * Extracted to module scope so Math.random() is called outside a component/hook
- * context — satisfying the react-hooks/purity lint rule.
- *
- * @param count - Number of particles to generate
- * @returns Interleaved [x, y, z, x, y, z, ...] positions
+ * Generate Float32Array of random particle positions outside a component
+ * so Math.random() is not called during render (react-hooks/purity).
  */
 function generateParticlePositions(count: number): Float32Array {
   const arr = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
-    arr[i * 3]     = (Math.random() - 0.5) * 12;
-    arr[i * 3 + 1] = (Math.random() - 0.5) * 12;
-    arr[i * 3 + 2] = (Math.random() - 0.5) * 6;
+    arr[i * 3]     = (Math.random() - 0.5) * 10;
+    arr[i * 3 + 1] = (Math.random() - 0.5) * 10;
+    arr[i * 3 + 2] = (Math.random() - 0.5) * 5;
   }
   return arr;
 }
 
-function Particles({ count = 80 }: { count?: number }) {
+function Particles({ count = 60 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null);
-  // positions are generated once (stable per count) via a module-level helper
-  // so Math.random() is not called during render.
   const positions = useMemo(() => generateParticlePositions(count), [count]);
 
   useFrame((_, delta) => {
-    if (ref.current) ref.current.rotation.y += delta * 0.012;
+    if (ref.current) ref.current.rotation.y += delta * 0.01;
   });
 
   return (
@@ -150,9 +138,9 @@ function Particles({ count = 80 }: { count?: number }) {
       </bufferGeometry>
       <pointsMaterial
         color="#CFE1B9"
-        size={0.025}
+        size={0.02}
         transparent
-        opacity={0.4}
+        opacity={0.3}
         sizeAttenuation
       />
     </points>
@@ -168,53 +156,48 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
   const { scene, camera } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
-  // Fix 1: start the shared singleton tick so smoothMouse is kept up-to-date.
-  // HeroScene reads via getMouseParallax() in useFrame; the returned ref is unused here.
+  // Start the shared singleton tick so smoothMouse is kept up-to-date.
   useMouseParallax();
 
-  // Transparent canvas — Three.js scene/camera are external R3F objects;
-  // mutating them in an effect is the correct R3F pattern.
   /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     scene.background = null;
-    // Camera at z=5 with fov=50 gives a good framing for the enlarged phone
     camera.position.set(0, 0, 5);
   }, [scene, camera]);
   /* eslint-enable react-hooks/immutability */
 
-  // Mouse parallax — gentle tilt, reads from shared singleton (no duplicate listener)
+  // Gentle mouse parallax tilt
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     const mouse = getMouseParallax();
     groupRef.current.rotation.y +=
-      (mouse.x * 0.18 - groupRef.current.rotation.y) * delta * 2.5;
+      (mouse.x * 0.12 - groupRef.current.rotation.y) * delta * 2.5;
     groupRef.current.rotation.x +=
-      (mouse.y * 0.10 - groupRef.current.rotation.x) * delta * 2.5;
+      (mouse.y * 0.07 - groupRef.current.rotation.x) * delta * 2.5;
   });
 
   return (
     <>
-      {/* Lighting — cool-toned studio to contrast the warm CSS glow behind canvas */}
-      <ambientLight intensity={0.3} />
-      <pointLight position={[0, 1, 5]}   intensity={3.0} color="#e8f0ff" />
-      <pointLight position={[3, 2, 3]}   intensity={1.5} color="#CFE1B9" />
-      <pointLight position={[-3, -1, 4]} intensity={1.2} color="#b0d0ff" />
-      <directionalLight position={[0, 1, 5]} intensity={1.5} color="#ddeeff" />
+      {/* Lighting — cool studio setup. Phone body reads as dark titanium, not orange. */}
+      <ambientLight intensity={0.2} />
+      <pointLight position={[0, 1, 5]}   intensity={1.2} color="#d0e8ff" />
+      <pointLight position={[2, 2, 3]}   intensity={0.6} color="#CFE1B9" />
+      <pointLight position={[-2, -1, 3]} intensity={0.5} color="#a8c8ff" />
 
-      {/* Environment map for realistic reflections on phone glass/metal */}
-      <Environment preset="night" environmentIntensity={0.5} />
+      {/* Environment map for glass/metal reflections — city preset gives cool blue tones */}
+      <Environment preset="city" environmentIntensity={0.3} />
 
       <group ref={groupRef}>
         <PhoneModel isMobile={isMobile} />
       </group>
 
-      <Particles count={isMobile ? 30 : 70} />
+      <Particles count={isMobile ? 20 : 50} />
 
-      {/* Bloom for emissive glow on screen + particles */}
+      {/* Soft bloom for screen glow */}
       <EffectComposer>
         <Bloom
-          intensity={isMobile ? 0.6 : 1.2}
-          luminanceThreshold={0.15}
+          intensity={isMobile ? 0.4 : 0.8}
+          luminanceThreshold={0.2}
           luminanceSmoothing={0.9}
           mipmapBlur
         />
@@ -223,5 +206,5 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
   );
 }
 
-// Preload GLTF + textures on module load (drei cache)
+// Preload GLTF + textures on module load
 useGLTF.preload(MODEL_PATH);

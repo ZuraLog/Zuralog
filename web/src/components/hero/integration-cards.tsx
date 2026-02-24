@@ -85,8 +85,9 @@ function IntegrationCard({
   const offsetX = mouseX * parallaxStrength;
   const offsetY = -mouseY * parallaxStrength;
 
-  const baseSize = 64 * item.scale;
-  const iconSize = Math.round(24 * item.scale);
+  // Larger cards (80px base) so integration logos are clearly legible
+  const baseSize = 80 * item.scale;
+  const iconSize = Math.round(32 * item.scale);
 
   // Fix 4: two-div pattern — outer plain div handles absolute positioning,
   // inner motion.div handles FM animations + parallax offset via x/y motion values.
@@ -130,7 +131,7 @@ function IntegrationCard({
         {/* Integration label */}
         <span
           className="text-center font-medium tracking-wide text-white/60 whitespace-nowrap"
-          style={{ fontSize: Math.max(9, 10 * item.scale) }}
+          style={{ fontSize: Math.max(10, 12 * item.scale) }}
         >
           {item.label}
         </span>

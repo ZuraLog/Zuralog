@@ -1,11 +1,14 @@
 /**
  * convergence-lines.tsx — animated SVG bezier paths from integrations to phone center.
  *
- * Each integration has a curved path drawn from its polar position to the
- * viewport center (where the phone sits). Animated dashes and traveling dots
- * show "data flowing in" — communicating ZuraLog's core hub concept.
+ * Each line is anchored to its integration card's CSS position (same polarToPercent
+ * calculation as integration-cards.tsx). The SVG uses viewBox="0 0 100 100" with
+ * preserveAspectRatio="none" so coordinates map 1:1 to viewport percentages.
  *
- * Uses pure SVG SMIL animations (no JS per frame) for GPU-composited performance.
+ * Mouse parallax: each line endpoint shifts by the same parallax offset applied to
+ * the corresponding integration card, so the line visually stays anchored to the card.
+ * The phone-center terminus (50%, 50%) shifts by a small fraction of mouse movement
+ * to simulate the phone tilting in 3D space.
  */
 "use client";
 
@@ -17,37 +20,121 @@ import {
   type IntegrationItem,
 } from "@/lib/integration-config";
 
-/** Convert polar angle/distance to SVG viewBox coordinates (0–100 space) */
-function polarToSvg(angleDeg: number, distance: number): { x: number; y: number } {
+/** Convert polar angle/distance to SVG viewBox % coordinates */
+function polarToSvg(angleDeg: number, distance: number, radiusVw: number): { x: number; y: number } {
   const rad = (angleDeg * Math.PI) / 180;
-  const x = 50 + Math.cos(rad) * ORBIT_RADIUS_VW * distance;
-  const y = 50 - Math.sin(rad) * ORBIT_RADIUS_VW * distance;
-  return { x, y };
+  return {
+    x: 50 + Math.cos(rad) * radiusVw * distance,
+    y: 50 - Math.sin(rad) * radiusVw * distance,
+  };
 }
 
-/** Generate a smooth quadratic bezier from integration to phone center */
-function makePath(item: IntegrationItem): string {
-  const start = polarToSvg(item.angle, item.distance);
-  const end = { x: 50, y: 50 };
+interface LineProps {
+  item: IntegrationItem;
+  index: number;
+  mouseX: number;
+  mouseY: number;
+  reducedMotion: boolean;
+  isMobile: boolean;
+}
 
-  // Control point: pull perpendicular to the direct line for organic curvature
+function ConvergenceLine({ item, index, mouseX, mouseY, reducedMotion, isMobile }: LineProps) {
+  const radiusVw = isMobile ? 22 : ORBIT_RADIUS_VW;
+
+  // The integration card's parallax strength (same formula as integration-cards.tsx)
+  const parallaxStrength = reducedMotion ? 0 : 12 * item.distance;
+  // Convert px offset → SVG % units (viewport width ≈ 100 SVG units wide)
+  // We scale down by a factor — 1vw = 1 SVG unit, and parallaxStrength is in px.
+  // At a typical 1440px wide screen, 1px ≈ 0.069 SVG units.
+  // We'll use a simple approximation: divide by 14 to get SVG units.
+  const cardOffsetX = (mouseX * parallaxStrength) / 14;
+  const cardOffsetY = (-mouseY * parallaxStrength) / 14;
+
+  // Phone center also shifts slightly (mimics the 3D tilt from hero-scene.tsx)
+  const phoneOffsetX = reducedMotion ? 0 : mouseX * 1.5;
+  const phoneOffsetY = reducedMotion ? 0 : -mouseY * 1.0;
+
+  const base = polarToSvg(item.angle, item.distance, radiusVw);
+  const start = {
+    x: base.x + cardOffsetX,
+    y: base.y + cardOffsetY,
+  };
+  const end = {
+    x: 50 + phoneOffsetX,
+    y: 50 + phoneOffsetY,
+  };
+
+  // Control point: pull perpendicular for organic curvature
   const midX = (start.x + end.x) / 2;
   const midY = (start.y + end.y) / 2;
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const perpX = -dy * 0.25;
-  const perpY = dx * 0.25;
+  const perpX = -dy * 0.22;
+  const perpY = dx * 0.22;
+  const ctrl = { x: midX + perpX, y: midY + perpY };
 
-  return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} Q ${(midX + perpX).toFixed(2)} ${(midY + perpY).toFixed(2)} ${end.x} ${end.y}`;
+  const d = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} Q ${ctrl.x.toFixed(2)} ${ctrl.y.toFixed(2)} ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+
+  return (
+    <g key={item.id}>
+      {/* Faint static base path */}
+      <path
+        d={d}
+        fill="none"
+        stroke="#CFE1B9"
+        strokeWidth="0.15"
+        strokeOpacity="0.12"
+      />
+
+      {!reducedMotion && (
+        <>
+          {/* Animated flowing dash */}
+          <path
+            d={d}
+            fill="none"
+            stroke="#CFE1B9"
+            strokeWidth="0.12"
+            strokeOpacity="0.35"
+            strokeDasharray="1.5 3"
+            strokeLinecap="round"
+          >
+            <animate
+              attributeName="stroke-dashoffset"
+              from="20"
+              to="0"
+              dur={`${3 + index * 0.5}s`}
+              repeatCount="indefinite"
+            />
+          </path>
+
+          {/* Traveling dot 1 */}
+          <circle r="0.35" fill="#CFE1B9" opacity="0.6">
+            <animateMotion
+              dur={`${2.5 + index * 0.4}s`}
+              repeatCount="indefinite"
+              path={d}
+            />
+          </circle>
+
+          {/* Traveling dot 2 (offset start) */}
+          <circle r="0.22" fill="#CFE1B9" opacity="0.35">
+            <animateMotion
+              dur={`${3.2 + index * 0.3}s`}
+              repeatCount="indefinite"
+              path={d}
+              begin={`${1.2 + index * 0.2}s`}
+            />
+          </circle>
+        </>
+      )}
+    </g>
+  );
 }
 
 interface ConvergenceLinesProps {
-  /** Normalized mouse X in range [-1, 1] */
   mouseX: number;
-  /** Normalized mouse Y in range [-1, 1] */
   mouseY: number;
   isMobile: boolean;
-  /** When true, disable parallax movement and SMIL animations */
   reducedMotion?: boolean;
 }
 
@@ -59,26 +146,16 @@ export function ConvergenceLines({
 }: ConvergenceLinesProps) {
   const integrations = isMobile ? INTEGRATIONS.slice(0, 3) : INTEGRATIONS;
 
-  const paths = useMemo(
-    () => integrations.map((item) => ({ item, d: makePath(item) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isMobile],
-  );
-
-  // Subtle parallax: the whole SVG shifts slightly with mouse (frozen when reduced-motion)
-  const parallaxX = reducedMotion ? 0 : mouseX * 3;
-  const parallaxY = reducedMotion ? 0 : -mouseY * 3;
+  // Memoize only the static integration list — paths now recompute on every
+  // mouseX/mouseY change (cheap math, no DOM) so we pass mouse directly to lines.
+  const items = useMemo(() => integrations, [isMobile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <motion.div
       initial={{ opacity: reducedMotion ? 1 : 0 }}
       animate={{ opacity: 1 }}
       transition={reducedMotion ? { duration: 0 } : { delay: 1.2, duration: 1.0 }}
-      className="absolute inset-0 pointer-events-none"
-      style={{
-        transform: `translate(${parallaxX}px, ${parallaxY}px)`,
-        willChange: "transform",
-      }}
+      className="pointer-events-none absolute inset-0"
     >
       <svg
         viewBox="0 0 100 100"
@@ -87,60 +164,16 @@ export function ConvergenceLines({
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
-        {paths.map(({ item, d }, i) => (
-          <g key={item.id}>
-            {/* Static faint background path — always visible */}
-            <path
-              d={d}
-              fill="none"
-              stroke="#CFE1B9"
-              strokeWidth="0.15"
-              strokeOpacity="0.1"
-            />
-
-            {/* Animated dashed flow path — omitted when reduced-motion is set */}
-            {!reducedMotion && (
-              <path
-                d={d}
-                fill="none"
-                stroke="#CFE1B9"
-                strokeWidth="0.12"
-                strokeOpacity="0.3"
-                strokeDasharray="1.5 3"
-                strokeLinecap="round"
-              >
-                <animate
-                  attributeName="stroke-dashoffset"
-                  from="20"
-                  to="0"
-                  dur={`${3 + i * 0.5}s`}
-                  repeatCount="indefinite"
-                />
-              </path>
-            )}
-
-            {/* Traveling dot particles — omitted when reduced-motion is set */}
-            {!reducedMotion && (
-              <>
-                <circle r="0.3" fill="#CFE1B9" opacity="0.55">
-                  <animateMotion
-                    dur={`${2.5 + i * 0.4}s`}
-                    repeatCount="indefinite"
-                    path={d}
-                  />
-                </circle>
-
-                <circle r="0.2" fill="#CFE1B9" opacity="0.3">
-                  <animateMotion
-                    dur={`${3.2 + i * 0.3}s`}
-                    repeatCount="indefinite"
-                    path={d}
-                    begin={`${1.2 + i * 0.2}s`}
-                  />
-                </circle>
-              </>
-            )}
-          </g>
+        {items.map((item, i) => (
+          <ConvergenceLine
+            key={item.id}
+            item={item}
+            index={i}
+            mouseX={mouseX}
+            mouseY={mouseY}
+            reducedMotion={reducedMotion}
+            isMobile={isMobile}
+          />
         ))}
       </svg>
     </motion.div>
