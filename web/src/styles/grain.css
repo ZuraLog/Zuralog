@@ -1,0 +1,15 @@
+/**
+ * Grain texture overlay — adds a subtle film grain effect to the page background.
+ * Applied as a pseudo-element on body at low opacity to preserve legibility.
+ * Uses a base64-encoded tiny noise PNG pattern that tiles seamlessly.
+ */
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXWBgYGHh4t5eXlzc3OLi4ubm5uVlZWPj4+NjY19fX2JiYl/f39ra2uRkZGZmZlpaWmXl5dvb29xcXGTk5NnZ2c8TV1mAAAAG3RSTlNAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAvEOwtAAAFVklEQVR4XpWWB67c2BUFb3g557T/hRo9/WUMZHlgr4Bg8Z4qQgQJlHI4A8SzFVrapvmTF9O7dmYRFZ60YiBhJRCgh1FYhiLAmdvX0CzTOpNE77ME0Zty/nWWzchDtiqrmQDeuv3powQ5ta2eN0FY0InkqDD73lT9c9lEzwUNqgFHs9VQce3TVClFCQrSTfOiYkVJQBmpbq2L6iZavPnAPcoU0dSw0SUTqz/GtrGuXfbyyBniKykOWQWGqwwma7ikVKk4hMU/c+d0Sn0/0Qq/xTB4BJXA/HWLP5OWNeDBN/LYYm4Xvl/dGsHfn6k1f6M9VUBdAW5YhS7LObqTsU6Y/9NN5U5cMuC7fxV4q9/zBD9J6CKOiH6H1EQMl2b3c=");
+}
