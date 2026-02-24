@@ -1,19 +1,20 @@
 # Zuralog — Developer Setup Guide
 
-Get the Cloud Brain (backend) and Edge Agent (mobile) running locally from a fresh clone.
+Get the Cloud Brain (backend), Edge Agent (mobile), and Website (Next.js) running locally from a fresh clone.
 
 ## Prerequisites
 
 Install the following before proceeding:
 
-| Tool | Version | Install |
-|---|---|---|
-| **Python** | 3.12+ | [python.org/downloads](https://www.python.org/downloads/) |
-| **uv** | Latest | `pip install uv` or [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) |
-| **Docker Desktop** | Latest | [docs.docker.com/desktop](https://docs.docker.com/desktop/setup/install/windows-install/) |
-| **Flutter SDK** | 3.32+ (Dart 3.11+) | [docs.flutter.dev/install/manual](https://docs.flutter.dev/install/manual) |
-| **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (needed for Android SDK, Emulator, and Java) |
-| **GNU Make** | 4.4+ | Pre-installed on macOS/Linux. Windows: `scoop install make` (recommended) — see [`make` not found](#make-not-found) |
+| Tool | Version | Install | Used By |
+|---|---|---|---|
+| **Python** | 3.12+ | [python.org/downloads](https://www.python.org/downloads/) | Cloud Brain |
+| **uv** | Latest | `pip install uv` or [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/) | Cloud Brain |
+| **Docker Desktop** | Latest | [docs.docker.com/desktop](https://docs.docker.com/desktop/setup/install/windows-install/) | Cloud Brain |
+| **Flutter SDK** | 3.32+ (Dart 3.11+) | [docs.flutter.dev/install/manual](https://docs.flutter.dev/install/manual) | Edge Agent |
+| **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (needed for Android SDK, Emulator, and Java) | Edge Agent |
+| **Node.js** | 20 LTS+ | [nodejs.org](https://nodejs.org/) | Website |
+| **GNU Make** | 4.4+ | Pre-installed on macOS/Linux. Windows: `scoop install make` (recommended) — see [`make` not found](#make-not-found) | Cloud Brain / Edge Agent |
 
 After installing Flutter, run `flutter doctor` to verify your setup and accept any Android SDK licenses.
 
@@ -352,7 +353,7 @@ flutter run --dart-define=BASE_URL=http://192.168.1.100:8001 \
 
 > Make sure the backend server is bound to `0.0.0.0:8001` (not `127.0.0.1`) so it is reachable from the emulator.
 
-### 3g. AntiGravity / VS Code Launch Configs
+### 3g. VS Code / AntiGravity Launch Configs
 
 A `.vscode/launch.json` is automatically available if you open the project in AntiGravity (or VS Code). It is **gitignored** — each developer has their own local copy with their own credentials.
 
@@ -367,6 +368,135 @@ The file is pre-populated at `.vscode/launch.json` with three configurations:
 All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to launch.
 
 > If `.vscode/launch.json` is missing (e.g., fresh clone), create it manually or run `make run` from the terminal instead.
+
+---
+
+## 4. Website (Next.js)
+
+> The website is a separate Next.js application at `web/` in the monorepo. It is deployed to Vercel and live at [https://www.zuralog.com](https://www.zuralog.com). You only need this section if you are working on the marketing site / waitlist page.
+
+All commands in this section are run from the `web/` directory unless noted.
+
+### 4a. Install Node.js Dependencies
+
+```bash
+cd web
+npm install
+```
+
+### 4b. Create Your `.env.local` File
+
+```bash
+# Windows
+copy .env.example .env.local
+
+# macOS/Linux
+cp .env.example .env.local
+```
+
+Open `.env.local` and fill in the values below.
+
+#### Required: Supabase
+
+The website uses the **same Supabase project** as the backend (`enccjffwpnwkxfkhargr`).
+
+| Variable | Where to find it | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | e.g., `https://enccjffwpnwkxfkhargr.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon public` | JWT starting with `eyJ...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` | Starts with `sb_secret_...` |
+
+> **⚠️ Warning:** `SUPABASE_SERVICE_ROLE_KEY` has full admin access. Never expose it client-side or commit it to Git. It is used only in server-side API routes.
+
+#### Required: Site URL
+
+| Variable | Local value | Production value |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | `https://www.zuralog.com` |
+
+#### Optional: Analytics (PostHog)
+
+PostHog tracking is wired but gracefully skipped when the key is absent.
+
+| Variable | Where to find it |
+|---|---|
+| `NEXT_PUBLIC_POSTHOG_KEY` | [posthog.com](https://posthog.com) → Project Settings → Project API Key |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Keep default: `https://us.i.posthog.com` |
+
+#### Deferred: Email & Rate Limiting (Phase 3.2)
+
+These are not needed until the Waitlist Landing Page (Phase 3.2) is built.
+
+| Variable | Where to find it |
+|---|---|
+| `RESEND_API_KEY` | [resend.com](https://resend.com) → API Keys (free tier: 100 emails/day) |
+| `UPSTASH_REDIS_REST_URL` | [console.upstash.com](https://console.upstash.com) → Redis database → REST URL |
+| `UPSTASH_REDIS_REST_TOKEN` | Same page → REST Token |
+
+### 4c. Start the Dev Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Hot reload is enabled — edits to `src/` apply instantly.
+
+> The website dev server does **not** depend on Docker, the Cloud Brain, or the Flutter emulator. It runs fully independently.
+
+### 4d. Verify It Works
+
+- [http://localhost:3000](http://localhost:3000) — landing page (currently a placeholder; Phase 3.2 will replace it)
+- No console errors in browser DevTools
+- If you see a blank page, check that `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set in `.env.local`
+
+### 4e. Lint and Type-Check
+
+```bash
+# ESLint
+npm run lint
+
+# TypeScript (type-check without emitting output)
+npx tsc --noEmit
+```
+
+The project enforces a zero-warning policy. All lint warnings should be treated as errors.
+
+### 4f. Build for Production (local verification)
+
+```bash
+npm run build
+npm run start    # serves the production build at http://localhost:3000
+```
+
+Run this before opening a PR that touches `web/` to confirm there are no build errors.
+
+### 4g. Deployment
+
+The website deploys automatically via Vercel on every push to `main`. The Vercel project is configured with:
+
+- **Root Directory:** `web`
+- **Build Command:** `npm run build` (Vercel default)
+- **Output Directory:** `.next` (Vercel default)
+- **Node.js Version:** 20.x
+
+All environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_SITE_URL`) are set in the Vercel dashboard → Project Settings → Environment Variables. You do **not** need to push `.env.local`.
+
+### 4h. Design System
+
+The website uses the **"Bold Convergence"** design system:
+
+| Token | Value |
+|---|---|
+| Background (dark) | `#000000` OLED black |
+| Background (light) | `#FAFAFA` |
+| Surface (dark) | `#1C1C1E` |
+| Surface (light) | `#FFFFFF` |
+| Primary (Sage Green) | `#CFE1B9` |
+| Display font | Satoshi Variable (`public/fonts/Satoshi-Variable.woff2`) |
+| Body font | Inter (Google Fonts via `next/font`) |
+| Mono font | JetBrains Mono (Google Fonts via `next/font`) |
+
+All tokens are defined as CSS variables in `src/app/globals.css` using Tailwind v4's `@theme inline`. Never hardcode hex values in component files — always reference `var(--color-*)` or Tailwind utility classes.
 
 ---
 
@@ -404,6 +534,17 @@ All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to
 | Build release App Bundle | `make build-appbundle` |
 
 > All `make` targets for Flutter automatically inject `GOOGLE_WEB_CLIENT_ID` from `cloud-brain/.env`. Never use bare `flutter run` if Google Sign-In needs to work.
+
+### Website (`web/`)
+
+| Action | Command |
+|---|---|
+| Install Node deps | `cd web && npm install` |
+| Start dev server | `cd web && npm run dev` → [http://localhost:3000](http://localhost:3000) |
+| Lint | `cd web && npm run lint` |
+| Type-check | `cd web && npx tsc --noEmit` |
+| Production build (local) | `cd web && npm run build && npm run start` |
+| Add shadcn/ui component | `cd web && npx shadcn add <component>` |
 
 ---
 

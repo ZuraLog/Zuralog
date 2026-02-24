@@ -2,6 +2,7 @@
   <img src="https://img.shields.io/badge/Status-In%20Development-blueviolet?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/Mobile-Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" />
+  <img src="https://img.shields.io/badge/Website-Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
   <img src="https://img.shields.io/badge/AI-MCP%20Agents-FF6F00?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge" />
 </p>
@@ -116,13 +117,26 @@ Every external service is an **MCP (Model Context Protocol) Server** that the AI
 | Push | **Firebase Messaging** |
 | Health Data | **health** package (HealthKit + Health Connect) |
 
+### Website (`web/`)
+
+| Component | Technology |
+|---|---|
+| Framework | **Next.js 16.x** (App Router, TypeScript) |
+| Styling | **Tailwind v4** (CSS-first, `@theme inline` tokens) |
+| Components | **shadcn/ui** |
+| 3D / Animation | **Three.js + React Three Fiber, GSAP, Framer Motion, Lenis** |
+| Backend | **Supabase** (shared project with Cloud Brain) |
+| Analytics | **PostHog + Vercel Analytics** |
+| Deployment | **Vercel** (auto-deploy from `main`, root dir: `web`) |
+| Live URL | [https://www.zuralog.com](https://www.zuralog.com) |
+
 ---
 
 ## Project Structure
 
 ```
 ZuraLog/
-├── cloud-brain/                 # Python backend
+├── cloud-brain/                 # Python backend (Cloud Brain)
 │   ├── app/
 │   │   ├── api/v1/              # REST + WebSocket endpoints
 │   │   │   ├── auth.py          # Login, register, refresh
@@ -130,7 +144,7 @@ ZuraLog/
 │   │   │   └── integrations.py  # OAuth flows (Strava, etc.)
 │   │   ├── agent/               # AI orchestration layer
 │   │   │   ├── orchestrator.py  # LLM agent loop
-│   │   │   └── mcp_client.py   # MCP tool routing
+│   │   │   └── mcp_client.py    # MCP tool routing
 │   │   ├── mcp_servers/         # Integration modules
 │   │   │   ├── base_server.py
 │   │   │   ├── strava_server.py
@@ -144,7 +158,7 @@ ZuraLog/
 │   ├── Dockerfile
 │   └── docker-compose.yml       # PostgreSQL + Redis
 │
-├── zuralog/                 # Flutter mobile app
+├── zuralog/                     # Flutter mobile app (Edge Agent)
 │   └── lib/
 │       ├── core/
 │       │   ├── network/         # API client, WebSocket, FCM
@@ -158,19 +172,35 @@ ZuraLog/
 │           ├── harness/         # Dev test harness
 │           └── health/          # Health data repository
 │
+├── web/                         # Next.js marketing website
+│   ├── src/
+│   │   ├── app/                 # App Router pages + layouts
+│   │   ├── components/          # React components (3d/, sections/, ui/)
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── lib/                 # Supabase client, GSAP, utilities
+│   │   ├── styles/              # grain.css overlay
+│   │   └── types/               # Supabase TypeScript types
+│   ├── public/                  # Static assets, fonts, favicons
+│   ├── .env.example             # Environment variable template
+│   └── package.json
+│
 └── docs/                        # Architecture, PRD, phase plans
     ├── plans/
     │   ├── product-requirements-document.md
     │   ├── architecture-design.md
-    │   └── backend/phases/      # 14 phase plans (1.1 → 1.14)
+    │   ├── backend/phases/      # 14 phase plans (1.1 → 1.14)
+    │   └── web/phases/          # Website phase plans (3.1 → 3.x)
     └── agent-executed/          # Completed phase docs
+        ├── backend/
+        ├── frontend/
+        └── web/
 ```
 
 ---
 
 ## Development Progress
 
-Phase-based execution plan with 14 phases for MVP:
+### Cloud Brain + Edge Agent (Phases 1.x)
 
 | Phase | Name | Status |
 |---|---|---|
@@ -189,6 +219,13 @@ Phase-based execution plan with 14 phases for MVP:
 | 1.13 | Subscription & Billing | ✅ Complete |
 | 1.14 | Documentation & E2E Testing | ✅ Complete |
 
+### Website (Phases 3.x)
+
+| Phase | Name | Status |
+|---|---|---|
+| 3.1 | Website Foundation & Infrastructure | ✅ Complete — live at [zuralog.com](https://www.zuralog.com) |
+| 3.2 | Waitlist Landing Page | ⏳ Planned |
+
 ---
 
 ## Getting Started
@@ -202,33 +239,42 @@ Phase-based execution plan with 14 phases for MVP:
 git clone https://github.com/hyowonbernabe/Life-Logger.git
 cd Life-Logger
 
-# Backend
+# Backend (Cloud Brain)
 cd cloud-brain
-cp .env.example .env          # Configure Supabase credentials
+cp .env.example .env          # Configure Supabase + API credentials
 docker compose up -d           # Start PostgreSQL + Redis
 uv sync --all-extras           # Install Python deps
 uv run alembic upgrade head    # Run migrations
-make dev                       # Start dev server → http://localhost:8000
+make dev                       # Start dev server → http://localhost:8001
 
-# Mobile
+# Mobile (Edge Agent)
 cd ../zuralog
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
-flutter run                    # Launch on emulator/device
+make run                       # Launch on Android emulator (injects GOOGLE_WEB_CLIENT_ID)
+
+# Website
+cd ../web
+cp .env.example .env.local    # Configure Supabase + PostHog credentials
+npm install
+npm run dev                    # Start dev server → http://localhost:3000
 ```
 
 ### Verify
 
 ```bash
 # Backend health check
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 # → {"status": "healthy"}
 
-# Run tests (309 passing)
+# Run tests
 cd cloud-brain && uv run pytest tests/ -v
 
 # API docs
-open http://localhost:8000/docs
+open http://localhost:8001/docs
+
+# Website
+open http://localhost:3000
 ```
 
 ---
