@@ -62,7 +62,6 @@ interface IntegrationCardProps {
 function IntegrationCard({ item, mouseX, mouseY, index }: IntegrationCardProps) {
   const { x, y } = polarToPercent(item.angle, item.distance);
 
-  // Cards farther from center have stronger parallax
   const parallaxStrength = 12 * item.distance;
   const offsetX = mouseX * parallaxStrength;
   const offsetY = -mouseY * parallaxStrength;
@@ -70,38 +69,50 @@ function IntegrationCard({ item, mouseX, mouseY, index }: IntegrationCardProps) 
   const baseSize = 64 * item.scale;
   const iconSize = Math.round(24 * item.scale);
 
+  // Fix 4: two-div pattern — outer plain div handles absolute positioning,
+  // inner motion.div handles FM animations + parallax offset via x/y motion values.
+  // Setting `transform` directly on a motion.div in FM v12 overrides FM's internal
+  // transform combiner, silently discarding scale/y animation values.
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.8 + index * 0.15, duration: 0.6, ease: "easeOut" }}
-      className="absolute flex flex-col items-center gap-1.5 pointer-events-none select-none"
+    <div
+      className="absolute pointer-events-none select-none"
       style={{
         left: `${x}%`,
         top: `${y}%`,
-        transform: `translate(-50%, -50%) translate(${offsetX}px, ${offsetY}px)`,
-        willChange: "transform",
+        transform: "translate(-50%, -50%)",
       }}
     >
-      {/* Glassmorphic card */}
-      <div
-        className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md"
+      <motion.div
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.8 + index * 0.15, duration: 0.6, ease: "easeOut" }}
+        className="flex flex-col items-center gap-1.5"
         style={{
-          width: baseSize,
-          height: baseSize,
-          boxShadow: `0 0 20px ${item.color}15, 0 8px 32px rgba(0,0,0,0.3)`,
+          x: offsetX,
+          y: offsetY,
+          willChange: "transform",
         }}
       >
-        <IntegrationIcon item={item} size={iconSize} />
-      </div>
-      {/* Integration label */}
-      <span
-        className="text-center font-medium tracking-wide text-white/60 whitespace-nowrap"
-        style={{ fontSize: Math.max(9, 10 * item.scale) }}
-      >
-        {item.label}
-      </span>
-    </motion.div>
+        {/* Glassmorphic card */}
+        <div
+          className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md"
+          style={{
+            width: baseSize,
+            height: baseSize,
+            boxShadow: `0 0 20px ${item.color}15, 0 8px 32px rgba(0,0,0,0.3)`,
+          }}
+        >
+          <IntegrationIcon item={item} size={iconSize} />
+        </div>
+        {/* Integration label */}
+        <span
+          className="text-center font-medium tracking-wide text-white/60 whitespace-nowrap"
+          style={{ fontSize: Math.max(9, 10 * item.scale) }}
+        >
+          {item.label}
+        </span>
+      </motion.div>
+    </div>
   );
 }
 

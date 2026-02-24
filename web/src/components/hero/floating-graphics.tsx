@@ -171,22 +171,33 @@ export function FloatingGraphics({ mouseX, mouseY, isMobile }: FloatingGraphicsP
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* Fix 4: two-div pattern — outer plain div handles absolute positioning,
+          inner motion.div handles FM animations + parallax via x/y motion values.
+          In FM v12, setting `transform` directly on a motion.div overrides FM's
+          internal transform combiner, silently discarding scale/y animation values. */}
       {elements.map((el) => (
-        <motion.div
+        <div
           key={el.id}
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ delay: el.delay, duration: 0.7, ease: "easeOut" }}
           className="absolute"
           style={{
             left: `${el.x}%`,
             top: `${el.y}%`,
-            transform: `translate(-50%, -50%) translate(${mouseX * el.depth}px, ${-mouseY * el.depth}px)`,
-            willChange: "transform",
+            transform: "translate(-50%, -50%)",
           }}
         >
-          {el.content}
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: el.delay, duration: 0.7, ease: "easeOut" }}
+            style={{
+              x: mouseX * el.depth,
+              y: -mouseY * el.depth,
+              willChange: "transform",
+            }}
+          >
+            {el.content}
+          </motion.div>
+        </div>
       ))}
     </div>
   );

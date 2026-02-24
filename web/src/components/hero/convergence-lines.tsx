@@ -79,7 +79,7 @@ export function ConvergenceLines({
     >
       <svg
         viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="none"
         className="absolute inset-0 h-full w-full"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"

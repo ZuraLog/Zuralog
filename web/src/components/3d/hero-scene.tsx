@@ -19,7 +19,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, Float, useTexture, Environment } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
-import { getMouseParallax } from "@/hooks/use-mouse-parallax";
+import { getMouseParallax, useMouseParallax } from "@/hooks/use-mouse-parallax";
 
 const MODEL_PATH = "/models/phone/scene.gltf";
 const SCREEN_TEXTURE_PATH = "/models/phone/screen-logo.png";
@@ -30,11 +30,13 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
   const screenTexture = useTexture(SCREEN_TEXTURE_PATH);
   const scale = isMobile ? 0.9 : 1.2;
 
-  // Configure texture properties BEFORE useMemo so they're set before GPU upload.
-  // Setting these inside the useMemo traverse would not trigger a re-upload.
-  screenTexture.flipY = false;          // GLTF UVs expect non-flipped
-  screenTexture.colorSpace = THREE.SRGBColorSpace;
-  screenTexture.needsUpdate = true;
+  // Fix 2: configure texture properties in an effect so they only run when the
+  // texture reference changes — not on every render.
+  useEffect(() => {
+    screenTexture.flipY = false;          // GLTF UVs expect non-flipped
+    screenTexture.colorSpace = THREE.SRGBColorSpace;
+    screenTexture.needsUpdate = true;
+  }, [screenTexture]);
 
   // Clone the scene so we can safely modify materials without mutating the cached original
   const clonedScene = useMemo(() => {
@@ -61,8 +63,10 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
         });
       }
 
-      // Boost env map intensity on all standard materials for better glass/metal appearance
+      // Fix 3: clone material before mutating envMapIntensity to avoid poisoning
+      // the shared GLTF material cache for other consumers of useGLTF.
       if (!Array.isArray(child.material) && child.material instanceof THREE.MeshStandardMaterial) {
+        child.material = child.material.clone();
         child.material.envMapIntensity = 1.2;
       }
     });
@@ -128,6 +132,10 @@ interface HeroSceneProps {
 export function HeroScene({ isMobile = false }: HeroSceneProps) {
   const { scene, camera } = useThree();
   const groupRef = useRef<THREE.Group>(null);
+
+  // Fix 1: start the shared singleton tick so smoothMouse is kept up-to-date.
+  // HeroScene reads via getMouseParallax() in useFrame; the returned ref is unused here.
+  useMouseParallax();
 
   // Transparent canvas
   useEffect(() => {
