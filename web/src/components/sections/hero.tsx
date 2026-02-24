@@ -65,23 +65,23 @@ function useWaitlistCount(): number | null {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function fetchCount() {
       try {
-        const res = await fetch('/api/waitlist/stats');
+        const res = await fetch('/api/waitlist/stats', { signal: controller.signal });
         if (!res.ok) return;
         const data = (await res.json()) as { count?: number };
-        if (!cancelled && typeof data.count === 'number') {
-          setCount(data.count);
-        }
-      } catch {
-        // Silently ignore — stat line is hidden on error
+        if (typeof data.count === 'number') setCount(data.count);
+      } catch (err) {
+        // Silently ignore AbortError (unmount) and all other errors;
+        // the stat line is simply hidden when unavailable.
+        if (err instanceof DOMException && err.name === 'AbortError') return;
       }
     }
 
     void fetchCount();
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, []);
 
   return count;
@@ -137,7 +137,7 @@ export function Hero() {
       </div>
 
       {/* Layer 5 — Bottom fade: cream → transparent, blends into next section */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-56 bg-gradient-to-t from-[#FAFAF5] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-56 bg-gradient-to-t from-[var(--section-cream)] to-transparent" />
 
       {/* Layer 6 — Text content, centered with absolute bottom anchor */}
       <div className="absolute bottom-20 left-0 right-0 z-30 flex flex-col items-center gap-5 px-6 text-center">
@@ -151,19 +151,19 @@ export function Hero() {
         </motion.div>
 
         {/* Headline — three lines, staggered 300/450/600ms */}
-        <div className="flex flex-col items-center">
+        <h1 className="flex flex-col items-center gap-1 text-center">
           {/* Line 1: regular weight */}
-          <motion.h1
+          <motion.span
             {...fadeUp(300)}
-            className="text-display-hero font-normal text-[var(--text-primary)]"
+            className="block text-display-hero font-normal text-[var(--text-primary)]"
           >
             Unified Health.
-          </motion.h1>
+          </motion.span>
 
           {/* Line 2: bold weight */}
           <motion.span
             {...fadeUp(450)}
-            className="text-display-hero block font-bold text-[var(--text-primary)]"
+            className="block text-display-hero font-bold text-[var(--text-primary)]"
           >
             Made Simple.
           </motion.span>
@@ -171,11 +171,11 @@ export function Hero() {
           {/* Line 3: bold weight, sage green */}
           <motion.span
             {...fadeUp(600)}
-            className="text-display-hero block font-bold text-sage"
+            className="block text-display-hero font-bold text-sage"
           >
             Made Smart.
           </motion.span>
-        </div>
+        </h1>
 
         {/* CTA button — scales in (750ms delay) with idle pulse-glow animation */}
         <motion.div {...scaleIn(750)}>
@@ -184,6 +184,7 @@ export function Hero() {
             size="pill"
             onClick={scrollToWaitlist}
             className="animate-pulse-glow"
+            style={{ animationDelay: '1000ms' }}
           >
             Claim Your Spot
           </Button>
