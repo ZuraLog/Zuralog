@@ -24,8 +24,8 @@ interface MousePosition {
 const LERP_SPEED = 0.08;
 
 /** Singleton mouse state so multiple consumers share one listener. */
-let rawMouse = { x: 0, y: 0 };
-let smoothMouse = { x: 0, y: 0 };
+const rawMouse = { x: 0, y: 0 };
+const smoothMouse = { x: 0, y: 0 };
 let listenerCount = 0;
 let rafId: number | null = null;
 

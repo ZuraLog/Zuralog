@@ -3,7 +3,8 @@
  *
  * Layer stack (back → front):
  *   z-0  : CSS radial sage glow (HeroGlow) — atmospheric underlay
- *   z-10 : Three.js Canvas (HeroSceneLoader) — transparent, phone + icons on top of glow
+ *   z-10 : Three.js Canvas (HeroSceneLoader) — transparent, phone on top of glow
+ *   z-15 : HTML/CSS/SVG overlay (HeroOverlay) — integration cards, graphics, lines
  *   z-20 : bottom fade gradient
  *   z-30 : text content
  */
@@ -18,6 +19,11 @@ import { HeroGlow } from '@/components/hero-glow';
 
 const HeroSceneLoader = dynamic(
   () => import('@/components/3d/hero-scene-loader').then((m) => m.HeroSceneLoader),
+  { ssr: false },
+);
+
+const HeroOverlay = dynamic(
+  () => import('@/components/hero/hero-overlay').then((m) => m.HeroOverlay),
   { ssr: false },
 );
 
@@ -50,15 +56,20 @@ export function Hero() {
         <HeroGlow />
       </div>
 
-      {/* Layer 2 — Three.js transparent canvas (phone + orbiting icons) */}
+      {/* Layer 2 — Three.js transparent canvas (phone) */}
       <div className="absolute inset-0 z-10">
         <HeroSceneLoader />
       </div>
 
-      {/* Layer 3 — bottom fade so the scene blends into the next section */}
+      {/* Layer 3 — HTML/CSS/SVG overlay: integration cards, floating graphics, convergence lines */}
+      <div className="absolute inset-0 z-[15]">
+        <HeroOverlay />
+      </div>
+
+      {/* Layer 4 — bottom fade so the scene blends into the next section */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-48 bg-gradient-to-t from-black to-transparent" />
 
-      {/* Layer 4 — hero text content */}
+      {/* Layer 5 — hero text content */}
       <div className="relative z-30 flex flex-col items-center gap-6 px-6 text-center">
         {/* Eyebrow badge */}
         <motion.div

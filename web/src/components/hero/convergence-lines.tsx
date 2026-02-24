@@ -105,7 +105,6 @@ export function ConvergenceLines({
               strokeDasharray="1.5 3"
               strokeLinecap="round"
             >
-              {/* @ts-ignore — SMIL animate attributes not fully typed in React SVG types */}
               <animate
                 attributeName="stroke-dashoffset"
                 from="20"
@@ -117,7 +116,6 @@ export function ConvergenceLines({
 
             {/* Primary traveling dot particle */}
             <circle r="0.3" fill="#CFE1B9" opacity="0.55">
-              {/* @ts-ignore — SMIL animateMotion attributes not fully typed in React SVG types */}
               <animateMotion
                 dur={`${2.5 + i * 0.4}s`}
                 repeatCount="indefinite"
@@ -127,7 +125,6 @@ export function ConvergenceLines({
 
             {/* Secondary staggered dot particle */}
             <circle r="0.2" fill="#CFE1B9" opacity="0.3">
-              {/* @ts-ignore — SMIL animateMotion attributes not fully typed in React SVG types */}
               <animateMotion
                 dur={`${3.2 + i * 0.3}s`}
                 repeatCount="indefinite"
