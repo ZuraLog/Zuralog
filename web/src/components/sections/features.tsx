@@ -213,85 +213,155 @@ function ActionsVisual() {
 }
 
 // ─── Feature Visual 3: Zero-Friction Logging ─────────────────────────────────
+// Vertical top-to-bottom data flow: inputs → ZuraLog engine → unified result.
+// Arrow direction is always downward, making the flow unambiguous.
 
 function LoggingVisual() {
-  const leftSources = [
-    { label: 'Photo taken', sublabel: 'Chicken rice bowl', color: '#10B981', icon: '📸' },
-    { label: 'Voice note', sublabel: '"Had a green salad"', color: '#3B82F6', icon: '🎙️' },
+  const manualSources = [
+    { label: 'Photo taken', sublabel: 'Chicken rice bowl', icon: '📸', delay: 0 },
+    { label: 'Voice note', sublabel: '"Had a green salad"', icon: '🎙️', delay: 0.4 },
   ];
 
-  const rightSources = [
-    { label: 'Strava', sublabel: '8.2km · 5:12 pace', color: '#FC4C02', Icon: SiStrava },
-    { label: 'Apple Health', sublabel: '9,820 steps · 620 kcal', color: '#e8e8e8', Icon: SiApple },
+  const autoSources = [
+    { label: 'Strava', sublabel: '8.2km · 5:12 pace', color: '#FC4C02', Icon: SiStrava, delay: 0.2 },
+    { label: 'Apple Health', sublabel: '9,820 steps · 620 kcal', color: '#e8e8e8', Icon: SiApple, delay: 0.6 },
   ];
 
   return (
-    <div className="flex h-full flex-col justify-center gap-3 p-5">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        {/* Left: Manual inputs */}
-        <div className="flex flex-col gap-2">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-zinc-500">You log</p>
-          {leftSources.map((src) => (
+    <div className="flex h-full flex-col justify-between p-4 gap-2">
+      {/* ── Row 1: Input sources side by side ── */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Manual inputs — left half */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">You log</span>
+            <span className="h-px flex-1 bg-zinc-800" />
+          </div>
+          {manualSources.map((src) => (
             <motion.div
               key={src.label}
-              className="rounded-xl border border-white/8 bg-black/50 p-2.5"
-              animate={{ x: [0, 4, 0] }}
-              transition={{ duration: 3, repeat: Infinity, delay: Math.random() * 2 }}
+              className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-2.5 py-2"
+              animate={{ y: [0, -2, 0] }}
+              transition={{ duration: 3 + src.delay, repeat: Infinity, delay: src.delay, ease: 'easeInOut' }}
             >
-              <span className="text-base">{src.icon}</span>
-              <p className="mt-1 text-[9px] font-medium text-white/80">{src.label}</p>
-              <p className="text-[8px] text-zinc-500">{src.sublabel}</p>
+              <span className="text-sm leading-none">{src.icon}</span>
+              <div className="min-w-0">
+                <p className="text-[9px] font-semibold text-white/85 truncate">{src.label}</p>
+                <p className="text-[8px] text-zinc-500 truncate">{src.sublabel}</p>
+              </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Center: ZuraLog hub */}
-        <div className="flex flex-col items-center gap-2">
-          {/* Flow arrows */}
-          <motion.div
-            className="text-sage/40 text-lg"
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            →
-          </motion.div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-sage/30 bg-sage/10 shadow-[0_0_20px_rgba(207,225,185,0.15)]">
-            <span className="text-lg font-bold text-sage">Z</span>
+        {/* Auto-synced — right half */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-500">Auto-synced</span>
+            <span className="h-px flex-1 bg-zinc-800" />
           </div>
-          <motion.div
-            className="text-sage/40 text-lg"
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: 0.75 }}
-          >
-            ←
-          </motion.div>
-        </div>
-
-        {/* Right: Auto-synced */}
-        <div className="flex flex-col gap-2">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-zinc-500">Auto-synced</p>
-          {rightSources.map((src) => (
+          {autoSources.map((src) => (
             <motion.div
               key={src.label}
-              className="rounded-xl border border-white/8 bg-black/50 p-2.5"
-              animate={{ x: [0, -4, 0] }}
-              transition={{ duration: 3, repeat: Infinity, delay: Math.random() * 2 }}
+              className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-2.5 py-2"
+              animate={{ y: [0, -2, 0] }}
+              transition={{ duration: 3 + src.delay, repeat: Infinity, delay: src.delay, ease: 'easeInOut' }}
             >
-              <src.Icon size={12} color={src.color} />
-              <p className="mt-1 text-[9px] font-medium text-white/80">{src.label}</p>
-              <p className="text-[8px] text-zinc-500">{src.sublabel}</p>
+              <src.Icon size={13} color={src.color} />
+              <div className="min-w-0">
+                <p className="text-[9px] font-semibold text-white/85 truncate">{src.label}</p>
+                <p className="text-[8px] text-zinc-500 truncate">{src.sublabel}</p>
+              </div>
             </motion.div>
           ))}
         </div>
       </div>
 
-      {/* Parsed result */}
+      {/* ── Row 2: Converging flow lines + hub ── */}
+      <div className="relative flex flex-col items-center">
+        {/* Animated SVG flow lines converging downward into the hub */}
+        <svg
+          viewBox="0 0 240 48"
+          className="w-full"
+          style={{ height: 48, overflow: 'visible' }}
+          aria-hidden="true"
+        >
+          {/* Left branch: from left-quarter down and right to center */}
+          <motion.path
+            d="M 60 0 L 60 24 L 120 48"
+            fill="none"
+            stroke="rgba(207,225,185,0.35)"
+            strokeWidth="1.5"
+            strokeDasharray="6 4"
+            animate={{ strokeDashoffset: [24, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+          />
+          {/* Right branch: from right-quarter down and left to center */}
+          <motion.path
+            d="M 180 0 L 180 24 L 120 48"
+            fill="none"
+            stroke="rgba(207,225,185,0.25)"
+            strokeWidth="1.5"
+            strokeDasharray="6 4"
+            animate={{ strokeDashoffset: [24, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: 'linear', delay: 0.4 }}
+          />
+          {/* Center straight line from midpoint to hub entry */}
+          <motion.line
+            x1="120" y1="0" x2="120" y2="48"
+            stroke="rgba(207,225,185,0.5)"
+            strokeWidth="1.5"
+            strokeDasharray="6 4"
+            animate={{ strokeDashoffset: [24, 0] }}
+            transition={{ duration: 1.0, repeat: Infinity, ease: 'linear', delay: 0.2 }}
+          />
+        </svg>
+
+        {/* ZuraLog processing hub */}
+        <motion.div
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-sage/30 bg-sage/8 px-4 py-2.5"
+          animate={{ borderColor: ['rgba(207,225,185,0.3)', 'rgba(207,225,185,0.6)', 'rgba(207,225,185,0.3)'] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <motion.div
+            className="h-1.5 w-1.5 rounded-full bg-sage"
+            animate={{ opacity: [1, 0.3, 1], scale: [1, 0.8, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-sage">
+            ZuraLog · Processing
+          </span>
+          <motion.div
+            className="h-1.5 w-1.5 rounded-full bg-sage"
+            animate={{ opacity: [1, 0.3, 1], scale: [1, 0.8, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: 0.6 }}
+          />
+        </motion.div>
+
+        {/* Arrow pointing down from hub to result */}
+        <motion.div
+          className="mt-1 flex flex-col items-center"
+          animate={{ y: [0, 2, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <div className="h-3 w-px bg-sage/40" />
+          <div
+            className="h-0 w-0"
+            style={{
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '6px solid rgba(207,225,185,0.4)',
+            }}
+          />
+        </motion.div>
+      </div>
+
+      {/* ── Row 3: Unified result ── */}
       <motion.div
-        className="rounded-xl border border-sage/20 bg-sage/5 p-3"
-        animate={{ opacity: [0.7, 1, 0.7] }}
+        className="rounded-xl border border-sage/25 bg-sage/5 p-3"
+        animate={{ opacity: [0.75, 1, 0.75] }}
         transition={{ duration: 3, repeat: Infinity }}
       >
-        <p className="text-[9px] font-semibold text-sage mb-1">✓ Unified for today</p>
+        <p className="mb-2 text-[9px] font-semibold text-sage">✓ Unified for today</p>
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
             { label: 'Total kcal', value: '2,340' },
@@ -299,7 +369,7 @@ function LoggingVisual() {
             { label: 'Steps', value: '9,820' },
           ].map((m) => (
             <div key={m.label}>
-              <p className="text-[10px] font-bold text-white">{m.value}</p>
+              <p className="text-[11px] font-bold text-white">{m.value}</p>
               <p className="text-[8px] text-zinc-500">{m.label}</p>
             </div>
           ))}
