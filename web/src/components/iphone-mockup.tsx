@@ -6,13 +6,21 @@
  */
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { Connect4Game } from '@/components/connect4-game';
+
+interface IPhoneMockupProps {
+  /** Current email field value — triggers easter eggs */
+  emailValue?: string;
+}
 
 /**
  * Renders a CSS iPhone frame with a mock Zuralog app screen inside.
+ * When emailValue is "connect4", swaps to a playable Connect 4 game.
  */
-export function IPhoneMockup() {
+export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
+  const showConnect4 = emailValue.toLowerCase() === 'connect4';
   return (
     <motion.div
       initial={{ opacity: 0, x: 40, rotateY: -8 }}
@@ -33,120 +41,144 @@ export function IPhoneMockup() {
         {/* Screen content */}
         <div className="relative bg-black px-1 pb-1 pt-1">
           <div className="overflow-hidden rounded-[2.7rem] bg-[#0a0a0a]">
-            {/* Status bar */}
-            <div className="flex items-center justify-between px-8 pb-1 pt-4 text-[10px] font-semibold text-white">
-              <span>9:41</span>
-              <div className="flex items-center gap-1">
-                <svg width="14" height="10" viewBox="0 0 14 10" fill="white">
-                  <rect x="0" y="6" width="2.5" height="4" rx="0.5" />
-                  <rect x="3.5" y="4" width="2.5" height="6" rx="0.5" />
-                  <rect x="7" y="2" width="2.5" height="8" rx="0.5" />
-                  <rect x="10.5" y="0" width="2.5" height="10" rx="0.5" />
-                </svg>
-                <svg width="14" height="10" viewBox="0 0 24 12" fill="white">
-                  <rect x="0" y="1" width="20" height="10" rx="2" stroke="white" strokeWidth="1.5" fill="none" />
-                  <rect x="21" y="4" width="2" height="4" rx="1" />
-                  <rect x="2" y="3" width="14" height="6" rx="1" fill="white" />
-                </svg>
-              </div>
-            </div>
-
-            {/* App header */}
-            <div className="flex items-center gap-2 px-5 pb-3 pt-2">
-              <div className="relative h-8 w-8">
-                <Image
-                  src="/logo.svg"
-                  alt="Zuralog"
-                  width={32}
-                  height={32}
-                  className="rounded-lg"
-                />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-white">Zuralog</p>
-                <p className="text-[9px] text-sage">Online</p>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="mx-4 h-px bg-white/8" />
-
-            {/* Chat messages */}
-            <div className="flex flex-col gap-2.5 px-4 py-4">
-              {/* AI message */}
-              <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white/8 px-3 py-2">
-                <p className="text-[10px] leading-relaxed text-zinc-300">
-                  Good morning! You slept 7h 42m last night. Your deep sleep was up 12% from last week.
-                </p>
-              </div>
-
-              {/* AI follow-up */}
-              <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white/8 px-3 py-2">
-                <p className="text-[10px] leading-relaxed text-zinc-300">
-                  Your resting heart rate has been trending down — nice work on the evening walks.
-                </p>
-              </div>
-
-              {/* User message */}
-              <div className="ml-auto max-w-[75%] rounded-2xl rounded-br-sm bg-sage/20 px-3 py-2">
-                <p className="text-[10px] leading-relaxed text-sage">
-                  How are my stress levels?
-                </p>
-              </div>
-
-              {/* AI response */}
-              <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white/8 px-3 py-2">
-                <p className="text-[10px] leading-relaxed text-zinc-300">
-                  HRV shows you recovered well. Your stress score is{' '}
-                  <span className="font-semibold text-sage">24 — low</span>. Keep it up!
-                </p>
-              </div>
-
-              {/* Health card */}
-              <div className="rounded-xl border border-sage/20 bg-sage/5 p-2.5">
-                <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-sage/70">
-                  Today&apos;s Summary
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center">
-                    <p className="text-[13px] font-bold text-sage">7.7k</p>
-                    <p className="text-[8px] text-zinc-500">Steps</p>
+            <AnimatePresence mode="wait">
+              {showConnect4 ? (
+                <motion.div
+                  key="connect4"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col"
+                  style={{ minHeight: 460 }}
+                >
+                  <Connect4Game />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="chat"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Status bar */}
+                  <div className="flex items-center justify-between px-8 pb-1 pt-4 text-[10px] font-semibold text-white">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <svg width="14" height="10" viewBox="0 0 14 10" fill="white">
+                        <rect x="0" y="6" width="2.5" height="4" rx="0.5" />
+                        <rect x="3.5" y="4" width="2.5" height="6" rx="0.5" />
+                        <rect x="7" y="2" width="2.5" height="8" rx="0.5" />
+                        <rect x="10.5" y="0" width="2.5" height="10" rx="0.5" />
+                      </svg>
+                      <svg width="14" height="10" viewBox="0 0 24 12" fill="white">
+                        <rect x="0" y="1" width="20" height="10" rx="2" stroke="white" strokeWidth="1.5" fill="none" />
+                        <rect x="21" y="4" width="2" height="4" rx="1" />
+                        <rect x="2" y="3" width="14" height="6" rx="1" fill="white" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-[13px] font-bold text-sage">62</p>
-                    <p className="text-[8px] text-zinc-500">BPM</p>
+
+                  {/* App header */}
+                  <div className="flex items-center gap-2 px-5 pb-3 pt-2">
+                    <div className="relative h-8 w-8">
+                      <Image
+                        src="/logo.svg"
+                        alt="Zuralog"
+                        width={32}
+                        height={32}
+                        className="rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-white">Zuralog</p>
+                      <p className="text-[9px] text-sage">Online</p>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-[13px] font-bold text-sage">24</p>
-                    <p className="text-[8px] text-zinc-500">Stress</p>
+
+                  {/* Divider */}
+                  <div className="mx-4 h-px bg-white/8" />
+
+                  {/* Chat messages */}
+                  <div className="flex flex-col gap-2.5 px-4 py-4">
+                    {/* AI message */}
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white/8 px-3 py-2">
+                      <p className="text-[10px] leading-relaxed text-zinc-300">
+                        Good morning! You slept 7h 42m last night. Your deep sleep was up 12% from last week.
+                      </p>
+                    </div>
+
+                    {/* AI follow-up */}
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white/8 px-3 py-2">
+                      <p className="text-[10px] leading-relaxed text-zinc-300">
+                        Your resting heart rate has been trending down — nice work on the evening walks.
+                      </p>
+                    </div>
+
+                    {/* User message */}
+                    <div className="ml-auto max-w-[75%] rounded-2xl rounded-br-sm bg-sage/20 px-3 py-2">
+                      <p className="text-[10px] leading-relaxed text-sage">
+                        How are my stress levels?
+                      </p>
+                    </div>
+
+                    {/* AI response */}
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-white/8 px-3 py-2">
+                      <p className="text-[10px] leading-relaxed text-zinc-300">
+                        HRV shows you recovered well. Your stress score is{' '}
+                        <span className="font-semibold text-sage">24 — low</span>. Keep it up!
+                      </p>
+                    </div>
+
+                    {/* Health card */}
+                    <div className="rounded-xl border border-sage/20 bg-sage/5 p-2.5">
+                      <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-sage/70">
+                        Today&apos;s Summary
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center">
+                          <p className="text-[13px] font-bold text-sage">7.7k</p>
+                          <p className="text-[8px] text-zinc-500">Steps</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[13px] font-bold text-sage">62</p>
+                          <p className="text-[8px] text-zinc-500">BPM</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[13px] font-bold text-sage">24</p>
+                          <p className="text-[8px] text-zinc-500">Stress</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Typing indicator */}
+                    <div className="flex items-center gap-1 px-1">
+                      <div className="flex gap-0.5">
+                        <span className="h-1 w-1 animate-pulse rounded-full bg-sage/50" />
+                        <span className="h-1 w-1 animate-pulse rounded-full bg-sage/50 [animation-delay:150ms]" />
+                        <span className="h-1 w-1 animate-pulse rounded-full bg-sage/50 [animation-delay:300ms]" />
+                      </div>
+                      <span className="text-[9px] text-zinc-600">Zuralog is typing...</span>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Typing indicator */}
-              <div className="flex items-center gap-1 px-1">
-                <div className="flex gap-0.5">
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-sage/50" />
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-sage/50 [animation-delay:150ms]" />
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-sage/50 [animation-delay:300ms]" />
-                </div>
-                <span className="text-[9px] text-zinc-600">Zuralog is typing...</span>
-              </div>
-            </div>
+                  {/* Input bar */}
+                  <div className="mx-3 mb-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2">
+                    <p className="flex-1 text-[10px] text-zinc-600">Ask anything...</p>
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-sage">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="19" x2="12" y2="5" />
+                        <polyline points="5 12 12 5 19 12" />
+                      </svg>
+                    </div>
+                  </div>
 
-            {/* Input bar */}
-            <div className="mx-3 mb-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2">
-              <p className="flex-1 text-[10px] text-zinc-600">Ask anything...</p>
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-sage">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="19" x2="12" y2="5" />
-                  <polyline points="5 12 12 5 19 12" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Home indicator */}
-            <div className="mx-auto mb-2 h-1 w-28 rounded-full bg-white/20" />
+                  {/* Home indicator */}
+                  <div className="mx-auto mb-2 h-1 w-28 rounded-full bg-white/20" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

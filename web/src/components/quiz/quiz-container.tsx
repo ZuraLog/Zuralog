@@ -25,7 +25,12 @@ import { ProgressIndicator } from './progress-indicator';
  * Renders the full quiz flow with step transitions.
  * Email signup is step 0; quiz questions follow.
  */
-export function QuizContainer() {
+interface QuizContainerProps {
+  /** Bubbles email value up for easter egg detection */
+  onEmailChange?: (value: string) => void;
+}
+
+export function QuizContainer({ onEmailChange }: QuizContainerProps) {
   const quiz = useQuiz();
 
   // Quiz questions are steps 1-3 (apps, frustrations, goal)
@@ -62,7 +67,7 @@ export function QuizContainer() {
               exit={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.3 }}
             >
-              <WaitlistForm onSignupSuccess={quiz.onSignupSuccess} />
+              <WaitlistForm onSignupSuccess={quiz.onSignupSuccess} onEmailChange={onEmailChange} />
             </motion.div>
           )}
 

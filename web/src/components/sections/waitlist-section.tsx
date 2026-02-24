@@ -8,6 +8,7 @@
  */
 'use client';
 
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { QuizContainer } from '@/components/quiz/quiz-container';
 import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
@@ -18,6 +19,8 @@ import { IPhoneMockup } from '@/components/iphone-mockup';
  * Full waitlist section with quiz funnel and iPhone app preview.
  */
 export function WaitlistSection() {
+  const [emailValue, setEmailValue] = useState('');
+  const handleEmailChange = useCallback((value: string) => setEmailValue(value), []);
 
   return (
     <section
@@ -61,12 +64,12 @@ export function WaitlistSection() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="w-full lg:max-w-xl"
           >
-            <QuizContainer />
+            <QuizContainer onEmailChange={handleEmailChange} />
           </motion.div>
 
           {/* iPhone mockup */}
           <div className="py-4 lg:py-0">
-            <IPhoneMockup />
+            <IPhoneMockup emailValue={emailValue} />
           </div>
         </div>
       </div>

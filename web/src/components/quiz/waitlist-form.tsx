@@ -26,12 +26,14 @@ type FormData = z.infer<typeof schema>;
 interface WaitlistFormProps {
   /** Called after successful email signup; advances to quiz steps */
   onSignupSuccess: (data: SuccessData) => void;
+  /** Called on every email keystroke (for easter eggs) */
+  onEmailChange?: (value: string) => void;
 }
 
 /**
  * First-step email signup form. On success, passes data up to advance to quiz.
  */
-export function WaitlistForm({ onSignupSuccess }: WaitlistFormProps) {
+export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormProps) {
   const [loading, setLoading] = useState(false);
 
   // Pre-fill referral code from URL ?ref= param
@@ -44,8 +46,15 @@ export function WaitlistForm({ onSignupSuccess }: WaitlistFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  // Report email value changes for easter eggs
+  const emailValue = watch('email');
+  useEffect(() => {
+    onEmailChange?.(emailValue ?? '');
+  }, [emailValue, onEmailChange]);
 
   async function onSubmit(data: FormData) {
     setLoading(true);
@@ -140,6 +149,16 @@ export function WaitlistForm({ onSignupSuccess }: WaitlistFormProps) {
       <p className="text-center text-xs text-zinc-600">
         No spam. Unsubscribe anytime. 30 seconds to complete.
       </p>
+
+      {/* Easter egg hint — subtle glitch text */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 0.7, 0, 0.5, 0, 0.8, 0] }}
+        transition={{ delay: 3, duration: 2.5, repeat: Infinity, repeatDelay: 2.5 }}
+        className="text-center font-mono text-[11px] tracking-widest text-sage/60 select-none"
+      >
+        psst... try connect4
+      </motion.p>
     </motion.div>
   );
 }
