@@ -14,9 +14,9 @@ import { QuizContainer } from '@/components/quiz/quiz-container';
 
 interface LeaderboardEntry {
   rank: number;
-  email_masked: string;
+  display_name: string;
   referral_count: number;
-  tier: string;
+  queue_position?: number;
 }
 
 /**
@@ -107,8 +107,8 @@ export function WaitlistSection() {
                           {entry.rank}
                         </span>
                         <span className="text-sm text-zinc-300">
-                          {entry.email_masked}
-                        </span>
+                           {entry.display_name}
+                         </span>
                       </div>
                       <span className="text-xs font-medium text-sage">
                         {entry.referral_count} refs
