@@ -69,11 +69,11 @@ export function Hero() {
       {/* Layer 4 — bottom fade so the scene blends into the next section */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-48 bg-gradient-to-t from-black to-transparent" />
 
-      {/* Layer 5 — hero text content */}
-      <div className="relative z-30 flex flex-col items-center gap-6 px-6 text-center">
+      {/* Layer 5 — hero text content, anchored to bottom to stay below the 3D scene */}
+      <div className="absolute bottom-20 left-0 right-0 z-30 flex flex-col items-center gap-4 px-6 text-center">
         {/* Eyebrow badge */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
@@ -87,33 +87,22 @@ export function Hero() {
           </Badge>
         </motion.div>
 
-        {/* Headline */}
+        {/* Headline — new slogan */}
         <motion.h1
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
-          className="font-display max-w-4xl text-5xl font-bold leading-[1.08] tracking-tight text-white md:text-7xl lg:text-8xl"
+          className="font-display max-w-2xl text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl"
         >
-          All your fitness apps.{' '}
-          <span className="text-sage">One AI brain.</span>
+          Unified Health.{' '}
+          <span className="text-sage">Made Smart.</span>
         </motion.h1>
-
-        {/* Sub-copy */}
-        <motion.p
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
-          className="max-w-xl text-lg text-zinc-400 md:text-xl"
-        >
-          ZuraLog unifies Strava, Apple Health, Garmin, MyFitnessPal and more
-          into a single action layer — then tells you exactly what to do next.
-        </motion.p>
 
         {/* CTAs */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
+          transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
           className="flex flex-col items-center gap-3 sm:flex-row"
         >
           <Button
@@ -140,12 +129,24 @@ export function Hero() {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.5 }}
             className="text-sm text-zinc-500"
           >
             {stats.totalSignups.toLocaleString()} people already on the list
           </motion.p>
         )}
+      </div>
+
+      {/* CC-BY-4.0 attribution for GLTF model (MajdyModels on Sketchfab) */}
+      <div className="absolute bottom-2 right-3 z-30">
+        <a
+          href="https://sketchfab.com/3d-models/iphone-17-pro-max-natural-titanium-56d2bffc70514bc3a5afa72396e1bda1"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[9px] text-white/20 transition-colors hover:text-white/40"
+        >
+          3D model: MajdyModels (CC BY 4.0)
+        </a>
       </div>
 
       {/* Scroll cue */}

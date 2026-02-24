@@ -30,7 +30,7 @@ export function HeroSceneLoader() {
           alpha: true,
           powerPreference: "high-performance",
         }}
-        camera={{ position: [0, 0, 6], fov: 50 }}
+        camera={{ position: [0, 0, 5], fov: 50 }}
         style={{
           position: "absolute",
           inset: 0,

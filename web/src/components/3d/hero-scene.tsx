@@ -28,20 +28,35 @@ const SCREEN_TEXTURE_PATH = "/models/phone/screen-logo.png";
 function PhoneModel({ isMobile }: { isMobile: boolean }) {
   const gltf = useGLTF(MODEL_PATH);
   const screenTexture = useTexture(SCREEN_TEXTURE_PATH);
-  const scale = isMobile ? 0.9 : 1.2;
 
-  // Fix 2: configure texture properties in an effect so they only run when the
-  // texture reference changes — not on every render.
+  // The GLTF root node bakes a 90° X-axis rotation (Blender→GLTF axis correction).
+  // Internally the phone is stored lying on its back pointing left.
+  // We undo that baked rotation then orient the phone:
+  //   - Stand it upright:    rotate X by +Math.PI/2 (un-bake the Blender correction)
+  //   - Face screen forward: rotate Y by Math.PI    (flip 180° so screen faces +Z / camera)
+  //
+  // Scale derivation:
+  //   The mesh sits inside nested matrices: Cube.010 (scale=100) → FBX node (scale=0.01)
+  //   → Sketchfab_model (rotation only). Net scale of 1.0 in Three.js = 0.708 scene units tall.
+  //   We target ~2.5 units tall so the phone fills ~55% of fov-50 view at camera z=5.
+  //   Required scale = 2.5 / 0.708 ≈ 3.53.
+  // Target phone to fill ~60% of the hero height — visible but not overwhelming.
+  // 0.708 Three.js units = phone height at scale 1.0; targeting ~1.3 units = scale 1.83.
+  const scale = isMobile ? 1.3 : 1.83;
+
   // Three.js textures are external system objects; mutating them in an effect is correct R3F practice.
   /* eslint-disable react-hooks/immutability */
   useEffect(() => {
-    screenTexture.flipY = false;          // GLTF UVs expect non-flipped
+    screenTexture.flipY = false;              // GLTF UVs are not flipped
     screenTexture.colorSpace = THREE.SRGBColorSpace;
+    screenTexture.wrapS = THREE.ClampToEdgeWrapping;
+    screenTexture.wrapT = THREE.ClampToEdgeWrapping;
     screenTexture.needsUpdate = true;
   }, [screenTexture]);
   /* eslint-enable react-hooks/immutability */
 
-  // Clone the scene so we can safely modify materials without mutating the cached original
+  // Clone the scene so we can safely modify materials without mutating the cached original.
+  // useMemo re-runs only when gltf.scene or screenTexture changes.
   const clonedScene = useMemo(() => {
     const clone = gltf.scene.clone(true);
 
@@ -56,21 +71,23 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
       const isScreen = name.includes("screen") || matName.includes("screen");
 
       if (isScreen) {
-        // Apply Zuralog logo texture to the screen mesh
+        // Replace with Zuralog logo material — emissive so it glows
         child.material = new THREE.MeshStandardMaterial({
           map: screenTexture,
           emissive: new THREE.Color("#CFE1B9"),
-          emissiveIntensity: 0.15,
-          roughness: 0.0,
-          metalness: 0.1,
+          emissiveMap: screenTexture,
+          emissiveIntensity: 0.5,
+          roughness: 0.05,
+          metalness: 0.0,
+          toneMapped: false,
         });
-      }
-
-      // Fix 3: clone material before mutating envMapIntensity to avoid poisoning
-      // the shared GLTF material cache for other consumers of useGLTF.
-      if (!Array.isArray(child.material) && child.material instanceof THREE.MeshStandardMaterial) {
-        child.material = child.material.clone();
-        child.material.envMapIntensity = 1.2;
+      } else {
+        // Clone all other materials to avoid polluting the shared cache.
+        // Boost emissive slightly so the phone body is visible on dark bg.
+        if (!Array.isArray(child.material) && child.material instanceof THREE.MeshStandardMaterial) {
+          child.material = child.material.clone();
+          child.material.envMapIntensity = 2.5;
+        }
       }
     });
 
@@ -78,12 +95,14 @@ function PhoneModel({ isMobile }: { isMobile: boolean }) {
   }, [gltf.scene, screenTexture]);
 
   return (
-    <Float speed={1.2} rotationIntensity={0.08} floatIntensity={0.2}>
+      <Float speed={1.4} rotationIntensity={0.05} floatIntensity={0.3}>
       <primitive
         object={clonedScene}
         scale={scale}
-        rotation={[0, 0, 0]}
-        position={[0, 0, 0]}
+        // Undo baked Blender 90° X correction, then face screen toward camera (+Z).
+        // After undoing X, screen faces +X so we rotate -90° around Y to bring it to +Z.
+        rotation={[0, Math.PI / 2, 0]}
+        position={[0, -0.3, 0]}
       />
     </Float>
   );
@@ -158,31 +177,32 @@ export function HeroScene({ isMobile = false }: HeroSceneProps) {
   /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     scene.background = null;
-    camera.position.set(0, 0, 6);
+    // Camera at z=5 with fov=50 gives a good framing for the enlarged phone
+    camera.position.set(0, 0, 5);
   }, [scene, camera]);
   /* eslint-enable react-hooks/immutability */
 
-  // Mouse parallax — reads from shared singleton (no duplicate listener)
+  // Mouse parallax — gentle tilt, reads from shared singleton (no duplicate listener)
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     const mouse = getMouseParallax();
     groupRef.current.rotation.y +=
-      (mouse.x * 0.25 - groupRef.current.rotation.y) * delta * 3.0;
+      (mouse.x * 0.18 - groupRef.current.rotation.y) * delta * 2.5;
     groupRef.current.rotation.x +=
-      (mouse.y * 0.15 - groupRef.current.rotation.x) * delta * 3.0;
+      (mouse.y * 0.10 - groupRef.current.rotation.x) * delta * 2.5;
   });
 
   return (
     <>
-      {/* Lighting — strong enough that the GLTF materials are clearly visible */}
-      <ambientLight intensity={1.5} />
-      <pointLight position={[0, 3, 4]} intensity={6} color="#ffffff" />
-      <pointLight position={[3, 2, 3]} intensity={4} color="#CFE1B9" />
-      <pointLight position={[-3, -2, 3]} intensity={3} color="#aaddff" />
-      <directionalLight position={[0, 0, 5]} intensity={2.5} color="#ffffff" />
+      {/* Lighting — cool-toned studio to contrast the warm CSS glow behind canvas */}
+      <ambientLight intensity={0.3} />
+      <pointLight position={[0, 1, 5]}   intensity={3.0} color="#e8f0ff" />
+      <pointLight position={[3, 2, 3]}   intensity={1.5} color="#CFE1B9" />
+      <pointLight position={[-3, -1, 4]} intensity={1.2} color="#b0d0ff" />
+      <directionalLight position={[0, 1, 5]} intensity={1.5} color="#ddeeff" />
 
       {/* Environment map for realistic reflections on phone glass/metal */}
-      <Environment preset="city" environmentIntensity={0.4} />
+      <Environment preset="night" environmentIntensity={0.5} />
 
       <group ref={groupRef}>
         <PhoneModel isMobile={isMobile} />

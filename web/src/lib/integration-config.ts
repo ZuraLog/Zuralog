@@ -33,6 +33,8 @@ export interface IntegrationItem {
  * Initial minimal integration set.
  * Expand by adding entries — no other code changes needed.
  */
+// All integrations placed in the top arc (10°–170°) so the bottom of the hero
+// is clear for the text content and floating graphics below the phone.
 export const INTEGRATIONS: IntegrationItem[] = [
   {
     id: "strava",
@@ -40,7 +42,7 @@ export const INTEGRATIONS: IntegrationItem[] = [
     color: "#FC4C02",
     iconType: "si",
     iconKey: "SiStrava",
-    angle: 35,
+    angle: 22,       // top-right
     distance: 1.0,
     scale: 1.0,
   },
@@ -50,9 +52,19 @@ export const INTEGRATIONS: IntegrationItem[] = [
     color: "#FF3B30",
     iconType: "si",
     iconKey: "SiApple",
-    angle: 110,
-    distance: 1.15,
-    scale: 0.85,
+    angle: 66,       // upper-right
+    distance: 1.1,
+    scale: 0.9,
+  },
+  {
+    id: "oura",
+    label: "Oura Ring",
+    color: "#9B8EFF",
+    iconType: "letter",
+    iconKey: "O",
+    angle: 90,       // straight up / center top
+    distance: 1.3,
+    scale: 0.8,
   },
   {
     id: "health_connect",
@@ -60,8 +72,8 @@ export const INTEGRATIONS: IntegrationItem[] = [
     color: "#4285F4",
     iconType: "si",
     iconKey: "SiGoogle",
-    angle: 200,
-    distance: 1.05,
+    angle: 114,      // upper-left
+    distance: 1.1,
     scale: 0.9,
   },
   {
@@ -70,24 +82,14 @@ export const INTEGRATIONS: IntegrationItem[] = [
     color: "#007CC3",
     iconType: "si",
     iconKey: "SiGarmin",
-    angle: 290,
-    distance: 1.1,
-    scale: 0.8,
-  },
-  {
-    id: "oura",
-    label: "Oura Ring",
-    color: "#9B8EFF",
-    iconType: "letter",
-    iconKey: "O",
-    angle: 340,
-    distance: 0.95,
-    scale: 0.75,
+    angle: 158,      // top-left
+    distance: 1.0,
+    scale: 0.85,
   },
 ];
 
 /** Radius base (% of viewport) for card placement */
-export const ORBIT_RADIUS_VW = 32;
+export const ORBIT_RADIUS_VW = 36;
 
 /** Brand color map for quick lookups */
 export const BRAND_COLORS: Record<string, string> = Object.fromEntries(
