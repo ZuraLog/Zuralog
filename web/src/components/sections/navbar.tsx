@@ -199,7 +199,8 @@ export function Navbar() {
             <Button
               variant="pill"
               size="pill-sm"
-              className="mt-2 w-full"
+              className="mt-2 w-full animate-pulse-glow"
+              style={{ animationDelay: '2000ms' }}
               onClick={() => handleNav('waitlist')}
             >
               Join Waitlist
