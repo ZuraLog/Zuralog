@@ -9,6 +9,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
+import { SmoothScroll } from '@/components/smooth-scroll';
 import { satoshi, inter, jetbrainsMono } from './fonts';
 import './globals.css';
 
@@ -35,7 +36,9 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
+          <SmoothScroll>
+            {children}
+          </SmoothScroll>
           <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
