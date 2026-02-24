@@ -17,6 +17,7 @@
 import { Suspense } from 'react';
 import { Navbar } from '@/components/sections/navbar';
 import { Hero } from '@/components/sections/hero';
+import { FullMobileSection } from '@/components/sections/full-mobile';
 import { ProblemSection } from '@/components/sections/problem';
 import { FeaturesSection } from '@/components/sections/features';
 import { HowItWorksSection } from '@/components/sections/how-it-works';
@@ -39,6 +40,7 @@ export default function Home() {
       </Suspense>
       <main>
         <Hero />
+        <FullMobileSection />
         <ProblemSection />
         <FeaturesSection />
         <HowItWorksSection />
