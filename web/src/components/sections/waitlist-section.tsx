@@ -11,12 +11,14 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { QuizContainer } from '@/components/quiz/quiz-container';
+import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
+import { WaitlistParticles } from '@/components/waitlist-particles';
 
 interface LeaderboardEntry {
   rank: number;
-  email_masked: string;
+  display_name: string;
   referral_count: number;
-  tier: string;
+  queue_position?: number;
 }
 
 /**
@@ -40,6 +42,7 @@ export function WaitlistSection() {
       {/* Background gradient glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sage/5 blur-[120px]" />
+        <WaitlistParticles />
       </div>
 
       <div className="relative mx-auto max-w-6xl px-6">
@@ -59,6 +62,9 @@ export function WaitlistSection() {
             personalize your experience before we launch.
           </p>
         </motion.div>
+
+        {/* Animated stats counters */}
+        <WaitlistStatsBar />
 
         {/* Main layout */}
         <div className="flex flex-col items-start gap-12 lg:flex-row lg:justify-between">
@@ -107,8 +113,8 @@ export function WaitlistSection() {
                           {entry.rank}
                         </span>
                         <span className="text-sm text-zinc-300">
-                          {entry.email_masked}
-                        </span>
+                           {entry.display_name}
+                         </span>
                       </div>
                       <span className="text-xs font-medium text-sage">
                         {entry.referral_count} refs

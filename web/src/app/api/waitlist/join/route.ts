@@ -100,14 +100,18 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. Resolve referrer
+  let referredByCode: string | null = null;
   let referrerId: string | null = null;
   if (referrerCode) {
     const { data: referrer } = await supabase
       .from('waitlist_users')
-      .select('id')
+      .select('id, referral_code')
       .eq('referral_code', referrerCode.toUpperCase())
       .maybeSingle();
-    if (referrer) referrerId = referrer.id;
+    if (referrer) {
+      referredByCode = referrer.referral_code;
+      referrerId = referrer.id;
+    }
   }
 
   // 5. Insert new user
@@ -117,8 +121,10 @@ export async function POST(request: NextRequest) {
     .insert({
       email,
       referral_code: newCode,
-      referred_by_id: referrerId,
-      quiz_answers: quizAnswers ?? null,
+      referred_by: referredByCode,
+      quiz_apps_used: quizAnswers?.apps ?? [],
+      quiz_frustration: quizAnswers?.frustrations?.[0] ?? null,
+      quiz_goal: quizAnswers?.goal ?? null,
     })
     .select('id, queue_position, tier')
     .single();

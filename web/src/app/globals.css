@@ -8,9 +8,8 @@
  *   1. Tailwind v4 base import
  *   2. shadcn/ui base styles
  *   3. @theme inline block — maps CSS vars to Tailwind utility names
- *   4. :root — light mode tokens
- *   5. .dark — dark mode tokens (default)
- *   6. @layer base — global resets
+ *   4. :root — dark mode tokens (always active, dark-only)
+ *   5. @layer base — global resets
  */
 
 @import "tailwindcss";
@@ -19,8 +18,6 @@
 
 /* Grain texture overlay */
 @import "../styles/grain.css";
-
-@custom-variant dark (&:is(.dark *));
 
 /* ─── Tailwind theme mapping ────────────────────────────────────────── */
 @theme inline {
@@ -83,59 +80,10 @@
   --radius-pill: 9999px;
 }
 
-/* ─── Light Mode Tokens ─────────────────────────────────────────────── */
+/* ─── Dark Mode Tokens (always active) ─────────────────────────────── */
 :root {
   --radius: 0.75rem;
 
-  /* Zuralog Light — soft white backgrounds, dark text */
-  --background: oklch(0.98 0 0);        /* #FAFAFA */
-  --foreground: oklch(0.1 0 0);         /* ~#1A1A1A */
-  --card: oklch(1 0 0);                 /* #FFFFFF */
-  --card-foreground: oklch(0.1 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.1 0 0);
-
-  /* Sage Green primary */
-  --primary: oklch(0.84 0.07 140);      /* ~#CFE1B9 */
-  --primary-foreground: oklch(0.1 0 0);
-
-  --secondary: oklch(0.94 0 0);
-  --secondary-foreground: oklch(0.2 0 0);
-  --muted: oklch(0.94 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.84 0.07 140);
-  --accent-foreground: oklch(0.1 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0 0);
-  --input: oklch(0.9 0 0);
-  --ring: oklch(0.84 0.07 140);
-
-  /* Brand extras */
-  --sage: oklch(0.84 0.07 140);        /* Sage Green #CFE1B9 */
-  --sage-dim: oklch(0.75 0.06 140);    /* Dimmer sage for hover states */
-  --surface: oklch(1 0 0);             /* Card surfaces */
-  --surface-elevated: oklch(0.97 0 0); /* Elevated surfaces */
-
-  /* Charts */
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-
-  /* Sidebar */
-  --sidebar: oklch(0.97 0 0);
-  --sidebar-foreground: oklch(0.1 0 0);
-  --sidebar-primary: oklch(0.84 0.07 140);
-  --sidebar-primary-foreground: oklch(0.1 0 0);
-  --sidebar-accent: oklch(0.94 0 0);
-  --sidebar-accent-foreground: oklch(0.2 0 0);
-  --sidebar-border: oklch(0.9 0 0);
-  --sidebar-ring: oklch(0.84 0.07 140);
-}
-
-/* ─── Dark Mode Tokens ──────────────────────────────────────────────── */
-.dark {
   /* Zuralog Dark — OLED black background, iOS-style surface cards */
   --background: oklch(0 0 0);           /* #000000 — OLED black */
   --foreground: oklch(0.97 0 0);        /* #F8F8F8 */
@@ -182,6 +130,7 @@
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.84 0.07 140);
 }
+
 
 /* ─── Base Layer Resets ─────────────────────────────────────────────── */
 @layer base {

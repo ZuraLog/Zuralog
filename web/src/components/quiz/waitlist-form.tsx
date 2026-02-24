@@ -109,7 +109,7 @@ export function WaitlistForm({ onSignupSuccess }: WaitlistFormProps) {
             type="email"
             placeholder="your@email.com"
             autoComplete="email"
-            className="h-14 rounded-2xl border-white/10 bg-white/5 px-5 text-base placeholder:text-zinc-600 focus:border-sage/50 focus:ring-sage/20"
+            className="h-14 rounded-2xl border-white/10 bg-white/5 px-5 text-base placeholder:text-zinc-600 focus:border-sage/50 focus:ring-2 focus:ring-sage/20 focus:shadow-[0_0_20px_rgba(207,225,185,0.12)] transition-all duration-200"
             {...register('email')}
           />
           {errors.email && (
@@ -123,7 +123,7 @@ export function WaitlistForm({ onSignupSuccess }: WaitlistFormProps) {
             type="text"
             placeholder="Referral code (optional)"
             defaultValue={urlRef}
-            className="h-12 rounded-2xl border-white/10 bg-white/5 px-5 text-sm placeholder:text-zinc-600 focus:border-sage/50"
+            className="h-12 rounded-2xl border-white/10 bg-white/5 px-5 text-sm placeholder:text-zinc-600 focus:border-sage/50 focus:ring-1 focus:ring-sage/20 transition-all duration-200"
             {...register('referralCode')}
           />
         </div>
@@ -131,7 +131,7 @@ export function WaitlistForm({ onSignupSuccess }: WaitlistFormProps) {
         <Button
           type="submit"
           disabled={loading}
-          className="h-14 w-full rounded-full bg-sage text-base font-semibold text-black shadow-[0_0_40px_rgba(207,225,185,0.25)] hover:bg-sage/90 disabled:opacity-50"
+          className={`h-14 w-full rounded-full bg-sage text-base font-semibold text-black transition-all duration-300 hover:bg-sage/90 hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(207,225,185,0.45)] active:scale-[0.98] disabled:opacity-50 ${loading ? 'animate-pulse shadow-[0_0_50px_rgba(207,225,185,0.4)]' : 'shadow-[0_0_30px_rgba(207,225,185,0.2)]'}`}
         >
           {loading ? 'Joining…' : 'Join & Tell Us About Yourself →'}
         </Button>

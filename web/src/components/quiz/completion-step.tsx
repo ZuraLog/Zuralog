@@ -11,9 +11,15 @@
 
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { getReferralUrl, buildShareText } from '@/lib/referral';
 import type { SuccessData } from '@/hooks/use-quiz';
+
+const ConfettiBurst = dynamic(
+  () => import('@/components/confetti-burst').then((m) => m.ConfettiBurst),
+  { ssr: false },
+);
 
 interface CompletionStepProps {
   data: SuccessData;
@@ -32,7 +38,9 @@ export function CompletionStep({ data }: CompletionStepProps) {
   }
 
   return (
-    <motion.div
+    <>
+      <ConfettiBurst trigger={true} />
+      <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -99,6 +107,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
       <p className="text-xs text-zinc-600">
         Each friend who joins moves you up one spot.
       </p>
-    </motion.div>
+      </motion.div>
+    </>
   );
 }

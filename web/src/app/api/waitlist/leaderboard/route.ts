@@ -2,13 +2,11 @@
  * GET /api/waitlist/leaderboard
  *
  * Returns the top referrers for the social proof leaderboard.
- * Results are cached for 60 seconds via Next.js route segment config.
  */
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,13 +14,12 @@ const supabase = createClient(
 );
 
 export async function GET() {
-  // Query waitlist_users directly, ordered by referral_count descending.
-  // Compute rank client-side to avoid dependency on a potentially broken view.
+  // Query the referral_leaderboard view which computes referral_count via JOIN
+  // and handles display_name privacy (real name or "Anonymous #XXXX").
   const { data, error } = await supabase
-    .from('waitlist_users')
-    .select('email, referral_count, tier')
+    .from('referral_leaderboard')
+    .select('display_name, referral_count, queue_position')
     .gt('referral_count', 0)
-    .order('referral_count', { ascending: false })
     .limit(10);
 
   if (error) {
@@ -33,10 +30,9 @@ export async function GET() {
 
   const leaderboard = (data ?? []).map((row, i) => ({
     rank: i + 1,
-    // Mask email: show first 2 chars + *** + domain
-    email_masked: row.email.replace(/^(.{2}).*?(@.*)$/, '$1***$2'),
-    referral_count: row.referral_count,
-    tier: row.tier,
+    display_name: row.display_name ?? `Anonymous #${i + 1}`,
+    referral_count: Number(row.referral_count),
+    queue_position: row.queue_position,
   }));
 
   return NextResponse.json({ leaderboard });
