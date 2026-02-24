@@ -34,7 +34,7 @@ This project uses specialized **Agent Skills** for development.
 - **Superpowers**: [Superpowers Skill](.agent/skills/superpowers/skills/using-superpowers/SKILL.md)
   - **Note**: This is your primary directive for high-level reasoning, cross-domain synthesis, and creative problem-solving. Review its instructions before starting any complex task.
 - **Frontend Design**: [Creative Frontend Design Skill](./.agent/skills/frontend-design/SKILL.md) — Create distinctive, production-grade frontend interfaces with high design quality.
-- **Browser Automation**: [Agent Browser Skill](./.agent/skills/agent-browser/SKILL.md) — Automate browser interactions (navigate, fill forms, click, screenshot, scrape data, test web apps) via `npx agent-browser` CLI.
+- **Browser Automation**: Playwright MCP (`@playwright/mcp`) — Automate browser interactions (navigate, fill forms, click, screenshot, scrape data, test web apps) via the Playwright MCP server.
 
 ## Canonical Commands
 - **Discovery**: `dir /s /b *.md` (To find documentation)
@@ -168,7 +168,7 @@ This project uses specialized **Agent Skills** for development.
 
 ### 21. Design System Consistency (UI Law)
 > [!IMPORTANT]
-> **Every screen MUST conform to the Zuralog design system defined in [`docs/plans/frontend/view-design.md`](./docs/plans/frontend/view-design.md).** Deviating from it without updating the design doc first is a bug, not a feature.
+> **Every screen MUST conform to the agreed plan for that feature.** [`docs/plans/frontend/view-design.md`](./docs/plans/frontend/view-design.md) is a reference for the Flutter app design system tokens — not the final authority. The actual spec is whatever was planned and agreed upon. When in doubt, ask before assuming the doc is correct.
 
 #### Background & Surface Rules (Non-Negotiable)
 *   **Scaffold background:** ALL screens use `Theme.of(context).scaffoldBackgroundColor` — never override with `colorScheme.surface` or a hardcoded color. The theme defines:
@@ -192,3 +192,10 @@ This project uses specialized **Agent Skills** for development.
 #### Enforce Before Merging
 *   Before any merge to `main`, do a visual audit: open each screen in both light and dark mode. If backgrounds, typography, or button styles deviate from the above rules, fix them first.
 *   If the design system itself needs to change, update `docs/plans/frontend/view-design.md` as part of the same PR — never let the doc drift from reality.
+
+---
+
+### 22. Visual QA with Playwright MCP (Non-Negotiable)
+
+> [!IMPORTANT]
+> After implementing any UI change, use the Playwright MCP to navigate to the affected page, take a screenshot, and visually confirm it matches the agreed plan or spec for that feature. If it does not match, fix it and re-screenshot until it does. A task is not complete until this passes.

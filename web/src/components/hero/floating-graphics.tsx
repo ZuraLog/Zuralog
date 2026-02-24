@@ -181,15 +181,17 @@ interface GraphicElement {
   content: React.ReactNode;
 }
 
-// Phone model center sits at approximately 50% / 40% of the hero viewport.
-// Cards are placed to visibly overlap the phone edges — tight cluster.
-// Left column: ~30% x, Right column: ~70% x, center-top/bottom adjust accordingly.
+// Phone model center sits at approximately 50% / 42% of the hero viewport.
+// Target: cards tightly clustered around phone edges per reference Image 2.
+// Left cards: x ~38-40% (right edge overlaps phone left bezel ~43%)
+// Right cards: x ~60-62% (left edge overlaps phone right bezel ~57%)
+// Vertical: top row y~28%, bottom row y~55%, metrics y~62%
 const DESKTOP_ELEMENTS: GraphicElement[] = [
-  { id: "readiness", x: 29, y: 33, depth: 6, delay: 0.7, content: <ReadinessRing /> },
-  { id: "workout",   x: 28, y: 58, depth: 5, delay: 0.9, content: <WorkoutCard /> },
-  { id: "weekly",    x: 72, y: 31, depth: 7, delay: 0.8, content: <WeeklyChart /> },
-  { id: "coach",     x: 73, y: 58, depth: 5, delay: 1.0, content: <AICoachBubble /> },
-  { id: "metrics",   x: 50, y: 63, depth: 4, delay: 1.1, content: <MetricPills /> },
+  { id: "readiness", x: 38, y: 28, depth: 6, delay: 0.7, content: <ReadinessRing /> },
+  { id: "workout",   x: 38, y: 55, depth: 5, delay: 0.9, content: <WorkoutCard /> },
+  { id: "weekly",    x: 62, y: 28, depth: 7, delay: 0.8, content: <WeeklyChart /> },
+  { id: "coach",     x: 62, y: 52, depth: 5, delay: 1.0, content: <AICoachBubble /> },
+  { id: "metrics",   x: 50, y: 62, depth: 4, delay: 1.1, content: <MetricPills /> },
 ];
 
 const MOBILE_ELEMENTS: GraphicElement[] = [
