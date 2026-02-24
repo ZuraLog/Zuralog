@@ -18,7 +18,9 @@ import { INTEGRATIONS, ORBIT_RADIUS_VW, type IntegrationItem } from "@/lib/integ
 
 /** Render the appropriate brand icon for a given integration */
 function IntegrationIcon({ item, size }: { item: IntegrationItem; size: number }) {
-  const props = { size, color: item.color };
+  // Garmin's icon is a wide wordmark — scale it up so it fills the card better
+  const iconSize = item.iconKey === "SiGarmin" ? Math.round(size * 1.6) : size;
+  const props = { size: iconSize, color: item.color };
 
   switch (item.iconKey) {
     case "SiStrava":  return <SiStrava {...props} />;
@@ -95,22 +97,26 @@ function IntegrationCard({
   // transform combiner, silently discarding scale/y animation values.
   return (
     <div
-      className="absolute pointer-events-none select-none"
+      className="absolute select-none"
       style={{
         left: `${x}%`,
         top: `${y}%`,
         transform: "translate(-50%, -50%)",
       }}
     >
-      <motion.div
+      <motion.a
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
         initial={reducedMotion ? false : { opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.08 }}
         transition={
           reducedMotion
             ? { duration: 0 }
             : { delay: 0.8 + index * 0.15, duration: 0.6, ease: "easeOut" }
         }
-        className="flex flex-col items-center gap-1.5"
+        className="flex flex-col items-center gap-1.5 cursor-pointer"
         style={{
           x: offsetX,
           y: offsetY,
@@ -119,7 +125,7 @@ function IntegrationCard({
       >
         {/* Glassmorphic card */}
         <div
-          className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md"
+          className="flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-colors duration-200 hover:border-white/25 hover:bg-white/10"
           style={{
             width: baseSize,
             height: baseSize,
@@ -135,7 +141,7 @@ function IntegrationCard({
         >
           {item.label}
         </span>
-      </motion.div>
+      </motion.a>
     </div>
   );
 }
@@ -160,14 +166,17 @@ export function IntegrationCards({
   if (isMobile) {
     const mobileVisible = INTEGRATIONS.slice(0, 4);
     return (
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-[33%] flex -translate-x-1/2 items-end gap-4">
           {mobileVisible.map((item, i) => {
             const size = 44 * item.scale;
             const iconSz = Math.round(18 * item.scale);
             return (
-              <motion.div
+              <motion.a
                 key={item.id}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex flex-col items-center gap-1"
                 initial={reducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -190,7 +199,7 @@ export function IntegrationCards({
                 <span className="text-center text-[8px] font-medium tracking-wide text-white/50 whitespace-nowrap">
                   {item.label}
                 </span>
-              </motion.div>
+              </motion.a>
             );
           })}
         </div>
@@ -200,7 +209,7 @@ export function IntegrationCards({
 
   // Desktop: polar orbit layout
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden">
       {INTEGRATIONS.map((item, i) => (
         <IntegrationCard
           key={item.id}

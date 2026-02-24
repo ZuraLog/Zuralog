@@ -143,15 +143,24 @@ function LearnVisual() {
       <div className="mb-3 rounded-xl border border-white/8 bg-black/40 p-3">
         <p className="mb-2 text-[9px] text-zinc-500">Correlating across all your data…</p>
         <div className="flex items-end gap-1 h-10">
-          {Array.from({ length: 14 }, (_, i) => (
-            <motion.div
-              key={i}
-              className="flex-1 rounded-sm bg-sage/20"
-              style={{ minHeight: 2 }}
-              animate={{ height: `${20 + Math.sin(i * 0.8) * 14 + 14}px` }}
-              transition={{ delay: i * 0.06, duration: 0.5 }}
-            />
-          ))}
+          {Array.from({ length: 14 }, (_, i) => {
+            const barHeight = 20 + Math.sin(i * 0.8) * 14 + 14;
+            return (
+              <motion.div
+                key={i}
+                className="group/bar relative flex-1 cursor-pointer rounded-sm bg-sage/20 transition-colors duration-200 hover:bg-sage/60"
+                style={{ minHeight: 2 }}
+                animate={{ height: `${barHeight}px` }}
+                transition={{ delay: i * 0.06, duration: 0.5 }}
+                whileHover={{ scale: 1.15 }}
+              >
+                {/* Tooltip on hover */}
+                <div className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 rounded bg-white/90 px-1 py-0.5 text-[7px] font-bold text-black opacity-0 transition-opacity group-hover/bar:opacity-100 whitespace-nowrap">
+                  {Math.round(barHeight)}%
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
         <p className="mt-1 text-[8px] text-zinc-600">14 days of cross-app patterns</p>
       </div>

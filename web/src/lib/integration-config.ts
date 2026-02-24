@@ -27,6 +27,8 @@ export interface IntegrationItem {
   distance: number;
   /** Relative scale of the card (1.0 = default) */
   scale: number;
+  /** External URL for the integration's website */
+  url: string;
 }
 
 /**
@@ -45,6 +47,7 @@ export const INTEGRATIONS: IntegrationItem[] = [
     angle: 22,       // top-right
     distance: 1.0,
     scale: 1.0,
+    url: "https://www.strava.com",
   },
   {
     id: "apple_health",
@@ -55,6 +58,7 @@ export const INTEGRATIONS: IntegrationItem[] = [
     angle: 66,       // upper-right
     distance: 1.1,
     scale: 0.9,
+    url: "https://www.apple.com/health/",
   },
   {
     id: "oura",
@@ -65,6 +69,7 @@ export const INTEGRATIONS: IntegrationItem[] = [
     angle: 90,       // straight up / center top
     distance: 1.3,
     scale: 0.8,
+    url: "https://ouraring.com",
   },
   {
     id: "health_connect",
@@ -75,6 +80,7 @@ export const INTEGRATIONS: IntegrationItem[] = [
     angle: 114,      // upper-left
     distance: 1.1,
     scale: 0.9,
+    url: "https://health.google/health-connect/",
   },
   {
     id: "garmin",
@@ -85,6 +91,7 @@ export const INTEGRATIONS: IntegrationItem[] = [
     angle: 158,      // top-left
     distance: 1.0,
     scale: 0.85,
+    url: "https://www.garmin.com",
   },
 ];
 

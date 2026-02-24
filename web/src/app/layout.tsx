@@ -37,25 +37,16 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: siteUrl,
     siteName: 'ZuraLog',
-    title: 'ZuraLog — The AI That Connects Your Fitness Apps',
+    title: 'ZuraLog — Unified Health. Made Smart.',
     description:
       'The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'ZuraLog — AI Fitness Hub',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
     creator: '@zuralog',
-    title: 'ZuraLog — The AI That Connects Your Fitness Apps',
+    title: 'ZuraLog — Unified Health. Made Smart.',
     description:
       'The AI that connects your fitness apps and actually thinks. Join the waitlist for early access.',
-    images: ['/og-image.png'],
   },
   robots: {
     index: true,
