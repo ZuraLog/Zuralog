@@ -3,7 +3,7 @@
  *
  * Provides:
  * - Satoshi (display), Inter (body), JetBrains Mono (code) font variables
- * - ThemeProvider with dark as default (next-themes)
+ * - Dark-only mode (hardcoded dark class on html element)
  * - SmoothScroll (Lenis + GSAP ScrollTrigger sync)
  * - Sonner toast notifications
  * - Vercel Analytics + Speed Insights
@@ -15,7 +15,6 @@ import { Suspense } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Toaster } from 'sonner';
-import { ThemeProvider } from '@/components/theme-provider';
 import { SmoothScroll } from '@/components/smooth-scroll';
 import { PostHogProvider } from '@/components/analytics';
 import { CursorTrail } from '@/components/cursor-trail';
@@ -88,27 +87,19 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
-      className={`${satoshi.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`dark ${satoshi.variable} ${inter.variable} ${jetbrainsMono.variable}`}
     >
       <body className="font-sans antialiased">
         <CursorTrail />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <SmoothScroll>
-            {/* PostHog requires useSearchParams — wrap in Suspense */}
-            <Suspense>
-              <PostHogProvider>
-                {children}
-              </PostHogProvider>
-            </Suspense>
-          </SmoothScroll>
-          <Toaster richColors position="bottom-right" />
-        </ThemeProvider>
+        <SmoothScroll>
+          {/* PostHog requires useSearchParams — wrap in Suspense */}
+          <Suspense>
+            <PostHogProvider>
+              {children}
+            </PostHogProvider>
+          </Suspense>
+        </SmoothScroll>
+        <Toaster richColors position="bottom-right" />
 
         {/* Vercel Analytics — server-safe, no client init needed */}
         <Analytics />
