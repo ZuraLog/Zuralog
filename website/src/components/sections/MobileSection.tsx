@@ -10,37 +10,23 @@ import { SiFitbit } from "react-icons/si";
 import { IoIosFitness } from "react-icons/io";
 import { TbBrain, TbMessages, TbRun, TbMoon, TbApple } from "react-icons/tb";
 import { MdOutlineAutoAwesome } from "react-icons/md";
-// Register ScrollTrigger
+import { mobileScrollProgress } from "@/lib/mobile-scroll-bridge";
+
+// Register ScrollTrigger once at module level
 if (typeof window !== "undefined") {
     gsap.registerPlugin(ScrollTrigger);
 }
 
 /**
  * Content slides configuration.
- * Each slide has unique content and a distinct layout style.
- * The phone texture swap is handled by PhoneCanvas via CSS custom property.
+ * Each slide has unique content and a distinct background color gradient.
+ * The phone texture swap is handled by PhoneCanvas via the mobileScrollProgress bridge.
  */
 const SLIDES = [
-    {
-        id: "unified",
-        bgFrom: "#CFE1B9",
-        bgTo: "#DAEEF7",
-    },
-    {
-        id: "intelligence",
-        bgFrom: "#DAEEF7",
-        bgTo: "#F7DAE4",
-    },
-    {
-        id: "actions",
-        bgFrom: "#F7DAE4",
-        bgTo: "#FDF0E0",
-    },
-    {
-        id: "coach",
-        bgFrom: "#FDF0E0",
-        bgTo: "#D6F0E0",
-    },
+    { id: "unified",      bgFrom: "#CFE1B9", bgTo: "#DAEEF7" },
+    { id: "intelligence", bgFrom: "#DAEEF7", bgTo: "#F7DAE4" },
+    { id: "actions",      bgFrom: "#F7DAE4", bgTo: "#FDF0E0" },
+    { id: "coach",        bgFrom: "#FDF0E0", bgTo: "#D6F0E0" },
 ];
 
 /** Total number of content slides */
@@ -50,13 +36,51 @@ export function MobileSection() {
     const sectionRef = useRef<HTMLElement>(null);
     const pinnedRef = useRef<HTMLDivElement>(null);
 
+    /**
+     * Cache pre-queried slide element references so the onUpdate callback
+     * never touches the DOM for element lookups — only style writes.
+     */
+    const slideEls = useRef<(Element | null)[]>([]);
+
+    // Populate slide element cache once on mount
+    useEffect(() => {
+        if (!pinnedRef.current) return;
+        slideEls.current = SLIDES.map((slide) =>
+            pinnedRef.current!.querySelector(`[data-slide="${slide.id}"]`)
+        );
+
+        // Promote each slide to its own compositor layer so the browser
+        // doesn't repaint the whole section on opacity/transform changes.
+        slideEls.current.forEach((el) => {
+            if (el) {
+                (el as HTMLElement).style.willChange = "transform, opacity";
+            }
+        });
+
+        return () => {
+            slideEls.current = [];
+        };
+    }, []);
+
     useGSAP(() => {
         if (!sectionRef.current || !pinnedRef.current) return;
 
-        // ──────────────────────────────────────────
-        // Master pinned scroll: lock the viewport for
-        // SLIDE_COUNT * 100vh of scroll distance
-        // ──────────────────────────────────────────
+        const slideDuration = 1 / SLIDE_COUNT;
+
+        // ──────────────────────────────────────────────────────────────────────
+        // Single master ScrollTrigger
+        //
+        // Previously there were 6 separate ScrollTrigger instances (1 pin +
+        // 4 per-slide text + 1 background) each firing onUpdate on every scroll
+        // frame. Consolidating into one means a single callback per frame for
+        // all slide logic — ~6× fewer JS evaluations per scroll tick.
+        //
+        // This trigger also:
+        //   • writes mobileScrollProgress.value (read by PhoneCanvas useFrame,
+        //     replaces the CSS custom-property round-trip)
+        //   • handles all slide opacity/translateY via direct gsap.set calls
+        //   • handles background color interpolation
+        // ──────────────────────────────────────────────────────────────────────
         const pinTrigger = ScrollTrigger.create({
             trigger: sectionRef.current,
             start: "top top",
@@ -64,111 +88,73 @@ export function MobileSection() {
             pin: pinnedRef.current,
             scrub: true,
             onUpdate: (self) => {
-                // Broadcast progress as a CSS custom property for PhoneCanvas
-                document.documentElement.style.setProperty(
-                    "--mobile-scroll-progress",
-                    String(self.progress)
-                );
-            },
-        });
+                const p = self.progress;
 
-        // ──────────────────────────────────────────
-        // Per-slide text animations
-        // Each slide fades in, stays, then fades out
-        // ──────────────────────────────────────────
-        const slideDuration = 1 / SLIDE_COUNT;
+                // ── 1. Write progress to the shared bridge (no CSS variable) ──
+                mobileScrollProgress.value = p;
 
-        SLIDES.forEach((slide, i) => {
-            const slideEl = pinnedRef.current!.querySelector(`[data-slide="${slide.id}"]`);
-            if (!slideEl) return;
+                // ── 2. Per-slide opacity + translateY ────────────────────────
+                SLIDES.forEach((slide, i) => {
+                    const slideEl = slideEls.current[i];
+                    if (!slideEl) return;
 
-            const enterStart = i * slideDuration;
-            const enterEnd = enterStart + slideDuration * 0.15;
-            const exitStart = enterStart + slideDuration * 0.85;
-            const exitEnd = enterStart + slideDuration;
+                    const enterStart = i * slideDuration;
+                    const enterEnd   = enterStart + slideDuration * 0.15;
+                    const exitStart  = enterStart + slideDuration * 0.85;
+                    const exitEnd    = enterStart + slideDuration;
 
-            // Fade in
-            ScrollTrigger.create({
-                trigger: sectionRef.current,
-                start: "top top",
-                end: () => `+=${window.innerHeight * SLIDE_COUNT}`,
-                scrub: true,
-                onUpdate: (self) => {
-                    const p = self.progress;
-
-                    // Calculate opacity for this slide
-                    let opacity = 0;
+                    let opacity    = 0;
                     let translateY = 30;
 
                     if (i === 0) {
-                        // First slide: already visible at start, fades out
+                        // First slide: visible from start, fades out
                         if (p <= exitStart) {
-                            opacity = 1;
+                            opacity    = 1;
                             translateY = 0;
                         } else if (p <= exitEnd) {
                             const fadeOut = (p - exitStart) / (exitEnd - exitStart);
-                            opacity = 1 - fadeOut;
+                            opacity    = 1 - fadeOut;
                             translateY = -30 * fadeOut;
                         }
                     } else if (i === SLIDE_COUNT - 1) {
                         // Last slide: fades in and stays
                         if (p >= enterStart && p <= enterEnd) {
                             const fadeIn = (p - enterStart) / (enterEnd - enterStart);
-                            opacity = fadeIn;
+                            opacity    = fadeIn;
                             translateY = 30 * (1 - fadeIn);
                         } else if (p > enterEnd) {
-                            opacity = 1;
+                            opacity    = 1;
                             translateY = 0;
                         }
                     } else {
-                        // Middle slides: fade in, stay, fade out
+                        // Middle slides: fade in → hold → fade out
                         if (p >= enterStart && p <= enterEnd) {
                             const fadeIn = (p - enterStart) / (enterEnd - enterStart);
-                            opacity = fadeIn;
+                            opacity    = fadeIn;
                             translateY = 30 * (1 - fadeIn);
                         } else if (p > enterEnd && p <= exitStart) {
-                            opacity = 1;
+                            opacity    = 1;
                             translateY = 0;
                         } else if (p > exitStart && p <= exitEnd) {
                             const fadeOut = (p - exitStart) / (exitEnd - exitStart);
-                            opacity = 1 - fadeOut;
+                            opacity    = 1 - fadeOut;
                             translateY = -30 * fadeOut;
                         }
                     }
 
-                    gsap.set(slideEl, {
-                        opacity,
-                        y: translateY,
-                    });
-                },
-            });
-        });
+                    gsap.set(slideEl, { opacity, y: translateY });
+                });
 
-        // ──────────────────────────────────────────
-        // Background color transition across slides
-        // ──────────────────────────────────────────
-        ScrollTrigger.create({
-            trigger: sectionRef.current,
-            start: "top top",
-            end: () => `+=${window.innerHeight * SLIDE_COUNT}`,
-            scrub: true,
-            onUpdate: (self) => {
-                const p = self.progress;
-                // Map progress to slide index and interpolate
-                const slideFloat = p * (SLIDE_COUNT - 1);
-                const slideIndex = Math.min(Math.floor(slideFloat), SLIDE_COUNT - 2);
-                const slideFrac = slideFloat - slideIndex;
-
-                const fromColor = SLIDES[slideIndex].bgFrom;
-                const toColor = SLIDES[slideIndex].bgTo;
-
+                // ── 3. Background color interpolation ────────────────────────
                 if (pinnedRef.current) {
-                    // Use GSAP's color interpolation
+                    const slideFloat  = p * (SLIDE_COUNT - 1);
+                    const slideIndex  = Math.min(Math.floor(slideFloat), SLIDE_COUNT - 2);
+                    const slideFrac   = slideFloat - slideIndex;
+                    const fromColor   = SLIDES[slideIndex].bgFrom;
+                    const toColor     = SLIDES[slideIndex].bgTo;
                     const interpolated = gsap.utils.interpolate(fromColor, toColor, slideFrac);
                     pinnedRef.current.style.backgroundColor = interpolated as string;
                 }
-
-
             },
         });
 
@@ -176,6 +162,8 @@ export function MobileSection() {
             pinTrigger.kill();
         };
     }, { scope: sectionRef });
+
+
 
     return (
         <section
@@ -412,7 +400,6 @@ export function MobileSection() {
                         />
                     ))}
                 </div>
-
 
             </div>
         </section>

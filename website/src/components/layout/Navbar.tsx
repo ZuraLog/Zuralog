@@ -76,7 +76,7 @@ export function Navbar() {
                         />
                         <span
                             className="font-semibold tracking-tight"
-                            style={{ color: "var(--text-primary)", fontSize: "13px" }}
+                            style={{ color: "var(--color-sage)", fontSize: "13px" }}
                         >
                             ZuraLog
                         </span>

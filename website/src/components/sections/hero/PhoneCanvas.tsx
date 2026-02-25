@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { PresentationControls, Environment, useGLTF, useTexture } from '@react-three/drei';
+import { Environment, useGLTF, useTexture } from '@react-three/drei';
+import { ProgressBridge } from '@/components/ProgressBridge';
 import * as THREE from 'three';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
+import { mobileScrollProgress } from '@/lib/mobile-scroll-bridge';
 
 if (typeof window !== "undefined") {
     gsap.registerPlugin(ScrollTrigger);
@@ -75,7 +77,7 @@ const SwipeTransitionShader = {
  * scale: uniform scale multiplier
  */
 const anim = {
-    posX: 0.22,
+    posX: 0.31,
     posY: -3.6,
     scale: 2.5,
 };
@@ -105,6 +107,23 @@ function PhoneModel() {
 
     /** Base rotation for the phone (facing camera). */
     const baseRotation = useRef(new THREE.Vector3(0, Math.PI / 2, 0));
+
+    /**
+     * Cache the slide dot NodeList once after mount so we never call
+     * document.querySelectorAll inside useFrame (which runs at ~60 fps).
+     * We also track the last active slide to avoid redundant style writes.
+     */
+    const slideDotsCacheRef = useRef<NodeListOf<Element> | null>(null);
+    const lastActiveSlideRef = useRef<number>(-1);
+
+    useEffect(() => {
+        // Cache dots after the section mounts. MobileSection renders them
+        // as static markup, so the list won't change after first paint.
+        slideDotsCacheRef.current = document.querySelectorAll('.slide-dot');
+        return () => {
+            slideDotsCacheRef.current = null;
+        };
+    }, []);
 
     /** Apply custom shader material to screen mesh and style body materials. */
     useEffect(() => {
@@ -215,7 +234,17 @@ function PhoneModel() {
 
     const smoothMouse = useRef({ x: 0, y: 0 });
 
-    /** Per-frame updates: apply position, rotation, scale, and texture transitions. */
+    /**
+     * Per-frame updates: apply position, rotation, scale, and texture transitions.
+     *
+     * Performance notes:
+     * - `mobileScrollProgress.value` is a plain JS object read — zero DOM/style cost.
+     *   Previously this used getComputedStyle() which forces style recalculation
+     *   on every frame and was the primary cause of scroll jank.
+     * - Slide dot style updates are guarded by a lastActiveSlide check so DOM
+     *   writes only happen when the active slide actually changes (~4 times total
+     *   per scroll session) rather than on every frame.
+     */
     useFrame((state) => {
         if (groupRef.current) {
             smoothMouse.current.x = THREE.MathUtils.lerp(smoothMouse.current.x, mouseRef.current.x, 0.05);
@@ -238,12 +267,11 @@ function PhoneModel() {
             groupRef.current.scale.setScalar(anim.scale);
         }
 
-        // Drive texture transitions within MobileSection via CSS variable
+        // Drive texture transitions within MobileSection via shared bridge ref.
+        // This avoids the per-frame getComputedStyle() call that forced style
+        // recalculation and caused measurable jank during pinned scroll.
         if (shaderMatRef.current && textures.length === TEXTURE_PATHS.length) {
-            const rawProgress = parseFloat(
-                getComputedStyle(document.documentElement)
-                    .getPropertyValue('--mobile-scroll-progress') || '0'
-            );
+            const rawProgress = mobileScrollProgress.value;
 
             const slideDuration = 1 / SLIDE_COUNT;
 
@@ -270,16 +298,25 @@ function PhoneModel() {
                 }
             }
 
+            // Only write to the DOM when the active slide index actually changes.
+            // Previously this ran on every frame regardless of whether anything changed.
             const activeSlide = Math.min(Math.floor(rawProgress * SLIDE_COUNT), SLIDE_COUNT - 1);
-            document.querySelectorAll('.slide-dot').forEach((dot, i) => {
-                if (i === activeSlide) {
-                    (dot as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.7)';
-                    (dot as HTMLElement).style.transform = 'scale(1.5)';
-                } else {
-                    (dot as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.2)';
-                    (dot as HTMLElement).style.transform = 'scale(1)';
+            if (activeSlide !== lastActiveSlideRef.current) {
+                lastActiveSlideRef.current = activeSlide;
+                const dots = slideDotsCacheRef.current;
+                if (dots) {
+                    dots.forEach((dot, i) => {
+                        const el = dot as HTMLElement;
+                        if (i === activeSlide) {
+                            el.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                            el.style.transform = 'scale(1.5)';
+                        } else {
+                            el.style.backgroundColor = 'rgba(0,0,0,0.2)';
+                            el.style.transform = 'scale(1)';
+                        }
+                    });
                 }
-            });
+            }
         }
     });
 
@@ -303,7 +340,7 @@ function PhoneModel() {
  *   2. SCROLLING TO MOBILE: Still fixed. GSAP scrubs 3D posX (center->right),
  *      posY (low->center), and scale (2.2->2.8).
  *   3. MOBILE SECTION PINNED: Still fixed full viewport. Phone is in right
- *      half at full scale. Slide textures swap via CSS variable.
+ *      half at full scale. Slide textures swap via shared bridge ref.
  *   4. PAST MOBILE SECTION: Canvas switches to position:absolute, anchored
  *      at the bottom of MobileSection. It scrolls away naturally.
  */
@@ -329,7 +366,7 @@ export function PhoneCanvas() {
                 const mobileSection = document.getElementById('mobile-section');
                 if (!mobileSection) return;
 
-        // Anchor the full-viewport canvas at the scroll position
+                // Anchor the full-viewport canvas at the scroll position
                 // where the pin ended. This is sectionTop + pinDuration.
                 const sectionTop = mobileSection.offsetTop;
                 const absTop = sectionTop + (window.innerHeight * SLIDE_COUNT);
@@ -376,26 +413,27 @@ export function PhoneCanvas() {
                 zIndex: 40,
             }}
         >
-            <div className="w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
+            {/* pointer-events-none: the canvas is purely visual. Mouse movement
+                still reaches the mousemove listener on window (for parallax tilt)
+                but clicks, drags, and text selection pass through to the page. */}
+            <div className="w-full h-full pointer-events-none">
                 <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
                     <ambientLight intensity={0.5} />
                     <directionalLight position={[10, 10, 5]} intensity={1} />
-                    <PresentationControls
-                        global
-                        snap
-                        rotation={[0, 0, 0]}
-                        polar={[-0.1, 0.1]}
-                        azimuth={[-0.4, 0.4]}
-                    >
+                    {/* Bridge: reads useProgress inside Canvas, writes to loadingBridge singleton */}
+                    <ProgressBridge />
+                    {/* Suspense boundary so useProgress tracks GLTF + texture loads */}
+                    <Suspense fallback={null}>
                         <PhoneModel />
-                    </PresentationControls>
-                    <Environment preset="city" />
+                        <Environment preset="city" />
+                    </Suspense>
                 </Canvas>
             </div>
         </div>
     );
 }
 
-// Preload all assets to avoid pop-in
-useGLTF.preload('/model/phone/scene.gltf');
-TEXTURE_PATHS.forEach((path) => useTexture.preload(path));
+// NOTE: preload calls removed intentionally.
+// Preloading fires before LoadingScreen mounts, which means useProgress
+// never sees the load happen and the bar stays at 0. Assets are loaded
+// inside the <Suspense> boundary in PhoneCanvas so useProgress tracks them.

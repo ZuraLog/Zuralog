@@ -5,6 +5,7 @@
  * - Geist Sans + Geist Mono font variables
  * - Full SEO metadata (title, description, OG, Twitter, robots, icons)
  * - Sonner toast notifications
+ * - SSR loading overlay (visible from first paint, dismissed by client JS)
  */
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -75,6 +76,77 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased">
+        {/* SSR loading overlay: rendered in the initial HTML so it's visible
+            from the very first paint. Client-side LoadingScreen.tsx will
+            fade this out and remove it once 3D assets finish loading.
+            ID "ssr-loading-overlay" is the contract between server and client.
+
+            The spinner uses a pure-CSS rotating dot pattern (no JS needed). */}
+        {/* eslint-disable-next-line @next/next/no-css-tags -- inline style tag for SSR overlay */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              @keyframes ssr-loader-spin {
+                100% { transform: rotate(.5turn); }
+              }
+              #ssr-loader {
+                width: 50px;
+                aspect-ratio: 1;
+                display: grid;
+                margin-top: 28px;
+              }
+              #ssr-loader::before,
+              #ssr-loader::after {
+                content: "";
+                grid-area: 1/1;
+                --c: no-repeat radial-gradient(farthest-side, #CFE1B9 92%, #0000);
+                background:
+                  var(--c) 50%  0,
+                  var(--c) 50%  100%,
+                  var(--c) 100% 50%,
+                  var(--c) 0    50%;
+                background-size: 12px 12px;
+                animation: ssr-loader-spin 1s infinite;
+              }
+              #ssr-loader::before {
+                margin: 4px;
+                --c: no-repeat radial-gradient(farthest-side, #E8F5A8 92%, #0000);
+                background-size: 8px 8px;
+                animation-timing-function: linear;
+              }
+            `,
+          }}
+        />
+        <div
+          id="ssr-loading-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#FAFAF5",
+            zIndex: 9999,
+            transition: "opacity 0.6s ease",
+          }}
+          aria-hidden="true"
+        >
+          <span
+            style={{
+              fontSize: "1.5rem",
+              fontWeight: 300,
+              letterSpacing: "0.3em",
+              color: "#2D2D2D",
+              textTransform: "uppercase" as const,
+              opacity: 0.85,
+            }}
+          >
+            Zuralog
+          </span>
+          {/* Pure-CSS spinner — animates without JS */}
+          <div id="ssr-loader" />
+        </div>
         <LenisProvider>
           {children}
         </LenisProvider>

@@ -41,16 +41,19 @@ export function LenisProvider({ children }: LenisProviderProps) {
         // window.scrollY — they are now the same virtual position.
         lenis.on("scroll", ScrollTrigger.update);
 
+        // Named reference so gsap.ticker.remove() targets the exact function.
+        // Using an anonymous arrow function in remove() creates a new reference
+        // that never matches the one that was added, causing a handler leak.
+        const tickerHandler = (time: number) => lenis.raf(time * 1000);
+
         // Drive Lenis from GSAP's RAF ticker so both run in the same frame.
-        gsap.ticker.add((time) => {
-            lenis.raf(time * 1000);
-        });
+        gsap.ticker.add(tickerHandler);
 
         // Disable GSAP's own lagSmoothing — Lenis handles this instead.
         gsap.ticker.lagSmoothing(0);
 
         return () => {
-            gsap.ticker.remove((time) => lenis.raf(time * 1000));
+            gsap.ticker.remove(tickerHandler);
             lenis.destroy();
             lenisRef.current = null;
         };
