@@ -355,6 +355,57 @@ export function BentoSection() {
                     }
                 );
             }
+
+            // ─────────────────────────────────────────────────────────────
+            // Magnetic 3D tilt — Cards 1, 2, 3, 5, 6
+            // Same effect as DashboardBento: rotateX/Y on mousemove,
+            // elastic spring-back on mouseleave.
+            // ─────────────────────────────────────────────────────────────
+            const MAX_TILT = 6;
+
+            /** Attach the magnetic tilt effect to a single card element */
+            const attachTilt = (card: Element) => {
+                const onMove = (e: Event) => {
+                    const ev = e as MouseEvent;
+                    const rect = card.getBoundingClientRect();
+                    const cx = rect.left + rect.width / 2;
+                    const cy = rect.top + rect.height / 2;
+                    const dx = ev.clientX - cx;
+                    const dy = ev.clientY - cy;
+                    gsap.to(card, {
+                        rotateX: (-dy / (rect.height / 2)) * MAX_TILT,
+                        rotateY: (dx / (rect.width / 2)) * MAX_TILT,
+                        transformPerspective: 900,
+                        duration: 0.35,
+                        ease: "power2.out",
+                    });
+                };
+
+                const onLeave = () => {
+                    gsap.to(card, {
+                        rotateX: 0,
+                        rotateY: 0,
+                        duration: 0.8,
+                        ease: "elastic.out(1, 0.45)",
+                    });
+                };
+
+                card.addEventListener("mousemove", onMove);
+                card.addEventListener("mouseleave", onLeave);
+            };
+
+            const tiltSelectors = [
+                '[data-card="connect"]',
+                '[data-card="waitlist"]',
+                '[data-card="integrations"]',
+                '[data-card="get-app"]',
+                '.personalized-card',
+            ];
+
+            tiltSelectors.forEach(sel => {
+                const el = sectionRef.current!.querySelector(sel);
+                if (el) attachTilt(el);
+            });
         },
         { scope: sectionRef }
     );
@@ -399,7 +450,7 @@ export function BentoSection() {
                         data-card="connect"
                         className="bento-card group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
                                    hover:shadow-2xl transition-shadow duration-300 opacity-0"
-                        style={{ gridColumn: "1", gridRow: "1", transformStyle: "preserve-3d" }}
+                        style={{ gridColumn: "1", gridRow: "1", transformStyle: "preserve-3d", willChange: "transform" }}
                     >
                         {/* Interactive Sheen layer */}
                         <div className="connect-sheen absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/80 to-transparent skew-x-[-25deg] pointer-events-none z-20" style={{ left: "-100%" }} />
@@ -459,7 +510,7 @@ export function BentoSection() {
                         data-card="waitlist"
                         className="bento-card group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
                                    hover:shadow-2xl transition-shadow duration-300 opacity-0"
-                        style={{ gridColumn: "2", gridRow: "1" }}
+                        style={{ gridColumn: "2", gridRow: "1", transformStyle: "preserve-3d", willChange: "transform" }}
                     >
                         <div className="waitlist-hover-mask absolute inset-0 bg-gradient-to-b from-[#E8F5A8]/10 to-transparent opacity-0 pointer-events-none transition-opacity duration-300" />
 
@@ -513,7 +564,7 @@ export function BentoSection() {
                         data-card="integrations"
                         className="bento-card group relative bg-white rounded-3xl shadow-xl overflow-hidden opacity-0
                                    hover:-translate-y-1 hover:shadow-2xl transition-all duration-300"
-                        style={{ gridColumn: "3", gridRow: "1 / 3" }}
+                        style={{ gridColumn: "3", gridRow: "1 / 3", willChange: "transform" }}
                     >
                         <div
                             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -578,6 +629,8 @@ export function BentoSection() {
                             gridColumn: "1",
                             gridRow: "3",
                             background: "linear-gradient(160deg, #141414 0%, #1E1E1E 60%, #0f1f0f 100%)",
+                            transformStyle: "preserve-3d",
+                            willChange: "transform",
                         }}
                     >
                         {/* Lime corner glow */}
@@ -663,7 +716,7 @@ export function BentoSection() {
                     <div
                         className="bento-card personalized-card group relative bg-white rounded-3xl shadow-xl overflow-hidden
                                    hover:-translate-y-1 hover:shadow-2xl transition-all duration-200 opacity-0"
-                        style={{ gridColumn: "2 / 4", gridRow: "3" }}
+                        style={{ gridColumn: "2 / 4", gridRow: "3", willChange: "transform" }}
                     >
                         {/* ── Header ── */}
                         <div className="flex items-center gap-3 px-7 lg:px-8 pt-7 lg:pt-8 pb-5">
