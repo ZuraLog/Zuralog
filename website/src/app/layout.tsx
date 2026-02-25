@@ -26,7 +26,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zuralog.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "ZuraLog — The AI That Connects Your Fitness Apps",
+    default: "ZuraLog",
     template: "%s | ZuraLog",
   },
   description:
@@ -61,6 +61,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/logo/Zuralog.png", type: "image/png" },
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
     ],

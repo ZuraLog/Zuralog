@@ -20,6 +20,11 @@
 :root {
   --background: #FAFAF5;
   --foreground: #2D2D2D;
+
+  /* Navbar tokens */
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --border-light: rgba(0, 0, 0, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -171,5 +176,16 @@ body {
 }
 .waitlist-urgent {
   animation: urgentPulse 2.5s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Navbar — CTA button pulse glow (peach)
+───────────────────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 171, 118, 0); }
+  50%       { box-shadow: 0 0 12px 3px rgba(255, 171, 118, 0.35); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
 }
 
