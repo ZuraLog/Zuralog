@@ -38,7 +38,7 @@ import {
     ChevronRight,
 } from "lucide-react";
 import { APPS } from "./hero/FloatingIcons";
-import { FaStrava, FaApple, FaGooglePlay, FaAppStoreIos, FaStar } from "react-icons/fa";
+import { FaStrava, FaApple, FaGooglePlay, FaAppStoreIos } from "react-icons/fa";
 import { SiFitbit } from "react-icons/si";
 
 // Card 4 — Unified Dashboard — opt out of SSR to prevent Math.random() hydration mismatches
@@ -570,7 +570,7 @@ export function BentoSection() {
                     {/* ══ Card 4: UNIFIED DASHBOARD ══ */}
                     <DashboardBento />
 
-                    {/* ══ Card 5: GET THE APP ══ */}
+                    {/* ══ Card 5: GET THE APP (coming soon) ══ */}
                     <div
                         data-card="get-app"
                         className="bento-card group relative rounded-3xl overflow-hidden shadow-xl opacity-0"
@@ -580,118 +580,82 @@ export function BentoSection() {
                             background: "linear-gradient(160deg, #141414 0%, #1E1E1E 60%, #0f1f0f 100%)",
                         }}
                     >
-                        {/* Subtle lime radial glow in corner */}
+                        {/* Lime corner glow */}
                         <div
-                            className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
-                            style={{ background: "radial-gradient(circle, rgba(232,245,168,0.12) 0%, transparent 70%)" }}
+                            className="absolute -top-12 -right-12 w-44 h-44 rounded-full pointer-events-none"
+                            style={{ background: "radial-gradient(circle, rgba(232,245,168,0.10) 0%, transparent 70%)" }}
                         />
 
-                        {/* Floating phone illustration */}
-                        <div className="absolute top-5 right-4 phone-float" aria-hidden="true">
-                            {/* Phone shell */}
+                        {/* Compact phone — top-right corner */}
+                        <div className="absolute top-4 right-4 phone-float" aria-hidden="true">
                             <div
-                                className="relative w-[72px] h-[130px] rounded-[22px] border-2 border-white/10 shadow-2xl"
+                                className="relative w-[52px] h-[90px] rounded-[16px] border border-white/10 shadow-xl"
                                 style={{ background: "linear-gradient(170deg, #2a2a2a 0%, #111 100%)" }}
                             >
-                                {/* Notch */}
-                                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1.5 rounded-full bg-black/60" />
-                                {/* Screen glow */}
-                                <div
-                                    className="absolute inset-[6px] rounded-[14px]"
-                                    style={{ background: "linear-gradient(160deg, #1a2e1a 0%, #0d1a0d 100%)" }}
-                                />
-                                {/* Screen content — tiny metric bars */}
-                                <div className="absolute inset-[10px] top-[14px] flex flex-col gap-[5px]">
-                                    <div className="h-1 rounded-full bg-[#E8F5A8]/60" style={{ width: "75%" }} />
-                                    <div className="h-1 rounded-full bg-[#E8F5A8]/40" style={{ width: "55%" }} />
-                                    <div className="h-1 rounded-full bg-[#E8F5A8]/30" style={{ width: "90%" }} />
-                                    <div className="mt-1 h-1 rounded-full bg-white/20" style={{ width: "45%" }} />
-                                    <div className="h-1 rounded-full bg-white/15" style={{ width: "70%" }} />
+                                <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full bg-black/60" />
+                                <div className="absolute inset-[5px] rounded-[10px]" style={{ background: "linear-gradient(160deg, #1a2e1a 0%, #0d1a0d 100%)" }} />
+                                <div className="absolute inset-[8px] top-[12px] flex flex-col gap-[4px]">
+                                    <div className="h-[3px] rounded-full bg-[#E8F5A8]/50" style={{ width: "70%" }} />
+                                    <div className="h-[3px] rounded-full bg-[#E8F5A8]/30" style={{ width: "50%" }} />
+                                    <div className="h-[3px] rounded-full bg-[#E8F5A8]/20" style={{ width: "85%" }} />
+                                    <div className="mt-1 h-[3px] rounded-full bg-white/15" style={{ width: "40%" }} />
                                 </div>
-                                {/* Home indicator */}
-                                <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-white/20" />
+                                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full bg-white/20" />
                             </div>
                         </div>
 
                         {/* Content */}
-                        <div className="relative z-10 flex flex-col h-full p-7 lg:p-8">
-                            {/* Badge */}
-                            <div className="inline-flex items-center gap-1.5 bg-[#E8F5A8]/10 border border-[#E8F5A8]/20 text-[#E8F5A8] rounded-full px-3 py-1 mb-5 w-fit">
-                                <Smartphone size={11} />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Now Available</span>
+                        <div className="relative z-10 flex flex-col h-full p-6">
+                            {/* Coming soon pill */}
+                            <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-white/50 rounded-full px-2.5 py-1 mb-4 w-fit">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#E8F5A8]/60 animate-pulse" />
+                                <span className="text-[9px] font-bold uppercase tracking-widest">Coming Soon</span>
                             </div>
 
                             {/* Headline */}
-                            <h3 className="text-[22px] font-bold text-white leading-tight mb-1">
+                            <h3 className="text-lg font-bold text-white leading-tight mb-1">
                                 Get the App
                             </h3>
-                            <p className="text-xs text-white/50 leading-relaxed mb-6 max-w-[160px]">
-                                Your health intelligence. In your pocket.
+                            <p className="text-[11px] text-white/40 leading-relaxed mb-5">
+                                iOS &amp; Android — dropping soon.
                             </p>
 
-                            {/* Store badges */}
-                            <div className="flex flex-col gap-3 mb-6">
-                                {/* App Store */}
-                                <a
-                                    href="#"
-                                    className="store-badge group/badge relative flex items-center gap-3 rounded-2xl px-4 py-3 overflow-hidden
-                                               transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
-                                    style={{ background: "linear-gradient(90deg, #1c1c1e, #2a2a2a)" }}
-                                    aria-label="Download on the App Store"
+                            {/* Locked store badges */}
+                            <div className="flex flex-col gap-2 mb-5">
+                                {/* App Store — locked */}
+                                <div
+                                    className="store-badge flex items-center gap-2.5 rounded-xl px-3 py-2.5 opacity-40 cursor-not-allowed select-none"
+                                    style={{ background: "#1c1c1e" }}
+                                    aria-label="App Store — coming soon"
                                 >
-                                    {/* shimmer layer */}
-                                    <div
-                                        className="absolute inset-0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-300 pointer-events-none badge-shimmer"
-                                        style={{
-                                            backgroundImage: "linear-gradient(90deg, transparent 0%, rgba(232,245,168,0.08) 50%, transparent 100%)",
-                                        }}
-                                    />
-                                    <FaAppStoreIos size={26} className="text-white relative z-10 flex-shrink-0" />
-                                    <div className="relative z-10 leading-none">
-                                        <div className="text-[9px] text-white/50 font-medium uppercase tracking-widest mb-0.5">Download on the</div>
-                                        <div className="text-[15px] font-bold text-white">App Store</div>
+                                    <FaAppStoreIos size={18} className="text-white/70 flex-shrink-0" />
+                                    <div className="leading-none">
+                                        <div className="text-[8px] text-white/50 uppercase tracking-widest mb-0.5">Download on the</div>
+                                        <div className="text-[13px] font-semibold text-white/70">App Store</div>
                                     </div>
-                                    <div className="ml-auto relative z-10 text-[#E8F5A8] opacity-40 group-hover/badge:opacity-100 transition-opacity text-lg">›</div>
-                                </a>
-
-                                {/* Google Play */}
-                                <a
-                                    href="#"
-                                    className="store-badge group/badge relative flex items-center gap-3 rounded-2xl px-4 py-3 overflow-hidden
-                                               transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
-                                    style={{ background: "linear-gradient(90deg, #1c1c1e, #2a2a2a)" }}
-                                    aria-label="Get it on Google Play"
-                                >
-                                    {/* shimmer layer */}
-                                    <div
-                                        className="absolute inset-0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-300 pointer-events-none badge-shimmer"
-                                        style={{
-                                            backgroundImage: "linear-gradient(90deg, transparent 0%, rgba(232,245,168,0.08) 50%, transparent 100%)",
-                                        }}
-                                    />
-                                    <FaGooglePlay size={22} className="text-white relative z-10 flex-shrink-0" />
-                                    <div className="relative z-10 leading-none">
-                                        <div className="text-[9px] text-white/50 font-medium uppercase tracking-widest mb-0.5">Get it on</div>
-                                        <div className="text-[15px] font-bold text-white">Google Play</div>
-                                    </div>
-                                    <div className="ml-auto relative z-10 text-[#E8F5A8] opacity-40 group-hover/badge:opacity-100 transition-opacity text-lg">›</div>
-                                </a>
-                            </div>
-
-                            {/* Star rating */}
-                            <div className="flex items-center gap-2 mt-auto">
-                                <div className="flex items-center gap-0.5">
-                                    {[0, 1, 2, 3, 4].map(i => (
-                                        <FaStar
-                                            key={i}
-                                            size={12}
-                                            className="text-[#E8F5A8] star-pop"
-                                            style={{ animationDelay: `${0.6 + i * 0.08}s` }}
-                                        />
-                                    ))}
+                                    <div className="ml-auto text-white/30 text-base">🔒</div>
                                 </div>
-                                <span className="text-xs font-semibold text-white/60">4.9 · 2.4k reviews</span>
+
+                                {/* Google Play — locked */}
+                                <div
+                                    className="store-badge flex items-center gap-2.5 rounded-xl px-3 py-2.5 opacity-40 cursor-not-allowed select-none"
+                                    style={{ background: "#1c1c1e" }}
+                                    aria-label="Google Play — coming soon"
+                                >
+                                    <FaGooglePlay size={16} className="text-white/70 flex-shrink-0" />
+                                    <div className="leading-none">
+                                        <div className="text-[8px] text-white/50 uppercase tracking-widest mb-0.5">Get it on</div>
+                                        <div className="text-[13px] font-semibold text-white/70">Google Play</div>
+                                    </div>
+                                    <div className="ml-auto text-white/30 text-base">🔒</div>
+                                </div>
                             </div>
+
+                            {/* Waitlist CTA */}
+                            <button className="mt-auto w-full bg-[#E8F5A8] text-gray-900 text-xs font-bold py-2.5 rounded-xl
+                                               hover:bg-[#d4f291] active:scale-95 transition-all duration-150 shadow-md shadow-black/30">
+                                Join the Waitlist →
+                            </button>
                         </div>
                     </div>
 
