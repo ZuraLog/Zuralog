@@ -1,6 +1,10 @@
 /**
  * GET /api/waitlist/status?email=...
+ *
  * Returns the waitlist position and referral code for a given email.
+ * Used to restore the success state when a user revisits the page.
+ *
+ * @param email - The user's email address (query param).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -29,6 +33,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (error) {
+    console.error('[waitlist/status] query error:', error);
     return NextResponse.json({ error: 'Failed to fetch status.' }, { status: 500 });
   }
 

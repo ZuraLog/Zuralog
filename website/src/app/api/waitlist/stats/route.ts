@@ -1,6 +1,10 @@
 /**
  * GET /api/waitlist/stats
- * Returns aggregate waitlist statistics. Cached for 30 seconds.
+ *
+ * Returns aggregate waitlist statistics for the hero counter.
+ * Queries the waitlist_stats view.
+ *
+ * Cached for 30 seconds.
  */
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
