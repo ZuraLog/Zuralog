@@ -49,7 +49,7 @@ export function FloatingIcons() {
 
                 gsap.utils.toArray('.parallax-wrapper').forEach((el: unknown, i) => {
                     const element = el as Element;
-                    const depth = (i % 3) + 1; // Variable depth for chaotic feel
+                    const depth = 1.5; // Equal depth for all icons
                     gsap.to(element, {
                         x: mx * 30 * depth,
                         y: my * 30 * depth,

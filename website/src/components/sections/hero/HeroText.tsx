@@ -23,8 +23,8 @@ export function HeroText() {
                 const my = (e.clientY / window.innerHeight - 0.5) * 2;
 
                 gsap.to('.hero-parallax', {
-                    x: mx * -25, // Move slightly opposite
-                    y: my * -25,
+                    x: mx * 25, // Move with mouse
+                    y: my * 25,
                     duration: 1.5,
                     ease: 'power2.out'
                 });
@@ -55,7 +55,7 @@ export function HeroText() {
                     </div>
                 </h1>
 
-                <p className="hero-line text-lg md:text-xl text-charcoal/70 mt-6 max-w-[500px] text-center pointer-events-auto">
+                <p className="hero-line text-lg md:text-xl text-black mt-6 max-w-[500px] text-center pointer-events-auto">
                     Bring all your fitness data into one brilliant interface.
                 </p>
 

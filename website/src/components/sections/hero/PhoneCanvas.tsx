@@ -35,7 +35,18 @@ function PhoneModel() {
     // X: move left/right (0 is center)
     // Y: move up/down (-2.5 is default base, increase to move higher into the text)
     // Z: move closer/further
-    const phonePosition: [number, number, number] = [0, -2.5, 0];
+    const phonePosition: [number, number, number] = [0.3, -2.5, 0];
+
+    // Global mouse tracking instead of canvas-local tracking
+    const mouseRef = useRef({ x: 0, y: 0 });
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
 
     // Subtle floating animation for the 3D model itself
     useFrame((state) => {
@@ -43,16 +54,16 @@ function PhoneModel() {
             // 1. Subtle up/down float
             const floatY = Math.sin(state.clock.elapsedTime) * 0.1;
 
-            // 2. Mouse parallax influence (-0.5 to 0.5)
-            const targetX = state.pointer.x * 0.5;
-            const targetY = state.pointer.y * 0.5;
+            // 2. Global mouse parallax influence (scaled down for subtlety)
+            const targetX = mouseRef.current.x * 0.15; // reduced intensity
+            const targetY = mouseRef.current.y * 0.15; // reduced intensity
 
-            // Interpolate rotation based on mouse position
-            groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -targetY * 0.5, 0.05);
+            // Interpolate rotation based on global mouse position
+            groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetY * 0.5, 0.05);
             groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, (Math.PI / 2) + targetX * 0.5, 0.05);
 
-            // Interpolate position based on mouse position
-            groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, phonePosition[0] + (targetX * 1.5), 0.05);
+            // Interpolate position based on global mouse position
+            groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, phonePosition[0] + (targetX * 0.8), 0.05);
             groupRef.current.position.y = phonePosition[1] + floatY;
         }
     });
