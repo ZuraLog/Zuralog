@@ -397,9 +397,9 @@ export function BentoSection() {
             const tiltSelectors = [
                 '[data-card="connect"]',
                 '[data-card="waitlist"]',
-                '[data-card="integrations"]',
+                '[data-card="integrations"]',   // outer wrapper — inner card untouched
                 '[data-card="get-app"]',
-                '.personalized-card',
+                '[data-card="personalized"]',   // outer wrapper — inner card untouched
             ];
 
             tiltSelectors.forEach(sel => {
@@ -560,11 +560,15 @@ export function BentoSection() {
                     </div>
 
                     {/* ══ Card 3: INTEGRATIONS (tall, spans rows 1-2) ══ */}
+                    {/* Outer tilt wrapper — GSAP targets this for rotateX/Y so the card's
+                        own transform is never touched, keeping child CSS animations fast. */}
                     <div
                         data-card="integrations"
+                        style={{ gridColumn: "3", gridRow: "1 / 3", willChange: "transform", transformStyle: "preserve-3d" }}
+                    >
+                    <div
                         className="bento-card group relative bg-white rounded-3xl shadow-xl overflow-hidden opacity-0
-                                   hover:-translate-y-1 hover:shadow-2xl transition-all duration-300"
-                        style={{ gridColumn: "3", gridRow: "1 / 3", willChange: "transform" }}
+                                   hover:shadow-2xl transition-shadow duration-300 h-full"
                     >
                         <div
                             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -612,11 +616,12 @@ export function BentoSection() {
                                 </p>
                                 <button className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-[#5A631B] group/btn transition-colors">
                                     Explore integrations
-                                    <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                                     <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                                 </button>
                             </div>
                         </div>
                     </div>
+                    </div>{/* end integrations tilt wrapper */}
 
                     {/* ══ Card 4: UNIFIED DASHBOARD ══ */}
                     <DashboardBento />
@@ -713,10 +718,14 @@ export function BentoSection() {
                     </div>
 
                     {/* ══ Card 6: PERSONALIZED FOR YOU (wide, spans cols 2-3) ══ */}
+                    {/* Outer tilt wrapper — same isolation pattern as Card 3 */}
+                    <div
+                        data-card="personalized"
+                        style={{ gridColumn: "2 / 4", gridRow: "3", willChange: "transform", transformStyle: "preserve-3d" }}
+                    >
                     <div
                         className="bento-card personalized-card group relative bg-white rounded-3xl shadow-xl overflow-hidden
-                                   hover:-translate-y-1 hover:shadow-2xl transition-all duration-200 opacity-0"
-                        style={{ gridColumn: "2 / 4", gridRow: "3", willChange: "transform" }}
+                                   hover:shadow-2xl transition-shadow duration-200 opacity-0 h-full"
                     >
                         {/* ── Header ── */}
                         <div className="flex items-center gap-3 px-7 lg:px-8 pt-7 lg:pt-8 pb-5">
@@ -776,6 +785,7 @@ export function BentoSection() {
                             </div>
                         </div>
                     </div>
+                    </div>{/* end personalized tilt wrapper */}
                 </div>
             </div>
         </section>
