@@ -454,10 +454,12 @@ export function BentoSection() {
                 '[data-card="personalized"]',   // outer wrapper — inner card untouched
             ];
 
-            tiltSelectors.forEach(sel => {
-                const el = sectionRef.current!.querySelector(sel);
-                if (el) attachTilt(el);
-            });
+            if (window.innerWidth >= 768) {
+                tiltSelectors.forEach(sel => {
+                    const el = sectionRef.current!.querySelector(sel);
+                    if (el) attachTilt(el);
+                });
+            }
         },
         { scope: sectionRef }
     );
@@ -466,7 +468,7 @@ export function BentoSection() {
         <section
             ref={sectionRef}
             id="bento-section"
-            className="relative w-full py-28 lg:py-36 overflow-hidden"
+            className="relative w-full py-16 md:py-28 lg:py-36 overflow-hidden"
         >
             {/* Subtle background texture */}
             <div
@@ -479,7 +481,7 @@ export function BentoSection() {
 
             <div className="relative z-10 max-w-[1280px] mx-auto px-6 lg:px-12">
                 {/* ── Section Header ── */}
-                <div className="text-center mb-16 lg:mb-20">
+                <div className="text-center mb-10 md:mb-16 lg:mb-20">
                     <p className="bento-subtitle text-sm font-semibold tracking-[0.25em] uppercase text-[#E8F5A8] mb-4 opacity-0">
                         How It Works
                     </p>
@@ -489,19 +491,13 @@ export function BentoSection() {
                 </div>
 
                 {/* ── Bento Grid ── */}
-                <div
-                    className="grid gap-4 lg:gap-5"
-                    style={{
-                        gridTemplateColumns: "repeat(3, 1fr)",
-                        gridTemplateRows: "auto auto auto",
-                    }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
                     {/* ══ Card 1: CONNECT ══ */}
                     <div
                         data-card="connect"
                         className="bento-card group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
                                    hover:shadow-2xl transition-shadow duration-300 opacity-0"
-                        style={{ gridColumn: "1", gridRow: "1", transformStyle: "preserve-3d", willChange: "transform" }}
+                        style={{ transformStyle: "preserve-3d", willChange: "transform" }}
                     >
                         {/* Interactive Sheen layer */}
                         <div className="connect-sheen absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/80 to-transparent skew-x-[-25deg] pointer-events-none z-20" style={{ left: "-100%" }} />
@@ -561,7 +557,7 @@ export function BentoSection() {
                         data-card="waitlist"
                         className="bento-card group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
                                    hover:shadow-2xl transition-shadow duration-300 opacity-0"
-                        style={{ gridColumn: "2", gridRow: "1", transformStyle: "preserve-3d", willChange: "transform" }}
+                        style={{ transformStyle: "preserve-3d", willChange: "transform" }}
                     >
                         <div className="waitlist-hover-mask absolute inset-0 bg-gradient-to-b from-[#E8F5A8]/10 to-transparent opacity-0 pointer-events-none transition-opacity duration-300" />
 
@@ -658,11 +654,12 @@ export function BentoSection() {
                         own transform is never touched, keeping child CSS animations fast. */}
                     <div
                         data-card="integrations"
-                        style={{ gridColumn: "3", gridRow: "1 / 3", willChange: "transform", transformStyle: "preserve-3d" }}
+                        className="sm:row-span-2 lg:col-start-3 lg:row-start-1"
+                        style={{ willChange: "transform", transformStyle: "preserve-3d" }}
                     >
                     <div
                         className="bento-card group relative bg-white rounded-3xl shadow-xl overflow-hidden opacity-0
-                                   hover:shadow-2xl transition-shadow duration-300 h-full"
+                                   hover:shadow-2xl transition-shadow duration-300 h-full min-h-[300px] sm:min-h-0"
                     >
                         <div
                             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -725,8 +722,6 @@ export function BentoSection() {
                         data-card="get-app"
                         className="bento-card group relative rounded-3xl overflow-hidden shadow-xl opacity-0"
                         style={{
-                            gridColumn: "1",
-                            gridRow: "3",
                             background: "linear-gradient(160deg, #141414 0%, #1E1E1E 60%, #0f1f0f 100%)",
                             transformStyle: "preserve-3d",
                             willChange: "transform",
@@ -817,7 +812,8 @@ export function BentoSection() {
                     {/* Outer tilt wrapper — same isolation pattern as Card 3 */}
                     <div
                         data-card="personalized"
-                        style={{ gridColumn: "2 / 4", gridRow: "3", willChange: "transform", transformStyle: "preserve-3d" }}
+                        className="sm:col-span-2 lg:col-span-2 lg:col-start-2 lg:row-start-3"
+                        style={{ willChange: "transform", transformStyle: "preserve-3d" }}
                     >
                     <div
                         className="bento-card personalized-card group relative bg-white rounded-3xl shadow-xl overflow-hidden
