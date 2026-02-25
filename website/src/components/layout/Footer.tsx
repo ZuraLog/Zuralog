@@ -44,7 +44,7 @@ const NAV_COLUMNS = [
     heading: 'Company',
     links: [
       { label: 'About Us', href: '/about' },
-      { label: 'Contact', href: 'mailto:support@zuralog.com' },
+      { label: 'Contact', href: '/contact' },
     ],
   },
 ];

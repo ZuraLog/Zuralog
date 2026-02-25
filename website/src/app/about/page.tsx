@@ -50,7 +50,7 @@ const VALUES = [
 const FOUNDERS = [
   {
     name: 'Hyowon Arzil B. Bernabe',
-    role: 'Co-Founder · CEO & CTO',
+    role: 'Co-Founder · CTO & COO',
     initials: 'HB',
     photoPath: '/founders/hyowon.jpg',
     bio: "Hyowon is a programmer and Computer Science graduate who builds things with one goal in mind — solve real problems. He can't see friction without wanting to automate it away. ZuraLog started as one of those ideas: a tool he wanted for himself, to make sense of all the health data scattered across his apps. If it makes life easier for everyone else too, even better.",
