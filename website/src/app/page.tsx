@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import { ScrollProgress } from "@/components/layout/ScrollProgress";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { MobileSection } from "@/components/sections/MobileSection";
@@ -19,6 +20,7 @@ export default function Home() {
                 <BentoSection />
                 <WaitlistSection />
             </main>
+            <Footer />
             {/* ClientShellLoader uses dynamic(ssr:false) to ensure PhoneCanvas
                 and LoadingScreen are never SSR'd — eliminating hydration mismatches
                 and making useState(true) for showLoader always correct on first render. */}
