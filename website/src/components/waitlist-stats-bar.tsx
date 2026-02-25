@@ -1,18 +1,18 @@
 /**
  * WaitlistStatsBar — three animated stat cards above the waitlist form.
  *
- * Fetches /api/waitlist/stats and animates three counters:
- *   - Total Signups
- *   - Founding Spots Left (pulses when ≤ 10)
- *   - Referrals Made
+ * Fetches /api/waitlist/stats for the initial paint, then subscribes to
+ * Supabase Realtime on the `waitlist_users` table so every INSERT or UPDATE
+ * re-fetches fresh stats without a page reload.
  *
  * Peach/apricot palette on cream background.
  */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WaitlistCounter } from '@/components/waitlist-counter';
+import { createClient } from '@/lib/supabase/client';
 
 interface Stats {
   totalSignups: number;
@@ -20,14 +20,61 @@ interface Stats {
   totalReferrals: number;
 }
 
+/** Fetches the latest stats from the API route. */
+async function fetchStats(): Promise<Stats | null> {
+  try {
+    const r = await fetch('/api/waitlist/stats', { cache: 'no-store' });
+    if (!r.ok) return null;
+    return (await r.json()) as Stats;
+  } catch {
+    return null;
+  }
+}
+
 export function WaitlistStatsBar() {
   const [stats, setStats] = useState<Stats | null>(null);
+  // Keep a stable ref to the latest setStats so the realtime callback can use it
+  const setStatsRef = useRef(setStats);
+  setStatsRef.current = setStats;
 
   useEffect(() => {
-    fetch('/api/waitlist/stats')
-      .then((r) => r.json())
-      .then((d: Stats) => setStats(d))
-      .catch(() => {});
+    // 1. Initial load
+    fetchStats().then((s) => {
+      if (s) setStatsRef.current(s);
+    });
+
+    // 2. Supabase Realtime subscription — fires on every INSERT / UPDATE
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel('waitlist-stats-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'waitlist_users',
+        },
+        () => {
+          // Re-fetch aggregated stats from the server after each change
+          fetchStats().then((s) => {
+            if (s) setStatsRef.current(s);
+          });
+        },
+      )
+      .subscribe();
+
+    // 3. Polling fallback — refresh every 30 s in case realtime misses an event
+    const interval = setInterval(() => {
+      fetchStats().then((s) => {
+        if (s) setStatsRef.current(s);
+      });
+    }, 30_000);
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (!stats) return null;

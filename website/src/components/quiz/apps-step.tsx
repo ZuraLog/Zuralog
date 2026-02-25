@@ -101,7 +101,7 @@ export function AppsStep({ selected, onToggle, onNext, canProceed }: AppsStepPro
               className={cn(
                 'flex items-center gap-3 rounded-2xl border p-4 text-left transition-all',
                 active
-                  ? 'border-peach/50 bg-peach/10 text-dark-charcoal shadow-[0_0_16px_rgba(255,171,118,0.15)]'
+                  ? 'border-peach/50 bg-peach/10 text-dark-charcoal shadow-[0_0_16px_rgba(207,225,185,0.35)]'
                   : 'border-black/8 bg-white text-black/50 hover:border-black/20 hover:bg-black/4 hover:text-dark-charcoal shadow-sm',
               )}
             >

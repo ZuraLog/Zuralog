@@ -69,7 +69,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-          className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-peach/20 bg-gradient-to-b from-white to-cream p-6 sm:p-8 shadow-[0_8px_40px_rgba(255,171,118,0.15)]"
+          className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-peach/20 bg-gradient-to-b from-white to-cream p-6 sm:p-8 shadow-[0_8px_40px_rgba(207,225,185,0.30)]"
         >
           {/* Ambient peach glow */}
           <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-peach/20 blur-3xl" />
