@@ -347,12 +347,36 @@ const METRIC_POOL: MetricCardData[] = [
 
 // ─────────────────────────────────────────────────────────────
 // Topic pills for "Personalized for You" card
+// Split into 3 rows for the infinite marquee lanes
 // ─────────────────────────────────────────────────────────────
-const TOPICS = [
-    "Sleep", "Nutrition", "Fitness", "Mental Health",
-    "Recovery", "HRV", "Cardio", "Strength",
-    "Hydration", "Weight", "Steps", "Macros",
-    "Zone 2", "Longevity", "Stress",
+const TOPICS_ROW1 = [
+    "Sleep Duration", "Deep Sleep", "REM Sleep", "Light Sleep", "Time in Bed",
+    "Sleep Efficiency", "Sleep Latency", "HRV", "Resting Heart Rate", "Heart Rate",
+    "Heart Rate Variability", "Respiratory Rate", "Blood Oxygen (SpO2)", "Body Temperature", "Wrist Temperature",
+    "Menstrual Cycle", "Ovulation", "Cervical Mucus", "Basal Body Temp", "Spotting",
+];
+const TOPICS_ROW2 = [
+    "Active Energy", "Basal Energy", "Dietary Calories", "Protein", "Carbohydrates",
+    "Total Fat", "Saturated Fat", "Dietary Fiber", "Dietary Sugar", "Sodium",
+    "Calcium", "Iron", "Vitamin C", "Vitamin D", "Potassium",
+    "Water Intake", "Caffeine", "Blood Glucose", "Insulin Delivery", "Dietary Cholesterol",
+];
+const TOPICS_ROW3 = [
+    "Step Count", "Walking Distance", "Running Distance", "Cycling Distance", "Swimming Distance",
+    "Flights Climbed", "Exercise Minutes", "Stand Hours", "Move Ring", "Exercise Ring",
+    "VO2 Max", "Running Speed", "Cycling Speed", "Swimming Laps", "Workout Duration",
+    "Weight", "BMI", "Body Fat %", "Lean Body Mass", "Waist Circumference",
+];
+
+// Staggered animation delays (seconds) — enough entries to cover all pills.
+// Spread between 0–9s so the lighting feels organic and non-repetitive.
+const PILL_DELAYS = [
+    0, 0.6, 1.3, 2.0, 2.7, 3.4, 4.1, 4.8, 5.6, 6.3,
+    7.0, 7.8, 8.2, 0.3, 1.0, 1.8, 2.4, 3.1, 3.8, 4.5,
+    5.2, 5.9, 6.7, 7.4, 8.0, 0.9, 1.6, 2.3, 3.0, 3.7,
+    4.4, 5.1, 5.8, 6.5, 7.2, 7.9, 8.5, 0.4, 1.1, 1.9,
+    2.6, 3.3, 4.0, 4.7, 5.4, 6.1, 6.8, 7.5, 8.3, 0.7,
+    1.4, 2.1, 2.8, 3.5, 4.2, 4.9, 5.7, 6.4, 7.1, 7.9,
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -574,31 +598,15 @@ function DashboardMetricCard({ snapshot, slotIndex }: DashboardMetricCardProps) 
  * "for anyone" effect where cards don't all update at once.
  */
 function DashboardBento() {
-    // Start with null to avoid SSR/client hydration mismatch — populated on mount
-    const [slots, setSlots] = useState<SlotSnapshot[] | null>(null);
+    // Lazy initialiser runs only on the client — avoids SSR hydration mismatch
+    // because this component is only rendered inside a client component tree.
+    const [slots, setSlots] = useState<SlotSnapshot[]>(() => initSlots());
     const cardRef = useRef<HTMLDivElement>(null);
-    // Guard so the cycling effect runs exactly once after init
-    const cyclingStarted = useRef(false);
-
-    // ── Init client-side only (prevents hydration mismatch) ───
-    useEffect(() => {
-        setSlots(initSlots());
-    }, []);
 
     // ── Staggered slot cycling ─────────────────────────────────
-    // Runs once when slots becomes non-null.
-    // Each slot updates on its own timer offset by slotIndex * 1200ms.
-    // Base period is 3s per slot.  Each update either:
-    //   a) Refreshes the value within the same card (70% probability)
-    //   b) Swaps to a completely different card from the pool (30% probability)
-    //
-    // IMPORTANT: setSlots uses the functional updater form so this effect
-    // never needs to re-run when slots changes — no stale-closure / restart bug.
-
+    // Runs once on mount. setSlots always uses the functional updater so it
+    // reads the latest state without this effect ever needing to re-run.
     useEffect(() => {
-        if (!slots || cyclingStarted.current) return;
-        cyclingStarted.current = true;
-
         const BASE_INTERVAL = 3000; // ms between updates per slot
         const SLOT_OFFSET = 1100;   // ms stagger between slots
 
@@ -608,7 +616,6 @@ function DashboardBento() {
         [0, 1, 2, 3].forEach((slotIdx) => {
             const tick = () => {
                 setSlots(prev => {
-                    if (!prev) return prev;
                     const next = [...prev];
                     const current = next[slotIdx];
                     const shouldSwapCard = Math.random() < 0.30;
@@ -644,7 +651,7 @@ function DashboardBento() {
 
             // Stagger the start of each slot's interval
             const t = setTimeout(() => {
-                tick(); // immediate first tick after the offset
+                tick(); // immediate first tick after the stagger offset
                 const iv = setInterval(tick, BASE_INTERVAL);
                 intervals.push(iv);
             }, slotIdx * SLOT_OFFSET);
@@ -656,7 +663,7 @@ function DashboardBento() {
             timeouts.forEach(clearTimeout);
             intervals.forEach(clearInterval);
         };
-    }, []);
+    }, []); // empty — timers read state via functional updater, never go stale
 
     // ── Magnetic 3D tilt on outer card (GSAP) ─────────────────
     useEffect(() => {
@@ -736,22 +743,15 @@ function DashboardBento() {
                     className="flex-1 grid grid-cols-2 gap-3"
                     style={{ perspective: "600px" }}
                 >
-                    {!slots ? (
-                        // SSR / pre-hydration skeleton — keeps layout stable
-                        [0, 1, 2, 3].map(i => (
-                            <div key={i} className="rounded-2xl bg-gray-50 border border-gray-100 h-[100px] animate-pulse" />
-                        ))
-                    ) : (
-                        <AnimatePresence mode="popLayout">
-                            {slots.map((slot, i) => (
-                                <DashboardMetricCard
-                                    key={`slot-${i}`}
-                                    snapshot={slot}
-                                    slotIndex={i}
-                                />
-                            ))}
-                        </AnimatePresence>
-                    )}
+                    <AnimatePresence mode="popLayout">
+                        {slots.map((slot, i) => (
+                            <DashboardMetricCard
+                                key={`slot-${i}`}
+                                snapshot={slot}
+                                slotIndex={i}
+                            />
+                        ))}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>
@@ -1246,23 +1246,6 @@ export function BentoSection() {
                         </div>
                     </div>
 
-                    {/* CSS for Integration Card 3 infinite drift */}
-                    <style>{`
-                        @keyframes diagonalDrift {
-                            0% { transform: translateY(-33.3333%); }
-                            100% { transform: translateY(0); }
-                        }
-                        .animate-drift-slow { animation: diagonalDrift 14s linear infinite; }
-                        .animate-drift-mid  { animation: diagonalDrift 11s linear infinite; }
-                        .animate-drift-fast { animation: diagonalDrift 8s linear infinite; }
-
-                        /* Dashboard metric tile idle float */
-                        @keyframes dashboardFloat {
-                            0%, 100% { transform: translateY(0px); }
-                            50%       { transform: translateY(-5px); }
-                        }
-                    `}</style>
-
                     {/* ══ Card 4: UNIFIED DASHBOARD ══ */}
                     <DashboardBento />
 
@@ -1296,11 +1279,12 @@ export function BentoSection() {
 
                     {/* ══ Card 6: PERSONALIZED FOR YOU (wide, spans cols 2-3) ══ */}
                     <div
-                        className="bento-card group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
+                        className="bento-card personalized-card group relative bg-white rounded-3xl shadow-xl overflow-hidden
                                    hover:-translate-y-1 hover:shadow-2xl transition-all duration-200 opacity-0"
                         style={{ gridColumn: "2 / 4", gridRow: "3" }}
                     >
-                        <div className="flex items-center gap-3 mb-4">
+                        {/* ── Header ── */}
+                        <div className="flex items-center gap-3 px-7 lg:px-8 pt-7 lg:pt-8 pb-5">
                             <div className="w-11 h-11 rounded-2xl bg-gray-900 flex items-center justify-center flex-shrink-0">
                                 <Sparkles size={20} className="text-[#E8F5A8]" />
                             </div>
@@ -1310,21 +1294,51 @@ export function BentoSection() {
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            {TOPICS.map((topic, i) => (
-                                <span
-                                    key={topic}
-                                    className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150
-                                               hover:scale-105 hover:shadow-sm cursor-default"
-                                    style={{
-                                        backgroundColor: i % 3 === 0 ? "#E8F5A8" : i % 3 === 1 ? "#F3F4F6" : "#F9FAFB",
-                                        borderColor: i % 3 === 0 ? "#D4F291" : "#E5E7EB",
-                                        color: i % 3 === 0 ? "#1A1A1A" : "#374151",
-                                    }}
-                                >
-                                    {topic}
-                                </span>
-                            ))}
+                        {/* ── Marquee rows ── */}
+                        <div
+                            className="flex flex-col gap-3 pb-7 lg:pb-8"
+                            style={{
+                                maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
+                                WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)",
+                            }}
+                        >
+                            {/* Row 1 — left → right */}
+                            <div className="overflow-hidden">
+                                <div className="animate-marquee-left flex gap-3 w-max">
+                                    {/* First copy — readable by screen readers */}
+                                    {TOPICS_ROW1.map((topic, i) => (
+                                        <span key={`r1a-${i}`} className="pill-pulse inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border cursor-default whitespace-nowrap flex-shrink-0" style={{ animationDelay: `${PILL_DELAYS[i % PILL_DELAYS.length]}s` }}>{topic}</span>
+                                    ))}
+                                    {/* Duplicate copies for seamless loop — hidden from a11y */}
+                                    {[...TOPICS_ROW1, ...TOPICS_ROW1].map((topic, i) => (
+                                        <span key={`r1b-${i}`} aria-hidden="true" className="pill-pulse inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border cursor-default whitespace-nowrap flex-shrink-0" style={{ animationDelay: `${PILL_DELAYS[(i + TOPICS_ROW1.length) % PILL_DELAYS.length]}s` }}>{topic}</span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Row 2 — right → left */}
+                            <div className="overflow-hidden">
+                                <div className="animate-marquee-right flex gap-3 w-max">
+                                    {TOPICS_ROW2.map((topic, i) => (
+                                        <span key={`r2a-${i}`} className="pill-pulse inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border cursor-default whitespace-nowrap flex-shrink-0" style={{ animationDelay: `${PILL_DELAYS[(i + 5) % PILL_DELAYS.length]}s` }}>{topic}</span>
+                                    ))}
+                                    {[...TOPICS_ROW2, ...TOPICS_ROW2].map((topic, i) => (
+                                        <span key={`r2b-${i}`} aria-hidden="true" className="pill-pulse inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border cursor-default whitespace-nowrap flex-shrink-0" style={{ animationDelay: `${PILL_DELAYS[(i + TOPICS_ROW2.length + 5) % PILL_DELAYS.length]}s` }}>{topic}</span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Row 3 — left → right */}
+                            <div className="overflow-hidden">
+                                <div className="animate-marquee-left flex gap-3 w-max">
+                                    {TOPICS_ROW3.map((topic, i) => (
+                                        <span key={`r3a-${i}`} className="pill-pulse inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border cursor-default whitespace-nowrap flex-shrink-0" style={{ animationDelay: `${PILL_DELAYS[(i + 10) % PILL_DELAYS.length]}s` }}>{topic}</span>
+                                    ))}
+                                    {[...TOPICS_ROW3, ...TOPICS_ROW3].map((topic, i) => (
+                                        <span key={`r3b-${i}`} aria-hidden="true" className="pill-pulse inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold border cursor-default whitespace-nowrap flex-shrink-0" style={{ animationDelay: `${PILL_DELAYS[(i + TOPICS_ROW3.length + 10) % PILL_DELAYS.length]}s` }}>{topic}</span>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
