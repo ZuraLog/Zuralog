@@ -150,3 +150,12 @@ body {
   animation: qrScan 2.2s ease-in-out infinite;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Waitlist Section — form input lavender focus ring
+───────────────────────────────────────────────────────────── */
+.wl-input:focus {
+  border-color: #C4B5FD !important;
+  box-shadow: 0 0 0 3px rgba(196, 181, 253, 0.25);
+  background-color: #FFFFFF !important;
+}
+

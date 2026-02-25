@@ -2,6 +2,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { MobileSection } from "@/components/sections/MobileSection";
 import { BentoSection } from "@/components/sections/BentoSection";
+import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { PhoneCanvas } from "@/components/sections/hero/PhoneCanvas";
 
 export default function Home() {
@@ -11,6 +12,7 @@ export default function Home() {
             <HeroSection />
             <MobileSection />
             <BentoSection />
+            <WaitlistSection />
 
             {/* 3D phone: lives at page level so it can transition between
                 fixed (follows viewport) and absolute (anchored in MobileSection).
