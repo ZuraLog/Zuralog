@@ -8,6 +8,8 @@
   --color-cream: #FAFAF5;
   --color-dark-charcoal: #2D2D2D;
   --color-accent-lime: #D4F291;
+  --color-peach: #FFAB76;
+  --color-peach-dim: #FF8C4B;
   
   --color-background: var(--color-cream);
   --color-foreground: var(--color-dark-charcoal);
@@ -18,6 +20,11 @@
 :root {
   --background: #FAFAF5;
   --foreground: #2D2D2D;
+
+  /* Navbar tokens */
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --border-light: rgba(0, 0, 0, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,3 +40,152 @@ body {
   font-family: var(--font-sans);
   overflow-x: hidden;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Bento Section — Integrations card: diagonal icon drift
+───────────────────────────────────────────────────────────── */
+@keyframes diagonalDrift {
+  0%   { transform: translateY(-33.3333%); }
+  100% { transform: translateY(0); }
+}
+.animate-drift-slow { animation: diagonalDrift 14s linear infinite; }
+.animate-drift-mid  { animation: diagonalDrift 11s linear infinite; }
+.animate-drift-fast { animation: diagonalDrift  8s linear infinite; }
+
+/* ─────────────────────────────────────────────────────────────
+   Bento Section — Unified Dashboard card: metric tile float
+───────────────────────────────────────────────────────────── */
+@keyframes dashboardFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Bento Section — Personalized card: infinite horizontal marquee
+   3× repeat trick: translateX(-33.333%) scrolls exactly one copy,
+   then snaps seamlessly back to 0. GPU-accelerated via translateZ.
+───────────────────────────────────────────────────────────── */
+@keyframes marqueeLeft {
+  0%   { transform: translateX(0) translateZ(0); }
+  100% { transform: translateX(-33.3333%) translateZ(0); }
+}
+@keyframes marqueeRight {
+  0%   { transform: translateX(-33.3333%) translateZ(0); }
+  100% { transform: translateX(0) translateZ(0); }
+}
+
+.animate-marquee-left {
+  animation: marqueeLeft 28s linear infinite;
+  will-change: transform;
+}
+.animate-marquee-right {
+  animation: marqueeRight 28s linear infinite;
+  will-change: transform;
+}
+
+/* Pause marquee on card hover */
+.personalized-card:hover .animate-marquee-left,
+.personalized-card:hover .animate-marquee-right {
+  animation-play-state: paused;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Bento Section — Personalized card: pill random highlight pulse
+   Each pill starts gray, pulses to lime, returns to gray.
+   Staggered animation-delay values make it feel organic/random.
+───────────────────────────────────────────────────────────── */
+@keyframes pillPulse {
+  0%, 30% {
+    background-color: #F3F4F6;
+    border-color: #E5E7EB;
+    color: #6B7280;
+    box-shadow: none;
+  }
+  45%, 60% {
+    background-color: #E8F5A8;
+    border-color: #D4F291;
+    color: #1A1A1A;
+    box-shadow: 0 0 12px rgba(212, 242, 145, 0.55);
+  }
+  75%, 100% {
+    background-color: #F3F4F6;
+    border-color: #E5E7EB;
+    color: #6B7280;
+    box-shadow: none;
+  }
+}
+
+.pill-pulse {
+  animation: pillPulse 9s ease-in-out infinite;
+}
+
+/* Pause pill pulses on card hover */
+.personalized-card:hover .pill-pulse {
+  animation-play-state: paused;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Bento Section — Card 5: Get the App
+───────────────────────────────────────────────────────────── */
+
+/* Phone idle float — gentle levitation */
+@keyframes phoneFloat {
+  0%, 100% { transform: translateY(0px) rotate(-2deg); }
+  50%       { transform: translateY(-10px) rotate(-2deg); }
+}
+.phone-float {
+  animation: phoneFloat 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Badge shimmer sweep — left-to-right highlight on idle */
+@keyframes badgeShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.badge-shimmer {
+  background-size: 200% auto;
+  animation: badgeShimmer 3.5s linear infinite;
+}
+
+/* QR scan-line sweep */
+@keyframes qrScan {
+  0%, 100% { top: 4px;  opacity: 0.9; }
+  50%       { top: calc(100% - 6px); opacity: 0.6; }
+}
+.qr-scanline {
+  animation: qrScan 2.2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Waitlist Section — floating particle drift
+───────────────────────────────────────────────────────────── */
+@keyframes particleFloat {
+  0%   { transform: translateY(0px); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-100vh); opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Waitlist Section — urgent pulse glow for founding spots
+───────────────────────────────────────────────────────────── */
+@keyframes urgentPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 171, 118, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(255, 171, 118, 0.18); }
+}
+.waitlist-urgent {
+  animation: urgentPulse 2.5s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Navbar — CTA button pulse glow (peach)
+───────────────────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 171, 118, 0); }
+  50%       { box-shadow: 0 0 12px 3px rgba(255, 171, 118, 0.35); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
