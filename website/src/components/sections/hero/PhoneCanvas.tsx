@@ -35,7 +35,7 @@ function PhoneModel() {
     // X: move left/right (0 is center)
     // Y: move up/down (-2.5 is default base, increase to move higher into the text)
     // Z: move closer/further
-    const phonePosition: [number, number, number] = [0.3, -2.5, 0];
+    const phonePosition: [number, number, number] = [0.3, -3.2, 0];
 
     // Global mouse tracking instead of canvas-local tracking
     const mouseRef = useRef({ x: 0, y: 0 });
@@ -58,12 +58,12 @@ function PhoneModel() {
             const targetX = mouseRef.current.x * 0.15; // reduced intensity
             const targetY = mouseRef.current.y * 0.15; // reduced intensity
 
-            // Interpolate rotation based on global mouse position
-            groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetY * 0.5, 0.05);
-            groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, (Math.PI / 2) + targetX * 0.5, 0.05);
+            // Interpolate rotation based on global mouse position (INVERTED)
+            groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -targetY * 0.5, 0.05);
+            groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, (Math.PI / 2) - targetX * 0.5, 0.05);
 
-            // Interpolate position based on global mouse position
-            groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, phonePosition[0] + (targetX * 0.8), 0.05);
+            // Interpolate position based on global mouse position (INVERTED)
+            groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, phonePosition[0] - (targetX * 0.8), 0.05);
             groupRef.current.position.y = phonePosition[1] + floatY;
         }
     });
