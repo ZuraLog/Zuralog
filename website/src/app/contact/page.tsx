@@ -33,7 +33,7 @@ const CONTACT_REASONS = [
 const SOCIAL_LINKS = [
   { label: 'X (Twitter)', href: 'https://twitter.com/zuralog', icon: FaXTwitter },
   { label: 'Instagram', href: 'https://instagram.com/zuralog', icon: FaInstagram },
-  { label: 'LinkedIn', href: 'https://linkedin.com/in/zuralog', icon: FaLinkedinIn },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/112446156/', icon: FaLinkedinIn },
   { label: 'Facebook', href: 'https://facebook.com/zuralog', icon: FaFacebookF },
 ];
 

@@ -62,7 +62,7 @@ const SOCIAL_LINKS = [
   },
   {
     label: 'LinkedIn',
-    href: 'https://linkedin.com/in/zuralog',
+    href: 'https://www.linkedin.com/company/112446156/',
     icon: FaLinkedinIn,
   },
   {
