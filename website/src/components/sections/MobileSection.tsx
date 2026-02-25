@@ -167,6 +167,18 @@ export function MobileSection() {
                     const interpolated = gsap.utils.interpolate(fromColor, toColor, slideFrac);
                     pinnedRef.current.style.backgroundColor = interpolated as string;
                 }
+
+                // Smooth gradient overlay fade in during the final portion
+                // We fade it in between progress 0.8 and 1.0 (the final slide duration)
+                const gradientOverlay = pinnedRef.current?.querySelector("#mobile-bottom-gradient") as HTMLElement;
+                if (gradientOverlay) {
+                    if (p > 0.8) {
+                        const fadeP = (p - 0.8) / 0.2; // 0 to 1
+                        gradientOverlay.style.opacity = String(Math.pow(fadeP, 2)); // Ease-in curve
+                    } else {
+                        gradientOverlay.style.opacity = "0";
+                    }
+                }
             },
         });
 
@@ -410,6 +422,15 @@ export function MobileSection() {
                         />
                     ))}
                 </div>
+
+                {/* ═══════════════════════════════════════════
+                    Gradient bottom overlay to transition to Bento Dark mode
+                    ═══════════════════════════════════════════ */}
+                <div
+                    id="mobile-bottom-gradient"
+                    className="absolute bottom-0 left-0 w-full h-80 pointer-events-none z-[100]"
+                    style={{ background: "linear-gradient(to bottom, transparent 0%, #2D2D2D 100%)", opacity: 0 }}
+                />
             </div>
         </section>
     );

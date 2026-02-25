@@ -10,7 +10,7 @@ import { IoIosFitness } from 'react-icons/io';
 import { TbTreadmill } from 'react-icons/tb';
 
 // Top 20 fitness and health apps organically spread
-const APPS = [
+export const APPS = [
     { id: 'google', Icon: FcGoogle, color: '', x: 25, y: 20 },
     { id: 'apple', Icon: FaApple, color: '#000000', x: 12, y: 35 },
     { id: 'strava', Icon: FaStrava, color: '#FC4C02', x: 8, y: 55 },

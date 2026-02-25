@@ -577,76 +577,85 @@ function DashboardBento() {
     // Start with null to avoid SSR/client hydration mismatch — populated on mount
     const [slots, setSlots] = useState<SlotSnapshot[] | null>(null);
     const cardRef = useRef<HTMLDivElement>(null);
+    // Guard so the cycling effect runs exactly once after init
+    const cyclingStarted = useRef(false);
 
-    // Initialise client-side only to prevent hydration mismatch
+    // ── Init client-side only (prevents hydration mismatch) ───
     useEffect(() => {
         setSlots(initSlots());
     }, []);
 
     // ── Staggered slot cycling ─────────────────────────────────
+    // Runs once when slots becomes non-null.
     // Each slot updates on its own timer offset by slotIndex * 1200ms.
-    // Base period is 4s per slot.  Each update either:
+    // Base period is 3s per slot.  Each update either:
     //   a) Refreshes the value within the same card (70% probability)
     //   b) Swaps to a completely different card from the pool (30% probability)
+    //
+    // IMPORTANT: setSlots uses the functional updater form so this effect
+    // never needs to re-run when slots changes — no stale-closure / restart bug.
 
     useEffect(() => {
-        if (!slots) return; // Wait until client-side init
+        if (!slots || cyclingStarted.current) return;
+        cyclingStarted.current = true;
 
-        const BASE_INTERVAL = 4000; // ms between updates per slot
-        const SLOT_OFFSET = 1200;    // ms stagger between slots
+        const BASE_INTERVAL = 3000; // ms between updates per slot
+        const SLOT_OFFSET = 1100;   // ms stagger between slots
 
-        const timers: ReturnType<typeof setInterval>[] = [];
+        const timeouts: ReturnType<typeof setTimeout>[] = [];
+        const intervals: ReturnType<typeof setInterval>[] = [];
 
         [0, 1, 2, 3].forEach((slotIdx) => {
-            const initialDelay = slotIdx * SLOT_OFFSET;
+            const tick = () => {
+                setSlots(prev => {
+                    if (!prev) return prev;
+                    const next = [...prev];
+                    const current = next[slotIdx];
+                    const shouldSwapCard = Math.random() < 0.30;
 
-            const start = setTimeout(() => {
-                const tick = () => {
-                    setSlots(prev => {
-                        if (!prev) return prev;
-                        const next = [...prev];
-                        const current = next[slotIdx];
-                        const shouldSwapCard = Math.random() < 0.30;
+                    if (shouldSwapCard) {
+                        // Pick a card NOT currently visible in any slot
+                        const usedIds = next.map(s => s.cardId);
+                        const newCard = pickFresh(METRIC_POOL, usedIds);
+                        const snap = newCard.generate();
+                        next[slotIdx] = {
+                            cardId: newCard.id,
+                            label: newCard.label,
+                            Icon: newCard.Icon,
+                            iconColor: newCard.iconColor,
+                            ...snap,
+                            valueKey: 0,
+                            cardKey: current.cardKey + 1,
+                        };
+                    } else {
+                        // Same card, fresh randomised value
+                        const card = METRIC_POOL.find(c => c.id === current.cardId)!;
+                        const snap = card.generate();
+                        next[slotIdx] = {
+                            ...current,
+                            ...snap,
+                            valueKey: current.valueKey + 1,
+                        };
+                    }
 
-                        if (shouldSwapCard) {
-                            // Pick a card NOT currently in any slot
-                            const usedIds = next.map(s => s.cardId);
-                            const newCard = pickFresh(METRIC_POOL, usedIds);
-                            const snap = newCard.generate();
-                            next[slotIdx] = {
-                                cardId: newCard.id,
-                                label: newCard.label,
-                                Icon: newCard.Icon,
-                                iconColor: newCard.iconColor,
-                                ...snap,
-                                valueKey: 0,
-                                cardKey: current.cardKey + 1,
-                            };
-                        } else {
-                            // Same card, fresh value
-                            const card = METRIC_POOL.find(c => c.id === current.cardId)!;
-                            const snap = card.generate();
-                            next[slotIdx] = {
-                                ...current,
-                                ...snap,
-                                valueKey: current.valueKey + 1,
-                            };
-                        }
+                    return next;
+                });
+            };
 
-                        return next;
-                    });
-                };
+            // Stagger the start of each slot's interval
+            const t = setTimeout(() => {
+                tick(); // immediate first tick after the offset
+                const iv = setInterval(tick, BASE_INTERVAL);
+                intervals.push(iv);
+            }, slotIdx * SLOT_OFFSET);
 
-                tick(); // First tick fires immediately after initial delay
-                const interval = setInterval(tick, BASE_INTERVAL);
-                timers.push(interval);
-            }, initialDelay);
-
-            // Track the initial delay timeout for cleanup
-            timers.push(start as unknown as ReturnType<typeof setInterval>);
+            timeouts.push(t);
         });
 
-        return () => timers.forEach(t => clearTimeout(t as unknown as ReturnType<typeof setTimeout>));
+        return () => {
+            timeouts.forEach(clearTimeout);
+            intervals.forEach(clearInterval);
+        };
     }, []);
 
     // ── Magnetic 3D tilt on outer card (GSAP) ─────────────────
