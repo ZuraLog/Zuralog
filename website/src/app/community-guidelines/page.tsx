@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function CommunityGuidelinesPage() {
   return (
-    <LegalPageLayout title="Community Guidelines" lastUpdated="2025-01-01">
+    <LegalPageLayout title="Community Guidelines" lastUpdated="2026-02-25">
       <p>
         We built ZuraLog because we believe health clarity should be available to everyone.
         Our community across LinkedIn, Instagram, X, Facebook, and beyond is a big part of

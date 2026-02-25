@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function TermsOfServicePage() {
   return (
-    <LegalPageLayout title="Terms of Service" lastUpdated="2025-01-01">
+    <LegalPageLayout title="Terms of Service" lastUpdated="2026-02-25">
       <p>
         These Terms of Service (&quot;Terms&quot;) govern your access to and use of the
         ZuraLog platform, mobile applications, and related services (collectively, the

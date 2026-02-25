@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function CookiePolicyPage() {
   return (
-    <LegalPageLayout title="Cookie Policy" lastUpdated="2025-01-01">
+    <LegalPageLayout title="Cookie Policy" lastUpdated="2026-02-25">
       <p>
         This Cookie Policy explains how ZuraLog (&quot;we,&quot; &quot;us,&quot; or
         &quot;our&quot;) uses cookies and similar technologies when you visit our website or

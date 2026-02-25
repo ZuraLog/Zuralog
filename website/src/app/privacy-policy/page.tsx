@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPageLayout title="Privacy Policy" lastUpdated="2025-01-01">
+    <LegalPageLayout title="Privacy Policy" lastUpdated="2026-02-25">
       <p>
         At ZuraLog (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), your privacy isn&apos;t
         just a policy checkbox — it&apos;s the foundation of everything we build. This Privacy
