@@ -8,6 +8,8 @@
   --color-cream: #FAFAF5;
   --color-dark-charcoal: #2D2D2D;
   --color-accent-lime: #D4F291;
+  --color-peach: #FFAB76;
+  --color-peach-dim: #FF8C4B;
   
   --color-background: var(--color-cream);
   --color-foreground: var(--color-dark-charcoal);
@@ -151,11 +153,23 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Waitlist Section — form input lavender focus ring
+   Waitlist Section — floating particle drift
 ───────────────────────────────────────────────────────────── */
-.wl-input:focus {
-  border-color: #C4B5FD !important;
-  box-shadow: 0 0 0 3px rgba(196, 181, 253, 0.25);
-  background-color: #FFFFFF !important;
+@keyframes particleFloat {
+  0%   { transform: translateY(0px); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-100vh); opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Waitlist Section — urgent pulse glow for founding spots
+───────────────────────────────────────────────────────────── */
+@keyframes urgentPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 171, 118, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(255, 171, 118, 0.18); }
+}
+.waitlist-urgent {
+  animation: urgentPulse 2.5s ease-in-out infinite;
 }
 
