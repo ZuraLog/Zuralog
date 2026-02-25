@@ -60,10 +60,10 @@ function PhoneModel() {
 
             // Interpolate rotation based on global mouse position (INVERTED)
             groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -targetY * 0.5, 0.05);
-            groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, (Math.PI / 2) - targetX * 0.5, 0.05);
+            groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, (Math.PI / 2) + targetX * 0.5, 0.05);
 
             // Interpolate position based on global mouse position (INVERTED)
-            groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, phonePosition[0] - (targetX * 0.8), 0.05);
+            groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, phonePosition[0] + (targetX * 0.8), 0.05);
             groupRef.current.position.y = phonePosition[1] + floatY;
         }
     });
