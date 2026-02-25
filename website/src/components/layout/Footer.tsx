@@ -267,6 +267,13 @@ export function Footer() {
               Cookie Policy
             </Link>
             <span aria-hidden="true" className="text-black/20">·</span>
+            <Link
+              href="/community-guidelines"
+              className="text-xs font-medium text-black/30 transition-colors hover:text-[#2D2D2D]"
+            >
+              Community Guidelines
+            </Link>
+            <span aria-hidden="true" className="text-black/20">·</span>
             {/* Manage cookies — client component (onClick handler) */}
             <ManageCookiesButton />
           </nav>
