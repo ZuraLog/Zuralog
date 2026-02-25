@@ -22,7 +22,7 @@ export function WaitlistSection() {
   return (
     <section
       id="waitlist"
-      className="relative min-h-screen bg-cream py-24 md:py-32 overflow-hidden"
+      className="relative min-h-screen py-24 md:py-32 overflow-hidden"
     >
       <Toaster position="top-center" richColors />
 

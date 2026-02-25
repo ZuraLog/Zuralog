@@ -401,9 +401,6 @@ export function PhoneCanvas() {
             id="phone-canvas-wrapper"
             className="pointer-events-none"
             style={{
-                // Full-viewport overlay. The phone model is never clipped
-                // because the Canvas always covers the entire screen.
-                // 3D position within Three.js handles visual placement.
                 position: 'fixed',
                 top: 0,
                 left: 0,
@@ -411,13 +408,14 @@ export function PhoneCanvas() {
                 width: '100%',
                 height: '100vh',
                 zIndex: 40,
+                pointerEvents: 'none',
             }}
         >
-            {/* pointer-events-none: the canvas is purely visual. Mouse movement
-                still reaches the mousemove listener on window (for parallax tilt)
-                but clicks, drags, and text selection pass through to the page. */}
-            <div className="w-full h-full pointer-events-none">
-                <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+            {/* pointerEvents: 'none' is set inline on both the wrapper and the Canvas
+                because R3F injects the <canvas> with its own event handling and does
+                not reliably inherit pointer-events from a CSS class on a parent div. */}
+            <div className="w-full h-full pointer-events-none" style={{ pointerEvents: 'none' }}>
+                <Canvas camera={{ position: [0, 0, 5], fov: 45 }} style={{ pointerEvents: 'none' }}>
                     <ambientLight intensity={0.5} />
                     <directionalLight position={[10, 10, 5]} intensity={1} />
                     {/* Bridge: reads useProgress inside Canvas, writes to loadingBridge singleton */}

@@ -467,7 +467,6 @@ export function BentoSection() {
             ref={sectionRef}
             id="bento-section"
             className="relative w-full py-28 lg:py-36 overflow-hidden"
-            style={{ backgroundColor: "#2D2D2D" }}
         >
             {/* Subtle background texture */}
             <div
@@ -805,8 +804,10 @@ export function BentoSection() {
                             </div>
 
                             {/* Waitlist CTA */}
-                            <button className="mt-auto w-full bg-[#E8F5A8] text-gray-900 text-xs font-bold py-2.5 rounded-xl
-                                               hover:bg-[#d4f291] active:scale-95 transition-all duration-150 shadow-md shadow-black/30">
+                            <button
+                                className="mt-auto w-full bg-[#E8F5A8] text-gray-900 text-xs font-bold py-2.5 rounded-xl hover:bg-[#d4f291] active:scale-95 transition-all duration-150 shadow-md shadow-black/30"
+                                onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
+                            >
                                 Join the Waitlist →
                             </button>
                         </div>

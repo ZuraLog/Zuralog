@@ -5,10 +5,12 @@ import { MobileSection } from "@/components/sections/MobileSection";
 import { BentoSection } from "@/components/sections/BentoSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { ClientShellLoader } from "@/components/ClientShellLoader";
+import { PageBackground } from "@/components/PageBackground";
 
 export default function Home() {
     return (
         <>
+            <PageBackground />
             <main className="relative min-h-screen">
                 <ScrollProgress />
                 <Navbar />

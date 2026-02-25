@@ -145,16 +145,7 @@ export function MobileSection() {
                     gsap.set(slideEl, { opacity, y: translateY });
                 });
 
-                // ── 3. Background color interpolation ────────────────────────
-                if (pinnedRef.current) {
-                    const slideFloat  = p * (SLIDE_COUNT - 1);
-                    const slideIndex  = Math.min(Math.floor(slideFloat), SLIDE_COUNT - 2);
-                    const slideFrac   = slideFloat - slideIndex;
-                    const fromColor   = SLIDES[slideIndex].bgFrom;
-                    const toColor     = SLIDES[slideIndex].bgTo;
-                    const interpolated = gsap.utils.interpolate(fromColor, toColor, slideFrac);
-                    pinnedRef.current.style.backgroundColor = interpolated as string;
-                }
+                // Background color is driven by PageBackground (scroll-driven global layer).
             },
         });
 
@@ -176,7 +167,7 @@ export function MobileSection() {
             <div
                 ref={pinnedRef}
                 className="w-full h-screen relative"
-                style={{ backgroundColor: SLIDES[0].bgFrom, overflow: "clip" }}
+                style={{ backgroundColor: "transparent", overflow: "clip" }}
             >
                 {/* ═══════════════════════════════════════════
                     SLIDE 1: "All Your Apps. One Place."
@@ -378,7 +369,10 @@ export function MobileSection() {
                                 </div>
                             </div>
 
-                            <button className="pointer-events-auto mt-10 bg-gray-900 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all">
+                            <button
+                                className="pointer-events-auto mt-10 bg-gray-900 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
+                                onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
+                            >
                                 Join the Waitlist
                             </button>
                         </div>
