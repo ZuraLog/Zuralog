@@ -10,6 +10,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/next";
 import { LenisProvider } from "@/components/layout/LenisProvider";
 import "./globals.css";
 
@@ -151,6 +152,7 @@ export default function RootLayout({
           {children}
         </LenisProvider>
         <Toaster richColors position="bottom-right" />
+        <Analytics />
       </body>
     </html>
   );
