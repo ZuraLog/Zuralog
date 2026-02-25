@@ -10,7 +10,6 @@ import { SiFitbit } from "react-icons/si";
 import { IoIosFitness } from "react-icons/io";
 import { TbBrain, TbMessages, TbRun, TbMoon, TbApple } from "react-icons/tb";
 import { MdOutlineAutoAwesome } from "react-icons/md";
-
 // Register ScrollTrigger
 if (typeof window !== "undefined") {
     gsap.registerPlugin(ScrollTrigger);
@@ -186,7 +185,7 @@ export function MobileSection() {
             {/* Pinned viewport container */}
             <div
                 ref={pinnedRef}
-                className="w-full h-screen overflow-hidden"
+                className="w-full h-screen overflow-hidden relative"
                 style={{ backgroundColor: SLIDES[0].bgFrom }}
             >
                 {/* ═══════════════════════════════════════════

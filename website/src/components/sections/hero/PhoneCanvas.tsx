@@ -66,15 +66,29 @@ const SwipeTransitionShader = {
 };
 
 /**
- * Inner 3D phone model with shader-based screen texture transitions
- * and scroll-driven scale animation.
+ * Animated 3D values that GSAP will scrub.
+ * Kept outside the component so GSAP can tween them by reference
+ * and useFrame can read them every tick.
  *
- * CSS handles all screen-space positioning (fixed vs absolute).
- * This component only manages:
- *   - 3D scale transitions (hero -> MobileSection)
- *   - Mouse parallax tilt/drift
- *   - Idle float animation
- *   - Screen texture swapping via shader uniforms
+ * posX: horizontal 3D offset (0 = center, positive = right in NDC-ish units)
+ * posY: vertical 3D offset (negative = lower on screen)
+ * scale: uniform scale multiplier
+ */
+const anim = {
+    posX: 0.22,
+    posY: -3.6,
+    scale: 2.5,
+};
+
+/**
+ * Inner 3D phone model with shader-based screen texture transitions
+ * and scroll-driven 3D position/scale animation.
+ *
+ * The Canvas is full-viewport. This component positions the phone
+ * within 3D space:
+ *   - Hero: centered (posX=0), low (posY=-1.2) — sits below CTA
+ *   - Transition: moves right (posX increases), up (posY increases), scales up
+ *   - MobileSection: settled in right half (posX~1.8, posY~0), scale 2.8
  */
 function PhoneModel() {
     const { scene } = useGLTF('/model/phone/scene.gltf');
@@ -89,13 +103,8 @@ function PhoneModel() {
     const groupRef = useRef<THREE.Group>(null);
     const shaderMatRef = useRef<THREE.ShaderMaterial | null>(null);
 
-    /**
-     * Base 3D states. Position is centered within the canvas.
-     * Scale is animated by GSAP ScrollTrigger.
-     */
-    const basePosition = useRef(new THREE.Vector3(0, -0.3, 0));
+    /** Base rotation for the phone (facing camera). */
     const baseRotation = useRef(new THREE.Vector3(0, Math.PI / 2, 0));
-    const baseScale = useRef(new THREE.Vector3(2.2, 2.2, 2.2));
 
     /** Apply custom shader material to screen mesh and style body materials. */
     useEffect(() => {
@@ -157,11 +166,17 @@ function PhoneModel() {
     }, []);
 
     /**
-     * GSAP scroll-driven scale animation.
-     * Scale from 2.2 (hero) to 2.8 (MobileSection) as user scrolls.
-     * Also handles the first texture swap (hero screen -> content_1).
+     * GSAP scroll-driven animations for the 3D model properties.
+     *
+     * Phase A (hero -> MobileSection approach):
+     *   - posX: 0 -> 1.8 (center to right half)
+     *   - posY: -1.2 -> 0 (below CTA to vertically centered)
+     *   - scale: 2.2 -> 2.8
+     *
+     * Phase B (first texture swap: hero screen -> content_1):
      */
     useGSAP(() => {
+        // Phase A: 3D position + scale transition as MobileSection approaches
         const tl = gsap.timeline({
             scrollTrigger: {
                 trigger: '#mobile-section',
@@ -171,7 +186,12 @@ function PhoneModel() {
             }
         });
 
-        tl.to(baseScale.current, { x: 2.8, y: 2.8, z: 2.8, ease: "none" }, 0);
+        tl.to(anim, {
+            posX: 2,
+            posY: 0,
+            scale: 2,
+            ease: "none",
+        }, 0);
 
         // First texture swap: hero screen -> content_1 during transition
         ScrollTrigger.create({
@@ -201,19 +221,21 @@ function PhoneModel() {
             smoothMouse.current.x = THREE.MathUtils.lerp(smoothMouse.current.x, mouseRef.current.x, 0.05);
             smoothMouse.current.y = THREE.MathUtils.lerp(smoothMouse.current.y, mouseRef.current.y, 0.05);
 
-            const floatY = Math.sin(state.clock.elapsedTime) * 0.08;
-            const targetX = smoothMouse.current.x * 0.1;
-            const targetY = smoothMouse.current.y * 0.1;
+            const floatY = Math.sin(state.clock.elapsedTime) * 0.06;
+            const targetX = smoothMouse.current.x * 0.08;
+            const targetY = smoothMouse.current.y * 0.08;
 
-            groupRef.current.rotation.x = baseRotation.current.x - targetY * 0.4;
-            groupRef.current.rotation.y = baseRotation.current.y + targetX * 0.4;
+            groupRef.current.rotation.x = baseRotation.current.x - targetY * 0.3;
+            groupRef.current.rotation.y = baseRotation.current.y + targetX * 0.3;
             groupRef.current.rotation.z = baseRotation.current.z;
 
-            groupRef.current.position.x = basePosition.current.x + (targetX * 0.5);
-            groupRef.current.position.y = basePosition.current.y + floatY;
-            groupRef.current.position.z = basePosition.current.z;
+            // Apply GSAP-driven position from the anim object
+            groupRef.current.position.x = anim.posX + (targetX * 0.4);
+            groupRef.current.position.y = anim.posY + floatY;
+            groupRef.current.position.z = 0;
 
-            groupRef.current.scale.copy(baseScale.current);
+            // Apply GSAP-driven scale
+            groupRef.current.scale.setScalar(anim.scale);
         }
 
         // Drive texture transitions within MobileSection via CSS variable
@@ -269,31 +291,21 @@ function PhoneModel() {
 }
 
 /**
- * PhoneCanvas: The 3D phone wrapper with scroll-driven CSS positioning.
+ * PhoneCanvas: Full-viewport 3D overlay with scroll-driven transitions.
  *
- * Uses a single persistent Canvas (never unmounts) and controls the wrapper
- * div's CSS `position` to achieve the scroll phases:
+ * The Canvas covers the entire viewport (100vw x 100vh) so the phone
+ * model is NEVER clipped. The phone's position within 3D space is what
+ * moves it from center (hero) to right-half (MobileSection).
  *
- * Phase 1 - HERO (initial):
- *   position: fixed, centered in the right half of viewport,
- *   vertically placed so the phone top is just below the "Waitlist Now" CTA.
- *
- * Phase 2 - SCROLLING TO MOBILE:
- *   Still position: fixed. Phone follows the user on scroll.
- *   3D scale increases via GSAP.
- *
- * Phase 3 - MOBILE SECTION REACHED:
- *   position: absolute, placed inside MobileSection's pinned area.
- *   Phone anchors in the right panel (50% width, full height).
- *   It stays there while slides scroll through.
- *
- * Phase 4 - PAST MOBILE SECTION:
- *   Still position: absolute in MobileSection. Scrolls away naturally
- *   with the section as the user moves past.
- *
- * The trick: We use ScrollTrigger to detect when MobileSection's top
- * hits viewport top. At that moment, we switch from fixed to absolute
- * and calculate the correct top offset so there's no visual jump.
+ * Phases:
+ *   1. HERO: Canvas is position:fixed, full viewport. Phone is centered
+ *      and low (below CTA button) via 3D posY offset.
+ *   2. SCROLLING TO MOBILE: Still fixed. GSAP scrubs 3D posX (center->right),
+ *      posY (low->center), and scale (2.2->2.8).
+ *   3. MOBILE SECTION PINNED: Still fixed full viewport. Phone is in right
+ *      half at full scale. Slide textures swap via CSS variable.
+ *   4. PAST MOBILE SECTION: Canvas switches to position:absolute, anchored
+ *      at the bottom of MobileSection. It scrolls away naturally.
  */
 export function PhoneCanvas() {
     const wrapperRef = useRef<HTMLDivElement>(null);
@@ -303,63 +315,43 @@ export function PhoneCanvas() {
         if (!wrapper) return;
 
         /**
-         * Phase A: As user scrolls from hero toward MobileSection,
-         * animate the phone upward from its starting position (top: 55%)
-         * to vertically centered (top: 15%) so it settles into the
-         * right panel naturally.
-         */
-        gsap.to(wrapper, {
-            top: '15%',
-            ease: 'none',
-            scrollTrigger: {
-                trigger: '#mobile-section',
-                start: 'top bottom',
-                end: 'top top',
-                scrub: true,
-            },
-        });
-
-        /**
-         * Phase B: When MobileSection pin ENDS (user scrolls past all slides),
-         * switch from fixed -> absolute so the phone stays at the bottom of
-         * MobileSection and scrolls away with it.
-         * The pin end = sectionTop + (SLIDE_COUNT * 100vh).
+         * When MobileSection pin ENDS (user scrolled past all slides),
+         * switch from fixed -> absolute so the Canvas stays anchored
+         * at the end of MobileSection and scrolls away with it.
+         *
+         * The pin duration is SLIDE_COUNT * 100vh of scroll distance.
          */
         ScrollTrigger.create({
             trigger: '#mobile-section',
-            // The pin lasts for SLIDE_COUNT * 100vh of scroll distance.
-            // We switch to absolute at the very end of that pin.
             start: () => `top+=${window.innerHeight * SLIDE_COUNT} top`,
             end: () => `top+=${window.innerHeight * SLIDE_COUNT} top`,
             onEnter: () => {
                 const mobileSection = document.getElementById('mobile-section');
                 if (!mobileSection) return;
-                // Place absolutely at the last screen's position within
-                // MobileSection. The section height is (SLIDE_COUNT+1)*100vh.
-                // The pinned area ends SLIDE_COUNT*100vh scrolled, placing
-                // the visible viewport at the last screen-height of the section.
+
+                // Anchor the full-viewport canvas at the scroll position
+                // where the pin ended. This is sectionTop + pinDuration.
                 const sectionTop = mobileSection.offsetTop;
-                const absTop = sectionTop + (window.innerHeight * SLIDE_COUNT) + (window.innerHeight * 0.15);
+                const absTop = sectionTop + (window.innerHeight * SLIDE_COUNT);
+
                 gsap.set(wrapper, {
                     position: 'absolute',
                     top: absTop,
-                    right: '2%',
-                    bottom: 'auto',
-                    transform: 'none',
-                    width: '48%',
-                    height: '70vh',
+                    left: 0,
+                    right: 'auto',
+                    width: '100vw',
+                    height: '100vh',
                 });
             },
             onLeaveBack: () => {
-                // Revert to fixed (phone stays in viewport during pinned slides)
+                // Revert to fixed full-viewport overlay
                 gsap.set(wrapper, {
                     position: 'fixed',
-                    top: '15%',
-                    right: '2%',
-                    bottom: 'auto',
-                    transform: 'none',
-                    width: '45vw',
-                    height: '70vh',
+                    top: 0,
+                    left: 0,
+                    right: 'auto',
+                    width: '100vw',
+                    height: '100vh',
                 });
             },
         });
@@ -372,20 +364,19 @@ export function PhoneCanvas() {
             id="phone-canvas-wrapper"
             className="pointer-events-none"
             style={{
-                // Initial state: fixed in right half, top aligned just
-                // below the hero CTA button (~60% from viewport top).
-                // The phone peeks into view from below.
+                // Full-viewport overlay. The phone model is never clipped
+                // because the Canvas always covers the entire screen.
+                // 3D position within Three.js handles visual placement.
                 position: 'fixed',
-                top: '55%',
-                right: '2%',
-                width: '45vw',
-                maxWidth: '700px',
-                height: '70vh',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
                 zIndex: 40,
             }}
         >
             <div className="w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
-                <Canvas camera={{ position: [0, 0, 5], fov: 35 }}>
+                <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
                     <ambientLight intensity={0.5} />
                     <directionalLight position={[10, 10, 5]} intensity={1} />
                     <PresentationControls
