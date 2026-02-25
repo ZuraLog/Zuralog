@@ -7,18 +7,27 @@
  *   - Transparent: at the very top of the page.
  *   - Frosted: cream glassmorphism with backdrop-blur when scrolled > 40px.
  *
- * Nav links map to real section IDs on the page.
+ * Scroll links map to section IDs on the home page.
+ * Page links navigate to standalone routes (About, Contact).
  * Mobile: hamburger → compact dropdown.
  */
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 
-const NAV_LINKS = [
+/** Links that scroll to a section on the home page */
+const SCROLL_LINKS = [
     { label: "How It Works", id: "mobile-section" },
     { label: "Features",     id: "bento-section"  },
     { label: "Early Access", id: "waitlist"        },
+] as const;
+
+/** Links that navigate to standalone pages */
+const PAGE_LINKS = [
+    { label: "About", href: "/about"   },
+    { label: "Contact", href: "/contact" },
 ] as const;
 
 export function Navbar() {
@@ -84,7 +93,7 @@ export function Navbar() {
 
                     {/* ── Desktop nav links ── */}
                     <nav className="hidden items-center gap-6 md:flex" aria-label="Main navigation">
-                        {NAV_LINKS.map(({ label, id }) => (
+                        {SCROLL_LINKS.map(({ label, id }) => (
                             <button
                                 key={id}
                                 onClick={() => handleNav(id)}
@@ -99,6 +108,22 @@ export function Navbar() {
                             >
                                 {label}
                             </button>
+                        ))}
+                        {PAGE_LINKS.map(({ label, href }) => (
+                            <Link
+                                key={href}
+                                href={href}
+                                className="text-xs font-medium transition-colors duration-150"
+                                style={{ color: "var(--text-secondary)" }}
+                                onMouseEnter={(e) =>
+                                    ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)")
+                                }
+                                onMouseLeave={(e) =>
+                                    ((e.currentTarget as HTMLAnchorElement).style.color = "var(--text-secondary)")
+                                }
+                            >
+                                {label}
+                            </Link>
                         ))}
                     </nav>
 
@@ -166,7 +191,7 @@ export function Navbar() {
                         }}
                     >
                         <nav className="flex flex-col gap-0.5 px-4 py-3" aria-label="Mobile navigation">
-                            {NAV_LINKS.map(({ label, id }) => (
+                            {SCROLL_LINKS.map(({ label, id }) => (
                                 <button
                                     key={id}
                                     onClick={() => handleNav(id)}
@@ -175,6 +200,17 @@ export function Navbar() {
                                 >
                                     {label}
                                 </button>
+                            ))}
+                            {PAGE_LINKS.map(({ label, href }) => (
+                                <Link
+                                    key={href}
+                                    href={href}
+                                    onClick={() => setMenuOpen(false)}
+                                    className="rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors duration-150 hover:bg-black/5"
+                                    style={{ color: "var(--text-primary)" }}
+                                >
+                                    {label}
+                                </Link>
                             ))}
                             <button
                                 onClick={() => handleNav("waitlist")}
