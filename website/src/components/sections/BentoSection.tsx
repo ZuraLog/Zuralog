@@ -38,7 +38,7 @@ import {
     ChevronRight,
 } from "lucide-react";
 import { APPS } from "./hero/FloatingIcons";
-import { FaStrava, FaApple } from "react-icons/fa";
+import { FaStrava, FaApple, FaGooglePlay, FaAppStoreIos, FaStar } from "react-icons/fa";
 import { SiFitbit } from "react-icons/si";
 
 // Card 4 — Unified Dashboard — opt out of SSR to prevent Math.random() hydration mismatches
@@ -326,6 +326,35 @@ export function BentoSection() {
             // Note: Card 4 (DashboardBento) self-animates via its own useEffect
             // because it is loaded asynchronously via dynamic() and does not exist
             // in the DOM when this useGSAP callback runs.
+
+            // ─────────────────────────────────────────────────────────────
+            // Card 5: Get the App — scroll entrance + idle phone float
+            // ─────────────────────────────────────────────────────────────
+            const card5 = sectionRef.current.querySelector('[data-card="get-app"]');
+            if (card5) {
+                gsap.fromTo(
+                    card5,
+                    { opacity: 0, y: 50, scale: 0.93 },
+                    {
+                        opacity: 1, y: 0, scale: 1,
+                        duration: 1.0,
+                        ease: "power3.out",
+                        scrollTrigger: {
+                            trigger: card5,
+                            start: "top 82%",
+                            toggleActions: "play none none none",
+                        },
+                        onComplete: () => {
+                            // Stagger-reveal the two store badges after card lands
+                            const badges = card5.querySelectorAll('.store-badge');
+                            gsap.fromTo(badges,
+                                { x: -18, opacity: 0 },
+                                { x: 0, opacity: 1, stagger: 0.12, duration: 0.5, ease: "back.out(2)" }
+                            );
+                        }
+                    }
+                );
+            }
         },
         { scope: sectionRef }
     );
@@ -541,32 +570,129 @@ export function BentoSection() {
                     {/* ══ Card 4: UNIFIED DASHBOARD ══ */}
                     <DashboardBento />
 
-                    {/* ══ Card 5: FREE TO START ══ */}
+                    {/* ══ Card 5: GET THE APP ══ */}
                     <div
-                        className="bento-card group relative rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
-                                   hover:-translate-y-1 hover:shadow-2xl transition-all duration-200 opacity-0"
+                        data-card="get-app"
+                        className="bento-card group relative rounded-3xl overflow-hidden shadow-xl opacity-0"
                         style={{
                             gridColumn: "1",
                             gridRow: "3",
-                            background: "linear-gradient(135deg, #E8F5A8 0%, #D4F291 100%)",
+                            background: "linear-gradient(160deg, #141414 0%, #1E1E1E 60%, #0f1f0f 100%)",
                         }}
                     >
-                        <div className="w-11 h-11 rounded-2xl bg-white/70 flex items-center justify-center mb-4">
-                            <Smartphone size={20} className="text-gray-900" />
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Free to Start</h3>
-                        <p className="text-sm text-gray-700 leading-relaxed mb-6">
-                            Core features always free. No credit card required.
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 bg-white/50 rounded-full overflow-hidden">
-                                <div className="h-full bg-gray-900/30 rounded-full" style={{ width: "65%" }} />
+                        {/* Subtle lime radial glow in corner */}
+                        <div
+                            className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
+                            style={{ background: "radial-gradient(circle, rgba(232,245,168,0.12) 0%, transparent 70%)" }}
+                        />
+
+                        {/* Floating phone illustration */}
+                        <div className="absolute top-5 right-4 phone-float" aria-hidden="true">
+                            {/* Phone shell */}
+                            <div
+                                className="relative w-[72px] h-[130px] rounded-[22px] border-2 border-white/10 shadow-2xl"
+                                style={{ background: "linear-gradient(170deg, #2a2a2a 0%, #111 100%)" }}
+                            >
+                                {/* Notch */}
+                                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-9 h-1.5 rounded-full bg-black/60" />
+                                {/* Screen glow */}
+                                <div
+                                    className="absolute inset-[6px] rounded-[14px]"
+                                    style={{ background: "linear-gradient(160deg, #1a2e1a 0%, #0d1a0d 100%)" }}
+                                />
+                                {/* Screen content — tiny metric bars */}
+                                <div className="absolute inset-[10px] top-[14px] flex flex-col gap-[5px]">
+                                    <div className="h-1 rounded-full bg-[#E8F5A8]/60" style={{ width: "75%" }} />
+                                    <div className="h-1 rounded-full bg-[#E8F5A8]/40" style={{ width: "55%" }} />
+                                    <div className="h-1 rounded-full bg-[#E8F5A8]/30" style={{ width: "90%" }} />
+                                    <div className="mt-1 h-1 rounded-full bg-white/20" style={{ width: "45%" }} />
+                                    <div className="h-1 rounded-full bg-white/15" style={{ width: "70%" }} />
+                                </div>
+                                {/* Home indicator */}
+                                <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-white/20" />
                             </div>
-                            <span className="text-xs font-semibold text-gray-700">65% claimed</span>
                         </div>
-                        <button className="mt-5 w-full bg-gray-900 text-white text-sm font-semibold py-3 rounded-2xl hover:bg-gray-800 transition-colors shadow-md">
-                            Claim Your Spot →
-                        </button>
+
+                        {/* Content */}
+                        <div className="relative z-10 flex flex-col h-full p-7 lg:p-8">
+                            {/* Badge */}
+                            <div className="inline-flex items-center gap-1.5 bg-[#E8F5A8]/10 border border-[#E8F5A8]/20 text-[#E8F5A8] rounded-full px-3 py-1 mb-5 w-fit">
+                                <Smartphone size={11} />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Now Available</span>
+                            </div>
+
+                            {/* Headline */}
+                            <h3 className="text-[22px] font-bold text-white leading-tight mb-1">
+                                Get the App
+                            </h3>
+                            <p className="text-xs text-white/50 leading-relaxed mb-6 max-w-[160px]">
+                                Your health intelligence. In your pocket.
+                            </p>
+
+                            {/* Store badges */}
+                            <div className="flex flex-col gap-3 mb-6">
+                                {/* App Store */}
+                                <a
+                                    href="#"
+                                    className="store-badge group/badge relative flex items-center gap-3 rounded-2xl px-4 py-3 overflow-hidden
+                                               transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
+                                    style={{ background: "linear-gradient(90deg, #1c1c1e, #2a2a2a)" }}
+                                    aria-label="Download on the App Store"
+                                >
+                                    {/* shimmer layer */}
+                                    <div
+                                        className="absolute inset-0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-300 pointer-events-none badge-shimmer"
+                                        style={{
+                                            backgroundImage: "linear-gradient(90deg, transparent 0%, rgba(232,245,168,0.08) 50%, transparent 100%)",
+                                        }}
+                                    />
+                                    <FaAppStoreIos size={26} className="text-white relative z-10 flex-shrink-0" />
+                                    <div className="relative z-10 leading-none">
+                                        <div className="text-[9px] text-white/50 font-medium uppercase tracking-widest mb-0.5">Download on the</div>
+                                        <div className="text-[15px] font-bold text-white">App Store</div>
+                                    </div>
+                                    <div className="ml-auto relative z-10 text-[#E8F5A8] opacity-40 group-hover/badge:opacity-100 transition-opacity text-lg">›</div>
+                                </a>
+
+                                {/* Google Play */}
+                                <a
+                                    href="#"
+                                    className="store-badge group/badge relative flex items-center gap-3 rounded-2xl px-4 py-3 overflow-hidden
+                                               transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
+                                    style={{ background: "linear-gradient(90deg, #1c1c1e, #2a2a2a)" }}
+                                    aria-label="Get it on Google Play"
+                                >
+                                    {/* shimmer layer */}
+                                    <div
+                                        className="absolute inset-0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-300 pointer-events-none badge-shimmer"
+                                        style={{
+                                            backgroundImage: "linear-gradient(90deg, transparent 0%, rgba(232,245,168,0.08) 50%, transparent 100%)",
+                                        }}
+                                    />
+                                    <FaGooglePlay size={22} className="text-white relative z-10 flex-shrink-0" />
+                                    <div className="relative z-10 leading-none">
+                                        <div className="text-[9px] text-white/50 font-medium uppercase tracking-widest mb-0.5">Get it on</div>
+                                        <div className="text-[15px] font-bold text-white">Google Play</div>
+                                    </div>
+                                    <div className="ml-auto relative z-10 text-[#E8F5A8] opacity-40 group-hover/badge:opacity-100 transition-opacity text-lg">›</div>
+                                </a>
+                            </div>
+
+                            {/* Star rating */}
+                            <div className="flex items-center gap-2 mt-auto">
+                                <div className="flex items-center gap-0.5">
+                                    {[0, 1, 2, 3, 4].map(i => (
+                                        <FaStar
+                                            key={i}
+                                            size={12}
+                                            className="text-[#E8F5A8] star-pop"
+                                            style={{ animationDelay: `${0.6 + i * 0.08}s` }}
+                                        />
+                                    ))}
+                                </div>
+                                <span className="text-xs font-semibold text-white/60">4.9 · 2.4k reviews</span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* ══ Card 6: PERSONALIZED FOR YOU (wide, spans cols 2-3) ══ */}

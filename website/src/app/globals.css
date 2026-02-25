@@ -116,3 +116,46 @@ body {
 .personalized-card:hover .pill-pulse {
   animation-play-state: paused;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Bento Section — Card 5: Get the App
+───────────────────────────────────────────────────────────── */
+
+/* Phone idle float — gentle levitation */
+@keyframes phoneFloat {
+  0%, 100% { transform: translateY(0px) rotate(-2deg); }
+  50%       { transform: translateY(-10px) rotate(-2deg); }
+}
+.phone-float {
+  animation: phoneFloat 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Badge shimmer sweep — left-to-right highlight on idle */
+@keyframes badgeShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.badge-shimmer {
+  background-size: 200% auto;
+  animation: badgeShimmer 3.5s linear infinite;
+}
+
+/* QR scan-line sweep */
+@keyframes qrScan {
+  0%, 100% { top: 4px;  opacity: 0.9; }
+  50%       { top: calc(100% - 6px); opacity: 0.6; }
+}
+.qr-scanline {
+  animation: qrScan 2.2s ease-in-out infinite;
+}
+
+/* Star pop-in stagger (driven by animation-delay inline) */
+@keyframes starPop {
+  0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+  70%  { transform: scale(1.25) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.star-pop {
+  animation: starPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
