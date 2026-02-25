@@ -4,12 +4,13 @@
  * Returns aggregate waitlist statistics for the hero counter.
  * Queries the waitlist_stats view.
  *
- * Cached for 30 seconds.
+ * Not cached — always returns fresh data so realtime counter updates
+ * are immediately reflected when the client re-fetches after a DB change.
  */
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
@@ -37,9 +38,12 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch stats.' }, { status: 500 });
   }
 
-  return NextResponse.json({
-    totalSignups: data?.total_signups ?? 0,
-    foundingMembersLeft: Math.max(0, 30 - (data?.founding_members ?? 0)),
-    totalReferrals: data?.total_referrals ?? 0,
-  });
+  return NextResponse.json(
+    {
+      totalSignups: data?.total_signups ?? 0,
+      foundingMembersLeft: Math.max(0, 30 - (data?.founding_members ?? 0)),
+      totalReferrals: data?.total_referrals ?? 0,
+    },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
 }

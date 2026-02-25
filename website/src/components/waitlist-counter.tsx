@@ -1,6 +1,9 @@
 /**
  * WaitlistCounter — animated odometer-style number counter.
  * Peach-themed for the website waitlist section.
+ *
+ * Animates from the current spring value toward `value` every time `value`
+ * changes — including realtime updates — so the display always stays live.
  */
 'use client';
 
@@ -25,12 +28,15 @@ export function WaitlistCounter({
   sizeClass = 'text-3xl',
 }: WaitlistCounterProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true });
+  // once: false so that subsequent value changes (realtime updates) also
+  // trigger a re-animation when the element scrolls into view.
+  const isInView = useInView(ref, { once: false });
   const spring = useSpring(0, { stiffness: 55, damping: 22 });
   const display = useTransform(spring, (v) => Math.round(v).toLocaleString());
 
   useEffect(() => {
-    if (!isInView || value <= 0) return;
+    if (value <= 0) return;
+    if (!isInView) return;
     const timer = setTimeout(() => spring.set(value), delay);
     return () => clearTimeout(timer);
   }, [isInView, value, spring, delay]);

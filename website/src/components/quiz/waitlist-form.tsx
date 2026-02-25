@@ -128,10 +128,10 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
         <Button
           type="submit"
           disabled={loading}
-          className={`h-14 w-full rounded-full bg-peach text-base font-semibold text-white transition-all duration-300 hover:bg-peach-dim hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,171,118,0.35)] active:scale-[0.98] disabled:opacity-50 ${
+          className={`h-14 w-full rounded-full bg-peach text-base font-semibold text-white transition-all duration-300 hover:bg-peach-dim hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(207,225,185,0.55)] active:scale-[0.98] disabled:opacity-50 ${
             loading
-              ? 'animate-pulse shadow-[0_0_30px_rgba(255,171,118,0.3)]'
-              : 'shadow-[0_0_20px_rgba(255,171,118,0.15)]'
+              ? 'animate-pulse shadow-[0_0_30px_rgba(207,225,185,0.45)]'
+              : 'shadow-[0_0_20px_rgba(207,225,185,0.30)]'
           }`}
         >
           {loading ? 'Joining…' : 'Join & Tell Us About Yourself →'}
