@@ -5,7 +5,7 @@ import { HeroSection } from "@/components/sections/HeroSection";
 import { MobileSection } from "@/components/sections/MobileSection";
 import { BentoSection } from "@/components/sections/BentoSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
-import { ClientShellLoader } from "@/components/ClientShellLoader";
+import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
 
 export default function Home() {
@@ -21,10 +21,11 @@ export default function Home() {
                 <WaitlistSection />
             </main>
             <Footer />
-            {/* ClientShellLoader uses dynamic(ssr:false) to ensure PhoneCanvas
-                and LoadingScreen are never SSR'd — eliminating hydration mismatches
-                and making useState(true) for showLoader always correct on first render. */}
-            <ClientShellLoader />
+            {/* ClientShellGate skips the 3D phone on mobile (<768px) to avoid
+                downloading ~2-5MB of GLTF/textures and running WebGL on low-power
+                devices. On desktop it delegates to ClientShellLoader (dynamic, ssr:false)
+                which renders PhoneCanvas + LoadingScreen. */}
+            <ClientShellGate />
         </>
     );
 }

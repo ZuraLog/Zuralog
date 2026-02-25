@@ -609,8 +609,8 @@ export default function DashboardBento() {
         <div
             ref={cardRef}
             data-card="dashboard"
-            className="bento-card dashboard-bento group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden opacity-0"
-            style={{ gridColumn: "1 / 3", gridRow: "2", transformStyle: "preserve-3d", willChange: "transform" }}
+            className="bento-card dashboard-bento group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden opacity-0 sm:col-span-2 lg:col-span-2 lg:col-start-1 lg:row-start-2"
+            style={{ transformStyle: "preserve-3d", willChange: "transform" }}
         >
             {/* Subtle inner glow on hover */}
             <div

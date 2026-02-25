@@ -8,6 +8,7 @@ import { MdWaterDrop, MdSelfImprovement, MdNightlight, MdMonitorHeart, MdSportsS
 import { GiMeditation, GiFruitBowl, GiRunningShoe } from 'react-icons/gi';
 import { IoIosFitness } from 'react-icons/io';
 import { TbTreadmill } from 'react-icons/tb';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 
 // Top 20 fitness and health apps organically spread
 export const APPS = [
@@ -33,8 +34,26 @@ export const APPS = [
     { id: 'weight', Icon: FaDumbbell, color: '#607D8B', x: 50, y: 8 },
 ];
 
+// 10 edge-positioned icons that frame the hero text without overlapping it on mobile
+const MOBILE_APPS = [
+    { id: 'apple',  Icon: FaApple,           color: '#000000', x: 8,  y: 15 },
+    { id: 'strava', Icon: FaStrava,          color: '#FC4C02', x: 85, y: 20 },
+    { id: 'heart',  Icon: FaHeartbeat,       color: '#E91E63', x: 5,  y: 45 },
+    { id: 'gym',    Icon: FaDumbbell,        color: '#9E9E9E', x: 90, y: 50 },
+    { id: 'water',  Icon: MdWaterDrop,       color: '#2196F3', x: 10, y: 75 },
+    { id: 'sleep',  Icon: MdNightlight,      color: '#3F51B5', x: 88, y: 80 },
+    { id: 'yoga',   Icon: MdSelfImprovement, color: '#9C27B0', x: 50, y: 8  },
+    { id: 'run',    Icon: FaRunning,         color: '#FF9800', x: 50, y: 88 },
+    { id: 'google', Icon: FcGoogle,          color: '',        x: 15, y: 88 },
+    { id: 'bike',   Icon: FaBicycle,         color: '#F44336', x: 82, y: 88 },
+];
+
 export function FloatingIcons() {
     const containerRef = useRef<HTMLDivElement>(null);
+    const isMobile = useIsMobile();
+
+    // Select the appropriate icon set based on viewport
+    const activeApps = isMobile ? MOBILE_APPS : APPS;
 
     useEffect(() => {
         let handleMouseMove: (e: MouseEvent) => void;
@@ -61,53 +80,56 @@ export function FloatingIcons() {
                 });
             });
 
-            // Mouse parallax and repellant configuration
-            handleMouseMove = (e: MouseEvent) => {
-                const mouseX = e.clientX;
-                const mouseY = e.clientY;
+            // Mouse parallax and repellant — skip on touch/mobile viewports
+            if (!window.matchMedia('(max-width: 767px)').matches) {
+                handleMouseMove = (e: MouseEvent) => {
+                    const mouseX = e.clientX;
+                    const mouseY = e.clientY;
 
-                // Normalized coordinates for subtle global drift
-                const mx = (mouseX / window.innerWidth - 0.5) * 2;
-                const my = (mouseY / window.innerHeight - 0.5) * 2;
+                    // Normalized coordinates for subtle global drift
+                    const mx = (mouseX / window.innerWidth - 0.5) * 2;
+                    const my = (mouseY / window.innerHeight - 0.5) * 2;
 
-                const repellantRadius = 150; // Distance in pixels to trigger push
-                const maxPush = 100; // How far the app gets pushed away
+                    const repellantRadius = 150; // Distance in pixels to trigger push
+                    const maxPush = 100; // How far the app gets pushed away
 
-                gsap.utils.toArray('.parallax-wrapper').forEach((el: unknown, i) => {
-                    const element = el as Element;
+                    gsap.utils.toArray('.parallax-wrapper').forEach((el: unknown, i) => {
+                        const element = el as Element;
 
-                    // Base parallax target (significantly lowered depth)
-                    const depth = 0.3; // Equal subtle depth for all icons
-                    let targetX = mx * 30 * depth;
-                    let targetY = my * 30 * depth;
+                        // Base parallax target (significantly lowered depth)
+                        const depth = 0.3; // Equal subtle depth for all icons
+                        let targetX = mx * 30 * depth;
+                        let targetY = my * 30 * depth;
 
-                    // Repellant physics: calculate distance from stable base screen coordinates
-                    const app = APPS[i];
-                    const baseX = window.innerWidth * (app.x / 100);
-                    const baseY = window.innerHeight * (app.y / 100);
+                        // Repellant physics: calculate distance from stable base screen coordinates
+                        const app = APPS[i];
+                        if (!app) return;
+                        const baseX = window.innerWidth * (app.x / 100);
+                        const baseY = window.innerHeight * (app.y / 100);
 
-                    const dx = baseX - mouseX;
-                    const dy = baseY - mouseY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+                        const dx = baseX - mouseX;
+                        const dy = baseY - mouseY;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < repellantRadius) {
-                        const safeDist = Math.max(distance, 1);
-                        // Using power to ease the push curve naturally
-                        const pushFactor = Math.pow((repellantRadius - safeDist) / repellantRadius, 1.5);
-                        targetX += (dx / safeDist) * maxPush * pushFactor;
-                        targetY += (dy / safeDist) * maxPush * pushFactor;
-                    }
+                        if (distance < repellantRadius) {
+                            const safeDist = Math.max(distance, 1);
+                            // Using power to ease the push curve naturally
+                            const pushFactor = Math.pow((repellantRadius - safeDist) / repellantRadius, 1.5);
+                            targetX += (dx / safeDist) * maxPush * pushFactor;
+                            targetY += (dy / safeDist) * maxPush * pushFactor;
+                        }
 
-                    gsap.to(element, {
-                        x: targetX,
-                        y: targetY,
-                        duration: 0.8,
-                        ease: 'power2.out',
-                        overwrite: 'auto'
+                        gsap.to(element, {
+                            x: targetX,
+                            y: targetY,
+                            duration: 0.8,
+                            ease: 'power2.out',
+                            overwrite: 'auto'
+                        });
                     });
-                });
-            };
-            window.addEventListener('mousemove', handleMouseMove);
+                };
+                window.addEventListener('mousemove', handleMouseMove);
+            }
         }, containerRef);
 
         return () => {
@@ -118,12 +140,12 @@ export function FloatingIcons() {
 
     return (
         <div ref={containerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-20">
-            {APPS.map((app) => (
+            {activeApps.map((app) => (
                 <div key={app.id} className="parallax-wrapper absolute" style={{ left: `${app.x}%`, top: `${app.y}%` }}>
                     <div
-                        className="app-icon-wrapper bg-white p-4 rounded-2xl shadow-xl flex items-center justify-center pointer-events-auto hover:scale-110 transition-transform cursor-pointer"
+                        className={`app-icon-wrapper bg-white ${isMobile ? 'p-3' : 'p-4'} rounded-2xl shadow-xl flex items-center justify-center pointer-events-auto hover:scale-110 transition-transform cursor-pointer`}
                     >
-                        <app.Icon size={32} color={app.color} />
+                        <app.Icon size={isMobile ? 22 : 32} color={app.color} />
                     </div>
                 </div>
             ))}

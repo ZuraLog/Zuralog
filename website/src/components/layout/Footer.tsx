@@ -101,7 +101,7 @@ export function Footer() {
       />
 
       {/* ── Main content ──────────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-12">
+      <div className="mx-auto max-w-[1280px] px-6 md:px-8 lg:px-12">
 
         {/* Top grid: brand + nav columns */}
         <div className="grid grid-cols-1 gap-12 py-16 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr]">
@@ -245,7 +245,7 @@ export function Footer() {
           </p>
 
           {/* Inline legal links + manage cookies */}
-          <nav aria-label="Legal navigation" className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          <nav aria-label="Legal navigation" className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:gap-x-5">
             <Link
               href="/privacy-policy"
               className="text-xs font-medium text-black/30 transition-colors hover:text-[#2D2D2D]"

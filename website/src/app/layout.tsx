@@ -155,6 +155,25 @@ export default function RootLayout({
           {/* Pure-CSS spinner — animates without JS */}
           <div id="ssr-loader" />
         </div>
+        {/* Fallback: auto-dismiss the SSR overlay on mobile where ClientShellGate
+            returns null (no 3D, no LoadingScreen). Fires after 600ms — much faster
+            than OverlayDismisser's 10s safety timeout for the home page. On desktop
+            the overlay is dismissed by LoadingScreen; this script is a no-op once
+            opacity has already been set to '0'. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              setTimeout(function() {
+                var el = document.getElementById('ssr-loading-overlay');
+                if (el && el.style.opacity !== '0') {
+                  el.style.transition = 'opacity 0.4s ease-out';
+                  el.style.opacity = '0';
+                  setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+                }
+              }, 600);
+            `,
+          }}
+        />
         <LenisProvider>
           {children}
         </LenisProvider>
