@@ -31,11 +31,11 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
       className="relative mx-auto w-[240px] shrink-0 sm:w-[260px] md:w-[280px]"
       style={{ perspective: '1200px' }}
     >
-      {/* Soft peach glow behind phone */}
-      <div className="absolute -inset-8 rounded-full bg-peach/15 blur-[60px]" />
+      {/* Soft sage glow behind phone */}
+      <div className="absolute -inset-8 rounded-full bg-sage/20 blur-[60px]" />
 
       {/* iPhone frame */}
-      <div className="relative overflow-hidden rounded-[3rem] border-[3px] border-black/10 bg-white shadow-2xl shadow-peach/20">
+      <div className="relative overflow-hidden rounded-[3rem] border-[3px] border-black/10 bg-white shadow-2xl shadow-sage/20">
         {/* Dynamic Island */}
         <div className="absolute left-1/2 top-3 z-20 h-[22px] w-[90px] -translate-x-1/2 rounded-full bg-dark-charcoal" />
 
@@ -94,7 +94,7 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
                     </div>
                     <div>
                       <p className="text-[11px] font-semibold text-dark-charcoal">Zuralog</p>
-                      <p className="text-[9px] text-peach">Online</p>
+                       <p className="text-[9px] text-sage-dim">Online</p>
                     </div>
                   </div>
 
@@ -118,8 +118,8 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
                     </div>
 
                     {/* User message */}
-                    <div className="ml-auto max-w-[75%] rounded-2xl rounded-br-sm bg-peach/20 px-3 py-2">
-                      <p className="text-[10px] leading-relaxed text-peach-dim">
+                    <div className="ml-auto max-w-[75%] rounded-2xl rounded-br-sm bg-sage/25 px-3 py-2">
+                      <p className="text-[10px] leading-relaxed text-sage-dim">
                         How are my stress levels?
                       </p>
                     </div>
@@ -128,26 +128,26 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
                     <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-black/5 px-3 py-2">
                       <p className="text-[10px] leading-relaxed text-dark-charcoal/80">
                         HRV shows you recovered well. Your stress score is{' '}
-                        <span className="font-semibold text-peach-dim">24 — low</span>. Keep it up!
+                        <span className="font-semibold text-sage-dim">24 — low</span>. Keep it up!
                       </p>
                     </div>
 
                     {/* Health summary card */}
-                    <div className="rounded-xl border border-peach/20 bg-peach/8 p-2.5">
-                      <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-peach-dim/70">
+                    <div className="rounded-xl border border-sage/30 bg-sage/15 p-2.5">
+                      <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-sage-dim/80">
                         Today&apos;s Summary
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="text-center">
-                          <p className="text-[13px] font-bold text-peach-dim">7.7k</p>
+                          <p className="text-[13px] font-bold text-sage-dim">7.7k</p>
                           <p className="text-[8px] text-black/40">Steps</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[13px] font-bold text-peach-dim">62</p>
+                          <p className="text-[13px] font-bold text-sage-dim">62</p>
                           <p className="text-[8px] text-black/40">BPM</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-[13px] font-bold text-peach-dim">24</p>
+                          <p className="text-[13px] font-bold text-sage-dim">24</p>
                           <p className="text-[8px] text-black/40">Stress</p>
                         </div>
                       </div>
@@ -156,9 +156,9 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
                     {/* Typing indicator */}
                     <div className="flex items-center gap-1 px-1">
                       <div className="flex gap-0.5">
-                        <span className="h-1 w-1 animate-pulse rounded-full bg-peach/50" />
-                        <span className="h-1 w-1 animate-pulse rounded-full bg-peach/50 [animation-delay:150ms]" />
-                        <span className="h-1 w-1 animate-pulse rounded-full bg-peach/50 [animation-delay:300ms]" />
+                        <span className="h-1 w-1 animate-pulse rounded-full bg-sage/60" />
+                        <span className="h-1 w-1 animate-pulse rounded-full bg-sage/60 [animation-delay:150ms]" />
+                        <span className="h-1 w-1 animate-pulse rounded-full bg-sage/60 [animation-delay:300ms]" />
                       </div>
                       <span className="text-[9px] text-black/30">Zuralog is typing...</span>
                     </div>

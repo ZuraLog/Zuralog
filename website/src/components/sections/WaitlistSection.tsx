@@ -26,9 +26,9 @@ export function WaitlistSection() {
     >
       <Toaster position="top-center" richColors />
 
-      {/* Subtle peach glow + particles */}
+      {/* Subtle lime glow + particles */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-peach/8 blur-[140px]" />
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-lime/10 blur-[140px]" />
         <WaitlistParticles />
       </div>
 
@@ -47,9 +47,9 @@ export function WaitlistSection() {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="mb-4 inline-flex items-center gap-2 rounded-full border border-peach/30 bg-peach/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-peach-dim"
+            className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary-lime/40 bg-primary-lime/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-dark-charcoal/70"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-peach animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-accent-lime animate-pulse" />
             Early Access
           </motion.span>
 

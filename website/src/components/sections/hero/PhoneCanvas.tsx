@@ -329,7 +329,7 @@ export function PhoneCanvas() {
                 const mobileSection = document.getElementById('mobile-section');
                 if (!mobileSection) return;
 
-                // Anchor the full-viewport canvas at the scroll position
+        // Anchor the full-viewport canvas at the scroll position
                 // where the pin ended. This is sectionTop + pinDuration.
                 const sectionTop = mobileSection.offsetTop;
                 const absTop = sectionTop + (window.innerHeight * SLIDE_COUNT);
@@ -338,8 +338,8 @@ export function PhoneCanvas() {
                     position: 'absolute',
                     top: absTop,
                     left: 0,
-                    right: 'auto',
-                    width: '100vw',
+                    right: 0,
+                    width: '100%',
                     height: '100vh',
                 });
             },
@@ -349,8 +349,8 @@ export function PhoneCanvas() {
                     position: 'fixed',
                     top: 0,
                     left: 0,
-                    right: 'auto',
-                    width: '100vw',
+                    right: 0,
+                    width: '100%',
                     height: '100vh',
                 });
             },
@@ -370,7 +370,8 @@ export function PhoneCanvas() {
                 position: 'fixed',
                 top: 0,
                 left: 0,
-                width: '100vw',
+                right: 0,
+                width: '100%',
                 height: '100vh',
                 zIndex: 40,
             }}

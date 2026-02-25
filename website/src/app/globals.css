@@ -8,8 +8,10 @@
   --color-cream: #FAFAF5;
   --color-dark-charcoal: #2D2D2D;
   --color-accent-lime: #D4F291;
-  --color-peach: #FFAB76;
-  --color-peach-dim: #FF8C4B;
+  --color-sage: #CFE1B9;
+  --color-sage-dim: #b3d18f;
+  --color-peach: #CFE1B9;
+  --color-peach-dim: #b3d18f;
   
   --color-background: var(--color-cream);
   --color-foreground: var(--color-dark-charcoal);
@@ -168,24 +170,39 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Waitlist Section — urgent pulse glow for founding spots
+   Waitlist Section — urgent pulse glow for founding spots (lime)
 ───────────────────────────────────────────────────────────── */
 @keyframes urgentPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 171, 118, 0); }
-  50%       { box-shadow: 0 0 0 6px rgba(255, 171, 118, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(207, 225, 185, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(207, 225, 185, 0.35); }
 }
 .waitlist-urgent {
   animation: urgentPulse 2.5s ease-in-out infinite;
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Navbar — CTA button pulse glow (peach)
+   Navbar — CTA button pulse glow (lime green)
 ───────────────────────────────────────────────────────────── */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 171, 118, 0); }
-  50%       { box-shadow: 0 0 12px 3px rgba(255, 171, 118, 0.35); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 242, 145, 0); }
+  50%       { box-shadow: 0 0 14px 4px rgba(212, 242, 145, 0.45); }
 }
 .animate-pulse-glow {
   animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Native scrollbar — hidden (unreliable on pinned-scroll pages).
+   Progress is shown by the custom ScrollProgress bar instead.
+───────────────────────────────────────────────────────────── */
+
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  display: none;
 }
 

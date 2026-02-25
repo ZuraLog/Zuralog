@@ -44,7 +44,7 @@ export function WaitlistStatsBar() {
           <path d="M16 13c2.2 0 4 1.8 4 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.5" />
         </svg>
       ),
-      color: '#FFAB76',
+      color: '#E8F5A8',
       delay: 0,
       urgent: false,
     },
@@ -56,7 +56,7 @@ export function WaitlistStatsBar() {
           <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6L12 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
         </svg>
       ),
-      color: '#F7C59F',
+      color: '#D4F291',
       delay: 150,
       urgent: stats.foundingMembersLeft <= 10,
     },
@@ -69,7 +69,7 @@ export function WaitlistStatsBar() {
           <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.8-1.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       ),
-      color: '#E8A87C',
+      color: '#b8e05a',
       delay: 300,
       urgent: false,
     },

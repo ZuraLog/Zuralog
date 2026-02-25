@@ -43,7 +43,7 @@ export function WaitlistParticles() {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute rounded-full bg-peach"
+          className="absolute rounded-full bg-primary-lime"
           style={{
             left: `${p.left}%`,
             bottom: 0,

@@ -9,6 +9,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { LenisProvider } from "@/components/layout/LenisProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,13 +61,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [
-      { url: "/logo/Zuralog.png", type: "image/png" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-    ],
-    apple: "/apple-touch-icon.png",
-    shortcut: "/favicon.ico",
+    icon: [{ url: "/logo/Zuralog.png", type: "image/png" }],
+    apple: [{ url: "/logo/Zuralog.png", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
 };
@@ -79,7 +75,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased">
-        {children}
+        <LenisProvider>
+          {children}
+        </LenisProvider>
         <Toaster richColors position="bottom-right" />
       </body>
     </html>
