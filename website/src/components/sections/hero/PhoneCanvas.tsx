@@ -30,15 +30,35 @@ function PhoneModel() {
         }
     }, [scene]);
 
+    // --- PHONE POSITION CONFIGURATION ---
+    // Adjust [x, y, z] to center the phone horizontally, vertically, and depth.
+    // X: move left/right (0 is center)
+    // Y: move up/down (-2.5 is default base, increase to move higher into the text)
+    // Z: move closer/further
+    const phonePosition: [number, number, number] = [0, -2.5, 0];
+
     // Subtle floating animation for the 3D model itself
     useFrame((state) => {
         if (groupRef.current) {
-            groupRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.1 - 2;
+            // 1. Subtle up/down float
+            const floatY = Math.sin(state.clock.elapsedTime) * 0.1;
+
+            // 2. Mouse parallax influence (-0.5 to 0.5)
+            const targetX = state.pointer.x * 0.5;
+            const targetY = state.pointer.y * 0.5;
+
+            // Interpolate rotation based on mouse position
+            groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -targetY * 0.5, 0.05);
+            groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, (Math.PI / 2) + targetX * 0.5, 0.05);
+
+            // Interpolate position based on mouse position
+            groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, phonePosition[0] + (targetX * 1.5), 0.05);
+            groupRef.current.position.y = phonePosition[1] + floatY;
         }
     });
 
     return (
-        <group ref={groupRef} position={[0, -2, 0]} rotation={[0, Math.PI / 2, 0]} scale={2.5}>
+        <group ref={groupRef} position={phonePosition} rotation={[0, Math.PI / 2, 0]} scale={2.5}>
             <primitive object={scene} />
         </group>
     );
@@ -46,7 +66,7 @@ function PhoneModel() {
 
 export function PhoneCanvas() {
     return (
-        <div className="absolute bottom-0 w-full h-[60vh] z-20 pointer-events-none flex justify-center">
+        <div className="absolute bottom-0 w-full h-[60vh] z-10 pointer-events-none flex justify-center">
             {/* Container for the 3D canvas */}
             <div className="w-full max-w-[800px] h-full pointer-events-auto cursor-grab active:cursor-grabbing">
                 <Canvas camera={{ position: [0, 0, 5], fov: 35 }}>
