@@ -1,16 +1,22 @@
 /**
- * About Us page — ZuraLog company story and mission.
+ * About Us page — ZuraLog company story, mission, values, and founders.
  *
- * Shares who we are, why we built ZuraLog, and what we stand for.
- * Uses the same Navbar + Footer shell as the rest of the site.
+ * Founders:
+ *   - Hyowon Arzil B. Bernabe — Co-Founder, CEO & CTO
+ *   - Fernando Leano           — Co-Founder, CEO & CFO
+ *
+ * Photo slots reserved at /public/founders/hyowon.jpg and
+ * /public/founders/fernando.jpg — drop the files in to activate real photos.
  */
 
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { FaLinkedinIn } from 'react-icons/fa6';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { PageBackground } from '@/components/PageBackground';
+import { FounderPhoto } from '@/components/ui/FounderPhoto';
 
 export const metadata: Metadata = {
   title: 'About Us | ZuraLog',
@@ -37,12 +43,86 @@ const VALUES = [
   },
   {
     title: 'Built for Real People',
-    body: 'Not just elite athletes. We build for busy humans who want clarity about their health without spending hours staring at dashboards.',
+    body: "Not just elite athletes. We build for busy humans who want clarity about their health without spending hours staring at dashboards.",
+  },
+];
+
+const FOUNDERS = [
+  {
+    name: 'Hyowon Arzil B. Bernabe',
+    role: 'Co-Founder · CEO & CTO',
+    initials: 'HB',
+    photoPath: '/founders/hyowon.jpg',
+    bio: "Hyowon studied Computer Science with one goal: build things that actually solve problems. He's the kind of person who can't see friction without immediately wanting to automate it away. ZuraLog started as one of those ideas — a tool he wanted for himself, to make sense of all the health data scattered across his apps. If it makes life easier for everyone else too, even better.",
+    linkedin: 'https://linkedin.com/in/hyowon-bernabe',
+  },
+  {
+    name: 'Fernando Leano',
+    role: 'Co-Founder · CEO & CFO',
+    initials: 'FL',
+    photoPath: '/founders/fernando.jpg',
+    bio: "Fernando is a born builder. He spent years working in the health space and kept running into the same wall — great data, zero clarity. He knows what it feels like to be deep in the fitness game and still not have a straight answer about why things aren't working. ZuraLog is the thing he wishes had existed. Now he's making sure it does.",
+    linkedin: 'https://www.linkedin.com/in/fernando-leano-7221b13b3/',
   },
 ];
 
 // ---------------------------------------------------------------------------
-// Component
+// Subcomponents
+// ---------------------------------------------------------------------------
+
+interface FounderCardProps {
+  name: string;
+  role: string;
+  initials: string;
+  photoPath: string;
+  bio: string;
+  linkedin: string;
+}
+
+/**
+ * Founder profile card with photo placeholder, bio, and LinkedIn link.
+ *
+ * @param name      - Full name
+ * @param role      - Role / title string
+ * @param initials  - Two-letter initials shown while no photo is available
+ * @param photoPath - Path to photo in /public (reserved for later)
+ * @param bio       - Short biography text
+ * @param linkedin  - LinkedIn profile URL
+ */
+function FounderCard({ name, role, initials, photoPath, bio, linkedin }: FounderCardProps) {
+  return (
+    <div className="flex flex-col gap-5 rounded-3xl border border-black/[0.06] bg-white/60 p-8">
+      {/* Avatar + name row */}
+      <div className="flex items-center gap-4">
+        {/* Photo slot — shows initials fallback until photo is added to /public/founders/ */}
+        <FounderPhoto src={photoPath} name={name} initials={initials} />
+
+        {/* Name + role + LinkedIn */}
+        <div className="flex flex-1 flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#1A1A1A]">{name}</span>
+            <a
+              href={linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${name} on LinkedIn`}
+              className="flex h-5 w-5 items-center justify-center rounded-full border border-black/[0.08] bg-white/60 text-black/30 transition-all hover:border-[#CFE1B9] hover:text-[#2D2D2D]"
+            >
+              <FaLinkedinIn className="h-2.5 w-2.5" />
+            </a>
+          </div>
+          <span className="text-xs font-medium text-black/40">{role}</span>
+        </div>
+      </div>
+
+      {/* Bio */}
+      <p className="text-sm leading-relaxed text-black/50">{bio}</p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
 // ---------------------------------------------------------------------------
 
 export default function AboutPage() {
@@ -141,21 +221,38 @@ export default function AboutPage() {
             </div>
           </section>
 
-          {/* ── Values ───────────────────────────────────────────────── */}
+          {/* ── Founders ─────────────────────────────────────────────── */}
           <section className="mx-auto max-w-[1280px] px-6 py-20 lg:px-12">
-            <h2 className="mb-10 text-[10px] font-semibold uppercase tracking-[0.22em] text-black/30">
-              What We Stand For
+            <h2 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-black/30">
+              The People Behind It
             </h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {VALUES.map((v) => (
-                <div
-                  key={v.title}
-                  className="rounded-3xl border border-black/[0.06] bg-white/60 p-8"
-                >
-                  <h3 className="mb-3 text-sm font-semibold text-[#1A1A1A]">{v.title}</h3>
-                  <p className="text-sm leading-relaxed text-black/45">{v.body}</p>
-                </div>
+            <p className="mb-10 text-sm text-black/40">
+              Two builders. One shared frustration. Zero tolerance for fragmented data.
+            </p>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {FOUNDERS.map((founder) => (
+                <FounderCard key={founder.name} {...founder} />
               ))}
+            </div>
+          </section>
+
+          {/* ── Values ───────────────────────────────────────────────── */}
+          <section className="border-t border-black/[0.06] bg-[#FAFAF5] px-6 py-20 lg:px-12">
+            <div className="mx-auto max-w-[1280px]">
+              <h2 className="mb-10 text-[10px] font-semibold uppercase tracking-[0.22em] text-black/30">
+                What We Stand For
+              </h2>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {VALUES.map((v) => (
+                  <div
+                    key={v.title}
+                    className="rounded-3xl border border-black/[0.06] bg-white/60 p-8"
+                  >
+                    <h3 className="mb-3 text-sm font-semibold text-[#1A1A1A]">{v.title}</h3>
+                    <p className="text-sm leading-relaxed text-black/45">{v.body}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
