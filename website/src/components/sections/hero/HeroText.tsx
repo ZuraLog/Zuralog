@@ -48,16 +48,16 @@ export function HeroText() {
                     <span className="text-sm font-medium text-black/70">The future of wellbeing</span>
                 </div>
 
-                <h1 className="text-center text-dark-charcoal font-sans pointer-events-auto max-w-[900px]">
-                    <div className="hero-line text-6xl md:text-7xl lg:text-8xl tracking-tight mb-2">
+                <h1 className="text-center text-dark-charcoal font-sans pointer-events-auto max-w-[900px] px-4 md:px-0">
+                    <div className="hero-line text-4xl sm:text-5xl md:text-7xl lg:text-8xl tracking-tight mb-2">
                         Unified <span className="text-[#CFE1B9]">Health.</span>
                     </div>
-                    <div className="hero-line text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight">
+                    <div className="hero-line text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight">
                         Made <span className="text-[#CFE1B9]">Smart.</span>
                     </div>
                 </h1>
 
-                <p className="hero-line text-lg md:text-xl text-black mt-6 max-w-[500px] text-center pointer-events-auto">
+                <p className="hero-line text-base md:text-xl text-black mt-6 max-w-[500px] text-center pointer-events-auto px-4 md:px-0">
                     Bring all your fitness data into one brilliant interface.
                 </p>
 
