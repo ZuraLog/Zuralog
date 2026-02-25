@@ -59,7 +59,7 @@ export function HeroText() {
                     Bring all your fitness data into one brilliant interface.
                 </p>
 
-                <button className="hero-cta pointer-events-auto mt-12 bg-dark-charcoal text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-black transition-colors shadow-xl">
+                <button className="hero-cta pointer-events-auto mt-12 bg-black text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-black/90 transition-colors shadow-xl">
                     Waitlist Now
                 </button>
             </div>
