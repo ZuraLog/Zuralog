@@ -22,7 +22,7 @@ export function WaitlistSection() {
   return (
     <section
       id="waitlist"
-      className="relative min-h-screen py-24 md:py-32 overflow-hidden"
+      className="relative min-h-screen py-16 md:py-24 lg:py-32 overflow-hidden"
     >
       <Toaster position="top-center" richColors />
 
@@ -79,7 +79,7 @@ export function WaitlistSection() {
           </motion.div>
 
           {/* iPhone mockup (right) */}
-          <div className="py-4 lg:py-0 lg:sticky lg:top-32">
+          <div className="w-full flex justify-center py-4 lg:w-auto lg:justify-start lg:py-0 lg:sticky lg:top-32">
             <IPhoneMockup emailValue={emailValue} />
           </div>
         </div>
