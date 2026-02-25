@@ -29,7 +29,9 @@ export function HeroText() {
                     ease: 'power2.out'
                 });
             };
-            window.addEventListener('mousemove', handleMouseMove);
+            if (!window.matchMedia('(max-width: 767px)').matches) {
+                window.addEventListener('mousemove', handleMouseMove);
+            }
         }, containerRef);
 
         return () => {
@@ -40,7 +42,7 @@ export function HeroText() {
 
     return (
         <div ref={containerRef} className="absolute inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
-            <div className="hero-parallax flex flex-col items-center mt-20">
+            <div className="hero-parallax flex flex-col items-center mt-10 md:mt-20">
                 <div className="badge pointer-events-auto flex items-center gap-2 border border-black/10 rounded-full px-4 py-1.5 mb-8 bg-white/50 backdrop-blur-sm shadow-sm">
                     <div className="w-2 h-2 bg-[#CFE1B9] rounded-full animate-pulse" />
                     <span className="text-sm font-medium text-black/70">The future of wellbeing</span>
@@ -60,7 +62,7 @@ export function HeroText() {
                 </p>
 
                 <button
-                    className="hero-cta pointer-events-auto mt-12 bg-dark-charcoal text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-black transition-colors shadow-xl"
+                    className="hero-cta pointer-events-auto mt-8 md:mt-12 bg-dark-charcoal text-white px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg font-semibold hover:bg-black transition-colors shadow-xl"
                     onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                 >
                     Waitlist Now

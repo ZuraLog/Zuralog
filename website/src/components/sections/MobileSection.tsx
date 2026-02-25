@@ -179,7 +179,7 @@ export function MobileSection() {
                 >
                     <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
                         {/* Left: Typography block */}
-                        <div className="w-full md:w-[50%] flex flex-col items-start">
+                        <div className="w-full md:w-[50%] flex flex-col items-center md:items-start">
                             <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-gray-500 mb-4">
                                 One App to Rule Them All
                             </span>
@@ -194,7 +194,7 @@ export function MobileSection() {
                             </p>
 
                             {/* App pills */}
-                            <div className="mt-8 flex flex-wrap gap-3 pointer-events-auto">
+                            <div className="mt-8 flex flex-wrap gap-3 justify-center md:justify-start pointer-events-auto">
                                 {[
                                     { icon: <FaStrava className="text-[#FC4C02]" size={16} />, name: "Strava" },
                                     { icon: <FaApple className="text-black" size={16} />, name: "Apple Health" },
@@ -214,7 +214,7 @@ export function MobileSection() {
                         </div>
 
                         {/* Right: Phone lives here (empty space for the 3D phone) */}
-                        <div className="w-full md:w-[50%] h-[60vh]" />
+                        <div className="hidden md:block md:w-[50%] md:h-[60vh]" />
                     </div>
                 </div>
 
@@ -228,16 +228,16 @@ export function MobileSection() {
                 >
                     <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
                         {/* Left: Large quote style */}
-                        <div className="w-full md:w-[50%] flex flex-col items-start">
-                            <div className="text-7xl lg:text-8xl font-black text-gray-900/5 leading-none select-none mb-[-20px] lg:mb-[-30px]">
+                        <div className="w-full md:w-[50%] flex flex-col items-center md:items-start">
+                            <div className="text-5xl sm:text-7xl lg:text-8xl font-black text-gray-900/5 leading-none select-none mb-[-20px] lg:mb-[-30px]">
                                 &ldquo;
                             </div>
-                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 leading-[1.2] tracking-tight italic">
+                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 leading-[1.2] tracking-tight italic text-center md:text-left">
                                 Why am I not
                                 <br />
                                 losing weight?
                             </h2>
-                            <div className="mt-6 w-16 h-1 bg-[#E88BA7] rounded-full" />
+                            <div className="mt-6 w-16 h-1 bg-[#E88BA7] rounded-full mx-auto md:mx-0" />
                             <p className="mt-6 text-lg text-gray-600 max-w-[440px] leading-relaxed">
                                 Other apps store data. Zuralog <span className="font-semibold text-gray-900">reasons</span> with it.
                                 It cross-references your nutrition, exercise, sleep, and recovery
@@ -245,7 +245,7 @@ export function MobileSection() {
                             </p>
 
                             {/* Insight example card */}
-                            <div className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-black/5 max-w-[440px] pointer-events-auto">
+                            <div className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-black/5 max-w-[440px] mx-auto md:mx-0 pointer-events-auto">
                                 <div className="flex items-center gap-2 mb-3">
                                     <TbBrain className="text-[#E88BA7]" size={20} />
                                     <span className="text-xs font-semibold tracking-wide uppercase text-[#E88BA7]">
@@ -261,7 +261,7 @@ export function MobileSection() {
                         </div>
 
                         {/* Right: Phone space */}
-                        <div className="w-full md:w-[50%] h-[60vh]" />
+                        <div className="hidden md:block md:w-[50%] md:h-[60vh]" />
                     </div>
                 </div>
 
@@ -275,18 +275,18 @@ export function MobileSection() {
                 >
                     <div className="container mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center gap-8 lg:gap-16">
                         {/* Left: Feature list */}
-                        <div className="w-full md:w-[50%] flex flex-col items-start">
-                            <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-gray-500 mb-4">
+                        <div className="w-full md:w-[50%] flex flex-col items-center md:items-start">
+                            <span className="inline-block text-xs font-semibold tracking-[0.2em] uppercase text-gray-500 mb-4 text-center md:text-left">
                                 Your AI Chief of Staff
                             </span>
-                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.1] tracking-tight">
+                            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.1] tracking-tight text-center md:text-left">
                                 Say it.
                                 <br />
                                 <span className="text-[#E8A855]">It&apos;s done.</span>
                             </h2>
 
                             {/* Command examples */}
-                            <div className="mt-10 flex flex-col gap-5 w-full max-w-[460px]">
+                            <div className="mt-10 flex flex-col gap-5 w-full max-w-[460px] mx-auto md:mx-0">
                                 {[
                                     {
                                         icon: <TbRun size={22} className="text-[#FC4C02]" />,
@@ -321,7 +321,7 @@ export function MobileSection() {
                         </div>
 
                         {/* Right: Phone space */}
-                        <div className="w-full md:w-[50%] h-[60vh]" />
+                        <div className="hidden md:block md:w-[50%] md:h-[60vh]" />
                     </div>
                 </div>
 
@@ -350,27 +350,27 @@ export function MobileSection() {
                             {/* Proactive notification examples */}
                             <div className="mt-8 flex flex-col gap-3 w-full max-w-[400px]">
                                 <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-5 py-3 border border-black/5 shadow-sm pointer-events-auto">
-                                    <TbMoon className="text-indigo-400 flex-shrink-0" size={18} />
-                                    <p className="text-sm text-gray-700">
-                                        <span className="font-semibold">5hr sleep detected.</span> Keep today&apos;s run in Zone 2.
-                                    </p>
+                                     <TbMoon className="text-indigo-400 flex-shrink-0" size={18} />
+                                     <p className="text-xs sm:text-sm text-gray-700">
+                                         <span className="font-semibold">5hr sleep detected.</span> Keep today&apos;s run in Zone 2.
+                                     </p>
                                 </div>
                                 <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-5 py-3 border border-black/5 shadow-sm pointer-events-auto">
-                                    <TbRun className="text-orange-400 flex-shrink-0" size={18} />
-                                    <p className="text-sm text-gray-700">
-                                        <span className="font-semibold">No run in 5 days.</span> Forgetting something?
-                                    </p>
+                                     <TbRun className="text-orange-400 flex-shrink-0" size={18} />
+                                     <p className="text-xs sm:text-sm text-gray-700">
+                                         <span className="font-semibold">No run in 5 days.</span> Forgetting something?
+                                     </p>
                                 </div>
                                 <div className="flex items-center gap-3 bg-white/70 backdrop-blur-sm rounded-full px-5 py-3 border border-black/5 shadow-sm pointer-events-auto">
-                                    <TbApple className="text-green-500 flex-shrink-0" size={18} />
-                                    <p className="text-sm text-gray-700">
-                                        <span className="font-semibold">Calories up 15%</span> vs last week. Want a plan?
-                                    </p>
+                                     <TbApple className="text-green-500 flex-shrink-0" size={18} />
+                                     <p className="text-xs sm:text-sm text-gray-700">
+                                         <span className="font-semibold">Calories up 15%</span> vs last week. Want a plan?
+                                     </p>
                                 </div>
                             </div>
 
                             <button
-                                className="pointer-events-auto mt-10 bg-gray-900 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
+                                className="pointer-events-auto mt-10 bg-gray-900 text-white px-8 py-4 rounded-full text-base md:text-lg font-semibold hover:bg-gray-800 transition-colors shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
                                 onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                             >
                                 Join the Waitlist
@@ -378,14 +378,14 @@ export function MobileSection() {
                         </div>
 
                         {/* Right: Phone space */}
-                        <div className="w-full md:w-[50%] h-[60vh]" />
+                        <div className="hidden md:block md:w-[50%] md:h-[60vh]" />
                     </div>
                 </div>
 
                 {/* ═══════════════════════════════════════════
                     Progress indicator dots
                     ═══════════════════════════════════════════ */}
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+                <div className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-2">
                     {SLIDES.map((slide, i) => (
                         <div
                             key={slide.id}
