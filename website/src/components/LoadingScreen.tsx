@@ -12,34 +12,46 @@
  * HTML). This component just takes over once JS hydrates.
  *
  * Minimum display: 1.5s so the brand + spinner are always seen.
+ * Safety timeout: 8s max — if 3D assets hang or never load, the overlay is
+ * forcibly dismissed so the user is never stuck on an infinite loader.
  */
 
 import { useEffect, useRef, useCallback } from "react";
 import { loadingBridge } from "@/lib/loading-bridge";
 
+/** Maximum time (ms) to wait for 3D assets before force-dismissing. */
+const MAX_LOADING_MS = 8_000;
+
+/** Minimum time (ms) to show the loading screen for brand visibility. */
+const MIN_DISPLAY_MS = 1_500;
+
 interface LoadingScreenProps {
-    onComplete: () => void;
+    onComplete?: () => void;
 }
 
 export function LoadingScreen({ onComplete }: LoadingScreenProps) {
     const exitFiredRef = useRef(false);
     const mountTimeRef = useRef(Date.now());
 
+    /** Fade out and remove the SSR overlay, then notify parent. */
     const handleComplete = useCallback(() => {
+        if (exitFiredRef.current) return;
+        exitFiredRef.current = true;
+
         const overlay = document.getElementById("ssr-loading-overlay");
         if (!overlay) {
-            onComplete();
+            onComplete?.();
             return;
         }
 
         const elapsed = Date.now() - mountTimeRef.current;
-        const remaining = Math.max(0, 1500 - elapsed);
+        const remaining = Math.max(0, MIN_DISPLAY_MS - elapsed);
 
         setTimeout(() => {
             overlay.style.opacity = "0";
             setTimeout(() => {
                 overlay.remove();
-                onComplete();
+                onComplete?.();
             }, 600);
         }, remaining);
     }, [onComplete]);
@@ -47,16 +59,28 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
     useEffect(() => {
         const overlay = document.getElementById("ssr-loading-overlay");
         if (!overlay) {
-            onComplete();
+            // Overlay already gone (another instance dismissed it, or it was
+            // never rendered). Nothing to do.
+            onComplete?.();
             return;
         }
 
-        return loadingBridge.subscribe((p) => {
-            if (p >= 100 && !exitFiredRef.current) {
-                exitFiredRef.current = true;
+        // --- Safety timeout: force-dismiss after MAX_LOADING_MS ---
+        const safetyTimer = setTimeout(() => {
+            handleComplete();
+        }, MAX_LOADING_MS);
+
+        // --- Normal path: dismiss when loadingBridge reports 100% ---
+        const unsubscribe = loadingBridge.subscribe((p) => {
+            if (p >= 100) {
                 handleComplete();
             }
         });
+
+        return () => {
+            clearTimeout(safetyTimer);
+            unsubscribe();
+        };
     }, [onComplete, handleComplete]);
 
     // Renders nothing — the SSR overlay IS the loading screen

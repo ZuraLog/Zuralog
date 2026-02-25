@@ -4,23 +4,24 @@
  * ClientShell.tsx
  *
  * Client-only (loaded via dynamic ssr:false). Renders PhoneCanvas and the
- * LoadingScreen overlay. Because this is never SSR'd, useState(true) for
- * showLoader is always the correct initial state with no hydration mismatch.
+ * LoadingScreen. The LoadingScreen subscribes to 3D-asset progress via
+ * loadingBridge and fades out the SSR overlay when assets finish loading
+ * (or after a safety timeout).
+ *
+ * Because this is never SSR'd, there are no hydration mismatches.
  */
 
-import { useState } from "react";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { PhoneCanvas } from "@/components/sections/hero/PhoneCanvas";
 
 export function ClientShell() {
-    const [showLoader, setShowLoader] = useState(true);
-
     return (
         <>
             <PhoneCanvas />
-            {showLoader && (
-                <LoadingScreen onComplete={() => setShowLoader(false)} />
-            )}
+            {/* LoadingScreen listens for 3D progress and dismisses the
+                SSR overlay. It has a built-in safety timeout so the
+                overlay is never stuck indefinitely. */}
+            <LoadingScreen />
         </>
     );
 }

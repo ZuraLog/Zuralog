@@ -6,12 +6,14 @@
  * - Full SEO metadata (title, description, OG, Twitter, robots, icons)
  * - Sonner toast notifications
  * - SSR loading overlay (visible from first paint, dismissed by client JS)
+ * - OverlayDismisser (ensures the loading overlay is dismissed on ALL pages)
  */
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/next";
 import { LenisProvider } from "@/components/layout/LenisProvider";
+import { OverlayDismisser } from "@/components/OverlayDismisser";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -77,6 +79,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased">
+        {/* OverlayDismisser: layout-level safety net. Ensures the loading
+            overlay is dismissed on EVERY page — not just the home page.
+            On non-home pages it dismisses quickly; on the home page it acts
+            as a fallback if LoadingScreen's 3D progress tracking fails. */}
+        <OverlayDismisser />
         {/* SSR loading overlay: rendered in the initial HTML so it's visible
             from the very first paint. Client-side LoadingScreen.tsx will
             fade this out and remove it once 3D assets finish loading.
