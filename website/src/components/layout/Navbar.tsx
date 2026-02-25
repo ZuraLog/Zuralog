@@ -70,10 +70,10 @@ export function Navbar() {
                     style={{ maxWidth: "1280px", padding: "0 clamp(1rem, 3vw, 2.5rem)" }}
                 >
                     {/* ── Logo ── */}
-                    <button
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                    <Link
+                        href="/"
                         className="flex items-center gap-2 transition-opacity hover:opacity-70"
-                        aria-label="Back to top"
+                        aria-label="ZuraLog home"
                     >
                         <Image
                             src="/logo/Zuralog.png"
@@ -89,7 +89,7 @@ export function Navbar() {
                         >
                             ZuraLog
                         </span>
-                    </button>
+                    </Link>
 
                     {/* ── Desktop nav links ── */}
                     <nav className="hidden items-center gap-6 md:flex" aria-label="Main navigation">
