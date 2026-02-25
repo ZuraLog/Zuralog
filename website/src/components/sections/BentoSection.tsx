@@ -25,14 +25,13 @@
  *   - GSAP scroll-triggered entrance with spring physics
  */
 
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import dynamic from "next/dynamic";
 import {
     Zap,
-    Smartphone,
     Sparkles,
     CheckCircle2,
     ChevronRight,
@@ -99,8 +98,60 @@ const CONNECT_STEPS = [
  * Dark background section with a 6-card bento grid layout.
  * Cards reveal with staggered GSAP scroll animations.
  */
+/** Shape returned by /api/waitlist/leaderboard */
+interface LeaderboardEntry {
+    rank: number;
+    display_name: string;
+    referral_count: number;
+    queue_position: number | null;
+}
+
 export function BentoSection() {
     const sectionRef = useRef<HTMLElement>(null);
+
+    // ── Live waitlist data ──────────────────────────────────────────
+    const [totalUsers, setTotalUsers] = useState<number>(0);
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
+    useEffect(() => {
+        /** Fetch total signups from the stats API */
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/waitlist/stats');
+                if (!res.ok) return;
+                const json = await res.json() as { totalSignups: number };
+                setTotalUsers(json.totalSignups ?? 0);
+            } catch {
+                // Non-fatal — counter stays at 0
+            }
+        }
+
+        /** Fetch top referrers for the leaderboard */
+        async function fetchLeaderboard() {
+            try {
+                const res = await fetch('/api/waitlist/leaderboard');
+                if (!res.ok) return;
+                const json = await res.json() as { leaderboard: LeaderboardEntry[] };
+                setLeaderboard(json.leaderboard ?? []);
+            } catch {
+                // Non-fatal — static entries remain
+            }
+        }
+
+        void fetchStats();
+        void fetchLeaderboard();
+    }, []);
+
+    // When totalUsers resolves after the GSAP entrance already ran, update the counter.
+    // We always animate — if the card hasn't revealed yet the GSAP entrance onComplete
+    // will pick up the correct data-target value. If it already revealed (e.g. the fetch
+    // resolved late), this effect drives a smooth count-up to the real number.
+    useEffect(() => {
+        if (!sectionRef.current || totalUsers === 0) return;
+        const counterEl = sectionRef.current.querySelector<HTMLElement>('.waitlist-counter-opt');
+        if (!counterEl) return;
+        gsap.to(counterEl, { innerText: totalUsers, duration: 1.5, ease: "power3.out", snap: { innerText: 1 } });
+    }, [totalUsers]);
 
     useGSAP(
         () => {
@@ -279,9 +330,10 @@ export function BentoSection() {
                         onComplete: () => {
                             const counterNum = card2.querySelector('.waitlist-counter-opt');
                             if (counterNum) {
+                                const target = Number(counterNum.getAttribute('data-target') ?? 0);
                                 gsap.fromTo(counterNum,
                                     { innerText: 0 },
-                                    { innerText: 2450, duration: 2, ease: "power3.out", snap: { innerText: 1 } }
+                                    { innerText: target, duration: 2, ease: "power3.out", snap: { innerText: 1 } }
                                 );
                             }
                             const entries = card2.querySelectorAll('.leaderboard-entry');
@@ -524,33 +576,76 @@ export function BentoSection() {
                                 <p className="text-xs text-gray-500 font-medium">Climb the ranks. Earn Pro.</p>
                             </div>
                             <div className="text-right">
-                                <div className="text-2xl font-black text-gray-900 leading-none waitlist-counter-opt">0</div>
+                                <div
+                                    className="text-2xl font-black text-gray-900 leading-none waitlist-counter-opt"
+                                    data-target={totalUsers}
+                                >
+                                    0
+                                </div>
                                 <div className="text-[10px] uppercase font-bold text-gray-400 mt-1">Total Users</div>
                             </div>
                         </div>
 
                         <div className="flex flex-col gap-2 relative z-10 mb-5">
-                            <div className="leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-[#FFD700]/10 to-transparent border border-[#FFD700]/20">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-6 font-bold text-[#D4AF37] text-sm text-center">#1</div>
-                                    <div className="w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center text-white text-[10px] font-bold shadow-sm">HY</div>
-                                    <span className="text-sm font-semibold text-gray-900">Hyowon B.</span>
-                                </div>
-                            </div>
-                            <div className="leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-6 font-bold text-gray-400 text-sm text-center">#2</div>
-                                    <div className="w-7 h-7 rounded-full bg-[#E8F5A8] flex items-center justify-center text-gray-900 text-[10px] font-bold shadow-sm">AL</div>
-                                    <span className="text-sm font-semibold text-gray-700">Alice L.</span>
-                                </div>
-                            </div>
-                            <div className="leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-6 font-bold text-gray-400 text-sm text-center">#3</div>
-                                    <div className="w-7 h-7 rounded-full border border-gray-200 border-dashed flex items-center justify-center text-gray-400 text-[10px] font-bold">+</div>
-                                    <span className="text-sm font-medium text-gray-400 italic">This could be you</span>
-                                </div>
-                            </div>
+                            {[0, 1, 2].map((slot) => {
+                                const entry = leaderboard[slot];
+                                const slotRank = slot + 1;
+                                const isFirst = slot === 0;
+
+                                if (entry) {
+                                    // Real leaderboard entry from DB
+                                    const initials = entry.display_name
+                                        .split(' ')
+                                        .map((w) => w[0])
+                                        .join('')
+                                        .toUpperCase()
+                                        .slice(0, 2);
+                                    return (
+                                        <div
+                                            key={entry.rank}
+                                            className={`leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl border ${
+                                                isFirst
+                                                    ? 'bg-gradient-to-r from-[#FFD700]/10 to-transparent border-[#FFD700]/20'
+                                                    : 'bg-gray-50 border-gray-100'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-6 font-bold text-sm text-center ${isFirst ? 'text-[#D4AF37]' : 'text-gray-400'}`}>
+                                                    #{entry.rank}
+                                                </div>
+                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm ${
+                                                    isFirst ? 'bg-gray-900 text-white' : 'bg-[#E8F5A8] text-gray-900'
+                                                }`}>
+                                                    {initials}
+                                                </div>
+                                                <span className={`text-sm font-semibold ${isFirst ? 'text-gray-900' : 'text-gray-700'}`}>
+                                                    {entry.display_name}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // Empty slot — CTA row (always #1 gold style if db returned nothing at all)
+                                return (
+                                    <div
+                                        key={`slot-${slotRank}`}
+                                        className={`leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl border ${
+                                            isFirst && leaderboard.length === 0
+                                                ? 'bg-gradient-to-r from-[#FFD700]/10 to-transparent border-[#FFD700]/20'
+                                                : 'bg-gray-50 border-gray-100'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-6 font-bold text-sm text-center ${isFirst && leaderboard.length === 0 ? 'text-[#D4AF37]' : 'text-gray-400'}`}>
+                                                #{slotRank}
+                                            </div>
+                                            <div className="w-7 h-7 rounded-full border border-gray-200 border-dashed flex items-center justify-center text-gray-400 text-[10px] font-bold">+</div>
+                                            <span className="text-sm font-medium text-gray-400 italic">This could be you</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         <p className="text-[10px] text-gray-400 leading-relaxed font-medium relative z-10 text-center">
