@@ -3,7 +3,7 @@ import { FloatingIcons } from "./hero/FloatingIcons";
 
 export function HeroSection() {
     return (
-        <section className="relative w-full h-screen bg-cream overflow-hidden">
+        <section id="hero-section" className="relative w-full h-screen bg-cream overflow-hidden">
             <FloatingIcons />
             <HeroText />
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useRef, useEffect } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { PresentationControls, Environment, useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGSAP } from '@gsap/react';
@@ -33,14 +33,8 @@ const TEXTURE_PATHS = [
 
 /**
  * Custom shader material for vertical swipe transition between two textures.
- * Creates a sliding reveal effect as if the user swiped up on the phone screen.
  */
 const SwipeTransitionShader = {
-    uniforms: {
-        texCurrent: { value: null as THREE.Texture | null },
-        texNext: { value: null as THREE.Texture | null },
-        progress: { value: 0.0 },
-    },
     vertexShader: `
         varying vec2 vUv;
         void main() {
@@ -55,20 +49,14 @@ const SwipeTransitionShader = {
         varying vec2 vUv;
 
         void main() {
-            // Vertical swipe: next texture slides up from bottom
             float p = clamp(progress, 0.0, 1.0);
-
-            // Current texture slides up and away
             vec2 uvCurrent = vUv + vec2(0.0, p);
-            // Next texture slides in from below
             vec2 uvNext = vUv + vec2(0.0, p - 1.0);
 
             vec4 colCurrent = texture2D(texCurrent, uvCurrent);
             vec4 colNext = texture2D(texNext, uvNext);
 
-            // Show current where UV is in range, next where it's in range
             if (vUv.y + p > 1.0) {
-                // This area shows the next texture coming from bottom
                 gl_FragColor = colNext;
             } else {
                 gl_FragColor = colCurrent;
@@ -77,14 +65,21 @@ const SwipeTransitionShader = {
     `,
 };
 
+/**
+ * Inner 3D phone model with shader-based screen texture transitions
+ * and scroll-driven scale animation.
+ *
+ * CSS handles all screen-space positioning (fixed vs absolute).
+ * This component only manages:
+ *   - 3D scale transitions (hero -> MobileSection)
+ *   - Mouse parallax tilt/drift
+ *   - Idle float animation
+ *   - Screen texture swapping via shader uniforms
+ */
 function PhoneModel() {
-    // Load the model from the local public path
     const { scene } = useGLTF('/model/phone/scene.gltf');
-
-    // Load all textures upfront
     const textures = useTexture(TEXTURE_PATHS);
 
-    // Configure all textures
     useEffect(() => {
         textures.forEach((tex) => {
             tex.flipY = false;
@@ -92,19 +87,17 @@ function PhoneModel() {
     }, [textures]);
 
     const groupRef = useRef<THREE.Group>(null);
-    const screenMeshRef = useRef<THREE.Mesh | null>(null);
     const shaderMatRef = useRef<THREE.ShaderMaterial | null>(null);
 
-    // Track which texture index is currently showing + transition progress
-    const currentTextureIndex = useRef(0);
-    const targetTextureIndex = useRef(0);
-
-    // Initial base states - used by GSAP to scrub values across scroll
-    const basePosition = useRef(new THREE.Vector3(0.3, -3.2, 0));
+    /**
+     * Base 3D states. Position is centered within the canvas.
+     * Scale is animated by GSAP ScrollTrigger.
+     */
+    const basePosition = useRef(new THREE.Vector3(0, -0.3, 0));
     const baseRotation = useRef(new THREE.Vector3(0, Math.PI / 2, 0));
-    const baseScale = useRef(new THREE.Vector3(2.5, 2.5, 2.5));
+    const baseScale = useRef(new THREE.Vector3(2.2, 2.2, 2.2));
 
-    // Apply material color CFE1B9 to the phone case and set up swipe shader on screen
+    /** Apply custom shader material to screen mesh and style body materials. */
     useEffect(() => {
         if (!scene || textures.length === 0) return;
 
@@ -129,14 +122,13 @@ function PhoneModel() {
             const matName = (mat?.name || "").toLowerCase();
 
             const isScreen = nodeName === "cube010_screen001_0" || matName === "screen.001";
-            const isGlass = nodeName === "cube010_glass002_0" || matName === "glass.002" || nodeName === "cube010_lensinglass_0" || matName === "lensinglass";
+            const isGlass = nodeName === "cube010_glass002_0" || matName === "glass.002"
+                || nodeName === "cube010_lensinglass_0" || matName === "lensinglass";
 
             if (isScreen) {
                 child.material = shaderMat;
                 child.renderOrder = 1;
-                screenMeshRef.current = child;
             } else if (isGlass) {
-                // Ensure front glass is functionally invisible so screen shows perfectly
                 child.material = new THREE.MeshStandardMaterial({
                     transparent: true,
                     opacity: 0.05,
@@ -145,7 +137,6 @@ function PhoneModel() {
                     color: new THREE.Color("#ffffff"),
                 });
             } else if (mat instanceof THREE.MeshStandardMaterial) {
-                // Continue to tint the rest of the body
                 if (nodeName.includes('basecolor') || nodeName.includes('metalframe') || nodeName.includes('backpanel')) {
                     mat.color.set('#CFE1B9');
                     mat.needsUpdate = true;
@@ -154,7 +145,7 @@ function PhoneModel() {
         });
     }, [scene, textures]);
 
-    // Global mouse tracking instead of canvas-local tracking
+    /** Track mouse position for parallax tilt. */
     const mouseRef = useRef({ x: 0, y: 0 });
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -165,44 +156,24 @@ function PhoneModel() {
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
+    /**
+     * GSAP scroll-driven scale animation.
+     * Scale from 2.2 (hero) to 2.8 (MobileSection) as user scrolls.
+     * Also handles the first texture swap (hero screen -> content_1).
+     */
     useGSAP(() => {
-        // ──────────────────────────────────────────
-        // Phase 1: Hero → MobileSection transition
-        // Phone moves from hero position to centered
-        // ──────────────────────────────────────────
         const tl = gsap.timeline({
             scrollTrigger: {
                 trigger: '#mobile-section',
-                start: 'top bottom', // Start when MobileSection enters from bottom
-                end: 'top center', // Complete when MobileSection top reaches center
+                start: 'top bottom',
+                end: 'top top',
                 scrub: true,
             }
         });
 
-        // Target centered config for MobileSection (phone on the right side)
-        tl.to(basePosition.current, {
-            x: 1.2, // Position phone to the right side
-            y: -0.1,
-            z: 0,
-            ease: "none",
-        }, 0)
-            .to(baseRotation.current, {
-                x: 0,
-                y: Math.PI / 2,
-                z: 0,
-                ease: "none",
-            }, 0)
-            .to(baseScale.current, {
-                x: 1.5,
-                y: 1.5,
-                z: 1.5,
-                ease: "none",
-            }, 0);
+        tl.to(baseScale.current, { x: 2.8, y: 2.8, z: 2.8, ease: "none" }, 0);
 
-        // ──────────────────────────────────────────
-        // Phase 2: First texture swap (hero → content_1)
-        // Happens as we enter the mobile section
-        // ──────────────────────────────────────────
+        // First texture swap: hero screen -> content_1 during transition
         ScrollTrigger.create({
             trigger: '#mobile-section',
             start: 'top 60%',
@@ -210,63 +181,48 @@ function PhoneModel() {
             scrub: true,
             onUpdate: (self) => {
                 if (!shaderMatRef.current) return;
-                // Swap from screen.png (0) to content_1 (1)
                 shaderMatRef.current.uniforms.texCurrent.value = textures[0];
                 shaderMatRef.current.uniforms.texNext.value = textures[1];
                 shaderMatRef.current.uniforms.progress.value = self.progress;
             },
             onLeave: () => {
                 if (!shaderMatRef.current) return;
-                currentTextureIndex.current = 1;
-                // Snap to fully showing content_1
                 shaderMatRef.current.uniforms.texCurrent.value = textures[1];
                 shaderMatRef.current.uniforms.progress.value = 0;
             },
-            onEnterBack: () => {
-                currentTextureIndex.current = 0;
-            },
         });
-
     }, { dependencies: [] });
 
-    // Store smoothed mouse values separately so it doesn't interfere with GSAP scroll values
     const smoothMouse = useRef({ x: 0, y: 0 });
 
-    // Subtle floating animation + GSAP base + mouse interactivity + texture swap polling
+    /** Per-frame updates: apply position, rotation, scale, and texture transitions. */
     useFrame((state) => {
         if (groupRef.current) {
             smoothMouse.current.x = THREE.MathUtils.lerp(smoothMouse.current.x, mouseRef.current.x, 0.05);
             smoothMouse.current.y = THREE.MathUtils.lerp(smoothMouse.current.y, mouseRef.current.y, 0.05);
 
-            const floatY = Math.sin(state.clock.elapsedTime) * 0.1;
-            const targetX = smoothMouse.current.x * 0.15;
-            const targetY = smoothMouse.current.y * 0.15;
+            const floatY = Math.sin(state.clock.elapsedTime) * 0.08;
+            const targetX = smoothMouse.current.x * 0.1;
+            const targetY = smoothMouse.current.y * 0.1;
 
-            // Apply base + mouse interactions cleanly
-            groupRef.current.rotation.x = baseRotation.current.x - targetY * 0.5;
-            groupRef.current.rotation.y = baseRotation.current.y + targetX * 0.5;
+            groupRef.current.rotation.x = baseRotation.current.x - targetY * 0.4;
+            groupRef.current.rotation.y = baseRotation.current.y + targetX * 0.4;
             groupRef.current.rotation.z = baseRotation.current.z;
 
-            groupRef.current.position.x = basePosition.current.x + (targetX * 0.8);
+            groupRef.current.position.x = basePosition.current.x + (targetX * 0.5);
             groupRef.current.position.y = basePosition.current.y + floatY;
             groupRef.current.position.z = basePosition.current.z;
 
             groupRef.current.scale.copy(baseScale.current);
         }
 
-        // ──────────────────────────────────────────
-        // Read CSS variable for scroll progress within the pinned section
-        // and drive texture transitions between content slides
-        // ──────────────────────────────────────────
+        // Drive texture transitions within MobileSection via CSS variable
         if (shaderMatRef.current && textures.length === TEXTURE_PATHS.length) {
             const rawProgress = parseFloat(
                 getComputedStyle(document.documentElement)
                     .getPropertyValue('--mobile-scroll-progress') || '0'
             );
 
-            // Map progress to slide transitions
-            // Progress 0..1 maps across SLIDE_COUNT slides
-            // Between slides we get a transition zone
             const slideDuration = 1 / SLIDE_COUNT;
 
             for (let i = 0; i < SLIDE_COUNT - 1; i++) {
@@ -275,8 +231,7 @@ function PhoneModel() {
 
                 if (rawProgress >= transStart && rawProgress <= transEnd) {
                     const transProgress = (rawProgress - transStart) / (transEnd - transStart);
-                    // Texture index: content_1 is textures[1], content_2 is textures[2], etc.
-                    const fromIdx = i + 1; // content slides start at textures[1]
+                    const fromIdx = i + 1;
                     const toIdx = i + 2;
 
                     if (toIdx < textures.length) {
@@ -287,18 +242,13 @@ function PhoneModel() {
                     break;
                 }
 
-                // After the transition, snap to the new texture
                 if (rawProgress > transEnd && i + 2 < textures.length) {
                     shaderMatRef.current.uniforms.texCurrent.value = textures[i + 2];
                     shaderMatRef.current.uniforms.progress.value = 0;
                 }
             }
 
-            // Update active dot indicators
-            const activeSlide = Math.min(
-                Math.floor(rawProgress * SLIDE_COUNT),
-                SLIDE_COUNT - 1
-            );
+            const activeSlide = Math.min(Math.floor(rawProgress * SLIDE_COUNT), SLIDE_COUNT - 1);
             document.querySelectorAll('.slide-dot').forEach((dot, i) => {
                 if (i === activeSlide) {
                     (dot as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.7)';
@@ -318,25 +268,135 @@ function PhoneModel() {
     );
 }
 
+/**
+ * PhoneCanvas: The 3D phone wrapper with scroll-driven CSS positioning.
+ *
+ * Uses a single persistent Canvas (never unmounts) and controls the wrapper
+ * div's CSS `position` to achieve the scroll phases:
+ *
+ * Phase 1 - HERO (initial):
+ *   position: fixed, centered in the right half of viewport,
+ *   vertically placed so the phone top is just below the "Waitlist Now" CTA.
+ *
+ * Phase 2 - SCROLLING TO MOBILE:
+ *   Still position: fixed. Phone follows the user on scroll.
+ *   3D scale increases via GSAP.
+ *
+ * Phase 3 - MOBILE SECTION REACHED:
+ *   position: absolute, placed inside MobileSection's pinned area.
+ *   Phone anchors in the right panel (50% width, full height).
+ *   It stays there while slides scroll through.
+ *
+ * Phase 4 - PAST MOBILE SECTION:
+ *   Still position: absolute in MobileSection. Scrolls away naturally
+ *   with the section as the user moves past.
+ *
+ * The trick: We use ScrollTrigger to detect when MobileSection's top
+ * hits viewport top. At that moment, we switch from fixed to absolute
+ * and calculate the correct top offset so there's no visual jump.
+ */
 export function PhoneCanvas() {
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useGSAP(() => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+
+        /**
+         * Phase A: As user scrolls from hero toward MobileSection,
+         * animate the phone upward from its starting position (top: 55%)
+         * to vertically centered (top: 15%) so it settles into the
+         * right panel naturally.
+         */
+        gsap.to(wrapper, {
+            top: '15%',
+            ease: 'none',
+            scrollTrigger: {
+                trigger: '#mobile-section',
+                start: 'top bottom',
+                end: 'top top',
+                scrub: true,
+            },
+        });
+
+        /**
+         * Phase B: When MobileSection pin ENDS (user scrolls past all slides),
+         * switch from fixed -> absolute so the phone stays at the bottom of
+         * MobileSection and scrolls away with it.
+         * The pin end = sectionTop + (SLIDE_COUNT * 100vh).
+         */
+        ScrollTrigger.create({
+            trigger: '#mobile-section',
+            // The pin lasts for SLIDE_COUNT * 100vh of scroll distance.
+            // We switch to absolute at the very end of that pin.
+            start: () => `top+=${window.innerHeight * SLIDE_COUNT} top`,
+            end: () => `top+=${window.innerHeight * SLIDE_COUNT} top`,
+            onEnter: () => {
+                const mobileSection = document.getElementById('mobile-section');
+                if (!mobileSection) return;
+                // Place absolutely at the last screen's position within
+                // MobileSection. The section height is (SLIDE_COUNT+1)*100vh.
+                // The pinned area ends SLIDE_COUNT*100vh scrolled, placing
+                // the visible viewport at the last screen-height of the section.
+                const sectionTop = mobileSection.offsetTop;
+                const absTop = sectionTop + (window.innerHeight * SLIDE_COUNT) + (window.innerHeight * 0.15);
+                gsap.set(wrapper, {
+                    position: 'absolute',
+                    top: absTop,
+                    right: '2%',
+                    bottom: 'auto',
+                    transform: 'none',
+                    width: '48%',
+                    height: '70vh',
+                });
+            },
+            onLeaveBack: () => {
+                // Revert to fixed (phone stays in viewport during pinned slides)
+                gsap.set(wrapper, {
+                    position: 'fixed',
+                    top: '15%',
+                    right: '2%',
+                    bottom: 'auto',
+                    transform: 'none',
+                    width: '45vw',
+                    height: '70vh',
+                });
+            },
+        });
+
+    }, { dependencies: [] });
+
     return (
-        <div className="w-full h-full pointer-events-none flex justify-center items-center">
-            {/* Container for the 3D canvas */}
+        <div
+            ref={wrapperRef}
+            id="phone-canvas-wrapper"
+            className="pointer-events-none"
+            style={{
+                // Initial state: fixed in right half, top aligned just
+                // below the hero CTA button (~60% from viewport top).
+                // The phone peeks into view from below.
+                position: 'fixed',
+                top: '55%',
+                right: '2%',
+                width: '45vw',
+                maxWidth: '700px',
+                height: '70vh',
+                zIndex: 40,
+            }}
+        >
             <div className="w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
                 <Canvas camera={{ position: [0, 0, 5], fov: 35 }}>
                     <ambientLight intensity={0.5} />
                     <directionalLight position={[10, 10, 5]} intensity={1} />
-
                     <PresentationControls
                         global
                         snap
                         rotation={[0, 0, 0]}
-                        polar={[-0.1, 0.1]} // Limit vertical rotation
-                        azimuth={[-0.4, 0.4]} // Limit horizontal rotation
+                        polar={[-0.1, 0.1]}
+                        azimuth={[-0.4, 0.4]}
                     >
                         <PhoneModel />
                     </PresentationControls>
-
                     <Environment preset="city" />
                 </Canvas>
             </div>
