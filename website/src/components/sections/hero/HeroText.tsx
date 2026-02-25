@@ -30,15 +30,15 @@ export function HeroText() {
 
             <h1 className="text-center text-dark-charcoal font-sans pointer-events-auto">
                 <div className="hero-line text-6xl md:text-7xl lg:text-8xl tracking-tight mb-2">
-                    Unified Health.
+                    Unified <span className="text-[#CFE1B9]">Health.</span>
                 </div>
                 <div className="hero-line text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight">
-                    Made Smart.
+                    Made <span className="text-[#CFE1B9]">Smart.</span>
                 </div>
             </h1>
 
             <button className="hero-cta pointer-events-auto mt-12 bg-dark-charcoal text-white px-8 py-4 rounded-full text-lg font-semibold hover:-translate-y-1 transition-transform shadow-xl">
-                Start Now
+                Waitlist Now
             </button>
         </div>
     );

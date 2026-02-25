@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { PresentationControls, Environment, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -10,6 +10,26 @@ function PhoneModel() {
     const { scene } = useGLTF('/model/phone/scene.gltf');
     const groupRef = useRef<THREE.Group>(null);
 
+    // Apply material color CFE1B9 to the phone case
+    useEffect(() => {
+        if (scene) {
+            scene.traverse((child) => {
+                if ((child as THREE.Mesh).isMesh) {
+                    const mesh = child as THREE.Mesh;
+                    console.log("Mesh name:", mesh.name, "Material name:", (mesh.material as THREE.Material)?.name);
+
+                    // Basic heuristic to color the case
+                    const name = mesh.name.toLowerCase();
+                    if (name.includes('basecolor') || name.includes('metalframe') || name.includes('backpanel')) {
+                        if (mesh.material) {
+                            (mesh.material as THREE.MeshStandardMaterial).color.set('#CFE1B9');
+                        }
+                    }
+                }
+            });
+        }
+    }, [scene]);
+
     // Subtle floating animation for the 3D model itself
     useFrame((state) => {
         if (groupRef.current) {
@@ -18,7 +38,7 @@ function PhoneModel() {
     });
 
     return (
-        <group ref={groupRef} position={[0, -2, 0]} rotation={[0, 0, 0]} scale={2.5}>
+        <group ref={groupRef} position={[0, -2, 0]} rotation={[0, Math.PI / 2, 0]} scale={2.5}>
             <primitive object={scene} />
         </group>
     );

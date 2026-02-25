@@ -6,12 +6,12 @@ import { FaHeartbeat, FaRunning, FaDumbbell, FaApple, FaStrava, FaGoogle } from 
 
 // Add new apps here to dynamically render them
 const APPS = [
-    { id: 'fit', Icon: FaGoogle, color: '#EA4335', x: 15, y: 20 },
-    { id: 'apple', Icon: FaApple, color: '#000000', x: 80, y: 15 },
-    { id: 'strava', Icon: FaStrava, color: '#FC4C02', x: 10, y: 70 },
-    { id: 'heart', Icon: FaHeartbeat, color: '#E91E63', x: 35, y: 10 },
-    { id: 'run', Icon: FaRunning, color: '#FF9800', x: 65, y: 30 },
-    { id: 'gym', Icon: FaDumbbell, color: '#9E9E9E', x: 25, y: 45 },
+    { id: 'fit', Icon: FaGoogle, color: '#EA4335', x: 20, y: 30 },
+    { id: 'apple', Icon: FaApple, color: '#000000', x: 5, y: 50 },
+    { id: 'strava', Icon: FaStrava, color: '#FC4C02', x: 15, y: 70 },
+    { id: 'heart', Icon: FaHeartbeat, color: '#E91E63', x: 80, y: 30 },
+    { id: 'run', Icon: FaRunning, color: '#FF9800', x: 95, y: 50 },
+    { id: 'gym', Icon: FaDumbbell, color: '#9E9E9E', x: 85, y: 70 },
 ];
 
 export function FloatingIcons() {
