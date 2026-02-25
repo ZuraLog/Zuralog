@@ -53,7 +53,7 @@ const FOUNDERS = [
     role: 'Co-Founder · CEO & CTO',
     initials: 'HB',
     photoPath: '/founders/hyowon.jpg',
-    bio: "Hyowon studied Computer Science with one goal: build things that actually solve problems. He's the kind of person who can't see friction without immediately wanting to automate it away. ZuraLog started as one of those ideas — a tool he wanted for himself, to make sense of all the health data scattered across his apps. If it makes life easier for everyone else too, even better.",
+    bio: "Hyowon is a programmer and Computer Science graduate who builds things with one goal in mind — solve real problems. He can't see friction without wanting to automate it away. ZuraLog started as one of those ideas: a tool he wanted for himself, to make sense of all the health data scattered across his apps. If it makes life easier for everyone else too, even better.",
     linkedin: 'https://linkedin.com/in/hyowon-bernabe',
   },
   {
@@ -61,7 +61,7 @@ const FOUNDERS = [
     role: 'Co-Founder · CEO & CFO',
     initials: 'FL',
     photoPath: '/founders/fernando.jpg',
-    bio: "Fernando is a born builder. He spent years working in the health space and kept running into the same wall — great data, zero clarity. He knows what it feels like to be deep in the fitness game and still not have a straight answer about why things aren't working. ZuraLog is the thing he wishes had existed. Now he's making sure it does.",
+    bio: "Fernando is a programmer and a born builder. He spent years working in the health space and kept running into the same wall — great data, zero clarity. He knows what it feels like to be deep in the fitness game and still not have a straight answer about why things aren't working. ZuraLog is the thing he wishes had existed. Now he's making sure it does.",
     linkedin: 'https://www.linkedin.com/in/fernando-leano-7221b13b3/',
   },
 ];
