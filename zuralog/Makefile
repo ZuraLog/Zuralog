@@ -1,48 +1,34 @@
 # =============================================================================
-# Zuralog Flutter — Makefile
+# Zuralog Flutter — Makefile (delegation shim)
 # =============================================================================
-# Flutter targets for running inside the zuralog/ directory.
-# Secrets are loaded from ../cloud-brain/.env automatically.
+# All Flutter targets live in the root Makefile one level up.
+# This shim lets you run `make run`, `make analyze`, etc. from inside the
+# zuralog/ directory without having to cd to the project root first.
 # =============================================================================
 
 SHELL := /bin/bash
 
-# Load GOOGLE_WEB_CLIENT_ID from the cloud-brain .env one level up
-GOOGLE_WEB_CLIENT_ID := $(shell grep -m1 '^GOOGLE_WEB_CLIENT_ID=' ../cloud-brain/.env | cut -d '=' -f2-)
+ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 .PHONY: run run-ios run-device analyze test build-apk build-appbundle
 
-## Run on Android emulator (default)
 run:
-	flutter run \
-		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
+	"$(MAKE)" -C "$(ROOT)/.." run
 
-## Run on iOS Simulator
 run-ios:
-	flutter run \
-		--dart-define=BASE_URL=http://localhost:8001 \
-		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
+	"$(MAKE)" -C "$(ROOT)/.." run-ios
 
-## Run on a physical device (update BASE_URL to your machine's LAN IP)
 run-device:
-	flutter run \
-		--dart-define=BASE_URL=http://192.168.1.100:8001 \
-		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
+	"$(MAKE)" -C "$(ROOT)/.." run-device
 
-## Run static analysis (zero warnings policy)
 analyze:
-	flutter analyze
+	"$(MAKE)" -C "$(ROOT)/.." analyze
 
-## Run Flutter tests
 test:
-	flutter test
+	"$(MAKE)" -C "$(ROOT)/.." test
 
-## Build a debug APK
 build-apk:
-	flutter build apk --debug \
-		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
+	"$(MAKE)" -C "$(ROOT)/.." build-apk
 
-## Build a release App Bundle for Play Store submission
 build-appbundle:
-	flutter build appbundle --release \
-		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
+	"$(MAKE)" -C "$(ROOT)/.." build-appbundle
