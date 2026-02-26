@@ -41,7 +41,7 @@ async def strava_authorize(request: Request) -> dict[str, str]:
         "redirect_uri": settings.strava_redirect_uri,
         "response_type": "code",
         "approval_prompt": "auto",
-        "scope": "read,activity:read,activity:write",
+        "scope": "read,activity:read_all,activity:write,profile:read_all",
     }
     auth_url = f"https://www.strava.com/oauth/authorize?{urllib.parse.urlencode(params)}"
     return {"auth_url": auth_url}

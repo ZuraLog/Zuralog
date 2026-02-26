@@ -36,7 +36,7 @@ def test_strava_authorize():
         assert "auth_url" in data
         assert "https://www.strava.com/oauth/authorize" in data["auth_url"]
         assert "response_type=code" in data["auth_url"]
-        assert "scope=read%2Cactivity%3Aread%2Cactivity%3Awrite" in data["auth_url"]
+        assert "scope=read%2Cactivity%3Aread_all%2Cactivity%3Awrite%2Cprofile%3Aread_all" in data["auth_url"]
 
 
 @patch("httpx.AsyncClient.post")
@@ -108,3 +108,12 @@ def test_strava_exchange_network_error(mock_post: AsyncMock, client_with_auth):
 
     assert response.status_code == 503
     assert "Could not reach Strava API" in response.json()["detail"]
+
+
+def test_strava_authorize_includes_expanded_scopes():
+    """Verify auth URL includes activity:read_all and profile:read_all."""
+    with TestClient(app) as client:
+        response = client.get("/api/v1/integrations/strava/authorize")
+        auth_url = response.json()["auth_url"]
+        assert "activity%3Aread_all" in auth_url or "activity:read_all" in auth_url
+        assert "profile%3Aread_all" in auth_url or "profile:read_all" in auth_url
