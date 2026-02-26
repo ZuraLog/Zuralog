@@ -698,25 +698,45 @@ export function BentoSection() {
                         >
                             <div
                                 className="absolute flex flex-row gap-4"
-                                style={{ width: "400%", height: "350%", top: "-130%", left: "-125%", transform: "rotate(45deg)", justifyContent: "center" }}
+                                style={{ width: "420%", height: "420%", top: "-160%", left: "-130%", transform: "rotate(45deg)", justifyContent: "center" }}
                             >
                                 {[0, 1, 2, 3, 4, 5, 6].map(colIndex => {
                                     const speedClass = colIndex % 3 === 0 ? 'animate-drift-slow' : colIndex % 3 === 1 ? 'animate-drift-mid' : 'animate-drift-fast';
+                                    // Each icon: w-16 h-16 = 64px, gap-4 = 16px between items
+                                    // One half height (measured in browser) = 1597px
+                                    // Gap between the two halves (gap-4) = 16px
+                                    // Drift = 1597 + 16 = 1613px for a perfectly seamless loop
+                                    const halfHeight = 1613;
+                                    const icons = APPS.map((app, i) => (
+                                        <div
+                                            key={i}
+                                            className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
+                                            style={{ transform: "rotate(-45deg) translateZ(0)" }}
+                                        >
+                                            <app.Icon size={28} color={app.color} />
+                                        </div>
+                                    ));
                                     return (
+                                        // Outer column: no animation, just positions the strip
                                         <div
                                             key={colIndex}
-                                            className={`integrations-column flex flex-col gap-4 w-max ${speedClass}`}
-                                            style={{ marginTop: colIndex % 2 !== 0 ? '60px' : '0px', willChange: 'transform' }}
+                                            className="integrations-column flex flex-col w-max"
+                                            style={{ marginTop: colIndex % 2 !== 0 ? '60px' : '0px' }}
+                                            aria-hidden="true"
                                         >
-                                             {[...APPS, ...APPS].map((app, i) => (
-                                                <div
-                                                    key={`${colIndex}-${i}`}
-                                                    className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
-                                                    style={{ transform: "rotate(-45deg) translateZ(0)" }}
-                                                >
-                                                    <app.Icon size={28} color={app.color} />
-                                                </div>
-                                            ))}
+                                            {/* Animated strip: translates by exactly -halfHeight px for gapless loop */}
+                                            <div
+                                                className={`flex flex-col gap-4 ${speedClass}`}
+                                                style={{
+                                                    willChange: 'transform',
+                                                    ['--drift-distance' as string]: `-${halfHeight}px`,
+                                                }}
+                                            >
+                                                {/* Half A */}
+                                                <div className="flex flex-col gap-4">{icons}</div>
+                                                {/* Half B — exact duplicate so loop is seamless */}
+                                                <div className="flex flex-col gap-4">{icons}</div>
+                                            </div>
                                         </div>
                                     );
                                 })}

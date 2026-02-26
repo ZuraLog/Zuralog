@@ -54,11 +54,14 @@ body {
 ───────────────────────────────────────────────────────────── */
 @keyframes diagonalDrift {
   0%   { transform: translateY(0); }
-  100% { transform: translateY(-50%); }
+  100% { transform: translateY(var(--drift-distance, -1598px)); }
 }
-.animate-drift-slow { animation: diagonalDrift 18s linear infinite; }
-.animate-drift-mid  { animation: diagonalDrift 14s linear infinite; }
-.animate-drift-fast { animation: diagonalDrift 10s linear infinite; }
+/* Animate the inner strip by a fixed px equal to one half's height.
+   Each column renders [half-A][half-B] inside .drift-strip; the strip scrolls
+   by exactly -half-height so it loops back to the start without any jump. */
+.animate-drift-slow { animation: diagonalDrift 22s linear infinite; }
+.animate-drift-mid  { animation: diagonalDrift 16s linear infinite; }
+.animate-drift-fast { animation: diagonalDrift 11s linear infinite; }
 
 /* ─────────────────────────────────────────────────────────────
    Bento Section — Unified Dashboard card: metric tile float
