@@ -25,7 +25,7 @@
  *   - GSAP scroll-triggered entrance with spring physics
  */
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
@@ -108,6 +108,7 @@ interface LeaderboardEntry {
 
 export function BentoSection() {
     const sectionRef = useRef<HTMLElement>(null);
+    const listenersRef = useRef<Array<{ el: Element; event: string; fn: EventListener }>>([]);
 
     // ── Live waitlist data ──────────────────────────────────────────
     const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -140,6 +141,20 @@ export function BentoSection() {
 
         void fetchStats();
         void fetchLeaderboard();
+    }, []);
+
+    const addTrackedListener = useCallback((el: Element, event: string, fn: EventListener) => {
+        el.addEventListener(event, fn);
+        listenersRef.current.push({ el, event, fn });
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            listenersRef.current.forEach(({ el, event, fn }) => {
+                el.removeEventListener(event, fn);
+            });
+            listenersRef.current = [];
+        };
     }, []);
 
     // When totalUsers resolves after the GSAP entrance already ran, update the counter.
@@ -275,37 +290,44 @@ export function BentoSection() {
                 });
 
                 const sheen = card1.querySelector('.connect-sheen');
-                card1.addEventListener('mouseenter', () => {
+                addTrackedListener(card1, 'mouseenter', () => {
                     gsap.fromTo(sheen, { left: "-100%" }, { left: "200%", duration: 1.2, ease: "power2.inOut" });
                 });
 
-                card1.addEventListener('mousemove', (e) => {
-                    const event = e as MouseEvent;
-                    const rect = card1.getBoundingClientRect();
-                    const rx = event.clientX - rect.left;
-                    const ry = event.clientY - rect.top;
+                let card1RafId = 0;
+                const card1MouseMove = (e: Event) => {
+                    if (card1RafId) return;
+                    card1RafId = requestAnimationFrame(() => {
+                        card1RafId = 0;
+                        const event = e as MouseEvent;
+                        const rect = card1.getBoundingClientRect();
+                        const rx = event.clientX - rect.left;
+                        const ry = event.clientY - rect.top;
 
-                    pills.forEach(pill => {
-                        const pillRect = pill.getBoundingClientRect();
-                        const px = pillRect.left - rect.left + pillRect.width / 2;
-                        const py = pillRect.top - rect.top + pillRect.height / 2;
-                        const dx = px - rx;
-                        const dy = py - ry;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        pills.forEach(pill => {
+                            const pillRect = pill.getBoundingClientRect();
+                            const px = pillRect.left - rect.left + pillRect.width / 2;
+                            const py = pillRect.top - rect.top + pillRect.height / 2;
+                            const dx = px - rx;
+                            const dy = py - ry;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
 
-                        if (dist < 100) {
-                            const force = (100 - dist) / 100;
-                            gsap.to(pill, {
-                                x: (dx / dist) * force * 20,
-                                y: (dy / dist) * force * 20 - 5,
-                                duration: 0.3, ease: "power2.out"
-                            });
-                        } else {
-                            gsap.to(pill, { x: 0, duration: 0.6, ease: "power2.out" });
-                        }
+                            if (dist < 100) {
+                                const force = (100 - dist) / 100;
+                                gsap.to(pill, {
+                                    x: (dx / dist) * force * 20,
+                                    y: (dy / dist) * force * 20 - 5,
+                                    duration: 0.3, ease: "power2.out"
+                                });
+                            } else {
+                                gsap.to(pill, { x: 0, duration: 0.6, ease: "power2.out" });
+                            }
+                        });
                     });
-                });
-                card1.addEventListener('mouseleave', () => {
+                };
+                addTrackedListener(card1, 'mousemove', card1MouseMove);
+                addTrackedListener(card1, 'mouseleave', () => {
+                    if (card1RafId) { cancelAnimationFrame(card1RafId); card1RafId = 0; }
                     gsap.to(pills, { x: 0, duration: 0.8, ease: "elastic.out(1, 0.4)" });
                 });
             }
@@ -364,11 +386,11 @@ export function BentoSection() {
 
                 const expandMask = card2.querySelector('.waitlist-hover-mask');
                 if (expandMask) {
-                    card2.addEventListener('mouseenter', () => {
+                    addTrackedListener(card2, 'mouseenter', () => {
                         gsap.fromTo(expandMask, { opacity: 0 }, { opacity: 1, duration: 0.3 });
                         gsap.to(entries, { x: 5, duration: 0.3, stagger: 0.05, ease: "power1.out" });
                     });
-                    card2.addEventListener('mouseleave', () => {
+                    addTrackedListener(card2, 'mouseleave', () => {
                         gsap.to(expandMask, { opacity: 0, duration: 0.3 });
                         gsap.to(entries, { x: 0, duration: 0.3, stagger: -0.05, ease: "power1.out" });
                     });
@@ -417,23 +439,29 @@ export function BentoSection() {
 
             /** Attach the magnetic tilt effect to a single card element */
             const attachTilt = (card: Element) => {
+                let rafId = 0;
                 const onMove = (e: Event) => {
-                    const ev = e as MouseEvent;
-                    const rect = card.getBoundingClientRect();
-                    const cx = rect.left + rect.width / 2;
-                    const cy = rect.top + rect.height / 2;
-                    const dx = ev.clientX - cx;
-                    const dy = ev.clientY - cy;
-                    gsap.to(card, {
-                        rotateX: (-dy / (rect.height / 2)) * MAX_TILT,
-                        rotateY: (dx / (rect.width / 2)) * MAX_TILT,
-                        transformPerspective: 900,
-                        duration: 0.35,
-                        ease: "power2.out",
+                    if (rafId) return;
+                    rafId = requestAnimationFrame(() => {
+                        rafId = 0;
+                        const ev = e as MouseEvent;
+                        const rect = card.getBoundingClientRect();
+                        const cx = rect.left + rect.width / 2;
+                        const cy = rect.top + rect.height / 2;
+                        const dx = ev.clientX - cx;
+                        const dy = ev.clientY - cy;
+                        gsap.to(card, {
+                            rotateX: (-dy / (rect.height / 2)) * MAX_TILT,
+                            rotateY: (dx / (rect.width / 2)) * MAX_TILT,
+                            transformPerspective: 900,
+                            duration: 0.35,
+                            ease: "power2.out",
+                        });
                     });
                 };
 
                 const onLeave = () => {
+                    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
                     gsap.to(card, {
                         rotateX: 0,
                         rotateY: 0,
@@ -442,8 +470,8 @@ export function BentoSection() {
                     });
                 };
 
-                card.addEventListener("mousemove", onMove);
-                card.addEventListener("mouseleave", onLeave);
+                addTrackedListener(card, "mousemove", onMove);
+                addTrackedListener(card, "mouseleave", onLeave);
             };
 
             const tiltSelectors = [
@@ -672,15 +700,15 @@ export function BentoSection() {
                                 className="absolute flex flex-row gap-4"
                                 style={{ width: "350%", height: "300%", top: "-100%", left: "-100%", transform: "rotate(45deg)", justifyContent: "center" }}
                             >
-                                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(colIndex => {
+                                {[0, 1, 2, 3, 4, 5, 6].map(colIndex => {
                                     const speedClass = colIndex % 3 === 0 ? 'animate-drift-slow' : colIndex % 3 === 1 ? 'animate-drift-mid' : 'animate-drift-fast';
                                     return (
                                         <div
                                             key={colIndex}
                                             className={`integrations-column flex flex-col gap-4 w-max h-max ${speedClass}`}
-                                            style={{ marginTop: colIndex % 2 !== 0 ? '40px' : '0px', willChange: "transform" }}
+                                            style={{ marginTop: colIndex % 2 !== 0 ? '40px' : '0px' }}
                                         >
-                                            {[...APPS, ...APPS, ...APPS].map((app, i) => (
+                                             {[...APPS, ...APPS].map((app, i) => (
                                                 <div
                                                     key={`${colIndex}-${i}`}
                                                     className="w-14 h-14 rounded-2xl bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
