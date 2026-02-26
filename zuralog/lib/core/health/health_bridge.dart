@@ -366,6 +366,138 @@ class HealthBridge {
     }
   }
 
+  /// Fetches total walking + running distance for a specific [date] in meters.
+  Future<double> getDistance(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getDistance', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble() ?? 0.0;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getDistance PlatformException: ${e.message}');
+        return true;
+      }());
+      return 0.0;
+    }
+  }
+
+  /// Fetches total flights of stairs climbed for a specific [date].
+  Future<double> getFlights(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getFlights', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble() ?? 0.0;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getFlights PlatformException: ${e.message}');
+        return true;
+      }());
+      return 0.0;
+    }
+  }
+
+  /// Fetches the most recent body fat percentage (0-100).
+  Future<double?> getBodyFat() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getBodyFat');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getBodyFat PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent respiratory rate in breaths-per-minute.
+  Future<double?> getRespiratoryRate() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getRespiratoryRate');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getRespiratoryRate PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent blood oxygen saturation (SpO2) percentage (0-100).
+  Future<double?> getOxygenSaturation() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getOxygenSaturation');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getOxygenSaturation PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent instantaneous heart rate in beats-per-minute.
+  Future<double?> getHeartRate() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getHeartRate');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getHeartRate PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent blood pressure reading.
+  ///
+  /// Returns a Map with `systolic`, `diastolic`, and `date` (ms).
+  Future<Map<String, dynamic>?> getBloodPressure() async {
+    try {
+      final result = await _channel.invokeMapMethod<String, dynamic>(
+        'getBloodPressure',
+      );
+      return result;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getBloodPressure PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Manually triggers a native background sync for a specific [type].
+  /// Used by FCM 'read_health' action.
+  Future<bool> triggerSync(String type) async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'triggerSync',
+        {'type': type},
+      );
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.triggerSync PlatformException: ${e.message}');
+        return true;
+      }());
+      return false;
+    }
+  }
+
   /// Stores the JWT auth token and Cloud Brain API base URL in the iOS
   /// Keychain so that native background sync code (running in
   /// HKObserverQuery callbacks outside the Flutter engine) can

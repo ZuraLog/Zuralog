@@ -65,3 +65,7 @@ class DailyHealthMetrics(Base):
     # Extended metrics (distance + floors — Phase 6 adds more)
     distance_meters = Column(Float, nullable=True)
     flights_climbed = Column(Integer, nullable=True)
+    body_fat_percentage = Column(Float, nullable=True)
+    respiratory_rate = Column(Float, nullable=True)
+    oxygen_saturation = Column(Float, nullable=True)
+    heart_rate_avg = Column(Float, nullable=True)

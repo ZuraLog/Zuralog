@@ -508,11 +508,23 @@ class HealthKitBridge: NSObject {
         let stepType = HKQuantityType(.stepCount)
         let workoutType = HKWorkoutType.workoutType()
         let sleepType = HKCategoryType(.sleepAnalysis)
+        let calorieType = HKQuantityType(.activeEnergyBurned)
+        let nutritionType = HKQuantityType(.dietaryEnergyConsumed)
+        let weightType = HKQuantityType(.bodyMass)
+        let rhrType = HKQuantityType(.restingHeartRate)
+        let hrvType = HKQuantityType(.heartRateVariabilitySDNN)
+        let vo2Type = HKQuantityType(.vo2Max)
 
         let typesToObserve: [(HKSampleType, String)] = [
             (stepType, "steps"),
             (workoutType, "workouts"),
             (sleepType, "sleep"),
+            (calorieType, "calories"),
+            (nutritionType, "nutrition"),
+            (weightType, "weight"),
+            (rhrType, "resting_heart_rate"),
+            (hrvType, "hrv"),
+            (vo2Type, "vo2_max"),
         ]
 
         // Track whether all background delivery registrations succeed.
@@ -554,6 +566,12 @@ class HealthKitBridge: NSObject {
         group.notify(queue: .main) {
             completion(allSucceeded)
         }
+    }
+
+    /// Manually triggers a native background sync for a specific type.
+    /// Used by the platform channel to satisfy FCM 'read_health' requests.
+    func triggerSync(type: String) {
+        notifyOfChange(type: type)
     }
 
     /// Called when an HKObserverQuery fires due to new data.

@@ -26,6 +26,7 @@ from app.models.health_data import (
     UnifiedActivity,
     WeightMeasurement,
 )
+from app.models.user_device import UserDevice
 
 logger = logging.getLogger(__name__)
 
@@ -473,10 +474,18 @@ class AppleHealthServer(BaseMCPServer):
                 error=f"Missing required parameters: {', '.join(missing)}",
             )
 
+        if not self._db_factory:
+            return ToolResult(
+                success=False,
+                error="Database not configured. The server is not fully initialised.",
+            )
+
         if not self._device_write_service:
             return ToolResult(
                 success=False,
-                error=("Write service not configured. Device write operations are not available in this environment."),
+                error=(
+                    "Write service not configured. Device write operations are not available in this environment."
+                ),
             )
 
         data_type = params["data_type"]
@@ -484,23 +493,67 @@ class AppleHealthServer(BaseMCPServer):
         date = params["date"]
         metadata = params.get("metadata", {})
 
-        # TODO(dev): Look up user's device FCM token from the user_devices table
-        # and call device_write_service.send_write_request(device_token, ...).
-        # For now we return a pending status — full wiring is in Task 5.3.
-        logger.info(
-            "apple_health write_entry: queued %s for user %s (FCM token lookup pending)",
-            data_type,
-            user_id,
-        )
-        return ToolResult(
-            success=True,
-            data={
-                "status": "pending_device_sync",
-                "message": (
-                    f"Write request for '{data_type}' queued. Full FCM dispatch will be wired in the next phase."
-                ),
-                "data_type": data_type,
-                "value": value,
+        # Prepare value dict for the device
+        value_dict = {"value": value, "date": date}
+        if data_type == "nutrition":
+            value_dict = {"calories": value, "date": date}
+        elif data_type == "weight":
+            value_dict = {"weight_kg": value, "date": date}
+        elif data_type == "workout":
+            value_dict = {
+                "calories": value,
+                "activity_type": metadata.get("activity_type", "running"),
+                "duration_seconds": metadata.get("duration_seconds", 1800),
                 "date": date,
-            },
-        )
+            }
+
+        try:
+            async with self._db_factory() as db:
+                # Look up user's most recent iOS device token
+                result = await db.execute(
+                    select(UserDevice)
+                    .where(
+                        UserDevice.user_id == user_id,
+                        UserDevice.platform == "ios",
+                    )
+                    .order_by(UserDevice.last_seen_at.desc())
+                    .limit(1)
+                )
+                device = result.scalar_one_or_none()
+
+                if not device:
+                    return ToolResult(
+                        success=False,
+                        error="No registered iOS device found for this user. Cannot perform Apple Health write.",
+                    )
+
+                # Call device_write_service.send_write_request(device_token, data_type, value_dict)
+                success = self._device_write_service.send_write_request(
+                    device_token=device.fcm_token,
+                    data_type=data_type,
+                    value_dict=value_dict,
+                )
+
+                if not success:
+                    return ToolResult(
+                        success=False,
+                        error="Failed to dispatch FCM write request to device.",
+                    )
+
+                logger.info(
+                    "apple_health write_entry: dispatched %s for user %s to device %s",
+                    data_type,
+                    user_id,
+                    device.id,
+                )
+                return ToolResult(
+                    success=True,
+                    data={
+                        "status": "dispatched",
+                        "message": f"Write request for '{data_type}' dispatched to your iOS device.",
+                        "device_id": device.id,
+                    },
+                )
+        except Exception as exc:
+            logger.exception("apple_health write_entry failed for user %s: %s", user_id, exc)
+            return ToolResult(success=False, error=str(exc))

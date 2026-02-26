@@ -234,6 +234,79 @@ import UIKit
                 }
             }
 
+        case "getDistance":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchDistance(date: date) { dist, error in
+                if let error = error {
+                    result(FlutterError(code: "DISTANCE_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(dist ?? 0.0)
+                }
+            }
+
+        case "getFlights":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchFlights(date: date) { count, error in
+                if let error = error {
+                    result(FlutterError(code: "FLIGHTS_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(count ?? 0.0)
+                }
+            }
+
+        case "getBodyFat":
+            healthKitBridge.fetchBodyFat { pct, error in
+                if let error = error {
+                    result(FlutterError(code: "BODYFAT_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(pct)
+                }
+            }
+
+        case "getRespiratoryRate":
+            healthKitBridge.fetchRespiratoryRate { rate, error in
+                if let error = error {
+                    result(FlutterError(code: "RR_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(rate)
+                }
+            }
+
+        case "getOxygenSaturation":
+            healthKitBridge.fetchOxygenSaturation { pct, error in
+                if let error = error {
+                    result(FlutterError(code: "OXY_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(pct)
+                }
+            }
+
+        case "getHeartRate":
+            healthKitBridge.fetchHeartRate { bpm, error in
+                if let error = error {
+                    result(FlutterError(code: "HR_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(bpm)
+                }
+            }
+
+        case "getBloodPressure":
+            healthKitBridge.fetchBloodPressure { data, error in
+                if let error = error {
+                    result(FlutterError(code: "BP_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(data)
+                }
+            }
+
         case "configureBackgroundSync":
             // Persists the JWT auth token and Cloud Brain API URL to the iOS
             // Keychain so native background observers can sync without Flutter.
@@ -325,6 +398,19 @@ import UIKit
                                    message: "Unknown backgroundWrite type: \(dataType)",
                                    details: nil))
             }
+
+        case "triggerSync":
+            // Manually triggers a native background sync for a specific type.
+            // Used by FCM 'read_health' action.
+            guard let args = call.arguments as? [String: Any],
+                  let type = args["type"] as? String else {
+                result(FlutterError(code: "BAD_ARGS",
+                                   message: "triggerSync requires type",
+                                   details: nil))
+                return
+            }
+            healthKitBridge.triggerSync(type: type)
+            result(true)
 
         default:
             result(FlutterMethodNotImplemented)

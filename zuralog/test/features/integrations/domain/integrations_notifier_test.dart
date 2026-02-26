@@ -9,15 +9,65 @@
 ///   - Does not affect non-health integrations
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 import 'package:zuralog/features/integrations/data/oauth_repository.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
+
+/// A [SecureStorage] fake.
+class _FakeSecureStorage implements SecureStorage {
+  final Map<String, String> _storage = {};
+
+  @override
+  Future<void> write(String key, String value) async => _storage[key] = value;
+  @override
+  Future<String?> read(String key) async => _storage[key];
+  @override
+  Future<void> delete(String key) async => _storage.remove(key);
+  @override
+  Future<void> saveAuthToken(String token) async => write('auth_token', token);
+  @override
+  Future<String?> getAuthToken() async => read('auth_token');
+  @override
+  Future<void> clearAuthToken() async => delete('auth_token');
+  @override
+  Future<void> saveIntegrationToken(String provider, String token) async =>
+      write('integration_$provider', token);
+  @override
+  Future<String?> getIntegrationToken(String provider) async =>
+      read('integration_$provider');
+}
+
+/// A [ApiClient] fake.
+class _FakeApiClient implements ApiClient {
+  @override
+  String get baseUrl => 'https://api.test.com';
+
+  @override
+  void Function()? get onUnauthenticated => null;
+
+  @override
+  Future<Response<dynamic>> get(String path, {Map<String, dynamic>? queryParameters}) async =>
+      throw UnimplementedError();
+  @override
+  Future<Response<dynamic>> post(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async =>
+      throw UnimplementedError();
+  @override
+  Future<Response<dynamic>> patch(String path, {Map<String, dynamic>? body}) async =>
+      throw UnimplementedError();
+
+  @override
+  // ignore: unused_element
+  static String friendlyError(DioException e) => '';
+}
 
 /// A [HealthRepository] fake with configurable return values.
 ///
@@ -77,6 +127,11 @@ class _FakeHealthRepository implements HealthRepository {
   }) async => false;
   @override
   Future<bool> startBackgroundObservers() async => false;
+  @override
+  Future<bool> configureBackgroundSync({
+    required String authToken,
+    required String apiBaseUrl,
+  }) async => true;
 }
 
 /// A [OAuthRepository] fake.
@@ -102,10 +157,14 @@ class _FakeOAuthRepository implements OAuthRepository {
 IntegrationsNotifier _makeNotifier({
   _FakeHealthRepository? health,
   _FakeOAuthRepository? oauth,
+  _FakeSecureStorage? secureStorage,
+  _FakeApiClient? apiClient,
 }) {
   return IntegrationsNotifier(
     oauthRepository: oauth ?? _FakeOAuthRepository(),
     healthRepository: health ?? _FakeHealthRepository(),
+    secureStorage: secureStorage ?? _FakeSecureStorage(),
+    apiClient: apiClient ?? _FakeApiClient(),
   );
 }
 
