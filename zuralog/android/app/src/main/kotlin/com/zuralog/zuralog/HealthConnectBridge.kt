@@ -15,9 +15,16 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -65,6 +72,14 @@ class HealthConnectBridge(private val context: Context) {
             HealthPermission.getReadPermission(RestingHeartRateRecord::class),
             HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
             HealthPermission.getReadPermission(Vo2MaxRecord::class),
+            // Phase 3 additions
+            HealthPermission.getReadPermission(DistanceRecord::class),
+            HealthPermission.getReadPermission(FloorsClimbedRecord::class),
+            HealthPermission.getReadPermission(BodyFatRecord::class),
+            HealthPermission.getReadPermission(RespiratoryRateRecord::class),
+            HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+            HealthPermission.getReadPermission(HeartRateRecord::class),
+            HealthPermission.getReadPermission(BloodPressureRecord::class),
         )
 
         /**
@@ -369,6 +384,193 @@ class HealthConnectBridge(private val context: Context) {
             response.records.maxByOrNull { it.time }?.vo2MillilitersPerMinuteKilogram
         } catch (e: Exception) {
             Log.e(TAG, "readCardioFitness failed", e)
+            null
+        }
+    }
+
+    /// Reads total distance traveled for a given date (midnight to midnight).
+    ///
+    /// Sums all `DistanceRecord` entries within the day window.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Total distance in meters, or null if no data.
+    suspend fun readDistance(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = DistanceRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            val total = response.records.sumOf { it.distance.inMeters }
+            if (total == 0.0) null else total
+        } catch (e: Exception) {
+            Log.e(TAG, "readDistance failed", e)
+            null
+        }
+    }
+
+    /// Reads total floors climbed for a given date (midnight to midnight).
+    ///
+    /// Sums all `FloorsClimbedRecord` entries within the day window.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Total floors climbed as Double, or null if no data.
+    suspend fun readFloors(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = FloorsClimbedRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            val total = response.records.sumOf { it.floors }
+            if (total == 0.0) null else total
+        } catch (e: Exception) {
+            Log.e(TAG, "readFloors failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent body fat percentage record.
+    ///
+    /// Returns: Body fat as a percentage (0–100), or null if no data.
+    suspend fun readBodyFat(): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val now = Instant.now()
+            val ninetyDaysAgo = now.minusSeconds(90L * 24 * 3600)
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = BodyFatRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(ninetyDaysAgo, now)
+                )
+            )
+            response.records.maxByOrNull { it.time }?.percentage?.value
+        } catch (e: Exception) {
+            Log.e(TAG, "readBodyFat failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent respiratory rate record.
+    ///
+    /// Returns: Respiratory rate in breaths per minute, or null if no data.
+    suspend fun readRespiratoryRate(): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val now = Instant.now()
+            val thirtyDaysAgo = now.minusSeconds(30L * 24 * 3600)
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = RespiratoryRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(thirtyDaysAgo, now)
+                )
+            )
+            response.records.maxByOrNull { it.time }?.rate
+        } catch (e: Exception) {
+            Log.e(TAG, "readRespiratoryRate failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent blood oxygen saturation (SpO2) record.
+    ///
+    /// Returns: Oxygen saturation as a percentage (0–100), or null if no data.
+    suspend fun readOxygenSaturation(): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val now = Instant.now()
+            val thirtyDaysAgo = now.minusSeconds(30L * 24 * 3600)
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = OxygenSaturationRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(thirtyDaysAgo, now)
+                )
+            )
+            response.records.maxByOrNull { it.time }?.percentage?.value
+        } catch (e: Exception) {
+            Log.e(TAG, "readOxygenSaturation failed", e)
+            null
+        }
+    }
+
+    /// Reads heart rate samples for a given date, returning the average BPM.
+    ///
+    /// `HeartRateRecord` contains a list of `samples` (each with a BPM value).
+    /// This method flattens all samples from the day and returns the mean.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Average heart rate in BPM as Double, or null if no data.
+    suspend fun readHeartRate(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = HeartRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            val allSamples = response.records.flatMap { it.samples }
+            if (allSamples.isEmpty()) return null
+            allSamples.map { it.beatsPerMinute.toDouble() }.average()
+        } catch (e: Exception) {
+            Log.e(TAG, "readHeartRate failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent blood pressure record, returning systolic and diastolic.
+    ///
+    /// Returns: Map with "systolic" and "diastolic" keys (mmHg), or null if no data.
+    suspend fun readBloodPressure(): Map<String, Double>? {
+        val hcClient = client ?: return null
+        return try {
+            val now = Instant.now()
+            val thirtyDaysAgo = now.minusSeconds(30L * 24 * 3600)
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = BloodPressureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(thirtyDaysAgo, now)
+                )
+            )
+            val latest = response.records.maxByOrNull { it.time } ?: return null
+            mapOf(
+                "systolic" to latest.systolic.inMillimetersOfMercury,
+                "diastolic" to latest.diastolic.inMillimetersOfMercury,
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "readBloodPressure failed", e)
             null
         }
     }

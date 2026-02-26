@@ -304,6 +304,34 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           _setStatus(integrationId, newStatus);
           if (granted) {
             await _saveConnectedState(integrationId, connected: true);
+            // Persist JWT to EncryptedSharedPreferences so HealthSyncWorker
+            // can authenticate with the Cloud Brain in the background.
+            if (_secureStorage != null && _apiClient != null) {
+              final authToken = await _secureStorage.getAuthToken();
+              if (authToken != null) {
+                await _healthRepository.configureBackgroundSync(
+                  authToken: authToken,
+                  apiBaseUrl: _apiClient.baseUrl,
+                );
+                debugPrint(
+                  '[IntegrationsNotifier] HC configureBackgroundSync completed',
+                );
+              }
+            }
+            // Schedule the WorkManager periodic sync task.
+            await _healthRepository.startBackgroundObservers();
+            // Trigger initial 30-day sync to populate Cloud Brain.
+            // Fire-and-forget — sync runs in background; UI doesn't wait.
+            if (_healthSyncService != null) {
+              unawaited(
+                _healthSyncService.syncToCloud(days: 30).then((success) {
+                  debugPrint(
+                    '[IntegrationsNotifier] Initial Health Connect sync '
+                    '${success ? 'succeeded' : 'failed'}',
+                  );
+                }),
+              );
+            }
           }
         default:
           // Not yet implemented — show coming soon feedback.

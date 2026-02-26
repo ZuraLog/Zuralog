@@ -75,7 +75,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             device_write_service=device_write_svc,
         )
     )
-    registry.register(HealthConnectServer())
+    registry.register(
+        HealthConnectServer(
+            db_factory=async_session,
+            device_write_service=device_write_svc,
+        )
+    )
     # Phase 1.7: DB-backed token service wired into StravaServer
     strava_token_service = StravaTokenService()
     strava_server = StravaServer(

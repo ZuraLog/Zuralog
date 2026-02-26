@@ -8,6 +8,8 @@
 /// - Background sync triggers (via FCM or native observers)
 library;
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
@@ -83,8 +85,12 @@ class HealthSyncService {
 
       final todayStr = _isoDate(today);
 
+      // Use the correct source name for each platform so the Cloud Brain
+      // DB and deduplication engine know the origin of the data.
+      final source = Platform.isAndroid ? 'health_connect' : 'apple_health';
+
       final payload = <String, dynamic>{
-        'source': 'apple_health',
+        'source': source,
         'daily_metrics': [
           {
             'date': todayStr,

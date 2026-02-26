@@ -1,9 +1,14 @@
 """Tests for HealthConnectServer MCP server.
 
 Verifies tool definitions, execute_tool routing, typed returns,
-and edge cases (unknown tools, missing params). Mirrors the
-test structure from test_apple_health_server.py.
+and edge cases (unknown tools, missing params, missing db_factory).
+Mirrors the test structure from test_apple_health_server.py.
 """
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -13,8 +18,25 @@ from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
 
 @pytest.fixture
 def server() -> HealthConnectServer:
-    """Create a fresh HealthConnectServer instance."""
+    """Create a fresh HealthConnectServer with no dependencies (stub mode)."""
     return HealthConnectServer()
+
+
+@pytest.fixture
+def server_with_db() -> HealthConnectServer:
+    """Create a HealthConnectServer with a mock db_factory that returns empty results."""
+
+    mock_db = AsyncMock()
+    # make execute() return a result whose scalars().all() returns []
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    @asynccontextmanager
+    async def _factory():
+        yield mock_db
+
+    return HealthConnectServer(db_factory=_factory)
 
 
 class TestHealthConnectServerProperties:
@@ -62,11 +84,12 @@ class TestHealthConnectServerTools:
         assert "nutrition" in enum_values
 
 
-class TestHealthConnectServerExecution:
-    """Tests for tool execution."""
+class TestHealthConnectServerExecutionNoDb:
+    """Tests for tool execution without db_factory (graceful degradation)."""
 
     @pytest.mark.asyncio
-    async def test_read_metrics_returns_tool_result(self, server: HealthConnectServer) -> None:
+    async def test_read_metrics_without_db_returns_error(self, server: HealthConnectServer) -> None:
+        """Without db_factory, reads should fail gracefully with an error."""
         result = await server.execute_tool(
             tool_name="health_connect_read_metrics",
             params={
@@ -77,12 +100,12 @@ class TestHealthConnectServerExecution:
             user_id="test-user-123",
         )
         assert isinstance(result, ToolResult)
-        assert result.success is True
-        assert "pending_device_sync" in str(result.data)
+        assert result.success is False
+        assert result.error is not None
 
     @pytest.mark.asyncio
-    async def test_read_metrics_nutrition_returns_success(self, server: HealthConnectServer) -> None:
-        """Read tool accepts nutrition data type (Phase 1.7)."""
+    async def test_read_metrics_nutrition_without_db_returns_error(self, server: HealthConnectServer) -> None:
+        """Read tool with nutrition data type fails gracefully without db_factory."""
         result = await server.execute_tool(
             tool_name="health_connect_read_metrics",
             params={
@@ -93,11 +116,12 @@ class TestHealthConnectServerExecution:
             user_id="test-user-123",
         )
         assert isinstance(result, ToolResult)
-        assert result.success is True
-        assert "pending_device_sync" in str(result.data)
+        assert result.success is False
+        assert result.error is not None
 
     @pytest.mark.asyncio
-    async def test_write_entry_returns_tool_result(self, server: HealthConnectServer) -> None:
+    async def test_write_entry_without_service_returns_error(self, server: HealthConnectServer) -> None:
+        """Write entry without device_write_service returns a graceful error."""
         result = await server.execute_tool(
             tool_name="health_connect_write_entry",
             params={
@@ -108,7 +132,8 @@ class TestHealthConnectServerExecution:
             user_id="test-user-123",
         )
         assert isinstance(result, ToolResult)
-        assert result.success is True
+        assert result.success is False
+        assert result.error is not None
 
     @pytest.mark.asyncio
     async def test_unknown_tool_returns_error(self, server: HealthConnectServer) -> None:
@@ -148,6 +173,87 @@ class TestHealthConnectServerExecution:
         assert result.error is not None
         assert "value" in result.error
         assert "date" in result.error
+
+
+class TestHealthConnectServerExecutionWithDb:
+    """Tests for tool execution with a mock db_factory (DB queries)."""
+
+    @pytest.mark.asyncio
+    async def test_read_steps_returns_success(self, server_with_db: HealthConnectServer) -> None:
+        result = await server_with_db.execute_tool(
+            tool_name="health_connect_read_metrics",
+            params={
+                "data_type": "steps",
+                "start_date": "2026-02-20",
+                "end_date": "2026-02-26",
+            },
+            user_id="test-user-123",
+        )
+        assert isinstance(result, ToolResult)
+        assert result.success is True
+        assert result.data is not None
+        assert result.data["data_type"] == "steps"
+        assert "records" in result.data
+
+    @pytest.mark.asyncio
+    async def test_read_nutrition_returns_success(self, server_with_db: HealthConnectServer) -> None:
+        """Read tool accepts nutrition data type (Phase 1.7)."""
+        result = await server_with_db.execute_tool(
+            tool_name="health_connect_read_metrics",
+            params={
+                "data_type": "nutrition",
+                "start_date": "2026-02-20",
+                "end_date": "2026-02-21",
+            },
+            user_id="test-user-123",
+        )
+        assert isinstance(result, ToolResult)
+        assert result.success is True
+        assert result.data is not None
+        assert result.data["data_type"] == "nutrition"
+        assert "records" in result.data
+
+    @pytest.mark.asyncio
+    async def test_read_workouts_returns_success(self, server_with_db: HealthConnectServer) -> None:
+        result = await server_with_db.execute_tool(
+            tool_name="health_connect_read_metrics",
+            params={
+                "data_type": "workouts",
+                "start_date": "2026-02-20",
+                "end_date": "2026-02-26",
+            },
+            user_id="test-user-123",
+        )
+        assert result.success is True
+        assert result.data["data_type"] == "workouts"
+
+    @pytest.mark.asyncio
+    async def test_read_sleep_returns_success(self, server_with_db: HealthConnectServer) -> None:
+        result = await server_with_db.execute_tool(
+            tool_name="health_connect_read_metrics",
+            params={
+                "data_type": "sleep",
+                "start_date": "2026-02-20",
+                "end_date": "2026-02-26",
+            },
+            user_id="test-user-123",
+        )
+        assert result.success is True
+        assert result.data["data_type"] == "sleep"
+
+    @pytest.mark.asyncio
+    async def test_unsupported_data_type_returns_error(self, server_with_db: HealthConnectServer) -> None:
+        result = await server_with_db.execute_tool(
+            tool_name="health_connect_read_metrics",
+            params={
+                "data_type": "invalid_type",
+                "start_date": "2026-02-20",
+                "end_date": "2026-02-26",
+            },
+            user_id="test-user-123",
+        )
+        assert result.success is False
+        assert "invalid_type" in (result.error or "")
 
 
 class TestHealthConnectServerResources:
