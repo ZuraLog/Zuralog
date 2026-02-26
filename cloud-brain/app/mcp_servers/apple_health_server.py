@@ -107,11 +107,18 @@ class AppleHealthServer(BaseMCPServer):
                                 "hrv",
                                 "vo2_max",
                                 "daily_summary",
+                                # Phase 6 new types
+                                "body_fat",
+                                "respiratory_rate",
+                                "oxygen_saturation",
+                                "heart_rate",
+                                "distance",
+                                "flights_climbed",
                             ],
                             "description": (
                                 "The health metric type to query. "
-                                "'daily_summary' returns all scalar metrics (steps, calories, HR, HRV, VO2 max) "
-                                "for the date range in one call."
+                                "'daily_summary' returns all scalar metrics (steps, calories, HR, HRV, VO2 max, "
+                                "body fat, respiratory rate, SpO2) for the date range in one call."
                             ),
                         },
                         "start_date": {
@@ -273,8 +280,13 @@ class AppleHealthServer(BaseMCPServer):
         ToolResult
             Query result or error.
         """
-        # --- Daily scalar metrics ---
-        if data_type in ("steps", "calories", "resting_heart_rate", "hrv", "vo2_max", "daily_summary"):
+        # --- Daily scalar metrics (includes Phase 6 new types) ---
+        _daily_scalar_types = (
+            "steps", "calories", "resting_heart_rate", "hrv", "vo2_max", "daily_summary",
+            "body_fat", "respiratory_rate", "oxygen_saturation", "heart_rate",
+            "distance", "flights_climbed",
+        )
+        if data_type in _daily_scalar_types:
             result = await db.execute(
                 select(DailyHealthMetrics)
                 .where(
@@ -334,6 +346,10 @@ class AppleHealthServer(BaseMCPServer):
                         "vo2_max_ml_kg_min": r.vo2_max,
                         "distance_meters": r.distance_meters,
                         "flights_climbed": r.flights_climbed,
+                        "body_fat_percentage": r.body_fat_percentage,
+                        "respiratory_rate_bpm": r.respiratory_rate,
+                        "oxygen_saturation_pct": r.oxygen_saturation,
+                        "heart_rate_avg_bpm": r.heart_rate_avg,
                     }
                     for r in rows
                 ]
@@ -343,6 +359,63 @@ class AppleHealthServer(BaseMCPServer):
                         "data_type": "daily_summary",
                         "records": records,
                         "record_count": len(records),
+                    },
+                )
+            # Phase 6 new types
+            if data_type == "body_fat":
+                records = [
+                    {"date": r.date, "body_fat_percentage": r.body_fat_percentage}
+                    for r in rows
+                    if r.body_fat_percentage is not None
+                ]
+                return ToolResult(success=True, data={"data_type": "body_fat", "records": records})
+            if data_type == "respiratory_rate":
+                records = [
+                    {"date": r.date, "respiratory_rate_bpm": r.respiratory_rate}
+                    for r in rows
+                    if r.respiratory_rate is not None
+                ]
+                return ToolResult(success=True, data={"data_type": "respiratory_rate", "records": records})
+            if data_type == "oxygen_saturation":
+                records = [
+                    {"date": r.date, "oxygen_saturation_pct": r.oxygen_saturation}
+                    for r in rows
+                    if r.oxygen_saturation is not None
+                ]
+                return ToolResult(success=True, data={"data_type": "oxygen_saturation", "records": records})
+            if data_type == "heart_rate":
+                records = [
+                    {"date": r.date, "heart_rate_avg_bpm": r.heart_rate_avg}
+                    for r in rows
+                    if r.heart_rate_avg is not None
+                ]
+                return ToolResult(success=True, data={"data_type": "heart_rate", "records": records})
+            if data_type == "distance":
+                records = [
+                    {"date": r.date, "distance_meters": r.distance_meters}
+                    for r in rows
+                    if r.distance_meters is not None
+                ]
+                return ToolResult(
+                    success=True,
+                    data={
+                        "data_type": "distance",
+                        "records": records,
+                        "total_distance_meters": sum(r.distance_meters or 0.0 for r in rows),
+                    },
+                )
+            if data_type == "flights_climbed":
+                records = [
+                    {"date": r.date, "flights_climbed": r.flights_climbed}
+                    for r in rows
+                    if r.flights_climbed is not None
+                ]
+                return ToolResult(
+                    success=True,
+                    data={
+                        "data_type": "flights_climbed",
+                        "records": records,
+                        "total_flights": sum(r.flights_climbed or 0 for r in rows),
                     },
                 )
 

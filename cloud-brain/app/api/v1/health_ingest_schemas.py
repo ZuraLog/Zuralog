@@ -118,6 +118,14 @@ class DailyMetricsEntry(BaseModel):
         Total walking + running distance in metres.
     flights_climbed : int | None
         Flights of stairs climbed.
+    body_fat_percentage : float | None
+        Body fat percentage (0–100).
+    respiratory_rate : float | None
+        Average respiratory rate in breaths/minute.
+    oxygen_saturation : float | None
+        Blood oxygen saturation percentage (SpO2, 0–100).
+    heart_rate_avg : float | None
+        Average heart rate for the day in bpm.
     """
 
     date: str = Field(..., description="ISO date YYYY-MM-DD")
@@ -128,6 +136,11 @@ class DailyMetricsEntry(BaseModel):
     vo2_max: float | None = None
     distance_meters: float | None = None
     flights_climbed: int | None = None
+    # Phase 6 new types
+    body_fat_percentage: float | None = None
+    respiratory_rate: float | None = None
+    oxygen_saturation: float | None = None
+    heart_rate_avg: float | None = None
 
 
 class HealthIngestRequest(BaseModel):

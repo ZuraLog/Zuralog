@@ -241,6 +241,15 @@ async def ingest_health_data(
                 row.distance_meters = dm.distance_meters
             if dm.flights_climbed is not None:
                 row.flights_climbed = dm.flights_climbed
+            # Phase 6 new types
+            if dm.body_fat_percentage is not None:
+                row.body_fat_percentage = dm.body_fat_percentage
+            if dm.respiratory_rate is not None:
+                row.respiratory_rate = dm.respiratory_rate
+            if dm.oxygen_saturation is not None:
+                row.oxygen_saturation = dm.oxygen_saturation
+            if dm.heart_rate_avg is not None:
+                row.heart_rate_avg = dm.heart_rate_avg
         else:
             db.add(
                 DailyHealthMetrics(
@@ -254,6 +263,11 @@ async def ingest_health_data(
                     vo2_max=dm.vo2_max,
                     distance_meters=dm.distance_meters,
                     flights_climbed=dm.flights_climbed,
+                    # Phase 6 new types
+                    body_fat_percentage=dm.body_fat_percentage,
+                    respiratory_rate=dm.respiratory_rate,
+                    oxygen_saturation=dm.oxygen_saturation,
+                    heart_rate_avg=dm.heart_rate_avg,
                 )
             )
     counts["daily_metrics"] = len(body.daily_metrics)
