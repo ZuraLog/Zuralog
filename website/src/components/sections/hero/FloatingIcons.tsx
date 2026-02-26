@@ -57,6 +57,7 @@ export function FloatingIcons() {
 
     useEffect(() => {
         let handleMouseMove: (e: MouseEvent) => void;
+        let rafId = 0;
 
         const ctx = gsap.context(() => {
             // Setup initial appear animation
@@ -83,57 +84,62 @@ export function FloatingIcons() {
             // Mouse parallax and repellant — skip on touch/mobile viewports
             if (!window.matchMedia('(max-width: 767px)').matches) {
                 handleMouseMove = (e: MouseEvent) => {
-                    const mouseX = e.clientX;
-                    const mouseY = e.clientY;
+                    if (rafId) return;
+                    rafId = requestAnimationFrame(() => {
+                        rafId = 0;
+                        const mouseX = e.clientX;
+                        const mouseY = e.clientY;
 
-                    // Normalized coordinates for subtle global drift
-                    const mx = (mouseX / window.innerWidth - 0.5) * 2;
-                    const my = (mouseY / window.innerHeight - 0.5) * 2;
+                        // Normalized coordinates for subtle global drift
+                        const mx = (mouseX / window.innerWidth - 0.5) * 2;
+                        const my = (mouseY / window.innerHeight - 0.5) * 2;
 
-                    const repellantRadius = 150; // Distance in pixels to trigger push
-                    const maxPush = 100; // How far the app gets pushed away
+                        const repellantRadius = 150; // Distance in pixels to trigger push
+                        const maxPush = 100; // How far the app gets pushed away
 
-                    gsap.utils.toArray('.parallax-wrapper').forEach((el: unknown, i) => {
-                        const element = el as Element;
+                        gsap.utils.toArray('.parallax-wrapper').forEach((el: unknown, i) => {
+                            const element = el as Element;
 
-                        // Base parallax target (significantly lowered depth)
-                        const depth = 0.3; // Equal subtle depth for all icons
-                        let targetX = mx * 30 * depth;
-                        let targetY = my * 30 * depth;
+                            // Base parallax target (significantly lowered depth)
+                            const depth = 0.3; // Equal subtle depth for all icons
+                            let targetX = mx * 30 * depth;
+                            let targetY = my * 30 * depth;
 
-                        // Repellant physics: calculate distance from stable base screen coordinates
-                        const app = APPS[i];
-                        if (!app) return;
-                        const baseX = window.innerWidth * (app.x / 100);
-                        const baseY = window.innerHeight * (app.y / 100);
+                            // Repellant physics: calculate distance from stable base screen coordinates
+                            const app = APPS[i];
+                            if (!app) return;
+                            const baseX = window.innerWidth * (app.x / 100);
+                            const baseY = window.innerHeight * (app.y / 100);
 
-                        const dx = baseX - mouseX;
-                        const dy = baseY - mouseY;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
+                            const dx = baseX - mouseX;
+                            const dy = baseY - mouseY;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
 
-                        if (distance < repellantRadius) {
-                            const safeDist = Math.max(distance, 1);
-                            // Using power to ease the push curve naturally
-                            const pushFactor = Math.pow((repellantRadius - safeDist) / repellantRadius, 1.5);
-                            targetX += (dx / safeDist) * maxPush * pushFactor;
-                            targetY += (dy / safeDist) * maxPush * pushFactor;
-                        }
+                            if (distance < repellantRadius) {
+                                const safeDist = Math.max(distance, 1);
+                                // Using power to ease the push curve naturally
+                                const pushFactor = Math.pow((repellantRadius - safeDist) / repellantRadius, 1.5);
+                                targetX += (dx / safeDist) * maxPush * pushFactor;
+                                targetY += (dy / safeDist) * maxPush * pushFactor;
+                            }
 
-                        gsap.to(element, {
-                            x: targetX,
-                            y: targetY,
-                            duration: 0.8,
-                            ease: 'power2.out',
-                            overwrite: 'auto'
+                            gsap.to(element, {
+                                x: targetX,
+                                y: targetY,
+                                duration: 0.8,
+                                ease: 'power2.out',
+                                overwrite: 'auto'
+                            });
                         });
                     });
                 };
-                window.addEventListener('mousemove', handleMouseMove);
+                window.addEventListener('mousemove', handleMouseMove, { passive: true });
             }
         }, containerRef);
 
         return () => {
             if (handleMouseMove) window.removeEventListener('mousemove', handleMouseMove);
+            if (rafId) cancelAnimationFrame(rafId);
             ctx.revert();
         };
     }, []);
