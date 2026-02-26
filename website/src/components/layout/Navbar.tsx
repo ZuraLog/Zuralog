@@ -22,7 +22,6 @@ import Link from "next/link";
 const SCROLL_LINKS = [
     { label: "How It Works", id: "mobile-section" },
     { label: "Features",     id: "bento-section"  },
-    { label: "Early Access", id: "waitlist"        },
 ] as const;
 
 /** Links that navigate to standalone pages */
