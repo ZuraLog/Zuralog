@@ -698,7 +698,7 @@ export function BentoSection() {
                         >
                             <div
                                 className="absolute flex flex-row gap-4"
-                                style={{ width: "420%", height: "420%", top: "-160%", left: "-130%", transform: "rotate(45deg)", justifyContent: "center" }}
+                                style={{ width: "520%", height: "520%", top: "-230%", left: "-160%", transform: "rotate(45deg)", justifyContent: "center" }}
                             >
                                 {[0, 1, 2, 3, 4, 5, 6].map(colIndex => {
                                     const speedClass = colIndex % 3 === 0 ? 'animate-drift-slow' : colIndex % 3 === 1 ? 'animate-drift-mid' : 'animate-drift-fast';
