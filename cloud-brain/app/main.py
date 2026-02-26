@@ -24,6 +24,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
+from app.api.v1.health_ingest import router as health_ingest_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.transcribe import router as transcribe_router
@@ -122,6 +123,7 @@ app.include_router(dev_router, prefix="/api/v1")  # Phase 1.10 (dev-only)
 app.include_router(analytics_router, prefix="/api/v1")  # Phase 1.11
 app.include_router(webhooks_router, prefix="/api/v1")  # Phase 1.13
 app.include_router(strava_webhook_router, prefix="/api/v1")  # Phase 1.7
+app.include_router(health_ingest_router, prefix="/api/v1")  # Apple Health Full Integration
 
 
 @app.get("/health")
