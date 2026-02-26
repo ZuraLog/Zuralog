@@ -25,9 +25,9 @@ from app.api.v1.chat import router as chat_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.integrations import router as integrations_router
+from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.transcribe import router as transcribe_router
 from app.api.v1.users import router as users_router
-from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.webhooks import router as webhooks_router
 from app.config import settings
 from app.database import async_session
@@ -38,10 +38,10 @@ from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
 from app.services.auth_service import AuthService
-from app.services.strava_token_service import StravaTokenService
 from app.services.device_write_service import DeviceWriteService
 from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
+from app.services.strava_token_service import StravaTokenService
 
 
 @asynccontextmanager

@@ -251,6 +251,7 @@ class TestStravaServerDBTokens:
     async def test_execute_tool_uses_token_service(self) -> None:
         """StravaServer reads tokens from StravaTokenService when db_factory is set."""
         from unittest.mock import AsyncMock, MagicMock, patch
+
         from app.mcp_servers.strava_server import StravaServer
 
         mock_token_service = AsyncMock()
