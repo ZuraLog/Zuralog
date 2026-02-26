@@ -246,6 +246,71 @@ import UIKit
                 result(granted)
             }
 
+        case "backgroundWrite":
+            // Invoked by FCM service when the Cloud Brain wants to write health data
+            // to the device (e.g. log a meal, record a workout).
+            guard let args = call.arguments as? [String: Any],
+                  let dataType = args["data_type"] as? String,
+                  let valueJson = args["value"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS",
+                                   message: "backgroundWrite requires data_type and value",
+                                   details: nil))
+                return
+            }
+
+            guard let valueData = valueJson.data(using: .utf8),
+                  let value = try? JSONSerialization.jsonObject(with: valueData) as? [String: Any] else {
+                result(FlutterError(code: "INVALID_JSON",
+                                   message: "Could not parse value JSON",
+                                   details: nil))
+                return
+            }
+
+            switch dataType {
+            case "nutrition":
+                let calories = value["calories"] as? Double ?? 0
+                let date = Date()
+                healthKitBridge.writeNutrition(calories: calories, date: date) { success, error in
+                    if let error = error {
+                        result(FlutterError(code: "WRITE_FAILED", message: error.localizedDescription, details: nil))
+                    } else {
+                        result(success)
+                    }
+                }
+            case "workout":
+                let calories = value["calories"] as? Double ?? 0
+                let duration = value["duration_seconds"] as? Double ?? 0
+                let activityType = value["activity_type"] as? String ?? "running"
+                let startDate = Date()
+                let endDate = startDate.addingTimeInterval(duration)
+                healthKitBridge.writeWorkout(
+                    activityType: activityType,
+                    startDate: startDate,
+                    endDate: endDate,
+                    energyBurned: calories
+                ) { success, error in
+                    if let error = error {
+                        result(FlutterError(code: "WRITE_FAILED", message: error.localizedDescription, details: nil))
+                    } else {
+                        result(success)
+                    }
+                }
+            case "weight":
+                let weightKg = value["weight_kg"] as? Double ?? 0
+                let date = Date()
+                healthKitBridge.writeWeight(weightKg: weightKg, date: date) { success, error in
+                    if let error = error {
+                        result(FlutterError(code: "WRITE_FAILED", message: error.localizedDescription, details: nil))
+                    } else {
+                        result(success)
+                    }
+                }
+            default:
+                result(FlutterError(code: "UNKNOWN_TYPE",
+                                   message: "Unknown backgroundWrite type: \(dataType)",
+                                   details: nil))
+            }
+
         default:
             result(FlutterMethodNotImplemented)
         }
