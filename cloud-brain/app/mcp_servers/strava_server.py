@@ -82,11 +82,12 @@ class StravaServer(BaseMCPServer):
     # ------------------------------------------------------------------
 
     def get_tools(self) -> list[ToolDefinition]:
-        """Return the two Strava tools the LLM may invoke.
+        """Return the Strava tools the LLM may invoke.
 
         Returns:
-            A list containing ``strava_get_activities`` and
-            ``strava_create_activity`` tool definitions.
+            A list containing ``strava_get_activities``,
+            ``strava_create_activity``, and ``strava_get_athlete_stats``
+            tool definitions.
         """
         return [
             ToolDefinition(
@@ -135,6 +136,25 @@ class StravaServer(BaseMCPServer):
                     "required": ["name", "type", "elapsed_time", "start_date_local"],
                 },
             ),
+            ToolDefinition(
+                name="strava_get_athlete_stats",
+                description=(
+                    "Get aggregate statistics for a Strava athlete. "
+                    "Returns recent, all-time, and year-to-date totals for runs, rides, and swims. "
+                    "Use this to answer questions like 'How far have I run this year?' or "
+                    "'What are my all-time cycling stats?'"
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "athlete_id": {
+                            "type": "integer",
+                            "description": "The Strava athlete ID to fetch stats for.",
+                        }
+                    },
+                    "required": ["athlete_id"],
+                },
+            ),
         ]
 
     # ------------------------------------------------------------------
@@ -173,6 +193,8 @@ class StravaServer(BaseMCPServer):
             return await self._get_activities(token, params)
         if tool_name == "strava_create_activity":
             return await self._create_activity(token, params)
+        if tool_name == "strava_get_athlete_stats":
+            return await self._get_athlete_stats(token, params)
 
         return ToolResult(success=False, error=f"Unknown tool: {tool_name}")
 
@@ -281,6 +303,53 @@ class StravaServer(BaseMCPServer):
             success=True,
             data={"id": 99999, "name": params.get("name", ""), "mock": True},
         )
+
+    async def _get_athlete_stats(
+        self,
+        token: str | None,
+        params: dict,
+    ) -> ToolResult:
+        """Fetch aggregate statistics for a Strava athlete.
+
+        Calls ``GET /athletes/{athlete_id}/stats`` when a token is available.
+        Returns an error ``ToolResult`` when no token is present, since there
+        is no meaningful mock for per-athlete aggregate data.
+
+        Args:
+            token: Strava Bearer access token, or ``None`` when unauthenticated.
+            params: Must contain ``athlete_id`` (integer).
+
+        Returns:
+            ``ToolResult`` containing recent, all-time, and YTD run/ride/swim
+            totals on success, or a descriptive error on failure.
+
+        Raises:
+            No exceptions are raised; network errors are caught and returned
+            as a failed ``ToolResult``.
+        """
+        if not token:
+            return ToolResult(
+                success=False,
+                data=None,
+                error="No Strava access token available. Please connect your Strava account first.",
+            )
+
+        athlete_id = params.get("athlete_id")
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(
+                    f"https://www.strava.com/api/v3/athletes/{athlete_id}/stats",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+            if resp.status_code != 200:
+                return ToolResult(
+                    success=False,
+                    data=None,
+                    error=f"Strava API error: {resp.status_code}",
+                )
+            return ToolResult(success=True, data=resp.json(), error=None)
+        except httpx.RequestError as exc:
+            return ToolResult(success=False, data=None, error=f"Network error: {exc}")
 
     # ------------------------------------------------------------------
     # Resources
