@@ -25,10 +25,12 @@ from app.api.v1.chat import router as chat_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.integrations import router as integrations_router
+from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.transcribe import router as transcribe_router
 from app.api.v1.users import router as users_router
 from app.api.v1.webhooks import router as webhooks_router
 from app.config import settings
+from app.database import async_session
 from app.limiter import limiter
 from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.deep_link_server import DeepLinkServer
@@ -39,6 +41,8 @@ from app.services.auth_service import AuthService
 from app.services.device_write_service import DeviceWriteService
 from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
+from app.services.strava_rate_limiter import StravaRateLimiter
+from app.services.strava_token_service import StravaTokenService
 
 
 @asynccontextmanager
@@ -63,9 +67,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     registry = MCPServerRegistry()
     registry.register(AppleHealthServer())
     registry.register(HealthConnectServer())
-    registry.register(StravaServer())  # Phase 1.6
+    # Phase 1.7: DB-backed token service wired into StravaServer
+    strava_token_service = StravaTokenService()
+    strava_server = StravaServer(
+        token_service=strava_token_service,
+        db_factory=async_session,
+        rate_limiter=StravaRateLimiter(redis_url=settings.redis_url),
+    )
+    registry.register(strava_server)  # Phase 1.6 + 1.7
     registry.register(DeepLinkServer())  # Phase 1.12
     app.state.mcp_registry = registry
+    app.state.strava_token_service = strava_token_service
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
@@ -109,6 +121,7 @@ app.include_router(devices_router, prefix="/api/v1")  # Phase 1.10
 app.include_router(dev_router, prefix="/api/v1")  # Phase 1.10 (dev-only)
 app.include_router(analytics_router, prefix="/api/v1")  # Phase 1.11
 app.include_router(webhooks_router, prefix="/api/v1")  # Phase 1.13
+app.include_router(strava_webhook_router, prefix="/api/v1")  # Phase 1.7
 
 
 @app.get("/health")

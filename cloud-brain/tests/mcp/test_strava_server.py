@@ -242,3 +242,88 @@ class TestStravaServerHealthCheck:
         mock_get.return_value = mock_response
 
         assert await server.health_check() is False
+
+
+class TestStravaServerDBTokens:
+    """Tests for DB-backed token retrieval."""
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_uses_token_service(self) -> None:
+        """StravaServer reads tokens from StravaTokenService when db_factory is set."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.mcp_servers.strava_server import StravaServer
+
+        mock_token_service = AsyncMock()
+        mock_token_service.get_access_token.return_value = "db-token"
+
+        mock_db = AsyncMock()
+        mock_db_ctx = AsyncMock()
+        mock_db_ctx.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_db_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        server = StravaServer(
+            token_service=mock_token_service,
+            db_factory=lambda: mock_db_ctx,
+        )
+
+        with patch("httpx.AsyncClient.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = [{"id": 1}]
+            mock_get.return_value = mock_resp
+
+            result = await server.execute_tool("strava_get_activities", {"limit": 1}, "user-123")
+
+        assert result.success is True
+        mock_token_service.get_access_token.assert_called_once_with(mock_db, "user-123")
+
+
+class TestStravaGetAthleteStats:
+    """Tests for the strava_get_athlete_stats tool."""
+
+    def test_has_get_athlete_stats_tool(self):
+        """StravaServer exposes a strava_get_athlete_stats tool."""
+        server = StravaServer()
+        tools = server.get_tools()
+        names = [t.name for t in tools]
+        assert "strava_get_athlete_stats" in names
+
+    def test_athlete_stats_tool_has_athlete_id_param(self):
+        """strava_get_athlete_stats requires athlete_id parameter."""
+        server = StravaServer()
+        tools = server.get_tools()
+        stats_tool = next(t for t in tools if t.name == "strava_get_athlete_stats")
+        assert "athlete_id" in stats_tool.input_schema.get("properties", {})
+
+    @pytest.mark.asyncio
+    async def test_execute_athlete_stats_with_token(self):
+        """Calls Strava API with valid token and returns stats."""
+        server = StravaServer()
+        server.store_token("user-123", "test-token")
+
+        with patch("httpx.AsyncClient.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {
+                "recent_run_totals": {"distance": 15000.0, "count": 3},
+                "all_run_totals": {"distance": 100000.0, "count": 50},
+                "ytd_run_totals": {"distance": 30000.0, "count": 10},
+            }
+            mock_get.return_value = mock_resp
+
+            result = await server.execute_tool("strava_get_athlete_stats", {"athlete_id": 12345}, "user-123")
+
+        assert result.success is True
+        assert "recent_run_totals" in result.data or "recent_run_totals" in str(result.data)
+
+    @pytest.mark.asyncio
+    async def test_execute_athlete_stats_no_token(self):
+        """Returns error or mock when no token available."""
+        server = StravaServer()
+        # No token stored
+
+        result = await server.execute_tool("strava_get_athlete_stats", {"athlete_id": 12345}, "user-no-token")
+
+        # Should fail gracefully (not throw), return success=False or mock data
+        assert result is not None

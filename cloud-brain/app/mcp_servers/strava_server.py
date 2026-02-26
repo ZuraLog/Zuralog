@@ -3,14 +3,20 @@ Zuralog Cloud Brain — Strava MCP Server (Phase 1.6).
 
 Wraps the Strava API so the LLM agent can read recent activities and
 create manual entries via standard MCP tool calls. Token storage is
-in-memory for the MVP phase; Phase 1.7 will migrate to database
-persistence.
+backed by the database via ``StravaTokenService`` when injected;
+falls back to the legacy in-memory dict for backwards compatibility.
 """
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any
 
 import httpx
 
 from app.mcp_servers.base_server import BaseMCPServer
 from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
+from app.services.strava_rate_limiter import StravaRateLimiter
 
 
 class StravaServer(BaseMCPServer):
@@ -20,14 +26,41 @@ class StravaServer(BaseMCPServer):
     - ``strava_get_activities``: Fetch recent runs/rides from Strava.
     - ``strava_create_activity``: Create a manual activity entry.
 
-    Access tokens are stored in ``_tokens`` (keyed by ``user_id``) and
-    injected via ``store_token()`` by the OAuth exchange endpoint once
-    the user completes the Strava login flow.
+    When ``token_service`` and ``db_factory`` are supplied, tokens are
+    retrieved via ``StravaTokenService.get_access_token()``.  Otherwise
+    the legacy in-memory ``_tokens`` dict is used (backwards compat).
+
+    Args:
+        token_service: Optional ``StravaTokenService`` instance for
+            DB-backed token retrieval.
+        db_factory: Optional callable that returns an async context
+            manager yielding an ``AsyncSession`` (e.g. ``async_session``
+            from ``app.database``).
+        rate_limiter: Optional ``StravaRateLimiter`` instance. When
+            provided, every ``execute_tool`` call checks and increments
+            the Redis-backed sliding window counters before hitting the
+            Strava API. Pass ``None`` (default) to disable rate limiting
+            (e.g. in unit tests).
     """
 
-    def __init__(self) -> None:
-        """Initialise the server with an empty in-memory token store."""
+    def __init__(
+        self,
+        token_service: Any | None = None,
+        db_factory: Callable[[], Any] | None = None,
+        rate_limiter: StravaRateLimiter | None = None,
+    ) -> None:
+        """Initialise the server.
+
+        Args:
+            token_service: Optional DB-backed token service.
+            db_factory: Optional async session factory.
+            rate_limiter: Optional Redis-backed rate limiter. When set,
+                requests are refused when approaching Strava's API limits.
+        """
         self._tokens: dict[str, str] = {}
+        self._token_service = token_service
+        self._db_factory = db_factory
+        self._rate_limiter = rate_limiter
 
     # ------------------------------------------------------------------
     # BaseMCPServer properties
@@ -59,11 +92,12 @@ class StravaServer(BaseMCPServer):
     # ------------------------------------------------------------------
 
     def get_tools(self) -> list[ToolDefinition]:
-        """Return the two Strava tools the LLM may invoke.
+        """Return the Strava tools the LLM may invoke.
 
         Returns:
-            A list containing ``strava_get_activities`` and
-            ``strava_create_activity`` tool definitions.
+            A list containing ``strava_get_activities``,
+            ``strava_create_activity``, and ``strava_get_athlete_stats``
+            tool definitions.
         """
         return [
             ToolDefinition(
@@ -112,6 +146,30 @@ class StravaServer(BaseMCPServer):
                     "required": ["name", "type", "elapsed_time", "start_date_local"],
                 },
             ),
+            ToolDefinition(
+                name="strava_get_athlete_stats",
+                description=(
+                    "Get aggregate statistics for the connected Strava athlete. "
+                    "Returns recent, all-time, and year-to-date totals for runs, rides, and swims. "
+                    "Use this to answer questions like 'How far have I run this year?' or "
+                    "'What are my all-time cycling stats?'. "
+                    "The athlete_id is resolved automatically from the user's connected account; "
+                    "you do not need to supply it."
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "athlete_id": {
+                            "type": "integer",
+                            "description": (
+                                "Strava athlete ID. Optional — auto-resolved from the "
+                                "user's connected account when omitted."
+                            ),
+                        }
+                    },
+                    "required": [],
+                },
+            ),
         ]
 
     # ------------------------------------------------------------------
@@ -126,26 +184,57 @@ class StravaServer(BaseMCPServer):
     ) -> ToolResult:
         """Execute a Strava tool on behalf of the given user.
 
-        Looks up the user's access token from the in-memory store.
-        MVP: returns mock data so the harness can be verified without
-        real Strava credentials. Activate the live ``httpx`` calls by
-        uncommenting the blocks below once credentials are available.
+        Rate limiting is checked first (if a ``rate_limiter`` was
+        injected). If the request would exceed Strava's API limits, a
+        ``ToolResult(success=False)`` is returned immediately without
+        touching the token or the Strava API.
+
+        Token resolution order:
+        1. If both ``token_service`` and ``db_factory`` are set, acquire
+           a DB session and call ``StravaTokenService.get_access_token()``.
+        2. Otherwise fall back to the in-memory ``_tokens`` dict.
 
         Args:
-            tool_name: One of ``strava_get_activities`` or
-                ``strava_create_activity``.
+            tool_name: One of ``strava_get_activities``,
+                ``strava_create_activity``, or ``strava_get_athlete_stats``.
             params: Parameter dict matching the tool's ``input_schema``.
             user_id: Authenticated user whose Strava token to use.
 
         Returns:
-            A ``ToolResult`` with mock or live Strava data.
+            A ``ToolResult`` with mock or live Strava data, or an error
+            result when rate-limited.
         """
-        token = self._tokens.get(user_id)
+        if self._rate_limiter:
+            allowed = await self._rate_limiter.check_and_increment()
+            if not allowed:
+                return ToolResult(
+                    success=False,
+                    data=None,
+                    error="Strava API rate limit reached. Please try again in a few minutes.",
+                )
+
+        if self._token_service is not None and self._db_factory is not None:
+            async with self._db_factory() as db:
+                token = await self._token_service.get_access_token(db, user_id)
+
+                # Auto-resolve athlete_id for strava_get_athlete_stats when
+                # the caller did not supply it explicitly.
+                if tool_name == "strava_get_athlete_stats" and "athlete_id" not in params:
+                    integration = await self._token_service.get_integration(db, user_id)
+                    if integration is not None:
+                        meta = integration.provider_metadata or {}
+                        resolved_id = meta.get("athlete_id")
+                        if resolved_id is not None:
+                            params = {**params, "athlete_id": int(resolved_id)}
+        else:
+            token = self._tokens.get(user_id)
 
         if tool_name == "strava_get_activities":
             return await self._get_activities(token, params)
         if tool_name == "strava_create_activity":
             return await self._create_activity(token, params)
+        if tool_name == "strava_get_athlete_stats":
+            return await self._get_athlete_stats(token, params)
 
         return ToolResult(success=False, error=f"Unknown tool: {tool_name}")
 
@@ -255,6 +344,66 @@ class StravaServer(BaseMCPServer):
             data={"id": 99999, "name": params.get("name", ""), "mock": True},
         )
 
+    async def _get_athlete_stats(
+        self,
+        token: str | None,
+        params: dict,
+    ) -> ToolResult:
+        """Fetch aggregate statistics for a Strava athlete.
+
+        Calls ``GET /athletes/{athlete_id}/stats`` when a token is available.
+        The ``athlete_id`` is resolved automatically from ``provider_metadata``
+        in ``execute_tool`` when the DB token path is active; it may also be
+        supplied explicitly in ``params`` for legacy / test callers.
+
+        Returns an error ``ToolResult`` when no token is present or when
+        ``athlete_id`` could not be resolved.
+
+        Args:
+            token: Strava Bearer access token, or ``None`` when unauthenticated.
+            params: May contain ``athlete_id`` (integer).  When absent, the
+                call fails with a descriptive message telling the user to
+                connect their account (``athlete_id`` should have been injected
+                by ``execute_tool`` if the integration is active).
+
+        Returns:
+            ``ToolResult`` containing recent, all-time, and YTD run/ride/swim
+            totals on success, or a descriptive error on failure.
+
+        Raises:
+            No exceptions are raised; network errors are caught and returned
+            as a failed ``ToolResult``.
+        """
+        if not token:
+            return ToolResult(
+                success=False,
+                data=None,
+                error="No Strava access token available. Please connect your Strava account first.",
+            )
+
+        athlete_id = params.get("athlete_id")
+        if athlete_id is None:
+            return ToolResult(
+                success=False,
+                data=None,
+                error=("Could not resolve your Strava athlete ID. Please reconnect your Strava account."),
+            )
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(
+                    f"https://www.strava.com/api/v3/athletes/{athlete_id}/stats",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+            if resp.status_code != 200:
+                return ToolResult(
+                    success=False,
+                    data=None,
+                    error=f"Strava API error: {resp.status_code}",
+                )
+            return ToolResult(success=True, data=resp.json(), error=None)
+        except httpx.RequestError as exc:
+            return ToolResult(success=False, data=None, error=f"Network error: {exc}")
+
     # ------------------------------------------------------------------
     # Resources
     # ------------------------------------------------------------------
@@ -281,11 +430,11 @@ class StravaServer(BaseMCPServer):
     # ------------------------------------------------------------------
 
     async def health_check(self) -> bool:
-        """Verify Strava API connectivity using the first available token.
+        """Verify Strava API connectivity using the first available in-memory token.
 
-        Falls back to ``True`` when no tokens are stored (no users have
-        connected Strava yet) to avoid marking the server as unhealthy
-        at startup.
+        Falls back to ``True`` when no in-memory tokens are stored (no
+        users have connected Strava yet via the legacy path, or the DB
+        path is used) to avoid marking the server as unhealthy at startup.
 
         Returns:
             ``True`` if the Strava API responds 200, ``False`` on error.

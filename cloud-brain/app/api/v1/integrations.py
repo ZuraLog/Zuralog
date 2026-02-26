@@ -14,11 +14,14 @@ import urllib.parse
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import _get_auth_service
 from app.config import settings
+from app.database import get_db
 from app.limiter import limiter
 from app.services.auth_service import AuthService
+from app.services.strava_token_service import StravaTokenService
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 security = HTTPBearer()
@@ -41,7 +44,7 @@ async def strava_authorize(request: Request) -> dict[str, str]:
         "redirect_uri": settings.strava_redirect_uri,
         "response_type": "code",
         "approval_prompt": "auto",
-        "scope": "read,activity:read,activity:write",
+        "scope": "read,activity:read_all,activity:write,profile:read_all",
     }
     auth_url = f"https://www.strava.com/oauth/authorize?{urllib.parse.urlencode(params)}"
     return {"auth_url": auth_url}
@@ -54,6 +57,7 @@ async def strava_exchange(
     code: str,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
     """Exchange a Strava authorization code for access and refresh tokens.
 
@@ -61,17 +65,19 @@ async def strava_exchange(
     link. The backend performs the token swap so the Client Secret is never
     exposed to the client.
 
-    On success, the access token is stored in the in-memory ``StravaServer``
-    instance (keyed by ``user_id``) so MCP tool calls can use it immediately.
-    Proper database persistence is deferred to Phase 1.7.
+    On success the tokens are persisted to the database via
+    ``StravaTokenService.save_tokens`` **and** stored in the in-memory
+    ``StravaServer`` instance (keyed by ``user_id``) for immediate MCP use.
 
     Args:
-        request: FastAPI request — used to access ``app.state.mcp_registry``.
+        request: FastAPI request — used to access ``app.state`` services.
         code: The short-lived authorization code returned by Strava.
-        user_id: The authenticated user's ID, used to key the stored token.
+        credentials: Bearer token for the authenticated Zuralog user.
+        auth_service: Injected auth service for verifying the JWT.
+        db: Injected async database session for token persistence.
 
     Returns:
-        dict: ``{"success": True, "message": "Strava connected!"}`` on success.
+        dict: ``{"success": True, "message": "Strava connected!", "athlete_id": <int|None>}``
 
     Raises:
         HTTPException: 400 if Strava rejects the code exchange.
@@ -106,12 +112,93 @@ async def strava_exchange(
 
     token_data: dict[str, object] = response.json()
     access_token = str(token_data.get("access_token", ""))
+    refresh_token = str(token_data.get("refresh_token", ""))
+    expires_at = int(token_data.get("expires_at", 0))
+    athlete: dict | None = token_data.get("athlete")  # type: ignore[assignment]
 
-    # Store token on the StravaServer instance for immediate MCP tool use.
-    # Phase 1.7 will replace this with proper DB persistence.
+    # Persist tokens to the database (Phase 1.7).
+    token_service: StravaTokenService = request.app.state.strava_token_service
+    await token_service.save_tokens(
+        db,
+        user_id,
+        access_token,
+        refresh_token,
+        expires_at,
+        athlete_data=athlete,
+    )
+
+    # Also store token on the StravaServer instance for immediate MCP tool use.
     registry = request.app.state.mcp_registry
     strava_server = registry.get("strava")
     if strava_server is not None:
         strava_server.store_token(user_id, access_token)
 
-    return {"success": True, "message": "Strava connected!"}
+    athlete_id: int | None = athlete.get("id") if athlete else None  # type: ignore[union-attr]
+    return {"success": True, "message": "Strava connected!", "athlete_id": athlete_id}
+
+
+@router.get("/strava/status")
+async def strava_status(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return Strava integration connection status for the current user.
+
+    Args:
+        request: FastAPI request — used to access ``app.state`` services.
+        credentials: Bearer token for the authenticated Zuralog user.
+        auth_service: Injected auth service for verifying the JWT.
+        db: Injected async database session.
+
+    Returns:
+        dict: ``{"connected": False}`` when no active integration exists, or
+              ``{"connected": True, "sync_status": ..., "last_synced_at": ..., "athlete": ...}``
+              when the user has an active Strava integration.
+    """
+    user_data = await auth_service.get_user(credentials.credentials)
+    user_id = user_data["id"]
+
+    token_service: StravaTokenService = request.app.state.strava_token_service
+    integration = await token_service.get_integration(db, user_id)
+
+    if integration is None or not integration.is_active:
+        return {"connected": False}
+
+    return {
+        "connected": True,
+        "sync_status": integration.sync_status,
+        "last_synced_at": integration.last_synced_at.isoformat() if integration.last_synced_at else None,
+        "athlete": integration.provider_metadata,
+    }
+
+
+@router.delete("/strava/disconnect")
+async def strava_disconnect(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Disconnect the current user's Strava integration.
+
+    Marks the integration as inactive in the database via
+    ``StravaTokenService.disconnect``.
+
+    Args:
+        request: FastAPI request — used to access ``app.state`` services.
+        credentials: Bearer token for the authenticated Zuralog user.
+        auth_service: Injected auth service for verifying the JWT.
+        db: Injected async database session.
+
+    Returns:
+        dict: ``{"success": True}`` if the integration was disconnected,
+              ``{"success": False}`` if no active integration was found.
+    """
+    user_data = await auth_service.get_user(credentials.credentials)
+    user_id = user_data["id"]
+
+    token_service: StravaTokenService = request.app.state.strava_token_service
+    disconnected = await token_service.disconnect(db, user_id)
+    return {"success": disconnected}
