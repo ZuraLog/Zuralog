@@ -14,6 +14,8 @@ Usage:
 import logging
 from datetime import datetime, timezone
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 # Conservative thresholds (leave 10% buffer under Strava's hard limits)
@@ -73,7 +75,7 @@ class StravaRateLimiter:
         try:
             import redis.asyncio as aioredis
 
-            redis_url = self._redis_url or "redis://localhost:6379/0"
+            redis_url = self._redis_url or settings.redis_url
             async with aioredis.from_url(redis_url) as redis:
                 key_15m = self._get_15min_key()
                 key_daily = self._get_daily_key()
@@ -97,7 +99,7 @@ class StravaRateLimiter:
         try:
             import redis.asyncio as aioredis
 
-            redis_url = self._redis_url or "redis://localhost:6379/0"
+            redis_url = self._redis_url or settings.redis_url
             async with aioredis.from_url(redis_url) as redis:
                 key_15m = self._get_15min_key()
                 key_daily = self._get_daily_key()

@@ -44,6 +44,34 @@ class TestWebhookValidation:
             )
         assert response.status_code == 403
 
+    def test_rejects_unconfigured_verify_token(self, client):
+        """Returns 503 when STRAVA_WEBHOOK_VERIFY_TOKEN is not configured."""
+        with patch("app.api.v1.strava_webhooks.settings") as mock_settings:
+            mock_settings.strava_webhook_verify_token = ""
+            response = client.get(
+                "/api/v1/webhooks/strava",
+                params={
+                    "hub.mode": "subscribe",
+                    "hub.verify_token": "",
+                    "hub.challenge": "challenge-abc",
+                },
+            )
+        assert response.status_code == 503
+
+    def test_rejects_invalid_hub_mode(self, client):
+        """Returns 400 when hub.mode is not 'subscribe'."""
+        with patch("app.api.v1.strava_webhooks.settings") as mock_settings:
+            mock_settings.strava_webhook_verify_token = "test-token"
+            response = client.get(
+                "/api/v1/webhooks/strava",
+                params={
+                    "hub.mode": "unsubscribe",
+                    "hub.verify_token": "test-token",
+                    "hub.challenge": "challenge-abc",
+                },
+            )
+        assert response.status_code == 400
+
 
 class TestWebhookEvent:
     def test_accepts_activity_create(self, client):

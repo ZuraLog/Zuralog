@@ -41,6 +41,7 @@ from app.services.auth_service import AuthService
 from app.services.device_write_service import DeviceWriteService
 from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
+from app.services.strava_rate_limiter import StravaRateLimiter
 from app.services.strava_token_service import StravaTokenService
 
 
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     strava_server = StravaServer(
         token_service=strava_token_service,
         db_factory=async_session,
+        rate_limiter=StravaRateLimiter(redis_url=settings.redis_url),
     )
     registry.register(strava_server)  # Phase 1.6 + 1.7
     registry.register(DeepLinkServer())  # Phase 1.12

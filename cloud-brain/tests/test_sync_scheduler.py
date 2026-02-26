@@ -38,11 +38,13 @@ async def test_sync_user_data_no_integrations(sync_service):
 async def test_sync_user_data_with_strava(sync_service):
     """Should attempt to sync Strava data when integration is active."""
     integrations = [{"provider": "strava", "access_token": "tok-123"}]
+    mock_db = AsyncMock()
     with patch.object(sync_service, "_sync_strava", new_callable=AsyncMock) as mock_strava:
         mock_strava.return_value = {"activities": 5}
         result = await sync_service.sync_user_data(
             user_id="user-123",
             active_integrations=integrations,
+            db=mock_db,
         )
     assert "strava" in result["synced_sources"]
     mock_strava.assert_called_once()

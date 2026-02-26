@@ -84,8 +84,11 @@ class SyncService:
             provider = integration.get("provider", "")
             try:
                 if provider == "strava":
+                    if db is None:
+                        errors.append("strava: db session required for Strava sync")
+                        continue
                     await self._sync_strava(
-                        db=db,  # type: ignore[arg-type]
+                        db=db,
                         user_id=user_id,
                         access_token=integration.get("access_token", ""),
                     )
@@ -124,7 +127,7 @@ class SyncService:
         """
         logger.info("Syncing Strava for user '%s'", user_id)
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(
                 _STRAVA_ACTIVITIES_URL,
                 headers={"Authorization": f"Bearer {access_token}"},
@@ -167,8 +170,10 @@ class SyncService:
             strava_type: str = activity.get("type", "")
             activity_type = _STRAVA_TYPE_MAP.get(strava_type, ActivityType.UNKNOWN)
 
-            # Parse ISO-8601 start time; fall back to UTC now on failure.
-            raw_start: str | None = activity.get("start_date_local")
+            # Parse ISO-8601 UTC start time.
+            # Use start_date (genuine UTC) not start_date_local (wall-clock in athlete's
+            # timezone, incorrectly suffixed with Z by Strava's API).
+            raw_start: str | None = activity.get("start_date")
             try:
                 start_time = (
                     datetime.fromisoformat(raw_start.replace("Z", "+00:00"))
@@ -176,7 +181,7 @@ class SyncService:
                     else datetime.now(tz=timezone.utc)
                 )
             except ValueError:
-                logger.warning("Could not parse start_date_local '%s'", raw_start)
+                logger.warning("Could not parse start_date '%s'", raw_start)
                 start_time = datetime.now(tz=timezone.utc)
 
             new_activity = UnifiedActivity(
