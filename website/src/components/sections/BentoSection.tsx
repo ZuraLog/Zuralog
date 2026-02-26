@@ -733,21 +733,63 @@ export function BentoSection() {
                             style={{ background: "radial-gradient(circle, rgba(232,245,168,0.10) 0%, transparent 70%)" }}
                         />
 
-                        {/* Compact phone — top-right corner */}
-                        <div className="absolute top-4 right-4 phone-float" aria-hidden="true">
+                        {/* Compact phone — top-right corner with mini chat analytics */}
+                        <div className="absolute top-3 right-3 phone-float" aria-hidden="true">
                             <div
-                                className="relative w-[52px] h-[90px] rounded-[16px] border border-white/10 shadow-xl"
-                                style={{ background: "linear-gradient(170deg, #2a2a2a 0%, #111 100%)" }}
+                                className="relative w-[68px] h-[128px] rounded-[16px] border-[1.5px] border-white/15 overflow-hidden"
+                                style={{
+                                    background: "linear-gradient(170deg, #333 0%, #1a1a1a 100%)",
+                                    boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 16px rgba(232,245,168,0.06)",
+                                }}
                             >
-                                <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full bg-black/60" />
-                                <div className="absolute inset-[5px] rounded-[10px]" style={{ background: "linear-gradient(160deg, #1a2e1a 0%, #0d1a0d 100%)" }} />
-                                <div className="absolute inset-[8px] top-[12px] flex flex-col gap-[4px]">
-                                    <div className="h-[3px] rounded-full bg-[#E8F5A8]/50" style={{ width: "70%" }} />
-                                    <div className="h-[3px] rounded-full bg-[#E8F5A8]/30" style={{ width: "50%" }} />
-                                    <div className="h-[3px] rounded-full bg-[#E8F5A8]/20" style={{ width: "85%" }} />
-                                    <div className="mt-1 h-[3px] rounded-full bg-white/15" style={{ width: "40%" }} />
+                                {/* Dynamic Island */}
+                                <div className="absolute top-[4px] left-1/2 -translate-x-1/2 w-[18px] h-[4px] rounded-full bg-black z-10" />
+                                {/* Screen */}
+                                <div className="absolute inset-[2px] top-[3px] rounded-[13px] overflow-hidden" style={{ background: "#FAFAF5" }}>
+                                    {/* Mini header */}
+                                    <div className="flex items-center gap-[3px] px-1.5 pt-[9px] pb-[3px]">
+                                        <div className="w-[7px] h-[7px] rounded-[2px] bg-[#CFE1B9]" />
+                                        <div className="text-[4px] font-bold text-black/60 leading-none">ZuraLog</div>
+                                    </div>
+                                    {/* Mini bar chart */}
+                                    <div className="mx-1.5 rounded-[4px] bg-white p-[3px]" style={{ boxShadow: "0 0.5px 2px rgba(0,0,0,0.04)" }}>
+                                        <div className="flex items-end gap-[1.5px] h-[16px]">
+                                            <div className="flex-1 rounded-t-[1px] bg-[#CFE1B9]/50" style={{ height: "8px" }} />
+                                            <div className="flex-1 rounded-t-[1px] bg-[#CFE1B9]/70" style={{ height: "11px" }} />
+                                            <div className="flex-1 rounded-t-[1px] bg-[#CFE1B9]/45" style={{ height: "6px" }} />
+                                            <div className="flex-1 rounded-t-[1px] bg-[#E8F5A8]" style={{ height: "15px" }} />
+                                            <div className="flex-1 rounded-t-[1px] bg-[#CFE1B9]/65" style={{ height: "10px" }} />
+                                            <div className="flex-1 rounded-t-[1px] bg-[#CFE1B9]/40" style={{ height: "7px" }} />
+                                            <div className="flex-1 rounded-t-[1px] bg-[#CFE1B9]/55" style={{ height: "12px" }} />
+                                        </div>
+                                    </div>
+                                    {/* Mini stats */}
+                                    <div className="flex gap-[2px] px-1.5 mt-[3px]">
+                                        <div className="flex-1 rounded-[3px] bg-white py-[2px] text-center" style={{ boxShadow: "0 0.5px 2px rgba(0,0,0,0.04)" }}>
+                                            <div className="text-[4.5px] font-bold text-black/65 leading-none">8.4k</div>
+                                            <div className="text-[3px] text-black/25">Steps</div>
+                                        </div>
+                                        <div className="flex-1 rounded-[3px] bg-white py-[2px] text-center" style={{ boxShadow: "0 0.5px 2px rgba(0,0,0,0.04)" }}>
+                                            <div className="text-[4.5px] font-bold text-[#4A7C3F] leading-none">82</div>
+                                            <div className="text-[3px] text-black/25">Score</div>
+                                        </div>
+                                    </div>
+                                    {/* Mini chat */}
+                                    <div className="flex flex-col gap-[2px] px-1.5 mt-[3px]">
+                                        <div className="rounded-[3px] bg-black/[0.04] px-[3px] py-[2px] w-[82%]">
+                                            <div className="h-[2px] rounded-full bg-black/12 w-[90%]" />
+                                            <div className="h-[2px] rounded-full bg-black/8 w-[55%] mt-[1.5px]" />
+                                        </div>
+                                        <div className="rounded-[3px] bg-[#E8F5A8]/40 px-[3px] py-[2px] w-[50%] ml-auto">
+                                            <div className="h-[2px] rounded-full bg-black/12 w-[75%]" />
+                                        </div>
+                                        <div className="rounded-[3px] bg-black/[0.04] px-[3px] py-[2px] w-[65%]">
+                                            <div className="h-[2px] rounded-full bg-black/12 w-[80%]" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full bg-white/20" />
+                                {/* Home indicator */}
+                                <div className="absolute bottom-[3px] left-1/2 -translate-x-1/2 w-6 h-[1.5px] rounded-full bg-white/20" />
                             </div>
                         </div>
 
