@@ -19,7 +19,7 @@ import { PageBackground } from '@/components/PageBackground';
 import { SupportSection } from '@/components/sections/SupportSection';
 
 export const metadata: Metadata = {
-  title: 'Support Us | ZuraLog',
+  title: 'Support Us',
   description:
     'Help ZuraLog grow — buy us a coffee, share with friends, become a sponsor, or spread the word. Every contribution counts.',
   openGraph: {
