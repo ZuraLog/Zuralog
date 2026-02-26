@@ -26,8 +26,9 @@ const SCROLL_LINKS = [
 
 /** Links that navigate to standalone pages */
 const PAGE_LINKS = [
-    { label: "About", href: "/about"   },
-    { label: "Contact", href: "/contact" },
+    { label: "About",      href: "/about"    },
+    { label: "Contact",    href: "/contact"  },
+    { label: "Support Us", href: "/support"  },
 ] as const;
 
 export function Navbar() {

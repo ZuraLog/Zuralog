@@ -31,8 +31,28 @@ async function fetchStats(): Promise<Stats | null> {
   }
 }
 
+interface SupportStats {
+  totalFundsRaised: number;
+  totalSupporters: number;
+}
+
+async function fetchSupportStats(): Promise<SupportStats | null> {
+  try {
+    const r = await fetch('/api/support/stats', { cache: 'no-store' });
+    if (!r.ok) return null;
+    const data = await r.json() as { totalFundsRaised?: number; totalSupporters?: number };
+    return {
+      totalFundsRaised: data.totalFundsRaised ?? 0,
+      totalSupporters: data.totalSupporters ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function WaitlistStatsBar() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [supportStats, setSupportStats] = useState<SupportStats | null>(null);
   // Keep a stable ref to the latest setStats so the realtime callback can use it
   const setStatsRef = useRef(setStats);
   useEffect(() => {
@@ -87,6 +107,14 @@ export function WaitlistStatsBar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (stats && stats.foundingMembersLeft === 0) {
+      fetchSupportStats().then((s) => {
+        if (s) setSupportStats(s);
+      });
+    }
+  }, [stats?.foundingMembersLeft]);
+
   if (!stats) {
     return (
       <div className="mb-12 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -100,10 +128,43 @@ export function WaitlistStatsBar() {
     );
   }
 
+  const isSoldOut = stats.foundingMembersLeft === 0;
+
+  const middleCard = isSoldOut
+    ? {
+        value: supportStats?.totalFundsRaised ?? 0,
+        label: 'Total Funds Raised',
+        prefix: '$',
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="mx-auto">
+            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ),
+        color: '#D4F291',
+        delay: 150,
+        urgent: false,
+        showSupportButton: true,
+      }
+    : {
+        value: stats.foundingMembersLeft,
+        label: 'Founding Spots Left',
+        prefix: '',
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="mx-auto">
+            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6L12 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+        ),
+        color: '#D4F291',
+        delay: 150,
+        urgent: stats.foundingMembersLeft <= 10,
+        showSupportButton: false,
+      };
+
   const cards = [
     {
       value: stats.totalSignups,
       label: 'People Waiting',
+      prefix: '',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="mx-auto">
           <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.5" />
@@ -115,22 +176,13 @@ export function WaitlistStatsBar() {
       color: '#E8F5A8',
       delay: 0,
       urgent: false,
+      showSupportButton: false,
     },
-    {
-      value: stats.foundingMembersLeft,
-      label: 'Founding Spots Left',
-      icon: (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="mx-auto">
-          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6L12 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-        </svg>
-      ),
-      color: '#D4F291',
-      delay: 150,
-      urgent: stats.foundingMembersLeft <= 10,
-    },
+    middleCard,
     {
       value: stats.totalReferrals,
       label: 'Referrals Made',
+      prefix: '',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="mx-auto">
           <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.8 1.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -140,6 +192,7 @@ export function WaitlistStatsBar() {
       color: '#b8e05a',
       delay: 300,
       urgent: false,
+      showSupportButton: false,
     },
   ] as const;
 
@@ -166,12 +219,23 @@ export function WaitlistStatsBar() {
           </div>
 
           {/* Counter */}
-          <WaitlistCounter value={card.value} delay={card.delay} sizeClass="text-3xl sm:text-2xl" />
+          <WaitlistCounter value={card.value} delay={card.delay} sizeClass="text-3xl sm:text-2xl" prefix={card.prefix} />
 
           {/* Label */}
           <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-black/35">
             {card.label}
           </p>
+
+          {/* Support Us button — only shown when founding spots sold out */}
+          {'showSupportButton' in card && card.showSupportButton && (
+            <a
+              href="/support"
+              className="mt-3 inline-flex items-center justify-center rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-all hover:opacity-90"
+              style={{ background: '#D4F291', color: '#2D2D2D' }}
+            >
+              Support Us
+            </a>
+          )}
 
           {/* Bottom accent line */}
           <div

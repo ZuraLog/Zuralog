@@ -45,6 +45,7 @@ const NAV_COLUMNS = [
     links: [
       { label: 'About Us', href: '/about' },
       { label: 'Contact', href: '/contact' },
+      { label: 'Support Us', href: '/support' },
     ],
   },
 ];
