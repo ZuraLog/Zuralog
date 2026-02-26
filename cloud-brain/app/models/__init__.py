@@ -7,6 +7,7 @@ Alembic's env.py imports from here to discover all models.
 
 from app.database import Base
 from app.models.conversation import Conversation, Message
+from app.models.daily_metrics import DailyHealthMetrics  # noqa: F401
 from app.models.health_data import (
     ActivityType,
     NutritionEntry,
@@ -23,6 +24,7 @@ __all__ = [
     "ActivityType",
     "Base",
     "Conversation",
+    "DailyHealthMetrics",
     "GoalPeriod",
     "Integration",
     "Message",
