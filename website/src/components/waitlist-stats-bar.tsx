@@ -62,14 +62,22 @@ export function WaitlistStatsBar() {
           });
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.debug('[waitlist] Realtime connected');
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[waitlist] Realtime issue:', status, err);
+          // Polling fallback handles updates regardless
+        }
+      });
 
-    // 3. Polling fallback — refresh every 30 s in case realtime misses an event
+    // 3. Polling fallback — refresh every 15 s in case realtime misses an event
     const interval = setInterval(() => {
       fetchStats().then((s) => {
         if (s) setStatsRef.current(s);
       });
-    }, 30_000);
+    }, 15_000);
 
     return () => {
       clearInterval(interval);
@@ -77,7 +85,18 @@ export function WaitlistStatsBar() {
     };
   }, []);
 
-  if (!stats) return null;
+  if (!stats) {
+    return (
+      <div className="mb-12 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-[120px] animate-pulse rounded-2xl bg-white/50 border border-black/6"
+          />
+        ))}
+      </div>
+    );
+  }
 
   const cards = [
     {
