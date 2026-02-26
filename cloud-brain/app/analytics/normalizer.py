@@ -147,13 +147,28 @@ class DataNormalizer:
     def _map_apple_type(apple_type: str | None) -> ActivityType:
         """Map an Apple HealthKit workout type to our canonical enum.
 
+        Supports both the full HK-prefixed names (e.g. HKWorkoutActivityTypeRunning)
+        and the short names sent by the iOS HealthKitBridge Swift extension
+        (e.g. "running"). The Swift bridge serialises HKWorkoutActivityType to
+        lowercase short strings; the HK-prefixed names are kept for backward
+        compatibility with any legacy data.
+
         Args:
-            apple_type: HKWorkoutActivityType string identifier.
+            apple_type: HKWorkoutActivityType string identifier (short or HK-prefixed).
 
         Returns:
             The corresponding ActivityType, or UNKNOWN if unrecognized.
         """
         mapping = {
+            # Short names from HealthKitBridge.swift HKWorkoutActivityType extension
+            "running": ActivityType.RUN,
+            "cycling": ActivityType.CYCLE,
+            "walking": ActivityType.WALK,
+            "swimming": ActivityType.SWIM,
+            "strength_training": ActivityType.STRENGTH,
+            "hiking": ActivityType.WALK,
+            "yoga": ActivityType.STRENGTH,
+            # Legacy HK-prefixed names (backward compatibility)
             "HKWorkoutActivityTypeRunning": ActivityType.RUN,
             "HKWorkoutActivityTypeCycling": ActivityType.CYCLE,
             "HKWorkoutActivityTypeWalking": ActivityType.WALK,
