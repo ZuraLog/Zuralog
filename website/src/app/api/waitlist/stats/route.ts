@@ -4,13 +4,12 @@
  * Returns aggregate waitlist statistics for the hero counter.
  * Queries the waitlist_stats view.
  *
- * Not cached — always returns fresh data so realtime counter updates
- * are immediately reflected when the client re-fetches after a DB change.
+ * Cached at the edge with stale-while-revalidate: served fresh for 5s,
+ * then stale for up to 10s while revalidating in the background. With
+ * 15s client polling, most requests hit the CDN cache rather than Supabase.
  */
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
-export const revalidate = 0;
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
@@ -44,6 +43,6 @@ export async function GET() {
       foundingMembersLeft: Math.max(0, 30 - (data?.founding_members ?? 0)),
       totalReferrals: data?.total_referrals ?? 0,
     },
-    { headers: { 'Cache-Control': 'no-store' } },
+    { headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10' } },
   );
 }
