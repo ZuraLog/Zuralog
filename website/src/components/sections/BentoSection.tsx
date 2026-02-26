@@ -703,10 +703,10 @@ export function BentoSection() {
                                 {[0, 1, 2, 3, 4, 5, 6].map(colIndex => {
                                     const speedClass = colIndex % 3 === 0 ? 'animate-drift-slow' : colIndex % 3 === 1 ? 'animate-drift-mid' : 'animate-drift-fast';
                                     // Each icon: w-16 h-16 = 64px, gap-4 = 16px between items
-                                    // One half height (measured in browser) = 1597px
+                                    // One half = 20 icons × 64px + 19 gaps × 16px = 1280 + 304 = 1584px
                                     // Gap between the two halves (gap-4) = 16px
-                                    // Drift = 1597 + 16 = 1613px for a perfectly seamless loop
-                                    const halfHeight = 1613;
+                                    // Drift = 1584 + 16 = 1600px for a perfectly seamless loop
+                                    const halfHeight = 1600;
                                     const icons = APPS.map((app, i) => (
                                         <div
                                             key={i}
