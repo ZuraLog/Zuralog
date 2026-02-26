@@ -477,6 +477,19 @@ export default function DashboardBento() {
 
     // Staggered slot cycling — 4 independent timers, offset by slot index
     useEffect(() => {
+        let isVisible = true;
+        let observerCleanup: (() => void) | undefined;
+
+        const card = cardRef.current;
+        if (card) {
+            const observer = new IntersectionObserver(
+                ([entry]) => { isVisible = entry.isIntersecting; },
+                { threshold: 0.1 }
+            );
+            observer.observe(card);
+            observerCleanup = () => observer.disconnect();
+        }
+
         const BASE_INTERVAL = 3000;
         const SLOT_OFFSET = 1100;
 
@@ -485,6 +498,7 @@ export default function DashboardBento() {
 
         [0, 1, 2, 3].forEach((slotIdx) => {
             const tick = () => {
+                if (!isVisible) return;
                 setSlots(prev => {
                     const next = [...prev];
                     const current = next[slotIdx];
@@ -525,6 +539,7 @@ export default function DashboardBento() {
         return () => {
             timeouts.forEach(clearTimeout);
             intervals.forEach(clearInterval);
+            observerCleanup?.();
         };
     }, []);
 
@@ -533,23 +548,29 @@ export default function DashboardBento() {
         const card = cardRef.current;
         if (!card) return;
 
+        let rafId = 0;
         const handleMouseMove = (e: MouseEvent) => {
-            const rect = card.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
-            const dx = e.clientX - cx;
-            const dy = e.clientY - cy;
-            const maxTilt = 6;
-            gsap.to(card, {
-                rotateX: (-dy / (rect.height / 2)) * maxTilt,
-                rotateY: (dx / (rect.width / 2)) * maxTilt,
-                transformPerspective: 900,
-                duration: 0.35,
-                ease: "power2.out",
+            if (rafId) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = 0;
+                const rect = card.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = e.clientX - cx;
+                const dy = e.clientY - cy;
+                const maxTilt = 6;
+                gsap.to(card, {
+                    rotateX: (-dy / (rect.height / 2)) * maxTilt,
+                    rotateY: (dx / (rect.width / 2)) * maxTilt,
+                    transformPerspective: 900,
+                    duration: 0.35,
+                    ease: "power2.out",
+                });
             });
         };
 
         const handleMouseLeave = () => {
+            if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
             gsap.to(card, { rotateX: 0, rotateY: 0, duration: 0.8, ease: "elastic.out(1, 0.45)" });
         };
 
