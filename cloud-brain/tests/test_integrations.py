@@ -210,3 +210,62 @@ def test_strava_exchange_persists_to_db(mock_post, client_with_auth_and_db):
         9999999999,
         athlete_data={"id": 42, "firstname": "Test", "lastname": "Athlete"},
     )
+
+
+def test_strava_status_connected(client_with_auth):
+    """Returns connected=True with athlete metadata when integration exists."""
+    c, mock_auth = client_with_auth
+    mock_auth.get_user.return_value = {"id": "user-123"}
+
+    integration = MagicMock()
+    integration.is_active = True
+    integration.last_synced_at = None
+    integration.sync_status = "idle"
+    integration.provider_metadata = {"id": 12345, "firstname": "Jake"}
+
+    app.state.strava_token_service.get_integration = AsyncMock(return_value=integration)
+
+    response = c.get(
+        "/api/v1/integrations/strava/status",
+        headers={"Authorization": "Bearer fake-jwt"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["connected"] is True
+    assert data["athlete"] == {"id": 12345, "firstname": "Jake"}
+    assert data["sync_status"] == "idle"
+    assert data["last_synced_at"] is None
+
+
+def test_strava_status_not_connected(client_with_auth):
+    """Returns connected=False when no integration exists."""
+    c, mock_auth = client_with_auth
+    mock_auth.get_user.return_value = {"id": "user-999"}
+
+    app.state.strava_token_service.get_integration = AsyncMock(return_value=None)
+
+    response = c.get(
+        "/api/v1/integrations/strava/status",
+        headers={"Authorization": "Bearer fake-jwt"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["connected"] is False
+
+
+def test_strava_disconnect_success(client_with_auth):
+    """Disconnects Strava and returns success."""
+    c, mock_auth = client_with_auth
+    mock_auth.get_user.return_value = {"id": "user-123"}
+
+    app.state.strava_token_service.disconnect = AsyncMock(return_value=True)
+
+    response = c.delete(
+        "/api/v1/integrations/strava/disconnect",
+        headers={"Authorization": "Bearer fake-jwt"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True

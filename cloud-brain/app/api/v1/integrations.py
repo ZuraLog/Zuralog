@@ -135,3 +135,70 @@ async def strava_exchange(
 
     athlete_id: int | None = athlete.get("id") if athlete else None  # type: ignore[union-attr]
     return {"success": True, "message": "Strava connected!", "athlete_id": athlete_id}
+
+
+@router.get("/strava/status")
+async def strava_status(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return Strava integration connection status for the current user.
+
+    Args:
+        request: FastAPI request — used to access ``app.state`` services.
+        credentials: Bearer token for the authenticated Zuralog user.
+        auth_service: Injected auth service for verifying the JWT.
+        db: Injected async database session.
+
+    Returns:
+        dict: ``{"connected": False}`` when no active integration exists, or
+              ``{"connected": True, "sync_status": ..., "last_synced_at": ..., "athlete": ...}``
+              when the user has an active Strava integration.
+    """
+    user_data = await auth_service.get_user(credentials.credentials)
+    user_id = user_data["id"]
+
+    token_service: StravaTokenService = request.app.state.strava_token_service
+    integration = await token_service.get_integration(db, user_id)
+
+    if integration is None or not integration.is_active:
+        return {"connected": False}
+
+    return {
+        "connected": True,
+        "sync_status": integration.sync_status,
+        "last_synced_at": integration.last_synced_at.isoformat() if integration.last_synced_at else None,
+        "athlete": integration.provider_metadata,
+    }
+
+
+@router.delete("/strava/disconnect")
+async def strava_disconnect(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Disconnect the current user's Strava integration.
+
+    Marks the integration as inactive in the database via
+    ``StravaTokenService.disconnect``.
+
+    Args:
+        request: FastAPI request — used to access ``app.state`` services.
+        credentials: Bearer token for the authenticated Zuralog user.
+        auth_service: Injected auth service for verifying the JWT.
+        db: Injected async database session.
+
+    Returns:
+        dict: ``{"success": True}`` if the integration was disconnected,
+              ``{"success": False}`` if no active integration was found.
+    """
+    user_data = await auth_service.get_user(credentials.credentials)
+    user_id = user_data["id"]
+
+    token_service: StravaTokenService = request.app.state.strava_token_service
+    disconnected = await token_service.disconnect(db, user_id)
+    return {"success": disconnected}
