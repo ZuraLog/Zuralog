@@ -19,14 +19,29 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
+import httpx
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.health_data import ActivityType, UnifiedActivity
 from app.models.integration import Integration
 from app.worker import celery_app
 
 if TYPE_CHECKING:
     from app.services.strava_token_service import StravaTokenService
+
+# Strava activity type string -> canonical ActivityType enum value
+_STRAVA_TYPE_MAP: dict[str, ActivityType] = {
+    "Run": ActivityType.RUN,
+    "Ride": ActivityType.CYCLE,
+    "Swim": ActivityType.SWIM,
+    "Walk": ActivityType.WALK,
+    "Hike": ActivityType.WALK,
+    "WeightTraining": ActivityType.STRENGTH,
+    "Workout": ActivityType.STRENGTH,
+}
+
+_STRAVA_ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities"
 
 logger = logging.getLogger(__name__)
 
