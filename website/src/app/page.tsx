@@ -8,11 +8,13 @@ import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { PhoneMockupSection } from "@/components/sections/PhoneMockupSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
+import { HashScrollHandler } from "@/components/HashScrollHandler";
 
 export default function Home() {
     return (
         <>
             <PageBackground />
+            <HashScrollHandler />
             <main className="relative min-h-screen">
                 <ScrollProgress />
                 <Navbar />
