@@ -698,23 +698,23 @@ export function BentoSection() {
                         >
                             <div
                                 className="absolute flex flex-row gap-4"
-                                style={{ width: "350%", height: "300%", top: "-100%", left: "-100%", transform: "rotate(45deg) scale(1.35)", justifyContent: "center" }}
+                                style={{ width: "400%", height: "350%", top: "-130%", left: "-125%", transform: "rotate(45deg)", justifyContent: "center" }}
                             >
                                 {[0, 1, 2, 3, 4, 5, 6].map(colIndex => {
                                     const speedClass = colIndex % 3 === 0 ? 'animate-drift-slow' : colIndex % 3 === 1 ? 'animate-drift-mid' : 'animate-drift-fast';
                                     return (
                                         <div
                                             key={colIndex}
-                                            className={`integrations-column flex flex-col gap-4 w-max h-max ${speedClass}`}
-                                            style={{ marginTop: colIndex % 2 !== 0 ? '40px' : '0px' }}
+                                            className={`integrations-column flex flex-col gap-4 w-max ${speedClass}`}
+                                            style={{ marginTop: colIndex % 2 !== 0 ? '60px' : '0px', willChange: 'transform' }}
                                         >
                                              {[...APPS, ...APPS].map((app, i) => (
                                                 <div
                                                     key={`${colIndex}-${i}`}
-                                                    className="w-14 h-14 rounded-2xl bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
+                                                    className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
                                                     style={{ transform: "rotate(-45deg) translateZ(0)" }}
                                                 >
-                                                    <app.Icon size={26} color={app.color} />
+                                                    <app.Icon size={28} color={app.color} />
                                                 </div>
                                             ))}
                                         </div>

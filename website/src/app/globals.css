@@ -53,12 +53,12 @@ body {
    Bento Section — Integrations card: diagonal icon drift
 ───────────────────────────────────────────────────────────── */
 @keyframes diagonalDrift {
-  0%   { transform: translateY(-33.3333%); }
-  100% { transform: translateY(0); }
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
 }
-.animate-drift-slow { animation: diagonalDrift 14s linear infinite; }
-.animate-drift-mid  { animation: diagonalDrift 11s linear infinite; }
-.animate-drift-fast { animation: diagonalDrift  8s linear infinite; }
+.animate-drift-slow { animation: diagonalDrift 18s linear infinite; }
+.animate-drift-mid  { animation: diagonalDrift 14s linear infinite; }
+.animate-drift-fast { animation: diagonalDrift 10s linear infinite; }
 
 /* ─────────────────────────────────────────────────────────────
    Bento Section — Unified Dashboard card: metric tile float
