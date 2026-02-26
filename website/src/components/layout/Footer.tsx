@@ -15,7 +15,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { FaXTwitter, FaInstagram, FaLinkedinIn, FaFacebookF, FaAppStoreIos, FaGooglePlay } from 'react-icons/fa6';
+import { FaXTwitter, FaInstagram, FaLinkedinIn, FaTiktok, FaAppStoreIos, FaGooglePlay } from 'react-icons/fa6';
 import { ManageCookiesButton } from '@/components/ui/ManageCookiesButton';
 
 // ---------------------------------------------------------------------------
@@ -66,9 +66,9 @@ const SOCIAL_LINKS = [
     icon: FaLinkedinIn,
   },
   {
-    label: 'Facebook',
-    href: 'https://facebook.com/zuralog',
-    icon: FaFacebookF,
+    label: 'TikTok',
+    href: 'https://www.tiktok.com/@zuralog',
+    icon: FaTiktok,
   },
 ];
 

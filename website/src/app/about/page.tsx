@@ -62,7 +62,7 @@ const FOUNDERS = [
     initials: 'FL',
     photoPath: '/founders/fernando.jpg',
     bio: "Fernando is a programmer and a born builder. He spent years working in the health space and kept running into the same wall — great data, zero clarity. He knows what it feels like to be deep in the fitness game and still not have a straight answer about why things aren't working. ZuraLog is the thing he wishes had existed. Now he's making sure it does.",
-    linkedin: 'https://www.linkedin.com/in/fernando-leano-7221b13b3/',
+    linkedin: 'https://www.linkedin.com/in/fernando-leano-682b28208/',
   },
 ];
 
@@ -265,12 +265,12 @@ export default function AboutPage() {
               <p className="mb-6 text-sm text-black/40">
                 Questions, press inquiries, partnership ideas — we&apos;d love to hear from you.
               </p>
-              <a
-                href="mailto:support@zuralog.com"
+              <Link
+                href="/contact"
                 className="inline-flex items-center gap-2 rounded-full bg-[#E8F5A8] px-6 py-2.5 text-sm font-semibold text-[#2D2D2D] transition-opacity hover:opacity-80"
               >
                 support@zuralog.com
-              </a>
+              </Link>
             </div>
           </section>
         </main>

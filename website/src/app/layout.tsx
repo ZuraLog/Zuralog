@@ -127,6 +127,7 @@ export default function RootLayout({
         />
         <div
           id="ssr-loading-overlay"
+          suppressHydrationWarning
           style={{
             position: "fixed",
             inset: 0,

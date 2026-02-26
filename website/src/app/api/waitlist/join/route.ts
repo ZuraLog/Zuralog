@@ -146,8 +146,28 @@ export async function POST(request: NextRequest) {
       .send({
         from: FROM_EMAIL,
         to: email,
-        subject: "You're on the ZuraLog waitlist!",
-        html: `<p>Welcome! You're #${inserted.queue_position} on the list. Your referral code is <strong>${newCode}</strong>. Share ${siteUrl}?ref=${newCode} to move up.</p>`,
+        subject: "Welcome to ZuraLog — You're on the list!",
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px; color: #1A1A1A;">
+            <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 16px;">Thank you for joining the waitlist!</h1>
+            <p style="font-size: 16px; line-height: 1.6; color: #555;">
+              We're thrilled to have you on board. You're <strong>#${inserted.queue_position}</strong> on the list.
+            </p>
+            <p style="font-size: 16px; line-height: 1.6; color: #555;">
+              ZuraLog is the AI that connects your fitness apps and actually thinks — so your health data finally works for you. We'll notify you as soon as the app is ready to launch.
+            </p>
+            <p style="font-size: 16px; line-height: 1.6; color: #555;">
+              In the meantime, share your referral link to move up the list:
+            </p>
+            <div style="background: #F5F5EF; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
+              <p style="margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #999;">Your referral link</p>
+              <a href="${siteUrl}?ref=${newCode}" style="font-size: 16px; font-weight: 600; color: #1A1A1A; text-decoration: none;">${siteUrl}?ref=${newCode}</a>
+            </div>
+            <p style="font-size: 14px; line-height: 1.6; color: #999; margin-top: 32px;">
+              — The ZuraLog Team
+            </p>
+          </div>
+        `,
       })
       .catch((err: unknown) => console.error('[waitlist/join] email send:', err));
   }

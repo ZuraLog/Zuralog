@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { PageBackground } from '@/components/PageBackground';
-import { FaXTwitter, FaInstagram, FaLinkedinIn, FaFacebookF } from 'react-icons/fa6';
+import { FaXTwitter, FaInstagram, FaLinkedinIn, FaTiktok } from 'react-icons/fa6';
 
 // ---------------------------------------------------------------------------
 // Data
@@ -34,7 +34,7 @@ const SOCIAL_LINKS = [
   { label: 'X (Twitter)', href: 'https://twitter.com/zuralog', icon: FaXTwitter },
   { label: 'Instagram', href: 'https://instagram.com/zuralog', icon: FaInstagram },
   { label: 'LinkedIn', href: 'https://www.linkedin.com/company/112446156/', icon: FaLinkedinIn },
-  { label: 'Facebook', href: 'https://facebook.com/zuralog', icon: FaFacebookF },
+  { label: 'TikTok', href: 'https://www.tiktok.com/@zuralog', icon: FaTiktok },
 ];
 
 // ---------------------------------------------------------------------------

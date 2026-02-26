@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,6 +34,8 @@ const PAGE_LINKS = [
 export function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const pathname = usePathname();
+    const router = useRouter();
 
     useEffect(() => {
         const handler = () => setScrolled(window.scrollY > 40);
@@ -43,8 +46,12 @@ export function Navbar() {
 
     const handleNav = useCallback((id: string) => {
         setMenuOpen(false);
+        if (pathname !== "/") {
+            router.push(`/#${id}`);
+            return;
+        }
         document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    }, []);
+    }, [pathname, router]);
 
     return (
         <motion.header
