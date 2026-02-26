@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/sections/HeroSection";
 import { MobileSection } from "@/components/sections/MobileSection";
 import { BentoSection } from "@/components/sections/BentoSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
+import { PhoneMockupSection } from "@/components/sections/PhoneMockupSection";
 import { ClientShellGate } from "@/components/ClientShellGate";
 import { PageBackground } from "@/components/PageBackground";
 
@@ -18,6 +19,7 @@ export default function Home() {
                 <HeroSection />
                 <MobileSection />
                 <BentoSection />
+                <PhoneMockupSection />
                 <WaitlistSection />
             </main>
             <Footer />

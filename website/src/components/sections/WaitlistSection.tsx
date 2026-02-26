@@ -1,9 +1,9 @@
 /**
  * WaitlistSection — full-page quiz + signup section for website/.
  *
- * Cream background (#FAFAF5) with peach (#FFAB76) accent.
- * Layout: stats bar at top, then quiz (left) + iPhone mockup (right).
- * Includes all easter eggs from web/ (connect4, etc.).
+ * Cream background (#FAFAF5) with lime accent.
+ * Layout: stats bar at top, then quiz (left) + leaderboard (right).
+ * Phone mockup lives in its own section below (PhoneMockupSection).
  */
 'use client';
 
@@ -12,7 +12,7 @@ import { motion } from 'framer-motion';
 import { QuizContainer } from '@/components/quiz/quiz-container';
 import { WaitlistStatsBar } from '@/components/waitlist-stats-bar';
 import { WaitlistParticles } from '@/components/waitlist-particles';
-import { IPhoneMockup } from '@/components/iphone-mockup';
+import { WaitlistLeaderboard } from '@/components/waitlist-leaderboard';
 import { Toaster } from 'sonner';
 
 export function WaitlistSection() {
@@ -65,7 +65,7 @@ export function WaitlistSection() {
         {/* Animated stats counters */}
         <WaitlistStatsBar />
 
-        {/* Main layout: quiz left, phone right */}
+        {/* Main layout: quiz left, leaderboard right */}
         <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
           {/* Quiz (left / main) */}
           <motion.div
@@ -78,9 +78,9 @@ export function WaitlistSection() {
             <QuizContainer onEmailChange={handleEmailChange} />
           </motion.div>
 
-          {/* iPhone mockup (right) */}
-          <div className="w-full flex justify-center py-4 lg:w-auto lg:justify-start lg:py-0 lg:sticky lg:top-32">
-            <IPhoneMockup emailValue={emailValue} />
+          {/* Leaderboard (right) */}
+          <div className="w-full lg:max-w-sm lg:sticky lg:top-32">
+            <WaitlistLeaderboard />
           </div>
         </div>
       </div>
