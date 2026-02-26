@@ -27,6 +27,7 @@ class Settings(BaseSettings):
         fcm_credentials_path: Path to Firebase service account JSON (Phase 1.9).
         revenuecat_webhook_secret: RevenueCat webhook auth secret (Phase 1.13).
         revenuecat_api_key: RevenueCat V1 Secret API key for server-side lookups (Phase 1.13).
+        strava_webhook_verify_token: Random token used to validate Strava webhook subscriptions (Phase 1.7).
         app_env: Current environment (development, staging, production).
         app_debug: Enable debug mode.
     """
@@ -50,6 +51,7 @@ class Settings(BaseSettings):
     fcm_credentials_path: str = ""
     revenuecat_webhook_secret: str = ""
     revenuecat_api_key: str = ""
+    strava_webhook_verify_token: str = ""
     app_env: str = "development"
     app_debug: bool = True
 
