@@ -700,7 +700,7 @@ export function BentoSection() {
                                 className="absolute flex flex-row gap-4"
                                 style={{ width: "350%", height: "300%", top: "-100%", left: "-100%", transform: "rotate(45deg)", justifyContent: "center" }}
                             >
-                                {[0, 1, 2, 3, 4, 5, 6].map(colIndex => {
+                                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(colIndex => {
                                     const speedClass = colIndex % 3 === 0 ? 'animate-drift-slow' : colIndex % 3 === 1 ? 'animate-drift-mid' : 'animate-drift-fast';
                                     return (
                                         <div
@@ -708,7 +708,7 @@ export function BentoSection() {
                                             className={`integrations-column flex flex-col gap-4 w-max h-max ${speedClass}`}
                                             style={{ marginTop: colIndex % 2 !== 0 ? '40px' : '0px' }}
                                         >
-                                             {[...APPS, ...APPS].map((app, i) => (
+                                             {[...APPS, ...APPS, ...APPS].map((app, i) => (
                                                 <div
                                                     key={`${colIndex}-${i}`}
                                                     className="w-14 h-14 rounded-2xl bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
