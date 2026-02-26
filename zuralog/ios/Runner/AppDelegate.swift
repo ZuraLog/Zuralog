@@ -234,6 +234,21 @@ import UIKit
                 }
             }
 
+        case "configureBackgroundSync":
+            // Persists the JWT auth token and Cloud Brain API URL to the iOS
+            // Keychain so native background observers can sync without Flutter.
+            guard let args = call.arguments as? [String: Any],
+                  let token = args["auth_token"] as? String,
+                  let apiUrl = args["api_base_url"] as? String else {
+                result(FlutterError(code: "BAD_ARGS",
+                                   message: "configureBackgroundSync requires auth_token and api_base_url",
+                                   details: nil))
+                return
+            }
+            let tokenSaved = KeychainHelper.shared.save(key: "auth_token", value: token)
+            let urlSaved = KeychainHelper.shared.save(key: "api_base_url", value: apiUrl)
+            result(tokenSaved && urlSaved)
+
         case "startBackgroundObservers":
             healthKitBridge.startBackgroundObservers { success in
                 result(success)

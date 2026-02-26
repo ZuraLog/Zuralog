@@ -558,17 +558,155 @@ class HealthKitBridge: NSObject {
 
     /// Called when an HKObserverQuery fires due to new data.
     ///
-    /// In Phase 1.10 (Background Services), this will:
-    /// 1. Start a headless FlutterEngine
-    /// 2. Send the change type via method channel
-    /// 3. Dart code syncs data to Cloud Brain via REST
+    /// Reads the Keychain for stored auth credentials and, if present,
+    /// reads the latest data for the changed type and POSTs it directly
+    /// to the Cloud Brain's `/api/v1/health/ingest` endpoint via URLSession.
     ///
-    /// For now, logs the event for debugging.
+    /// This runs entirely natively — no Flutter engine required — so it
+    /// works reliably in the background when the app is suspended or terminated.
     ///
     /// - Parameter type: The data type that changed (e.g., "steps", "workouts").
     private func notifyOfChange(type: String) {
         print("[HealthKitBridge] background_observer_triggered: \(type)")
-        // TODO(phase-1.10): Trigger background sync to Cloud Brain
+
+        guard let token = KeychainHelper.shared.read(key: "auth_token"),
+              let baseURL = KeychainHelper.shared.read(key: "api_base_url") else {
+            print("[HealthKitBridge] No auth credentials in Keychain — skipping background sync")
+            return
+        }
+
+        let now = Date()
+        let oneDayAgo = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+
+        switch type {
+        case "steps":
+            fetchSteps(date: now) { steps, _ in
+                guard let steps = steps, steps > 0 else { return }
+                let today = ISO8601DateFormatter().string(from: Calendar.current.startOfDay(for: now)).prefix(10)
+                let payload: [String: Any] = [
+                    "source": "apple_health",
+                    "daily_metrics": [["date": String(today), "steps": Int(steps)]],
+                ]
+                self.postToIngest(payload: payload, token: token, baseURL: baseURL)
+            }
+        case "workouts":
+            fetchWorkouts(startDate: oneDayAgo, endDate: now) { workouts, _ in
+                guard let workouts = workouts, !workouts.isEmpty else { return }
+                let entries: [[String: Any]] = workouts.map { w in
+                    [
+                        "original_id": (w["id"] as? String) ?? UUID().uuidString,
+                        "activity_type": (w["activityType"] as? String) ?? "other",
+                        "duration_seconds": (w["duration"] as? Double).map { Int($0) } ?? 0,
+                        "calories": (w["energyBurned"] as? Double).map { Int($0) } ?? 0,
+                        "start_time": ISO8601DateFormatter().string(
+                            from: Date(timeIntervalSince1970: ((w["startDate"] as? Double) ?? 0) / 1000.0)
+                        ),
+                    ]
+                }
+                let payload: [String: Any] = ["source": "apple_health", "workouts": entries]
+                self.postToIngest(payload: payload, token: token, baseURL: baseURL)
+            }
+        case "sleep":
+            fetchSleep(startDate: oneDayAgo, endDate: now) { segments, _ in
+                guard let segments = segments, !segments.isEmpty else { return }
+                var totalSeconds: Double = 0
+                for seg in segments {
+                    let startMs = (seg["startDate"] as? Double) ?? 0
+                    let endMs = (seg["endDate"] as? Double) ?? 0
+                    totalSeconds += (endMs - startMs) / 1000.0
+                }
+                let hours = totalSeconds / 3600.0
+                guard hours > 0 else { return }
+                let today = String(ISO8601DateFormatter().string(from: Calendar.current.startOfDay(for: now)).prefix(10))
+                let payload: [String: Any] = [
+                    "source": "apple_health",
+                    "sleep": [["date": today, "hours": round(hours * 100) / 100]],
+                ]
+                self.postToIngest(payload: payload, token: token, baseURL: baseURL)
+            }
+        default:
+            // For other types (calories, nutrition, weight, RHR, HRV, VO2)
+            // read today's daily metrics and post as daily_metrics entry
+            readAndPostDailyMetrics(date: now, token: token, baseURL: baseURL)
+        }
+    }
+
+    /// Reads key daily metrics and posts them to the ingest endpoint.
+    ///
+    /// Used as a fallback for observer types that don't warrant individual
+    /// fetch functions (calories, RHR, HRV, VO2, nutrition).
+    ///
+    /// - Parameters:
+    ///   - date: The date to read metrics for.
+    ///   - token: JWT bearer token.
+    ///   - baseURL: Cloud Brain API base URL.
+    private func readAndPostDailyMetrics(date: Date, token: String, baseURL: String) {
+        let group = DispatchGroup()
+        var steps: Double = 0
+        var calories: Double = 0
+        var rhr: Double? = nil
+        var hrv: Double? = nil
+        var vo2: Double? = nil
+
+        group.enter()
+        fetchSteps(date: date) { s, _ in steps = s ?? 0; group.leave() }
+
+        group.enter()
+        fetchActiveCaloriesBurned(date: date) { c, _ in calories = c ?? 0; group.leave() }
+
+        group.enter()
+        fetchRestingHeartRate { r, _ in rhr = r; group.leave() }
+
+        group.enter()
+        fetchHRV { h, _ in hrv = h; group.leave() }
+
+        group.enter()
+        fetchCardioFitness { v, _ in vo2 = v; group.leave() }
+
+        group.notify(queue: .global(qos: .background)) {
+            let today = String(ISO8601DateFormatter().string(from: Calendar.current.startOfDay(for: date)).prefix(10))
+            var entry: [String: Any] = ["date": today]
+            if steps > 0 { entry["steps"] = Int(steps) }
+            if calories > 0 { entry["active_calories"] = Int(calories) }
+            if let rhr = rhr, rhr > 0 { entry["resting_heart_rate"] = rhr }
+            if let hrv = hrv, hrv > 0 { entry["hrv_ms"] = hrv }
+            if let vo2 = vo2, vo2 > 0 { entry["vo2_max"] = vo2 }
+            let payload: [String: Any] = ["source": "apple_health", "daily_metrics": [entry]]
+            self.postToIngest(payload: payload, token: token, baseURL: baseURL)
+        }
+    }
+
+    /// Posts a health data payload to the Cloud Brain ingest endpoint via URLSession.
+    ///
+    /// Fire-and-forget — errors are logged but not propagated.
+    ///
+    /// - Parameters:
+    ///   - payload: The JSON-encodable dictionary to POST.
+    ///   - token: JWT bearer token for Authorization header.
+    ///   - baseURL: Cloud Brain API base URL (e.g., https://api.zuralog.com).
+    private func postToIngest(payload: [String: Any], token: String, baseURL: String) {
+        guard let url = URL(string: "\(baseURL)/api/v1/health/ingest"),
+              let body = try? JSONSerialization.data(withJSONObject: payload) else {
+            print("[HealthKitBridge] Invalid ingest URL or payload")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+        request.timeoutInterval = 30.0
+
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error = error {
+                print("[HealthKitBridge] Ingest POST failed: \(error.localizedDescription)")
+            } else if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                print("[HealthKitBridge] Ingest POST returned HTTP \(http.statusCode)")
+            } else {
+                print("[HealthKitBridge] Ingest POST succeeded for \(payload["source"] ?? "?")")
+            }
+        }.resume()
     }
 }
 

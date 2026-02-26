@@ -366,6 +366,41 @@ class HealthBridge {
     }
   }
 
+  /// Stores the JWT auth token and Cloud Brain API base URL in the iOS
+  /// Keychain so that native background sync code (running in
+  /// HKObserverQuery callbacks outside the Flutter engine) can
+  /// authenticate directly with the Cloud Brain.
+  ///
+  /// Must be called after successful Apple Health authorization and
+  /// before [startBackgroundObservers] — the native observers need
+  /// the credentials to be present when they fire.
+  ///
+  /// - [authToken]: The current JWT bearer token for the logged-in user.
+  /// - [apiBaseUrl]: The Cloud Brain base URL (e.g. https://api.zuralog.com).
+  ///
+  /// Returns `true` if the credentials were saved successfully.
+  Future<bool> configureBackgroundSync({
+    required String authToken,
+    required String apiBaseUrl,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<bool>(
+        'configureBackgroundSync',
+        {'auth_token': authToken, 'api_base_url': apiBaseUrl},
+      );
+      return result ?? false;
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print(
+          'HealthBridge.configureBackgroundSync PlatformException: ${e.message}',
+        );
+        return true;
+      }());
+      return false;
+    }
+  }
+
   /// Starts background observers for health data changes.
   ///
   /// When HealthKit detects new data (e.g., from Apple Watch),
