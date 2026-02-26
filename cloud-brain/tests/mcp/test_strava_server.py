@@ -242,3 +242,37 @@ class TestStravaServerHealthCheck:
         mock_get.return_value = mock_response
 
         assert await server.health_check() is False
+
+
+class TestStravaServerDBTokens:
+    """Tests for DB-backed token retrieval."""
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_uses_token_service(self) -> None:
+        """StravaServer reads tokens from StravaTokenService when db_factory is set."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from app.mcp_servers.strava_server import StravaServer
+
+        mock_token_service = AsyncMock()
+        mock_token_service.get_access_token.return_value = "db-token"
+
+        mock_db = AsyncMock()
+        mock_db_ctx = AsyncMock()
+        mock_db_ctx.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_db_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        server = StravaServer(
+            token_service=mock_token_service,
+            db_factory=lambda: mock_db_ctx,
+        )
+
+        with patch("httpx.AsyncClient.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = [{"id": 1}]
+            mock_get.return_value = mock_resp
+
+            result = await server.execute_tool("strava_get_activities", {"limit": 1}, "user-123")
+
+        assert result.success is True
+        mock_token_service.get_access_token.assert_called_once_with(mock_db, "user-123")

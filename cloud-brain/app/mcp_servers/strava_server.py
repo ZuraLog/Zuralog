@@ -3,9 +3,14 @@ Zuralog Cloud Brain — Strava MCP Server (Phase 1.6).
 
 Wraps the Strava API so the LLM agent can read recent activities and
 create manual entries via standard MCP tool calls. Token storage is
-in-memory for the MVP phase; Phase 1.7 will migrate to database
-persistence.
+backed by the database via ``StravaTokenService`` when injected;
+falls back to the legacy in-memory dict for backwards compatibility.
 """
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any
 
 import httpx
 
@@ -20,14 +25,32 @@ class StravaServer(BaseMCPServer):
     - ``strava_get_activities``: Fetch recent runs/rides from Strava.
     - ``strava_create_activity``: Create a manual activity entry.
 
-    Access tokens are stored in ``_tokens`` (keyed by ``user_id``) and
-    injected via ``store_token()`` by the OAuth exchange endpoint once
-    the user completes the Strava login flow.
+    When ``token_service`` and ``db_factory`` are supplied, tokens are
+    retrieved via ``StravaTokenService.get_access_token()``.  Otherwise
+    the legacy in-memory ``_tokens`` dict is used (backwards compat).
+
+    Args:
+        token_service: Optional ``StravaTokenService`` instance for
+            DB-backed token retrieval.
+        db_factory: Optional callable that returns an async context
+            manager yielding an ``AsyncSession`` (e.g. ``async_session``
+            from ``app.database``).
     """
 
-    def __init__(self) -> None:
-        """Initialise the server with an empty in-memory token store."""
+    def __init__(
+        self,
+        token_service: Any | None = None,
+        db_factory: Callable[[], Any] | None = None,
+    ) -> None:
+        """Initialise the server.
+
+        Args:
+            token_service: Optional DB-backed token service.
+            db_factory: Optional async session factory.
+        """
         self._tokens: dict[str, str] = {}
+        self._token_service = token_service
+        self._db_factory = db_factory
 
     # ------------------------------------------------------------------
     # BaseMCPServer properties
@@ -126,10 +149,10 @@ class StravaServer(BaseMCPServer):
     ) -> ToolResult:
         """Execute a Strava tool on behalf of the given user.
 
-        Looks up the user's access token from the in-memory store.
-        MVP: returns mock data so the harness can be verified without
-        real Strava credentials. Activate the live ``httpx`` calls by
-        uncommenting the blocks below once credentials are available.
+        Token resolution order:
+        1. If both ``token_service`` and ``db_factory`` are set, acquire
+           a DB session and call ``StravaTokenService.get_access_token()``.
+        2. Otherwise fall back to the in-memory ``_tokens`` dict.
 
         Args:
             tool_name: One of ``strava_get_activities`` or
@@ -140,7 +163,11 @@ class StravaServer(BaseMCPServer):
         Returns:
             A ``ToolResult`` with mock or live Strava data.
         """
-        token = self._tokens.get(user_id)
+        if self._token_service is not None and self._db_factory is not None:
+            async with self._db_factory() as db:
+                token = await self._token_service.get_access_token(db, user_id)
+        else:
+            token = self._tokens.get(user_id)
 
         if tool_name == "strava_get_activities":
             return await self._get_activities(token, params)
@@ -281,11 +308,11 @@ class StravaServer(BaseMCPServer):
     # ------------------------------------------------------------------
 
     async def health_check(self) -> bool:
-        """Verify Strava API connectivity using the first available token.
+        """Verify Strava API connectivity using the first available in-memory token.
 
-        Falls back to ``True`` when no tokens are stored (no users have
-        connected Strava yet) to avoid marking the server as unhealthy
-        at startup.
+        Falls back to ``True`` when no in-memory tokens are stored (no
+        users have connected Strava yet via the legacy path, or the DB
+        path is used) to avoid marking the server as unhealthy at startup.
 
         Returns:
             ``True`` if the Strava API responds 200, ``False`` on error.
