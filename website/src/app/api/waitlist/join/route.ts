@@ -9,9 +9,8 @@
  * 3. Check for duplicate email
  * 4. Generate unique referral code
  * 5. Insert into waitlist_users
- * 6. Increment referrer's count if referralCode provided
- * 7. Send welcome email via Resend (non-blocking)
- * 8. Return position + referral code
+ * 6. Send welcome email via Resend (non-blocking)
+ * 7. Return position + referral code
  *
  * Set NEXT_PUBLIC_PREVIEW_MODE=true in .env.local to bypass Supabase in dev.
  */
@@ -94,16 +93,14 @@ export async function POST(request: NextRequest) {
 
   // 4. Resolve referrer
   let referredByCode: string | null = null;
-  let referrerId: string | null = null;
   if (referrerCode) {
     const { data: referrer } = await supabase
       .from('waitlist_users')
-      .select('id, referral_code')
+      .select('referral_code')
       .eq('referral_code', referrerCode.toUpperCase())
       .maybeSingle();
     if (referrer) {
       referredByCode = referrer.referral_code;
-      referrerId = referrer.id;
     }
   }
 
@@ -130,15 +127,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 6. Increment referrer count (fire-and-forget)
-  if (referrerId) {
-    supabase.rpc('increment_referral_count', { user_id: referrerId }).then(
-      () => {},
-      (err: unknown) => console.error('[waitlist/join] referral increment:', err),
-    );
-  }
-
-  // 7. Send welcome email (fire-and-forget)
+  // 6. Send welcome email (fire-and-forget)
   const resend = getResendClient();
   if (resend) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zuralog.com';
