@@ -13,24 +13,11 @@ The normalizer handles:
 """
 
 import logging
-from enum import Enum
 from typing import Any
 
+from app.models.health_data import ActivityType  # noqa: F401 — single source of truth
+
 logger = logging.getLogger(__name__)
-
-
-class ActivityType(str, Enum):
-    """Canonical activity types used across the entire system.
-
-    Maps source-specific activity names to a unified set.
-    """
-
-    RUN = "run"
-    CYCLE = "cycle"
-    WALK = "walk"
-    SWIM = "swim"
-    STRENGTH = "strength"
-    UNKNOWN = "unknown"
 
 
 # Health Connect exercise type constants (from Android SDK).
