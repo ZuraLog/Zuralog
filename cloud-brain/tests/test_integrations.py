@@ -11,18 +11,31 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.v1.auth import _get_auth_service
+from app.database import get_db
 from app.main import app
 from app.services.auth_service import AuthService
 
 
 @pytest.fixture
 def client_with_auth():
-    """Create a TestClient with mocked AuthService."""
+    """Create a TestClient with mocked AuthService and DB dependencies.
+
+    Also patches app.state.strava_token_service with an AsyncMock so the
+    exchange endpoint can call save_tokens without a real DB connection.
+    """
     mock_auth_service = AsyncMock(spec=AuthService)
+    mock_db = AsyncMock()
+    mock_token_service = AsyncMock()
+    mock_token_service.save_tokens = AsyncMock()
+
     app.dependency_overrides[_get_auth_service] = lambda: mock_auth_service
+    app.dependency_overrides[get_db] = lambda: mock_db
 
     with TestClient(app, raise_server_exceptions=False) as c:
+        original_token_service = app.state.strava_token_service
+        app.state.strava_token_service = mock_token_service
         yield c, mock_auth_service
+        app.state.strava_token_service = original_token_service
 
     app.dependency_overrides.clear()
 
@@ -60,7 +73,10 @@ def test_strava_exchange_success(mock_post: AsyncMock, client_with_auth):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"success": True, "message": "Strava connected!"}
+    data = response.json()
+    assert data["success"] is True
+    assert data["message"] == "Strava connected!"
+    assert data["athlete_id"] is None  # no athlete in mock response
 
     # Verify token was saved in the in-memory MCP server registry
     registry = app.state.mcp_registry
@@ -117,3 +133,80 @@ def test_strava_authorize_includes_expanded_scopes():
         auth_url = response.json()["auth_url"]
         assert "activity%3Aread_all" in auth_url or "activity:read_all" in auth_url
         assert "profile%3Aread_all" in auth_url or "profile:read_all" in auth_url
+
+
+@pytest.fixture
+def client_with_auth_and_db():
+    """Create a TestClient with mocked AuthService AND mocked DB dependency.
+
+    Overrides both _get_auth_service and get_db so the endpoint can use
+    a DB session without connecting to a real database. Also patches
+    app.state.strava_token_service with an AsyncMock **inside** the
+    TestClient context (after lifespan startup) so the endpoint receives
+    the mock rather than the real service.
+
+    Yields:
+        tuple: (TestClient, mock_auth_service, mock_db, mock_token_service)
+    """
+    mock_auth_service = AsyncMock(spec=AuthService)
+    mock_db = AsyncMock()
+    mock_token_service = AsyncMock()
+    mock_token_service.save_tokens = AsyncMock()
+
+    app.dependency_overrides[_get_auth_service] = lambda: mock_auth_service
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    with TestClient(app, raise_server_exceptions=False) as c:
+        # Patch after lifespan has run (which sets the real token service).
+        original_token_service = app.state.strava_token_service
+        app.state.strava_token_service = mock_token_service
+        yield c, mock_auth_service, mock_db, mock_token_service
+        app.state.strava_token_service = original_token_service
+
+    app.dependency_overrides.clear()
+
+
+@patch("httpx.AsyncClient.post")
+def test_strava_exchange_persists_to_db(mock_post, client_with_auth_and_db):
+    """Verify /strava/exchange persists tokens to DB via StravaTokenService.
+
+    After a successful Strava code exchange the endpoint must call
+    ``save_tokens`` on the StravaTokenService so credentials are durably
+    stored in the database. The response must also include ``athlete_id``.
+    """
+    c, mock_auth, mock_db, mock_token_service = client_with_auth_and_db
+    mock_auth.get_user.return_value = {"id": "test-user-123"}
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "access_token": "test-access-token",
+        "refresh_token": "test-refresh-token",
+        "expires_at": 9999999999,
+        "athlete": {"id": 42, "firstname": "Test", "lastname": "Athlete"},
+    }
+    mock_post.return_value = mock_response
+
+    # Mock save_tokens to return a dummy Integration-like object
+    mock_token_service.save_tokens = AsyncMock()
+
+    response = c.post(
+        "/api/v1/integrations/strava/exchange",
+        params={"code": "auth-code-123"},
+        headers={"Authorization": "Bearer fake-jwt"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["athlete_id"] == 42
+
+    # Verify save_tokens was called with the correct arguments
+    mock_token_service.save_tokens.assert_called_once_with(
+        mock_db,
+        "test-user-123",
+        "test-access-token",
+        "test-refresh-token",
+        9999999999,
+        athlete_data={"id": 42, "firstname": "Test", "lastname": "Athlete"},
+    )
