@@ -64,7 +64,6 @@ class _FakeApiClient implements ApiClient {
   Future<Response<dynamic>> patch(String path, {Map<String, dynamic>? body}) async =>
       throw UnimplementedError();
 
-  @override
   // ignore: unused_element
   static String friendlyError(DioException e) => '';
 }
