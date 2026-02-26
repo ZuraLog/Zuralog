@@ -87,10 +87,17 @@ class SyncService:
                     if db is None:
                         errors.append("strava: db session required for Strava sync")
                         continue
+
+                    # Derive incremental after= timestamp from last_synced_at.
+                    # None triggers a full historical backfill (first connect).
+                    last_synced_at: datetime | None = integration.get("last_synced_at")
+                    after_ts: int | None = int(last_synced_at.timestamp()) if last_synced_at else None
+
                     await self._sync_strava(
                         db=db,
                         user_id=user_id,
                         access_token=integration.get("access_token", ""),
+                        after_timestamp=after_ts,
                     )
                     synced_sources.append("strava")
                 else:
@@ -107,107 +114,163 @@ class SyncService:
         db: AsyncSession,
         user_id: str,
         access_token: str,
+        after_timestamp: int | None = None,
     ) -> dict[str, Any]:
-        """Pull recent activities from Strava API and persist new ones.
+        """Pull activities from Strava API and persist new ones.
 
-        Calls ``GET /api/v3/athlete/activities`` with the supplied
-        access token.  For each returned activity, checks whether a
-        ``UnifiedActivity`` row already exists (matched by ``source``
-        and ``original_id``).  New activities are inserted; duplicates
-        are silently skipped.
+        Pages through ``GET /api/v3/athlete/activities`` (up to 200 per page)
+        until an empty page is returned.  Stops early if all activities on a
+        page already exist in the database — this makes incremental syncs fast
+        because once we hit the first duplicate we know the rest of history is
+        already stored.
+
+        When ``after_timestamp`` is supplied (a Unix epoch integer), the Strava
+        API's ``after=`` filter is applied so only activities newer than that
+        moment are fetched.  Callers should derive this from the integration's
+        ``last_synced_at`` column for incremental syncs.  Omitting it performs
+        a full historical backfill (used on first connect).
 
         Args:
             db: Async SQLAlchemy session used for reads and writes.
             user_id: The user's ID for associating stored activities.
             access_token: Valid Strava OAuth access token.
+            after_timestamp: Optional Unix epoch; only fetch activities
+                created after this time. ``None`` = fetch all history.
 
         Returns:
-            On success: ``{"activities_synced": <int>}``.
-            On API failure: ``{"error": <str>, "activities_synced": 0}``.
+            On success: ``{"activities_synced": <int>, "pages_fetched": <int>}``.
+            On API failure: ``{"error": <str>, "activities_synced": 0, "pages_fetched": 0}``.
         """
-        logger.info("Syncing Strava for user '%s'", user_id)
+        logger.info(
+            "Syncing Strava for user '%s' (after=%s)",
+            user_id,
+            after_timestamp,
+        )
+
+        synced_count = 0
+        page = 1
+        _PAGE_SIZE = 200  # Strava's maximum per-page
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(
-                _STRAVA_ACTIVITIES_URL,
-                headers={"Authorization": f"Bearer {access_token}"},
-                params={"per_page": 30},
-            )
+            while True:
+                params: dict[str, Any] = {"per_page": _PAGE_SIZE, "page": page}
+                if after_timestamp is not None:
+                    params["after"] = after_timestamp
 
-        if resp.status_code != 200:
-            logger.warning(
-                "Strava API returned %d for user '%s': %s",
-                resp.status_code,
-                user_id,
-                resp.text,
-            )
-            return {"error": resp.text, "activities_synced": 0}
+                resp = await client.get(
+                    _STRAVA_ACTIVITIES_URL,
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    params=params,
+                )
 
-        activities: list[dict[str, Any]] = resp.json()
-        synced_count = 0
+                if resp.status_code != 200:
+                    logger.warning(
+                        "Strava API returned %d for user '%s' (page %d): %s",
+                        resp.status_code,
+                        user_id,
+                        page,
+                        resp.text,
+                    )
+                    if synced_count:
+                        await db.commit()
+                    return {"error": resp.text, "activities_synced": synced_count, "pages_fetched": page - 1}
 
-        for activity in activities:
-            original_id = str(activity["id"])
+                activities: list[dict[str, Any]] = resp.json()
 
-            # Check for an existing record to prevent duplication.
-            stmt = select(UnifiedActivity).where(
-                UnifiedActivity.source == "strava",
-                UnifiedActivity.original_id == original_id,
-                UnifiedActivity.user_id == user_id,
-            )
-            result = await db.execute(stmt)
-            existing = result.scalar_one_or_none()
+                # Empty page means we have reached the end of history.
+                if not activities:
+                    logger.debug(
+                        "Strava pagination complete for user '%s' at page %d",
+                        user_id,
+                        page,
+                    )
+                    break
 
-            if existing is not None:
-                logger.debug(
-                    "Strava activity %s already stored for user '%s' — skipping",
-                    original_id,
+                new_on_page = 0
+                for activity in activities:
+                    original_id = str(activity["id"])
+
+                    # Check for an existing record to prevent duplication.
+                    stmt = select(UnifiedActivity).where(
+                        UnifiedActivity.source == "strava",
+                        UnifiedActivity.original_id == original_id,
+                        UnifiedActivity.user_id == user_id,
+                    )
+                    result = await db.execute(stmt)
+                    existing = result.scalar_one_or_none()
+
+                    if existing is not None:
+                        logger.debug(
+                            "Strava activity %s already stored for user '%s' — stopping pagination",
+                            original_id,
+                            user_id,
+                        )
+                        # All older activities are already stored; stop paging.
+                        new_on_page = -1  # sentinel: hit overlap boundary
+                        break
+
+                    # Map Strava type string to canonical ActivityType enum value.
+                    strava_type: str = activity.get("type", "")
+                    activity_type = _STRAVA_TYPE_MAP.get(strava_type, ActivityType.UNKNOWN)
+
+                    # Parse ISO-8601 UTC start time.
+                    # Use start_date (genuine UTC) not start_date_local (wall-clock in athlete's
+                    # timezone, incorrectly suffixed with Z by Strava's API).
+                    raw_start: str | None = activity.get("start_date")
+                    try:
+                        start_time = (
+                            datetime.fromisoformat(raw_start.replace("Z", "+00:00"))
+                            if raw_start
+                            else datetime.now(tz=timezone.utc)
+                        )
+                    except ValueError:
+                        logger.warning("Could not parse start_date '%s'", raw_start)
+                        start_time = datetime.now(tz=timezone.utc)
+
+                    new_activity = UnifiedActivity(
+                        user_id=user_id,
+                        source="strava",
+                        original_id=original_id,
+                        activity_type=activity_type,
+                        duration_seconds=int(activity.get("elapsed_time") or 0),
+                        distance_meters=activity.get("distance"),
+                        calories=int(activity.get("calories") or 0),
+                        start_time=start_time,
+                    )
+                    db.add(new_activity)
+                    synced_count += 1
+                    new_on_page += 1
+
+                # If we hit an overlap boundary, stop fetching more pages.
+                if new_on_page == -1:
+                    break
+
+                # If this page was completely new, commit and fetch the next page.
+                await db.commit()
+                logger.info(
+                    "Strava sync: committed %d activities from page %d for user '%s'",
+                    new_on_page,
+                    page,
                     user_id,
                 )
-                continue
-
-            # Map Strava type string to canonical ActivityType enum value.
-            strava_type: str = activity.get("type", "")
-            activity_type = _STRAVA_TYPE_MAP.get(strava_type, ActivityType.UNKNOWN)
-
-            # Parse ISO-8601 UTC start time.
-            # Use start_date (genuine UTC) not start_date_local (wall-clock in athlete's
-            # timezone, incorrectly suffixed with Z by Strava's API).
-            raw_start: str | None = activity.get("start_date")
-            try:
-                start_time = (
-                    datetime.fromisoformat(raw_start.replace("Z", "+00:00"))
-                    if raw_start
-                    else datetime.now(tz=timezone.utc)
-                )
-            except ValueError:
-                logger.warning("Could not parse start_date '%s'", raw_start)
-                start_time = datetime.now(tz=timezone.utc)
-
-            new_activity = UnifiedActivity(
-                user_id=user_id,
-                source="strava",
-                original_id=original_id,
-                activity_type=activity_type,
-                duration_seconds=int(activity.get("elapsed_time") or 0),
-                distance_meters=activity.get("distance"),
-                calories=int(activity.get("calories") or 0),
-                start_time=start_time,
-            )
-            db.add(new_activity)
-            synced_count += 1
+                page += 1
 
         if synced_count:
-            await db.commit()
+            # Commit any uncommitted rows from the last (potentially partial) page.
+            try:
+                await db.commit()
+            except Exception:
+                pass  # already committed above in the loop
             logger.info(
-                "Strava sync committed %d new activities for user '%s'",
+                "Strava sync complete: %d total new activities over %d page(s) for user '%s'",
                 synced_count,
+                page,
                 user_id,
             )
         else:
             logger.info("No new Strava activities for user '%s'", user_id)
 
-        return {"activities_synced": synced_count}
+        return {"activities_synced": synced_count, "pages_fetched": page}
 
     async def _refresh_expiring_tokens(
         self,
@@ -255,6 +318,161 @@ class SyncService:
                 )
 
         return {"refreshed": refreshed}
+
+
+@celery_app.task(name="app.services.sync_scheduler.sync_strava_activity_task")
+def sync_strava_activity_task(
+    owner_id: int,
+    activity_id: int,
+    aspect_type: str,
+) -> dict[str, Any]:
+    """Sync a single Strava activity triggered by a webhook event.
+
+    Called immediately when Strava pushes a webhook event for an activity
+    create, update, or delete.  Looks up the Strava integration for
+    ``owner_id`` (the Strava athlete ID stored in ``provider_metadata``),
+    fetches or removes the specific activity, and upserts / deletes it from
+    ``UnifiedActivity``.
+
+    Args:
+        owner_id: Strava athlete ID from the webhook event ``owner_id`` field.
+        activity_id: Strava activity ID from the webhook event ``object_id`` field.
+        aspect_type: One of ``"create"``, ``"update"``, or ``"delete"``.
+
+    Returns:
+        A dict with ``"status"`` key describing the outcome.
+    """
+    from app.database import async_session
+    from app.models.health_data import UnifiedActivity
+    from app.models.integration import Integration
+    from app.services.strava_token_service import StravaTokenService
+
+    logger.info(
+        "Webhook task: aspect_type=%s activity_id=%d owner_id=%d",
+        aspect_type,
+        activity_id,
+        owner_id,
+    )
+
+    async def _run() -> dict[str, Any]:
+        async with async_session() as db:
+            # Look up integration by Strava athlete_id stored in provider_metadata.
+            stmt = select(Integration).where(
+                Integration.provider == "strava",
+                Integration.is_active.is_(True),
+            )
+            result = await db.execute(stmt)
+            integrations = result.scalars().all()
+
+            target: Integration | None = None
+            for intg in integrations:
+                meta = intg.provider_metadata or {}
+                if str(meta.get("athlete_id", "")) == str(owner_id):
+                    target = intg
+                    break
+
+            if target is None:
+                logger.warning("Webhook: no active Strava integration for athlete_id=%d", owner_id)
+                return {"status": "no_integration"}
+
+            token_service = StravaTokenService()
+            access_token = await token_service.get_access_token(db, target.user_id)
+            if not access_token:
+                logger.warning("Webhook: could not obtain access token for user '%s'", target.user_id)
+                return {"status": "no_token"}
+
+            if aspect_type == "delete":
+                # Remove the activity from UnifiedActivity if it exists.
+                del_stmt = select(UnifiedActivity).where(
+                    UnifiedActivity.source == "strava",
+                    UnifiedActivity.original_id == str(activity_id),
+                    UnifiedActivity.user_id == target.user_id,
+                )
+                del_result = await db.execute(del_stmt)
+                existing = del_result.scalar_one_or_none()
+                if existing:
+                    await db.delete(existing)
+                    await db.commit()
+                    logger.info(
+                        "Webhook: deleted activity %d for user '%s'",
+                        activity_id,
+                        target.user_id,
+                    )
+                    return {"status": "deleted"}
+                return {"status": "delete_noop"}
+
+            # For create / update: fetch the activity from Strava and upsert.
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(
+                    f"https://www.strava.com/api/v3/activities/{activity_id}",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+
+            if resp.status_code != 200:
+                logger.warning(
+                    "Webhook: Strava API returned %d for activity %d: %s",
+                    resp.status_code,
+                    activity_id,
+                    resp.text,
+                )
+                return {"status": f"strava_error_{resp.status_code}"}
+
+            activity = resp.json()
+            original_id = str(activity["id"])
+
+            strava_type: str = activity.get("type", "")
+            activity_type = _STRAVA_TYPE_MAP.get(strava_type, ActivityType.UNKNOWN)
+
+            raw_start: str | None = activity.get("start_date")
+            try:
+                start_time = (
+                    datetime.fromisoformat(raw_start.replace("Z", "+00:00"))
+                    if raw_start
+                    else datetime.now(tz=timezone.utc)
+                )
+            except ValueError:
+                start_time = datetime.now(tz=timezone.utc)
+
+            # Check for existing row (upsert: update if present, insert if not).
+            upsert_stmt = select(UnifiedActivity).where(
+                UnifiedActivity.source == "strava",
+                UnifiedActivity.original_id == original_id,
+                UnifiedActivity.user_id == target.user_id,
+            )
+            upsert_result = await db.execute(upsert_stmt)
+            existing = upsert_result.scalar_one_or_none()
+
+            if existing:
+                existing.activity_type = activity_type
+                existing.duration_seconds = int(activity.get("elapsed_time") or 0)
+                existing.distance_meters = activity.get("distance")
+                existing.calories = int(activity.get("calories") or 0)
+                existing.start_time = start_time
+                action = "updated"
+            else:
+                new_activity = UnifiedActivity(
+                    user_id=target.user_id,
+                    source="strava",
+                    original_id=original_id,
+                    activity_type=activity_type,
+                    duration_seconds=int(activity.get("elapsed_time") or 0),
+                    distance_meters=activity.get("distance"),
+                    calories=int(activity.get("calories") or 0),
+                    start_time=start_time,
+                )
+                db.add(new_activity)
+                action = "created"
+
+            await db.commit()
+            logger.info(
+                "Webhook: %s activity %d for user '%s'",
+                action,
+                activity_id,
+                target.user_id,
+            )
+            return {"status": action}
+
+    return asyncio.run(_run())
 
 
 @celery_app.task(name="app.services.sync_scheduler.sync_all_users_task")

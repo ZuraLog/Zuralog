@@ -149,20 +149,25 @@ class StravaServer(BaseMCPServer):
             ToolDefinition(
                 name="strava_get_athlete_stats",
                 description=(
-                    "Get aggregate statistics for a Strava athlete. "
+                    "Get aggregate statistics for the connected Strava athlete. "
                     "Returns recent, all-time, and year-to-date totals for runs, rides, and swims. "
                     "Use this to answer questions like 'How far have I run this year?' or "
-                    "'What are my all-time cycling stats?'"
+                    "'What are my all-time cycling stats?'. "
+                    "The athlete_id is resolved automatically from the user's connected account; "
+                    "you do not need to supply it."
                 ),
                 input_schema={
                     "type": "object",
                     "properties": {
                         "athlete_id": {
                             "type": "integer",
-                            "description": "The Strava athlete ID to fetch stats for.",
+                            "description": (
+                                "Strava athlete ID. Optional — auto-resolved from the "
+                                "user's connected account when omitted."
+                            ),
                         }
                     },
-                    "required": ["athlete_id"],
+                    "required": [],
                 },
             ),
         ]
@@ -211,6 +216,16 @@ class StravaServer(BaseMCPServer):
         if self._token_service is not None and self._db_factory is not None:
             async with self._db_factory() as db:
                 token = await self._token_service.get_access_token(db, user_id)
+
+                # Auto-resolve athlete_id for strava_get_athlete_stats when
+                # the caller did not supply it explicitly.
+                if tool_name == "strava_get_athlete_stats" and "athlete_id" not in params:
+                    integration = await self._token_service.get_integration(db, user_id)
+                    if integration is not None:
+                        meta = integration.provider_metadata or {}
+                        resolved_id = meta.get("athlete_id")
+                        if resolved_id is not None:
+                            params = {**params, "athlete_id": int(resolved_id)}
         else:
             token = self._tokens.get(user_id)
 
@@ -337,12 +352,19 @@ class StravaServer(BaseMCPServer):
         """Fetch aggregate statistics for a Strava athlete.
 
         Calls ``GET /athletes/{athlete_id}/stats`` when a token is available.
-        Returns an error ``ToolResult`` when no token is present, since there
-        is no meaningful mock for per-athlete aggregate data.
+        The ``athlete_id`` is resolved automatically from ``provider_metadata``
+        in ``execute_tool`` when the DB token path is active; it may also be
+        supplied explicitly in ``params`` for legacy / test callers.
+
+        Returns an error ``ToolResult`` when no token is present or when
+        ``athlete_id`` could not be resolved.
 
         Args:
             token: Strava Bearer access token, or ``None`` when unauthenticated.
-            params: Must contain ``athlete_id`` (integer).
+            params: May contain ``athlete_id`` (integer).  When absent, the
+                call fails with a descriptive message telling the user to
+                connect their account (``athlete_id`` should have been injected
+                by ``execute_tool`` if the integration is active).
 
         Returns:
             ``ToolResult`` containing recent, all-time, and YTD run/ride/swim
@@ -360,6 +382,12 @@ class StravaServer(BaseMCPServer):
             )
 
         athlete_id = params.get("athlete_id")
+        if athlete_id is None:
+            return ToolResult(
+                success=False,
+                data=None,
+                error=("Could not resolve your Strava athlete ID. Please reconnect your Strava account."),
+            )
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.get(

@@ -5,6 +5,11 @@ Handles Strava's real-time event push notifications for activities.
 Two endpoints:
 - GET  /webhooks/strava  — Strava subscription validation challenge
 - POST /webhooks/strava  — Incoming activity event (create/update/delete)
+
+On receiving a POST event for an activity object, the handler immediately
+dispatches a ``sync_strava_activity_task`` Celery task and returns 200.
+This pattern satisfies Strava's 2-second response timeout while performing
+the actual work asynchronously.
 """
 
 import logging
@@ -97,8 +102,27 @@ async def strava_webhook_event(event: StravaWebhookEvent) -> dict[str, bool]:
         event.owner_id,
     )
 
-    # TODO(dev): Trigger async task to process the event
-    # e.g., sync the specific activity for the owner's account
-    # For now, log and acknowledge immediately.
+    # Only dispatch sync tasks for activity objects.
+    # "athlete" object_type events are profile deauthorisation notices;
+    # we log them but take no further action.
+    if event.object_type == "activity":
+        from app.services.sync_scheduler import sync_strava_activity_task  # noqa: PLC0415
+
+        sync_strava_activity_task.delay(
+            owner_id=event.owner_id,
+            activity_id=event.object_id,
+            aspect_type=event.aspect_type,
+        )
+        logger.info(
+            "Dispatched sync_strava_activity_task for activity %d (owner %d, aspect=%s)",
+            event.object_id,
+            event.owner_id,
+            event.aspect_type,
+        )
+    else:
+        logger.info(
+            "Strava webhook: ignoring object_type=%s (no task dispatched)",
+            event.object_type,
+        )
 
     return {"received": True}

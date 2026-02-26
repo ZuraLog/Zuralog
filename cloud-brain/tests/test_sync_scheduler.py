@@ -72,92 +72,189 @@ class TestSyncStravaReal:
     """Tests for the real Strava sync implementation."""
 
     @pytest.mark.asyncio
-    @patch("httpx.AsyncClient.get")
-    async def test_sync_strava_fetches_and_stores_activities(self, mock_get):
-        """Fetches activities from Strava and creates UnifiedActivity rows."""
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = [
+    async def test_sync_strava_fetches_and_stores_activities(self):
+        """Fetches activities from Strava and creates UnifiedActivity rows.
+
+        The mock returns one page of activities then an empty page to terminate
+        pagination.
+        """
+        page1_resp = MagicMock()
+        page1_resp.status_code = 200
+        page1_resp.json.return_value = [
             {
                 "id": 123,
                 "name": "Morning Run",
                 "type": "Run",
                 "distance": 5000.0,
                 "elapsed_time": 1800,
-                "start_date_local": "2026-02-25T07:00:00Z",
+                "start_date": "2026-02-25T07:00:00Z",
                 "calories": 350,
                 "total_elevation_gain": 50.0,
             }
         ]
-        mock_get.return_value = mock_resp
+        empty_resp = MagicMock()
+        empty_resp.status_code = 200
+        empty_resp.json.return_value = []
 
         service = SyncService()
         mock_db = AsyncMock()
-        # Simulate "no existing activity" (upsert creates new)
         mock_db.execute.return_value = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
 
-        result = await service._sync_strava(
-            db=mock_db,
-            user_id="user-123",
-            access_token="valid-token",
-        )
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.get = AsyncMock(side_effect=[page1_resp, empty_resp])
+            mock_client_cls.return_value = mock_client
 
-        assert result["activities_synced"] > 0
+            result = await service._sync_strava(
+                db=mock_db,
+                user_id="user-123",
+                access_token="valid-token",
+            )
+
+        assert result["activities_synced"] == 1
+        assert result["pages_fetched"] >= 1
         mock_db.add.assert_called()
         mock_db.commit.assert_called()
 
     @pytest.mark.asyncio
-    @patch("httpx.AsyncClient.get")
-    async def test_sync_strava_skips_existing_activities(self, mock_get):
-        """Does not duplicate activities that already exist."""
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.json.return_value = [
+    async def test_sync_strava_skips_existing_activities(self):
+        """Does not duplicate activities that already exist.
+
+        When the first activity on page 1 already exists in the DB, pagination
+        stops immediately (early-exit optimisation).
+        """
+        page1_resp = MagicMock()
+        page1_resp.status_code = 200
+        page1_resp.json.return_value = [
             {
                 "id": 123,
                 "name": "Morning Run",
                 "type": "Run",
                 "distance": 5000.0,
                 "elapsed_time": 1800,
-                "start_date_local": "2026-02-25T07:00:00Z",
+                "start_date": "2026-02-25T07:00:00Z",
             }
         ]
-        mock_get.return_value = mock_resp
 
         service = SyncService()
         mock_db = AsyncMock()
-        # Simulate "activity already exists"
         existing = MagicMock()
         mock_db.execute.return_value = MagicMock(scalar_one_or_none=MagicMock(return_value=existing))
 
-        result = await service._sync_strava(
-            db=mock_db,
-            user_id="user-123",
-            access_token="valid-token",
-        )
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.get = AsyncMock(return_value=page1_resp)
+            mock_client_cls.return_value = mock_client
+
+            result = await service._sync_strava(
+                db=mock_db,
+                user_id="user-123",
+                access_token="valid-token",
+            )
 
         assert result["activities_synced"] == 0
         mock_db.add.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("httpx.AsyncClient.get")
-    async def test_sync_strava_handles_api_error(self, mock_get):
+    async def test_sync_strava_handles_api_error(self):
         """Returns error info when Strava API returns non-200."""
-        mock_resp = MagicMock()
-        mock_resp.status_code = 401
-        mock_resp.text = "Unauthorized"
-        mock_get.return_value = mock_resp
+        error_resp = MagicMock()
+        error_resp.status_code = 401
+        error_resp.text = "Unauthorized"
 
         service = SyncService()
         mock_db = AsyncMock()
 
-        result = await service._sync_strava(
-            db=mock_db,
-            user_id="user-123",
-            access_token="bad-token",
-        )
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.get = AsyncMock(return_value=error_resp)
+            mock_client_cls.return_value = mock_client
+
+            result = await service._sync_strava(
+                db=mock_db,
+                user_id="user-123",
+                access_token="bad-token",
+            )
 
         assert result.get("error") is not None
+
+    @pytest.mark.asyncio
+    async def test_sync_strava_incremental_passes_after_param(self):
+        """When after_timestamp is supplied, it is forwarded to the Strava API."""
+        empty_resp = MagicMock()
+        empty_resp.status_code = 200
+        empty_resp.json.return_value = []
+
+        service = SyncService()
+        mock_db = AsyncMock()
+
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.get = AsyncMock(return_value=empty_resp)
+            mock_client_cls.return_value = mock_client
+
+            await service._sync_strava(
+                db=mock_db,
+                user_id="user-123",
+                access_token="valid-token",
+                after_timestamp=1700000000,
+            )
+
+        call_kwargs = mock_client.get.call_args
+        assert call_kwargs.kwargs["params"]["after"] == 1700000000
+
+    @pytest.mark.asyncio
+    async def test_sync_strava_paginates_multiple_pages(self):
+        """Fetches page 2 when page 1 is fully new."""
+
+        def _activity(aid: int) -> dict:
+            return {
+                "id": aid,
+                "type": "Run",
+                "distance": 5000.0,
+                "elapsed_time": 1800,
+                "start_date": "2026-02-25T07:00:00Z",
+            }
+
+        page1_resp = MagicMock()
+        page1_resp.status_code = 200
+        page1_resp.json.return_value = [_activity(1), _activity(2)]
+
+        page2_resp = MagicMock()
+        page2_resp.status_code = 200
+        page2_resp.json.return_value = [_activity(3)]
+
+        empty_resp = MagicMock()
+        empty_resp.status_code = 200
+        empty_resp.json.return_value = []
+
+        service = SyncService()
+        mock_db = AsyncMock()
+        mock_db.execute.return_value = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client.get = AsyncMock(side_effect=[page1_resp, page2_resp, empty_resp])
+            mock_client_cls.return_value = mock_client
+
+            result = await service._sync_strava(
+                db=mock_db,
+                user_id="user-123",
+                access_token="valid-token",
+            )
+
+        assert result["activities_synced"] == 3
+        assert mock_client.get.call_count == 3
 
 
 class TestRefreshTokensTask:
