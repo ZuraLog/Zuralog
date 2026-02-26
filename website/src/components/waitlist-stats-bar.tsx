@@ -35,7 +35,9 @@ export function WaitlistStatsBar() {
   const [stats, setStats] = useState<Stats | null>(null);
   // Keep a stable ref to the latest setStats so the realtime callback can use it
   const setStatsRef = useRef(setStats);
-  setStatsRef.current = setStats;
+  useEffect(() => {
+    setStatsRef.current = setStats;
+  }, [setStats]);
 
   useEffect(() => {
     // 1. Initial load

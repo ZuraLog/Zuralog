@@ -31,6 +31,7 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ onComplete }: LoadingScreenProps) {
     const exitFiredRef = useRef(false);
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is used only once via ref initializer, not during re-renders
     const mountTimeRef = useRef(Date.now());
 
     /** Fade out and remove the SSR overlay, then notify parent. */
