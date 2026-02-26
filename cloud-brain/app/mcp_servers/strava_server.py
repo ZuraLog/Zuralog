@@ -16,6 +16,7 @@ import httpx
 
 from app.mcp_servers.base_server import BaseMCPServer
 from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
+from app.services.strava_rate_limiter import StravaRateLimiter
 
 
 class StravaServer(BaseMCPServer):
@@ -35,22 +36,31 @@ class StravaServer(BaseMCPServer):
         db_factory: Optional callable that returns an async context
             manager yielding an ``AsyncSession`` (e.g. ``async_session``
             from ``app.database``).
+        rate_limiter: Optional ``StravaRateLimiter`` instance. When
+            provided, every ``execute_tool`` call checks and increments
+            the Redis-backed sliding window counters before hitting the
+            Strava API. Pass ``None`` (default) to disable rate limiting
+            (e.g. in unit tests).
     """
 
     def __init__(
         self,
         token_service: Any | None = None,
         db_factory: Callable[[], Any] | None = None,
+        rate_limiter: StravaRateLimiter | None = None,
     ) -> None:
         """Initialise the server.
 
         Args:
             token_service: Optional DB-backed token service.
             db_factory: Optional async session factory.
+            rate_limiter: Optional Redis-backed rate limiter. When set,
+                requests are refused when approaching Strava's API limits.
         """
         self._tokens: dict[str, str] = {}
         self._token_service = token_service
         self._db_factory = db_factory
+        self._rate_limiter = rate_limiter
 
     # ------------------------------------------------------------------
     # BaseMCPServer properties
@@ -169,20 +179,35 @@ class StravaServer(BaseMCPServer):
     ) -> ToolResult:
         """Execute a Strava tool on behalf of the given user.
 
+        Rate limiting is checked first (if a ``rate_limiter`` was
+        injected). If the request would exceed Strava's API limits, a
+        ``ToolResult(success=False)`` is returned immediately without
+        touching the token or the Strava API.
+
         Token resolution order:
         1. If both ``token_service`` and ``db_factory`` are set, acquire
            a DB session and call ``StravaTokenService.get_access_token()``.
         2. Otherwise fall back to the in-memory ``_tokens`` dict.
 
         Args:
-            tool_name: One of ``strava_get_activities`` or
-                ``strava_create_activity``.
+            tool_name: One of ``strava_get_activities``,
+                ``strava_create_activity``, or ``strava_get_athlete_stats``.
             params: Parameter dict matching the tool's ``input_schema``.
             user_id: Authenticated user whose Strava token to use.
 
         Returns:
-            A ``ToolResult`` with mock or live Strava data.
+            A ``ToolResult`` with mock or live Strava data, or an error
+            result when rate-limited.
         """
+        if self._rate_limiter:
+            allowed = await self._rate_limiter.check_and_increment()
+            if not allowed:
+                return ToolResult(
+                    success=False,
+                    data=None,
+                    error="Strava API rate limit reached. Please try again in a few minutes.",
+                )
+
         if self._token_service is not None and self._db_factory is not None:
             async with self._db_factory() as db:
                 token = await self._token_service.get_access_token(db, user_id)
