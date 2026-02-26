@@ -67,4 +67,8 @@ dependencies {
 
     // Kotlin coroutines (required by Health Connect suspend functions).
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // EncryptedSharedPreferences for storing Cloud Brain credentials on device.
+    // Used by HealthSyncWorker to securely load user_id / access_token.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }

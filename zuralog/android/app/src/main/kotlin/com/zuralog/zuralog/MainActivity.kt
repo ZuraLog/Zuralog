@@ -365,6 +365,149 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
 
+                "getDistance" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val meters = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readDistance(dateMillis)
+                            }
+                            result.success(meters)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getDistance failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getFloors" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val floors = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readFloors(dateMillis)
+                            }
+                            result.success(floors)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getFloors failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getBodyFat" -> {
+                    lifecycleScope.launch {
+                        try {
+                            val pct = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readBodyFat()
+                            }
+                            result.success(pct)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getBodyFat failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getRespiratoryRate" -> {
+                    lifecycleScope.launch {
+                        try {
+                            val rate = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readRespiratoryRate()
+                            }
+                            result.success(rate)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getRespiratoryRate failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getOxygenSaturation" -> {
+                    lifecycleScope.launch {
+                        try {
+                            val pct = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readOxygenSaturation()
+                            }
+                            result.success(pct)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getOxygenSaturation failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getHeartRate" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val bpm = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readHeartRate(dateMillis)
+                            }
+                            result.success(bpm)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getHeartRate failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getBloodPressure" -> {
+                    lifecycleScope.launch {
+                        try {
+                            val bp = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readBloodPressure()
+                            }
+                            result.success(bp)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getBloodPressure failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "configureBackgroundSync" -> {
+                    // Called after the user grants Health Connect permissions in the
+                    // connect flow. Stores the Cloud Brain credentials in
+                    // EncryptedSharedPreferences so HealthSyncWorker can read them
+                    // in the background, then schedules the periodic WorkManager task.
+                    //
+                    // Parameters (from Dart):
+                    //   userId   — the authenticated Supabase user UUID
+                    //   apiToken — the user's access token for POST /health/ingest
+                    // Keys match what HealthBridge.dart sends via invokeMethod:
+                    //   auth_token    — the user's JWT bearer token
+                    //   api_base_url  — the Cloud Brain base URL (informational,
+                    //                   stored but HealthSyncWorker uses the
+                    //                   hardcoded INGEST_URL constant instead).
+                    val apiToken = call.argument<String>("auth_token") ?: ""
+                    val apiBaseUrl = call.argument<String>("api_base_url") ?: ""
+
+                    try {
+                        // Persist credentials for HealthSyncWorker.
+                        HealthSyncWorker.storeCredentials(
+                            context = this@MainActivity,
+                            apiToken = apiToken,
+                        )
+                        // Schedule the periodic background worker.
+                        HealthSyncWorker.schedule(this@MainActivity)
+                        Log.i(TAG, "configureBackgroundSync: credentials stored + worker scheduled (baseUrl=$apiBaseUrl)")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "configureBackgroundSync failed", e)
+                        result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                    }
+                }
+
                 "startBackgroundObservers" -> {
                     // On Android, background sync is handled by WorkManager
                     // (Phase 1.5.5), not observer queries like iOS.
@@ -375,6 +518,70 @@ class MainActivity : FlutterFragmentActivity() {
                     } catch (e: Exception) {
                         Log.e(TAG, "startBackgroundObservers failed", e)
                         result.success(false)
+                    }
+                }
+
+                "backgroundWrite" -> {
+                    // Handles FCM-initiated write commands dispatched by the Cloud Brain
+                    // AI agent (via DeviceWriteService → FCM → FCMService.dart).
+                    //
+                    // Matches the iOS AppDelegate contract exactly:
+                    //   data_type — "nutrition" | "workout" | "weight"  (snake_case)
+                    //   value     — JSON string encoding the write payload
+                    //               e.g. '{"calories":500,"date":"2026-02-27T..."}'
+                    val dataType = call.argument<String>("data_type") ?: ""
+                    val valueJson = call.argument<String>("value") ?: "{}"
+
+                    // Parse the JSON value string into a key→Any map.
+                    val valueMap: Map<String, Any?> = try {
+                        val jsonObj = org.json.JSONObject(valueJson)
+                        jsonObj.keys().asSequence().associateWith { jsonObj.get(it) }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "backgroundWrite: could not parse value JSON: $valueJson")
+                        emptyMap()
+                    }
+
+                    val dateMillis = try {
+                        val dateStr = valueMap["date"] as? String ?: ""
+                        java.time.Instant.parse(dateStr).toEpochMilli()
+                    } catch (e: Exception) {
+                        System.currentTimeMillis()
+                    }
+
+                    lifecycleScope.launch {
+                        try {
+                            val ok = withContext(Dispatchers.IO) {
+                                when (dataType) {
+                                    "nutrition" -> {
+                                        val calories = (valueMap["calories"] as? Number)?.toDouble() ?: 0.0
+                                        healthConnectBridge.writeNutrition(calories, dateMillis)
+                                    }
+                                    "weight" -> {
+                                        val weightKg = (valueMap["weight_kg"] as? Number)?.toDouble() ?: 0.0
+                                        healthConnectBridge.writeWeight(weightKg, dateMillis)
+                                    }
+                                    "workout" -> {
+                                        val calories = (valueMap["calories"] as? Number)?.toDouble() ?: 0.0
+                                        val activityType = valueMap["activity_type"] as? String ?: "other"
+                                        val durationSeconds = (valueMap["duration_seconds"] as? Number)?.toLong() ?: 1800L
+                                        healthConnectBridge.writeWorkout(
+                                            activityType = activityType,
+                                            startTimeMillis = dateMillis,
+                                            endTimeMillis = dateMillis + durationSeconds * 1000L,
+                                            energyBurned = calories,
+                                        )
+                                    }
+                                    else -> {
+                                        Log.w(TAG, "backgroundWrite: unsupported data_type=$dataType")
+                                        false
+                                    }
+                                }
+                            }
+                            result.success(ok)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "backgroundWrite failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
                     }
                 }
 
