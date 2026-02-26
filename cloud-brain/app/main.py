@@ -24,6 +24,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
+from app.api.v1.health_ingest import router as health_ingest_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.transcribe import router as transcribe_router
@@ -65,7 +66,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # MCP Framework (Phase 1.3+)
     registry = MCPServerRegistry()
-    registry.register(AppleHealthServer())
+    # DeviceWriteService must be created before MCP servers that need it.
+    push_svc = PushService()
+    device_write_svc = DeviceWriteService(push_service=push_svc)
+    registry.register(
+        AppleHealthServer(
+            db_factory=async_session,
+            device_write_service=device_write_svc,
+        )
+    )
     registry.register(HealthConnectServer())
     # Phase 1.7: DB-backed token service wired into StravaServer
     strava_token_service = StravaTokenService()
@@ -82,8 +91,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
     app.state.rate_limiter = RateLimiter()
-    app.state.push_service = PushService()
-    app.state.device_write_service = DeviceWriteService(push_service=app.state.push_service)
+    # Reuse push_svc / device_write_svc created above for the MCP server.
+    app.state.push_service = push_svc
+    app.state.device_write_service = device_write_svc
 
     yield
 
@@ -122,6 +132,7 @@ app.include_router(dev_router, prefix="/api/v1")  # Phase 1.10 (dev-only)
 app.include_router(analytics_router, prefix="/api/v1")  # Phase 1.11
 app.include_router(webhooks_router, prefix="/api/v1")  # Phase 1.13
 app.include_router(strava_webhook_router, prefix="/api/v1")  # Phase 1.7
+app.include_router(health_ingest_router, prefix="/api/v1")  # Apple Health Full Integration
 
 
 @app.get("/health")

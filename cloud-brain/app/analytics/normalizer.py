@@ -13,24 +13,11 @@ The normalizer handles:
 """
 
 import logging
-from enum import Enum
 from typing import Any
 
+from app.models.health_data import ActivityType  # noqa: F401 — single source of truth
+
 logger = logging.getLogger(__name__)
-
-
-class ActivityType(str, Enum):
-    """Canonical activity types used across the entire system.
-
-    Maps source-specific activity names to a unified set.
-    """
-
-    RUN = "run"
-    CYCLE = "cycle"
-    WALK = "walk"
-    SWIM = "swim"
-    STRENGTH = "strength"
-    UNKNOWN = "unknown"
 
 
 # Health Connect exercise type constants (from Android SDK).
@@ -147,13 +134,28 @@ class DataNormalizer:
     def _map_apple_type(apple_type: str | None) -> ActivityType:
         """Map an Apple HealthKit workout type to our canonical enum.
 
+        Supports both the full HK-prefixed names (e.g. HKWorkoutActivityTypeRunning)
+        and the short names sent by the iOS HealthKitBridge Swift extension
+        (e.g. "running"). The Swift bridge serialises HKWorkoutActivityType to
+        lowercase short strings; the HK-prefixed names are kept for backward
+        compatibility with any legacy data.
+
         Args:
-            apple_type: HKWorkoutActivityType string identifier.
+            apple_type: HKWorkoutActivityType string identifier (short or HK-prefixed).
 
         Returns:
             The corresponding ActivityType, or UNKNOWN if unrecognized.
         """
         mapping = {
+            # Short names from HealthKitBridge.swift HKWorkoutActivityType extension
+            "running": ActivityType.RUN,
+            "cycling": ActivityType.CYCLE,
+            "walking": ActivityType.WALK,
+            "swimming": ActivityType.SWIM,
+            "strength_training": ActivityType.STRENGTH,
+            "hiking": ActivityType.WALK,
+            "yoga": ActivityType.STRENGTH,
+            # Legacy HK-prefixed names (backward compatibility)
             "HKWorkoutActivityTypeRunning": ActivityType.RUN,
             "HKWorkoutActivityTypeCycling": ActivityType.CYCLE,
             "HKWorkoutActivityTypeWalking": ActivityType.WALK,

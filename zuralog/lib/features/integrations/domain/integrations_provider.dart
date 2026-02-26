@@ -16,7 +16,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
+import 'package:zuralog/features/health/data/health_sync_service.dart';
 import 'package:zuralog/features/integrations/data/oauth_repository.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 
@@ -69,17 +72,37 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   /// Parameters:
   ///   oauthRepository: Handles the Strava OAuth flow.
   ///   healthRepository: Handles HealthKit / Health Connect permissions.
+  ///   healthSyncService: Optional — pushes HealthKit data to Cloud Brain after connect.
+  ///   secureStorage: Optional — reads the JWT token to configure native background sync.
+  ///   apiClient: Optional — provides the Cloud Brain base URL for native sync config.
   IntegrationsNotifier({
     required OAuthRepository oauthRepository,
     required HealthRepository healthRepository,
+    HealthSyncService? healthSyncService,
+    SecureStorage? secureStorage,
+    ApiClient? apiClient,
   }) : _oauthRepository = oauthRepository,
        _healthRepository = healthRepository,
+       _healthSyncService = healthSyncService,
+       _secureStorage = secureStorage,
+       _apiClient = apiClient,
        // Start in loading state so the screen never briefly shows
        // "No integrations available." before loadIntegrations() fires.
        super(const IntegrationsState(isLoading: true));
 
   final OAuthRepository _oauthRepository;
   final HealthRepository _healthRepository;
+
+  /// Optional sync service. When present, initial sync is triggered after
+  /// Apple Health authorization is granted.
+  final HealthSyncService? _healthSyncService;
+
+  /// Optional secure storage. Used to read the JWT token for native Keychain
+  /// persistence so [HealthKitBridge] can sync in the background.
+  final SecureStorage? _secureStorage;
+
+  /// Optional API client. Provides the Cloud Brain base URL for native sync.
+  final ApiClient? _apiClient;
 
   // ── Mock seed data ─────────────────────────────────────────────────────────
 
@@ -230,6 +253,35 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           _setStatus(integrationId, newStatus);
           if (granted) {
             await _saveConnectedState(integrationId, connected: true);
+            // Persist JWT + API URL to iOS Keychain so native Swift code can
+            // sync HealthKit data directly to the Cloud Brain in the background
+            // without requiring the Flutter engine to be running.
+            if (_secureStorage != null && _apiClient != null) {
+              final authToken = await _secureStorage.getAuthToken();
+              if (authToken != null) {
+                await _healthRepository.configureBackgroundSync(
+                  authToken: authToken,
+                  apiBaseUrl: _apiClient.baseUrl,
+                );
+                debugPrint(
+                  '[IntegrationsNotifier] configureBackgroundSync completed',
+                );
+              }
+            }
+            // Start native background observers (HKObserverQuery on iOS).
+            await _healthRepository.startBackgroundObservers();
+            // Trigger initial 30-day sync to populate Cloud Brain.
+            // Fire-and-forget — sync runs in background; UI doesn't wait.
+            if (_healthSyncService != null) {
+              unawaited(
+                _healthSyncService.syncToCloud(days: 30).then((success) {
+                  debugPrint(
+                    '[IntegrationsNotifier] Initial Apple Health sync '
+                    '${success ? 'succeeded' : 'failed'}',
+                  );
+                }),
+              );
+            }
           }
         case 'google_health_connect':
           // Android-only: Health Connect is guarded by PlatformCompatibility.androidOnly
@@ -366,6 +418,9 @@ final integrationsProvider =
       final notifier = IntegrationsNotifier(
         oauthRepository: ref.watch(oauthRepositoryProvider),
         healthRepository: ref.watch(healthRepositoryProvider),
+        healthSyncService: ref.watch(healthSyncServiceProvider),
+        secureStorage: ref.read(secureStorageProvider),
+        apiClient: ref.read(apiClientProvider),
       );
       // Kick off the initial load after the current frame so the provider is
       // fully initialised before any state mutation occurs.

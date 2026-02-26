@@ -124,3 +124,25 @@ def test_normalize_unknown_source(normalizer):
     result = normalizer.normalize_activity("fitbit", raw)
     assert result["source"] == "fitbit"
     assert result["type"] == ActivityType.UNKNOWN
+
+
+def test_apple_health_type_mapping_short_names():
+    """Swift bridge sends short names like 'running', not HK-prefixed strings."""
+    n = DataNormalizer()
+    assert n._map_apple_type("running") == ActivityType.RUN
+    assert n._map_apple_type("cycling") == ActivityType.CYCLE
+    assert n._map_apple_type("walking") == ActivityType.WALK
+    assert n._map_apple_type("swimming") == ActivityType.SWIM
+    assert n._map_apple_type("strength_training") == ActivityType.STRENGTH
+    assert n._map_apple_type("hiking") == ActivityType.WALK
+    assert n._map_apple_type("yoga") == ActivityType.STRENGTH
+    assert n._map_apple_type("dance") == ActivityType.UNKNOWN
+
+
+def test_apple_health_type_mapping_hk_prefixed():
+    """Legacy HK-prefixed names should still work after the fix."""
+    n = DataNormalizer()
+    assert n._map_apple_type("HKWorkoutActivityTypeRunning") == ActivityType.RUN
+    assert n._map_apple_type("HKWorkoutActivityTypeCycling") == ActivityType.CYCLE
+    assert n._map_apple_type("HKWorkoutActivityTypeWalking") == ActivityType.WALK
+    assert n._map_apple_type("HKWorkoutActivityTypeSwimming") == ActivityType.SWIM

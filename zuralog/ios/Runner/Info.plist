@@ -102,13 +102,14 @@
 		<string>calai</string>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep) to provide personalized AI coaching and track your fitness goals.</string>
+	<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep, heart rate, HRV, VO2 max, and other vitals) to provide personalized AI coaching and track your fitness goals.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Zuralog needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
 		<string>processing</string>
+		<string>remote-notification</string>
 	</array>
 </dict>
 </plist>

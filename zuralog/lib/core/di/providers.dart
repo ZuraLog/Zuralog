@@ -18,6 +18,7 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 import 'package:zuralog/features/analytics/data/analytics_repository.dart';
 import 'package:zuralog/features/integrations/data/oauth_repository.dart';
+import 'package:zuralog/features/health/data/health_sync_service.dart';
 
 /// Provides a singleton [ApiClient] for REST API communication.
 ///
@@ -80,6 +81,17 @@ final syncStatusStoreProvider = Provider<SyncStatusStore>((ref) {
 /// the harness "Init FCM" button) — it is not called automatically to avoid
 /// permission prompts before the user has consented.
 final fcmServiceProvider = Provider<FCMService>((ref) => FCMService());
+
+/// Provides the [HealthSyncService] singleton for device-to-cloud health data sync.
+///
+/// Reads all HealthKit/Health Connect data and pushes it to the Cloud Brain
+/// via the `/api/v1/health/ingest` REST endpoint.
+final healthSyncServiceProvider = Provider<HealthSyncService>((ref) {
+  return HealthSyncService(
+    healthRepository: ref.watch(healthRepositoryProvider),
+    apiClient: ref.read(apiClientProvider),
+  );
+});
 
 /// Provides the [SocialAuthService] singleton for native OAuth sign-in.
 ///

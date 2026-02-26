@@ -234,6 +234,94 @@ import UIKit
                 }
             }
 
+        case "getDistance":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchDistance(date: date) { dist, error in
+                if let error = error {
+                    result(FlutterError(code: "DISTANCE_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(dist ?? 0.0)
+                }
+            }
+
+        case "getFlights":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchFlights(date: date) { count, error in
+                if let error = error {
+                    result(FlutterError(code: "FLIGHTS_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(count ?? 0.0)
+                }
+            }
+
+        case "getBodyFat":
+            healthKitBridge.fetchBodyFat { pct, error in
+                if let error = error {
+                    result(FlutterError(code: "BODYFAT_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(pct)
+                }
+            }
+
+        case "getRespiratoryRate":
+            healthKitBridge.fetchRespiratoryRate { rate, error in
+                if let error = error {
+                    result(FlutterError(code: "RR_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(rate)
+                }
+            }
+
+        case "getOxygenSaturation":
+            healthKitBridge.fetchOxygenSaturation { pct, error in
+                if let error = error {
+                    result(FlutterError(code: "OXY_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(pct)
+                }
+            }
+
+        case "getHeartRate":
+            healthKitBridge.fetchHeartRate { bpm, error in
+                if let error = error {
+                    result(FlutterError(code: "HR_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(bpm)
+                }
+            }
+
+        case "getBloodPressure":
+            healthKitBridge.fetchBloodPressure { data, error in
+                if let error = error {
+                    result(FlutterError(code: "BP_ERROR", message: error.localizedDescription, details: nil))
+                } else {
+                    result(data)
+                }
+            }
+
+        case "configureBackgroundSync":
+            // Persists the JWT auth token and Cloud Brain API URL to the iOS
+            // Keychain so native background observers can sync without Flutter.
+            guard let args = call.arguments as? [String: Any],
+                  let token = args["auth_token"] as? String,
+                  let apiUrl = args["api_base_url"] as? String else {
+                result(FlutterError(code: "BAD_ARGS",
+                                   message: "configureBackgroundSync requires auth_token and api_base_url",
+                                   details: nil))
+                return
+            }
+            let tokenSaved = KeychainHelper.shared.save(key: "auth_token", value: token)
+            let urlSaved = KeychainHelper.shared.save(key: "api_base_url", value: apiUrl)
+            result(tokenSaved && urlSaved)
+
         case "startBackgroundObservers":
             healthKitBridge.startBackgroundObservers { success in
                 result(success)
@@ -245,6 +333,84 @@ import UIKit
             healthKitBridge.checkPermissionsGranted { granted in
                 result(granted)
             }
+
+        case "backgroundWrite":
+            // Invoked by FCM service when the Cloud Brain wants to write health data
+            // to the device (e.g. log a meal, record a workout).
+            guard let args = call.arguments as? [String: Any],
+                  let dataType = args["data_type"] as? String,
+                  let valueJson = args["value"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS",
+                                   message: "backgroundWrite requires data_type and value",
+                                   details: nil))
+                return
+            }
+
+            guard let valueData = valueJson.data(using: .utf8),
+                  let value = try? JSONSerialization.jsonObject(with: valueData) as? [String: Any] else {
+                result(FlutterError(code: "INVALID_JSON",
+                                   message: "Could not parse value JSON",
+                                   details: nil))
+                return
+            }
+
+            switch dataType {
+            case "nutrition":
+                let calories = value["calories"] as? Double ?? 0
+                let date = Date()
+                healthKitBridge.writeNutrition(calories: calories, date: date) { success, error in
+                    if let error = error {
+                        result(FlutterError(code: "WRITE_FAILED", message: error.localizedDescription, details: nil))
+                    } else {
+                        result(success)
+                    }
+                }
+            case "workout":
+                let calories = value["calories"] as? Double ?? 0
+                let duration = value["duration_seconds"] as? Double ?? 0
+                let activityType = value["activity_type"] as? String ?? "running"
+                let startDate = Date()
+                let endDate = startDate.addingTimeInterval(duration)
+                healthKitBridge.writeWorkout(
+                    activityType: activityType,
+                    startDate: startDate,
+                    endDate: endDate,
+                    energyBurned: calories
+                ) { success, error in
+                    if let error = error {
+                        result(FlutterError(code: "WRITE_FAILED", message: error.localizedDescription, details: nil))
+                    } else {
+                        result(success)
+                    }
+                }
+            case "weight":
+                let weightKg = value["weight_kg"] as? Double ?? 0
+                let date = Date()
+                healthKitBridge.writeWeight(weightKg: weightKg, date: date) { success, error in
+                    if let error = error {
+                        result(FlutterError(code: "WRITE_FAILED", message: error.localizedDescription, details: nil))
+                    } else {
+                        result(success)
+                    }
+                }
+            default:
+                result(FlutterError(code: "UNKNOWN_TYPE",
+                                   message: "Unknown backgroundWrite type: \(dataType)",
+                                   details: nil))
+            }
+
+        case "triggerSync":
+            // Manually triggers a native background sync for a specific type.
+            // Used by FCM 'read_health' action.
+            guard let args = call.arguments as? [String: Any],
+                  let type = args["type"] as? String else {
+                result(FlutterError(code: "BAD_ARGS",
+                                   message: "triggerSync requires type",
+                                   details: nil))
+                return
+            }
+            healthKitBridge.triggerSync(type: type)
+            result(true)
 
         default:
             result(FlutterMethodNotImplemented)

@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/features/health/data/health_repository.dart';
 
 /// Handles top-level background messages from FCM.
 ///
@@ -26,6 +27,21 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   if (action == 'write_health') {
     await _handleBackgroundHealthWrite(message.data);
+  } else if (action == 'read_health') {
+    // For background 'read_health', delegate to the native MethodChannel.
+    // The native Swift code (HealthKitBridge.triggerSync) will read HealthKit
+    // and POST to the ingest endpoint directly via URLSession — no Dart needed.
+    final dataType = message.data['data_type'] as String? ?? 'all';
+    try {
+      const channel = MethodChannel('com.zuralog/health');
+      await channel.invokeMethod('triggerSync', {'type': dataType});
+    } on PlatformException catch (e) {
+      debugPrint('Background read_health failed (PlatformException): $e');
+    } on MissingPluginException catch (_) {
+      debugPrint('Health plugin not available in background isolate');
+    } catch (e) {
+      debugPrint('Background read_health failed: $e');
+    }
   }
 }
 
@@ -89,6 +105,12 @@ class FCMService {
   /// permission was denied.
   String? get token => _token;
 
+  /// Stored API client for token-refresh re-registration.
+  ApiClient? _apiClient;
+
+  /// Stored health repository for 'read_health' FCM action handling.
+  HealthRepository? _healthRepository;
+
   /// Initializes FCM: requests permissions, retrieves token,
   /// and sets up message handlers.
   ///
@@ -112,11 +134,19 @@ class FCMService {
     // Get the FCM token for this device
     _token = await _messaging.getToken();
 
-    // Listen for token refresh
+    // Listen for token refresh — re-register with backend automatically.
     _messaging.onTokenRefresh.listen((newToken) {
       _token = newToken;
-      // TODO(phase-1.9): Re-register updated token with backend
-      debugPrint('FCM token refreshed — re-register with backend to stay current');
+      debugPrint('FCM token refreshed — re-registering with backend');
+      if (_apiClient != null) {
+        // Fire-and-forget: update the Cloud Brain with the refreshed token.
+        registerWithBackend(_apiClient!).then((success) {
+          debugPrint(
+            'FCM token re-registration '
+            '${success ? 'succeeded' : 'failed'}',
+          );
+        });
+      }
     });
 
     // Handle foreground messages
@@ -134,10 +164,16 @@ class FCMService {
   /// to `POST /api/v1/devices/register` so the backend can send push
   /// notifications to this specific device.
   ///
+  /// Stores [apiClient] internally so that [onTokenRefresh] can automatically
+  /// re-register without requiring the caller to pass the client again.
+  ///
   /// [apiClient] is the REST client used for backend communication.
   ///
   /// Returns `true` if registration succeeded, `false` otherwise.
   Future<bool> registerWithBackend(ApiClient apiClient) async {
+    // Store for automatic re-registration on token refresh.
+    _apiClient = apiClient;
+
     if (_token == null) {
       debugPrint('FCM: no token available — call initialize() first');
       return false;
@@ -156,16 +192,61 @@ class FCMService {
     }
   }
 
+  /// Sets the [HealthRepository] used to handle 'read_health' FCM actions.
+  ///
+  /// Call this after app initialization so the FCM service can delegate
+  /// 'read_health' push messages to the native HealthKit bridge.
+  ///
+  /// [healthRepository] must not be null when 'read_health' messages
+  /// are expected from the Cloud Brain.
+  void setHealthRepository(HealthRepository healthRepository) {
+    _healthRepository = healthRepository;
+  }
+
   /// Handles messages received while the app is in the foreground.
   ///
-  /// For 'write_health' actions, delegates to the same write handler.
-  /// For other messages, logs for debugging.
+  /// Supported actions:
+  /// - `'write_health'`: Delegates to the native platform channel write handler.
+  /// - `'read_health'`: Reads the requested data type from HealthKit and triggers
+  ///   a native background sync to push fresh data to the Cloud Brain ingest endpoint.
   ///
   /// [message] is the incoming FCM remote message.
   void _handleForegroundMessage(RemoteMessage message) {
     final action = message.data['action'];
     if (action == 'write_health') {
       _handleBackgroundHealthWrite(message.data);
+    } else if (action == 'read_health') {
+      _handleReadHealthAction(message.data);
+    }
+  }
+
+  /// Handles a 'read_health' FCM push from the Cloud Brain.
+  ///
+  /// The Cloud Brain sends this to request a fresh read of a specific health
+  /// data type. This method reads the latest data from HealthKit via the
+  /// native bridge and posts it to the ingest endpoint.
+  ///
+  /// [data] is the FCM message data map with optional key:
+  /// - 'data_type': The health type to sync (e.g. 'steps', 'workouts').
+  ///   If absent, triggers a full daily metrics sync.
+  void _handleReadHealthAction(Map<String, dynamic> data) {
+    final dataType = data['data_type'] as String? ?? 'all';
+    debugPrint('[FCMService] read_health action received — type: $dataType');
+
+    if (_healthRepository != null) {
+      // Use triggerSync which calls notifyOfChange() natively — this reads
+      // HealthKit and POSTs directly to the Cloud Brain via URLSession.
+      _healthRepository!.triggerSync(dataType).then((success) {
+        debugPrint(
+          '[FCMService] read_health triggerSync($dataType): '
+          '${success ? 'dispatched' : 'failed'}',
+        );
+      });
+    } else {
+      debugPrint(
+        '[FCMService] read_health: no HealthRepository set — '
+        'call setHealthRepository() during app initialization',
+      );
     }
   }
 }
