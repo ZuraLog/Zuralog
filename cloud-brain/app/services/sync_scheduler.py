@@ -14,10 +14,19 @@ Note: Apple Health and Health Connect are push-from-device via
 the Edge Agent — they are NOT synced by this scheduler.
 """
 
+import asyncio
 import logging
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any
 
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.integration import Integration
 from app.worker import celery_app
+
+if TYPE_CHECKING:
+    from app.services.strava_token_service import StravaTokenService
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +43,7 @@ class SyncService:
         self,
         user_id: str,
         active_integrations: list[dict[str, Any]],
+        db: AsyncSession | None = None,
     ) -> dict[str, Any]:
         """Sync data from all active cloud integrations for a user.
 
@@ -45,6 +55,8 @@ class SyncService:
             user_id: The user's ID.
             active_integrations: List of integration dicts, each with
                 'provider' and 'access_token' keys.
+            db: Optional async database session. Required when a
+                provider needs to persist data (e.g. Strava).
 
         Returns:
             A dict with 'synced_sources' (list of provider names that
@@ -58,6 +70,7 @@ class SyncService:
             try:
                 if provider == "strava":
                     await self._sync_strava(
+                        db=db,  # type: ignore[arg-type]
                         user_id=user_id,
                         access_token=integration.get("access_token", ""),
                     )
@@ -71,25 +84,157 @@ class SyncService:
 
         return {"synced_sources": synced_sources, "errors": errors}
 
-    async def _sync_strava(self, user_id: str, access_token: str) -> dict[str, Any]:
-        """Pull recent activities from Strava API.
+    async def _sync_strava(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        access_token: str,
+    ) -> dict[str, Any]:
+        """Pull recent activities from Strava API and persist new ones.
+
+        Calls ``GET /api/v3/athlete/activities`` with the supplied
+        access token.  For each returned activity, checks whether a
+        ``UnifiedActivity`` row already exists (matched by ``source``
+        and ``original_id``).  New activities are inserted; duplicates
+        are silently skipped.
 
         Args:
-            user_id: The user's ID for storing results.
+            db: Async SQLAlchemy session used for reads and writes.
+            user_id: The user's ID for associating stored activities.
             access_token: Valid Strava OAuth access token.
 
         Returns:
-            A dict with the number of activities synced.
-
-        Raises:
-            RuntimeError: If the Strava API returns an error.
+            On success: ``{"activities_synced": <int>}``.
+            On API failure: ``{"error": <str>, "activities_synced": 0}``.
         """
-        # TODO(phase-1.10): Implement actual Strava API call
-        # Uses httpx to GET /api/v3/athlete/activities
-        # Normalize via DataNormalizer, deduplicate via SourceOfTruth
-        # Save to database
         logger.info("Syncing Strava for user '%s'", user_id)
-        return {"activities": 0}
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                _STRAVA_ACTIVITIES_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"per_page": 30},
+            )
+
+        if resp.status_code != 200:
+            logger.warning(
+                "Strava API returned %d for user '%s': %s",
+                resp.status_code,
+                user_id,
+                resp.text,
+            )
+            return {"error": resp.text, "activities_synced": 0}
+
+        activities: list[dict[str, Any]] = resp.json()
+        synced_count = 0
+
+        for activity in activities:
+            original_id = str(activity["id"])
+
+            # Check for an existing record to prevent duplication.
+            stmt = select(UnifiedActivity).where(
+                UnifiedActivity.source == "strava",
+                UnifiedActivity.original_id == original_id,
+                UnifiedActivity.user_id == user_id,
+            )
+            result = await db.execute(stmt)
+            existing = result.scalar_one_or_none()
+
+            if existing is not None:
+                logger.debug(
+                    "Strava activity %s already stored for user '%s' — skipping",
+                    original_id,
+                    user_id,
+                )
+                continue
+
+            # Map Strava type string to canonical ActivityType enum value.
+            strava_type: str = activity.get("type", "")
+            activity_type = _STRAVA_TYPE_MAP.get(strava_type, ActivityType.UNKNOWN)
+
+            # Parse ISO-8601 start time; fall back to UTC now on failure.
+            raw_start: str | None = activity.get("start_date_local")
+            try:
+                start_time = (
+                    datetime.fromisoformat(raw_start.replace("Z", "+00:00"))
+                    if raw_start
+                    else datetime.now(tz=timezone.utc)
+                )
+            except ValueError:
+                logger.warning("Could not parse start_date_local '%s'", raw_start)
+                start_time = datetime.now(tz=timezone.utc)
+
+            new_activity = UnifiedActivity(
+                user_id=user_id,
+                source="strava",
+                original_id=original_id,
+                activity_type=activity_type,
+                duration_seconds=int(activity.get("elapsed_time") or 0),
+                distance_meters=activity.get("distance"),
+                calories=int(activity.get("calories") or 0),
+                start_time=start_time,
+            )
+            db.add(new_activity)
+            synced_count += 1
+
+        if synced_count:
+            await db.commit()
+            logger.info(
+                "Strava sync committed %d new activities for user '%s'",
+                synced_count,
+                user_id,
+            )
+        else:
+            logger.info("No new Strava activities for user '%s'", user_id)
+
+        return {"activities_synced": synced_count}
+
+    async def _refresh_expiring_tokens(
+        self,
+        db: AsyncSession,
+        token_service: "StravaTokenService",
+    ) -> dict[str, Any]:
+        """Find and refresh Strava tokens expiring within 30 minutes.
+
+        Queries the database for active Strava integrations whose
+        ``token_expires_at`` falls within the next 30 minutes, then
+        calls ``StravaTokenService.refresh_access_token`` for each.
+
+        Args:
+            db: Async database session.
+            token_service: ``StravaTokenService`` instance for refreshing.
+
+        Returns:
+            A dict with ``'refreshed'`` count of successfully refreshed tokens.
+        """
+        cutoff = datetime.now(timezone.utc) + timedelta(minutes=30)
+
+        stmt = select(Integration).where(
+            and_(
+                Integration.provider == "strava",
+                Integration.is_active.is_(True),
+                Integration.token_expires_at <= cutoff,
+            )
+        )
+        result = await db.execute(stmt)
+        expiring = result.scalars().all()
+
+        refreshed = 0
+        for integration in expiring:
+            new_token = await token_service.refresh_access_token(db, integration)
+            if new_token:
+                refreshed += 1
+                logger.info(
+                    "Proactively refreshed token for user '%s'",
+                    integration.user_id,
+                )
+            else:
+                logger.warning(
+                    "Failed to refresh token for user '%s'",
+                    integration.user_id,
+                )
+
+        return {"refreshed": refreshed}
 
 
 @celery_app.task(name="app.services.sync_scheduler.sync_all_users_task")
@@ -115,10 +260,23 @@ def refresh_tokens_task() -> dict[str, Any]:
     Called by Celery Beat every hour. Checks for tokens expiring
     within 30 minutes and refreshes them proactively.
 
+    Creates a database session and a ``StravaTokenService`` instance,
+    then delegates to ``SyncService._refresh_expiring_tokens``.
+
     Returns:
         A dict with the number of tokens refreshed.
     """
-    # TODO(phase-1.10): Query Integration model for expiring tokens
-    # Use provider-specific refresh endpoints
+    from app.database import async_session
+    from app.services.strava_token_service import StravaTokenService
+
     logger.info("Checking for expiring OAuth tokens")
-    return {"tokens_refreshed": 0}
+
+    async def _run() -> dict[str, Any]:
+        async with async_session() as db:
+            token_service = StravaTokenService()
+            service = SyncService()
+            result = await service._refresh_expiring_tokens(db, token_service)
+            logger.info("Token refresh complete: %s token(s) refreshed", result["refreshed"])
+            return {"tokens_refreshed": result["refreshed"]}
+
+    return asyncio.run(_run())
