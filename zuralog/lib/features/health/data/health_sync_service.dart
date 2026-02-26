@@ -61,11 +61,21 @@ class HealthSyncService {
       final activeCalories = await _healthRepo.getCaloriesBurned(today);
       final nutritionCalories = await _healthRepo.getNutritionCalories(today);
 
+      // Phase 6 new scalar types (also single-date or point-in-time)
+      final distance = await _healthRepo.getDistance(today);
+      final flights = await _healthRepo.getFlights(today);
+
       // Read point-in-time values (most recent reading, no date arg)
       final weight = await _healthRepo.getWeight();
       final rhr = await _healthRepo.getRestingHeartRate();
       final hrv = await _healthRepo.getHRV();
       final vo2 = await _healthRepo.getCardioFitness();
+
+      // Phase 6 point-in-time new types
+      final bodyFat = await _healthRepo.getBodyFat();
+      final respiratoryRate = await _healthRepo.getRespiratoryRate();
+      final oxygenSaturation = await _healthRepo.getOxygenSaturation();
+      final heartRate = await _healthRepo.getHeartRate();
 
       // Read date-range collections
       final workouts = await _healthRepo.getWorkouts(rangeStart, now);
@@ -83,6 +93,16 @@ class HealthSyncService {
             if (rhr != null && rhr > 0) 'resting_heart_rate': rhr,
             if (hrv != null && hrv > 0) 'hrv_ms': hrv,
             if (vo2 != null && vo2 > 0) 'vo2_max': vo2,
+            // Phase 6 new types
+            if (distance > 0) 'distance_meters': distance,
+            if (flights > 0) 'flights_climbed': flights.round(),
+            if (bodyFat != null && bodyFat > 0) 'body_fat_percentage': bodyFat,
+            if (respiratoryRate != null && respiratoryRate > 0)
+              'respiratory_rate': respiratoryRate,
+            if (oxygenSaturation != null && oxygenSaturation > 0)
+              'oxygen_saturation': oxygenSaturation,
+            if (heartRate != null && heartRate > 0)
+              'heart_rate_avg': heartRate,
           },
         ],
         'workouts': workouts.map((w) {
