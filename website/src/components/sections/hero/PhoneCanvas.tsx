@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, Suspense } from 'react';
+import { useRef, useEffect, Suspense, type RefObject } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, useGLTF, useTexture } from '@react-three/drei';
 import { ProgressBridge } from '@/components/ProgressBridge';
@@ -92,7 +92,7 @@ const anim = {
  *   - Transition: moves right (posX increases), up (posY increases), scales up
  *   - MobileSection: settled in right half (posX~1.8, posY~0), scale 2.8
  */
-function PhoneModel() {
+function PhoneModel({ wrapperRef }: { wrapperRef: RefObject<HTMLDivElement | null> }) {
     const { scene } = useGLTF('/model/phone/scene.gltf');
     const textures = useTexture(TEXTURE_PATHS);
 
@@ -101,6 +101,27 @@ function PhoneModel() {
             tex.flipY = false;
         });
     }, [textures]);
+
+    /**
+     * Opacity entrance fade: once the scene and all textures are ready,
+     * fade the canvas wrapper from opacity 0 → 1.
+     *
+     * This is purely a CSS opacity tween on the wrapper div — it never
+     * touches the 3D anim object, so it works correctly regardless of
+     * what scroll position the page was loaded at.
+     */
+    useEffect(() => {
+        if (!scene || textures.length === 0) return;
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+
+        gsap.to(wrapper, {
+            opacity: 1,
+            duration: 2.4,
+            delay: 0.2,
+            ease: 'power1.inOut',
+        });
+    }, [scene, textures, wrapperRef]);
 
     const groupRef = useRef<THREE.Group>(null);
     const shaderMatRef = useRef<THREE.ShaderMaterial | null>(null);
@@ -409,6 +430,7 @@ export function PhoneCanvas() {
                 height: '100vh',
                 zIndex: 40,
                 pointerEvents: 'none',
+                opacity: 0,
             }}
         >
             {/* pointerEvents: 'none' is set inline on both the wrapper and the Canvas
@@ -422,7 +444,7 @@ export function PhoneCanvas() {
                     <ProgressBridge />
                     {/* Suspense boundary so useProgress tracks GLTF + texture loads */}
                     <Suspense fallback={null}>
-                        <PhoneModel />
+                        <PhoneModel wrapperRef={wrapperRef} />
                         <Environment preset="city" />
                     </Suspense>
                 </Canvas>
