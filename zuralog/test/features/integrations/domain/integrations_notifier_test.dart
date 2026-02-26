@@ -75,6 +75,8 @@ class _FakeHealthRepository implements HealthRepository {
     required double weightKg,
     required DateTime date,
   }) async => false;
+  @override
+  Future<bool> startBackgroundObservers() async => false;
 }
 
 /// A [OAuthRepository] fake.

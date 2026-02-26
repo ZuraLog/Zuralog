@@ -66,7 +66,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # MCP Framework (Phase 1.3+)
     registry = MCPServerRegistry()
-    registry.register(AppleHealthServer())
+    # DeviceWriteService must be created before MCP servers that need it.
+    push_svc = PushService()
+    device_write_svc = DeviceWriteService(push_service=push_svc)
+    registry.register(
+        AppleHealthServer(
+            db_factory=async_session,
+            device_write_service=device_write_svc,
+        )
+    )
     registry.register(HealthConnectServer())
     # Phase 1.7: DB-backed token service wired into StravaServer
     strava_token_service = StravaTokenService()
@@ -83,8 +91,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
     app.state.rate_limiter = RateLimiter()
-    app.state.push_service = PushService()
-    app.state.device_write_service = DeviceWriteService(push_service=app.state.push_service)
+    # Reuse push_svc / device_write_svc created above for the MCP server.
+    app.state.push_service = push_svc
+    app.state.device_write_service = device_write_svc
 
     yield
 
