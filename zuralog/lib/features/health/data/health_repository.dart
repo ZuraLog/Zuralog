@@ -107,6 +107,15 @@ class HealthRepository {
   /// Returns `null` if no data exists or the health platform is unavailable.
   Future<double?> getCardioFitness() => _bridge.getCardioFitness();
 
+  /// Starts native background observers for health data changes.
+  ///
+  /// On iOS, registers [HKObserverQuery] instances for all tracked data types.
+  /// Changes detected from external apps (Apple Watch, CalAI, etc.) will
+  /// eventually trigger a background sync to the Cloud Brain.
+  ///
+  /// Returns `true` if observers started successfully, `false` otherwise.
+  Future<bool> startBackgroundObservers() => _bridge.startBackgroundObservers();
+
   // -- Write Methods --
 
   /// Writes a workout entry to HealthKit.

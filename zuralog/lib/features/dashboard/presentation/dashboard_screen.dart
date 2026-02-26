@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -56,86 +57,97 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // ── Floating App Bar ────────────────────────────────────────────
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            pinned: false,
-            backgroundColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
-            toolbarHeight: 72,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Push latest HealthKit data to Cloud Brain, then refresh UI providers.
+          await ref.read(healthSyncServiceProvider).syncToCloud();
+          ref.invalidate(dailySummaryProvider);
+          ref.invalidate(weeklyTrendsProvider);
+          ref.invalidate(dashboardInsightProvider);
+        },
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // ── Floating App Bar ────────────────────────────────────────────
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              pinned: false,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              toolbarHeight: 72,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                  ),
+                  child: _buildHeader(context, ref, profile?.aiName ?? '...'),
                 ),
-                child: _buildHeader(context, ref, profile?.aiName ?? '...'),
               ),
             ),
-          ),
 
-          // ── Main Content ────────────────────────────────────────────────
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                // A) Compact AI Insight strip
-                insightAsync.when(
-                  data: (insight) => _CompactInsightStrip(
-                    insight: insight,
-                    onTap: () =>
-                        StatefulNavigationShell.of(context).goBranch(1),
-                  ),
-                  loading: () => const _InsightStripShimmer(),
-                  error: (e, _) => _CompactInsightStrip(
-                    insight: const DashboardInsight(
-                      insight:
-                          'Tap to chat with your AI coach for today\'s insight.',
+            // ── Main Content ────────────────────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // A) Compact AI Insight strip
+                  insightAsync.when(
+                    data: (insight) => _CompactInsightStrip(
+                      insight: insight,
+                      onTap: () =>
+                          StatefulNavigationShell.of(context).goBranch(1),
                     ),
-                    onTap: () =>
-                        StatefulNavigationShell.of(context).goBranch(1),
+                    loading: () => const _InsightStripShimmer(),
+                    error: (e, _) => _CompactInsightStrip(
+                      insight: const DashboardInsight(
+                        insight:
+                            'Tap to chat with your AI coach for today\'s insight.',
+                      ),
+                      onTap: () =>
+                          StatefulNavigationShell.of(context).goBranch(1),
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: AppDimens.spaceLg),
+                  const SizedBox(height: AppDimens.spaceLg),
 
-                // B) Hero row — rings + key stats side-by-side
-                summaryAsync.when(
-                  data: (summary) => _HeroRow(summary: summary),
-                  loading: () => const _HeroRowShimmer(),
-                  error: (e, _) => const SizedBox.shrink(),
-                ),
+                  // B) Hero row — rings + key stats side-by-side
+                  summaryAsync.when(
+                    data: (summary) => _HeroRow(summary: summary),
+                    loading: () => const _HeroRowShimmer(),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
 
-                // B2) Quick stat chips — workouts, nutrition, sleep quality
-                summaryAsync.when(
-                  data: (summary) => _QuickStatChips(summary: summary),
-                  loading: () => const SizedBox.shrink(),
-                  error: (e, _) => const SizedBox.shrink(),
-                ),
+                  // B2) Quick stat chips — workouts, nutrition, sleep quality
+                  summaryAsync.when(
+                    data: (summary) => _QuickStatChips(summary: summary),
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
 
-                const SizedBox(height: AppDimens.spaceLg),
+                  const SizedBox(height: AppDimens.spaceLg),
 
-                // C) Metrics grid — requires both summary and trends
-                _buildMetricsGrid(context, summaryAsync, trendsAsync),
+                  // C) Metrics grid — requires both summary and trends
+                  _buildMetricsGrid(context, summaryAsync, trendsAsync),
 
-                const SizedBox(height: AppDimens.spaceLg),
+                  const SizedBox(height: AppDimens.spaceLg),
 
-                // D) Connected-apps rail at the very bottom
-                IntegrationsRail(
-                  // goBranch(2) switches to the Integrations tab.
-                  onManageTap: () =>
-                      StatefulNavigationShell.of(context).goBranch(2),
-                ),
+                  // D) Connected-apps rail at the very bottom
+                  IntegrationsRail(
+                    // goBranch(2) switches to the Integrations tab.
+                    onManageTap: () =>
+                        StatefulNavigationShell.of(context).goBranch(2),
+                  ),
 
-                // E) Bottom padding for nav bar clearance
-                const SizedBox(height: AppDimens.spaceXxl),
-              ]),
+                  // E) Bottom padding for nav bar clearance
+                  const SizedBox(height: AppDimens.spaceXxl),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -151,8 +163,8 @@ class DashboardScreen extends ConsumerWidget {
     final greeting = hour < 12
         ? 'Good Morning'
         : hour < 18
-            ? 'Good Afternoon'
-            : 'Good Evening';
+        ? 'Good Afternoon'
+        : 'Good Evening';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -170,9 +182,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             Text(
               name,
-              style: AppTextStyles.h2.copyWith(
-                color: AppColors.primary,
-              ),
+              style: AppTextStyles.h2.copyWith(color: AppColors.primary),
             ),
           ],
         ),
@@ -504,10 +514,7 @@ class _HeroRowShimmer extends StatelessWidget {
 ///   onTap:   Callback to navigate to the chat screen.
 class _CompactInsightStrip extends StatelessWidget {
   /// Creates a [_CompactInsightStrip].
-  const _CompactInsightStrip({
-    required this.insight,
-    this.onTap,
-  });
+  const _CompactInsightStrip({required this.insight, this.onTap});
 
   /// The AI-generated insight.
   final DashboardInsight insight;

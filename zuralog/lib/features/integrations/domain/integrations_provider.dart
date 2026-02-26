@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
+import 'package:zuralog/features/health/data/health_sync_service.dart';
 import 'package:zuralog/features/integrations/data/oauth_repository.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 
@@ -69,17 +70,24 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   /// Parameters:
   ///   oauthRepository: Handles the Strava OAuth flow.
   ///   healthRepository: Handles HealthKit / Health Connect permissions.
+  ///   healthSyncService: Optional — pushes HealthKit data to Cloud Brain after connect.
   IntegrationsNotifier({
     required OAuthRepository oauthRepository,
     required HealthRepository healthRepository,
+    HealthSyncService? healthSyncService,
   }) : _oauthRepository = oauthRepository,
        _healthRepository = healthRepository,
+       _healthSyncService = healthSyncService,
        // Start in loading state so the screen never briefly shows
        // "No integrations available." before loadIntegrations() fires.
        super(const IntegrationsState(isLoading: true));
 
   final OAuthRepository _oauthRepository;
   final HealthRepository _healthRepository;
+
+  /// Optional sync service. When present, initial sync is triggered after
+  /// Apple Health authorization is granted.
+  final HealthSyncService? _healthSyncService;
 
   // ── Mock seed data ─────────────────────────────────────────────────────────
 
@@ -230,6 +238,20 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           _setStatus(integrationId, newStatus);
           if (granted) {
             await _saveConnectedState(integrationId, connected: true);
+            // Start native background observers (HKObserverQuery on iOS).
+            await _healthRepository.startBackgroundObservers();
+            // Trigger initial 30-day sync to populate Cloud Brain.
+            // Fire-and-forget — sync runs in background; UI doesn't wait.
+            if (_healthSyncService != null) {
+              unawaited(
+                _healthSyncService.syncToCloud(days: 30).then((success) {
+                  debugPrint(
+                    '[IntegrationsNotifier] Initial Apple Health sync '
+                    '${success ? 'succeeded' : 'failed'}',
+                  );
+                }),
+              );
+            }
           }
         case 'google_health_connect':
           // Android-only: Health Connect is guarded by PlatformCompatibility.androidOnly
@@ -366,6 +388,7 @@ final integrationsProvider =
       final notifier = IntegrationsNotifier(
         oauthRepository: ref.watch(oauthRepositoryProvider),
         healthRepository: ref.watch(healthRepositoryProvider),
+        healthSyncService: ref.watch(healthSyncServiceProvider),
       );
       // Kick off the initial load after the current frame so the provider is
       // fully initialised before any state mutation occurs.
