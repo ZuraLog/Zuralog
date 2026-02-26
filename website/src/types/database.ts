@@ -64,6 +64,47 @@ export type Database = {
           user_agent?: string | null;
         };
       };
+      support_contributions: {
+        Row: {
+          id: string;
+          source: string;
+          source_id: string | null;
+          supporter_name: string;
+          is_anonymous: boolean;
+          amount: number;
+          currency: string;
+          message: string | null;
+          contributed_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          source?: string;
+          source_id?: string | null;
+          supporter_name?: string;
+          is_anonymous?: boolean;
+          amount: number;
+          currency?: string;
+          message?: string | null;
+          contributed_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          source?: string;
+          source_id?: string | null;
+          supporter_name?: string;
+          is_anonymous?: boolean;
+          amount?: number;
+          currency?: string;
+          message?: string | null;
+          contributed_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       waitlist_stats: {
@@ -84,6 +125,21 @@ export type Database = {
           referral_count: number | null;
           queue_position: number | null;
           created_at: string | null;
+        };
+      };
+      support_stats: {
+        Row: {
+          total_supporters: number | null;
+          total_funds_raised: number | null;
+          highest_single_contribution: number | null;
+        };
+      };
+      support_leaderboard: {
+        Row: {
+          supporter_name: string | null;
+          total_contributed: number | null;
+          contribution_count: number | null;
+          latest_contribution: string | null;
         };
       };
     };
