@@ -132,6 +132,24 @@ class _FakeHealthRepository implements HealthRepository {
     required String authToken,
     required String apiBaseUrl,
   }) async => true;
+
+  // Phase 6 stubs — new HealthKit data types.
+  @override
+  Future<double> getDistance(DateTime date) async => 0;
+  @override
+  Future<double> getFlights(DateTime date) async => 0;
+  @override
+  Future<double?> getBodyFat() async => null;
+  @override
+  Future<double?> getRespiratoryRate() async => null;
+  @override
+  Future<double?> getOxygenSaturation() async => null;
+  @override
+  Future<double?> getHeartRate() async => null;
+  @override
+  Future<Map<String, double>?> getBloodPressure() async => null;
+  @override
+  Future<bool> triggerSync(String type) async => false;
 }
 
 /// A [OAuthRepository] fake.

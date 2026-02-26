@@ -141,6 +141,12 @@ class ApiClient {
     }
   }
 
+  /// The base URL this client is configured to communicate with.
+  ///
+  /// Exposed so other services (e.g. background sync) can pass the URL to
+  /// native code without having to re-read it from the environment.
+  String get baseUrl => _dio.options.baseUrl;
+
   /// Sends a GET request to the given [path] with optional [queryParameters].
   ///
   /// [queryParameters] are appended to the URL as query string key-value pairs.
