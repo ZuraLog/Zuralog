@@ -232,9 +232,16 @@ class DashboardScreen extends ConsumerWidget {
             ),
 
             // ── D) Integrations rail + bottom clearance ──────────────────────
+            // Bottom padding = nav bar height + device safe-area inset so the
+            // rail is never hidden behind the floating bottom navigation bar.
             SliverPadding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd,
+              padding: EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                0,
+                AppDimens.spaceMd,
+                AppDimens.bottomNavHeight +
+                    MediaQuery.of(context).padding.bottom +
+                    AppDimens.spaceMd,
               ),
               sliver: SliverToBoxAdapter(
                 child: Column(
@@ -246,7 +253,6 @@ class DashboardScreen extends ConsumerWidget {
                         context,
                       ).goBranch(_kIntegrationsBranchIndex),
                     ),
-                    const SizedBox(height: AppDimens.spaceXxl),
                   ],
                 ),
               ),
