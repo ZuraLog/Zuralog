@@ -478,25 +478,25 @@ class MainActivity : FlutterFragmentActivity() {
                 "configureBackgroundSync" -> {
                     // Called after the user grants Health Connect permissions in the
                     // connect flow. Stores the Cloud Brain credentials in
-                    // EncryptedSharedPreferences so HealthSyncWorker can read them
-                    // in the background, then schedules the periodic WorkManager task.
+                    // EncryptedSharedPreferences so HealthSyncWorker can reach the
+                    // correct server in the background, then schedules the periodic
+                    // WorkManager task.
                     //
-                    // Parameters (from Dart):
-                    //   userId   — the authenticated Supabase user UUID
-                    //   apiToken — the user's access token for POST /health/ingest
                     // Keys match what HealthBridge.dart sends via invokeMethod:
                     //   auth_token    — the user's JWT bearer token
-                    //   api_base_url  — the Cloud Brain base URL (informational,
-                    //                   stored but HealthSyncWorker uses the
-                    //                   hardcoded INGEST_URL constant instead).
+                    //   api_base_url  — the Cloud Brain base URL (e.g. http://192.168.1.5:8001
+                    //                   for local dev, https://api.zuralog.com for production).
+                    //                   Stored and used by HealthSyncWorker to build the
+                    //                   full ingest URL dynamically — not hardcoded.
                     val apiToken = call.argument<String>("auth_token") ?: ""
                     val apiBaseUrl = call.argument<String>("api_base_url") ?: ""
 
                     try {
-                        // Persist credentials for HealthSyncWorker.
+                        // Persist both JWT token and base URL for HealthSyncWorker.
                         HealthSyncWorker.storeCredentials(
                             context = this@MainActivity,
                             apiToken = apiToken,
+                            apiBaseUrl = apiBaseUrl,
                         )
                         // Schedule the periodic background worker.
                         HealthSyncWorker.schedule(this@MainActivity)
