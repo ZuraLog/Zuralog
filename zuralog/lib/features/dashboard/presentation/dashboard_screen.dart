@@ -30,6 +30,7 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/dashboard/domain/health_category.dart';
 import 'package:zuralog/features/dashboard/domain/health_metric.dart';
 import 'package:zuralog/features/dashboard/domain/health_metric_registry.dart';
+import 'package:zuralog/features/dashboard/domain/metric_series.dart';
 import 'package:zuralog/features/dashboard/domain/time_range.dart';
 import 'package:zuralog/features/dashboard/presentation/providers/metric_series_provider.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/category_card.dart';
@@ -409,7 +410,7 @@ class _CategoryCardLoader extends ConsumerWidget {
   /// or a surface-coloured [SizedBox] placeholder while loading or on error.
   Widget? _buildMiniGraph(
     BuildContext context,
-    AsyncValue<dynamic>? seriesAsync,
+    AsyncValue<MetricSeries>? seriesAsync,
     HealthMetric? metric,
     HealthCategory category,
   ) {
