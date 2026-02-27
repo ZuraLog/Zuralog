@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/dashboard/domain/metric_series.dart';
 import 'package:zuralog/features/dashboard/domain/time_range.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/graph_utils.dart';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -142,7 +143,7 @@ class _CalendarHeatmapState extends State<CalendarHeatmap> {
   @override
   Widget build(BuildContext context) {
     if (widget.series.dataPoints.isEmpty) {
-      return _EmptyState(compact: widget.compact);
+      return GraphEmptyState(compact: widget.compact);
     }
 
     final dayMap = _buildDayMap();
@@ -378,72 +379,4 @@ class _DayInfo extends StatelessWidget {
   }
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
 
-/// Dashed rounded-rectangle empty state.
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: compact ? 48 : null,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: AppColors.textSecondary.withValues(alpha: 0.4),
-          radius: AppDimens.radiusSm,
-        ),
-        child: Center(
-          child: compact
-              ? const SizedBox.shrink()
-              : Text(
-                  'No data',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Paints a dashed rounded-rectangle border for the empty state.
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    const dashWidth = 6.0;
-    const dashSpace = 4.0;
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(1, 1, size.width - 2, size.height - 2),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics();
-    for (final metric in metrics) {
-      double distance = 0;
-      while (distance < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(distance, distance + dashWidth),
-          paint,
-        );
-        distance += dashWidth + dashSpace;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
-      color != oldDelegate.color || radius != oldDelegate.radius;
-}

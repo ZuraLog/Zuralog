@@ -16,6 +16,7 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/dashboard/domain/metric_data_point.dart';
 import 'package:zuralog/features/dashboard/domain/metric_series.dart';
 import 'package:zuralog/features/dashboard/domain/time_range.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/graph_utils.dart';
 
 // ── Internal types ────────────────────────────────────────────────────────────
 
@@ -221,7 +222,7 @@ class _StackedBarChartState extends State<StackedBarChart> {
   @override
   Widget build(BuildContext context) {
     if (widget.series.dataPoints.isEmpty) {
-      return _EmptyState(compact: widget.compact);
+      return GraphEmptyState(compact: widget.compact);
     }
 
     final mode = _detectMode();
@@ -310,7 +311,7 @@ class _StackedBarChartState extends State<StackedBarChart> {
                       }
                       final ts =
                           widget.series.dataPoints[idx].timestamp;
-                      final label = _xLabel(ts, widget.timeRange);
+                      final label = graphXLabel(ts, widget.timeRange);
                       return Text(
                         label,
                         style: AppTextStyles.caption.copyWith(
@@ -373,30 +374,6 @@ class _StackedBarChartState extends State<StackedBarChart> {
   }
 }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
-
-/// Formats an x-axis label from a [DateTime] appropriate for the [TimeRange].
-String _xLabel(DateTime ts, TimeRange range) {
-  switch (range) {
-    case TimeRange.day:
-      final h = ts.hour;
-      final suffix = h < 12 ? 'am' : 'pm';
-      final display = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-      return '$display$suffix';
-    case TimeRange.week:
-      const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-      return days[(ts.weekday - 1) % 7];
-    case TimeRange.month:
-      return '${ts.day}';
-    case TimeRange.sixMonths:
-    case TimeRange.year:
-      const months = [
-        'J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D',
-      ];
-      return months[ts.month - 1];
-  }
-}
-
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 /// A single colour + label legend item.
@@ -431,70 +408,4 @@ class _LegendItem extends StatelessWidget {
   }
 }
 
-/// Dashed rounded-rectangle empty state shown when there are no data points.
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.compact});
 
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: compact ? 48 : null,
-      child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: AppColors.textSecondary.withValues(alpha: 0.4),
-          radius: AppDimens.radiusSm,
-        ),
-        child: Center(
-          child: compact
-              ? const SizedBox.shrink()
-              : Text(
-                  'No data',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Paints a dashed rounded-rectangle border for the empty state.
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    const dashWidth = 6.0;
-    const dashSpace = 4.0;
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(1, 1, size.width - 2, size.height - 2),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics();
-    for (final metric in metrics) {
-      double distance = 0;
-      while (distance < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(distance, distance + dashWidth),
-          paint,
-        );
-        distance += dashWidth + dashSpace;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
-      color != oldDelegate.color || radius != oldDelegate.radius;
-}
