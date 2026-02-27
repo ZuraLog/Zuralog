@@ -43,6 +43,7 @@ import 'package:zuralog/features/dashboard/presentation/widgets/graphs/range_lin
 import 'package:zuralog/features/dashboard/presentation/widgets/graphs/stacked_bar_chart.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/graphs/threshold_line_chart.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/integrations_rail.dart';
+import 'package:zuralog/features/integrations/domain/integration_context_provider.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── Internal constants ────────────────────────────────────────────────────────
@@ -312,6 +313,32 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+// ── Navigation helper ─────────────────────────────────────────────────────────
+
+/// Navigates to the Integrations tab with a contextual "Connect a source for
+/// [metricLabel]" banner.
+///
+/// Sets [integrationContextProvider] to [metricLabel] so the Integrations
+/// screen can display a banner explaining why the user was sent there.
+/// Then switches to the Integrations shell branch (index 2).
+///
+/// Parameters:
+///   [context]     — current [BuildContext] for [StatefulNavigationShell].
+///   [ref]         — [WidgetRef] for writing the Riverpod provider.
+///   [metricLabel] — human-readable metric name shown in the banner.
+void _navigateToIntegrationsWithContext(
+  BuildContext context,
+  WidgetRef ref,
+  String metricLabel,
+) {
+  // Set context first so the Integrations screen sees it on arrival.
+  ref.read(integrationContextProvider.notifier).state = metricLabel;
+  // Switch to the Integrations tab branch (branch index 2).
+  StatefulNavigationShell.of(context).goBranch(
+    DashboardScreen._kIntegrationsBranchIndex,
+  );
+}
+
 // ── Category platform filter ──────────────────────────────────────────────────
 
 /// Returns `true` if [category] has at least one metric available on the
@@ -390,12 +417,26 @@ class _CategoryCardLoader extends ConsumerWidget {
         miniGraph: miniGraph,
         onTap: () => context.go('/dashboard/${category.name}'),
       ),
-      data: (snapshot) => CategoryCard(
-        category: category,
-        previews: _dataPreviews(previewIds, snapshot),
-        miniGraph: miniGraph,
-        onTap: () => context.go('/dashboard/${category.name}'),
-      ),
+      data: (snapshot) {
+        final List<MetricPreview> previews = _dataPreviews(previewIds, snapshot);
+        final bool allEmpty = previews.every((MetricPreview p) => !p.hasData);
+
+        return Opacity(
+          opacity: allEmpty ? 0.45 : 1.0,
+          child: CategoryCard(
+            category: category,
+            previews: previews,
+            miniGraph: allEmpty ? null : miniGraph,
+            onTap: allEmpty
+                ? () => _navigateToIntegrationsWithContext(
+                      context,
+                      ref,
+                      category.displayName,
+                    )
+                : () => context.go('/dashboard/${category.name}'),
+          ),
+        );
+      },
     );
   }
 
@@ -429,7 +470,9 @@ class _CategoryCardLoader extends ConsumerWidget {
 
   /// Builds data [MetricPreview] rows from a [snapshot] map.
   ///
-  /// Falls back to `'—'` for any metric ID not present in [snapshot].
+  /// Metrics absent from [snapshot] are rendered with `hasData: false`
+  /// (dimmed row with `'—'` placeholder) to indicate no source is connected.
+  /// Metrics present in [snapshot] are rendered normally with `hasData: true`.
   List<MetricPreview> _dataPreviews(
     List<String> ids,
     Map<String, double> snapshot,
@@ -439,15 +482,25 @@ class _CategoryCardLoader extends ConsumerWidget {
         final raw = snapshot[id];
         final label = metric?.displayName ?? id;
         final unit = metric?.unit ?? '';
+        // No data — metric key absent from the snapshot.
         if (raw == null) {
-          return MetricPreview(label: label, value: '—', unit: unit);
+          return MetricPreview(
+            label: label,
+            value: '—',
+            unit: unit,
+            hasData: false,
+          );
         }
         // Format integers without decimals; floats to 1 decimal place.
         final formatted =
             raw == raw.truncateToDouble() && raw < 10000
                 ? raw.toInt().toString()
                 : raw.toStringAsFixed(1);
-        return MetricPreview(label: label, value: formatted, unit: unit);
+        return MetricPreview(
+          label: label,
+          value: formatted,
+          unit: unit,
+        );
       }).toList();
 
   // ── Mini graph builder ───────────────────────────────────────────────────
@@ -764,7 +817,115 @@ class _EssentialStatTile extends ConsumerWidget {
     // brightness checks that can fail when the system theme changes mid-session.
     final textPrimary = cs.onSurface;
 
-    // Resolve display value.
+    // Flutter BoxDecoration requires uniform border colors when borderRadius
+    // is set. To achieve a left accent stripe + optional uniform card border
+    // in dark mode, we use a Stack: a rounded card layer + a left accent bar
+    // clipped to the rounded rect.
+    final radius = BorderRadius.circular(AppDimens.radiusChip);
+
+    // Detect no-data state: series loaded successfully but has no data points.
+    final bool hasData = seriesAsync.whenOrNull(
+          data: (series) => series.dataPoints.isNotEmpty,
+        ) ??
+        false;
+    final bool isLoaded = !seriesAsync.isLoading;
+
+    // Dimmed tile for metrics with no connected data source.
+    if (!hasData && isLoaded && !seriesAsync.hasError) {
+      return GestureDetector(
+        onTap: () => _navigateToIntegrationsWithContext(
+          context,
+          ref,
+          config.label,
+        ),
+        child: Opacity(
+          opacity: 0.45,
+          child: ClipRRect(
+            borderRadius: radius,
+            child: Stack(
+              children: [
+                // ── Card background ──────────────────────────────────────────
+                Container(
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: radius,
+                    border: isDark ? Border.all(color: cs.outline) : null,
+                    boxShadow: isDark ? null : AppDimens.cardShadowLight,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceSm,
+                    vertical: AppDimens.spaceXs,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Grey icon badge (no accent colour — no data).
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: cs.onSurface.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          config.icon,
+                          color: cs.onSurfaceVariant,
+                          size: AppDimens.iconSm,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.spaceXs),
+                      // "—" value + label.
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '—',
+                              style: AppTextStyles.h3.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                            Text(
+                              config.label,
+                              style: AppTextStyles.caption.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Small "connect" hint icon.
+                      Icon(
+                        Icons.add_circle_outline_rounded,
+                        size: 14,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Grey left accent stripe (no data) ────────────────────────
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 3,
+                    color: cs.onSurface.withValues(alpha: 0.2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Resolve display value for the normal (data available) state.
     final String displayValue = seriesAsync.when(
       loading: () => '—',
       error: (err, st) => '—',
@@ -779,12 +940,6 @@ class _EssentialStatTile extends ConsumerWidget {
         return raw.toStringAsFixed(1);
       },
     );
-
-    // Flutter BoxDecoration requires uniform border colors when borderRadius
-    // is set. To achieve a left accent stripe + optional uniform card border
-    // in dark mode, we use a Stack: a rounded card layer + a left accent bar
-    // clipped to the rounded rect.
-    final radius = BorderRadius.circular(AppDimens.radiusChip);
 
     return GestureDetector(
       onTap: () => GoRouter.of(context).go('/dashboard/${config.category.name}'),

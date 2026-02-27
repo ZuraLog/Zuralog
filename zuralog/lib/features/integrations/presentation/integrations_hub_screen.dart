@@ -16,9 +16,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/integrations/domain/compatible_apps_registry.dart';
+import 'package:zuralog/features/integrations/domain/integration_context_provider.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/integrations/presentation/widgets/compatible_apps_section.dart';
@@ -61,6 +63,20 @@ class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
     // Initial load is kicked automatically by the provider factory via
     // Future.microtask. No explicit call needed here — pull-to-refresh
     // (_onRefresh) handles manual reloads.
+
+    // Auto-clear the contextual banner after 10 seconds if the user doesn't
+    // dismiss it manually. We use a post-frame callback to ensure ref is ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final label = ref.read(integrationContextProvider);
+      if (label != null) {
+        Future<void>.delayed(const Duration(seconds: 10), () {
+          // Only clear if the same label is still showing (not replaced).
+          if (mounted && ref.read(integrationContextProvider) == label) {
+            ref.read(integrationContextProvider.notifier).state = null;
+          }
+        });
+      }
+    });
   }
 
   /// Handles pull-to-refresh gesture.
@@ -69,10 +85,22 @@ class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
   }
 
   @override
+  void dispose() {
+    // Clear the context banner when the Integrations screen is fully removed
+    // from the widget tree (e.g., the user logs out).
+    // Note: for tab-switch scenarios, the 10-second auto-clear in initState
+    // handles cleanup without requiring dispose.
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = ref.watch(integrationsProvider);
     final integrations = state.integrations;
     final query = _searchQuery.toLowerCase().trim();
+
+    // Watch the contextual banner label set by the dashboard.
+    final String? contextLabel = ref.watch(integrationContextProvider);
 
     // ── Search filter predicate ──────────────────────────────────────────────
     bool matchesQuery(IntegrationModel i) =>
@@ -145,6 +173,74 @@ class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
                 onChanged: (v) => setState(() => _searchQuery = v),
               ),
             ),
+
+            // ── Contextual "Connect a source for X" banner ────────────────────
+            // Shown when the user navigated here by tapping a no-data metric.
+            if (contextLabel != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceXs,
+                    AppDimens.spaceMd,
+                    0,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceSm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusSm),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: AppDimens.iconSm,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: AppDimens.spaceSm),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: AppTextStyles.body.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              children: [
+                                const TextSpan(text: 'Connect a source for '),
+                                TextSpan(
+                                  text: contextLabel,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Dismiss button.
+                        GestureDetector(
+                          onTap: () => ref
+                              .read(integrationContextProvider.notifier)
+                              .state = null,
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: AppDimens.iconSm,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // ── Connected Section ─────────────────────────────────────────────
             if (connected.isNotEmpty) ...[
