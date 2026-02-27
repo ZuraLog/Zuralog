@@ -6,16 +6,24 @@
 ///   - **Available** — supported services the user can connect.
 ///   - **Coming Soon** — upcoming integrations shown as a teaser.
 ///
-/// Supports pull-to-refresh to reload the integration list.
+/// Also displays a [CompatibleAppsSection] listing indirect integrations
+/// (apps that sync through HealthKit / Health Connect).
+///
+/// Supports pull-to-refresh to reload the integration list and a search
+/// bar that filters both direct and compatible app listings.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/integrations/domain/compatible_apps_registry.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
+import 'package:zuralog/features/integrations/presentation/widgets/compatible_apps_section.dart';
 import 'package:zuralog/features/integrations/presentation/widgets/integration_tile.dart';
+import 'package:zuralog/features/integrations/presentation/widgets/integrations_search_bar.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -24,6 +32,10 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 /// Observes [integrationsProvider] and categorises integrations into
 /// Connected, Available, and Coming Soon sections. Empty sections are
 /// hidden automatically.
+///
+/// A search bar (above the sections) filters both direct integrations and
+/// the [CompatibleAppsSection]. When search is active and nothing matches
+/// either list, a "No results for '...'" empty state is shown.
 ///
 /// Lifecycle:
 ///   - On first mount, calls [IntegrationsNotifier.loadIntegrations].
@@ -38,6 +50,11 @@ class IntegrationsHubScreen extends ConsumerStatefulWidget {
 }
 
 class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
+  /// The current search query entered by the user.
+  ///
+  /// Updated via [setState] on every keystroke in [IntegrationsSearchBar].
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -55,27 +72,53 @@ class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(integrationsProvider);
     final integrations = state.integrations;
+    final query = _searchQuery.toLowerCase().trim();
 
-    // Partition into display sections.
+    // ── Search filter predicate ──────────────────────────────────────────────
+    bool matchesQuery(IntegrationModel i) =>
+        query.isEmpty || i.name.toLowerCase().contains(query);
+
+    // ── Partition into display sections (with search filter applied) ──────────
     final connected = integrations
         .where(
           (i) =>
-              i.status == IntegrationStatus.connected ||
-              i.status == IntegrationStatus.syncing,
+              (i.status == IntegrationStatus.connected ||
+                  i.status == IntegrationStatus.syncing) &&
+              matchesQuery(i),
         )
         .toList();
 
     final available = integrations
         .where(
           (i) =>
-              i.status == IntegrationStatus.available ||
-              i.status == IntegrationStatus.error,
+              (i.status == IntegrationStatus.available ||
+                  i.status == IntegrationStatus.error) &&
+              matchesQuery(i),
         )
         .toList();
 
     final comingSoon = integrations
-        .where((i) => i.status == IntegrationStatus.comingSoon)
+        .where(
+          (i) => i.status == IntegrationStatus.comingSoon && matchesQuery(i),
+        )
         .toList();
+
+    // ── Derived display flags ─────────────────────────────────────────────────
+
+    /// Whether any direct integration matches the current query.
+    final hasDirectResults =
+        connected.isNotEmpty || available.isNotEmpty || comingSoon.isNotEmpty;
+
+    /// Compatible apps filtered by query (empty query → all apps).
+    final compatibleApps = query.isEmpty
+        ? CompatibleAppsRegistry.apps
+        : CompatibleAppsRegistry.searchApps(query);
+    final hasCompatibleResults = compatibleApps.isNotEmpty;
+
+    /// Show the "no results" empty state only when search is active and
+    /// nothing is found in either the direct or compatible lists.
+    final showNoResults =
+        query.isNotEmpty && !hasDirectResults && !hasCompatibleResults;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -83,7 +126,7 @@ class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // ── App Bar ──────────────────────────────────────────────────
+            // ── App Bar ──────────────────────────────────────────────────────
             const SliverAppBar(
               title: Text('Integrations'),
               floating: true,
@@ -96,39 +139,65 @@ class _IntegrationsHubScreenState extends ConsumerState<IntegrationsHubScreen> {
               ],
             ),
 
-            // ── Connected Section ────────────────────────────────────────
+            // ── Search Bar ───────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: IntegrationsSearchBar(
+                onChanged: (v) => setState(() => _searchQuery = v),
+              ),
+            ),
+
+            // ── Connected Section ─────────────────────────────────────────────
             if (connected.isNotEmpty) ...[
               _SectionHeaderSliver(title: 'Connected'),
               _IntegrationListSliver(integrations: connected),
             ],
 
-            // ── Available Section ────────────────────────────────────────
+            // ── Available Section ─────────────────────────────────────────────
             if (available.isNotEmpty) ...[
               _SectionHeaderSliver(title: 'Available'),
               _IntegrationListSliver(integrations: available),
             ],
 
-            // ── Coming Soon Section ──────────────────────────────────────
+            // ── Coming Soon Section ───────────────────────────────────────────
             if (comingSoon.isNotEmpty) ...[
               _SectionHeaderSliver(title: 'Coming Soon'),
               _IntegrationListSliver(integrations: comingSoon),
             ],
 
-            // ── Loading indicator ─────────────────────────────────────────
-            if (state.isLoading)
+            // ── Compatible Apps Section ───────────────────────────────────────
+            // Omitted only when a search is active and nothing matches anywhere.
+            if (!showNoResults)
+              CompatibleAppsSection(searchQuery: _searchQuery),
+
+            // ── No results empty state ────────────────────────────────────────
+            if (showNoResults)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Text(
+                    "No results for '$_searchQuery'",
+                    style: AppTextStyles.body.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── Loading indicator ─────────────────────────────────────────────
+            if (state.isLoading && integrations.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator()),
               ),
 
-            // ── Empty state (list loaded but genuinely empty) ─────────────
-            if (integrations.isEmpty && !state.isLoading)
+            // ── Empty state (no integrations at all, not a search) ────────────
+            if (integrations.isEmpty && !state.isLoading && query.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(child: Text('No integrations available.')),
               ),
 
-            // ── Bottom padding for nav bar ───────────────────────────────
+            // ── Bottom padding for nav bar ────────────────────────────────────
             const SliverToBoxAdapter(
               child: SizedBox(height: AppDimens.spaceXl),
             ),
