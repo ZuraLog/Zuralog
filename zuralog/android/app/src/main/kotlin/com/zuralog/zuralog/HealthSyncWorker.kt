@@ -50,9 +50,10 @@ class HealthSyncWorker(
 
         /// Keys within the encrypted prefs file.
         private const val KEY_API_TOKEN = "api_token"
+        private const val KEY_API_BASE_URL = "api_base_url"
 
-        /// Cloud Brain ingest endpoint.  Matches the iOS Swift constant.
-        private const val INGEST_URL = "https://api.zuralog.com/api/v1/health/ingest"
+        /// Fallback ingest URL used only if no base URL was stored during connect.
+        private const val FALLBACK_INGEST_URL = "https://api.zuralog.com/api/v1/health/ingest"
 
         // ------------------------------------------------------------------
         // Scheduling
@@ -90,21 +91,26 @@ class HealthSyncWorker(
         // Credential storage
         // ------------------------------------------------------------------
 
-        /// Persists the JWT api token in EncryptedSharedPreferences.
+        /// Persists the JWT api token and Cloud Brain base URL in
+        /// EncryptedSharedPreferences so [HealthSyncWorker.doWork] can
+        /// authenticate and reach the correct server.
         ///
         /// Called from [MainActivity.configureBackgroundSync] immediately
         /// after the user grants Health Connect permissions.
         ///
         /// The server extracts user_id from the JWT, so we only need to
-        /// store the token itself.
+        /// store the token and base URL — not user_id.
         ///
         /// Parameters:
-        ///   - context:  Application or Activity context.
-        ///   - apiToken: The user's JWT bearer token for POST /health/ingest.
-        fun storeCredentials(context: Context, apiToken: String) {
+        ///   - context:    Application or Activity context.
+        ///   - apiToken:   The user's JWT bearer token for POST /health/ingest.
+        ///   - apiBaseUrl: The Cloud Brain base URL (e.g. http://192.168.1.5:8001
+        ///                 for local dev, https://api.zuralog.com for production).
+        fun storeCredentials(context: Context, apiToken: String, apiBaseUrl: String) {
             val prefs = buildEncryptedPrefs(context)
             prefs.edit()
                 .putString(KEY_API_TOKEN, apiToken)
+                .putString(KEY_API_BASE_URL, apiBaseUrl)
                 .apply()
         }
 
@@ -149,10 +155,21 @@ class HealthSyncWorker(
         // 2. Load credentials from EncryptedSharedPreferences.
         val prefs = buildEncryptedPrefs(applicationContext)
         val apiToken = prefs.getString(KEY_API_TOKEN, null)
+        val apiBaseUrl = prefs.getString(KEY_API_BASE_URL, null)
 
         if (apiToken.isNullOrBlank()) {
             Log.w(TAG, "No credentials stored — Health Connect not yet connected. Skipping.")
             return@withContext Result.failure()
+        }
+
+        // Build the ingest URL from the stored base URL.
+        // Falls back to the production URL if none was stored (e.g. after a fresh install
+        // over an older build that did not persist the base URL).
+        val ingestUrl = if (!apiBaseUrl.isNullOrBlank()) {
+            "${apiBaseUrl.trimEnd('/')}/api/v1/health/ingest"
+        } else {
+            Log.w(TAG, "No api_base_url stored — falling back to $FALLBACK_INGEST_URL")
+            FALLBACK_INGEST_URL
         }
 
         return@withContext try {
@@ -160,7 +177,7 @@ class HealthSyncWorker(
             val payload = buildPayload(bridge)
 
             // POST to Cloud Brain.
-            val httpStatus = postPayload(payload, apiToken)
+            val httpStatus = postPayload(payload, apiToken, ingestUrl)
 
             if (httpStatus in 200..299) {
                 Log.i(TAG, "HealthSyncWorker: ingest succeeded (HTTP $httpStatus)")
@@ -284,14 +301,15 @@ class HealthSyncWorker(
     /// Uses java.net.HttpURLConnection (no external HTTP library needed).
     ///
     /// Parameters:
-    ///   - payload:  The JSON body to send.
-    ///   - apiToken: Bearer token for Authorization header.
+    ///   - payload:    The JSON body to send.
+    ///   - apiToken:   Bearer token for Authorization header.
+    ///   - ingestUrl:  Full URL for the ingest endpoint (built from stored base URL).
     ///
     /// Returns: HTTP response status code (e.g. 200, 400, 500).
     ///
     /// Throws: IOException on network failure.
-    private fun postPayload(payload: JSONObject, apiToken: String): Int {
-        val url = URL(INGEST_URL)
+    private fun postPayload(payload: JSONObject, apiToken: String, ingestUrl: String): Int {
+        val url = URL(ingestUrl)
         val conn = url.openConnection() as HttpURLConnection
         return try {
             conn.requestMethod = "POST"
