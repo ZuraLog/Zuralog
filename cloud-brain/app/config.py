@@ -49,11 +49,17 @@ class Settings(BaseSettings):
     strava_client_secret: str = ""
     strava_redirect_uri: str = "zuralog://oauth/strava"
     fcm_credentials_path: str = ""
+    # Firebase credentials as a JSON string (for Railway/production).
+    # Takes priority over fcm_credentials_path when set.
+    firebase_credentials_json: str = ""
     revenuecat_webhook_secret: str = ""
     revenuecat_api_key: str = ""
+    # Comma-separated list of allowed CORS origins.
+    # Use "*" for development; lock down for production.
+    allowed_origins: str = "*"
     strava_webhook_verify_token: str = ""
-    app_env: str = "development"
-    app_debug: bool = True
+    app_env: str = "production"
+    app_debug: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

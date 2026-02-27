@@ -1,0 +1,26 @@
+# =============================================================================
+# Zuralog Cloud Brain — Railway Config-as-Code
+# =============================================================================
+# Configures the primary web service deployment on Railway.
+# Celery worker and beat services override startCommand in the Railway dashboard.
+# =============================================================================
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Run Alembic migrations before the new deployment goes live.
+# This ensures the database schema is always up-to-date.
+preDeployCommand = "alembic upgrade head"
+
+# Start the FastAPI server on the Railway-injected PORT.
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+
+# Zero-downtime deployment: Railway queries this endpoint until it returns 200.
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+
+# Restart on failure with exponential backoff.
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
