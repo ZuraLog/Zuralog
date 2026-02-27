@@ -671,6 +671,7 @@ class _EssentialMetricsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ref is kept for ConsumerWidget compliance; tiles use their own ref.
     // Split into row 1 (first 3) and row 2 (last 2).
     final row1 = _kEssentialTiles.sublist(0, 3);
     final row2 = _kEssentialTiles.sublist(3);
@@ -697,7 +698,7 @@ class _EssentialMetricsSection extends ConsumerWidget {
                 padding: EdgeInsets.only(
                   right: cfg == row1.last ? 0 : AppDimens.spaceXs,
                 ),
-                child: _EssentialStatTile(config: cfg, ref: ref),
+                child: _EssentialStatTile(config: cfg),
               ),
             );
           }).toList(),
@@ -713,7 +714,7 @@ class _EssentialMetricsSection extends ConsumerWidget {
                 padding: EdgeInsets.only(
                   right: cfg == row2.last ? 0 : AppDimens.spaceXs,
                 ),
-                child: _EssentialStatTile(config: cfg, ref: ref),
+                child: _EssentialStatTile(config: cfg),
               ),
             );
           }).toList(),
@@ -734,32 +735,28 @@ class _EssentialMetricsSection extends ConsumerWidget {
 /// identity without competing with the card background.
 ///
 /// Tapping navigates to `/dashboard/{category.name}`.
-class _EssentialStatTile extends StatelessWidget {
+///
+/// Implemented as a [ConsumerWidget] to ensure proper Riverpod reactivity
+/// and correct rebuilds on theme/data changes.
+class _EssentialStatTile extends ConsumerWidget {
   /// Creates an [_EssentialStatTile].
   ///
   /// [config] — static display metadata for this tile.
-  ///
-  /// [ref]    — Riverpod [WidgetRef] forwarded from the parent
-  ///   [_EssentialMetricsSection] so we can watch providers.
-  const _EssentialStatTile({
-    required this.config,
-    required this.ref,
-  });
+  const _EssentialStatTile({required this.config});
 
   /// Display metadata and provider key for this tile.
   final _EssentialTileConfig config;
 
-  /// Riverpod ref from the parent [ConsumerWidget].
-  final WidgetRef ref;
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final seriesAsync = ref.watch(
       metricSeriesProvider((config.metricId, TimeRange.day)),
     );
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final cs = Theme.of(context).colorScheme;
+    final isDark = cs.brightness == Brightness.dark;
+    // Use theme's onSurface for maximum compatibility — avoids manual
+    // brightness checks that can fail when the system theme changes mid-session.
+    final textPrimary = cs.onSurface;
 
     // Resolve display value.
     final String displayValue = seriesAsync.when(
@@ -777,88 +774,105 @@ class _EssentialStatTile extends StatelessWidget {
       },
     );
 
+    // Flutter BoxDecoration requires uniform border colors when borderRadius
+    // is set. To achieve a left accent stripe + optional uniform card border
+    // in dark mode, we use a Stack: a rounded card layer + a left accent bar
+    // clipped to the rounded rect.
+    final radius = BorderRadius.circular(AppDimens.radiusChip);
+
     return GestureDetector(
       onTap: () => GoRouter.of(context).go('/dashboard/${config.category.name}'),
-      child: Container(
-        height: 72,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-          border: Border(
-            left: BorderSide(color: config.accentColor, width: 3),
-            top: isDark
-                ? BorderSide(color: Theme.of(context).colorScheme.outline)
-                : BorderSide.none,
-            right: isDark
-                ? BorderSide(color: Theme.of(context).colorScheme.outline)
-                : BorderSide.none,
-            bottom: isDark
-                ? BorderSide(color: Theme.of(context).colorScheme.outline)
-                : BorderSide.none,
-          ),
-          boxShadow: isDark ? null : AppDimens.cardShadowLight,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceSm,
-          vertical: AppDimens.spaceXs,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
           children: [
-            // ── Accent icon badge ──────────────────────────────────────────
+            // ── Card background ─────────────────────────────────────────────
             Container(
-              width: 30,
-              height: 30,
+              height: 72,
               decoration: BoxDecoration(
-                color: config.accentColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10),
+                color: cs.surface,
+                borderRadius: radius,
+                border: isDark
+                    ? Border.all(color: cs.outline)
+                    : null,
+                boxShadow: isDark ? null : AppDimens.cardShadowLight,
               ),
-              child: Icon(
-                config.icon,
-                color: config.accentColor,
-                size: AppDimens.iconSm,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceSm,
+                vertical: AppDimens.spaceXs,
               ),
-            ),
-            const SizedBox(width: AppDimens.spaceXs),
-
-            // ── Value + label column ───────────────────────────────────────
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Value row with unit.
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          displayValue,
-                          style: AppTextStyles.h3.copyWith(color: textPrimary),
+                  // ── Accent icon badge ────────────────────────────────────
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: config.accentColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      config.icon,
+                      color: config.accentColor,
+                      size: AppDimens.iconSm,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimens.spaceXs),
+
+                  // ── Value + label column ─────────────────────────────────
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Value row with unit.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                displayValue,
+                                style: AppTextStyles.h3
+                                    .copyWith(color: textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              config.unit,
+                              style: AppTextStyles.labelXs.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          config.label,
+                          style: AppTextStyles.caption.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        config.unit,
-                        style: AppTextStyles.labelXs.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    config.label,
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                      ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
+              ),
+            ),
+
+            // ── Left accent stripe (rendered on top, clipped by ClipRRect) ──
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 3,
+                color: config.accentColor,
               ),
             ),
           ],
