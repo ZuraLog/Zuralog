@@ -162,6 +162,15 @@ class _FakeOAuthRepository implements OAuthRepository {
   Future<String?> getStravaAuthUrl() async => null;
   @override
   Future<bool> handleStravaCallback(String code, String userId) async => false;
+  @override
+  Future<String?> getFitbitAuthUrl() async => null;
+  @override
+  Future<bool> handleFitbitCallback(
+    String code,
+    String state,
+    String userId,
+  ) async =>
+      false;
 }
 
 // ── Helper ─────────────────────────────────────────────────────────────────────

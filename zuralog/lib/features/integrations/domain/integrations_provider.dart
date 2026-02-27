@@ -137,7 +137,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     IntegrationModel(
       id: 'fitbit',
       name: 'Fitbit',
-      status: IntegrationStatus.comingSoon,
+      status: IntegrationStatus.available,
       description: 'Import daily activity, heart rate, and sleep.',
       compatibility: PlatformCompatibility.all,
     ),
@@ -222,6 +222,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   /// Connects the integration identified by [integrationId].
   ///
   /// For Strava, delegates to [OAuthRepository.getStravaAuthUrl].
+  /// For Fitbit, delegates to [OAuthRepository.getFitbitAuthUrl].
   /// For Apple Health, delegates to [HealthRepository.requestAuthorization].
   /// For all others, transitions the status to [IntegrationStatus.syncing]
   /// briefly, then sets it back to [IntegrationStatus.available] with a
@@ -244,6 +245,16 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Strava connection.');
+          }
+        case 'fitbit':
+          final url = await _oauthRepository.getFitbitAuthUrl();
+          if (!context.mounted) break;
+          if (url != null) {
+            // URL obtained — deep-link handler will call handleFitbitCallback.
+            _setStatus(integrationId, IntegrationStatus.connected);
+          } else {
+            _setStatus(integrationId, IntegrationStatus.available);
+            _showSnackBar(context, 'Could not start Fitbit connection.');
           }
         case 'apple_health':
           final granted = await _healthRepository.requestAuthorization();

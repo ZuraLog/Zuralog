@@ -2,8 +2,8 @@
 ///
 /// Listens for incoming custom URL scheme links (`zuralog://`) and
 /// dispatches them to the appropriate handler. Currently handles Strava
-/// OAuth callbacks; additional integrations can be added here in future
-/// phases by extending the switch on [Uri.host].
+/// and Fitbit OAuth callbacks; additional integrations can be added here
+/// in future phases by extending the switch on [Uri.pathSegments].
 ///
 /// Usage: call [DeeplinkHandler.init] once from the root screen's
 /// [State.initState] so the subscription is active for the app lifetime.
@@ -74,8 +74,8 @@ class DeeplinkHandler {
 
   /// Handle `zuralog://oauth/<provider>?code=XXX` callbacks.
   ///
-  /// Extracts the `code` query parameter and dispatches to the
-  /// appropriate OAuth repository based on the path segment.
+  /// Extracts the `code` (and optional `state`) query parameters and
+  /// dispatches to the appropriate OAuth repository based on the path segment.
   static Future<void> _handleOAuth(
     Uri uri,
     WidgetRef ref, {
@@ -92,6 +92,9 @@ class DeeplinkHandler {
     switch (provider) {
       case 'strava':
         await _handleStravaCallback(code, ref, onLog: onLog);
+      case 'fitbit':
+        final state = uri.queryParameters['state'] ?? '';
+        await _handleFitbitCallback(code, state, ref, onLog: onLog);
       default:
         onLog('⚠️ Unknown OAuth provider in deep link: $provider');
     }
@@ -123,6 +126,42 @@ class DeeplinkHandler {
       onLog('✅ Strava connected successfully!');
     } else {
       onLog('❌ Strava token exchange failed. Check server logs.');
+    }
+  }
+
+  /// Exchange the Fitbit authorization code and PKCE state for tokens via
+  /// the Cloud Brain.
+  ///
+  /// Reads the stored user ID from [SecureStorage] so the backend can
+  /// associate the token with the correct account.
+  ///
+  /// Args:
+  ///   code: The short-lived authorization code from Fitbit.
+  ///   state: The PKCE state parameter used by the backend to retrieve the
+  ///     stored code verifier.
+  static Future<void> _handleFitbitCallback(
+    String code,
+    String state,
+    WidgetRef ref, {
+    required void Function(String) onLog,
+  }) async {
+    onLog('🔗 Fitbit OAuth callback received, exchanging code...');
+
+    final storage = ref.read(secureStorageProvider);
+    final userId = await storage.read('user_id');
+
+    if (userId == null) {
+      onLog('❌ Cannot exchange Fitbit code — no user_id in secure storage. Log in first.');
+      return;
+    }
+
+    final oauthRepo = ref.read(oauthRepositoryProvider);
+    final success = await oauthRepo.handleFitbitCallback(code, state, userId);
+
+    if (success) {
+      onLog('✅ Fitbit connected successfully!');
+    } else {
+      onLog('❌ Fitbit token exchange failed. Check server logs.');
     }
   }
 }

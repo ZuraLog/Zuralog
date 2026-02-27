@@ -518,3 +518,9 @@ def refresh_tokens_task() -> dict[str, Any]:
             return {"tokens_refreshed": result["refreshed"]}
 
     return asyncio.run(_run())
+
+
+# NOTE: sync_fitbit_collection_task has been moved to app.tasks.fitbit_sync.
+# The webhook handler (app.api.v1.fitbit_webhooks) now imports directly from
+# that module. This stub is intentionally removed to avoid duplicate task
+# registration under conflicting names.

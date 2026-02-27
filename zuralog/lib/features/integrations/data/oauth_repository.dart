@@ -11,7 +11,7 @@ library;
 import 'package:zuralog/core/network/api_client.dart';
 
 /// Repository responsible for initiating and completing OAuth flows
-/// with third-party integrations (currently Strava).
+/// with third-party integrations (Strava, Fitbit).
 ///
 /// All network calls go through [ApiClient], which automatically
 /// injects the user's auth token into every request.
@@ -60,6 +60,61 @@ class OAuthRepository {
       final response = await _apiClient.post(
         '/api/v1/integrations/strava/exchange',
         queryParameters: <String, dynamic>{'code': code, 'user_id': userId},
+      );
+      final data = response.data as Map<String, dynamic>;
+      return (data['success'] as bool?) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Request the Fitbit authorization URL from the Cloud Brain.
+  ///
+  /// The returned URL should be opened in the system browser via
+  /// `launchUrl(..., mode: LaunchMode.externalApplication)` so that
+  /// Fitbit's login cookies persist and the deep-link return works.
+  ///
+  /// Returns:
+  ///   The Fitbit OAuth URL string, or `null` if the request fails.
+  Future<String?> getFitbitAuthUrl() async {
+    try {
+      final response = await _apiClient.get(
+        '/api/v1/integrations/fitbit/authorize',
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data['auth_url'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Forward the intercepted Fitbit authorization code to the Cloud Brain
+  /// for server-side PKCE token exchange.
+  ///
+  /// Called automatically by [DeeplinkHandler] after the app intercepts
+  /// the `zuralog://oauth/fitbit?code=XXX&state=YYY` deep link.
+  ///
+  /// Args:
+  ///   code: The short-lived authorization code from Fitbit (expires quickly).
+  ///   state: The PKCE state parameter used to retrieve the stored verifier.
+  ///   userId: The currently authenticated user's ID, used by the backend
+  ///     to key the stored token.
+  ///
+  /// Returns:
+  ///   `true` if the exchange succeeded and Fitbit is now connected.
+  Future<bool> handleFitbitCallback(
+    String code,
+    String state,
+    String userId,
+  ) async {
+    try {
+      final response = await _apiClient.post(
+        '/api/v1/integrations/fitbit/exchange',
+        queryParameters: <String, dynamic>{
+          'code': code,
+          'state': state,
+          'user_id': userId,
+        },
       );
       final data = response.data as Map<String, dynamic>;
       return (data['success'] as bool?) ?? false;

@@ -28,6 +28,11 @@ class Settings(BaseSettings):
         revenuecat_webhook_secret: RevenueCat webhook auth secret (Phase 1.13).
         revenuecat_api_key: RevenueCat V1 Secret API key for server-side lookups (Phase 1.13).
         strava_webhook_verify_token: Random token used to validate Strava webhook subscriptions (Phase 1.7).
+        fitbit_client_id: Fitbit application Client ID (Phase 5.1).
+        fitbit_client_secret: Fitbit application Client Secret (Phase 5.1).
+        fitbit_redirect_uri: OAuth callback URI registered with Fitbit (Phase 5.1).
+        fitbit_webhook_verify_code: Verification code used to validate Fitbit webhook subscriptions (Phase 5.1).
+        fitbit_webhook_subscriber_id: Subscriber ID for Fitbit webhook subscriptions (Phase 5.1).
         app_env: Current environment (development, staging, production).
         app_debug: Enable debug mode.
     """
@@ -58,6 +63,12 @@ class Settings(BaseSettings):
     # Use "*" for development; lock down for production.
     allowed_origins: str = "*"
     strava_webhook_verify_token: str = ""
+    # Fitbit OAuth 2.0
+    fitbit_client_id: str = ""
+    fitbit_client_secret: str = ""
+    fitbit_redirect_uri: str = "zuralog://oauth/fitbit"
+    fitbit_webhook_verify_code: str = ""
+    fitbit_webhook_subscriber_id: str = ""
     app_env: str = "production"
     app_debug: bool = False
 

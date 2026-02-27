@@ -1,201 +1,63 @@
-# Zuralog: Project Index for AI Agents
+# Zuralog
 
-Unified "Hybrid Hub" agent for harmonizing health, fitness, and life data.
+Hybrid Hub app — centralizes health/fitness data into a single Action Layer.
+- **Cloud Brain:** Python/FastAPI | **Edge Agent:** Swift/Kotlin (HealthKit/Health Connect)
+- **PRD:** [Product Requirements Document](./docs/plans/product-requirements-document.md)
 
-## AI Agent Role
-You are a **Senior Software Engineer and Lead Executor**. Your mission is to own the full development lifecycle:
-- **Build & Implement**: Write production-quality code.
-- **Test & Validate**: Write and run tests (Unit, Widget, Integration).
-- **Quality Control**: Perform linting and code reviews.
-- **Debug**: Analyze logs and fix issues across the full stack.
-- **Strategize**: Align every change with the [PRD](./docs/plans/product-requirements-document.md).
+### Project Structure
+| Folder | Purpose | Deployed To |
+|--------|---------|-------------|
+| `zuralog/` | Mobile app (Flutter) | Apple App Store & Google Play |
+| `cloud-brain/` | Backend server (Python/FastAPI) | Railway |
+| `website/` | Marketing website (Next.js) | Vercel |
+| `docs/` | Documentation for developers & agents | — |
 
-## Project Context
-- **Purpose**: A "Super-App" AI Agent that centralizes fragmented fitness/health data into a single "Action Layer."
-- **Architecture**: **Hybrid Hub**
-  - **Cloud Brain**: Python/FastAPI (Core logic).
-  - **Edge Agent**: Swift/Kotlin (Local data access via HealthKit/Health Connect).
-- **Core Docs**: [Product Requirements Document (PRD)](./docs/plans/product-requirements-document.md)
+## Skills
 
-## Tech Stack & Skills
-This project uses specialized **Agent Skills** for development.
+Check `.agent/skills/` before every task. If a skill applies, **use it**.
 
-### Skill Discovery
-> [!TIP]
-> **Always check the `.agent/skills/` directory** for available capabilities. Add new skills there to make them immediately discoverable for future agents.
-
-
-
-### Current Skills
-- **Flutter & Dart**: [Flutter Expert](./.agent/skills/flutter-expert/SKILL.md)
-- **MAD Agents Collection**: [Flutter & Dart Reference](./.agent/skills/mad-agents-skills/README.md)
-  - Includes: `flutter-architecture`, `flutter-adaptive-ui`, `flutter-animations`, etc.
-- **Project Setup**: [AGENTS.md Generator](./.agent/skills/mad-agents-skills/agents-md-generator/SKILL.md)
-- **Superpowers**: [Superpowers Skill](.agent/skills/superpowers/skills/using-superpowers/SKILL.md)
-  - **Note**: This is your primary directive for high-level reasoning, cross-domain synthesis, and creative problem-solving. Review its instructions before starting any complex task.
-- **Frontend Design**: [Creative Frontend Design Skill](./.agent/skills/frontend-design/SKILL.md) — Create distinctive, production-grade frontend interfaces with high design quality.
-- **Browser Automation**: Playwright MCP (`@playwright/mcp`) — Automate browser interactions (navigate, fill forms, click, screenshot, scrape data, test web apps) via the Playwright MCP server.
-
-## Canonical Commands
-- **Discovery**: `dir /s /b *.md` (To find documentation)
-- **Skill Audit**: `ls -R .agent/skills/`
+| Skill | Path |
+|-------|------|
+| Flutter & Dart | [.agent/skills/flutter-expert/SKILL.md](./.agent/skills/flutter-expert/SKILL.md) |
+| Superpowers | [.agent/skills/superpowers/skills/using-superpowers/SKILL.md](.agent/skills/superpowers/skills/using-superpowers/SKILL.md) |
+| Frontend Design | [.agent/skills/frontend-design/SKILL.md](./.agent/skills/frontend-design/SKILL.md) |
+| MAD Agents | [.agent/skills/mad-agents-skills/README.md](./.agent/skills/mad-agents-skills/README.md) |
 
 ---
 
-## Engineering Standards (Do's & Don'ts)
-**These rules must be followed exactly by all agents working on this project (OpenCode, AntiGravity, etc.).**
+## Rules
 
-> [!IMPORTANT]
-> **CRITICAL: GIT BRANCHING & CHECKPOINTS**
-> *   **Make a New Branch**: START every task by creating a new branch (e.g., `feat/task-name`). NEVER work on `main` directly.
-> *   **Commit Checkpoints**: WORK IN PROGRESS MUST BE SAVED. Periodically `git commit` your changes at logical checkpoints. Do not wait for perfection to save your work.
+### 1. Git Discipline
+- Create a new branch (e.g., `feat/task-name`) before executing any plan. **Never work on `main`.**
+- Commit and push at every logical checkpoint. Do not wait for perfection.
+- Merge only when the entire phase is complete with zero errors/warnings. **Squash merge** to keep `main` history clean.
 
-### 1. Keep It Simple and DRY (Don't Repeat Yourself)
-*   **Simplicity (KISS):** Avoid over-engineering solutions. If a built-in Dart method or a basic widget can achieve the desired result, use it rather than writing custom logic.
-*   **Reusability:** If you write the same logic or UI component more than twice, extract it into a reusable function or a custom stateless widget.
+### 2. Context Awareness
+Before starting work, read relevant files for context (e.g., existing implementations, related docs in `docs/`, or prior executed summaries in `docs/agent-executed/`). Do not assume — verify.
 
-### 2. Establish Meaningful Naming Conventions
-*   **Classes and Enums:** Use `PascalCase` (e.g., `UserProfile`, `AuthRepository`).
-*   **Variables and Methods:** Use `camelCase` (e.g., `fetchUserData()`, `totalAmount`).
-*   **Files and Directories:** Use `snake_case` (e.g., `user_profile.dart`, `auth_repository.dart`).
-*   **Clarity over Brevity:** Name variables for their exact purpose. A variable named `accountBalance` is infinitely easier for your future self to understand than `accBal` or `ab`.
+### 3. Post-Execution Documentation
+After completing a phase, create `docs/agent-executed/[backend|frontend]/phases/executed-phase-[X.Y.Z].[name].md`:
+- What was built, deviations from plan (with reasons), and next steps. No code blocks.
 
-### 3. Modularize and Separate Concerns
-*   **Architectural Layers:** Separate your application into distinct layers: Presentation (UI), Domain (Business Logic), and Data (Repositories and Services).
-*   **Single Responsibility Principle:** Each function, class, or widget should do exactly one thing. If a widget fetches data, parses the response, and builds the UI, break it up into smaller, focused components.
+### 4. Final Review Only
+Do not perform visual QA or detailed review after every sub-task. Perform a single comprehensive review (including Playwright screenshots for UI work) at the end of the last task in a sequence.
 
-### 4. Strict Static Typing and Linting
-*   **Strong Typing:** Always define concrete types for variables, function parameters, and return types. Avoid using the `dynamic` keyword.
-*   **Zero-Warning Policy:** As you noted, always lint. Configure your project with `flutter_lints`, treat all warnings as structural errors, and run `flutter analyze` frequently to catch potential issues early.
+### 5. Cleanup Before Push
+At final review, delete all temporary artifacts (screenshots, scratch files, test outputs) from the working tree. Nothing generated during the session should be pushed to the remote repository.
 
-### 5. Strategic Documentation
-*   **Explain the 'Why', Not the 'What':** Clean code should largely explain itself through clear naming. Use documentation to explain complex algorithms, business rules, or necessary workarounds.
-*   **Public APIs:** Use standard Dart docstrings (`///`) for public functions, classes, and parameters so the context appears in your IDE on hover.
+### 6. AI Working Directories
+Each tool writes plans to its own **gitignored** directory. Never use another tool's directory.
+- OpenCode → `.opencode/plans/` | Cursor → `.cursor/` | AntiGravity → its artifact directory
 
-### 6. Robust State Management
-*   **Avoid Deep Prop-Drilling:** Passing state down manually through multiple nested widget constructors creates tight coupling and messy code.
-*   **Adopt a Pattern:** Pick a predictable state management solution (such as Riverpod, BLoC, or Provider) and use it consistently across the entire application to manage data flow.
+### 7. Design System Tokens (Flutter)
+Use the **Frontend Design skill** for all UI/UX decisions — aim for bold, premium designs. No hardcoded hex in widget files.
+- **Brand color:** Sage Green `#CFE1B9` (`AppColors.primary`)
 
-### 7. Performance Optimization
-*   **Const Constructors:** Liberally use the `const` keyword for widgets that do not change. This prevents the Flutter framework from rebuilding them unnecessarily during state updates.
-*   **Minimize Rebuilds:** Avoid calling `setState` at the top level of a deep widget tree. Isolate your state changes so that only the specific nodes that require an update are rebuilt.
+| Token | Light | Dark |
+|-------|-------|------|
+| `scaffoldBackgroundColor` | `#FAFAFA` | `#000000` (OLED) |
+| `colorScheme.surface` | `#FFFFFF` | `#1C1C1E` |
 
-### 8. Automated Testing
-*   **Unit Tests:** Verify that individual functions and business logic behave correctly in isolation.
-*   **Widget Tests:** Ensure individual UI components render properly and react to simulated user interactions.
-*   **Integration Tests:** Validate the full user journey across multiple layers of the application on a real device or emulator.
-
-### 9. Comprehensive Documentation Standards
-*   **Universal Docstrings:**
-    *   **Files:** Every file must start with a top-level comment block explaining its purpose and key responsibilities.
-    *   **Classes & Enums:** Explain *what* the component represents and *how* it should be used.
-    *   **Methods & Functions:** **Every** method (public AND private) must have a docstring containing:
-        *   **Description:** Concise summary of functionality.
-        *   **Parameters:** Explanation of inputs and constraints.
-        *   **Returns:** Definition of return values (including `null` cases).
-        *   **Throws:** List of potential exceptions.
-*   **Markdown Support:** Use Markdown syntax in docstrings for readability.
-*   **Maintain Freshness:** Stale documentation is a bug. Update docs immediately when logic changes.
-
-### 10. Error Handling & Resilience
-*   **Fail Gracefully:** Never leave a `catch` block empty. At minimum, log the error with context.
-*   **Granular Catching:** Avoid generic `catch (e)`. Catch specific exceptions (e.g., `SocketException`, `FormatException`) to provide targeted recovery.
-
-### 11. Security First
-*   **No Hardcoded Secrets:** **NEVER** commit API keys, tokens, or passwords. Use secure environment variables or vaults.
-*   **Input Validation:** Validate and sanitize all external data inputs to prevent injection and corruption.
-
-### 12. Git & Version Control Etiquette
-*   **Atomic Commits:** Focus each commit on a single logical change.
-*   **Descriptive Messages:** Explain *why* a change was made, not just *what* changed.
-*   **Pull Before Push:** Always resolve conflicts locally first.
-*   **Checkpoint Commits:** Commit often! Short, meaningful commits at logical checkpoints are far better than one massive, monolithic commit.
-
-### 13. Dependency Management
-*   **Vet Your Packages:** Assess maintenance status and size before adding.
-*   **Pin Versions:** Use strict version constraints to prevent breaking changes.
-
-### 14. Accessibility (a11y)
-*   **Semantic Structure:** Use widgets correctly (e.g., `Semantics`) to support screen readers.
-*   **Touch Targets:** Ensure interactive elements are at least 44x44 (iOS) or 48x48 (Android).
-
-### 15. Continuous Improvement
-*   **Boy Scout Rule:** Always leave the code cleaner than you found it. Safe refactors (like renaming unclear variables) are encouraged during unrelated tasks.
-*   **ToDo Management:** Every `TODO` must have an owner and context (e.g., `// TODO(dev): Fix X`). If it's worth noting, it's worth doing.
-
-### 16. Critique Before Execution
-> [!IMPORTANT]
-> **Evaluate First:** Critically evaluate every design plan before execution; do not follow it blindly. Actively seek simpler, more efficient alternatives and identify any fundamental flaws in the provided logic.
->
-> **Propose Revisions:** Before taking action, you must present a revised implementation plan that outlines your proposed approach, explicitly explaining why your method is better, or justifying why the original plan should be retained.
-
-### 17. Context Awareness
-> [!IMPORTANT]
-> **Check Executed Documentation:** Always check the *executed* documentation of the previous phase to gain context. Do NOT rely solely on the original plan, as the execution may have deviated.
->
-> **Path:** Look for files in `docs/agent-executed/[backend|frontend]/phases/`. For example, if tasked to execute Phase 1.2.2, you must first read `executed-phase-1.2.1.[name].md`.
-
-### 18. Documentation of Executed Phases
-> [!IMPORTANT]
-> **Create Executed Doc:** After finishing a phase, you MUST create a summary file in `docs/agent-executed/[backend|frontend]/phases/`.
->
-> **Naming Convention:** `executed-phase-[X.Y.Z].[name].md` (e.g., `executed-phase-1.2.1.database-setup.md`).
->
-> **Content:**
-> *   **Summary:** What was actually built.
-> *   **Deviations:** Explicitly list any deviations from the original plan and the reasons why (e.g., "Found a better library," "Schema needed optimization").
-> *   **No Code:** Do not include large text blocks of code; focus on architectural decisions and outcomes.
-> *   **Next Steps:** Briefly mention what is ready for the next phase.
-
-### 19. Phase Branching & Clean Merging
-> [!IMPORTANT]
-> **Dedicated Branches:** Execute every major phase (e.g., `1.1`, `1.2`) on a dedicated branch (e.g., `feat/phase-1.1`). Do NOT commit directly to `main`. Sub-phases (e.g., `1.1.1`) stay on the parent phase branch.
->
-> **Merge Criteria:**
-> *   **Complete Phase:** Merge only when the *entire* phase is complete.
-> *   **Zero Errors:** Strict prohibition on merging code with errors, warnings, or linting issues.
-> *   **Verify:** Ensure all tests pass before the merge.
-
-### 20. Localized AI Working Directories
-> [!IMPORTANT]
-> **Keep Plans Local but Gitignored:** OpenCode, AntiGravity, Cursor, and other AI coding tools MUST write their implementation plans and rules in their own local directories within the project, BUT these directories MUST be added to `.gitignore`. Never push them to the remote GitHub repository.
-
-*   **Plan Persistence:** Saving plans in the working directory before initiating code changes is recommended to avoid losing the plan due to context compaction.
-*   **NO CROSS-TOOL POLLUTION:** Do NOT use or refer to `.claude/`, `.cursor/`, or other tool-specific directories unless you are that exact tool. These are NOT project-wide conventions.
-*   **OpenCode:** Use `.opencode/plans/` for your plans and ensure `.opencode/` is gitignored. DO NOT write to `.claude/plans/` or `docs/plans/` for active workspace planning.
-*   **AntiGravity:** Continue rendering artifacts exclusively in your local artifact directory. Never leak scratchpads or implementation plans into the main tracked repository.
-*   **Other Tools:** Keep your implementation plans and state tracking in your tool-specific local directories (e.g., `.cursor/`, `.claude/`) and ensure they are gitignored.
-
-### 21. Design System Consistency (UI Law)
-> [!IMPORTANT]
-> **Every screen MUST conform to the agreed plan for that feature.** [`docs/plans/frontend/view-design.md`](./docs/plans/frontend/view-design.md) is a reference for the Flutter app design system tokens — not the final authority. The actual spec is whatever was planned and agreed upon. When in doubt, ask before assuming the doc is correct.
-
-#### Background & Surface Rules (Non-Negotiable)
-*   **Scaffold background:** ALL screens use `Theme.of(context).scaffoldBackgroundColor` — never override with `colorScheme.surface` or a hardcoded color. The theme defines:
-    *   *Light:* `#FAFAFA` (`AppColors.backgroundLight`)
-    *   *Dark:* `#000000` (`AppColors.backgroundDark`, OLED black)
-*   **Cards / Bottom Sheets / Modals:** Use `Theme.of(context).colorScheme.surface`:
-    *   *Light:* `#FFFFFF` (`AppColors.surfaceLight`)
-    *   *Dark:* `#1C1C1E` (`AppColors.surfaceDark`, iOS-style dark grey)
-*   **Never** hardcode hex color values in widget files. Always reference `AppColors.*` tokens or `Theme.of(context)` properties.
-
-#### Typography Rules
-*   Use only tokens from `AppTextStyles` — never create ad-hoc `TextStyle(...)` objects in widget files.
-*   Heading hierarchy must be respected: H1 (34pt Bold) → H2 (22pt Semibold) → H3 (17pt Semibold) → Body (17pt Regular) → Caption (12pt Medium).
-
-#### Component Rules
-*   **Primary actions:** Pill-shaped `FilledButton` with `AppColors.primary` (Sage Green) background.
-*   **Secondary actions / Connect:** Neutral pill (`TextButton.icon`, `StadiumBorder`, `onSurface` at 8% opacity). **Never use green on a non-active/non-connected element.**
-*   **Connected / success badges:** Green only — `AppColors.primary` or `Colors.green`.
-*   **Cards:** `borderRadius: BorderRadius.circular(24)` on all `Card`/`Container` cards. Light-mode cards use a soft shadow; dark-mode cards use a 1px `AppColors.border` stroke with no elevation.
-
-#### Enforce Before Merging
-*   Before any merge to `main`, do a visual audit: open each screen in both light and dark mode. If backgrounds, typography, or button styles deviate from the above rules, fix them first.
-*   If the design system itself needs to change, update `docs/plans/frontend/view-design.md` as part of the same PR — never let the doc drift from reality.
-
----
-
-### 22. Visual QA with Playwright MCP (Non-Negotiable)
-
-> [!IMPORTANT]
-> After implementing any UI change, use the Playwright MCP to navigate to the affected page, take a screenshot, and visually confirm it matches the agreed plan or spec for that feature. If it does not match, fix it and re-screenshot until it does. A task is not complete until this passes.
+- Typography: `AppTextStyles` only — no ad-hoc `TextStyle(...)`.
+- Primary actions: pill `FilledButton` with `AppColors.primary` (Sage Green).
+- Cards: `borderRadius: 24`, soft shadow (light) / 1px border (dark).

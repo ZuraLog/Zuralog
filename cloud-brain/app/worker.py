@@ -44,7 +44,15 @@ celery_app.conf.beat_schedule = {
         "task": "app.services.sync_scheduler.refresh_tokens_task",
         "schedule": 3600.0,  # 1 hour
     },
+    "sync-fitbit-users-15m": {
+        "task": "app.tasks.fitbit_sync.sync_fitbit_periodic_task",
+        "schedule": 900.0,  # 15 minutes
+    },
+    "refresh-fitbit-tokens-1h": {
+        "task": "app.tasks.fitbit_sync.refresh_fitbit_tokens_task",
+        "schedule": 3600.0,  # 1 hour
+    },
 }
 
-# Auto-discover tasks in services module
-celery_app.autodiscover_tasks(["app.services"])
+# Auto-discover tasks in services and tasks modules
+celery_app.autodiscover_tasks(["app.services", "app.tasks"])
