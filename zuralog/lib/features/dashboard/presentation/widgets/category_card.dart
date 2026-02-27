@@ -58,7 +58,7 @@ class MetricPreview {
 ///   [accentColor] background).
 /// - Category [displayName] as an H3 heading.
 /// - 2–4 inline metric preview rows (label: value unit).
-/// - Optional [miniGraph] widget at the bottom inside a 36px [SizedBox].
+/// - Optional [miniGraph] widget at the bottom inside a 60px [SizedBox].
 ///
 /// Tapping the card calls [onTap]; the parent screen handles navigation.
 ///
@@ -85,7 +85,7 @@ class CategoryCard extends StatelessWidget {
   ///   Passing more than 4 is allowed but only the first 4 are rendered.
   ///
   /// [miniGraph] — optional sparkline or mini-chart at the bottom of the card
-  ///   (rendered inside a 36px [SizedBox]). Pass `null` to omit.
+  ///   (rendered inside a 60px [SizedBox]). Pass `null` to omit.
   ///
   /// [onTap] — called when the card is tapped; the parent screen navigates.
   const CategoryCard({
@@ -136,7 +136,7 @@ class CategoryCard extends StatelessWidget {
           // ── Optional mini graph ────────────────────────────────────────
           if (miniGraph != null) ...[
             const SizedBox(height: AppDimens.spaceSm),
-            SizedBox(height: 36, child: miniGraph),
+            SizedBox(height: 60, child: miniGraph),
           ],
         ],
       ),
