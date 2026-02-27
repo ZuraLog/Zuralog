@@ -4,10 +4,11 @@
 ///
 /// Layout order (top → bottom):
 ///   A) Floating [SliverAppBar] — time-sensitive greeting + profile avatar.
-///   B) Compact AI Insight strip — left-border accent, italic text, tap to chat.
-///   C) [SliverList] of 10 [CategoryCard] widgets, one per [HealthCategory].
+///   B) [_EssentialMetricsSection] — "Today's Essentials" at-a-glance tiles.
+///   C) Compact AI Insight strip — left-border accent, italic text, tap to chat.
+///   D) [SliverList] of 10 [CategoryCard] widgets, one per [HealthCategory].
 ///      Categories with zero platform-available metrics are hidden automatically.
-///   D) Connected-apps [IntegrationsRail] at the very bottom.
+///   E) Connected-apps [IntegrationsRail] at the very bottom.
 ///
 /// Data is sourced from:
 ///   - [categorySnapshotProvider] — today's snapshot values per category.
@@ -27,6 +28,7 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/dashboard/domain/graph_type.dart';
 import 'package:zuralog/features/dashboard/domain/health_category.dart';
 import 'package:zuralog/features/dashboard/domain/health_metric.dart';
 import 'package:zuralog/features/dashboard/domain/health_metric_registry.dart';
@@ -34,8 +36,13 @@ import 'package:zuralog/features/dashboard/domain/metric_series.dart';
 import 'package:zuralog/features/dashboard/domain/time_range.dart';
 import 'package:zuralog/features/dashboard/presentation/providers/metric_series_provider.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/category_card.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/bar_chart_graph.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/dual_line_chart.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/line_chart_graph.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/range_line_chart.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/stacked_bar_chart.dart';
+import 'package:zuralog/features/dashboard/presentation/widgets/graphs/threshold_line_chart.dart';
 import 'package:zuralog/features/dashboard/presentation/widgets/integrations_rail.dart';
-import 'package:zuralog/features/dashboard/presentation/widgets/metric_graph_tile.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── Internal constants ────────────────────────────────────────────────────────
@@ -167,7 +174,13 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
 
-            // ── A) Compact AI Insight strip ─────────────────────────────────
+            // ── A) Essential health at-a-glance tiles ───────────────────────
+            const SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+              sliver: SliverToBoxAdapter(child: _EssentialMetricsSection()),
+            ),
+
+            // ── B) Compact AI Insight strip ─────────────────────────────────
             SliverPadding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimens.spaceMd,
@@ -200,7 +213,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
 
-            // ── B) One CategoryCard per visible HealthCategory (lazy) ────────
+            // ── C) One CategoryCard per visible HealthCategory (lazy) ────────
             SliverPadding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimens.spaceMd,
@@ -218,7 +231,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
 
-            // ── C) Integrations rail + bottom clearance ──────────────────────
+            // ── D) Integrations rail + bottom clearance ──────────────────────
             SliverPadding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimens.spaceMd,
@@ -435,9 +448,17 @@ class _CategoryCardLoader extends ConsumerWidget {
 
   /// Builds the compact mini graph widget from the series async state.
   ///
-  /// Returns a [MetricGraphTile] (compact: true) when data is available,
-  /// or a surface-coloured placeholder via [_graphPlaceholder] while loading
-  /// or on error.
+  /// Returns the raw chart widget at 60px height via [_buildRawMiniGraph]
+  /// when data is available. While loading or on error a surface-coloured
+  /// placeholder via [_graphPlaceholder] is shown instead.
+  ///
+  /// Parameters:
+  ///   [context]     — current [BuildContext].
+  ///   [seriesAsync] — nullable async series for the primary metric.
+  ///   [metric]      — the [HealthMetric] definition for graph type dispatch.
+  ///   [category]    — category providing the accent colour.
+  ///
+  /// Returns `null` when no primary metric or series provider exists.
   Widget? _buildMiniGraph(
     BuildContext context,
     AsyncValue<MetricSeries>? seriesAsync,
@@ -449,21 +470,416 @@ class _CategoryCardLoader extends ConsumerWidget {
     return seriesAsync.when(
       loading: () => _graphPlaceholder(context),
       error: (err, st) => _graphPlaceholder(context),
-      data: (series) => MetricGraphTile(
-        metric: metric,
-        series: series,
-        accentColor: category.accentColor,
-        compact: true,
-      ),
+      data: (series) => _buildRawMiniGraph(series, metric, category.accentColor),
     );
   }
 
-  /// Returns an 80px tall surface-coloured placeholder used while the mini
+  /// Builds a raw 60px chart widget without any header, subtitle, or stats row.
+  ///
+  /// Dispatches on [metric.graphType] and returns the appropriate low-level
+  /// chart widget constrained to 60px height. Defaults to [LineChartGraph]
+  /// for any unhandled [GraphType].
+  ///
+  /// Parameters:
+  ///   [series]      — the time-series data to render.
+  ///   [metric]      — provides the [GraphType] for dispatch.
+  ///   [accentColor] — accent colour forwarded to the chart widget.
+  Widget _buildRawMiniGraph(
+    MetricSeries series,
+    HealthMetric metric,
+    Color accentColor,
+  ) {
+    final Widget chart = switch (metric.graphType) {
+      GraphType.bar => BarChartGraph(
+          series: series,
+          timeRange: series.timeRange,
+          accentColor: accentColor,
+          compact: true,
+        ),
+      GraphType.rangeLine => RangeLineChart(
+          series: series,
+          timeRange: series.timeRange,
+          accentColor: accentColor,
+          compact: true,
+        ),
+      GraphType.dualLine => DualLineChart(
+          series: series,
+          timeRange: series.timeRange,
+          accentColor: accentColor,
+          compact: true,
+        ),
+      GraphType.stackedBar => StackedBarChart(
+          series: series,
+          timeRange: series.timeRange,
+          accentColor: accentColor,
+          compact: true,
+        ),
+      GraphType.thresholdLine => ThresholdLineChart(
+          series: series,
+          timeRange: series.timeRange,
+          accentColor: accentColor,
+          compact: true,
+        ),
+      _ => LineChartGraph(
+          series: series,
+          timeRange: series.timeRange,
+          accentColor: accentColor,
+          compact: true,
+        ),
+    };
+    return SizedBox(height: 60, child: chart);
+  }
+
+  /// Returns a 60px tall surface-coloured placeholder used while the mini
   /// graph series is loading or has errored.
+  ///
+  /// Parameters:
+  ///   [context] — current [BuildContext] for theme access.
   Widget _graphPlaceholder(BuildContext context) => Container(
-        height: 80,
-        color: Theme.of(context).colorScheme.surface,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+        ),
       );
+}
+
+// ── Essential Metrics Section ─────────────────────────────────────────────────
+
+/// Describes one essential metric tile shown in [_EssentialMetricsSection].
+///
+/// Bundles together all the static display metadata and provider key that a
+/// single [_EssentialStatTile] needs, keeping the grid builder clean and
+/// declarative.
+class _EssentialTileConfig {
+  /// Creates an [_EssentialTileConfig].
+  ///
+  /// [metricId]    — the [HealthMetric] id used to call [metricSeriesProvider].
+  ///
+  /// [label]       — short display label shown below the value.
+  ///
+  /// [icon]        — icon rendered inside the accent badge.
+  ///
+  /// [accentColor] — badge background tint and thin left-border colour.
+  ///
+  /// [category]    — destination category for tap navigation.
+  ///
+  /// [useTotal]    — when `true`, uses [MetricStats.total]; otherwise uses
+  ///   [MetricStats.average].
+  ///
+  /// [unit]        — unit abbreviation appended to the displayed value.
+  const _EssentialTileConfig({
+    required this.metricId,
+    required this.label,
+    required this.icon,
+    required this.accentColor,
+    required this.category,
+    required this.useTotal,
+    required this.unit,
+  });
+
+  /// Unique metric id — matches [HealthMetric.id].
+  final String metricId;
+
+  /// Short label shown below the numeric value.
+  final String label;
+
+  /// Icon rendered in the accent badge.
+  final IconData icon;
+
+  /// Accent colour for the badge background (20% opacity) and left border.
+  final Color accentColor;
+
+  /// Destination [HealthCategory] for tap navigation.
+  final HealthCategory category;
+
+  /// When `true`, reads [MetricStats.total]; when `false`, reads
+  /// [MetricStats.average].
+  final bool useTotal;
+
+  /// Unit abbreviation appended to the value string.
+  final String unit;
+}
+
+/// Static ordered list of the five essential health metrics shown at the
+/// top of the dashboard.
+///
+/// Order: Steps | Active Calories | Resting HR | Sleep Duration | HRV.
+///
+/// Declared as a non-const list because [HealthCategory.accentColor] is a
+/// non-const enum field and cannot appear in a `const` initialiser.
+// ignore: prefer_const_declarations
+final List<_EssentialTileConfig> _kEssentialTiles = [
+  _EssentialTileConfig(
+    metricId: 'steps',
+    label: 'Steps',
+    icon: Icons.directions_walk_rounded,
+    accentColor: HealthCategory.activity.accentColor,
+    category: HealthCategory.activity,
+    useTotal: true,
+    unit: 'steps',
+  ),
+  _EssentialTileConfig(
+    metricId: 'active_calories_burned',
+    label: 'Active Cal',
+    icon: Icons.local_fire_department_rounded,
+    accentColor: HealthCategory.activity.accentColor,
+    category: HealthCategory.activity,
+    useTotal: true,
+    unit: 'kcal',
+  ),
+  _EssentialTileConfig(
+    metricId: 'resting_heart_rate',
+    label: 'Resting HR',
+    icon: Icons.favorite_rounded,
+    accentColor: HealthCategory.heart.accentColor,
+    category: HealthCategory.heart,
+    useTotal: false,
+    unit: 'bpm',
+  ),
+  _EssentialTileConfig(
+    metricId: 'sleep_duration',
+    label: 'Sleep',
+    icon: Icons.bedtime_rounded,
+    accentColor: HealthCategory.sleep.accentColor,
+    category: HealthCategory.sleep,
+    useTotal: false,
+    unit: 'hr',
+  ),
+  _EssentialTileConfig(
+    metricId: 'heart_rate_variability',
+    label: 'HRV',
+    icon: Icons.monitor_heart_rounded,
+    accentColor: HealthCategory.heart.accentColor,
+    category: HealthCategory.heart,
+    useTotal: false,
+    unit: 'ms',
+  ),
+];
+
+/// "Today's Essentials" at-a-glance section shown at the top of the dashboard.
+///
+/// Renders five [_EssentialStatTile]s in a responsive 2-row grid:
+///   - Row 1: Steps | Active Calories | Resting HR  (3 equal columns).
+///   - Row 2: Sleep Duration | HRV  (2 equal columns).
+///
+/// Each tile watches [metricSeriesProvider] for today's value and taps
+/// through to the corresponding category detail screen.
+class _EssentialMetricsSection extends ConsumerWidget {
+  /// Creates an [_EssentialMetricsSection].
+  const _EssentialMetricsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ref is kept for ConsumerWidget compliance; tiles use their own ref.
+    // Split into row 1 (first 3) and row 2 (last 2).
+    final row1 = _kEssentialTiles.sublist(0, 3);
+    final row2 = _kEssentialTiles.sublist(3);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: AppDimens.spaceMd),
+        // Section header label.
+        Text(
+          "Today's Essentials",
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceSm),
+
+        // Row 1: 3-column grid (Steps, Active Cal, Resting HR).
+        Row(
+          children: row1.map((cfg) {
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: cfg == row1.last ? 0 : AppDimens.spaceXs,
+                ),
+                child: _EssentialStatTile(config: cfg),
+              ),
+            );
+          }).toList(),
+        ),
+
+        const SizedBox(height: AppDimens.spaceXs),
+
+        // Row 2: 2-column grid (Sleep, HRV).
+        Row(
+          children: row2.map((cfg) {
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: cfg == row2.last ? 0 : AppDimens.spaceXs,
+                ),
+                child: _EssentialStatTile(config: cfg),
+              ),
+            );
+          }).toList(),
+        ),
+
+        const SizedBox(height: AppDimens.spaceMd),
+      ],
+    );
+  }
+}
+
+/// A single compact stat tile used inside [_EssentialMetricsSection].
+///
+/// Layout (horizontal):
+///   [accent badge | icon] → [value (H3) + label (caption)]
+///
+/// A thin left border in [config.accentColor] provides subtle category
+/// identity without competing with the card background.
+///
+/// Tapping navigates to `/dashboard/{category.name}`.
+///
+/// Implemented as a [ConsumerWidget] to ensure proper Riverpod reactivity
+/// and correct rebuilds on theme/data changes.
+class _EssentialStatTile extends ConsumerWidget {
+  /// Creates an [_EssentialStatTile].
+  ///
+  /// [config] — static display metadata for this tile.
+  const _EssentialStatTile({required this.config});
+
+  /// Display metadata and provider key for this tile.
+  final _EssentialTileConfig config;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final seriesAsync = ref.watch(
+      metricSeriesProvider((config.metricId, TimeRange.day)),
+    );
+    final cs = Theme.of(context).colorScheme;
+    final isDark = cs.brightness == Brightness.dark;
+    // Use theme's onSurface for maximum compatibility — avoids manual
+    // brightness checks that can fail when the system theme changes mid-session.
+    final textPrimary = cs.onSurface;
+
+    // Resolve display value.
+    final String displayValue = seriesAsync.when(
+      loading: () => '—',
+      error: (err, st) => '—',
+      data: (series) {
+        final raw =
+            config.useTotal ? series.stats.total : series.stats.average;
+        if (raw == 0.0) return '—';
+        // Whole-number metrics (steps, kcal) shown without decimals.
+        if (raw == raw.truncateToDouble() && raw < 100000) {
+          return raw.toInt().toString();
+        }
+        return raw.toStringAsFixed(1);
+      },
+    );
+
+    // Flutter BoxDecoration requires uniform border colors when borderRadius
+    // is set. To achieve a left accent stripe + optional uniform card border
+    // in dark mode, we use a Stack: a rounded card layer + a left accent bar
+    // clipped to the rounded rect.
+    final radius = BorderRadius.circular(AppDimens.radiusChip);
+
+    return GestureDetector(
+      onTap: () => GoRouter.of(context).go('/dashboard/${config.category.name}'),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
+          children: [
+            // ── Card background ─────────────────────────────────────────────
+            Container(
+              height: 72,
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: radius,
+                border: isDark
+                    ? Border.all(color: cs.outline)
+                    : null,
+                boxShadow: isDark ? null : AppDimens.cardShadowLight,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceSm,
+                vertical: AppDimens.spaceXs,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // ── Accent icon badge ────────────────────────────────────
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: config.accentColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      config.icon,
+                      color: config.accentColor,
+                      size: AppDimens.iconSm,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimens.spaceXs),
+
+                  // ── Value + label column ─────────────────────────────────
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Value row with unit.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                displayValue,
+                                style: AppTextStyles.h3
+                                    .copyWith(color: textPrimary),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              config.unit,
+                              style: AppTextStyles.labelXs.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          config.label,
+                          style: AppTextStyles.caption.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Left accent stripe (rendered on top, clipped by ClipRRect) ──
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: 3,
+                color: config.accentColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ── Compact Insight Strip ─────────────────────────────────────────────────────
