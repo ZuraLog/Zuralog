@@ -16,7 +16,23 @@ logger = logging.getLogger(__name__)
 # FCM is optional — only initialize if credentials are configured.
 _fcm_initialized = False
 
-if settings.fcm_credentials_path:
+if settings.firebase_credentials_json:
+    # Production path: credentials provided as a JSON string env var (Railway).
+    try:
+        import json
+
+        import firebase_admin  # type: ignore[import-untyped]
+        from firebase_admin import credentials
+
+        cred_dict = json.loads(settings.firebase_credentials_json)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+        _fcm_initialized = True
+        logger.info("FCM initialized from FIREBASE_CREDENTIALS_JSON env var")
+    except Exception:
+        logger.exception("Failed to initialize FCM from JSON env var")
+elif settings.fcm_credentials_path:
+    # Local dev path: credentials loaded from a file.
     try:
         import firebase_admin  # type: ignore[import-untyped]
         from firebase_admin import credentials

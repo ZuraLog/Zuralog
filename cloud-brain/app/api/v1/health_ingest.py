@@ -19,16 +19,18 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.normalizer import DataNormalizer
 from app.api.v1.auth import _get_auth_service
 from app.api.v1.health_ingest_schemas import (
     HealthIngestRequest,
     HealthIngestResponse,
 )
-from app.analytics.normalizer import DataNormalizer
 from app.database import get_db
 from app.models.daily_metrics import DailyHealthMetrics
 from app.models.health_data import (
     NutritionEntry as NutritionModel,
+)
+from app.models.health_data import (
     SleepRecord,
     UnifiedActivity,
     WeightMeasurement,

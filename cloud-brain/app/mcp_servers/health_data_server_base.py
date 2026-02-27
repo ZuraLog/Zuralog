@@ -39,6 +39,8 @@ from app.mcp_servers.models import Resource, ToolDefinition, ToolResult
 from app.models.daily_metrics import DailyHealthMetrics
 from app.models.health_data import (
     NutritionEntry as NutritionModel,
+)
+from app.models.health_data import (
     SleepRecord,
     UnifiedActivity,
     WeightMeasurement,
@@ -693,7 +695,10 @@ class HealthDataServerBase(BaseMCPServer):
                     success=True,
                     data={
                         "status": "dispatched",
-                        "message": f"Write request for '{data_type}' dispatched to your {self.platform.upper()} device.",
+                        "message": (
+                            f"Write request for '{data_type}' dispatched to your"
+                            f" {self.platform.upper()} device."
+                        ),
                         "device_id": device.id,
                     },
                 )

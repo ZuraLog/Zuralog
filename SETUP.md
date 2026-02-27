@@ -500,6 +500,48 @@ All tokens are defined as CSS variables in `src/app/globals.css` using Tailwind 
 
 ---
 
+## 5. Production Deployment (Railway)
+
+The Cloud Brain backend deploys to Railway at `api.zuralog.com`. All deployment configuration is in `cloud-brain/`.
+
+### One-time deploy
+
+1. Connect the `life-logger` GitHub repo to Railway
+2. Set the service **Root Directory** to `cloud-brain`
+3. Railway auto-detects `railway.toml` which configures:
+   - Builder: Dockerfile
+   - Pre-deploy: `alembic upgrade head` (runs migrations before the new deployment goes live)
+   - Start: `uvicorn app.main:app --host 0.0.0.0 --port ${PORT}`
+   - Health check: `/health`
+4. Add all environment variables (see `cloud-brain/RAILWAY_ENV_VARS.md`)
+5. Add separate services for `celery-worker` and `celery-beat` with the same root dir but custom start commands (see `cloud-brain/docs/railway-setup-guide.md`)
+6. Add CNAME `api → <railway-domain>.railway.app` in your DNS provider
+
+For the full step-by-step guide including domain setup, Celery services, and Strava webhook registration, see:
+- **[`cloud-brain/docs/railway-setup-guide.md`](./cloud-brain/docs/railway-setup-guide.md)** — step-by-step Railway setup
+- **[`cloud-brain/RAILWAY_ENV_VARS.md`](./cloud-brain/RAILWAY_ENV_VARS.md)** — every env var, where to get it, which to seal
+
+### Production build commands
+
+```bash
+# Build Android App Bundle pointing at production API
+make build-prod
+
+# Build iOS IPA pointing at production API
+make build-prod-ios
+```
+
+### Key differences from local dev
+
+| Concern | Local | Production (Railway) |
+|---------|-------|----------------------|
+| Firebase credentials | `FCM_CREDENTIALS_PATH=firebase-service-account.json` (file) | `FIREBASE_CREDENTIALS_JSON={"type":"service_account",...}` (JSON string) |
+| CORS origins | `ALLOWED_ORIGINS=*` | `ALLOWED_ORIGINS=https://zuralog.com,https://www.zuralog.com` |
+| Debug mode | `APP_DEBUG=true` | `APP_DEBUG=false` |
+| Migrations | `make migrate` (manual) | Auto-run as pre-deploy command |
+
+---
+
 ## Quick Reference
 
 ### Cloud Brain (`cloud-brain/`)

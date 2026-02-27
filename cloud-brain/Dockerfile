@@ -1,7 +1,8 @@
 # =============================================================================
 # Zuralog Cloud Brain — Production Dockerfile
 # =============================================================================
-# Multi-stage build: uv install → slim runtime.
+# Multi-stage build: uv install -> slim runtime.
+# Compatible with Railway PaaS (respects $PORT env var).
 # =============================================================================
 
 # --- Stage 1: Build dependencies ---
@@ -26,7 +27,7 @@ WORKDIR /app
 # Copy the virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
 
-# Copy application code
+# Copy application code and migration files
 COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
@@ -35,6 +36,9 @@ COPY alembic.ini .
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
+# Railway injects PORT at runtime; default to 8000 for local Docker usage.
+ENV PORT=8000
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use shell form so ${PORT} is expanded by the shell at container start.
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}

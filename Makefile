@@ -20,7 +20,7 @@ SHELL := /bin/bash
 # ---------------------------------------------------------------------------
 GOOGLE_WEB_CLIENT_ID := $(shell grep -m1 '^GOOGLE_WEB_CLIENT_ID=' cloud-brain/.env | cut -d '=' -f2-)
 
-.PHONY: run run-ios run-device analyze test build-apk build-appbundle
+.PHONY: run run-ios run-device analyze test build-apk build-appbundle build-prod build-prod-ios
 
 ## Run on Android emulator (default)
 ## Equivalent: flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=...
@@ -62,4 +62,18 @@ build-apk:
 ## Equivalent: flutter build appbundle --release --dart-define=GOOGLE_WEB_CLIENT_ID=...
 build-appbundle:
 	cd zuralog && flutter build appbundle --release \
+		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
+
+## Production Android build — points to Railway backend (api.zuralog.com)
+## Requires GOOGLE_WEB_CLIENT_ID to be set in cloud-brain/.env
+build-prod:
+	cd zuralog && flutter build appbundle \
+		--dart-define=BASE_URL=https://api.zuralog.com \
+		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
+
+## Production iOS build — points to Railway backend (api.zuralog.com)
+## Requires GOOGLE_WEB_CLIENT_ID to be set in cloud-brain/.env
+build-prod-ios:
+	cd zuralog && flutter build ipa \
+		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID)
