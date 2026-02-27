@@ -13,6 +13,18 @@
 /// /auth/register        → RegisterScreen
 /// / (StatefulShellRoute) → AppShell
 ///   /dashboard          → DashboardScreen (tab 0)
+///     /dashboard/activity          → CategoryDetailScreen(activity)
+///       /dashboard/activity/:id    → MetricDetailScreen(activity, id)
+///     /dashboard/body              → CategoryDetailScreen(body)
+///       /dashboard/body/:id        → MetricDetailScreen(body, id)
+///     /dashboard/heart             → CategoryDetailScreen(heart)
+///     /dashboard/vitals            → CategoryDetailScreen(vitals)
+///     /dashboard/sleep             → CategoryDetailScreen(sleep)
+///     /dashboard/nutrition         → CategoryDetailScreen(nutrition)
+///     /dashboard/cycle             → CategoryDetailScreen(cycle)
+///     /dashboard/wellness          → CategoryDetailScreen(wellness)
+///     /dashboard/mobility          → CategoryDetailScreen(mobility)
+///     /dashboard/environment       → CategoryDetailScreen(environment)
 ///   /chat               → ChatScreen (placeholder, tab 1)
 ///   /integrations       → IntegrationsHubScreen (tab 2)
 /// /settings             → SettingsScreen (pushed over shell)
@@ -43,7 +55,10 @@ import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/chat/presentation/chat_screen.dart';
+import 'package:zuralog/features/dashboard/domain/health_category.dart';
+import 'package:zuralog/features/dashboard/presentation/category_detail_screen.dart';
 import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:zuralog/features/dashboard/presentation/metric_detail_screen.dart';
 import 'package:zuralog/features/integrations/presentation/integrations_hub_screen.dart';
 import 'package:zuralog/features/settings/presentation/settings_screen.dart';
 import 'package:zuralog/shared/layout/app_shell.dart';
@@ -163,6 +178,37 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
+/// Constructs the nested [GoRoute] list for all 10 health category detail
+/// screens and their per-metric child routes.
+///
+/// Each category gets a `GoRoute` at `/dashboard/{categoryName}` with a
+/// nested `:metricId` child that pushes [MetricDetailScreen].
+///
+/// These routes are registered as `routes:` inside the dashboard [GoRoute]
+/// so they remain within the [StatefulShellBranch] and preserve the bottom
+/// navigation bar.
+List<GoRoute> _buildCategoryRoutes() {
+  return HealthCategory.values.map((category) {
+    return GoRoute(
+      path: category.name,
+      builder: (BuildContext context, GoRouterState state) =>
+          CategoryDetailScreen(category: category),
+      routes: [
+        GoRoute(
+          path: ':metricId',
+          builder: (BuildContext context, GoRouterState state) {
+            final String metricId = state.pathParameters['metricId']!;
+            return MetricDetailScreen(
+              category: category,
+              metricId: metricId,
+            );
+          },
+        ),
+      ],
+    );
+  }).toList();
+}
+
 /// Constructs the complete route list for the application.
 ///
 /// Returns a flat list of [RouteBase] objects that includes both top-level
@@ -227,6 +273,7 @@ List<RouteBase> _buildRoutes() {
               path: RouteNames.dashboardPath,
               name: RouteNames.dashboard,
               builder: (context, state) => const DashboardScreen(),
+              routes: _buildCategoryRoutes(),
             ),
           ],
         ),

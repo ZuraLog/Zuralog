@@ -74,6 +74,38 @@ abstract final class RouteNames {
   /// Path for the settings screen.
   static const String settingsPath = '/settings';
 
+  // ── Dashboard Category Detail Routes ─────────────────────────────────────
+
+  /// Path for the Activity category detail screen.
+  static const String categoryActivity = '/dashboard/activity';
+
+  /// Path for the Body Measurements category detail screen.
+  static const String categoryBody = '/dashboard/body';
+
+  /// Path for the Heart category detail screen.
+  static const String categoryHeart = '/dashboard/heart';
+
+  /// Path for the Vitals category detail screen.
+  static const String categoryVitals = '/dashboard/vitals';
+
+  /// Path for the Sleep category detail screen.
+  static const String categorySleep = '/dashboard/sleep';
+
+  /// Path for the Nutrition category detail screen.
+  static const String categoryNutrition = '/dashboard/nutrition';
+
+  /// Path for the Cycle Tracking category detail screen.
+  static const String categoryCycle = '/dashboard/cycle';
+
+  /// Path for the Wellness category detail screen.
+  static const String categoryWellness = '/dashboard/wellness';
+
+  /// Path for the Mobility category detail screen.
+  static const String categoryMobility = '/dashboard/mobility';
+
+  /// Path for the Environment category detail screen.
+  static const String categoryEnvironment = '/dashboard/environment';
+
   // ── Developer Tools ───────────────────────────────────────────────────────
 
   /// Name for the design system visual catalog (dev only).
