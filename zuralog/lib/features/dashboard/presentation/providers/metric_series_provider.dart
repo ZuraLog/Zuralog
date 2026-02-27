@@ -56,7 +56,7 @@ final metricDataRepositoryProvider = Provider<RealMetricDataRepository>(
 /// pre-computed [MetricStats] for the given metric and time window.
 /// When [MetricSeries.dataPoints] is empty, no data source is connected.
 final metricSeriesProvider =
-    FutureProvider.autoDispose.family<MetricSeries, (String, TimeRange)>(
+    FutureProvider.family<MetricSeries, (String, TimeRange)>(
   (ref, args) async {
     final RealMetricDataRepository repo =
         ref.watch(metricDataRepositoryProvider);
@@ -82,7 +82,7 @@ final metricSeriesProvider =
 /// most-recent single reading. Missing keys indicate no data was recorded for
 /// that metric — the UI should treat these as "no data" and render dimmed.
 final categorySnapshotProvider =
-    FutureProvider.autoDispose.family<Map<String, double>, HealthCategory>(
+    FutureProvider.family<Map<String, double>, HealthCategory>(
   (ref, category) async {
     final RealMetricDataRepository repo =
         ref.watch(metricDataRepositoryProvider);

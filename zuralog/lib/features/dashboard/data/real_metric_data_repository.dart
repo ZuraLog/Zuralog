@@ -35,7 +35,7 @@ class RealMetricDataRepository {
   ///
   /// [healthRepository] — native health platform access.
   /// [analyticsRepository] — Cloud Brain API access for fallback.
-  const RealMetricDataRepository({
+  RealMetricDataRepository({
     required HealthRepository healthRepository,
     required AnalyticsRepository analyticsRepository,
   })  : _healthRepo = healthRepository,
@@ -43,6 +43,18 @@ class RealMetricDataRepository {
 
   final HealthRepository _healthRepo;
   final AnalyticsRepository _analyticsRepo;
+
+  // ── Session-scoped cache ─────────────────────────────────────────────────
+  // Prevents multiple in-flight duplicate calls to the same Cloud Brain
+  // endpoint within a single provider lifecycle (e.g. when 4 metrics all
+  // fall back to getWeeklyTrends() in parallel).
+  //
+  // Storing the Future (not the resolved value) means concurrent callers
+  // all await the same in-flight request — they don't each fire a new one.
+
+  /// Memoised weekly-trends future.  Reset to `null` on pull-to-refresh
+  /// (done externally by invalidating the Riverpod providers).
+  Future<dynamic>? _weeklyTrendsFuture;
 
   // ── Public API (same signature as MetricDataRepository) ──────────────────
 
@@ -593,7 +605,10 @@ class RealMetricDataRepository {
       // For weekly trends, the Cloud Brain API provides 7-day data for
       // a fixed set of metrics: steps, caloriesIn, caloriesOut, sleepHours.
       if (timeRange == TimeRange.week) {
-        final trends = await _analyticsRepo.getWeeklyTrends();
+        // Deduplicate concurrent calls: all parallel metric providers share
+        // one in-flight Future so only one HTTP request is made per session.
+        final trends = await (_weeklyTrendsFuture ??=
+            _analyticsRepo.getWeeklyTrends());
         return switch (metricId) {
           'steps' => _weeklyTrendsToPoints(
               trends.dates,
