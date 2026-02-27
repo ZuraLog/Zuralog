@@ -109,6 +109,12 @@ class DashboardScreen extends ConsumerWidget {
   /// Creates a [DashboardScreen].
   const DashboardScreen({super.key});
 
+  /// Shell branch index for the Chat / AI Coach tab.
+  static const int _kChatBranchIndex = 1;
+
+  /// Shell branch index for the Integrations tab.
+  static const int _kIntegrationsBranchIndex = 2;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final insightAsync = ref.watch(dashboardInsightProvider);
@@ -161,52 +167,75 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
 
-            // ── Main Content ────────────────────────────────────────────────
+            // ── A) Compact AI Insight strip ─────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    insightAsync.when(
+                      data: (insight) => _CompactInsightStrip(
+                        insight: insight,
+                        onTap: () => StatefulNavigationShell.of(
+                          context,
+                        ).goBranch(_kChatBranchIndex),
+                      ),
+                      loading: () => const _InsightStripShimmer(),
+                      error: (e, _) => _CompactInsightStrip(
+                        insight: const DashboardInsight(
+                          insight:
+                              'Tap to chat with your AI coach for today\'s insight.',
+                        ),
+                        onTap: () => StatefulNavigationShell.of(
+                          context,
+                        ).goBranch(_kChatBranchIndex),
+                      ),
+                    ),
+                    const SizedBox(height: AppDimens.spaceLg),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── B) One CategoryCard per visible HealthCategory (lazy) ────────
             SliverPadding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimens.spaceMd,
               ),
               sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  // A) Compact AI Insight strip
-                  insightAsync.when(
-                    data: (insight) => _CompactInsightStrip(
-                      insight: insight,
-                      onTap: () =>
-                          StatefulNavigationShell.of(context).goBranch(1),
-                    ),
-                    loading: () => const _InsightStripShimmer(),
-                    error: (e, _) => _CompactInsightStrip(
-                      insight: const DashboardInsight(
-                        insight:
-                            'Tap to chat with your AI coach for today\'s insight.',
-                      ),
-                      onTap: () =>
-                          StatefulNavigationShell.of(context).goBranch(1),
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, i) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
+                    child: _CategoryCardLoader(
+                      category: visibleCategories[i],
                     ),
                   ),
+                  childCount: visibleCategories.length,
+                ),
+              ),
+            ),
 
-                  const SizedBox(height: AppDimens.spaceLg),
-
-                  // B) One CategoryCard per visible HealthCategory
-                  ...visibleCategories.map(
-                    (cat) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
-                      child: _CategoryCardLoader(category: cat),
+            // ── C) Integrations rail + bottom clearance ──────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: AppDimens.spaceSm),
+                    IntegrationsRail(
+                      onManageTap: () => StatefulNavigationShell.of(
+                        context,
+                      ).goBranch(_kIntegrationsBranchIndex),
                     ),
-                  ),
-
-                  const SizedBox(height: AppDimens.spaceSm),
-
-                  // C) Connected-apps rail at the very bottom
-                  IntegrationsRail(
-                    onManageTap: () =>
-                        StatefulNavigationShell.of(context).goBranch(2),
-                  ),
-
-                  // D) Bottom padding for nav bar clearance
-                  const SizedBox(height: AppDimens.spaceXxl),
-                ]),
+                    const SizedBox(height: AppDimens.spaceXxl),
+                  ],
+                ),
               ),
             ),
           ],
@@ -407,7 +436,8 @@ class _CategoryCardLoader extends ConsumerWidget {
   /// Builds the compact mini graph widget from the series async state.
   ///
   /// Returns a [MetricGraphTile] (compact: true) when data is available,
-  /// or a surface-coloured [SizedBox] placeholder while loading or on error.
+  /// or a surface-coloured placeholder via [_graphPlaceholder] while loading
+  /// or on error.
   Widget? _buildMiniGraph(
     BuildContext context,
     AsyncValue<MetricSeries>? seriesAsync,
@@ -417,18 +447,8 @@ class _CategoryCardLoader extends ConsumerWidget {
     if (seriesAsync == null || metric == null) return null;
 
     return seriesAsync.when(
-      loading: () => SizedBox(
-        height: 80,
-        child: Container(
-          color: Theme.of(context).colorScheme.surface,
-        ),
-      ),
-      error: (err, st) => SizedBox(
-        height: 80,
-        child: Container(
-          color: Theme.of(context).colorScheme.surface,
-        ),
-      ),
+      loading: () => _graphPlaceholder(context),
+      error: (err, st) => _graphPlaceholder(context),
       data: (series) => MetricGraphTile(
         metric: metric,
         series: series,
@@ -437,6 +457,13 @@ class _CategoryCardLoader extends ConsumerWidget {
       ),
     );
   }
+
+  /// Returns an 80px tall surface-coloured placeholder used while the mini
+  /// graph series is loading or has errored.
+  Widget _graphPlaceholder(BuildContext context) => Container(
+        height: 80,
+        color: Theme.of(context).colorScheme.surface,
+      );
 }
 
 // ── Compact Insight Strip ─────────────────────────────────────────────────────
