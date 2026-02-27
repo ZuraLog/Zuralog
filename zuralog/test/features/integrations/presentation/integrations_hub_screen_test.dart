@@ -8,6 +8,10 @@
 ///   - Section headers "Connected", "Available", "Coming Soon" appear when
 ///     the corresponding integrations are present.
 ///   - Pull-to-refresh triggers [IntegrationsNotifier.loadIntegrations].
+///   - Search bar is present and functional.
+///   - [CompatibleAppsSection] is always rendered.
+///   - No-results empty state when search matches nothing.
+///   - Filtering direct integrations by name hides non-matching items.
 library;
 
 import 'package:flutter/material.dart';
@@ -18,6 +22,8 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/integrations/presentation/integrations_hub_screen.dart';
+import 'package:zuralog/features/integrations/presentation/widgets/compatible_apps_section.dart';
+import 'package:zuralog/features/integrations/presentation/widgets/integrations_search_bar.dart';
 
 // ── Stub Notifier ─────────────────────────────────────────────────────────────
 
@@ -100,6 +106,8 @@ Widget _buildHarness({
 
 void main() {
   group('IntegrationsHubScreen', () {
+    // ── Existing tests ────────────────────────────────────────────────────────
+
     testWidgets('smoke test: renders without crashing', (tester) async {
       await tester.pumpWidget(_buildHarness());
       await tester.pump();
@@ -190,5 +198,91 @@ void main() {
 
       expect(calls, contains('loadIntegrations'));
     });
+
+    // ── New search & compatible apps tests ────────────────────────────────────
+
+    testWidgets('shows IntegrationsSearchBar', (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      await tester.pump();
+      expect(find.byType(IntegrationsSearchBar), findsOneWidget);
+    });
+
+    testWidgets('shows CompatibleAppsSection', (tester) async {
+      await tester.pumpWidget(_buildHarness());
+      await tester.pump();
+      expect(find.byType(CompatibleAppsSection), findsOneWidget);
+    });
+
+    testWidgets(
+      'shows no-results text when search matches nothing in direct or compatible lists',
+      (tester) async {
+        // Start with an empty integrations list so there are no direct results
+        // either; the "zzzzthiscannotmatchanything" query also matches no
+        // compatible apps, so the no-results state must appear.
+        await tester.pumpWidget(_buildHarness());
+        await tester.pump();
+
+        await tester.enterText(
+          find.byType(TextField),
+          'zzzzthiscannotmatchanything',
+        );
+        await tester.pump();
+
+        expect(find.textContaining('No results for'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'hides no-results state when search matches a compatible app',
+      (tester) async {
+        // "Strava" matches CompatibleAppsRegistry even if no direct integration
+        // is present, so the no-results state must NOT appear.
+        await tester.pumpWidget(_buildHarness());
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField), 'Strava');
+        await tester.pump();
+
+        expect(find.textContaining('No results for'), findsNothing);
+        expect(find.byType(CompatibleAppsSection), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'filtering direct integrations by name hides non-matching section headers',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildHarness(
+            integrations: [_connectedIntegration, _availableIntegration],
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Type "Strava" — should keep the Connected (Strava) section but hide
+        // the Available (Fitbit) section header.
+        await tester.enterText(find.byType(TextField), 'Strava');
+        await tester.pump();
+
+        // "Connected" section header should still be visible (Strava is connected).
+        expect(find.text('Connected'), findsWidgets);
+        // "Available" section header for Fitbit should be gone.
+        expect(find.text('Available'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'search bar text is reflected in filtering (no crash on type)',
+      (tester) async {
+        await tester.pumpWidget(_buildHarness());
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.enterText(find.byType(TextField), 'Strava');
+        await tester.pump();
+
+        // At minimum the typed text exists somewhere in the widget tree.
+        expect(find.text('Strava'), findsAtLeastNWidgets(1));
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
