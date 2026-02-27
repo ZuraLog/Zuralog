@@ -1,9 +1,9 @@
 /// Zuralog Dashboard — Metric Series Riverpod Providers.
 ///
 /// Declares the three Riverpod providers that wire the data layer
-/// ([MetricDataRepository]) to the presentation layer:
+/// ([RealMetricDataRepository]) to the presentation layer:
 ///
-/// - [metricDataRepositoryProvider] — singleton repository instance.
+/// - [metricDataRepositoryProvider] — singleton real repository instance.
 /// - [metricSeriesProvider] — family provider for one metric's time-series.
 /// - [categorySnapshotProvider] — family provider for a category's hub-card
 ///   preview values.
@@ -14,7 +14,8 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:zuralog/features/dashboard/data/metric_data_repository.dart';
+import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/dashboard/data/real_metric_data_repository.dart';
 import 'package:zuralog/features/dashboard/domain/health_category.dart';
 import 'package:zuralog/features/dashboard/domain/health_metric_registry.dart';
 import 'package:zuralog/features/dashboard/domain/metric_series.dart';
@@ -26,12 +27,18 @@ export 'package:zuralog/features/dashboard/presentation/widgets/time_range_selec
 
 // ── Repository provider ───────────────────────────────────────────────────────
 
-/// Provider that exposes the singleton [MetricDataRepository].
+/// Provider that exposes the singleton [RealMetricDataRepository].
+///
+/// Reads live health data from native HealthKit / Health Connect via
+/// [HealthRepository], with Cloud Brain API as a fallback.
 ///
 /// Use [ref.watch(metricDataRepositoryProvider)] inside other providers or
 /// widgets to obtain the shared repository instance.
-final metricDataRepositoryProvider = Provider<MetricDataRepository>(
-  (ref) => const MetricDataRepository(),
+final metricDataRepositoryProvider = Provider<RealMetricDataRepository>(
+  (ref) => RealMetricDataRepository(
+    healthRepository: ref.watch(healthRepositoryProvider),
+    analyticsRepository: ref.watch(analyticsRepositoryProvider),
+  ),
 );
 
 // ── Series provider ───────────────────────────────────────────────────────────
@@ -47,10 +54,12 @@ final metricDataRepositoryProvider = Provider<MetricDataRepository>(
 ///
 /// Returns an [AsyncValue<MetricSeries>] containing the data points and
 /// pre-computed [MetricStats] for the given metric and time window.
+/// When [MetricSeries.dataPoints] is empty, no data source is connected.
 final metricSeriesProvider =
     FutureProvider.autoDispose.family<MetricSeries, (String, TimeRange)>(
   (ref, args) async {
-    final MetricDataRepository repo = ref.watch(metricDataRepositoryProvider);
+    final RealMetricDataRepository repo =
+        ref.watch(metricDataRepositoryProvider);
     return repo.getMetricSeries(metricId: args.$1, timeRange: args.$2);
   },
 );
@@ -70,12 +79,13 @@ final metricSeriesProvider =
 /// ```
 ///
 /// Returns an [AsyncValue<Map<String, double>>] mapping metric IDs to their
-/// most-recent single reading. Missing keys mean no data was recorded for that
-/// metric; callers should guard with `result[id] ?? 0.0`.
+/// most-recent single reading. Missing keys indicate no data was recorded for
+/// that metric — the UI should treat these as "no data" and render dimmed.
 final categorySnapshotProvider =
     FutureProvider.autoDispose.family<Map<String, double>, HealthCategory>(
   (ref, category) async {
-    final MetricDataRepository repo = ref.watch(metricDataRepositoryProvider);
+    final RealMetricDataRepository repo =
+        ref.watch(metricDataRepositoryProvider);
     final List<String> previewIds =
         HealthMetricRegistry.byCategory(category)
             .take(4)

@@ -25,18 +25,25 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 /// Used inside [CategoryCard] to render a compact row of the form:
 /// "{label}: {value} {unit}".
 ///
+/// When [hasData] is `false`, the row renders dimmed (38% opacity) with a
+/// `'—'` placeholder and a small `+` icon to indicate no source is connected.
+///
 /// Example:
 /// ```dart
 /// const MetricPreview(label: 'Steps', value: '8,432', unit: 'steps')
+/// const MetricPreview(label: 'HRV', value: '—', unit: '', hasData: false)
 /// ```
 class MetricPreview {
   /// Creates a [MetricPreview].
   ///
-  /// All fields are required and must be non-null strings.
+  /// [label] and [unit] are required. [value] is the formatted reading string.
+  /// [hasData] defaults to `true` — set to `false` when no health source is
+  /// connected for this metric.
   const MetricPreview({
     required this.label,
     required this.value,
     required this.unit,
+    this.hasData = true,
   });
 
   /// Human-readable metric label (e.g. `'Steps'`, `'Heart Rate'`).
@@ -47,6 +54,12 @@ class MetricPreview {
 
   /// Unit abbreviation (e.g. `'steps'`, `'bpm'`).
   final String unit;
+
+  /// Whether this metric has real data from a connected health source.
+  ///
+  /// When `false`, the preview row is rendered dimmed with reduced opacity
+  /// and a small `+` icon to invite the user to connect a data source.
+  final bool hasData;
 }
 
 // ── Widget ────────────────────────────────────────────────────────────────────
@@ -110,9 +123,14 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Limit previews to 4 to respect the 2-4 spec.
-    final displayedPreviews =
-        previews.length > 4 ? previews.sublist(0, 4) : previews;
+    // Sort: metrics with data appear first, no-data metrics are pushed below.
+    // Then limit to 4 previews as per the 2-4 spec.
+    final sorted = List<MetricPreview>.from(previews)
+      ..sort(
+        (MetricPreview a, MetricPreview b) =>
+            (b.hasData ? 1 : 0).compareTo(a.hasData ? 1 : 0),
+      );
+    final displayedPreviews = sorted.length > 4 ? sorted.sublist(0, 4) : sorted;
 
     return ZuralogCard(
       onTap: onTap,
@@ -215,6 +233,11 @@ class _CategoryIconBadge extends StatelessWidget {
 /// The label is rendered in [AppColors.textSecondary]; the value and unit
 /// are rendered in the primary text colour. The value text is emphasised
 /// with [FontWeight.w600].
+///
+/// When [preview.hasData] is `false`, the entire row is wrapped in
+/// `Opacity(0.38)` — the Material Design disabled-state opacity — and
+/// a small `Icons.add_circle_outline_rounded` icon is shown at the
+/// trailing edge to invite the user to connect a data source.
 class _MetricPreviewRow extends StatelessWidget {
   const _MetricPreviewRow({
     required this.preview,
@@ -233,6 +256,36 @@ class _MetricPreviewRow extends StatelessWidget {
     final primaryColor =
         isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
+    // Dimmed state — no data source connected for this metric.
+    if (!preview.hasData) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
+        child: Opacity(
+          opacity: 0.38,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${preview.label}: —',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Icon(
+                Icons.add_circle_outline_rounded,
+                size: 12,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Normal state — real data available.
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
       child: Row(

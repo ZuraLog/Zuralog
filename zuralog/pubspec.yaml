@@ -66,11 +66,12 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  build_runner: any
+  build_runner: ^2.5.4
   riverpod_generator: any
   drift_dev: any
   plugin_platform_interface: any
   url_launcher_platform_interface: any
+  mockito: ^5.4.6
 
 flutter:
   uses-material-design: true
