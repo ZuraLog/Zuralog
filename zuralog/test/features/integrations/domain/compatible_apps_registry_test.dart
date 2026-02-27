@@ -60,5 +60,10 @@ void main() {
       final results = CompatibleAppsRegistry.searchApps('');
       expect(results.length, equals(CompatibleAppsRegistry.apps.length));
     });
+
+    test('searchApps returns empty list for no-match query', () {
+      final results = CompatibleAppsRegistry.searchApps('zzzzxqwerty');
+      expect(results, isEmpty);
+    });
   });
 }

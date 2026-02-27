@@ -51,6 +51,9 @@ class _CompatibleAppsSectionState extends State<CompatibleAppsSection> {
   void didUpdateWidget(CompatibleAppsSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Auto-expand when a search becomes active after the initial build.
+    // Intentionally does NOT auto-collapse when search is cleared — once the
+    // user has opened the section (either manually or via search), it stays
+    // open for the remainder of the session so results aren't hidden on clear.
     if (widget.searchQuery.isNotEmpty && !_expanded) {
       setState(() => _expanded = true);
     }

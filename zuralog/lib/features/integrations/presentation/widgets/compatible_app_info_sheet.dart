@@ -52,13 +52,15 @@ class CompatibleAppInfoSheet extends StatelessWidget {
   /// Parameters:
   ///   url: The URL string to open.
   ///
-  /// Silently ignores errors (e.g., app not installed for deep links).
+  /// Silently ignores errors (e.g., app not installed for deep links) but
+  /// logs a debug message so failures are visible during development.
   Future<void> _launch(String url) async {
     final uri = Uri.parse(url);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      // Silently ignore — app may not be installed.
+    } catch (e) {
+      // App may not be installed or URL may be malformed — not fatal.
+      debugPrint('CompatibleAppInfoSheet: failed to launch $url: $e');
     }
   }
 
