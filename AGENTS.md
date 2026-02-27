@@ -22,6 +22,9 @@ Check `.agent/skills/` before every task. If a skill applies, **use it**.
 | Superpowers | [.agent/skills/superpowers/skills/using-superpowers/SKILL.md](.agent/skills/superpowers/skills/using-superpowers/SKILL.md) |
 | Frontend Design | [.agent/skills/frontend-design/SKILL.md](./.agent/skills/frontend-design/SKILL.md) |
 | MAD Agents | [.agent/skills/mad-agents-skills/README.md](./.agent/skills/mad-agents-skills/README.md) |
+| FastAPI Templates | [.agent/skills/fastapi-templates/SKILL.md](./.agent/skills/fastapi-templates/SKILL.md) |
+| MCP Builder | [.agent/skills/mcp-builder/SKILL.md](./.agent/skills/mcp-builder/SKILL.md) |
+| Doc Co-Authoring | [.agent/skills/doc-coauthoring/SKILL.md](./.agent/skills/doc-coauthoring/SKILL.md) |
 
 ---
 
