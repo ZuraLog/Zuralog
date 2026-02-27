@@ -50,3 +50,4 @@ nul
 # Git Worktrees
 .worktrees/.Claude/
 .worktrees/
+*.png
