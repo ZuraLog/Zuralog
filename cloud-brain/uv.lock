@@ -1722,6 +1722,18 @@ wheels = [
 ]
 
 [[package]]
+name = "upstash-redis"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/02/b2a6a1e04b4e83b20c54b161c9d75c2c04a4d06fb93c6418abb549136c8c/upstash_redis-1.6.0.tar.gz", hash = "sha256:23ae31acac3c95e5a9c1e732657c9b195ddda511c687021f9e9fd4a795606925", size = 41673, upload-time = "2026-02-03T07:00:59.375Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/44/7b/d0663e6b82933f4440b6854cac3a72413b4cbaddbce12fc17d5f5ec79618/upstash_redis-1.6.0-py3-none-any.whl", hash = "sha256:2f717f1fdc01c5f93a0fb30e0979c37c926d7810f14d7e207531d6858de259c7", size = 43461, upload-time = "2026-02-03T07:00:58.416Z" },
+]
+
+[[package]]
 name = "urllib3"
 version = "2.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1994,6 +2006,7 @@ dependencies = [
     { name = "sentry-sdk", extra = ["celery", "fastapi", "httpx", "sqlalchemy"] },
     { name = "slowapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "upstash-redis" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -2027,6 +2040,7 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["fastapi", "celery", "sqlalchemy", "httpx"], specifier = ">=2.19.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.0" },
+    { name = "upstash-redis", specifier = ">=1.4.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
 ]
 provides-extras = ["dev"]

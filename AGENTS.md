@@ -64,3 +64,10 @@ Use the **Frontend Design skill** for all UI/UX decisions — aim for bold, prem
 - Typography: `AppTextStyles` only — no ad-hoc `TextStyle(...)`.
 - Primary actions: pill `FilledButton` with `AppColors.primary` (Sage Green).
 - Cards: `borderRadius: 24`, soft shadow (light) / 1px border (dark).
+
+### 8. Security First
+- Heavily reinforce security: never expose API Keys, implement strict API limits, and proactively prevent abuse.
+
+### 9. Scalability & Longevity
+- Think about scale from day one. We are building a production-grade system that lasts, not a demo or MVP. Focus on robust architecture and performance.
+
