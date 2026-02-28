@@ -11,10 +11,12 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getCached, setCached } from "@/lib/cache";
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
-export async function GET() {
+export async function GET(request: Request) {
   return Sentry.withServerActionInstrumentation(
     "waitlist/stats",
     async () => {
@@ -23,6 +25,22 @@ export async function GET() {
           totalSignups: 142,
           foundingMembersLeft: 12,
           totalReferrals: 38,
+        });
+      }
+
+      // Rate limit
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+      const rl = await checkRateLimit(ip, "general");
+      if (!rl.success) {
+        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      }
+
+      // Try Redis cache first
+      const cacheKey = "website:waitlist:stats";
+      const cachedData = await getCached<{ totalSignups: number; foundingMembersLeft: number; totalReferrals: number }>(cacheKey);
+      if (cachedData) {
+        return NextResponse.json(cachedData, {
+          headers: { "Cache-Control": "public, s-maxage=5, stale-while-revalidate=10" },
         });
       }
 
@@ -41,14 +59,16 @@ export async function GET() {
         return NextResponse.json({ error: 'Failed to fetch stats.' }, { status: 500 });
       }
 
-      return NextResponse.json(
-        {
-          totalSignups: data?.total_signups ?? 0,
-          foundingMembersLeft: Math.max(0, 30 - (data?.founding_members ?? 0)),
-          totalReferrals: data?.total_referrals ?? 0,
-        },
-        { headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=10' } },
-      );
+      const statsData = {
+        totalSignups: data?.total_signups ?? 0,
+        foundingMembersLeft: Math.max(0, 30 - (data?.founding_members ?? 0)),
+        totalReferrals: data?.total_referrals ?? 0,
+      };
+      await setCached(cacheKey, statsData, 10);
+
+      return NextResponse.json(statsData, {
+        headers: { "Cache-Control": "public, s-maxage=5, stale-while-revalidate=10" },
+      });
     }
   );
 }

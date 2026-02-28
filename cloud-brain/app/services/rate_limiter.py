@@ -100,6 +100,22 @@ class RateLimiter:
                 reset_seconds=reset_seconds,
             )
 
+    @staticmethod
+    def headers(result: RateLimitResult) -> dict[str, str]:
+        """Generate standard X-RateLimit response headers.
+
+        Args:
+            result: The rate limit check result.
+
+        Returns:
+            Dict of header name → value pairs.
+        """
+        return {
+            "X-RateLimit-Limit": str(result.limit),
+            "X-RateLimit-Remaining": str(result.remaining),
+            "X-RateLimit-Reset": str(result.reset_seconds),
+        }
+
     async def close(self) -> None:
         """Close the Redis connection."""
         await self._redis.aclose()

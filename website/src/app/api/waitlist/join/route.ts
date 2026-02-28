@@ -19,6 +19,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { joinWaitlistSchema } from '@/lib/validations';
 import { rateLimiter } from '@/lib/rate-limit';
+import { deleteCached } from "@/lib/cache";
 import { generateReferralCode } from '@/lib/referral';
 import { getResendClient, FROM_EMAIL } from '@/lib/resend';
 
@@ -130,6 +131,10 @@ export async function POST(request: NextRequest) {
           { status: 500 },
         );
       }
+
+      // Invalidate waitlist stats and leaderboard caches
+      await deleteCached("website:waitlist:stats");
+      await deleteCached("website:waitlist:leaderboard");
 
       // 6. Send welcome email (fire-and-forget)
       const resend = getResendClient();

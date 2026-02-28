@@ -18,10 +18,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import _get_auth_service
+from app.api.v1.deps import get_authenticated_user_id
 from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
 from app.services.auth_service import AuthService
+from app.services.cache_service import CacheService, cached
 from app.services.strava_token_service import StravaTokenService
 
 
@@ -39,6 +41,7 @@ security = HTTPBearer()
 
 @router.get("/strava/authorize")
 @limiter.limit("5/minute")
+@cached(prefix="integrations.strava_authorize", ttl=3600, key_params=[])
 async def strava_authorize(request: Request) -> dict[str, str]:
     """Return the Strava OAuth authorization URL for the mobile app to open.
 
@@ -143,23 +146,27 @@ async def strava_exchange(
     if strava_server is not None:
         strava_server.store_token(user_id, access_token)
 
+    # Invalidate strava status cache after successful token exchange
+    cache = getattr(request.app.state, "cache_service", None)
+    if cache:
+        await cache.delete(CacheService.make_key("integrations.strava_status", user_id))
+
     athlete_id: int | None = athlete.get("id") if athlete else None  # type: ignore[union-attr]
     return {"success": True, "message": "Strava connected!", "athlete_id": athlete_id}
 
 
 @router.get("/strava/status")
+@cached(prefix="integrations.strava_status", ttl=300, key_params=["user_id"])
 async def strava_status(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Return Strava integration connection status for the current user.
 
     Args:
         request: FastAPI request — used to access ``app.state`` services.
-        credentials: Bearer token for the authenticated Zuralog user.
-        auth_service: Injected auth service for verifying the JWT.
+        user_id: Authenticated user ID from JWT (injected by dependency).
         db: Injected async database session.
 
     Returns:
@@ -167,9 +174,6 @@ async def strava_status(
               ``{"connected": True, "sync_status": ..., "last_synced_at": ..., "athlete": ...}``
               when the user has an active Strava integration.
     """
-    user_data = await auth_service.get_user(credentials.credentials)
-    user_id = user_data["id"]
-
     token_service: StravaTokenService = request.app.state.strava_token_service
     integration = await token_service.get_integration(db, user_id)
 
@@ -211,4 +215,10 @@ async def strava_disconnect(
 
     token_service: StravaTokenService = request.app.state.strava_token_service
     disconnected = await token_service.disconnect(db, user_id)
+
+    # Invalidate strava status cache after disconnect
+    cache = getattr(request.app.state, "cache_service", None)
+    if cache:
+        await cache.delete(CacheService.make_key("integrations.strava_status", user_id))
+
     return {"success": disconnected}

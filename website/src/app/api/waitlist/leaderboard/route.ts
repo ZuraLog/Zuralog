@@ -10,12 +10,14 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getCached, setCached } from "@/lib/cache";
 
 export const revalidate = 60;
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
-export async function GET() {
+export async function GET(request: Request) {
   return Sentry.withServerActionInstrumentation(
     "waitlist/leaderboard",
     async () => {
@@ -27,6 +29,20 @@ export async function GET() {
             { rank: 3, display_name: 'Anonymous #4421', referral_count: 5, queue_position: 15 },
           ],
         });
+      }
+
+      // Rate limit
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+      const rl = await checkRateLimit(ip, "general");
+      if (!rl.success) {
+        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+      }
+
+      // Try Redis cache first
+      const cacheKey = "website:waitlist:leaderboard";
+      const cachedLeaderboard = await getCached<Array<{ rank: number; display_name: string; referral_count: number; queue_position: number }>>(cacheKey);
+      if (cachedLeaderboard) {
+        return NextResponse.json({ leaderboard: cachedLeaderboard });
       }
 
       const supabase = createClient(
@@ -53,6 +69,7 @@ export async function GET() {
         queue_position: row.queue_position,
       }));
 
+      await setCached(cacheKey, leaderboard, 60);
       return NextResponse.json({ leaderboard });
     }
   );

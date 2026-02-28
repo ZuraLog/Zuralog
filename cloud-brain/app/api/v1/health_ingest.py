@@ -301,6 +301,23 @@ async def ingest_health_data(
     total = sum(counts.values())
     logger.info("Health ingest user=%s source=%s counts=%s", user_id, source, counts)
 
+    # Invalidate analytics caches for this user after successful ingest
+    cache_service = getattr(request.app.state, "cache_service", None)
+    if cache_service:
+        from app.services.cache_service import CacheService
+
+        date_str_val = body.daily_metrics[0].date if body.daily_metrics else None
+        keys_to_delete = [
+            CacheService.make_key("analytics.daily_summary", user_id, str(date_str_val) if date_str_val else ""),
+            CacheService.make_key("analytics.weekly_trends", user_id),
+            CacheService.make_key("analytics.correlation", user_id, "30"),
+            CacheService.make_key("analytics.goals", user_id),
+            CacheService.make_key("analytics.dashboard_insight", user_id),
+        ]
+        for key in keys_to_delete:
+            await cache_service.delete(key)
+        logger.info("Invalidated analytics cache for user %s after ingest", user_id)
+
     return HealthIngestResponse(
         success=True,
         message=f"Ingested {total} records from {source}",

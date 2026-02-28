@@ -75,6 +75,13 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = 1.0
     sentry_profiles_sample_rate: float = 0.25
+    # Upstash Redis REST (for CacheService — separate from redis_url used by Celery)
+    upstash_redis_rest_url: str = ""
+    upstash_redis_rest_token: str = ""
+    # Cache TTL defaults (seconds)
+    cache_ttl_short: int = 300  # 5 minutes — analytics, preferences
+    cache_ttl_medium: int = 900  # 15 minutes — correlations, profiles
+    cache_ttl_long: int = 86400  # 24 hours — immutable historical data
 
     model_config = SettingsConfigDict(
         env_file=".env",

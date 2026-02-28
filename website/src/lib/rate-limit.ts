@@ -1,94 +1,99 @@
 /**
- * In-memory sliding-window rate limiter.
+ * Distributed rate limiter powered by Upstash Redis.
  *
- * Replaces Upstash Redis — zero external dependencies, zero cost.
- * Works on Vercel serverless: warm function instances persist the Map
- * between invocations for several minutes. Cold starts reset the
- * window, which is acceptable for a waitlist signup endpoint.
+ * Replaces the previous in-memory sliding-window implementation.
+ * This version persists across Vercel cold starts and works
+ * consistently across all serverless function instances.
  *
- * Algorithm: sliding window log — stores timestamps of recent requests
- * per identifier (IP address). On each check, prunes expired entries
- * and counts remaining.
+ * Uses the Upstash Ratelimit SDK with a sliding window algorithm
+ * backed by atomic Redis Lua scripts.
  */
 
-interface RateLimitResult {
+import { Ratelimit } from "@upstash/ratelimit";
+import { redis } from "@/lib/redis";
+
+/**
+ * Result of a rate limit check.
+ * Maintains the same interface as the previous in-memory version
+ * so existing consumers don't need changes.
+ */
+export interface RateLimitResult {
   success: boolean;
   limit: number;
   remaining: number;
   reset: number;
 }
 
-interface RateLimiterConfig {
-  /** Maximum requests allowed within the window. */
-  maxRequests: number;
-  /** Window duration in milliseconds. */
-  windowMs: number;
-}
+/**
+ * Waitlist signup rate limiter: 5 requests per 60 seconds per IP.
+ *
+ * Matches the previous in-memory limiter's config exactly.
+ * Now survives cold starts and is consistent across instances.
+ */
+const waitlistLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "60 s"),
+  analytics: true,
+  prefix: "ratelimit:waitlist",
+});
 
-/** Per-identifier request log: array of timestamps (ms). */
-const requestLog = new Map<string, number[]>();
+/**
+ * Contact form rate limiter: 3 requests per 60 seconds per IP.
+ */
+const contactLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, "60 s"),
+  analytics: true,
+  prefix: "ratelimit:contact",
+});
 
-/** Periodic cleanup to prevent unbounded memory growth. */
-let cleanupScheduled = false;
+/**
+ * General API rate limiter: 30 requests per 60 seconds per IP.
+ * Used for public GET endpoints (stats, leaderboard, status).
+ */
+const generalLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, "60 s"),
+  analytics: true,
+  prefix: "ratelimit:general",
+});
 
-function scheduleCleanup(windowMs: number) {
-  if (cleanupScheduled) return;
-  cleanupScheduled = true;
+/**
+ * Check rate limit for a given identifier.
+ *
+ * @param identifier - Usually the client IP address.
+ * @param type - Which limiter to use.
+ * @returns Rate limit result compatible with the previous API.
+ */
+export async function checkRateLimit(
+  identifier: string,
+  type: "waitlist" | "contact" | "general" = "general"
+): Promise<RateLimitResult> {
+  const limiter =
+    type === "waitlist"
+      ? waitlistLimiter
+      : type === "contact"
+        ? contactLimiter
+        : generalLimiter;
 
-  const interval = setInterval(() => {
-    const now = Date.now();
-    for (const [key, timestamps] of requestLog) {
-      const valid = timestamps.filter((t) => now - t < windowMs);
-      if (valid.length === 0) {
-        requestLog.delete(key);
-      } else {
-        requestLog.set(key, valid);
-      }
-    }
-  }, windowMs * 2);
-
-  // .unref() prevents the timer from keeping the Node process alive
-  if (typeof interval === 'object' && 'unref' in interval) {
-    (interval as { unref: () => void }).unref();
-  }
-}
-
-function createRateLimiter(config: RateLimiterConfig = { maxRequests: 5, windowMs: 60_000 }) {
-  const { maxRequests, windowMs } = config;
-
-  scheduleCleanup(windowMs);
+  const result = await limiter.limit(identifier);
 
   return {
-    limit: async (identifier: string): Promise<RateLimitResult> => {
-      const now = Date.now();
-      const timestamps = requestLog.get(identifier) ?? [];
-
-      // Prune entries outside the current window
-      const valid = timestamps.filter((t) => now - t < windowMs);
-
-      if (valid.length >= maxRequests) {
-        const oldestInWindow = valid[0]!;
-        return {
-          success: false,
-          limit: maxRequests,
-          remaining: 0,
-          reset: oldestInWindow + windowMs,
-        };
-      }
-
-      // Allow — record timestamp
-      valid.push(now);
-      requestLog.set(identifier, valid);
-
-      return {
-        success: true,
-        limit: maxRequests,
-        remaining: maxRequests - valid.length,
-        reset: now + windowMs,
-      };
-    },
+    success: result.success,
+    limit: result.limit,
+    remaining: result.remaining,
+    reset: result.reset,
   };
 }
 
-/** Waitlist signup: 5 requests per 60 seconds per IP. */
-export const rateLimiter = createRateLimiter({ maxRequests: 5, windowMs: 60_000 });
+/**
+ * Legacy-compatible export for existing consumers.
+ *
+ * The waitlist/join route imports `rateLimiter` and calls
+ * `rateLimiter.limit(ip)`. This preserves that interface.
+ */
+export const rateLimiter = {
+  limit: async (identifier: string): Promise<RateLimitResult> => {
+    return checkRateLimit(identifier, "waitlist");
+  },
+};

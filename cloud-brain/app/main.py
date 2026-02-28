@@ -55,6 +55,7 @@ from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
 from app.services.strava_rate_limiter import StravaRateLimiter
 from app.services.strava_token_service import StravaTokenService
+from app.services.cache_service import CacheService
 
 # Configure root logger based on environment.
 logging.basicConfig(
@@ -163,6 +164,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
     app.state.rate_limiter = RateLimiter()
+    app.state.cache_service = CacheService()
     # Reuse push_svc / device_write_svc created above for the MCP server.
     app.state.push_service = push_svc
     app.state.device_write_service = device_write_svc

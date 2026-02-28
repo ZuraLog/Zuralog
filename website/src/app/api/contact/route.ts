@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { getResendClient, FROM_EMAIL } from '@/lib/resend';
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /** Expected request body shape */
 interface ContactBody {
@@ -65,6 +66,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'Please fill in all fields with valid values.' },
           { status: 400 },
+        );
+      }
+
+      // Rate limit: 3 submissions per minute per IP
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+      const rl = await checkRateLimit(ip, "contact");
+      if (!rl.success) {
+        return NextResponse.json(
+          { error: "Too many requests. Please try again later." },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": String(rl.limit),
+              "X-RateLimit-Remaining": String(rl.remaining),
+              "X-RateLimit-Reset": String(rl.reset),
+              "Retry-After": String(Math.ceil((rl.reset - Date.now()) / 1000)),
+            },
+          }
         );
       }
 

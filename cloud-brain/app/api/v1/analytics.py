@@ -28,6 +28,7 @@ from app.api.v1.analytics_schemas import (
 )
 from app.database import get_db
 from app.models.user_goal import GoalPeriod, UserGoal
+from app.services.cache_service import cached
 
 
 async def _set_sentry_module() -> None:
@@ -45,6 +46,7 @@ _analytics_service = AnalyticsService()
 
 
 @router.get("/daily-summary", response_model=DailySummaryResponse)
+@cached(prefix="analytics.daily_summary", ttl=300, key_params=["user_id", "date_str"])
 async def daily_summary(
     user_id: str = Query(..., description="User ID"),
     date_str: str | None = Query(
@@ -85,6 +87,7 @@ async def daily_summary(
 
 
 @router.get("/weekly-trends", response_model=WeeklyTrendsResponse)
+@cached(prefix="analytics.weekly_trends", ttl=300, key_params=["user_id"])
 async def weekly_trends(
     user_id: str = Query(..., description="User ID"),
     db: AsyncSession = Depends(get_db),
@@ -106,6 +109,7 @@ async def weekly_trends(
 
 
 @router.get("/correlation/sleep-activity", response_model=CorrelationResponse)
+@cached(prefix="analytics.correlation", ttl=900, key_params=["user_id", "days"])
 async def sleep_activity_correlation(
     user_id: str = Query(..., description="User ID"),
     days: int = Query(30, ge=7, le=365, description="Lookback days"),
@@ -137,6 +141,7 @@ async def sleep_activity_correlation(
 
 
 @router.get("/trend/{metric}", response_model=TrendResponse)
+@cached(prefix="analytics.trend", ttl=300, key_params=["user_id", "metric"])
 async def metric_trend(
     metric: str,
     user_id: str = Query(..., description="User ID"),
@@ -167,6 +172,7 @@ async def metric_trend(
 
 
 @router.get("/goals", response_model=list[GoalProgressResponse])
+@cached(prefix="analytics.goals", ttl=300, key_params=["user_id"])
 async def get_goals(
     user_id: str = Query(..., description="User ID"),
     db: AsyncSession = Depends(get_db),
@@ -253,6 +259,7 @@ async def create_or_update_goal(
 
 
 @router.get("/dashboard-insight", response_model=DashboardInsightResponse)
+@cached(prefix="analytics.dashboard_insight", ttl=300, key_params=["user_id"])
 async def dashboard_insight(
     user_id: str = Query(..., description="User ID"),
     db: AsyncSession = Depends(get_db),

@@ -18,6 +18,8 @@ from app.api.v1.schemas import UpdateProfileRequest, UserProfileResponse
 from app.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
+from app.api.v1.deps import get_authenticated_user_id
+from app.services.cache_service import CacheService, cached
 
 logger = logging.getLogger(__name__)
 
@@ -59,18 +61,17 @@ def _get_auth_service(request: Request) -> AuthService:
 
 
 @router.get("/me/preferences")
+@cached(prefix="users.preferences", ttl=900, key_params=["user_id"])
 async def get_preferences(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Get the current user's AI preferences.
 
     Args:
         request: The incoming FastAPI request (used to set state for Sentry).
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
+        user_id: Authenticated user ID from JWT (injected by dependency).
         db: Injected async database session.
 
     Returns:
@@ -79,8 +80,6 @@ async def get_preferences(
     Raises:
         HTTPException: 404 if the user is not found in the database.
     """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
     request.state.user_id = user_id
     sentry_sdk.set_user({"id": user_id})
 
@@ -143,22 +142,26 @@ async def update_preferences(
     )
     await db.commit()
 
+    # Invalidate cached preferences
+    cache = getattr(request.app.state, "cache_service", None)
+    if cache:
+        await cache.delete(CacheService.make_key("users.preferences", user_id))
+
     return {"message": "Preferences updated", "coach_persona": body.coach_persona}
 
 
 @router.get("/me/profile", response_model=UserProfileResponse)
+@cached(prefix="users.profile", ttl=900, key_params=["user_id"])
 async def get_profile(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> UserProfileResponse:
     """Get the current user's profile.
 
     Args:
         request: The incoming FastAPI request (used to set state for Sentry).
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
+        user_id: Authenticated user ID from JWT (injected by dependency).
         db: Injected async database session.
 
     Returns:
@@ -167,10 +170,6 @@ async def get_profile(
     Raises:
         HTTPException: 404 if the user is not found in the database.
     """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     request.state.user_id = user_id
     sentry_sdk.set_user({"id": user_id})
 
@@ -229,5 +228,10 @@ async def update_profile(
 
     await db.commit()
     await db.refresh(db_user)
+
+    # Invalidate cached profile
+    cache = getattr(request.app.state, "cache_service", None)
+    if cache:
+        await cache.delete(CacheService.make_key("users.profile", user_id))
 
     return UserProfileResponse.model_validate(db_user)

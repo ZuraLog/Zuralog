@@ -5,6 +5,21 @@
 
 ---
 
+## Upstash Redis REST (CacheService)
+
+Added during Upstash integration. These are **additional** to the existing `REDIS_URL` — do NOT replace or modify `REDIS_URL`.
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `UPSTASH_REDIS_REST_URL` | *(from Bitwarden — search "Upstash ZuraLog Redis" → REST URL)* | HTTP REST endpoint for CacheService |
+| `UPSTASH_REDIS_REST_TOKEN` | *(from Bitwarden — search "Upstash ZuraLog Redis" → REST Token)* | REST auth token — **⚠️ SEAL THIS** |
+
+> **Why two Redis connections?** `REDIS_URL` is the TLS TCP connection used by Celery and the per-user rate limiter (`redis.asyncio`). `UPSTASH_REDIS_REST_*` is the HTTP REST connection used by `CacheService` for response caching. Both point at the same Upstash database — different protocols, different clients, fully independent.
+
+> **Add both to Shared Variables** so all three services (`web`, `celery-worker`, `celery-beat`) inherit them automatically.
+
+---
+
 ## Required Variables — App Will Not Start Without These
 
 | Variable | Example Value | Where to Get It |
