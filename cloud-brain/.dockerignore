@@ -1,0 +1,62 @@
+# =============================================================================
+# Zuralog Cloud Brain — Docker Ignore
+# =============================================================================
+# Keeps the build context small and prevents secrets from leaking into images.
+# =============================================================================
+
+# Version control
+.git
+.gitignore
+
+# Environment / secrets
+.env
+.env.*
+firebase-service-account.json
+*-firebase-adminsdk-*.json
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Tests & dev tooling
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Scripts (dev-only)
+scripts/
+
+# OpenAPI export (not needed at runtime)
+openapi.json
+
+# Makefile (dev-only)
+Makefile
