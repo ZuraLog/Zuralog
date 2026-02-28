@@ -13,6 +13,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
@@ -352,6 +353,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           }
       }
     } catch (e, st) {
+      Sentry.captureException(e, stackTrace: st);
       debugPrint(
         '[IntegrationsNotifier] connect($integrationId) failed: $e\n$st',
       );
@@ -373,6 +375,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
         Object e,
         StackTrace st,
       ) {
+        Sentry.captureException(e, stackTrace: st);
         debugPrint(
           '[IntegrationsNotifier] Failed to clear persisted state for '
           '$integrationId: $e\n$st',

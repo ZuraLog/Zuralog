@@ -7,6 +7,7 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 
 /// REST API client for Cloud Brain communication.
 ///
@@ -56,6 +57,9 @@ class ApiClient {
     _dio.options.baseUrl = baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
+
+    // Attach Sentry performance tracing and breadcrumb capture for all requests.
+    _dio.addSentry();
 
     _dio.interceptors.add(
       InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
@@ -175,10 +179,8 @@ class ApiClient {
   ///
   /// [body] is serialised as JSON and sent as the request body.
   /// Returns the Dio [Response] containing the server's response.
-  Future<Response<dynamic>> patch(
-    String path, {
-    Map<String, dynamic>? body,
-  }) => _dio.patch(path, data: body);
+  Future<Response<dynamic>> patch(String path, {Map<String, dynamic>? body}) =>
+      _dio.patch(path, data: body);
 
   // -------------------------------------------------------------------------
   // Error Helpers

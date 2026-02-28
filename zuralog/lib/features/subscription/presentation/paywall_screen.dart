@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 
@@ -61,6 +62,7 @@ class PaywallScreen extends ConsumerWidget {
           }
         },
         onPurchaseError: (error) {
+          Sentry.captureException(error);
           debugPrint('[PaywallScreen] Purchase error: ${error.message}');
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -79,6 +81,7 @@ class PaywallScreen extends ConsumerWidget {
           }
         },
         onRestoreError: (error) {
+          Sentry.captureException(error);
           debugPrint('[PaywallScreen] Restore error: ${error.message}');
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

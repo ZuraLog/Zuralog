@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import httpx
+import sentry_sdk
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -154,9 +155,7 @@ async def _sync_fitbit_activities(
         # We record it as UTC for consistency (Fitbit doesn't include tz offset here).
         raw_start = activity.get("startTime") or f"{date_str}T00:00:00.000"
         try:
-            start_time = datetime.fromisoformat(raw_start.replace(".000", "")).replace(
-                tzinfo=timezone.utc
-            )
+            start_time = datetime.fromisoformat(raw_start.replace(".000", "")).replace(tzinfo=timezone.utc)
         except ValueError:
             start_time = datetime.now(tz=timezone.utc)
 
@@ -502,11 +501,7 @@ async def _sync_fitbit_user(
                 )
             if hr_resp.status_code == 200:
                 hr_data = hr_resp.json()
-                resting_hr = (
-                    hr_data.get("activities-heart", [{}])[0]
-                    .get("value", {})
-                    .get("restingHeartRate")
-                )
+                resting_hr = hr_data.get("activities-heart", [{}])[0].get("value", {}).get("restingHeartRate")
                 if resting_hr:
                     logger.debug(
                         "Fitbit HR: resting=%d bpm for user '%s' date '%s' (no model, skipped)",
@@ -742,6 +737,7 @@ def sync_fitbit_periodic_task() -> dict[str, Any]:
                         integration.user_id,
                         exc,
                     )
+                    sentry_sdk.capture_exception(exc)
 
             logger.info(
                 "sync_fitbit_periodic_task: synced %d user(s)",
@@ -805,17 +801,16 @@ def refresh_fitbit_tokens_task() -> dict[str, Any]:
                     else:
                         # refresh_access_token already marks sync_status="error" on failure.
                         logger.warning(
-                            "refresh_fitbit_tokens_task: failed to refresh token for user '%s'"
-                            " — marked as error",
+                            "refresh_fitbit_tokens_task: failed to refresh token for user '%s' — marked as error",
                             integration.user_id,
                         )
                 except Exception as exc:  # noqa: BLE001
                     logger.exception(
-                        "refresh_fitbit_tokens_task: unexpected error refreshing token for"
-                        " user '%s': %s",
+                        "refresh_fitbit_tokens_task: unexpected error refreshing token for user '%s': %s",
                         integration.user_id,
                         exc,
                     )
+                    sentry_sdk.capture_exception(exc)
                     integration.sync_status = "error"
                     integration.sync_error = "Refresh failed — re-authentication required"
                     await db.commit()
@@ -884,9 +879,7 @@ def backfill_fitbit_data_task(user_id: str, days_back: int = 30) -> dict[str, An
             await db.commit()
 
             today = date.today()
-            dates = [
-                (today - timedelta(days=i)).isoformat() for i in range(days_back - 1, -1, -1)
-            ]
+            dates = [(today - timedelta(days=i)).isoformat() for i in range(days_back - 1, -1, -1)]
 
             try:
                 totals = await _sync_fitbit_user(db, user_id, access_token, dates)
@@ -896,6 +889,7 @@ def backfill_fitbit_data_task(user_id: str, days_back: int = 30) -> dict[str, An
                     user_id,
                     exc,
                 )
+                sentry_sdk.capture_exception(exc)
                 integration.sync_status = "error"
                 integration.sync_error = str(exc)
                 await db.commit()

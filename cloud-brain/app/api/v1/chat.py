@@ -9,6 +9,7 @@ through the Orchestrator, and message persistence.
 import logging
 from typing import Any
 
+import sentry_sdk
 from fastapi import (
     APIRouter,
     Depends,
@@ -35,7 +36,16 @@ from app.services.usage_tracker import UsageTracker
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "chat")
+
+
+router = APIRouter(
+    prefix="/chat",
+    tags=["chat"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 
@@ -186,6 +196,7 @@ async def websocket_chat(
                     await websocket.send_json(ws_payload)
                 except Exception as e:
                     logger.exception("Orchestrator error for user '%s'", user_id)
+                    sentry_sdk.capture_exception(e)
                     await websocket.send_json(
                         {
                             "type": "error",

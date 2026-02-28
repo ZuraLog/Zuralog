@@ -9,6 +9,7 @@ library;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
@@ -35,11 +36,14 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     try {
       const channel = MethodChannel('com.zuralog/health');
       await channel.invokeMethod('triggerSync', {'type': dataType});
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('Background read_health failed (PlatformException): $e');
-    } on MissingPluginException catch (_) {
+    } on MissingPluginException catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('Health plugin not available in background isolate');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('Background read_health failed: $e');
     }
   }
@@ -74,13 +78,16 @@ Future<void> _handleBackgroundHealthWrite(Map<String, dynamic> data) async {
       'data_type': dataType,
       'value': valueJson,
     });
-  } on PlatformException catch (e) {
+  } on PlatformException catch (e, stackTrace) {
     // Log but don't rethrow — background handler must not crash
+    Sentry.captureException(e, stackTrace: stackTrace);
     debugPrint('Background health write failed (PlatformException): $e');
-  } on MissingPluginException catch (_) {
+  } on MissingPluginException catch (e, stackTrace) {
     // Plugin not registered in headless isolate — expected on some platforms
+    Sentry.captureException(e, stackTrace: stackTrace);
     debugPrint('Health plugin not available in background isolate');
-  } catch (e) {
+  } catch (e, stackTrace) {
+    Sentry.captureException(e, stackTrace: stackTrace);
     debugPrint('Background health write failed: $e');
   }
 }
@@ -180,13 +187,19 @@ class FCMService {
     }
 
     try {
-      await apiClient.post('/api/v1/devices/register', data: {
-        'fcm_token': _token,
-        'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
-      });
+      await apiClient.post(
+        '/api/v1/devices/register',
+        data: {
+          'fcm_token': _token,
+          'platform': defaultTargetPlatform == TargetPlatform.iOS
+              ? 'ios'
+              : 'android',
+        },
+      );
       debugPrint('FCM: device registered with backend');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('FCM: device registration failed: $e');
       return false;
     }

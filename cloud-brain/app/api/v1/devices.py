@@ -8,6 +8,7 @@ after obtaining an FCM token during initialization.
 
 import logging
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -18,7 +19,16 @@ from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/devices", tags=["devices"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "devices")
+
+
+router = APIRouter(
+    prefix="/devices",
+    tags=["devices"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 
@@ -65,6 +75,8 @@ async def register_device(
     """
     user_data = await auth_service.get_user(credentials.credentials)
     user_id = user_data["id"]
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
 
     if not hasattr(request.app.state, "device_tokens"):
         request.app.state.device_tokens = {}

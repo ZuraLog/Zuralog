@@ -11,6 +11,7 @@ library;
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 
@@ -107,8 +108,7 @@ class HealthSyncService {
               'respiratory_rate': respiratoryRate,
             if (oxygenSaturation != null && oxygenSaturation > 0)
               'oxygen_saturation': oxygenSaturation,
-            if (heartRate != null && heartRate > 0)
-              'heart_rate_avg': heartRate,
+            if (heartRate != null && heartRate > 0) 'heart_rate_avg': heartRate,
           },
         ],
         'workouts': workouts.map((w) {
@@ -143,6 +143,7 @@ class HealthSyncService {
       );
       return true;
     } catch (e, st) {
+      Sentry.captureException(e, stackTrace: st);
       debugPrint('[HealthSync] Sync failed: $e\n$st');
       return false;
     }

@@ -26,6 +26,7 @@ dependencies = [
     "celery[redis]>=5.4.0",
     "python-multipart>=0.0.9",
     "numpy>=2.0.0",
+    "sentry-sdk[fastapi,celery,sqlalchemy,httpx]>=2.19.0",
 ]
 
 [project.optional-dependencies]

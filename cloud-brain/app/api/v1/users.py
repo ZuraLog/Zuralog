@@ -7,6 +7,7 @@ such as coaching persona, subscription tier, and onboarding profile fields.
 
 import logging
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -20,7 +21,16 @@ from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/users", tags=["users"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "users")
+
+
+router = APIRouter(
+    prefix="/users",
+    tags=["users"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
@@ -50,6 +60,7 @@ def _get_auth_service(request: Request) -> AuthService:
 
 @router.get("/me/preferences")
 async def get_preferences(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     db: AsyncSession = Depends(get_db),
@@ -57,6 +68,7 @@ async def get_preferences(
     """Get the current user's AI preferences.
 
     Args:
+        request: The incoming FastAPI request (used to set state for Sentry).
         credentials: Bearer token from the Authorization header.
         auth_service: Injected auth service for token validation.
         db: Injected async database session.
@@ -69,6 +81,8 @@ async def get_preferences(
     """
     user = await auth_service.get_user(credentials.credentials)
     user_id = user.get("id", "unknown")
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
 
     result = await db.execute(
         text("SELECT coach_persona, subscription_tier FROM users WHERE id = :uid"),
@@ -88,6 +102,7 @@ async def get_preferences(
 
 @router.patch("/me/preferences")
 async def update_preferences(
+    request: Request,
     body: UpdatePreferencesRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
@@ -96,6 +111,7 @@ async def update_preferences(
     """Update the current user's AI preferences.
 
     Args:
+        request: The incoming FastAPI request (used to set state for Sentry).
         body: The request body containing fields to update.
         credentials: Bearer token from the Authorization header.
         auth_service: Injected auth service for token validation.
@@ -109,6 +125,8 @@ async def update_preferences(
     """
     user = await auth_service.get_user(credentials.credentials)
     user_id = user.get("id", "unknown")
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
 
     if body.coach_persona and body.coach_persona not in VALID_PERSONAS:
         raise HTTPException(
@@ -130,6 +148,7 @@ async def update_preferences(
 
 @router.get("/me/profile", response_model=UserProfileResponse)
 async def get_profile(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     db: AsyncSession = Depends(get_db),
@@ -137,6 +156,7 @@ async def get_profile(
     """Get the current user's profile.
 
     Args:
+        request: The incoming FastAPI request (used to set state for Sentry).
         credentials: Bearer token from the Authorization header.
         auth_service: Injected auth service for token validation.
         db: Injected async database session.
@@ -151,6 +171,8 @@ async def get_profile(
     user_id = user.get("id")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
 
     result = await db.execute(select(User).where(User.id == user_id))
     db_user = result.scalars().first()
@@ -163,6 +185,7 @@ async def get_profile(
 
 @router.patch("/me/profile", response_model=UserProfileResponse)
 async def update_profile(
+    request: Request,
     body: UpdateProfileRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
@@ -173,6 +196,7 @@ async def update_profile(
     Only fields with non-None values in the request body are applied.
 
     Args:
+        request: The incoming FastAPI request (used to set state for Sentry).
         body: Partial profile update payload.
         credentials: Bearer token from the Authorization header.
         auth_service: Injected auth service for token validation.
@@ -188,6 +212,8 @@ async def update_profile(
     user_id = user.get("id")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
 
     result = await db.execute(select(User).where(User.id == user_id))
     db_user = result.scalars().first()

@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 import httpx
+import sentry_sdk
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,6 +107,7 @@ class SyncService:
                 error_msg = f"{provider}: {exc}"
                 errors.append(error_msg)
                 logger.exception("Sync failed for user '%s' provider '%s'", user_id, provider)
+                sentry_sdk.capture_exception(exc)
 
         return {"synced_sources": synced_sources, "errors": errors}
 

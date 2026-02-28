@@ -21,6 +21,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'package:zuralog/features/auth/domain/social_auth_credentials.dart';
@@ -105,8 +106,10 @@ class SocialAuthService {
       );
     }
 
-    debugPrint('[SocialAuthService] Google sign-in succeeded for '
-        '${googleUser.email}');
+    debugPrint(
+      '[SocialAuthService] Google sign-in succeeded for '
+      '${googleUser.email}',
+    );
 
     return SocialAuthCredentials(
       provider: SocialProvider.google,
@@ -181,10 +184,13 @@ class SocialAuthService {
         //   ),
         // ),
       );
-    } on SignInWithAppleAuthorizationException catch (e) {
+    } on SignInWithAppleAuthorizationException catch (e, stackTrace) {
       if (e.code == AuthorizationErrorCode.canceled) {
-        throw const SocialAuthCancelledException(provider: SocialProvider.apple);
+        throw const SocialAuthCancelledException(
+          provider: SocialProvider.apple,
+        );
       }
+      Sentry.captureException(e, stackTrace: stackTrace);
       throw SocialAuthException(
         provider: SocialProvider.apple,
         message: 'Apple Sign In failed: ${e.message}',
@@ -247,10 +253,7 @@ class SocialAuthService {
 /// Base class for social authentication failures.
 class SocialAuthException implements Exception {
   /// Creates a [SocialAuthException].
-  const SocialAuthException({
-    required this.provider,
-    required this.message,
-  });
+  const SocialAuthException({required this.provider, required this.message});
 
   /// The provider that caused the failure.
   final SocialProvider provider;
@@ -259,8 +262,7 @@ class SocialAuthException implements Exception {
   final String message;
 
   @override
-  String toString() =>
-      'SocialAuthException(${provider.name}): $message';
+  String toString() => 'SocialAuthException(${provider.name}): $message';
 }
 
 /// Thrown when the user actively cancels the OAuth sign-in dialog.

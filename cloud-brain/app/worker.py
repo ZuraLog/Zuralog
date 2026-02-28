@@ -17,6 +17,18 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+import sentry_sdk  # noqa: E402
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.app_env,
+        release="cloud-brain@worker",
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        send_default_pii=False,
+        enable_tracing=True,
+    )
+
 celery_app = Celery(
     "zuralog",
     broker=settings.redis_url,

@@ -10,8 +10,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/app.dart';
+import 'package:zuralog/core/monitoring/sentry_riverpod_observer.dart';
 import 'package:zuralog/core/network/fcm_service.dart';
 
 /// RevenueCat public API key (dev key by default).
@@ -22,6 +24,12 @@ const _kRevenueCatApiKey = String.fromEnvironment(
   defaultValue: 'test_gZWuFxwZilsfhakSXGNPoSduuYz',
 );
 
+/// Sentry DSN for crash reporting and error monitoring.
+///
+/// Override at build time: `flutter run --dart-define=SENTRY_DSN=<dsn>`
+/// When empty, Sentry is disabled (e.g., local development without a DSN).
+const _kSentryDsn = String.fromEnvironment('SENTRY_DSN', defaultValue: '');
+
 /// Application entry point.
 ///
 /// Ensures Flutter bindings are initialized, sets up Firebase,
@@ -29,15 +37,17 @@ const _kRevenueCatApiKey = String.fromEnvironment(
 /// registers the FCM background handler, then runs the app.
 /// The [ProviderScope] at the root enables Riverpod state management
 /// throughout the entire widget tree.
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
+/// Initializes Firebase and RevenueCat, then runs the app.
+///
+/// Called after Sentry is initialized so any init failures are captured.
+Future<void> _initAndRun() async {
   // Initialize Firebase (required before any Firebase service).
   // Wrapped in try-catch for environments without Firebase config files.
   try {
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  } catch (e) {
+  } catch (e, stackTrace) {
+    Sentry.captureException(e, stackTrace: stackTrace);
     debugPrint('Firebase init skipped: $e');
   }
 
@@ -46,9 +56,40 @@ void main() async {
   try {
     await Purchases.configure(PurchasesConfiguration(_kRevenueCatApiKey));
     debugPrint('RevenueCat configured (anonymous)');
-  } catch (e) {
+  } catch (e, stackTrace) {
+    Sentry.captureException(e, stackTrace: stackTrace);
     debugPrint('RevenueCat init skipped: $e');
   }
 
-  runApp(const ProviderScope(child: ZuralogApp()));
+  runApp(
+    ProviderScope(
+      observers: [SentryRiverpodObserver()],
+      child: const ZuralogApp(),
+    ),
+  );
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  if (_kSentryDsn.isNotEmpty) {
+    await SentryFlutter.init((options) {
+      options.dsn = _kSentryDsn;
+      options.environment = const String.fromEnvironment(
+        'APP_ENV',
+        defaultValue: 'development',
+      );
+      options.tracesSampleRate = 1.0;
+      options.profilesSampleRate = 0.25;
+      options.attachScreenshot = true;
+      options.attachViewHierarchy = true;
+      options.sendDefaultPii = false;
+      options.enableAutoNativeBreadcrumbs = true;
+      options.enableAutoPerformanceTracing = true;
+      options.anrEnabled = true;
+      options.anrTimeoutInterval = const Duration(seconds: 5);
+    }, appRunner: _initAndRun);
+  } else {
+    await _initAndRun();
+  }
 }

@@ -15,14 +15,23 @@ the actual work asynchronously.
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+import sentry_sdk
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["strava-webhooks"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "strava_webhooks")
+
+
+router = APIRouter(
+    tags=["strava-webhooks"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 
 
 class StravaWebhookEvent(BaseModel):

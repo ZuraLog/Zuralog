@@ -8,6 +8,7 @@
 
 'use client';
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from 'react';
 import Link from 'next/link';
 
@@ -26,8 +27,7 @@ interface ErrorPageProps {
  */
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    // Log to console in dev; replace with error reporting service in production
-    console.error('[ZuraLog] Unhandled error:', error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

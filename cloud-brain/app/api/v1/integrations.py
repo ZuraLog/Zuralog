@@ -11,6 +11,7 @@ flow and intercepts the redirect URI via a custom URL scheme deep link.
 
 import urllib.parse
 
+import sentry_sdk
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -23,7 +24,16 @@ from app.limiter import limiter
 from app.services.auth_service import AuthService
 from app.services.strava_token_service import StravaTokenService
 
-router = APIRouter(prefix="/integrations", tags=["integrations"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "integrations")
+
+
+router = APIRouter(
+    prefix="/integrations",
+    tags=["integrations"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 

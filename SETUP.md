@@ -195,6 +195,16 @@ Used for in-app purchase webhooks. Not required for local development.
 | `REVENUECAT_WEBHOOK_SECRET` | RevenueCat Dashboard → Webhooks → Auth Header |
 | `REVENUECAT_API_KEY` | RevenueCat Dashboard → API Keys → Secret key (starts with `sk_`) |
 
+#### Required: Sentry (Error Monitoring)
+
+The Cloud Brain sends errors and performance traces to Sentry. The DSN is already filled in `.env.example` — copy it across when you run `cp .env.example .env`. No account setup needed for local dev; events will appear in the `cloud-brain` project at [zuralog.sentry.io](https://zuralog.sentry.io).
+
+| Variable | Value (local dev) |
+|---|---|
+| `SENTRY_DSN` | Pre-filled in `.env.example` |
+| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` (100% locally; set to `0.2` in Railway prod) |
+| `SENTRY_PROFILES_SAMPLE_RATE` | `0.25` (25% locally; set to `0.1` in Railway prod) |
+
 ### 2d. Run Database Migrations
 
 ```bash
@@ -311,7 +321,7 @@ make run-ios      # iOS Simulator
 make run-device   # Physical device (update IP in Makefile first)
 ```
 
-> **Why `make run` instead of `flutter run`?** The app requires `GOOGLE_WEB_CLIENT_ID` to be injected at build time via `--dart-define`. `make run` reads this automatically from `cloud-brain/.env` and passes it through. Bare `flutter run` skips this and Google Sign-In will return a null token at runtime.
+> **Why `make run` instead of `flutter run`?** The app requires `GOOGLE_WEB_CLIENT_ID` and `SENTRY_DSN` to be injected at build time via `--dart-define`. `make run` reads both automatically from `cloud-brain/.env` and passes them through. Bare `flutter run` skips this — Google Sign-In will return a null token and Sentry will be disabled.
 
 You should see the **Zuralog Welcome screen** — the animated entry screen with the Zuralog logo. From there you can proceed through onboarding and log in. The auth guard will redirect authenticated users directly to the Dashboard on subsequent launches.
 
@@ -344,11 +354,15 @@ Or manually if needed:
 ```bash
 # iOS Simulator
 flutter run --dart-define=BASE_URL=http://localhost:8001 \
-            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id>
+            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id> \
+            --dart-define=SENTRY_DSN=<sentry-dsn> \
+            --dart-define=APP_ENV=development
 
 # Physical device
 flutter run --dart-define=BASE_URL=http://192.168.1.100:8001 \
-            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id>
+            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id> \
+            --dart-define=SENTRY_DSN=<sentry-dsn> \
+            --dart-define=APP_ENV=development
 ```
 
 > Make sure the backend server is bound to `0.0.0.0:8001` (not `127.0.0.1`) so it is reachable from the emulator.
@@ -365,7 +379,7 @@ The file is pre-populated at `.vscode/launch.json` with three configurations:
 | **Zuralog (iOS Simulator)** | Uses `http://localhost:8001` |
 | **Zuralog (Physical Device)** | Update `BASE_URL` IP to your machine's LAN address |
 
-All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to launch.
+All three configurations have `GOOGLE_WEB_CLIENT_ID` and `SENTRY_DSN` pre-filled. Press **F5** to launch.
 
 > If `.vscode/launch.json` is missing (e.g., fresh clone), create it manually or run `make run` from the terminal instead.
 
@@ -373,14 +387,14 @@ All three configurations have `GOOGLE_WEB_CLIENT_ID` pre-filled. Press **F5** to
 
 ## 4. Website (Next.js)
 
-> The website is a separate Next.js application at `web/` in the monorepo. It is deployed to Vercel and live at [https://www.zuralog.com](https://www.zuralog.com). You only need this section if you are working on the marketing site / waitlist page.
+> The website is a separate Next.js application at `website/` in the monorepo. It is deployed to Vercel and live at [https://www.zuralog.com](https://www.zuralog.com). You only need this section if you are working on the marketing site / waitlist page.
 
-All commands in this section are run from the `web/` directory unless noted.
+All commands in this section are run from the `website/` directory unless noted.
 
 ### 4a. Install Node.js Dependencies
 
 ```bash
-cd web
+cd website
 npm install
 ```
 
@@ -422,6 +436,20 @@ PostHog tracking is wired but gracefully skipped when the key is absent.
 |---|---|
 | `NEXT_PUBLIC_POSTHOG_KEY` | [posthog.com](https://posthog.com) → Project Settings → Project API Key |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Keep default: `https://us.i.posthog.com` |
+
+#### Required: Sentry (Error Monitoring)
+
+The website sends client-side errors, server errors, and performance data to Sentry. Values are pre-filled in `.env.local` — no extra steps needed for local dev.
+
+| Variable | Value (local dev) |
+|---|---|
+| `NEXT_PUBLIC_SENTRY_DSN` | Pre-filled in `.env.local` |
+| `SENTRY_DSN` | Pre-filled in `.env.local` |
+| `SENTRY_ORG` | `zuralog` |
+| `SENTRY_PROJECT` | `website` |
+| `SENTRY_AUTH_TOKEN` | Pre-filled in `.env.local` and `website/.env.sentry-build-plugin` |
+
+> **Note:** `SENTRY_AUTH_TOKEN` is an org-level CI token. It is gitignored. Source map uploads only run during `npm run build` when `SENTRY_AUTH_TOKEN` is present.
 
 #### Deferred: Email & Rate Limiting (Phase 3.2)
 
@@ -468,18 +496,18 @@ npm run build
 npm run start    # serves the production build at http://localhost:3000
 ```
 
-Run this before opening a PR that touches `web/` to confirm there are no build errors.
+Run this before opening a PR that touches `website/` to confirm there are no build errors.
 
 ### 4g. Deployment
 
 The website deploys automatically via Vercel on every push to `main`. The Vercel project is configured with:
 
-- **Root Directory:** `web`
+- **Root Directory:** `website`
 - **Build Command:** `npm run build` (Vercel default)
 - **Output Directory:** `.next` (Vercel default)
 - **Node.js Version:** 20.x
 
-All environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_SITE_URL`) are set in the Vercel dashboard → Project Settings → Environment Variables. You do **not** need to push `.env.local`.
+All environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`) are set in the Vercel dashboard → Project Settings → Environment Variables. You do **not** need to push `.env.local`.
 
 ### 4h. Design System
 
@@ -577,16 +605,16 @@ make build-prod-ios
 
 > All `make` targets for Flutter automatically inject `GOOGLE_WEB_CLIENT_ID` from `cloud-brain/.env`. Never use bare `flutter run` if Google Sign-In needs to work.
 
-### Website (`web/`)
+### Website (`website/`)
 
 | Action | Command |
 |---|---|
-| Install Node deps | `cd web && npm install` |
-| Start dev server | `cd web && npm run dev` → [http://localhost:3000](http://localhost:3000) |
-| Lint | `cd web && npm run lint` |
-| Type-check | `cd web && npx tsc --noEmit` |
-| Production build (local) | `cd web && npm run build && npm run start` |
-| Add shadcn/ui component | `cd web && npx shadcn add <component>` |
+| Install Node deps | `cd website && npm install` |
+| Start dev server | `cd website && npm run dev` → [http://localhost:3000](http://localhost:3000) |
+| Lint | `cd website && npm run lint` |
+| Type-check | `cd website && npx tsc --noEmit` |
+| Production build (local) | `cd website && npm run build && npm run start` |
+| Add shadcn/ui component | `cd website && npx shadcn add <component>` |
 
 ---
 
@@ -676,7 +704,7 @@ Verify your Supabase credentials in `cloud-brain/.env`:
 - Make sure the Email auth provider is enabled in Supabase → Authentication → Providers
 
 ### Google Sign-In returns null token / silently fails
-This means `GOOGLE_WEB_CLIENT_ID` was not injected at build time. Use `make run` instead of bare `flutter run`. The `make` target reads the client ID from `cloud-brain/.env` automatically.
+This means `GOOGLE_WEB_CLIENT_ID` was not injected at build time. Use `make run` instead of bare `flutter run`. The `make` target reads `GOOGLE_WEB_CLIENT_ID` and `SENTRY_DSN` automatically from `cloud-brain/.env`.
 
 If you must use `flutter run` directly:
 ```bash

@@ -8,16 +8,21 @@ and wires up the MCP framework (registry, client, memory store).
 """
 
 import logging
+import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.agent.context_manager.memory_store import InMemoryStore
+from app.middleware.sentry_context import SentryUserContextMiddleware
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.api.v1.analytics import router as analytics_router
@@ -57,6 +62,43 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+
+def _get_release() -> str:
+    """Return a Sentry release string derived from the current git SHA.
+
+    Falls back to ``cloud-brain@unknown`` if git is unavailable (e.g. in
+    Docker images built without the ``.git`` directory).
+    """
+    try:
+        sha = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                stderr=subprocess.DEVNULL,
+                cwd=Path(__file__).parent,
+            )
+            .decode()
+            .strip()
+        )
+        return f"cloud-brain@{sha}"
+    except Exception:
+        return "cloud-brain@unknown"
+
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.app_env,
+        release=_get_release(),
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        profiles_sample_rate=settings.sentry_profiles_sample_rate,
+        send_default_pii=False,
+        enable_tracing=True,
+        integrations=[
+            FastApiIntegration(transaction_style="endpoint"),
+        ],
+    )
+    logging.info("Sentry initialized for Cloud Brain (%s)", settings.app_env)
 
 
 @asynccontextmanager
@@ -158,6 +200,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SentryUserContextMiddleware)
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")  # Phase 1.9

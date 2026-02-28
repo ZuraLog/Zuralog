@@ -8,6 +8,7 @@ RevenueCat for subscription lifecycle events.
 import hmac
 import logging
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +18,16 @@ from app.services.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "webhooks")
+
+
+router = APIRouter(
+    prefix="/webhooks",
+    tags=["webhooks"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 
 
 @router.post("/revenuecat")

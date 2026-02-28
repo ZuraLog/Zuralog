@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -39,7 +40,16 @@ from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/health", tags=["health"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "health_ingest")
+
+
+router = APIRouter(
+    prefix="/health",
+    tags=["health"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 _normalizer = DataNormalizer()
 
@@ -79,6 +89,19 @@ async def ingest_health_data(
     """
     user_data = await auth_service.get_user(credentials.credentials)
     user_id: str = user_data["id"]
+    request.state.user_id = user_id
+    sentry_sdk.set_user({"id": user_id})
+    sentry_sdk.set_context(
+        "health_ingest",
+        {
+            "source": body.source,
+            "workouts": len(body.workouts),
+            "sleep": len(body.sleep),
+            "nutrition": len(body.nutrition),
+            "weight": len(body.weight),
+            "daily_metrics": len(body.daily_metrics),
+        },
+    )
     source = body.source
     counts: dict[str, int] = {}
 

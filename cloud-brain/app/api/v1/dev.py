@@ -10,6 +10,7 @@ WARNING: These endpoints must be disabled or protected in production.
 
 import logging
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -21,7 +22,16 @@ from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/dev", tags=["dev"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "dev")
+
+
+router = APIRouter(
+    prefix="/dev",
+    tags=["dev"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 

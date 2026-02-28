@@ -7,6 +7,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -58,8 +59,9 @@ class CompatibleAppInfoSheet extends StatelessWidget {
     final uri = Uri.parse(url);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (e) {
+    } catch (e, stackTrace) {
       // App may not be installed or URL may be malformed — not fatal.
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('CompatibleAppInfoSheet: failed to launch $url: $e');
     }
   }

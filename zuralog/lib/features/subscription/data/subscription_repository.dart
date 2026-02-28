@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/subscription/domain/subscription_state.dart';
@@ -88,13 +89,15 @@ class SubscriptionRepository {
       // 401 = unauthenticated (expired/missing token) — expected, no log needed.
       // Other errors = backend unavailable — log for diagnostics.
       if (e is! DioException || e.response?.statusCode != 401) {
+        Sentry.captureException(e);
         debugPrint('[SubscriptionRepository] fetchStatus backend error: $e');
       }
       // Backend unavailable — fall back to local RC entitlement check.
       try {
         final info = await Purchases.getCustomerInfo();
         return stateFromCustomerInfo(info);
-      } catch (e2) {
+      } catch (e2, stackTrace2) {
+        Sentry.captureException(e2, stackTrace: stackTrace2);
         debugPrint('[SubscriptionRepository] RC getCustomerInfo error: $e2');
         return const SubscriptionState(tier: SubscriptionTier.free);
       }
@@ -108,7 +111,8 @@ class SubscriptionRepository {
   Future<Offerings?> getOfferings() async {
     try {
       return await Purchases.getOfferings();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('[SubscriptionRepository] getOfferings error: $e');
       return null;
     }

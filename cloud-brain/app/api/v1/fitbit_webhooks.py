@@ -19,7 +19,8 @@ Fitbit's push model differs from Strava:
 
 import logging
 
-from fastapi import APIRouter, Request
+import sentry_sdk
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, ValidationError
 
@@ -27,7 +28,15 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["fitbit-webhooks"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "fitbit_webhooks")
+
+
+router = APIRouter(
+    tags=["fitbit-webhooks"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 
 
 class FitbitWebhookNotification(BaseModel):
@@ -103,6 +112,7 @@ async def fitbit_webhook_event(request: Request) -> Response:
         body = await request.json()
     except Exception as exc:  # noqa: BLE001
         logger.error("Fitbit webhook: failed to parse JSON body: %s", exc)
+        sentry_sdk.capture_exception(exc)
         return Response(status_code=204)
 
     if not isinstance(body, list):
@@ -145,6 +155,7 @@ async def fitbit_webhook_event(request: Request) -> Response:
                 notification.collectionType,
                 exc,
             )
+            sentry_sdk.capture_exception(exc)
 
     # CRITICAL: Always return 204 — never let Fitbit see errors
     return Response(status_code=204)

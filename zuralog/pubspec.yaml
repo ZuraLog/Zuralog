@@ -21,6 +21,10 @@ dependencies:
   dio: ^5.9.1
   web_socket_channel: any
 
+  # Error Monitoring & Crash Reporting
+  sentry_flutter: ^8.13.0
+  sentry_dio: ^8.13.0
+
   # Local Storage
   drift: any
   sqlite3_flutter_libs: ^0.5.0

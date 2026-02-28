@@ -6,6 +6,7 @@ All auth operations proxy to Supabase Auth via httpx, and new users are
 synced to the local `users` table on registration and login.
 """
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +24,16 @@ from app.limiter import limiter
 from app.services.auth_service import AuthService
 from app.services.user_service import sync_user_to_db
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "auth")
+
+
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 

@@ -13,7 +13,8 @@ lifespan and shared across requests.
 import logging
 from typing import Any
 
-from openai import AsyncOpenAI
+import sentry_sdk
+from openai import AsyncOpenAI, APIError
 
 from app.config import settings
 
@@ -87,7 +88,11 @@ class LLMClient:
             len(tools) if tools else 0,
         )
 
-        response = await self._client.chat.completions.create(**kwargs)
+        try:
+            response = await self._client.chat.completions.create(**kwargs)
+        except APIError as e:
+            sentry_sdk.capture_exception(e)
+            raise
 
         logger.info(
             "LLM response: model=%s, tokens_in=%d, tokens_out=%d",
@@ -127,4 +132,8 @@ class LLMClient:
         if tools:
             kwargs["tools"] = tools
 
-        return await self._client.chat.completions.create(**kwargs)
+        try:
+            return await self._client.chat.completions.create(**kwargs)
+        except APIError as e:
+            sentry_sdk.capture_exception(e)
+            raise

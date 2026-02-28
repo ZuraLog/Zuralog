@@ -7,6 +7,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -45,7 +46,8 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
       await repo.init(appUserId: appUserId);
       final status = await repo.fetchStatus();
       state = status;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('[SubscriptionNotifier] initialize error: $e');
       state = const SubscriptionState(tier: SubscriptionTier.free);
     }
@@ -59,7 +61,8 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
       await repo.logOut();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('[SubscriptionNotifier] logOut error: $e');
     }
     state = const SubscriptionState(tier: SubscriptionTier.free);
@@ -88,7 +91,8 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
       }
       final status = await repo.fetchStatus();
       state = status;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('[SubscriptionNotifier] refresh error: $e');
       state = const SubscriptionState(tier: SubscriptionTier.free);
     }

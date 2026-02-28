@@ -16,6 +16,7 @@ The PKCE flow:
 import logging
 import secrets
 
+import sentry_sdk
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -30,7 +31,16 @@ from app.services.fitbit_token_service import FitbitTokenService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/integrations/fitbit", tags=["fitbit"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "fitbit")
+
+
+router = APIRouter(
+    prefix="/integrations/fitbit",
+    tags=["fitbit"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 
@@ -216,9 +226,7 @@ async def fitbit_status(
     return {
         "connected": True,
         "sync_status": integration.sync_status,
-        "last_synced_at": (
-            integration.last_synced_at.isoformat() if integration.last_synced_at else None
-        ),
+        "last_synced_at": (integration.last_synced_at.isoformat() if integration.last_synced_at else None),
         "fitbit_user_id": metadata.get("fitbit_user_id"),
         "display_name": metadata.get("display_name"),
         "devices": metadata.get("devices", []),

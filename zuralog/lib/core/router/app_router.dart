@@ -42,6 +42,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
@@ -78,10 +79,7 @@ class _RouterRefreshListenable extends ChangeNotifier {
   /// flag, profile state, and profile-loading flag changes via [ref].
   _RouterRefreshListenable(Ref ref) {
     // Listen to auth state changes.
-    ref.listen<AuthState>(
-      authStateProvider,
-      (prev, next) => notifyListeners(),
-    );
+    ref.listen<AuthState>(authStateProvider, (prev, next) => notifyListeners());
     // Listen to the onboarding flag to redirect first-timers.
     ref.listen<AsyncValue<bool>>(
       hasSeenOnboardingProvider,
@@ -118,6 +116,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: RouteNames.welcomePath,
     refreshListenable: listenable,
     debugLogDiagnostics: kDebugMode,
+    observers: [SentryNavigatorObserver()],
     redirect: (BuildContext context, GoRouterState state) {
       final authState = ref.read(authStateProvider);
       final location = state.matchedLocation;
@@ -198,10 +197,7 @@ List<GoRoute> _buildCategoryRoutes() {
           path: ':metricId',
           builder: (BuildContext context, GoRouterState state) {
             final String metricId = state.pathParameters['metricId']!;
-            return MetricDetailScreen(
-              category: category,
-              metricId: metricId,
-            );
+            return MetricDetailScreen(category: category, metricId: metricId);
           },
         ),
       ],

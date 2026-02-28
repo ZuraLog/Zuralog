@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
@@ -235,10 +236,9 @@ final userEmailProvider = StateProvider<String>(
 /// final profile = ref.watch(userProfileProvider);
 /// final name = profile?.aiName ?? 'there';
 /// ```
-final userProfileProvider =
-    NotifierProvider<UserProfileNotifier, UserProfile?>(
-      UserProfileNotifier.new,
-    );
+final userProfileProvider = NotifierProvider<UserProfileNotifier, UserProfile?>(
+  UserProfileNotifier.new,
+);
 
 /// Whether the user profile is currently being fetched from the backend.
 ///
@@ -272,6 +272,7 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
       final repo = ref.read(authRepositoryProvider);
       state = await repo.fetchProfile();
     } catch (e, st) {
+      Sentry.captureException(e, stackTrace: st);
       debugPrint('[UserProfileNotifier.load] Profile fetch failed: $e\n$st');
     } finally {
       ref.read(isLoadingProfileProvider.notifier).state = false;

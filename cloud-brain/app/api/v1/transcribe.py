@@ -13,6 +13,7 @@ Supported formats: .webm, .m4a, .wav, .mp3
 import logging
 import os
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from openai import AsyncOpenAI
@@ -22,7 +23,15 @@ from app.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["transcribe"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "transcribe")
+
+
+router = APIRouter(
+    tags=["transcribe"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 security = HTTPBearer()
 
 ALLOWED_EXTENSIONS = {".webm", ".m4a", ".wav", ".mp3"}
@@ -125,6 +134,7 @@ async def transcribe_audio(
         logger.exception("Error during OpenAI transcription")
         if isinstance(e, HTTPException):
             raise
+        sentry_sdk.capture_exception(e)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Error processing audio transcription. Please try again later.",

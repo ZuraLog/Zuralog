@@ -12,6 +12,7 @@ which composes the pure-logic analytics modules with database access.
 import uuid
 from datetime import date
 
+import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +29,16 @@ from app.api.v1.analytics_schemas import (
 from app.database import get_db
 from app.models.user_goal import GoalPeriod, UserGoal
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+async def _set_sentry_module() -> None:
+    sentry_sdk.set_tag("api.module", "analytics")
+
+
+router = APIRouter(
+    prefix="/analytics",
+    tags=["analytics"],
+    dependencies=[Depends(_set_sentry_module)],
+)
 
 # Module-level singleton — stateless, safe to reuse across requests.
 _analytics_service = AnalyticsService()

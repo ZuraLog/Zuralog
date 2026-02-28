@@ -9,6 +9,7 @@ individual servers directly.
 
 import logging
 
+import sentry_sdk
 from app.mcp_servers.models import ToolDefinition, ToolResult
 from app.mcp_servers.registry import MCPServerRegistry
 
@@ -78,6 +79,7 @@ class MCPClient:
                 tool_name,
                 server.name,
             )
+            sentry_sdk.capture_exception(exc)
             return ToolResult(
                 success=False,
                 error=f"Tool execution failed: {exc}",

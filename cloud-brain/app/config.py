@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     fitbit_webhook_subscriber_id: str = ""
     app_env: str = "production"
     app_debug: bool = False
+    # Sentry
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = 1.0
+    sentry_profiles_sample_rate: float = 0.25
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
@@ -42,12 +43,14 @@ const List<String> _genderOptions = [
 ];
 
 /// Earliest selectable birthday (100 years ago).
-DateTime get _birthdayFirst =>
-    DateTime(DateTime.now().year - 100, 1, 1);
+DateTime get _birthdayFirst => DateTime(DateTime.now().year - 100, 1, 1);
 
 /// Latest selectable birthday (13 years ago — minimum age).
-DateTime get _birthdayLast =>
-    DateTime(DateTime.now().year - 13, DateTime.now().month, DateTime.now().day);
+DateTime get _birthdayLast => DateTime(
+  DateTime.now().year - 13,
+  DateTime.now().month,
+  DateTime.now().day,
+);
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -167,7 +170,9 @@ class _ProfileQuestionnaireScreenState
     setState(() => _isSubmitting = true);
 
     try {
-      await ref.read(userProfileProvider.notifier).update(
+      await ref
+          .read(userProfileProvider.notifier)
+          .update(
             displayName: _displayNameController.text.trim().isEmpty
                 ? null
                 : _displayNameController.text.trim(),
@@ -182,6 +187,7 @@ class _ProfileQuestionnaireScreenState
       if (!mounted) return;
       context.go(RouteNames.dashboardPath);
     } catch (e, st) {
+      Sentry.captureException(e, stackTrace: st);
       debugPrint('[ProfileQuestionnaire] Save failed: $e\n$st');
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -210,9 +216,9 @@ class _ProfileQuestionnaireScreenState
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.primary,
-                  onPrimary: AppColors.primaryButtonText,
-                ),
+              primary: AppColors.primary,
+              onPrimary: AppColors.primaryButtonText,
+            ),
           ),
           child: child!,
         );
@@ -243,10 +249,7 @@ class _ProfileQuestionnaireScreenState
         title: SvgPicture.asset(
           'assets/images/zuralog_logo.svg',
           height: 28,
-          colorFilter: ColorFilter.mode(
-            colorScheme.onSurface,
-            BlendMode.srcIn,
-          ),
+          colorFilter: ColorFilter.mode(colorScheme.onSurface, BlendMode.srcIn),
         ),
         centerTitle: true,
       ),
@@ -265,9 +268,7 @@ class _ProfileQuestionnaireScreenState
               const SizedBox(height: AppDimens.spaceXl),
 
               // ── Step content ─────────────────────────────────────────────
-              Expanded(
-                child: _buildStep(context),
-              ),
+              Expanded(child: _buildStep(context)),
 
               const SizedBox(height: AppDimens.spaceLg),
 
@@ -318,10 +319,7 @@ class _ProfileQuestionnaireScreenState
 /// Shows "Step X of Y" text above a segmented progress track.
 class _ProgressHeader extends StatelessWidget {
   /// Creates a [_ProgressHeader].
-  const _ProgressHeader({
-    required this.currentStep,
-    required this.totalSteps,
-  });
+  const _ProgressHeader({required this.currentStep, required this.totalSteps});
 
   /// Zero-based index of the current step.
   final int currentStep;
@@ -356,9 +354,7 @@ class _ProgressHeader extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(2),
-                  color: isComplete
-                      ? AppColors.primary
-                      : AppColors.borderLight,
+                  color: isComplete ? AppColors.primary : AppColors.borderLight,
                 ),
               ),
             );
@@ -409,10 +405,7 @@ class _NavigationButtons extends StatelessWidget {
         // Back button — only shown when there's a step to go back to.
         if (onBack != null) ...[
           Expanded(
-            child: SecondaryButton(
-              label: 'Back',
-              onPressed: onBack,
-            ),
+            child: SecondaryButton(label: 'Back', onPressed: onBack),
           ),
           const SizedBox(width: AppDimens.spaceMd),
         ],
@@ -567,16 +560,12 @@ class _Step2Birthday extends StatelessWidget {
           // ── Heading ──────────────────────────────────────────────────
           Text(
             'When were you born?',
-            style: AppTextStyles.h2.copyWith(
-              color: colorScheme.onSurface,
-            ),
+            style: AppTextStyles.h2.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Used to personalise health recommendations. Optional.',
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -677,16 +666,12 @@ class _Step3Gender extends StatelessWidget {
           // ── Heading ──────────────────────────────────────────────────
           Text(
             'How do you identify?',
-            style: AppTextStyles.h2.copyWith(
-              color: colorScheme.onSurface,
-            ),
+            style: AppTextStyles.h2.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Helps tailor health insights. Optional.',
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -805,8 +790,7 @@ class _GenderOptionTile extends StatelessWidget {
                 color: isSelected
                     ? colorScheme.onSurface
                     : AppColors.textSecondary,
-                fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
