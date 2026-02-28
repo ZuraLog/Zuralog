@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { replayIntegration } from "@sentry/browser";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -11,7 +12,7 @@ Sentry.init({
   replaysSessionSampleRate: 0.0,
   replaysOnErrorSampleRate: 1.0,
   integrations: [
-    Sentry.replayIntegration({
+    replayIntegration({
       maskAllText: false,
       blockAllMedia: false,
     }),
