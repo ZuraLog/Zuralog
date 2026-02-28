@@ -46,6 +46,7 @@ nul
 .cursor/
 .antigravity/
 .claudeplans/
+opencode.json
 
 # Git Worktrees
 .worktrees/.Claude/
