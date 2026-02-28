@@ -1,0 +1,206 @@
+# Zuralog — Product Roadmap
+
+**Format:** Living checklist. Agents and developers update `Status` as work completes.  
+**Last Updated:** 2026-03-01
+
+**Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
+
+---
+
+## Backend (Cloud Brain)
+
+### Phase 1.1 — Foundation & Infrastructure
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Repository structure, monorepo setup | ✅ Done | |
+| P0 | FastAPI app scaffold with lifespan, CORS, error handlers | ✅ Done | |
+| P0 | Supabase Postgres connection (async SQLAlchemy) | ✅ Done | |
+| P0 | Alembic migrations setup | ✅ Done | |
+| P0 | Docker Compose (local Postgres + Redis) | ✅ Done | |
+| P0 | uv + pyproject.toml project setup | ✅ Done | |
+| P0 | Railway deployment + Dockerfile | ✅ Done | |
+| P0 | Sentry integration (FastAPI + Celery + SQLAlchemy) | ✅ Done | |
+| P0 | `.env.example` + RAILWAY_ENV_VARS.md | ✅ Done | |
+
+### Phase 1.2 — Auth & User Management
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Supabase JWT validation middleware | ✅ Done | |
+| P0 | User creation on first login | ✅ Done | |
+| P0 | Row Level Security (RLS) setup in Supabase | ✅ Done | |
+| P0 | Auth API routes (`/api/v1/auth/`) | ✅ Done | |
+
+### Phase 1.3 — Agent & LLM
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Orchestrator (Reason → Tool → Act loop) | ✅ Done | |
+| P0 | OpenRouter LLM client (Kimi K2.5) | ✅ Done | Via `moonshotai/kimi-k2.5` |
+| P0 | MCP client + server registry | ✅ Done | |
+| P0 | Chat SSE streaming endpoint | ✅ Done | |
+| P0 | Conversation persistence | ✅ Done | |
+| P1 | System prompt tuning (Tough Love Coach persona) | 🔜 Planned | |
+
+### Phase 1.4 — Apple Health Integration
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | HealthKit native bridge (Swift platform channel) | ✅ Done | |
+| P0 | `HKObserverQuery` background observers | ✅ Done | |
+| P0 | `HKAnchoredObjectQuery` incremental sync | ✅ Done | |
+| P0 | 30-day initial backfill on connect | ✅ Done | |
+| P0 | iOS Keychain JWT persistence for background sync | ✅ Done | |
+| P0 | `AppleHealthServer` MCP tools | ✅ Done | |
+| P0 | `/api/v1/health/ingest` endpoint | ✅ Done | |
+
+### Phase 1.5 — Google Health Connect Integration
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Health Connect native bridge (Kotlin platform channel) | ✅ Done | |
+| P0 | WorkManager periodic background sync | ✅ Done | |
+| P0 | EncryptedSharedPreferences JWT persistence | ✅ Done | |
+| P0 | 30-day initial backfill on connect | ✅ Done | |
+| P0 | `HealthConnectServer` MCP tools | ✅ Done | |
+
+### Phase 1.6 — Strava Integration
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Strava OAuth 2.0 flow | ✅ Done | |
+| P0 | Deep link callback (`zuralog://oauth/strava`) | ✅ Done | |
+| P0 | `StravaSyncService` + Celery periodic sync | ✅ Done | |
+| P0 | `StravaServer` MCP tools | ✅ Done | `get_activities`, `create_activity`, `get_athlete_stats` |
+| P0 | Strava webhook handler + real-time sync | ✅ Done | |
+| P0 | Redis sliding window rate limiter (100/15min, 1K/day) | ✅ Done | |
+
+### Phase 1.7 — Fitbit Integration
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | Fitbit OAuth 2.0 + PKCE flow | ✅ Done | |
+| P1 | `FitbitTokenService` (single-use refresh handling) | ✅ Done | |
+| P1 | Per-user Redis token bucket rate limiter (150/hr) | ✅ Done | |
+| P1 | `FitbitServer` MCP tools (12 tools) | ✅ Done | Activity, HR, HRV, sleep, SpO2, breathing, temp, VO2, weight, nutrition |
+| P1 | Fitbit webhook handler + subscription management | ✅ Done | |
+| P1 | Celery periodic sync (15min) + token refresh (1hr) | ✅ Done | |
+
+### Phase 1.8 — Push Notifications
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | Firebase FCM integration | ✅ Done | |
+| P1 | Device token registration (`/api/v1/devices/`) | ✅ Done | |
+| P1 | Push notification service | ✅ Done | |
+| P1 | Background insight alerts | 🔜 Planned | Trigger on health data events |
+
+### Phase 1.9 — Subscriptions
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | RevenueCat webhook receiver | ✅ Done | |
+| P1 | Subscription entitlement service | ✅ Done | |
+| P1 | Usage tracking per tier | ✅ Done | |
+
+### Phase 1.10 — Analytics & Reasoning
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | Correlation analysis engine | ✅ Done | |
+| P1 | Analytics API endpoints | ✅ Done | |
+| P2 | Pinecone vector store for long-term context | 🔜 Planned | Env var exists; code not yet written |
+
+---
+
+## Mobile App (Flutter Edge Agent)
+
+### Core Infrastructure
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Flutter project setup + Riverpod | ✅ Done | |
+| P0 | GoRouter navigation | ✅ Done | |
+| P0 | Dio HTTP client + auth interceptor | ✅ Done | |
+| P0 | Drift local DB | ✅ Done | |
+| P0 | SecureStorage (JWT persistence) | ✅ Done | |
+| P0 | Sentry integration (Flutter + Dio) | ✅ Done | |
+| P0 | Deep link handler (`app_links`) | ✅ Done | |
+
+### Features
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Auth flow (signup, login, Google Sign In) | ✅ Done | |
+| P0 | Apple Sign In (iOS native) | 🔜 Planned | Pending Apple Developer subscription |
+| P0 | Onboarding screens | ✅ Done | |
+| P0 | AI Chat UI (streaming) | ✅ Done | |
+| P0 | Voice input (mic button) | 🔜 Planned | Whisper via OpenAI API |
+| P0 | File attachments in chat | 📋 Future | |
+| P0 | Dashboard (health summary cards) | ✅ Done | |
+| P0 | Integrations Hub screen | ✅ Done | Connected / Available / Coming Soon sections |
+| P0 | Settings screen | ✅ Done | |
+| P0 | Data export | 📋 Future | |
+| P0 | Profile photo upload | 📋 Future | |
+| P1 | RevenueCat paywall (Pro upgrade) | ✅ Done | |
+| P1 | Analytics / correlation views | ✅ Done | |
+| P1 | Deep link catalog (third-party app launch) | ✅ Done | |
+| P1 | Push notification handling | ✅ Done | |
+
+---
+
+## Website
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Next.js 16 project setup | ✅ Done | |
+| P0 | Landing page (hero section) | ✅ Done | |
+| P0 | 3D phone mockup (Three.js) | ✅ Done | |
+| P0 | Waitlist signup system | ✅ Done | Supabase-backed |
+| P0 | Waitlist counter + leaderboard | ✅ Done | |
+| P0 | Onboarding quiz flow | ✅ Done | |
+| P0 | Legal pages (privacy, terms, cookies, community guidelines) | ✅ Done | |
+| P0 | About + Contact + Support pages | ✅ Done | |
+| P0 | SEO + OG image | ✅ Done | |
+| P0 | Sentry integration (Next.js) | ✅ Done | |
+| P0 | Vercel Analytics | ✅ Done | |
+| P1 | Email confirmation (Resend) | ✅ Done | |
+
+---
+
+## Direct Integrations Roadmap
+
+| # | Integration | Tier | Priority | Status | Backend | Mobile | Notes |
+|---|-------------|------|----------|--------|---------|--------|-------|
+| 1 | Strava | 1 | P0 | ✅ Done | OAuth, MCP, webhooks, sync | Connected | |
+| 2 | Apple Health | 1 | P0 | ✅ Done | Ingest endpoint, MCP | Connected (iOS only) | HealthKit native bridge |
+| 3 | Google Health Connect | 1 | P0 | ✅ Done | Ingest endpoint, MCP | Connected (Android only) | WorkManager |
+| 4 | Fitbit | 1 | P1 | ✅ Done | OAuth+PKCE, 12 MCP tools, webhooks | Connected | |
+| 5 | Oura Ring | 1 | P1 | 🔜 Planned | Not started | Coming Soon | Self-service OAuth; 10-user dev limit |
+| 6 | WHOOP | 1 | P1 | 🔜 Planned | Not started | Coming Soon | Requires app approval before launch |
+| 7 | Withings | 1 | P1 | 🔜 Planned | Not started | Planned | Best device ecosystem API |
+| 8 | Polar | 1 | P2 | 📋 Future | Not started | Planned | AccessLink API |
+| 9 | MapMyFitness | 1 | P2 | 📋 Future | Not started | Planned | 40M users, 700+ activity types |
+| 10 | Garmin | 2 | P2 | 📋 Future | Not started | Coming Soon | Requires business application |
+| — | Lose It! | 2 | P2 | 📋 Future | Not started | Planned | Nutrition gap; partner application needed |
+| — | Suunto | 2 | P3 | 📋 Future | Not started | Planned | Outdoor/adventure niche |
+
+**Indirect coverage (via Apple Health / Health Connect):** CalAI, MyFitnessPal, Cronometer, Yazio, Sleep Cycle, Renpho, Peloton, Nike Run Club, COROS — all write to the OS health store, so Zuralog reads them automatically.
+
+---
+
+## Coming Soon Features
+
+| Feature | Priority | Status | Notes |
+|---------|----------|--------|-------|
+| Voice input (Whisper STT) | P1 | 🔜 Planned | OpenAI `whisper-1` via Cloud Brain `/api/v1/transcribe/` route exists |
+| File attachments in chat | P2 | 📋 Future | UI placeholder exists |
+| Apple Sign In | P1 | 🔜 Planned | Pending Apple Developer subscription |
+| Profile photo upload | P2 | 📋 Future | |
+| Data export | P2 | 📋 Future | |
+| Pinecone vector store (AI memory) | P2 | 🔜 Planned | Config env var exists; code not written |
+| AI-powered morning briefing | P2 | 📋 Future | Daily summary push |
+| Smart reminders | P2 | 📋 Future | "You haven't run in 5 days" |
+| Bi-directional triggers | P3 | 📋 Future | "If sleep < 30%, reschedule workout" |
+| Notion / YNAB / Todoist integration | P3 | 📋 Future | Life OS phase |

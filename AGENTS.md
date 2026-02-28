@@ -1,8 +1,8 @@
 # Zuralog
 
 Hybrid Hub app — centralizes health/fitness data into a single Action Layer.
-- **Cloud Brain:** Python/FastAPI | **Edge Agent:** Swift/Kotlin (HealthKit/Health Connect)
-- **PRD:** [Product Requirements Document](./docs/plans/product-requirements-document.md)
+- **Cloud Brain:** Python/FastAPI | **Edge Agent:** Flutter (HealthKit/Health Connect)
+- **PRD:** [Product Requirements Document](./docs/PRD.md)
 
 ### Project Structure
 | Folder | Purpose | Deployed To |
@@ -12,6 +12,20 @@ Hybrid Hub app — centralizes health/fitness data into a single Action Layer.
 | `website/` | Marketing website (Next.js) | Vercel |
 | `docs/` | Documentation for developers & agents | — |
 
+## Documentation
+
+All project documentation lives in `docs/`. Read the relevant doc before starting any task.
+
+| Document | Purpose |
+|----------|---------| 
+| [`docs/PRD.md`](./docs/PRD.md) | Product vision, user scenarios, AI decisions, business model |
+| [`docs/architecture.md`](./docs/architecture.md) | Technical architecture, all ADRs, data flows, security model |
+| [`docs/infrastructure.md`](./docs/infrastructure.md) | All services, deployment, costs, environment variables |
+| [`docs/roadmap.md`](./docs/roadmap.md) | Living checklist — update status as work completes |
+| [`docs/implementation-status.md`](./docs/implementation-status.md) | Historical record of what was built and how |
+| [`docs/design.md`](./docs/design.md) | Brand colors, typography, design philosophy (exploration-first) |
+| [`docs/integrations/`](./docs/integrations/) | Per-integration reference (Strava, Fitbit, Apple Health, Health Connect, planned) |
+
 ## Skills
 
 Check `.agent/skills/` before every task. If a skill applies, **use it**.
@@ -19,12 +33,11 @@ Check `.agent/skills/` before every task. If a skill applies, **use it**.
 | Skill | Path |
 |-------|------|
 | Flutter & Dart | [.agent/skills/flutter-expert/SKILL.md](./.agent/skills/flutter-expert/SKILL.md) |
-| Superpowers | [.agent/skills/superpowers/skills/using-superpowers/SKILL.md](.agent/skills/superpowers/skills/using-superpowers/SKILL.md) |
 | Frontend Design | [.agent/skills/frontend-design/SKILL.md](./.agent/skills/frontend-design/SKILL.md) |
-| MAD Agents | [.agent/skills/mad-agents-skills/README.md](./.agent/skills/mad-agents-skills/README.md) |
 | FastAPI Templates | [.agent/skills/fastapi-templates/SKILL.md](./.agent/skills/fastapi-templates/SKILL.md) |
 | MCP Builder | [.agent/skills/mcp-builder/SKILL.md](./.agent/skills/mcp-builder/SKILL.md) |
 | Doc Co-Authoring | [.agent/skills/doc-coauthoring/SKILL.md](./.agent/skills/doc-coauthoring/SKILL.md) |
+| Supabase / Postgres | [.agent/skills/supabase-postgres-best-practices/SKILL.md](./.agent/skills/supabase-postgres-best-practices/SKILL.md) |
 
 ---
 
@@ -36,11 +49,13 @@ Check `.agent/skills/` before every task. If a skill applies, **use it**.
 - Merge only when the entire phase is complete with zero errors/warnings. **Squash merge** to keep `main` history clean.
 
 ### 2. Context Awareness
-Before starting work, read relevant files for context (e.g., existing implementations, related docs in `docs/`, or prior executed summaries in `docs/agent-executed/`). Do not assume — verify.
+Before starting work, read the relevant docs in `docs/` for context — `architecture.md` for backend tasks, `design.md` for UI tasks, the relevant file in `docs/integrations/` for integration work. Do not assume — verify against the actual codebase.
 
 ### 3. Post-Execution Documentation
-After completing a phase, create `docs/agent-executed/[backend|frontend]/phases/executed-phase-[X.Y.Z].[name].md`:
-- What was built, deviations from plan (with reasons), and next steps. No code blocks.
+After completing a significant phase or feature:
+- Update the relevant status column in [`docs/roadmap.md`](./docs/roadmap.md)
+- Add a brief summary to [`docs/implementation-status.md`](./docs/implementation-status.md) if the work is substantial
+- Do not create one-off plan files or task-specific markdown files in `docs/`
 
 ### 4. Final Review Only
 Do not perform visual QA or detailed review after every sub-task. Perform a single comprehensive review (including Playwright screenshots for UI work) at the end of the last task in a sequence.
@@ -55,6 +70,7 @@ Each tool writes plans to its own **gitignored** directory. Never use another to
 ### 7. Design System Tokens (Flutter)
 Use the **Frontend Design skill** for all UI/UX decisions — aim for bold, premium designs. No hardcoded hex in widget files.
 - **Brand color:** Sage Green `#CFE1B9` (`AppColors.primary`)
+- Design philosophy is **exploration-first** — always seek the best UI/UX, see [`docs/design.md`](./docs/design.md)
 
 | Token | Light | Dark |
 |-------|-------|------|
@@ -70,4 +86,3 @@ Use the **Frontend Design skill** for all UI/UX decisions — aim for bold, prem
 
 ### 9. Scalability & Longevity
 - Think about scale from day one. We are building a production-grade system that lasts, not a demo or MVP. Focus on robust architecture and performance.
-
