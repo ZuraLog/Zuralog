@@ -14,10 +14,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 
 # Copy dependency files first for layer caching
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock ./
 
-# Install dependencies into a virtual environment
-RUN uv sync --frozen --no-dev --no-editable
+# Install ONLY dependencies (not the project itself) into a virtual environment.
+# --no-install-project is required because app source isn't copied yet at this
+# stage — this is the standard Docker layer-caching pattern for uv.
+RUN uv sync --frozen --no-dev --no-install-project
 
 # --- Stage 2: Runtime ---
 FROM python:3.12-slim AS runtime
