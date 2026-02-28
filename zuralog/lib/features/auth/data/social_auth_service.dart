@@ -176,11 +176,11 @@ class SocialAuthService {
         nonce: hashedNonce,
         // For Android web-based flow, configure a redirect URI that
         // points to your Supabase auth callback:
-        //   https://enccjffwpnwkxfkhargr.supabase.co/auth/v1/callback
+        //   https://<your-project-ref>.supabase.co/auth/v1/callback
         // webAuthenticationOptions: WebAuthenticationOptions(
         //   clientId: 'com.zuralog.auth',
         //   redirectUri: Uri.parse(
-        //     'https://enccjffwpnwkxfkhargr.supabase.co/auth/v1/callback',
+        //     'https://<your-project-ref>.supabase.co/auth/v1/callback',
         //   ),
         // ),
       );
