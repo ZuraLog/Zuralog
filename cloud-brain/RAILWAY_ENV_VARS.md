@@ -105,10 +105,10 @@ Supabase gives you a connection string starting with `postgresql://`. You **must
 
 ```
 # Wrong (from Supabase):
-postgresql://postgres.xxxx:password@aws-0-us-east-1.pooler.supabase.com:5432/postgres
+postgresql://postgres.xxxx:password@aws-1-us-east-1.pooler.supabase.com:5432/postgres
 
-# Correct (for Railway):
-postgresql+asyncpg://postgres.xxxx:password@aws-0-us-east-1.pooler.supabase.com:5432/postgres
+# Correct (for Railway — use session pooler, not transaction pooler):
+postgresql+asyncpg://postgres.xxxx:password@aws-1-us-east-1.pooler.supabase.com:5432/postgres
 ```
 
 ### 4. REDIS_URL TLS
