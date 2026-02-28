@@ -79,9 +79,10 @@ Every external service is an **MCP (Model Context Protocol) Server** that the AI
 | **Apple HealthKit** | Read/write steps, sleep, weight, nutrition, workouts | ✅ Built |
 | **Google Health Connect** | Read/write (Android equivalent) | ✅ Built |
 | **Strava** | Read activities, create/update workouts, OAuth flow | ✅ Built |
+| **Fitbit** | Read steps, sleep, HR, HRV, SpO2, temperature (12 tools + webhooks) | ✅ Built |
 | **CalAI** | Zero-friction deep link integration | ✅ Built |
-| **Fitbit** | Read steps, sleep, HR, weight, HRV | 📋 Planned |
-| **Oura** | Read sleep, readiness, HRV | 📋 Planned |
+| **Oura** | Read sleep, readiness, HRV | 🔜 Coming Soon |
+| **WHOOP** | Read recovery, strain, sleep | 🔜 Coming Soon |
 
 ---
 
@@ -115,7 +116,7 @@ Every external service is an **MCP (Model Context Protocol) Server** that the AI
 | Secure Storage | **flutter_secure_storage** |
 | Navigation | **GoRouter** (deep link support) |
 | Push | **Firebase Messaging** |
-| Health Data | **health** package (HealthKit + Health Connect) |
+| Health Data | **Native platform channels** — Swift (HealthKit) + Kotlin (Health Connect). The `health` package is **not used**. |
 
 ### Website (`web/`)
 
@@ -141,17 +142,18 @@ ZuraLog/
 │   │   ├── api/v1/              # REST + WebSocket endpoints
 │   │   │   ├── auth.py          # Login, register, refresh
 │   │   │   ├── chat.py          # WebSocket chat + history
-│   │   │   └── integrations.py  # OAuth flows (Strava, etc.)
+│   │   │   ├── strava_routes.py # Strava OAuth + webhooks
+│   │   │   └── fitbit_routes.py # Fitbit OAuth + webhooks
 │   │   ├── agent/               # AI orchestration layer
-│   │   │   ├── orchestrator.py  # LLM agent loop
+│   │   │   ├── orchestrator.py  # LLM agent loop (OpenRouter → kimi-k2.5)
 │   │   │   └── mcp_client.py    # MCP tool routing
 │   │   ├── mcp_servers/         # Integration modules
-│   │   │   ├── base_server.py
 │   │   │   ├── strava_server.py
+│   │   │   ├── fitbit_server.py
 │   │   │   ├── apple_health_server.py
 │   │   │   └── health_connect_server.py
 │   │   ├── models/              # SQLAlchemy ORM models
-│   │   ├── services/            # Auth, push notifications
+│   │   ├── services/            # Auth, push, rate limiting
 │   │   └── config.py
 │   ├── tests/                   # pytest suite
 │   ├── alembic/                 # DB migrations
@@ -162,69 +164,61 @@ ZuraLog/
 │   └── lib/
 │       ├── core/
 │       │   ├── network/         # API client, WebSocket, FCM
-│       │   ├── health/          # HealthKit/HC bridge
+│       │   ├── health/          # Native HealthKit/HC bridge (platform channels)
 │       │   ├── storage/         # Drift DB, secure storage
 │       │   ├── deeplink/        # App launcher (Strava, CalAI)
 │       │   └── di/              # Riverpod providers
 │       └── features/
 │           ├── chat/            # Chat repository + domain model
 │           ├── auth/            # Auth state management
-│           ├── harness/         # Dev test harness
+│           ├── integrations/    # Direct + compatible app integrations
 │           └── health/          # Health data repository
 │
-├── web/                         # Next.js marketing website
+├── website/                     # Next.js marketing website
 │   ├── src/
 │   │   ├── app/                 # App Router pages + layouts
 │   │   ├── components/          # React components (3d/, sections/, ui/)
 │   │   ├── hooks/               # Custom React hooks
-│   │   ├── lib/                 # Supabase client, GSAP, utilities
-│   │   ├── styles/              # grain.css overlay
-│   │   └── types/               # Supabase TypeScript types
+│   │   └── lib/                 # Supabase client, GSAP, utilities
 │   ├── public/                  # Static assets, fonts, favicons
-│   ├── .env.example             # Environment variable template
 │   └── package.json
 │
-└── docs/                        # Architecture, PRD, phase plans
-    ├── plans/
-    │   ├── product-requirements-document.md
-    │   ├── architecture-design.md
-    │   ├── backend/phases/      # 14 phase plans (1.1 → 1.14)
-    │   └── web/phases/          # Website phase plans (3.1 → 3.x)
-    └── agent-executed/          # Completed phase docs
-        ├── backend/
-        ├── frontend/
-        └── web/
+└── docs/                        # Project documentation (13 files)
+    ├── PRD.md                   # Product vision and decisions
+    ├── architecture.md          # Technical architecture + ADRs
+    ├── infrastructure.md        # Services, costs, env vars
+    ├── roadmap.md               # Living checklist with priorities
+    ├── implementation-status.md # What was built and how
+    ├── design.md                # Brand + design philosophy
+    └── integrations/            # Per-integration reference docs
 ```
 
 ---
 
 ## Development Progress
 
-### Cloud Brain + Edge Agent (Phases 1.x)
+### Cloud Brain + Edge Agent
 
 | Phase | Name | Status |
 |---|---|---|
-| 1.1 | Foundation & Infrastructure | ✅ Complete |
-| 1.2 | Authentication & User Management | ✅ Complete |
-| 1.3 | MCP Base Framework | ✅ Complete |
-| 1.4 | Apple HealthKit Integration | ✅ Complete |
-| 1.5 | Google Health Connect Integration | ✅ Complete |
+| 1.1–1.5 | Foundation, Auth, MCP Base, HealthKit, Health Connect | ✅ Complete |
 | 1.6 | Strava Integration | ✅ Complete |
 | 1.7 | CalAI Integration | ✅ Complete |
-| 1.8 | AI Brain (LLM Orchestrator) | ✅ Complete |
+| 1.8 | AI Brain (LLM Orchestrator — OpenRouter → kimi-k2.5) | ✅ Complete |
 | 1.9 | Chat & Communication | ✅ Complete |
-| 1.10 | Background Services | ✅ Complete |
-| 1.11 | Analytics & Reasoning | ✅ Complete |
-| 1.12 | Autonomous Actions | ✅ Complete |
-| 1.13 | Subscription & Billing | ✅ Complete |
-| 1.14 | Documentation & E2E Testing | ✅ Complete |
+| 1.10–1.14 | Background Services, Analytics, Autonomous Actions, Billing, Testing | ✅ Complete |
+| Direct: Fitbit | OAuth+PKCE, 12 MCP tools, webhooks, per-user rate limiting | ✅ Complete |
+| Direct: Oura | Read sleep, readiness, HRV | 🔜 Planned |
+| Direct: WHOOP | Read recovery, strain, sleep | 🔜 Planned |
 
-### Website (Phases 3.x)
+### Website
 
-| Phase | Name | Status |
-|---|---|---|
-| 3.1 | Website Foundation & Infrastructure | ✅ Complete — live at [zuralog.com](https://www.zuralog.com) |
-| 3.2 | Waitlist Landing Page | ⏳ Planned |
+| Feature | Status |
+|---|---|
+| Marketing site — live at [zuralog.com](https://www.zuralog.com) | ✅ Complete |
+| 3D hero (Three.js + React Three Fiber), GSAP animations, Lenis scroll | ✅ Complete |
+| Waitlist with quiz, email confirmation (Resend + Supabase) | ✅ Complete |
+| Legal pages (Privacy Policy, Terms of Service) | ✅ Complete |
 
 ---
 
@@ -254,7 +248,7 @@ dart run build_runner build --delete-conflicting-outputs
 make run                       # Launch on Android emulator (injects GOOGLE_WEB_CLIENT_ID)
 
 # Website
-cd ../web
+cd ../website
 cp .env.example .env.local    # Configure Supabase + PostHog credentials
 npm install
 npm run dev                    # Start dev server → http://localhost:3000
@@ -333,6 +327,20 @@ The exported `openapi.json` can be used for client codegen, documentation hostin
 **"I forgot to log yesterday"** → "I had a burrito and ran 3 miles" → Logs both to the right apps via API.
 
 **"What should I eat?"** → Checks remaining calorie budget and protein intake, suggests meals based on your patterns.
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [`docs/PRD.md`](./docs/PRD.md) | Product vision, decisions, business model |
+| [`docs/architecture.md`](./docs/architecture.md) | Full system architecture, ADRs, data flows |
+| [`docs/infrastructure.md`](./docs/infrastructure.md) | All services, costs, environment variables |
+| [`docs/roadmap.md`](./docs/roadmap.md) | Living checklist with priorities and statuses |
+| [`docs/design.md`](./docs/design.md) | Brand palette, typography, design philosophy |
+| [`docs/integrations/`](./docs/integrations/) | Per-integration reference docs |
+| [`SETUP.md`](./SETUP.md) | Step-by-step local dev setup |
+| [`AGENTS.md`](./AGENTS.md) / [`CLAUDE.md`](./CLAUDE.md) | Agent rules and standards |
+| [`DEBUG-FLUTTER.md`](./DEBUG-FLUTTER.md) | ADB screenshot + interaction guide for agents |
 
 ---
 

@@ -138,23 +138,38 @@ Used for vector embeddings and as an LLM fallback. You can skip this during init
 |---|---|
 | `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 
+#### Production: Fitbit Integration
+
+Fitbit OAuth is fully implemented (OAuth 2.0 + PKCE) with 12 MCP tools and webhook support. When you are ready to test Fitbit locally:
+
+1. Go to [dev.fitbit.com/apps/new](https://dev.fitbit.com/apps/new) and create an API application.
+2. Set the **OAuth 2.0 Application Type** to "Personal" (for local dev) or "Server" (for production).
+3. Set the **Redirect URL** to `zuralog://oauth/fitbit`.
+4. Copy the **Client ID** and **Client Secret** into `.env`.
+
+| Variable | Description |
+|---|---|
+| `FITBIT_CLIENT_ID` | Your Fitbit API app's Client ID |
+| `FITBIT_CLIENT_SECRET` | Your Fitbit API app's Client Secret |
+| `FITBIT_REDIRECT_URI` | Keep default: `zuralog://oauth/fitbit` |
+| `FITBIT_WEBHOOK_VERIFY_CODE` | Set in Fitbit app settings under Subscriptions |
+| `FITBIT_WEBHOOK_SUBSCRIBER_ID` | Set in Fitbit app settings under Subscriptions |
+
 #### Deferred: Strava Integration
 
-Strava OAuth is implemented but registration of the Strava API application is not required for core local development. When you are ready to test Strava:
+Strava OAuth is implemented. Registration of the Strava API application is not required for core local development. When you are ready to test Strava:
 
 1. Go to [strava.com/settings/api](https://www.strava.com/settings/api) and create an API application.
 2. Set the **Authorization Callback Domain** to `localhost` (for development).
 3. Copy the **Client ID** and **Client Secret** into `.env`.
 
-> **Note:** This follows the same model as "Sign in with Google." You (the developer) register one Strava API application. Users never need their own Strava API keys — they just log in via OAuth using the app's credentials. The `STRAVA_REDIRECT_URI` default (`zuralog://oauth/strava`) is a deep link handled by the Flutter app.
+> **Note:** You (the developer) register one Strava API application. Users just log in via OAuth using the app's credentials. The `STRAVA_REDIRECT_URI` default (`zuralog://oauth/strava`) is a deep link handled by the Flutter app.
 
 | Variable | Description |
 |---|---|
 | `STRAVA_CLIENT_ID` | Your Strava API application's numeric Client ID |
 | `STRAVA_CLIENT_SECRET` | Your Strava API application's Client Secret |
 | `STRAVA_REDIRECT_URI` | Keep default: `zuralog://oauth/strava` |
-
-#### Required: Firebase (Push Notifications + Flutter Build)
 
 Firebase is required for the Flutter app to build. `google-services.json` and `GoogleService-Info.plist` are already committed to the repo — you get them automatically from `git clone`. The service account JSON (backend push notifications) is a private key and must be shared securely between developers.
 
@@ -451,9 +466,9 @@ The website sends client-side errors, server errors, and performance data to Sen
 
 > **Note:** `SENTRY_AUTH_TOKEN` is an org-level CI token. It is gitignored. Source map uploads only run during `npm run build` when `SENTRY_AUTH_TOKEN` is present.
 
-#### Deferred: Email & Rate Limiting (Phase 3.2)
+#### Required: Email & Rate Limiting (Waitlist)
 
-These are not needed until the Waitlist Landing Page (Phase 3.2) is built.
+Used for the waitlist signup flow (Resend for transactional emails, Upstash Redis for rate limiting). Both are implemented and required for the waitlist to function locally.
 
 | Variable | Where to find it |
 |---|---|
@@ -473,7 +488,7 @@ Open [http://localhost:3000](http://localhost:3000). Hot reload is enabled — e
 
 ### 4d. Verify It Works
 
-- [http://localhost:3000](http://localhost:3000) — landing page (currently a placeholder; Phase 3.2 will replace it)
+- [http://localhost:3000](http://localhost:3000) — landing page with waitlist, 3D hero, and marketing sections
 - No console errors in browser DevTools
 - If you see a blank page, check that `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set in `.env.local`
 
