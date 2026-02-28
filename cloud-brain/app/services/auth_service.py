@@ -39,13 +39,13 @@ class AuthService:
             client: A shared httpx.AsyncClient instance.
         """
         self._client = client
-        self._base_url = settings.supabase_url
-        self._api_key = settings.supabase_anon_key
+        # Strip whitespace/newlines — common copy-paste issue from dashboards.
+        self._base_url = settings.supabase_url.strip().rstrip("/")
+        self._api_key = settings.supabase_anon_key.strip()
 
         if not self._base_url:
             logger.warning(
-                "SUPABASE_URL is empty — all auth requests will fail. "
-                "Set the SUPABASE_URL environment variable."
+                "SUPABASE_URL is empty — all auth requests will fail. Set the SUPABASE_URL environment variable."
             )
         if not self._api_key:
             logger.warning(
@@ -114,26 +114,31 @@ class AuthService:
             )
 
         url = self._auth_url(path)
+        logger.debug("Supabase auth request: %s %s", method, url)
         try:
             if method.upper() == "GET":
                 return await self._client.get(url, headers=headers or {})
-            return await self._client.post(
-                url, headers=headers or {}, json=json
-            )
+            return await self._client.post(url, headers=headers or {}, json=json)
         except httpx.TimeoutException:
-            logger.error("Supabase auth request timed out: %s %s", method, path)
+            logger.error("Supabase auth request timed out: %s %s", method, url)
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                 detail="Auth service timed out. Please try again.",
             )
         except httpx.ConnectError as exc:
-            logger.error("Cannot reach Supabase: %s", exc)
+            logger.error("Cannot reach Supabase at %s: %s", url, exc)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Auth service unreachable. Please try again later.",
             )
         except httpx.HTTPError as exc:
-            logger.error("Supabase auth request failed: %s", exc)
+            logger.error(
+                "Supabase auth request failed: %s %s — %s: %s",
+                method,
+                url,
+                type(exc).__name__,
+                exc,
+            )
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Auth service error: {type(exc).__name__}",
@@ -153,7 +158,8 @@ class AuthService:
             HTTPException: 400 if registration fails (e.g., email taken).
         """
         response = await self._request(
-            "POST", "/signup",
+            "POST",
+            "/signup",
             headers=self._headers(),
             json={"email": email, "password": password},
         )
@@ -203,7 +209,8 @@ class AuthService:
             HTTPException: 401 if credentials are invalid.
         """
         response = await self._request(
-            "POST", "/token?grant_type=password",
+            "POST",
+            "/token?grant_type=password",
             headers=self._headers(),
             json={"email": email, "password": password},
         )
@@ -236,7 +243,8 @@ class AuthService:
             HTTPException: 400 if logout fails.
         """
         response = await self._request(
-            "POST", "/logout",
+            "POST",
+            "/logout",
             headers=self._headers(access_token=access_token),
         )
 
@@ -260,7 +268,8 @@ class AuthService:
             HTTPException: 401 if the refresh token is invalid or expired.
         """
         response = await self._request(
-            "POST", "/token?grant_type=refresh_token",
+            "POST",
+            "/token?grant_type=refresh_token",
             headers=self._headers(),
             json={"refresh_token": refresh_token},
         )
@@ -326,7 +335,8 @@ class AuthService:
             payload["nonce"] = nonce
 
         response = await self._request(
-            "POST", "/token?grant_type=id_token",
+            "POST",
+            "/token?grant_type=id_token",
             headers=self._headers(),
             json=payload,
         )
@@ -363,7 +373,8 @@ class AuthService:
             HTTPException: 401 if the access token is invalid or expired.
         """
         response = await self._request(
-            "GET", "/user",
+            "GET",
+            "/user",
             headers=self._headers(access_token=access_token),
         )
 
