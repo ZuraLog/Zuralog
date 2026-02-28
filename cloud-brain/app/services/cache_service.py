@@ -1,7 +1,7 @@
 """
 Zuralog Cloud Brain — Distributed Cache Service.
 
-HTTP REST-based cache layer using the Upstash Redis SDK.
+HTTP REST-based cache layer using the Upstash Redis async SDK.
 Provides both direct get/set operations and a decorator for
 automatic response caching on FastAPI route handlers.
 
@@ -17,7 +17,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
-from upstash_redis import Redis
+from upstash_redis.asyncio import Redis
 
 from app.config import settings
 
@@ -62,7 +62,7 @@ class CacheService:
         if not self.enabled:
             return None
         try:
-            raw = self._redis.get(key)
+            raw = await self._redis.get(key)
             if raw is None:
                 return None
             return json.loads(raw) if isinstance(raw, str) else raw
@@ -83,9 +83,9 @@ class CacheService:
         try:
             serialized = json.dumps(value, default=str)
             if ttl:
-                self._redis.setex(key, ttl, serialized)
+                await self._redis.setex(key, ttl, serialized)
             else:
-                self._redis.set(key, serialized)
+                await self._redis.set(key, serialized)
         except Exception:
             logger.warning("Cache SET failed for key=%s", key, exc_info=True)
 
@@ -98,7 +98,7 @@ class CacheService:
         if not self.enabled:
             return
         try:
-            self._redis.delete(key)
+            await self._redis.delete(key)
         except Exception:
             logger.warning("Cache DELETE failed for key=%s", key, exc_info=True)
 
@@ -119,9 +119,9 @@ class CacheService:
             deleted = 0
             cursor = 0
             while True:
-                cursor, keys = self._redis.scan(cursor, match=pattern, count=100)
+                cursor, keys = await self._redis.scan(cursor, match=pattern, count=100)
                 if keys:
-                    self._redis.delete(*keys)
+                    await self._redis.delete(*keys)
                     deleted += len(keys)
                 if cursor == 0:
                     break

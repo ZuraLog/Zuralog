@@ -13,7 +13,7 @@ import uuid
 from datetime import date
 
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.analytics_service import AnalyticsService
@@ -48,6 +48,7 @@ _analytics_service = AnalyticsService()
 @router.get("/daily-summary", response_model=DailySummaryResponse)
 @cached(prefix="analytics.daily_summary", ttl=300, key_params=["user_id", "date_str"])
 async def daily_summary(
+    request: Request,
     user_id: str = Query(..., description="User ID"),
     date_str: str | None = Query(
         None,
@@ -89,6 +90,7 @@ async def daily_summary(
 @router.get("/weekly-trends", response_model=WeeklyTrendsResponse)
 @cached(prefix="analytics.weekly_trends", ttl=300, key_params=["user_id"])
 async def weekly_trends(
+    request: Request,
     user_id: str = Query(..., description="User ID"),
     db: AsyncSession = Depends(get_db),
 ) -> WeeklyTrendsResponse:
@@ -111,6 +113,7 @@ async def weekly_trends(
 @router.get("/correlation/sleep-activity", response_model=CorrelationResponse)
 @cached(prefix="analytics.correlation", ttl=900, key_params=["user_id", "days"])
 async def sleep_activity_correlation(
+    request: Request,
     user_id: str = Query(..., description="User ID"),
     days: int = Query(30, ge=7, le=365, description="Lookback days"),
     lag: int = Query(0, ge=0, le=7, description="Day lag for activity"),
@@ -143,6 +146,7 @@ async def sleep_activity_correlation(
 @router.get("/trend/{metric}", response_model=TrendResponse)
 @cached(prefix="analytics.trend", ttl=300, key_params=["user_id", "metric"])
 async def metric_trend(
+    request: Request,
     metric: str,
     user_id: str = Query(..., description="User ID"),
     window_size: int = Query(7, ge=3, le=30, description="Window size"),
@@ -174,6 +178,7 @@ async def metric_trend(
 @router.get("/goals", response_model=list[GoalProgressResponse])
 @cached(prefix="analytics.goals", ttl=300, key_params=["user_id"])
 async def get_goals(
+    request: Request,
     user_id: str = Query(..., description="User ID"),
     db: AsyncSession = Depends(get_db),
 ) -> list[GoalProgressResponse]:
@@ -261,6 +266,7 @@ async def create_or_update_goal(
 @router.get("/dashboard-insight", response_model=DashboardInsightResponse)
 @cached(prefix="analytics.dashboard_insight", ttl=300, key_params=["user_id"])
 async def dashboard_insight(
+    request: Request,
     user_id: str = Query(..., description="User ID"),
     db: AsyncSession = Depends(get_db),
 ) -> DashboardInsightResponse:

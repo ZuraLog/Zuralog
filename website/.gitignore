@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Dev / session artifacts
+lint-results.json
+test.spec.ts
+.vade-report

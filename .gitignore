@@ -48,6 +48,9 @@ nul
 .claudeplans/
 opencode.json
 
+# Dev / session artifacts
+test_compilation.sh
+
 # Git Worktrees
 .worktrees/.Claude/
 .worktrees/
