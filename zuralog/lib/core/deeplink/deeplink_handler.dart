@@ -2,8 +2,8 @@
 ///
 /// Listens for incoming custom URL scheme links (`zuralog://`) and
 /// dispatches them to the appropriate handler. Currently handles Strava,
-/// Fitbit, and Oura Ring OAuth callbacks; additional integrations can be
-/// added here by extending the switch on [Uri.pathSegments].
+/// Fitbit, Oura Ring, and Withings OAuth callbacks; additional integrations
+/// can be added here by extending the switch on [Uri.pathSegments].
 ///
 /// Usage: call [DeeplinkHandler.init] once from the root screen's
 /// [State.initState] so the subscription is active for the app lifetime.
@@ -72,16 +72,23 @@ class DeeplinkHandler {
     }
   }
 
-  /// Handle `zuralog://oauth/<provider>?code=XXX` callbacks.
+  /// Handle `zuralog://oauth/<provider>?...` callbacks.
   ///
-  /// Extracts the `code` (and optional `state`) query parameters and
-  /// dispatches to the appropriate OAuth repository based on the path segment.
+  /// Most providers send `?code=XXX&state=YYY` for client-side exchange.
+  /// Withings uses a server-side callback and sends only `?success=true/false`.
   static Future<void> _handleOAuth(
     Uri uri,
     WidgetRef ref, {
     required void Function(String) onLog,
   }) async {
     final provider = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : '';
+
+    // Withings: server-side callback — no code, only a success flag.
+    if (provider == 'withings') {
+      await _handleWithingsResult(uri, ref, onLog: onLog);
+      return;
+    }
+
     final code = uri.queryParameters['code'];
 
     if (code == null || code.isEmpty) {
@@ -165,6 +172,33 @@ class DeeplinkHandler {
       onLog('✅ Fitbit connected successfully!');
     } else {
       onLog('❌ Fitbit token exchange failed. Check server logs.');
+    }
+  }
+
+  /// Handle the Withings server-side OAuth result deep link.
+  ///
+  /// Withings redirects the browser back to the Cloud Brain callback URL,
+  /// which exchanges the code and then redirects the browser to
+  /// `zuralog://oauth/withings?success=true` (or `success=false`).
+  ///
+  /// No client-side code exchange is required — the server already handled it.
+  /// We just log the result and the IntegrationsNotifier state is already
+  /// optimistically set to connected from [connect()].
+  static Future<void> _handleWithingsResult(
+    Uri uri,
+    WidgetRef ref, {
+    required void Function(String) onLog,
+  }) async {
+    final success = uri.queryParameters['success'] == 'true';
+    final error = uri.queryParameters['error'];
+
+    if (success) {
+      onLog('Withings connected successfully!');
+    } else {
+      onLog(
+        'Withings connection failed${error != null ? ': $error' : ''}. '
+        'Please try again.',
+      );
     }
   }
 

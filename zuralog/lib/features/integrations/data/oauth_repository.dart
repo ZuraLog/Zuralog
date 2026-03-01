@@ -143,6 +143,27 @@ class OAuthRepository {
     }
   }
 
+  /// Request the Withings authorization URL from the Cloud Brain.
+  ///
+  /// Withings uses a server-side callback — the browser is redirected to
+  /// https://api.zuralog.com/…/callback, which exchanges the code and then
+  /// redirects to `zuralog://oauth/withings?success=true`. No client-side
+  /// code exchange is needed; the deep link only carries a success flag.
+  ///
+  /// Returns:
+  ///   The Withings OAuth URL string, or `null` if the request fails.
+  Future<String?> getWithingsAuthUrl() async {
+    try {
+      final response = await _apiClient.get(
+        '/api/v1/integrations/withings/authorize',
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data['auth_url'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Forward the intercepted Oura authorization code to the Cloud Brain
   /// for server-side token exchange.
   ///
