@@ -10,6 +10,7 @@ Usage:
 """
 
 import logging
+import ssl
 
 from celery import Celery
 
@@ -68,6 +69,15 @@ celery_app.conf.update(
     task_acks_late=True,
     worker_prefetch_multiplier=1,
 )
+
+# Upstash Redis requires explicit SSL cert config when using rediss:// (TLS).
+# CERT_NONE disables certificate verification — acceptable for Upstash's managed TLS.
+if settings.redis_url.startswith("rediss://"):
+    _ssl_opts = {"ssl_cert_reqs": ssl.CERT_NONE}
+    celery_app.conf.update(
+        broker_use_ssl=_ssl_opts,
+        redis_backend_use_ssl=_ssl_opts,
+    )
 
 # Beat schedule: periodic tasks
 celery_app.conf.beat_schedule = {
