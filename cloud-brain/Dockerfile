@@ -34,6 +34,15 @@ COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
 
+# Create a non-root user and transfer ownership.
+# Running as root in production containers is a security risk — if a task is
+# exploited, the attacker gets uid=0. appuser (uid=1000) limits blast radius.
+# Celery beat writes celerybeat-schedule to /app, so appuser must own it.
+RUN adduser --disabled-password --gecos "" --uid 1000 appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 # Use the virtual environment's Python and binaries
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
