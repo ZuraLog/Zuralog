@@ -12,6 +12,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 
@@ -26,14 +27,18 @@ class HealthSyncService {
   /// Parameters:
   /// - [healthRepository]: Provides local HealthKit/Health Connect reads.
   /// - [apiClient]: Handles authenticated REST calls to the Cloud Brain.
+  /// - [analyticsService]: Optional analytics for sync event tracking.
   HealthSyncService({
     required HealthRepository healthRepository,
     required ApiClient apiClient,
+    AnalyticsService? analyticsService,
   }) : _healthRepo = healthRepository,
-       _apiClient = apiClient;
+       _apiClient = apiClient,
+       _analytics = analyticsService;
 
   final HealthRepository _healthRepo;
   final ApiClient _apiClient;
+  final AnalyticsService? _analytics;
 
   /// Reads all available HealthKit data for the last [days] and pushes it
   /// to the Cloud Brain ingest endpoint.
@@ -54,6 +59,12 @@ class HealthSyncService {
   ///   `true` if the POST to the Cloud Brain succeeded, `false` otherwise.
   ///   Errors are caught and logged; this method never throws.
   Future<bool> syncToCloud({int days = 7}) async {
+    final platform = Platform.isIOS ? 'apple_health' : 'health_connect';
+    // Analytics: track sync start (fire-and-forget).
+    _analytics?.capture(
+      event: 'health_sync_started',
+      properties: {'platform': platform},
+    );
     try {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -141,10 +152,26 @@ class HealthSyncService {
         '[HealthSync] Sync complete: ${workouts.length} workouts, '
         '${steps.round()} steps',
       );
+      // Analytics: track sync success (fire-and-forget).
+      _analytics?.capture(
+        event: 'health_sync_completed',
+        properties: {
+          'platform': platform,
+          'record_count': workouts.length,
+        },
+      );
       return true;
     } catch (e, st) {
       Sentry.captureException(e, stackTrace: st);
       debugPrint('[HealthSync] Sync failed: $e\n$st');
+      // Analytics: track sync failure (fire-and-forget).
+      _analytics?.capture(
+        event: 'health_sync_failed',
+        properties: {
+          'platform': platform,
+          'error': e.toString(),
+        },
+      );
       return false;
     }
   }

@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     cache_ttl_short: int = 300  # 5 minutes — analytics, preferences
     cache_ttl_medium: int = 900  # 15 minutes — correlations, profiles
     cache_ttl_long: int = 86400  # 24 hours — immutable historical data
+    # PostHog
+    posthog_api_key: str = ""
+    posthog_host: str = "https://us.i.posthog.com"
 
     model_config = SettingsConfigDict(
         env_file=".env",

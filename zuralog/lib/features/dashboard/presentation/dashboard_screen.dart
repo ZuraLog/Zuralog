@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
@@ -113,7 +114,7 @@ const Map<HealthCategory, List<String>> _kCategoryPreviewIds = {
 ///
 /// Platform awareness: categories whose metrics are unavailable on the
 /// current device platform are silently omitted from the list.
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   /// Creates a [DashboardScreen].
   const DashboardScreen({super.key});
 
@@ -124,7 +125,21 @@ class DashboardScreen extends ConsumerWidget {
   static const int _kIntegrationsBranchIndex = 2;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Analytics: fire dashboard_viewed once when the screen initialises.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(analyticsServiceProvider).capture(event: 'dashboard_viewed');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final insightAsync = ref.watch(dashboardInsightProvider);
     final profile = ref.watch(userProfileProvider);
 
@@ -195,7 +210,7 @@ class DashboardScreen extends ConsumerWidget {
                         insight: insight,
                         onTap: () => StatefulNavigationShell.of(
                           context,
-                        ).goBranch(_kChatBranchIndex),
+                        ).goBranch(DashboardScreen._kChatBranchIndex),
                       ),
                       loading: () => const _InsightStripShimmer(),
                       error: (e, _) => _CompactInsightStrip(
@@ -205,7 +220,7 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         onTap: () => StatefulNavigationShell.of(
                           context,
-                        ).goBranch(_kChatBranchIndex),
+                        ).goBranch(DashboardScreen._kChatBranchIndex),
                       ),
                     ),
                     const SizedBox(height: AppDimens.spaceLg),
@@ -252,7 +267,7 @@ class DashboardScreen extends ConsumerWidget {
                     IntegrationsRail(
                       onManageTap: () => StatefulNavigationShell.of(
                         context,
-                      ).goBranch(_kIntegrationsBranchIndex),
+                      ).goBranch(DashboardScreen._kIntegrationsBranchIndex),
                     ),
                   ],
                 ),

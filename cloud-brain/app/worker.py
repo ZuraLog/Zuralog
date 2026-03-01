@@ -29,6 +29,29 @@ if settings.sentry_dsn:
         enable_tracing=True,
     )
 
+import posthog as _posthog  # noqa: E402
+
+_settings = settings  # capture for signal handler closure
+
+if settings.posthog_api_key:
+    _posthog.api_key = settings.posthog_api_key
+    _posthog.host = settings.posthog_host
+    logger.info("PostHog initialized for Celery worker")
+
+from celery.signals import worker_shutdown  # noqa: E402
+
+
+@worker_shutdown.connect
+def _flush_posthog_on_shutdown(**kwargs):
+    """Flush pending PostHog events before Celery worker exits."""
+    if _settings.posthog_api_key:
+        try:
+            _posthog.shutdown()
+            logger.info("PostHog flushed on worker shutdown")
+        except Exception:
+            logger.warning("PostHog worker shutdown flush failed", exc_info=True)
+
+
 celery_app = Celery(
     "zuralog",
     broker=settings.redis_url,

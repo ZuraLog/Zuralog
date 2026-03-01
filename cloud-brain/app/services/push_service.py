@@ -99,6 +99,9 @@ class PushService:
             )
             response = messaging.send(message)
             logger.info("FCM notification sent: %s", response)
+            # TODO: PostHog push_notification_sent event — needs analytics service injection.
+            # PushService is a plain class instantiated without request context; pass an
+            # optional analytics_service parameter if this event becomes required.
             return response
         except Exception:
             logger.exception("FCM send failed")

@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/health/health_bridge.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/network/fcm_service.dart';
@@ -90,6 +91,7 @@ final healthSyncServiceProvider = Provider<HealthSyncService>((ref) {
   return HealthSyncService(
     healthRepository: ref.watch(healthRepositoryProvider),
     apiClient: ref.read(apiClientProvider),
+    analyticsService: ref.read(analyticsServiceProvider),
   );
 });
 

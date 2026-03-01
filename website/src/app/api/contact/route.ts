@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { getResendClient, FROM_EMAIL } from '@/lib/resend';
 import { checkRateLimit } from "@/lib/rate-limit";
+import { captureServerEvent } from '@/lib/posthog-server';
 
 /** Expected request body shape */
 interface ContactBody {
@@ -134,6 +135,12 @@ export async function POST(request: NextRequest) {
           { status: 500 },
         );
       }
+
+      // Fire-and-forget — analytics must never delay or break the contact response
+      captureServerEvent(data.email, "contact_form_server", {
+        subject: data.subject,
+        message_length: data.message.length,
+      }).catch(() => {});
 
       return NextResponse.json(
         { message: 'Message received. We will be in touch soon.' },

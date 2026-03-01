@@ -184,6 +184,14 @@ async def fitbit_exchange(
 
     logger.info("Fitbit connected for user '%s' (fitbit_user_id=%s)", user_id, fitbit_user_id)
 
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        analytics.capture(
+            distinct_id=user_id,
+            event="fitbit_connected",
+            properties={"provider": "fitbit"},
+        )
+
     return {
         "success": True,
         "fitbit_user_id": fitbit_user_id,
@@ -260,4 +268,13 @@ async def fitbit_disconnect(
 
     fitbit_token_service: FitbitTokenService = request.app.state.fitbit_token_service
     disconnected = await fitbit_token_service.disconnect(db, user_id)
+
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        analytics.capture(
+            distinct_id=user_id,
+            event="fitbit_disconnected",
+            properties={"provider": "fitbit"},
+        )
+
     return {"success": disconnected}

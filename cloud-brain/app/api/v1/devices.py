@@ -88,4 +88,12 @@ async def register_device(
 
     logger.info("Device registered for user '%s' (platform=%s)", user_id, body.platform)
 
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        analytics.capture(
+            distinct_id=user_id,
+            event="device_registered",
+            properties={"platform": body.platform},
+        )
+
     return {"success": True, "message": "Device registered"}

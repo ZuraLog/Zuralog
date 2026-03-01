@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/storage/secure_storage.dart';
@@ -82,11 +83,13 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     HealthSyncService? healthSyncService,
     SecureStorage? secureStorage,
     ApiClient? apiClient,
+    AnalyticsService? analyticsService,
   }) : _oauthRepository = oauthRepository,
        _healthRepository = healthRepository,
        _healthSyncService = healthSyncService,
        _secureStorage = secureStorage,
        _apiClient = apiClient,
+       _analytics = analyticsService,
        // Start in loading state so the screen never briefly shows
        // "No integrations available." before loadIntegrations() fires.
        super(const IntegrationsState(isLoading: true));
@@ -104,6 +107,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   /// Optional API client. Provides the Cloud Brain base URL for native sync.
   final ApiClient? _apiClient;
+
+  /// Optional analytics service for integration event tracking.
+  final AnalyticsService? _analytics;
 
   // ── Mock seed data ─────────────────────────────────────────────────────────
 
@@ -243,6 +249,10 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           if (url != null) {
             // URL obtained — deep-link handler will call handleStravaCallback.
             _setStatus(integrationId, IntegrationStatus.connected);
+            _analytics?.capture(
+              event: 'integration_connected',
+              properties: {'provider': integrationId},
+            );
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Strava connection.');
@@ -253,6 +263,10 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           if (url != null) {
             // URL obtained — deep-link handler will call handleFitbitCallback.
             _setStatus(integrationId, IntegrationStatus.connected);
+            _analytics?.capture(
+              event: 'integration_connected',
+              properties: {'provider': integrationId},
+            );
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Fitbit connection.');
@@ -265,6 +279,10 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           _setStatus(integrationId, newStatus);
           if (granted) {
             await _saveConnectedState(integrationId, connected: true);
+            _analytics?.capture(
+              event: 'integration_connected',
+              properties: {'provider': integrationId},
+            );
             // Persist JWT + API URL to iOS Keychain so native Swift code can
             // sync HealthKit data directly to the Cloud Brain in the background
             // without requiring the Flutter engine to be running.
@@ -316,6 +334,10 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           _setStatus(integrationId, newStatus);
           if (granted) {
             await _saveConnectedState(integrationId, connected: true);
+            _analytics?.capture(
+              event: 'integration_connected',
+              properties: {'provider': integrationId},
+            );
             // Persist JWT to EncryptedSharedPreferences so HealthSyncWorker
             // can authenticate with the Cloud Brain in the background.
             if (_secureStorage != null && _apiClient != null) {
@@ -369,6 +391,11 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
   /// Parameters:
   ///   integrationId: The [IntegrationModel.id] of the service to disconnect.
   void disconnect(String integrationId) {
+    // Analytics: track integration disconnection (fire-and-forget).
+    _analytics?.capture(
+      event: 'integration_disconnected',
+      properties: {'provider': integrationId},
+    );
     // Clear persisted state so the integration shows as Available after restart.
     unawaited(
       _saveConnectedState(integrationId, connected: false).catchError((
@@ -463,6 +490,7 @@ final integrationsProvider =
         healthSyncService: ref.watch(healthSyncServiceProvider),
         secureStorage: ref.read(secureStorageProvider),
         apiClient: ref.read(apiClientProvider),
+        analyticsService: ref.read(analyticsServiceProvider),
       );
       // Kick off the initial load after the current frame so the provider is
       // fully initialised before any state mutation occurs.

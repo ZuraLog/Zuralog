@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import httpx
+import posthog as _posthog
 import sentry_sdk
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -666,6 +667,25 @@ def sync_fitbit_collection_task(
                 collection_type,
                 date,
             )
+
+            from app.config import settings as _settings  # noqa: PLC0415
+
+            if _settings.posthog_api_key and upserted > 0:
+                try:
+                    _posthog.capture(
+                        distinct_id=target.user_id,
+                        event="health_data_ingested",
+                        properties={
+                            "platform": "fitbit",
+                            "source": "background_sync",
+                            "record_count": upserted,
+                            "task": "sync_fitbit_collection_task",
+                            "collection_type": collection_type,
+                        },
+                    )
+                except Exception:  # noqa: BLE001
+                    pass  # Never let analytics break Celery tasks
+
             return {
                 "status": "ok",
                 "user_id": target.user_id,
@@ -724,12 +744,30 @@ def sync_fitbit_periodic_task() -> dict[str, Any]:
                         )
                         continue
 
-                    await _sync_fitbit_user(db, integration.user_id, access_token, dates)
+                    sync_totals = await _sync_fitbit_user(db, integration.user_id, access_token, dates)
 
                     integration.last_synced_at = datetime.now(timezone.utc)
                     integration.sync_status = "idle"
                     await db.commit()
                     users_synced += 1
+
+                    from app.config import settings as _settings  # noqa: PLC0415
+
+                    total_synced = sum(sync_totals.values()) if sync_totals else 0
+                    if _settings.posthog_api_key and total_synced > 0:
+                        try:
+                            _posthog.capture(
+                                distinct_id=integration.user_id,
+                                event="health_data_ingested",
+                                properties={
+                                    "platform": "fitbit",
+                                    "source": "background_sync",
+                                    "record_count": total_synced,
+                                    "task": "sync_fitbit_periodic_task",
+                                },
+                            )
+                        except Exception:  # noqa: BLE001
+                            pass  # Never let analytics break Celery tasks
 
                 except Exception as exc:  # noqa: BLE001
                     logger.exception(
@@ -905,6 +943,26 @@ def backfill_fitbit_data_task(user_id: str, days_back: int = 30) -> dict[str, An
                 user_id,
                 totals,
             )
+
+            from app.config import settings as _settings  # noqa: PLC0415
+
+            total_synced = sum(totals.values()) if totals else 0
+            if _settings.posthog_api_key and total_synced > 0:
+                try:
+                    _posthog.capture(
+                        distinct_id=user_id,
+                        event="health_data_ingested",
+                        properties={
+                            "platform": "fitbit",
+                            "source": "background_sync",
+                            "record_count": total_synced,
+                            "task": "backfill_fitbit_data_task",
+                            "days_back": days_back,
+                        },
+                    )
+                except Exception:  # noqa: BLE001
+                    pass  # Never let analytics break Celery tasks
+
             return {"status": "ok", "days_back": days_back, **totals}
 
     return asyncio.run(_run())

@@ -210,6 +210,17 @@ Used for in-app purchase webhooks. Not required for local development.
 | `REVENUECAT_WEBHOOK_SECRET` | RevenueCat Dashboard → Webhooks → Auth Header |
 | `REVENUECAT_API_KEY` | RevenueCat Dashboard → API Keys → Secret key (starts with `sk_`) |
 
+#### Optional: PostHog (Analytics)
+
+PostHog captures backend events (API requests, auth, health ingest, chat, integrations, subscriptions). When `POSTHOG_API_KEY` is empty the service starts normally and all analytics calls are silent no-ops — no errors, no crashes.
+
+| Variable | Value |
+|---|---|
+| `POSTHOG_API_KEY` | `phc_mR6tpsplNPlIRjEALV2lH0T1YHAGb7YRqRBlLQ1AICO` (shared project key) |
+| `POSTHOG_HOST` | `https://us.i.posthog.com` |
+
+> **Production (Railway):** These are already set on all three services (Zuralog, Celery Worker, Celery Beat). No Railway action needed.
+
 #### Required: Sentry (Error Monitoring)
 
 The Cloud Brain sends errors and performance traces to Sentry. The DSN is already filled in `.env.example` — copy it across when you run `cp .env.example .env`. No account setup needed for local dev; events will appear in the `cloud-brain` project at [zuralog.sentry.io](https://zuralog.sentry.io).
@@ -316,7 +327,7 @@ This should report **No issues found**. The project enforces a zero-warning poli
 flutter test
 ```
 
-All tests should pass. The test suite currently covers 201 tests across unit, widget, and provider layers.
+273 tests pass across unit, widget, and provider layers. 8 pre-existing failures in `test/features/dashboard/presentation/dashboard_screen_test.dart` are known — they relate to pending fake timers in the `RealMetricDataRepository` and do not affect production behavior.
 
 ### 3e. Launch on an Emulator
 
@@ -338,7 +349,11 @@ make run-device   # Physical device (update IP in Makefile first)
 
 > **Why `make run` instead of `flutter run`?** The app requires `GOOGLE_WEB_CLIENT_ID` and `SENTRY_DSN` to be injected at build time via `--dart-define`. `make run` reads both automatically from `cloud-brain/.env` and passes them through. Bare `flutter run` skips this — Google Sign-In will return a null token and Sentry will be disabled.
 
-You should see the **Zuralog Welcome screen** — the animated entry screen with the Zuralog logo. From there you can proceed through onboarding and log in. The auth guard will redirect authenticated users directly to the Dashboard on subsequent launches.
+You should see the **Zuralog Welcome screen** — the animated entry screen with the Zuralog logo.
+
+> **PostHog analytics in debug builds:** Analytics is disabled by default in `kDebugMode` to prevent test events polluting production data. To enable it locally (e.g., when verifying event instrumentation), add `--dart-define=ENABLE_ANALYTICS=true` to your `flutter run` command or `make` target.
+
+From there you can proceed through onboarding and log in. The auth guard will redirect authenticated users directly to the Dashboard on subsequent launches.
 
 **Screen map (post Phase 2.2):**
 
@@ -445,12 +460,15 @@ The website uses the **same Supabase project** as the backend (`enccjffwpnwkxfkh
 
 #### Optional: Analytics (PostHog)
 
-PostHog tracking is wired but gracefully skipped when the key is absent.
+PostHog tracking is wired but gracefully skipped when any key is absent. Three variables are required — two for the client-side SDK (`NEXT_PUBLIC_*`) and one for the server-side Node.js client used in API routes.
 
-| Variable | Where to find it |
+| Variable | Value |
 |---|---|
-| `NEXT_PUBLIC_POSTHOG_KEY` | [posthog.com](https://posthog.com) → Project Settings → Project API Key |
-| `NEXT_PUBLIC_POSTHOG_HOST` | Keep default: `https://us.i.posthog.com` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | `phc_mR6tpsplNPlIRjEALV2lH0T1YHAGb7YRqRBlLQ1AICO` |
+| `NEXT_PUBLIC_POSTHOG_HOST` | `https://us.i.posthog.com` |
+| `POSTHOG_API_KEY` | `phc_mR6tpsplNPlIRjEALV2lH0T1YHAGb7YRqRBlLQ1AICO` (same key, no prefix — used server-side in API routes) |
+
+> **Vercel (production):** All three variables must be set in the Vercel dashboard → Project Settings → Environment Variables. They are **not** auto-deployed from `.env.local`.
 
 #### Required: Sentry (Error Monitoring)
 
@@ -522,7 +540,25 @@ The website deploys automatically via Vercel on every push to `main`. The Vercel
 - **Output Directory:** `.next` (Vercel default)
 - **Node.js Version:** 20.x
 
-All environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`) are set in the Vercel dashboard → Project Settings → Environment Variables. You do **not** need to push `.env.local`.
+All environment variables are set in the Vercel dashboard → Project Settings → Environment Variables. You do **not** need to push `.env.local`.
+
+| Variable | Notes |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | |
+| `SUPABASE_SERVICE_ROLE_KEY` | |
+| `NEXT_PUBLIC_SITE_URL` | Set to `https://www.zuralog.com` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog client-side SDK key |
+| `NEXT_PUBLIC_POSTHOG_HOST` | `https://us.i.posthog.com` |
+| `POSTHOG_API_KEY` | PostHog server-side key (same value as `NEXT_PUBLIC_POSTHOG_KEY`) |
+| `NEXT_PUBLIC_SENTRY_DSN` | |
+| `SENTRY_DSN` | |
+| `SENTRY_ORG` | `zuralog` |
+| `SENTRY_PROJECT` | `website` |
+| `SENTRY_AUTH_TOKEN` | Source map upload token — gitignored, set only in Vercel |
+| `RESEND_API_KEY` | Transactional email for waitlist |
+| `UPSTASH_REDIS_REST_URL` | Rate limiting |
+| `UPSTASH_REDIS_REST_TOKEN` | Rate limiting |
 
 ### 4h. Design System
 

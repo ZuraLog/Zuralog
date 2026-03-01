@@ -22,6 +22,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.agent.context_manager.memory_store import InMemoryStore
+from app.middleware.posthog_analytics import PostHogAnalyticsMiddleware
 from app.middleware.sentry_context import SentryUserContextMiddleware
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
@@ -55,6 +56,7 @@ from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
 from app.services.strava_rate_limiter import StravaRateLimiter
 from app.services.strava_token_service import StravaTokenService
+from app.services.analytics import AnalyticsService
 from app.services.cache_service import CacheService
 
 # Configure root logger based on environment.
@@ -165,6 +167,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.llm_client = LLMClient()
     app.state.rate_limiter = RateLimiter()
     app.state.cache_service = CacheService()
+    app.state.analytics_service = AnalyticsService()
     # Reuse push_svc / device_write_svc created above for the MCP server.
     app.state.push_service = push_svc
     app.state.device_write_service = device_write_svc
@@ -175,6 +178,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if getattr(app.state, "rate_limiter", None) is not None:
         await app.state.rate_limiter.close()
     await http_client.aclose()
+    if hasattr(app.state, "analytics_service"):
+        app.state.analytics_service.shutdown()
     print("Zuralog Cloud Brain shutting down")
 
 
@@ -204,6 +209,7 @@ app.add_middleware(
 )
 
 app.add_middleware(SentryUserContextMiddleware)
+app.add_middleware(PostHogAnalyticsMiddleware)
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")  # Phase 1.9

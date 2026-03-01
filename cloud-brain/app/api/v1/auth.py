@@ -6,6 +6,8 @@ All auth operations proxy to Supabase Auth via httpx, and new users are
 synced to the local `users` table on registration and login.
 """
 
+from typing import TYPE_CHECKING
+
 import sentry_sdk
 from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -23,6 +25,13 @@ from app.database import get_db
 from app.limiter import limiter
 from app.services.auth_service import AuthService
 from app.services.user_service import sync_user_to_db
+
+if TYPE_CHECKING:
+    from app.services.analytics import AnalyticsService
+
+
+def _get_analytics(request: "Request") -> "AnalyticsService | None":
+    return getattr(request.app.state, "analytics_service", None)
 
 
 async def _set_sentry_module() -> None:
@@ -80,6 +89,30 @@ async def register(
     result = await auth_service.sign_up(body.email, body.password)
     await sync_user_to_db(db, result["user_id"], body.email)
 
+    analytics = _get_analytics(request)
+    if analytics:
+        analytics.capture(
+            distinct_id=result["user_id"],
+            event="user_signed_up",
+            properties={
+                "method": "email",
+                "platform": request.headers.get("x-platform", "unknown"),
+            },
+        )
+        analytics.identify(
+            distinct_id=result["user_id"],
+            properties={
+                "platform": request.headers.get("x-platform", "unknown"),
+                "subscription_tier": "free",
+                "connected_integrations": [],
+            },
+        )
+        analytics.group_identify(
+            group_type="subscription",
+            group_key="free",
+            properties={"tier": "free"},
+        )
+
     return AuthResponse(
         user_id=result["user_id"],
         access_token=result["access_token"],
@@ -114,6 +147,17 @@ async def login(
     """
     result = await auth_service.sign_in(body.email, body.password)
     await sync_user_to_db(db, result["user_id"], body.email)
+
+    analytics = _get_analytics(request)
+    if analytics:
+        analytics.capture(
+            distinct_id=result["user_id"],
+            event="user_logged_in",
+            properties={
+                "method": "email",
+                "platform": request.headers.get("x-platform", "unknown"),
+            },
+        )
 
     return AuthResponse(
         user_id=result["user_id"],

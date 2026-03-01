@@ -22,6 +22,7 @@ import { rateLimiter } from '@/lib/rate-limit';
 import { deleteCached } from "@/lib/cache";
 import { generateReferralCode } from '@/lib/referral';
 import { getResendClient, FROM_EMAIL } from '@/lib/resend';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
@@ -135,6 +136,13 @@ export async function POST(request: NextRequest) {
       // Invalidate waitlist stats and leaderboard caches
       await deleteCached("website:waitlist:stats");
       await deleteCached("website:waitlist:leaderboard");
+
+      // Fire-and-forget — analytics must never add latency to the signup response
+      captureServerEvent(email, "waitlist_signup_server", {
+        referral_code: referredByCode || null,
+        position: inserted.queue_position,
+        source: request.headers.get("referer") || "direct",
+      }).catch(() => {});
 
       // 6. Send welcome email (fire-and-forget)
       const resend = getResendClient();

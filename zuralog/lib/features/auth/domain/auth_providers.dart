@@ -8,11 +8,14 @@
 /// onboarding display via [SharedPreferences].
 library;
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/auth/data/auth_repository.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
@@ -101,11 +104,25 @@ class AuthStateNotifier extends Notifier<AuthState> {
     final result = await _authRepository.login(email, password);
 
     switch (result) {
-      case AuthSuccess():
+      case AuthSuccess(:final userId):
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
+        // Analytics: identify first so the login event is attributed to the
+        // identified user (not the anonymous ID) in PostHog (fire-and-forget).
+        final analytics = ref.read(analyticsServiceProvider);
+        analytics.identify(
+          userId: userId,
+          properties: {
+            'subscription_tier': 'free',
+            'platform': Platform.isIOS ? 'ios' : 'android',
+          },
+        );
+        analytics.capture(
+          event: 'user_logged_in',
+          properties: {'method': 'email'},
+        );
       case AuthFailure():
         state = AuthState.unauthenticated;
     }
@@ -124,11 +141,26 @@ class AuthStateNotifier extends Notifier<AuthState> {
     final result = await _authRepository.register(email, password);
 
     switch (result) {
-      case AuthSuccess():
+      case AuthSuccess(:final userId):
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
+        // Analytics: identify first so the signup event is attributed to the
+        // identified user (not the anonymous ID) in PostHog (fire-and-forget).
+        final analytics = ref.read(analyticsServiceProvider);
+        analytics.identify(
+          userId: userId,
+          properties: {
+            'signup_date': DateTime.now().toIso8601String(),
+            'subscription_tier': 'free',
+            'platform': Platform.isIOS ? 'ios' : 'android',
+          },
+        );
+        analytics.capture(
+          event: 'user_signed_up',
+          properties: {'method': 'email'},
+        );
       case AuthFailure():
         state = AuthState.unauthenticated;
     }
@@ -162,10 +194,24 @@ class AuthStateNotifier extends Notifier<AuthState> {
     );
 
     switch (result) {
-      case AuthSuccess():
+      case AuthSuccess(:final userId):
         state = AuthState.authenticated;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
+        // Analytics: identify first so the login event is attributed to the
+        // identified user (not the anonymous ID) in PostHog (fire-and-forget).
+        final analytics = ref.read(analyticsServiceProvider);
+        analytics.identify(
+          userId: userId,
+          properties: {
+            'subscription_tier': 'free',
+            'platform': Platform.isIOS ? 'ios' : 'android',
+          },
+        );
+        analytics.capture(
+          event: 'user_logged_in',
+          properties: {'method': credentials.provider.name},
+        );
       case AuthFailure():
         state = AuthState.unauthenticated;
     }
@@ -179,6 +225,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// stored email from [userEmailProvider]. Also clears the cached
   /// [userProfileProvider] state.
   Future<void> logout() async {
+    // Analytics: reset identity before clearing auth state (fire-and-forget).
+    ref.read(analyticsServiceProvider).reset();
     state = AuthState.loading;
     await _authRepository.logout();
     ref.read(userEmailProvider.notifier).state = '';
@@ -193,6 +241,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// refresh token are expired and cannot be recovered. Clears the local
   /// profile and email state so the router redirects to the login screen.
   void forceLogout() {
+    // Analytics: reset identity on force logout (fire-and-forget).
+    ref.read(analyticsServiceProvider).reset();
     ref.read(userEmailProvider.notifier).state = '';
     ref.read(userProfileProvider.notifier).clear();
     state = AuthState.unauthenticated;

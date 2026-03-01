@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/features/chat/data/chat_repository.dart';
@@ -74,6 +75,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
   /// Tracks the stream subscription so it can be cancelled on dispose.
   Object? _messageSub;
 
+  /// Whether [chat_opened] has been fired for the current session.
+  bool _chatOpened = false;
+
   /// Creates a [ChatNotifier] with the given [repository] and [ref].
   ///
   /// Initial state has no messages, not typing, and no error.
@@ -117,6 +121,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
   void connect(String token) {
     _repository.connect(token);
 
+    // Analytics: fire chat_opened once per session when WebSocket connects.
+    if (!_chatOpened) {
+      _chatOpened = true;
+      _ref.read(analyticsServiceProvider).capture(event: 'chat_opened');
+    }
+
     final subscription = _repository.messages.listen(
       (message) {
         if (!mounted) return;
@@ -152,6 +162,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
     );
 
     _repository.sendMessage(text.trim());
+
+    // Analytics: capture message sent event (fire-and-forget).
+    _ref.read(analyticsServiceProvider).capture(
+      event: 'chat_message_sent',
+      properties: {'message_length': text.length},
+    );
   }
 
   /// Fetches conversation history from the REST API.

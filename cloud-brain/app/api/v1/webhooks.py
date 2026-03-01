@@ -98,4 +98,18 @@ async def revenuecat_webhook(
         product_id=product_id,
     )
 
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics and app_user_id:  # Only capture when we have a real user
+        try:
+            analytics.capture(
+                distinct_id=app_user_id,
+                event="subscription_changed",
+                properties={
+                    "plan": product_id if product_id else "unknown",
+                    "change_type": event_type if event_type else "unknown",
+                },
+            )
+        except Exception:
+            logger.warning("PostHog subscription_changed capture failed", exc_info=True)
+
     return {"received": True}

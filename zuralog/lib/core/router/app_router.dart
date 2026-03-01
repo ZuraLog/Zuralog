@@ -44,6 +44,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/analytics/posthog_navigator_observer.dart';
+
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
@@ -116,7 +119,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: RouteNames.welcomePath,
     refreshListenable: listenable,
     debugLogDiagnostics: kDebugMode,
-    observers: [SentryNavigatorObserver()],
+    observers: [
+      SentryNavigatorObserver(),
+      PostHogNavigatorObserver(ref.read(analyticsServiceProvider)),
+    ],
     redirect: (BuildContext context, GoRouterState state) {
       final authState = ref.read(authStateProvider);
       final location = state.matchedLocation;

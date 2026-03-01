@@ -157,5 +157,23 @@ async def fitbit_webhook_event(request: Request) -> Response:
             )
             sentry_sdk.capture_exception(exc)
 
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        for raw_notif in body if isinstance(body, list) else []:
+            owner_id = raw_notif.get("ownerId", "unknown") if isinstance(raw_notif, dict) else "unknown"
+            collection_type = raw_notif.get("collectionType", "unknown") if isinstance(raw_notif, dict) else "unknown"
+            try:
+                analytics.capture(
+                    distinct_id=f"fitbit:{owner_id}",  # Fitbit owner_id; no Zuralog user_id in webhook context
+                    event="webhook_received",
+                    properties={
+                        "provider": "fitbit",
+                        "event_type": collection_type,
+                        "processed": True,
+                    },
+                )
+            except Exception:  # noqa: BLE001
+                pass  # Never let analytics break the 204 response
+
     # CRITICAL: Always return 204 — never let Fitbit see errors
     return Response(status_code=204)

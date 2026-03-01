@@ -14,6 +14,7 @@ import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/next";
 import { LenisProvider } from "@/components/layout/LenisProvider";
 import { OverlayDismisser } from "@/components/OverlayDismisser";
+import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -175,11 +176,13 @@ export default function RootLayout({
             `,
           }}
         />
-        <LenisProvider>
-          {children}
-        </LenisProvider>
-        <Toaster richColors position="bottom-right" />
-        <Analytics />
+        <PostHogProvider>
+          <LenisProvider>
+            {children}
+          </LenisProvider>
+          <Toaster richColors position="bottom-right" />
+          <Analytics />
+        </PostHogProvider>
       </body>
     </html>
   );

@@ -28,6 +28,7 @@ dependencies = [
     "numpy>=2.0.0",
     "sentry-sdk[fastapi,celery,sqlalchemy,httpx]>=2.19.0",
     "upstash-redis>=1.4.0",
+    "posthog>=3.7.0",
 ]
 
 [project.optional-dependencies]

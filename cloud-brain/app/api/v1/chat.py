@@ -157,6 +157,8 @@ async def websocket_chat(
                 )
                 continue
 
+            analytics = getattr(app.state, "analytics_service", None)
+
             # Enforce per-user rate limit before processing
             if rate_limiter:
                 try:
@@ -173,6 +175,15 @@ async def websocket_chat(
                         continue
                     raise
 
+            # Only count messages that pass the rate-limit gate
+            if analytics:
+                _sent_props: dict[str, Any] = {"message_length": len(message_text)}
+                analytics.capture(
+                    distinct_id=user_id,
+                    event="chat_message_sent",
+                    properties=_sent_props,
+                )
+
             # Build orchestrator with a fresh DB session for usage tracking
             async with async_session() as db:
                 usage_tracker = UsageTracker(session=db)
@@ -186,6 +197,12 @@ async def websocket_chat(
                 # Process through the Orchestrator
                 try:
                     agent_response = await orchestrator.process_message(user_id, message_text)
+                    if analytics:
+                        analytics.capture(
+                            distinct_id=user_id,
+                            event="chat_response_received",
+                            properties={},
+                        )
                     ws_payload: dict[str, Any] = {
                         "type": "message",
                         "content": agent_response.message,

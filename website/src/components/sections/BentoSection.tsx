@@ -30,6 +30,7 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import dynamic from "next/dynamic";
+import { useScrollDepth } from "@/hooks/useScrollDepth";
 import {
     Zap,
     Sparkles,
@@ -107,6 +108,7 @@ interface LeaderboardEntry {
 }
 
 export function BentoSection() {
+    useScrollDepth();
     const sectionRef = useRef<HTMLElement>(null);
     const listenersRef = useRef<Array<{ el: Element; event: string; fn: EventListener }>>([]);
 

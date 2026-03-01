@@ -25,6 +25,9 @@ dependencies:
   sentry_flutter: ^8.13.0
   sentry_dio: ^8.13.0
 
+  # Product Analytics & Feature Flags
+  posthog_flutter: ^4.7.0
+
   # Local Storage
   drift: any
   sqlite3_flutter_libs: ^0.5.0
@@ -56,6 +59,9 @@ dependencies:
   google_sign_in: ^6.2.2          # Native Google Sign In (iOS + Android)
   sign_in_with_apple: ^6.1.4      # Native Apple Sign In (iOS; web-based on Android)
   crypto: ^3.0.6                  # SHA-256 nonce hashing for Apple Sign In
+
+  # App metadata (version, build number) — used by AnalyticsInitializer
+  package_info_plus: any
 
   # SVG rendering (for the Zuralog brand logo asset)
   flutter_svg: ^2.0.17

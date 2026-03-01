@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
@@ -46,6 +47,11 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
       await repo.init(appUserId: appUserId);
       final status = await repo.fetchStatus();
       state = status;
+      // Analytics: identify user with subscription tier (fire-and-forget).
+      ref.read(analyticsServiceProvider).identify(
+        userId: appUserId,
+        properties: {'subscription_tier': status.tier.name},
+      );
     } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
       debugPrint('[SubscriptionNotifier] initialize error: $e');
@@ -106,6 +112,14 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
     final result = await repo.presentPaywall();
     if (result == PaywallResult.purchased || result == PaywallResult.restored) {
       await refresh();
+      // Analytics: capture tier from state after refresh. If refresh failed and
+      // fell back to free, we still record it — the RevenueCat webhook on the
+      // server side will be the authoritative source for plan tracking.
+      final purchasedTier = state.tier;
+      ref.read(analyticsServiceProvider).capture(
+        event: 'subscription_started',
+        properties: {'plan': purchasedTier.name},
+      );
     }
     return result;
   }
@@ -118,6 +132,12 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
     final result = await repo.presentPaywallIfNeeded();
     if (result == PaywallResult.purchased || result == PaywallResult.restored) {
       await refresh();
+      // Analytics: see note in presentPaywall() about tier after refresh.
+      final purchasedTier = state.tier;
+      ref.read(analyticsServiceProvider).capture(
+        event: 'subscription_started',
+        properties: {'plan': purchasedTier.name},
+      );
     }
     return result;
   }

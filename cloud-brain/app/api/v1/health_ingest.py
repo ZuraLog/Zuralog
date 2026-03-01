@@ -301,6 +301,18 @@ async def ingest_health_data(
     total = sum(counts.values())
     logger.info("Health ingest user=%s source=%s counts=%s", user_id, source, counts)
 
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        analytics.capture(
+            distinct_id=user_id,
+            event="health_data_ingested",
+            properties={
+                "platform": source,
+                "record_count": total,
+                "source": "manual",
+            },
+        )
+
     # Invalidate analytics caches for this user after successful ingest
     cache_service = getattr(request.app.state, "cache_service", None)
     if cache_service:

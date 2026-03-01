@@ -152,6 +152,15 @@ async def strava_exchange(
         await cache.delete(CacheService.make_key("integrations.strava_status", user_id))
 
     athlete_id: int | None = athlete.get("id") if athlete else None  # type: ignore[union-attr]
+
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        analytics.capture(
+            distinct_id=user_id,
+            event="strava_connected",
+            properties={"provider": "strava"},
+        )
+
     return {"success": True, "message": "Strava connected!", "athlete_id": athlete_id}
 
 
@@ -220,5 +229,13 @@ async def strava_disconnect(
     cache = getattr(request.app.state, "cache_service", None)
     if cache:
         await cache.delete(CacheService.make_key("integrations.strava_status", user_id))
+
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        analytics.capture(
+            distinct_id=user_id,
+            event="strava_disconnected",
+            properties={"provider": "strava"},
+        )
 
     return {"success": disconnected}

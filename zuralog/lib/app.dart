@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_initializer.dart';
 import 'package:zuralog/core/router/app_router.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -56,17 +57,19 @@ class _ZuralogAppState extends ConsumerState<ZuralogApp> {
     final themeMode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);
 
-    return MaterialApp.router(
-      title: 'Zuralog',
-      debugShowCheckedModeBanner: false,
-      // Light and dark themes from the design system.
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      // Defaults to ThemeMode.system — follows the device's OS setting.
-      // Overridable from the Settings screen via themeModeProvider.
-      themeMode: themeMode,
-      // GoRouter-backed declarative navigation.
-      routerConfig: router,
+    return AnalyticsInitializer(
+      child: MaterialApp.router(
+        title: 'Zuralog',
+        debugShowCheckedModeBanner: false,
+        // Light and dark themes from the design system.
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        // Defaults to ThemeMode.system — follows the device's OS setting.
+        // Overridable from the Settings screen via themeModeProvider.
+        themeMode: themeMode,
+        // GoRouter-backed declarative navigation.
+        routerConfig: router,
+      ),
     );
   }
 }

@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { usePostHog } from 'posthog-js/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { SuccessData } from '@/hooks/use-quiz';
@@ -28,6 +29,7 @@ interface WaitlistFormProps {
 export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormProps) {
   const [loading, setLoading] = useState(false);
   const [urlRef, setUrlRef] = useState('');
+  const posthog = usePostHog();
 
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get('ref') ?? '';
@@ -69,6 +71,11 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
         toast.info("You're already on the waitlist! Tell us more about yourself.");
       } else {
         toast.success("You're on the waitlist! Now tell us about yourself.");
+        // Track successful new waitlist signup client-side
+        posthog?.capture("waitlist_joined", {
+          referral_code: data.referralCode || urlRef || null,
+          position: json.position,
+        });
       }
 
       onSignupSuccess({

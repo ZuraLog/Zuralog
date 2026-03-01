@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -55,24 +56,48 @@ class ThemeSelector extends ConsumerWidget {
             mode: ThemeMode.system,
             currentMode: currentMode,
             colorScheme: colorScheme,
-            onTap: () => ref.read(themeModeProvider.notifier).state =
-                ThemeMode.system,
+            onTap: () {
+              ref.read(themeModeProvider.notifier).state = ThemeMode.system;
+              ref.read(analyticsServiceProvider).capture(
+                event: 'settings_changed',
+                properties: {
+                  'setting_name': 'theme',
+                  'new_value': ThemeMode.system.name,
+                },
+              );
+            },
           ),
           _ThemePill(
             label: 'Light',
             mode: ThemeMode.light,
             currentMode: currentMode,
             colorScheme: colorScheme,
-            onTap: () => ref.read(themeModeProvider.notifier).state =
-                ThemeMode.light,
+            onTap: () {
+              ref.read(themeModeProvider.notifier).state = ThemeMode.light;
+              ref.read(analyticsServiceProvider).capture(
+                event: 'settings_changed',
+                properties: {
+                  'setting_name': 'theme',
+                  'new_value': ThemeMode.light.name,
+                },
+              );
+            },
           ),
           _ThemePill(
             label: 'Dark',
             mode: ThemeMode.dark,
             currentMode: currentMode,
             colorScheme: colorScheme,
-            onTap: () => ref.read(themeModeProvider.notifier).state =
-                ThemeMode.dark,
+            onTap: () {
+              ref.read(themeModeProvider.notifier).state = ThemeMode.dark;
+              ref.read(analyticsServiceProvider).capture(
+                event: 'settings_changed',
+                properties: {
+                  'setting_name': 'theme',
+                  'new_value': ThemeMode.dark.name,
+                },
+              );
+            },
           ),
         ],
       ),

@@ -16,7 +16,7 @@ import logging
 from typing import Any
 
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.config import settings
@@ -90,7 +90,7 @@ async def strava_webhook_validation(
 
 
 @router.post("/webhooks/strava")
-async def strava_webhook_event(event: StravaWebhookEvent) -> dict[str, bool]:
+async def strava_webhook_event(request: Request, event: StravaWebhookEvent) -> dict[str, bool]:
     """Handle incoming Strava activity event.
 
     Strava pushes events here when a user's activity is created,
@@ -132,6 +132,18 @@ async def strava_webhook_event(event: StravaWebhookEvent) -> dict[str, bool]:
         logger.info(
             "Strava webhook: ignoring object_type=%s (no task dispatched)",
             event.object_type,
+        )
+
+    analytics = getattr(request.app.state, "analytics_service", None)
+    if analytics:
+        analytics.capture(
+            distinct_id=f"strava:{event.owner_id}",  # Strava owner_id; no Zuralog user_id in webhook context
+            event="webhook_received",
+            properties={
+                "provider": "strava",
+                "event_type": f"{event.object_type}.{event.aspect_type}",
+                "processed": True,
+            },
         )
 
     return {"received": True}

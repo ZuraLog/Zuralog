@@ -200,6 +200,7 @@ async def get_goals(
 
 @router.post("/goals", response_model=GoalProgressResponse, status_code=201)
 async def create_or_update_goal(
+    request: Request,
     body: UserGoalRequest,
     user_id: str = Query(..., description="User ID"),
     db: AsyncSession = Depends(get_db),
@@ -244,6 +245,14 @@ async def create_or_update_goal(
 
     await db.commit()
 
+    analytics_svc = getattr(request.app.state, "analytics_service", None)
+    if analytics_svc:
+        analytics_svc.capture(
+            distinct_id=user_id,
+            event="goals_updated",
+            properties={"goal_count": 1},
+        )
+
     # Compute current progress for the response.
     current = await _analytics_service._get_current_metric_value(
         db,
@@ -284,6 +293,14 @@ async def dashboard_insight(
         DashboardInsightResponse with insight text, goals, and trends.
     """
     result = await _analytics_service.get_dashboard_insight(db, user_id)
+
+    analytics_svc = getattr(request.app.state, "analytics_service", None)
+    if analytics_svc:
+        analytics_svc.capture(
+            distinct_id=user_id,
+            event="analytics_viewed",
+            properties={"view_type": "dashboard_insight"},
+        )
 
     # Convert nested dicts to response models.
     goals = [GoalProgressResponse(**g) for g in result["goals"]]
