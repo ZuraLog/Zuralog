@@ -35,6 +35,8 @@ from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
 from app.api.v1.oura_routes import router as oura_router
 from app.api.v1.oura_webhooks import webhook_router as oura_webhook_router
+from app.api.v1.withings_routes import router as withings_router
+from app.api.v1.withings_webhooks import webhook_router as withings_webhook_router
 from app.api.v1.health_ingest import router as health_ingest_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
@@ -49,6 +51,7 @@ from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.fitbit_server import FitbitServer
 from app.mcp_servers.oura_server import OuraServer
+from app.mcp_servers.withings_server import WithingsServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
 from app.services.auth_service import AuthService
@@ -57,6 +60,9 @@ from app.services.fitbit_rate_limiter import FitbitRateLimiter
 from app.services.fitbit_token_service import FitbitTokenService
 from app.services.oura_rate_limiter import OuraRateLimiter
 from app.services.oura_token_service import OuraTokenService
+from app.services.withings_rate_limiter import WithingsRateLimiter
+from app.services.withings_signature_service import WithingsSignatureService
+from app.services.withings_token_service import WithingsTokenService
 from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
 from app.services.strava_rate_limiter import StravaRateLimiter
@@ -179,6 +185,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.oura_token_service = oura_token_service
     app.state.oura_rate_limiter = oura_rate_limiter
 
+    # Withings wiring
+    withings_signature_service = WithingsSignatureService(
+        client_id=settings.withings_client_id,
+        client_secret=settings.withings_client_secret,
+    )
+    withings_token_service = WithingsTokenService()
+    withings_rate_limiter = WithingsRateLimiter(redis_url=settings.redis_url)
+    withings_server = WithingsServer(
+        token_service=withings_token_service,
+        signature_service=withings_signature_service,
+        db_factory=async_session,
+        rate_limiter=withings_rate_limiter,
+    )
+    registry.register(withings_server)
+    app.state.withings_token_service = withings_token_service
+    app.state.withings_signature_service = withings_signature_service
+    app.state.withings_rate_limiter = withings_rate_limiter
+
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
@@ -243,6 +267,8 @@ app.include_router(fitbit_router, prefix="/api/v1")  # Phase 5.1
 app.include_router(fitbit_webhook_router, prefix="/api/v1")  # Phase 5.1
 app.include_router(oura_router, prefix="/api/v1")  # Phase 5.2
 app.include_router(oura_webhook_router, prefix="/api/v1")  # Phase 5.2
+app.include_router(withings_router, prefix="/api/v1")  # Withings integration
+app.include_router(withings_webhook_router, prefix="/api/v1")  # Withings webhooks
 
 
 @app.get("/health")
