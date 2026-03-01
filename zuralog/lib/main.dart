@@ -7,8 +7,10 @@ library;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -29,6 +31,14 @@ const _kRevenueCatApiKey = String.fromEnvironment(
 /// Override at build time: `flutter run --dart-define=SENTRY_DSN=<dsn>`
 /// When empty, Sentry is disabled (e.g., local development without a DSN).
 const _kSentryDsn = String.fromEnvironment('SENTRY_DSN', defaultValue: '');
+
+/// PostHog project API key for analytics.
+///
+/// Injected at build time: `flutter run --dart-define=POSTHOG_API_KEY=phc_...`
+/// Reads automatically from cloud-brain/.env via `make run`.
+/// When empty, PostHog is not initialized and all analytics calls are no-ops.
+const _kPosthogApiKey =
+    String.fromEnvironment('POSTHOG_API_KEY', defaultValue: '');
 
 /// Application entry point.
 ///
@@ -59,6 +69,22 @@ Future<void> _initAndRun() async {
   } catch (e, stackTrace) {
     Sentry.captureException(e, stackTrace: stackTrace);
     debugPrint('RevenueCat init skipped: $e');
+  }
+
+  // Initialize PostHog analytics (Dart-side init — key injected via --dart-define).
+  // Key is intentionally not embedded in native platform config files.
+  if (_kPosthogApiKey.isNotEmpty) {
+    try {
+      final config = PostHogConfig(_kPosthogApiKey)
+        ..host = 'https://us.i.posthog.com'
+        ..captureApplicationLifecycleEvents = true
+        ..debug = kDebugMode;
+      await Posthog().setup(config);
+      debugPrint('PostHog configured');
+    } catch (e, stackTrace) {
+      Sentry.captureException(e, stackTrace: stackTrace);
+      debugPrint('PostHog init skipped: $e');
+    }
   }
 
   runApp(

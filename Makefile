@@ -7,8 +7,8 @@
 #   scoop install make
 # Or see the "make not found" section in SETUP.md for alternatives.
 #
-# All flutter targets read GOOGLE_WEB_CLIENT_ID from cloud-brain/.env
-# automatically so you never have to pass it manually.
+# All flutter targets read GOOGLE_WEB_CLIENT_ID and POSTHOG_API_KEY from cloud-brain/.env
+# automatically so you never have to pass them manually.
 # =============================================================================
 
 # Force Git Bash on Windows — prevents make from falling back to cmd.exe
@@ -20,6 +20,7 @@ SHELL := /bin/bash
 # ---------------------------------------------------------------------------
 GOOGLE_WEB_CLIENT_ID := $(shell grep -m1 '^GOOGLE_WEB_CLIENT_ID=' cloud-brain/.env | cut -d '=' -f2-)
 SENTRY_DSN           := $(shell grep -m1 '^SENTRY_DSN=' cloud-brain/.env | cut -d '=' -f2-)
+POSTHOG_API_KEY      := $(shell grep -m1 '^POSTHOG_API_KEY=' cloud-brain/.env | cut -d '=' -f2-)
 
 .PHONY: run run-ios run-device analyze test build-apk build-appbundle build-prod build-prod-ios
 
@@ -29,6 +30,7 @@ run:
 	cd zuralog && flutter run \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
 		--dart-define=APP_ENV=development
 
 ## Run on iOS Simulator
@@ -38,6 +40,7 @@ run-ios:
 		--dart-define=BASE_URL=http://localhost:8001 \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
 		--dart-define=APP_ENV=development
 
 ## Run on a physical device (update BASE_URL to your machine's LAN IP)
@@ -47,6 +50,7 @@ run-device:
 		--dart-define=BASE_URL=http://192.168.1.100:8001 \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
 		--dart-define=APP_ENV=development
 
 ## Run static analysis (zero warnings policy)
@@ -65,6 +69,7 @@ build-apk:
 	cd zuralog && flutter build apk --debug \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
 		--dart-define=APP_ENV=development
 
 ## Build a release App Bundle for Play Store submission
@@ -73,6 +78,7 @@ build-appbundle:
 	cd zuralog && flutter build appbundle --release \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
 		--dart-define=APP_ENV=production
 
 ## Production Android build — points to Railway backend (api.zuralog.com)
@@ -82,6 +88,7 @@ build-prod:
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
 		--dart-define=APP_ENV=production
 
 ## Production iOS build — points to Railway backend (api.zuralog.com)
@@ -91,4 +98,5 @@ build-prod-ios:
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
 		--dart-define=APP_ENV=production

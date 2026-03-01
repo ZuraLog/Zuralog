@@ -111,12 +111,6 @@
 		<string>processing</string>
 		<string>remote-notification</string>
 	</array>
-	<!-- PostHog Analytics (phc_ key is a public capture-only key, safe to embed) -->
-	<key>com.posthog.posthog.API_KEY</key>
-	<string>phc_OL7Q8F7OKfGVAfOZCPe3XEOMI1bqzqCpGuGFIeX7DA5</string>
-	<key>com.posthog.posthog.POSTHOG_HOST</key>
-	<string>https://us.i.posthog.com</string>
-	<key>com.posthog.posthog.TRACK_APPLICATION_LIFECYCLE_EVENTS</key>
-	<true/>
+
 </dict>
 </plist>
