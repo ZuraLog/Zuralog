@@ -171,6 +171,12 @@ class _FakeOAuthRepository implements OAuthRepository {
     String userId,
   ) async =>
       false;
+  @override
+  Future<String?> getOuraAuthUrl() async => null;
+  @override
+  Future<bool> handleOuraCallback(String code, String state, String userId) async => false;
+  @override
+  Future<String?> getWithingsAuthUrl() async => null;
 }
 
 // ── Helper ─────────────────────────────────────────────────────────────────────

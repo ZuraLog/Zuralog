@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-01  
+**Last Updated:** 2026-03-01 (Withings integration code complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -30,6 +30,7 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 - `StravaServer` — activities, stats, create activity
 - `FitbitServer` — 12 tools (activity, HR/HRV/intraday, sleep, SpO2, breathing rate, skin temp, VO2 max, weight, nutrition)
 - `OuraServer` — 16 tools (sleep, readiness, activity, HR, SpO2, stress, resilience, cardiovascular age, VO2 max, workouts, sessions, tags, rest mode, sleep time, ring config)
+- `WithingsServer` — 10 tools (body composition, blood pressure, temperature, SpO2, HRV, activity, workouts, sleep, sleep summary, ECG/heart)
 - `AppleHealthServer` — ingest and read HealthKit data
 - `HealthConnectServer` — ingest and read Health Connect data
 - `DeepLinkServer` — URI scheme launch library for third-party apps
@@ -38,6 +39,7 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 - Strava: full OAuth 2.0, token auto-refresh, Celery sync (15min), webhooks, Redis sliding-window rate limiter
 - Fitbit: OAuth 2.0 + PKCE, single-use refresh token handling, per-user Redis token-bucket rate limiter (150/hr), webhooks, Celery sync (15min) + token refresh (1hr)
 - Oura Ring: OAuth 2.0 (no PKCE), long-lived tokens, app-level Redis sliding-window rate limiter (5,000/hr shared), per-app webhook subscriptions (90-day expiry with auto-renewal), sandbox mode, Celery sync
+- Withings: OAuth 2.0 with HMAC-SHA256 request signing (unique), server-side callback, app-level rate limiter (120 req/min), 7 webhook `appli` codes, 10 MCP tools, `BloodPressureRecord` new model; credentials pending
 - Apple Health: ingest-only (native bridge handles reading; backend receives via platform channel)
 - Google Health Connect: same pattern as Apple Health
 
@@ -85,7 +87,7 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 - Email/password signup and login
 - Google Sign In (native, iOS + Android)
 - Onboarding screens
-- Deep link OAuth callback handler (`zuralog://oauth/strava`, `zuralog://oauth/fitbit`, `zuralog://oauth/oura`)
+- Deep link OAuth callback handler (`zuralog://oauth/strava`, `zuralog://oauth/fitbit`, `zuralog://oauth/oura`, `zuralog://oauth/withings`)
 
 **Chat**
 - AI chat UI with streaming message display
@@ -243,6 +245,80 @@ All three Railway services (**Zuralog** web, **Celery_Worker**, **Celery_Beat**)
 
 - `ssl.CERT_REQUIRED` (not `CERT_NONE`) — full TLS certificate verification against system CA bundle.
 - Dockerfile runtime stage now creates a non-root `appuser` (uid=1000); Celery and uvicorn both run as non-root, eliminating Celery's SecurityWarning.
+
+---
+
+## Withings Direct Integration (2026-03-01) — Code Complete, Credentials Pending
+
+> **Status:** All backend and Flutter code is implemented on `feat/withings-integration`. Deployment is blocked on setting `WITHINGS_CLIENT_ID` and `WITHINGS_CLIENT_SECRET` in Railway (credentials are in BitWarden). The `WITHINGS_REDIRECT_URI` is already set on the Zuralog Railway service. Once credentials are configured on all three Railway services (Zuralog, Celery_Worker, Celery_Beat), the branch can be deployed and E2E tested.
+
+Full Withings integration providing body composition, sleep, blood pressure, temperature, SpO2, HRV, ECG, and activity data via the Withings Health API (HMAC-SHA256 request signing).
+
+**Backend files created (8):**
+- `cloud-brain/app/services/withings_signature_service.py` — HMAC-SHA256 nonce+signature service; every Withings API call gets a fresh nonce from `/v2/signature`, then signs `action,client_id,nonce` with HMAC-SHA256
+- `cloud-brain/app/services/withings_token_service.py` — OAuth 2.0 token management (no PKCE); 3-hour access tokens with 30-minute proactive refresh buffer; stores `user_id` (not `"1"`) in Redis state for server-side callback resolution
+- `cloud-brain/app/services/withings_rate_limiter.py` — App-level Redis Lua-atomic rate limiter (120 req/min shared; Withings enforces at app level)
+- `cloud-brain/app/models/blood_pressure.py` — New `BloodPressureRecord` DB model; Supabase migration applied (`blood_pressure_records` table with uq constraint on `user_id+source+measured_at`)
+- `cloud-brain/app/api/v1/withings_routes.py` — OAuth routes: `/authorize`, `/callback` (server-side; browser redirect then deep-link redirect to `zuralog://oauth/withings`), `/status`, `/disconnect`
+- `cloud-brain/app/api/v1/withings_webhooks.py` — Webhook receiver (form-encoded POST, not JSON); dispatches Celery tasks per `appli` code
+- `cloud-brain/app/mcp_servers/withings_server.py` — `WithingsServer` with 10 MCP tools covering all Withings data types
+- `cloud-brain/app/tasks/withings_sync.py` — 5 Celery tasks: notification sync, 15-min periodic, 1-hr token refresh, 30-day backfill, webhook subscription creation
+
+**Backend files modified (2):**
+- `cloud-brain/app/main.py` — wired `WithingsSignatureService`, `WithingsTokenService`, `WithingsRateLimiter`, `WithingsServer`; mounted routes
+- `cloud-brain/app/worker.py` — added Beat schedules: `sync-withings-users-15m` (900s), `refresh-withings-tokens-1h` (3600s)
+
+**Flutter files modified (3):**
+- `zuralog/lib/features/integrations/data/oauth_repository.dart` — added `getWithingsAuthUrl()` (GET `/api/v1/integrations/withings/authorize`)
+- `zuralog/lib/features/integrations/domain/integrations_provider.dart` — added Withings to `_defaultIntegrations` and `connect()` switch case
+- `zuralog/lib/core/deeplink/deeplink_handler.dart` — added `withings` provider case; reads `success` query param from `zuralog://oauth/withings?success=true`
+
+**Test coverage (71 new tests):**
+
+| File | Tests |
+|------|-------|
+| `tests/test_withings_signature_service.py` | 10 |
+| `tests/test_withings_token_service.py` | 16 |
+| `tests/test_withings_rate_limiter.py` | 12 |
+| `tests/test_withings_routes.py` | 11 |
+| `tests/test_withings_webhooks.py` | 7 |
+| `tests/test_withings_server.py` | 15 |
+| **Total** | **71** |
+
+**Key implementation decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Standalone `WithingsSignatureService` | HMAC-SHA256 nonce+signature is unique to Withings among all integrations; isolating it into its own class makes testing clean and reuse straightforward |
+| Server-side OAuth callback | Withings validates callback URL reachability at app registration — `zuralog://` custom schemes are rejected. Backend receives the code at `https://api.zuralog.com/api/v1/integrations/withings/callback`, exchanges it within the 30-second window, then redirects the browser to `zuralog://oauth/withings?success=true` |
+| `store_state` stores `user_id` | Unlike Oura (which stores `"1"`), Withings' server-side callback has no JWT available — user identity is resolved from the `state` → `user_id` Redis lookup |
+| Webhook subscribe uses Bearer auth (no signing) | Only data API calls require HMAC-SHA256 signatures; Withings' `notify/subscribe` endpoint uses standard Bearer token auth |
+| 30-minute refresh buffer | Access tokens expire in 3 hours (most aggressive of all integrations); 30-minute buffer ensures proactive refresh before expiry during long-running tasks |
+| `BloodPressureRecord` as new model | No existing BP model in codebase; designed to support future integrations (not Withings-specific); includes `source` field for multi-provider dedup |
+| App-level rate limiter at 120/min | Withings enforces 120 req/min at the application level (not per-user); Redis Lua atomic INCR+EXPIRE, fail-open on Redis errors |
+
+**Webhook `appli` codes handled:**
+```
+1=weight/body comp → getmeas (1,5,6,8,76,77,88,91)
+2=temperature → getmeas (12,71,73)
+4=blood pressure/SpO2 → getmeas (9,10,11,54)
+16=activity → getactivity / getworkouts
+44=sleep → sleep v2 getsummary
+54=ECG → heart v2 list
+62=HRV → getmeas (135)
+```
+
+**MCP tools (10):** `withings_get_measurements`, `withings_get_blood_pressure`, `withings_get_temperature`, `withings_get_spo2`, `withings_get_hrv`, `withings_get_activity`, `withings_get_workouts`, `withings_get_sleep`, `withings_get_sleep_summary`, `withings_get_heart_list`
+
+---
+
+## WHOOP Integration — Deferred (2026-03-01)
+
+WHOOP was researched and planned as a P1 direct integration. Implementation was deferred after confirming that the WHOOP Developer Dashboard (`developer-dashboard.whoop.com`) requires an active WHOOP membership to create an account and register an OAuth application. This is a hardware dependency, not a policy gate — there is no workaround.
+
+**Decision:** Moved to P2/Future. Will revisit when user demand from the WHOOP member segment justifies acquiring hardware. All technical research and the implementation plan are preserved in `.opencode/plans/2026-02-28-direct-integrations-top10-research.md`.
+
+**Next integration:** Withings (P1).
 
 ---
 
