@@ -221,7 +221,7 @@ PostHog captures backend events (API requests, auth, health ingest, chat, integr
 | `POSTHOG_API_KEY` | `phc_<your-posthog-project-api-key>` (shared project key) |
 | `POSTHOG_HOST` | `https://us.i.posthog.com` |
 
-> **Production (Railway):** These are already set on all three services (Zuralog, Celery Worker, Celery Beat). No Railway action needed.
+> **Production (Railway):** These are already set on all three services (Zuralog, Celery_Worker, Celery_Beat). No Railway action needed.
 
 #### Required: Sentry (Error Monitoring)
 
@@ -595,7 +595,12 @@ The Cloud Brain backend deploys to Railway at `api.zuralog.com`. All deployment 
    - Start: `uvicorn app.main:app --host 0.0.0.0 --port ${PORT}`
    - Health check: `/health`
 4. Add all environment variables (see `cloud-brain/RAILWAY_ENV_VARS.md`)
-5. Add separate services for `celery-worker` and `celery-beat` with the same root dir but custom start commands (see `cloud-brain/docs/railway-setup-guide.md`)
+5. Add separate services for `Celery_Worker` and `Celery_Beat`:
+   - Same GitHub repo + root directory (`cloud-brain`) as the web service
+   - In each service: **Settings → Source → Config File Path** →
+     - Worker: `cloud-brain/railway.celery-worker.toml`
+     - Beat: `cloud-brain/railway.celery-beat.toml`
+   - The config files set the correct start commands and disable the HTTP healthcheck automatically — no dashboard overrides needed
 6. Add CNAME `api → <railway-domain>.railway.app` in your DNS provider
 
 For the full step-by-step guide including domain setup, Celery services, and Strava webhook registration, see:
