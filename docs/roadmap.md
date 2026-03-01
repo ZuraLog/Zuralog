@@ -19,7 +19,7 @@
 | P0 | Alembic migrations setup | ✅ Done | |
 | P0 | Docker Compose (local Postgres + Redis) | ✅ Done | |
 | P0 | uv + pyproject.toml project setup | ✅ Done | |
-| P0 | Railway deployment + Dockerfile | ✅ Done | |
+| P0 | Railway deployment + Dockerfile | ✅ Done | All 3 services (web, Celery_Worker, Celery_Beat) live |
 | P0 | Sentry integration (FastAPI + Celery + SQLAlchemy) | ✅ Done | |
 | P0 | `.env.example` + RAILWAY_ENV_VARS.md | ✅ Done | |
 

@@ -179,6 +179,25 @@ A full marketing and waitlist site built on Next.js 16:
 
 ---
 
+## Celery / Railway Production Fix (2026-03-01)
+
+All three Railway services (**Zuralog** web, **Celery_Worker**, **Celery_Beat**) are now fully deployed and running.
+
+**Root causes fixed:**
+
+1. **Missing `posthog` in lockfile** — `posthog>=3.7.0` was added to `pyproject.toml` but `uv.lock` was never regenerated. The Dockerfile uses `uv sync --frozen`, so `posthog` was absent at runtime, causing `ModuleNotFoundError` on uvicorn startup and failing every `/health` healthcheck.
+
+2. **No Railway config for Celery services** — Worker and Beat had no `railway.*.toml` files, so Railway had no start command. Created `cloud-brain/railway.celery-worker.toml` and `cloud-brain/railway.celery-beat.toml` with Dockerfile builder, correct `celery` start commands, and no `healthcheckPath` (Celery is not an HTTP server).
+
+3. **Celery SSL config for Upstash `rediss://`** — Celery 5.x requires explicit `broker_use_ssl` / `redis_backend_use_ssl` with `ssl_cert_reqs` when using TLS. Added to `worker.py` using `ssl.CERT_REQUIRED` (Upstash uses CA-signed DigiCert certs).
+
+**Security hardening applied:**
+
+- `ssl.CERT_REQUIRED` (not `CERT_NONE`) — full TLS certificate verification against system CA bundle.
+- Dockerfile runtime stage now creates a non-root `appuser` (uid=1000); Celery and uvicorn both run as non-root, eliminating Celery's SecurityWarning.
+
+---
+
 ## Waitlist Bug Fix (2026-02-24)
 
 A critical bug in the waitlist signup flow was identified and fixed:
