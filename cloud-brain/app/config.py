@@ -92,6 +92,14 @@ class Settings(BaseSettings):
     # Withings does not sign webhook payloads with HMAC; this query-param secret
     # is the standard defence against unauthenticated webhook spoofing.
     withings_webhook_secret: str = ""  # WITHINGS_WEBHOOK_SECRET
+    # Polar AccessLink
+    polar_client_id: str = ""  # POLAR_CLIENT_ID
+    polar_client_secret: str = ""  # POLAR_CLIENT_SECRET
+    polar_redirect_uri: str = "zuralog://oauth/polar"  # POLAR_REDIRECT_URI
+    polar_webhook_signature_key: str = ""  # POLAR_WEBHOOK_SIGNATURE_KEY
+    # Base URL of the Cloud Brain API used to construct the Polar webhook callback URL.
+    # Defaults to production; override in staging/local via POLAR_API_BASE_URL.
+    polar_api_base_url: str = "https://api.zuralog.com"  # POLAR_API_BASE_URL
     app_env: str = "production"
     app_debug: bool = False
     # Sentry

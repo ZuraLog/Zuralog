@@ -118,6 +118,18 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.withings_sync.refresh_withings_tokens_task",
         "schedule": 3600.0,  # 1 hour (tokens expire in 3h, refresh buffer is 30min)
     },
+    "sync-polar-users-15m": {
+        "task": "polar.sync_periodic",
+        "schedule": 900.0,  # 15 minutes
+    },
+    "monitor-polar-token-expiry-daily": {
+        "task": "polar.monitor_token_expiry",
+        "schedule": 86400.0,  # 24 hours
+    },
+    "check-polar-webhook-status-daily": {
+        "task": "polar.check_webhook_status",
+        "schedule": 86400.0,  # 24 hours
+    },
 }
 
 # Auto-discover tasks in services and tasks modules

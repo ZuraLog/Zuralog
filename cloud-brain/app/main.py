@@ -35,6 +35,8 @@ from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
 from app.api.v1.oura_routes import router as oura_router
 from app.api.v1.oura_webhooks import webhook_router as oura_webhook_router
+from app.api.v1.polar_routes import router as polar_router
+from app.api.v1.polar_webhooks import webhook_router as polar_webhook_router
 from app.api.v1.withings_routes import router as withings_router
 from app.api.v1.withings_webhooks import webhook_router as withings_webhook_router
 from app.api.v1.health_ingest import router as health_ingest_router
@@ -51,6 +53,7 @@ from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.fitbit_server import FitbitServer
 from app.mcp_servers.oura_server import OuraServer
+from app.mcp_servers.polar_server import PolarServer
 from app.mcp_servers.withings_server import WithingsServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
@@ -60,6 +63,8 @@ from app.services.fitbit_rate_limiter import FitbitRateLimiter
 from app.services.fitbit_token_service import FitbitTokenService
 from app.services.oura_rate_limiter import OuraRateLimiter
 from app.services.oura_token_service import OuraTokenService
+from app.services.polar_rate_limiter import PolarRateLimiter
+from app.services.polar_token_service import PolarTokenService
 from app.services.withings_rate_limiter import WithingsRateLimiter
 from app.services.withings_signature_service import WithingsSignatureService
 from app.services.withings_token_service import WithingsTokenService
@@ -203,6 +208,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.withings_signature_service = withings_signature_service
     app.state.withings_rate_limiter = withings_rate_limiter
 
+    # Polar wiring
+    polar_token_service = PolarTokenService()
+    polar_rate_limiter = PolarRateLimiter(redis_url=settings.redis_url)
+    polar_server = PolarServer(
+        token_service=polar_token_service,
+        db_factory=async_session,
+        rate_limiter=polar_rate_limiter,
+    )
+    registry.register(polar_server)
+    app.state.polar_token_service = polar_token_service
+    app.state.polar_rate_limiter = polar_rate_limiter
+
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
@@ -267,6 +284,8 @@ app.include_router(fitbit_router, prefix="/api/v1")  # Phase 5.1
 app.include_router(fitbit_webhook_router, prefix="/api/v1")  # Phase 5.1
 app.include_router(oura_router, prefix="/api/v1")  # Phase 5.2
 app.include_router(oura_webhook_router, prefix="/api/v1")  # Phase 5.2
+app.include_router(polar_router, prefix="/api/v1")  # Polar integration
+app.include_router(polar_webhook_router, prefix="/api/v1")  # Polar webhooks
 app.include_router(withings_router, prefix="/api/v1")  # Withings integration
 app.include_router(withings_webhook_router, prefix="/api/v1")  # Withings webhooks
 

@@ -165,6 +165,15 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
+      id: 'polar',
+      name: 'Polar',
+      status: IntegrationStatus.available,
+      description:
+          'Heart rate monitors, GPS watches, and fitness trackers. '
+          'Exercises, sleep, Nightly Recharge, continuous HR, cardio load, and SleepWise alertness.',
+      compatibility: PlatformCompatibility.all,
+    ),
+    IntegrationModel(
       id: 'google_health_connect',
       name: 'Google Health Connect',
       // Available on Android; shown in the Available section with a platform
@@ -315,6 +324,20 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Withings connection.');
+          }
+        case 'polar':
+          final url = await _oauthRepository.getPolarAuthUrl();
+          if (!context.mounted) break;
+          if (url != null) {
+            // URL obtained — deep-link handler will call handlePolarCallback.
+            _setStatus(integrationId, IntegrationStatus.connected);
+            _analytics?.capture(
+              event: 'integration_connected',
+              properties: {'provider': integrationId},
+            );
+          } else {
+            _setStatus(integrationId, IntegrationStatus.available);
+            _showSnackBar(context, 'Could not start Polar connection.');
           }
         case 'apple_health':
           final granted = await _healthRepository.requestAuthorization();

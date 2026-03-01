@@ -175,6 +175,8 @@ All external integrations are implemented as **MCP Servers** that expose a stand
 | `OuraServer` | 16 tools covering sleep, readiness, activity, heart rate, SpO2, stress, resilience, cardiovascular age, VO2 max, workouts, sessions, tags, rest mode, sleep time, and ring configuration | ✅ Production |
 | `AppleHealthServer` | Read/write HealthKit data via ingest endpoint | ✅ Production |
 | `HealthConnectServer` | Read/write Health Connect data via ingest endpoint | ✅ Production |
+| `WithingsServer` | 10 tools (body composition, blood pressure, temperature, SpO2, HRV, activity, workouts, sleep, sleep summary, ECG/heart) | ✅ Production |
+| `PolarServer` | 14 tools (exercises, daily activity, continuous HR, sleep, nightly recharge, cardio load, SleepWise alertness/bedtime, body temperature, physical info) | ✅ Production |
 | `DeepLinkServer` | Launch third-party apps via URI schemes | ✅ Production |
 
 ---
@@ -253,7 +255,7 @@ FCM push notification to user (optional insight)
 ### 3.3 Deep Link Architecture
 
 Zuralog uses the `zuralog://` URI scheme for two purposes:
-1. **OAuth callbacks** — `zuralog://oauth/strava`, `zuralog://oauth/fitbit`, `zuralog://oauth/oura`
+1. **OAuth callbacks** — `zuralog://oauth/strava`, `zuralog://oauth/fitbit`, `zuralog://oauth/oura`, `zuralog://oauth/polar`
 2. **External app launching** — `strava://`, `calai://`, etc. (Deep Link Registry)
 
 The `DeepLinkHandler` intercepts incoming links and routes them to the correct feature handler.

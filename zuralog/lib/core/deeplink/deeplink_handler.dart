@@ -41,7 +41,7 @@ class DeeplinkHandler {
     _subscription?.cancel();
     _subscription = AppLinks().uriLinkStream.listen(
       (uri) => _handleUri(uri, ref, onLog: onLog),
-      onError: (Object error) => onLog('❌ Deep link error: $error'),
+      onError: (Object error) => onLog('Deep link error: $error'),
     );
   }
 
@@ -69,7 +69,7 @@ class DeeplinkHandler {
       case 'oauth':
         await _handleOAuth(uri, ref, onLog: onLog);
       default:
-        onLog('⚠️ Unrecognised deep link: $uri');
+        onLog('Unrecognised deep link: $uri');
     }
   }
 
@@ -106,8 +106,11 @@ class DeeplinkHandler {
       case 'oura':
         final state = uri.queryParameters['state'] ?? '';
         await _handleOuraCallback(code, state, ref, onLog: onLog);
+      case 'polar':
+        final state = uri.queryParameters['state'] ?? '';
+        await _handlePolarCallback(code, state, ref, onLog: onLog);
       default:
-        onLog('⚠️ Unknown OAuth provider in deep link: $provider');
+        onLog('Unknown OAuth provider in deep link: $provider');
     }
   }
 
@@ -173,6 +176,42 @@ class DeeplinkHandler {
       onLog('✅ Fitbit connected successfully!');
     } else {
       onLog('❌ Fitbit token exchange failed. Check server logs.');
+    }
+  }
+
+  /// Exchange the Polar authorization code and CSRF state for tokens
+  /// via the Cloud Brain.
+  ///
+  /// Called after the app intercepts `zuralog://oauth/polar?code=XXX&state=YYY`.
+  /// Polar uses a mandatory user registration step server-side after the token
+  /// exchange; the backend handles this transparently.
+  ///
+  /// Args:
+  ///   code: The short-lived authorization code from Polar (expires in 10 min).
+  ///   state: The CSRF state parameter validated server-side.
+  static Future<void> _handlePolarCallback(
+    String code,
+    String state,
+    WidgetRef ref, {
+    required void Function(String) onLog,
+  }) async {
+    onLog('🔗 Polar OAuth callback received, exchanging code...');
+
+    final storage = ref.read(secureStorageProvider);
+    final userId = await storage.read('user_id');
+
+    if (userId == null) {
+      onLog('❌ Cannot exchange Polar code — no user_id in secure storage. Log in first.');
+      return;
+    }
+
+    final oauthRepo = ref.read(oauthRepositoryProvider);
+    final success = await oauthRepo.handlePolarCallback(code, state, userId);
+
+    if (success) {
+      onLog('✅ Polar connected successfully!');
+    } else {
+      onLog('❌ Polar token exchange failed. Check server logs.');
     }
   }
 

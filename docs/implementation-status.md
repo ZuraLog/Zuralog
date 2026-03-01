@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-01 (Withings integration code complete)  
+**Last Updated:** 2026-03-01 (Polar AccessLink integration code complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -319,6 +319,44 @@ WHOOP was researched and planned as a P1 direct integration. Implementation was 
 **Decision:** Moved to P2/Future. Will revisit when user demand from the WHOOP member segment justifies acquiring hardware. All technical research and the implementation plan are preserved in `.opencode/plans/2026-02-28-direct-integrations-top10-research.md`.
 
 **Next integration:** Withings (P1).
+
+---
+
+## Polar AccessLink Direct Integration (2026-03-01) — Code Complete, Credentials Set
+
+Full Polar AccessLink integration providing exercise data, daily activity, continuous heart rate, sleep, Nightly Recharge (ANS/HRV recovery), cardio load, SleepWise alertness/circadian bedtime, Elixir body temperature, and physical information from Polar watches and sensors.
+
+**New files:**
+- `cloud-brain/app/services/polar_token_service.py` — OAuth 2.0 token lifecycle (auth URL, code exchange with Basic auth, mandatory user registration, save/retrieve/disconnect); no refresh tokens (~1 year access tokens)
+- `cloud-brain/app/services/polar_rate_limiter.py` — Dynamic dual-window app-level rate limiter (short: `500 + N×20` per 15 min; long: `5000 + N×100` per 24 hr); limits updated from Polar response headers (`RateLimit-Usage`, `RateLimit-Limit`, `RateLimit-Reset`), fail-open
+- `cloud-brain/app/api/v1/polar_routes.py` — OAuth endpoints: `GET /authorize`, `POST /exchange`, `GET /status`, `DELETE /disconnect`; IDOR prevention via state→user_id lookup; mandatory user registration step after token exchange
+- `cloud-brain/app/api/v1/polar_webhooks.py` — Webhook handler with HMAC-SHA256 signature verification (`Polar-Webhook-Signature` header); handles PING event (sent on webhook creation); always returns 200 to prevent 7-day auto-deactivation
+- `cloud-brain/app/mcp_servers/polar_server.py` — `PolarServer` with 14 MCP tools covering all Polar data types
+- `cloud-brain/app/tasks/polar_sync.py` — 6 Celery tasks: webhook-triggered sync, 15-min periodic sync, daily token expiry monitor (push notification 30 days before expiry), 28-day backfill, webhook creation (client-level Basic auth), daily webhook status check + re-activation
+
+**Modified files:**
+- `cloud-brain/app/config.py` — added `polar_client_id`, `polar_client_secret`, `polar_redirect_uri`, `polar_webhook_signature_key`
+- `cloud-brain/app/main.py` — wired `PolarTokenService`, `PolarRateLimiter`, `PolarServer`; mounted routes and webhook router
+- `cloud-brain/app/worker.py` — added 3 Beat schedules: `sync-polar-users-15m`, `monitor-polar-token-expiry-daily`, `check-polar-webhook-status-daily`
+- `zuralog/lib/features/integrations/data/oauth_repository.dart` — added `getPolarAuthUrl()` and `handlePolarCallback()`
+- `zuralog/lib/features/integrations/domain/integrations_provider.dart` — added Polar to `_defaultIntegrations` (Available) and `connect()` switch case
+- `zuralog/lib/core/deeplink/deeplink_handler.dart` — added `case 'polar':` and `_handlePolarCallback()`
+
+**Tests:** 137 tests total across 5 test files (token service 42, rate limiter 20, webhooks 13, MCP server 33, sync tasks 29)
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Basic auth on token exchange | Polar requires `Authorization: Basic base64(client_id:client_secret)` — unlike most providers that accept credentials in the POST body. `redirect_uri` must also be echoed per RFC 6749 §4.1.3 |
+| Mandatory user registration | Polar AccessLink requires `POST /v3/users {"member-id": user_id}` after every first OAuth before any data can be fetched. 409 (already registered) is handled gracefully |
+| No refresh tokens | Polar issues ~1-year access tokens with no refresh mechanism. Expired tokens require full re-auth; `monitor_polar_token_expiry_task` sends push notification 30 days before expiry |
+| Single client-level webhook | Polar issues one webhook per client covering all users (unlike Fitbit/Withings which are per-user). Webhook auto-deactivates after 7 days of failures → `check_polar_webhook_status_task` checks daily and re-activates if needed |
+| Dynamic dual-window rate limits | Polar's limits scale with registered user count: `500 + (N×20)` per 15 min, `5000 + (N×100)` per 24 hr. Headers are authoritative; formula is fallback. Block at 90% safety margin |
+| Two auth modes | Bearer token for user data endpoints; Basic auth for client-level endpoints (webhook CRUD, pull notifications). `_basic_auth_header()` helper in sync tasks |
+| Data window | Polar only exposes last 30 days and only data uploaded after user registration. Backfill uses 28-day window to be safe |
+
+**MCP tools (14):** `polar_get_exercises`, `polar_get_exercise`, `polar_get_daily_activity`, `polar_get_activity_range`, `polar_get_continuous_hr`, `polar_get_continuous_hr_range`, `polar_get_sleep`, `polar_get_nightly_recharge`, `polar_get_cardio_load`, `polar_get_cardio_load_range`, `polar_get_sleepwise_alertness`, `polar_get_sleepwise_bedtime`, `polar_get_body_temperature`, `polar_get_physical_info`
 
 ---
 

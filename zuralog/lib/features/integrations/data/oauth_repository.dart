@@ -164,6 +164,61 @@ class OAuthRepository {
     }
   }
 
+  /// Request the Polar AccessLink authorization URL from the Cloud Brain.
+  ///
+  /// The returned URL should be opened in the system browser via
+  /// `launchUrl(..., mode: LaunchMode.externalApplication)` so that
+  /// Polar Flow login cookies persist and the deep-link return works.
+  ///
+  /// Returns:
+  ///   The Polar OAuth URL string, or `null` if the request fails.
+  Future<String?> getPolarAuthUrl() async {
+    try {
+      final response = await _apiClient.get(
+        '/api/v1/integrations/polar/authorize',
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data['auth_url'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Forward the intercepted Polar authorization code and CSRF state to the
+  /// Cloud Brain for server-side token exchange and user registration.
+  ///
+  /// Called automatically by [DeeplinkHandler] after the app intercepts
+  /// the `zuralog://oauth/polar?code=XXX&state=YYY` deep link.
+  ///
+  /// Args:
+  ///   code: The short-lived authorization code from Polar (expires in 10 min).
+  ///   state: The CSRF state parameter validated by the backend.
+  ///   userId: The currently authenticated user's ID, used by the backend
+  ///     to key the stored token.
+  ///
+  /// Returns:
+  ///   `true` if the exchange succeeded and Polar is now connected.
+  Future<bool> handlePolarCallback(
+    String code,
+    String state,
+    String userId,
+  ) async {
+    try {
+      final response = await _apiClient.post(
+        '/api/v1/integrations/polar/exchange',
+        queryParameters: <String, dynamic>{
+          'code': code,
+          'state': state,
+          'user_id': userId,
+        },
+      );
+      final data = response.data as Map<String, dynamic>;
+      return (data['success'] as bool?) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Forward the intercepted Oura authorization code to the Cloud Brain
   /// for server-side token exchange.
   ///
