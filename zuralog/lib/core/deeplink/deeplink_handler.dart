@@ -1,9 +1,9 @@
 /// Zuralog Edge Agent — Deep Link Handler (Phase 1.6).
 ///
 /// Listens for incoming custom URL scheme links (`zuralog://`) and
-/// dispatches them to the appropriate handler. Currently handles Strava
-/// and Fitbit OAuth callbacks; additional integrations can be added here
-/// in future phases by extending the switch on [Uri.pathSegments].
+/// dispatches them to the appropriate handler. Currently handles Strava,
+/// Fitbit, and Oura Ring OAuth callbacks; additional integrations can be
+/// added here by extending the switch on [Uri.pathSegments].
 ///
 /// Usage: call [DeeplinkHandler.init] once from the root screen's
 /// [State.initState] so the subscription is active for the app lifetime.
@@ -95,6 +95,9 @@ class DeeplinkHandler {
       case 'fitbit':
         final state = uri.queryParameters['state'] ?? '';
         await _handleFitbitCallback(code, state, ref, onLog: onLog);
+      case 'oura':
+        final state = uri.queryParameters['state'] ?? '';
+        await _handleOuraCallback(code, state, ref, onLog: onLog);
       default:
         onLog('⚠️ Unknown OAuth provider in deep link: $provider');
     }
@@ -162,6 +165,41 @@ class DeeplinkHandler {
       onLog('✅ Fitbit connected successfully!');
     } else {
       onLog('❌ Fitbit token exchange failed. Check server logs.');
+    }
+  }
+
+  /// Exchange the Oura Ring authorization code and CSRF state for tokens
+  /// via the Cloud Brain.
+  ///
+  /// Reads the stored user ID from [SecureStorage] so the backend can
+  /// associate the token with the correct account.
+  ///
+  /// Args:
+  ///   code: The short-lived authorization code from Oura.
+  ///   state: The CSRF state parameter validated server-side.
+  static Future<void> _handleOuraCallback(
+    String code,
+    String state,
+    WidgetRef ref, {
+    required void Function(String) onLog,
+  }) async {
+    onLog('🔗 Oura Ring OAuth callback received, exchanging code...');
+
+    final storage = ref.read(secureStorageProvider);
+    final userId = await storage.read('user_id');
+
+    if (userId == null) {
+      onLog('❌ Cannot exchange Oura code — no user_id in secure storage. Log in first.');
+      return;
+    }
+
+    final oauthRepo = ref.read(oauthRepositoryProvider);
+    final success = await oauthRepo.handleOuraCallback(code, state, userId);
+
+    if (success) {
+      onLog('✅ Oura Ring connected successfully!');
+    } else {
+      onLog('❌ Oura Ring token exchange failed. Check server logs.');
     }
   }
 }

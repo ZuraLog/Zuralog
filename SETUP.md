@@ -157,6 +157,28 @@ Get the credentials from Bitwarden (search **"Fitbit API - Zuralog"**) and copy 
 
 > **Note:** `FITBIT_WEBHOOK_VERIFY_CODE` and `FITBIT_WEBHOOK_SUBSCRIBER_ID` are not required for local development — leave them empty. They are only needed when setting up the live webhook endpoint on Railway.
 
+#### Coming Soon: Oura Ring Integration
+
+> **Blocked — hardware required.** The Oura integration code is fully implemented (OAuth 2.0, 16 MCP tools, webhooks, Celery sync), but registering an Oura OAuth application requires an active Oura account, which requires owning an Oura Ring. The feature appears as **Coming Soon** in the app until credentials are available.
+
+**When the ring arrives, complete these steps:**
+
+1. Set up the ring in the Oura app and create your account.
+2. Sign in at [cloud.ouraring.com/oauth/applications](https://cloud.ouraring.com/oauth/applications).
+3. Create a new application — name: `Zuralog`, redirect URI: `zuralog://oauth/oura`.
+4. Save the Client ID and Client Secret to Bitwarden under **"Oura API - Zuralog"**.
+5. Copy the credentials into `cloud-brain/.env`:
+
+| Variable | Description |
+|---|---|
+| `OURA_CLIENT_ID` | From the Oura developer portal → your application → Client ID |
+| `OURA_CLIENT_SECRET` | From the Oura developer portal → Client Secret — **never commit** |
+| `OURA_REDIRECT_URI` | Keep default: `zuralog://oauth/oura` |
+| `OURA_WEBHOOK_VERIFICATION_TOKEN` | Chosen by you when creating webhook subscriptions (production) |
+| `OURA_USE_SANDBOX` | Set to `true` to use Oura sandbox endpoints during development |
+
+> **Note:** `OURA_WEBHOOK_VERIFICATION_TOKEN` is only needed when registering webhook subscriptions in production. Leave it empty for local development. `OURA_USE_SANDBOX=true` routes all data fetches to `/v2/sandbox/usercollection/` — useful for smoke-testing the integration without real ring data.
+
 #### Deferred: Strava Integration
 
 Strava OAuth is implemented. Registration of the Strava API application is not required for core local development. When you are ready to test Strava:

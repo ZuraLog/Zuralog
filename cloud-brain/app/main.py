@@ -33,6 +33,8 @@ from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
+from app.api.v1.oura_routes import router as oura_router
+from app.api.v1.oura_webhooks import webhook_router as oura_webhook_router
 from app.api.v1.health_ingest import router as health_ingest_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
@@ -46,12 +48,15 @@ from app.mcp_servers.apple_health_server import AppleHealthServer
 from app.mcp_servers.deep_link_server import DeepLinkServer
 from app.mcp_servers.health_connect_server import HealthConnectServer
 from app.mcp_servers.fitbit_server import FitbitServer
+from app.mcp_servers.oura_server import OuraServer
 from app.mcp_servers.registry import MCPServerRegistry
 from app.mcp_servers.strava_server import StravaServer
 from app.services.auth_service import AuthService
 from app.services.device_write_service import DeviceWriteService
 from app.services.fitbit_rate_limiter import FitbitRateLimiter
 from app.services.fitbit_token_service import FitbitTokenService
+from app.services.oura_rate_limiter import OuraRateLimiter
+from app.services.oura_token_service import OuraTokenService
 from app.services.push_service import PushService
 from app.services.rate_limiter import RateLimiter
 from app.services.strava_rate_limiter import StravaRateLimiter
@@ -162,6 +167,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     registry.register(fitbit_server)
     app.state.fitbit_token_service = fitbit_token_service
     app.state.fitbit_rate_limiter = fitbit_rate_limiter
+
+    # Oura wiring (Phase 5.2)
+    oura_token_service = OuraTokenService()
+    oura_rate_limiter = OuraRateLimiter(redis_url=settings.redis_url)
+    oura_server = OuraServer(
+        token_service=oura_token_service,
+        db_factory=async_session,
+    )
+    registry.register(oura_server)
+    app.state.oura_token_service = oura_token_service
+    app.state.oura_rate_limiter = oura_rate_limiter
+
     app.state.mcp_client = MCPClient(registry=registry)
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
@@ -224,6 +241,8 @@ app.include_router(strava_webhook_router, prefix="/api/v1")  # Phase 1.7
 app.include_router(health_ingest_router, prefix="/api/v1")  # Apple Health Full Integration
 app.include_router(fitbit_router, prefix="/api/v1")  # Phase 5.1
 app.include_router(fitbit_webhook_router, prefix="/api/v1")  # Phase 5.1
+app.include_router(oura_router, prefix="/api/v1")  # Phase 5.2
+app.include_router(oura_webhook_router, prefix="/api/v1")  # Phase 5.2
 
 
 @app.get("/health")

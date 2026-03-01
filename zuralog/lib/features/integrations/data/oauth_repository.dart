@@ -122,4 +122,59 @@ class OAuthRepository {
       return false;
     }
   }
+
+  /// Request the Oura Ring authorization URL from the Cloud Brain.
+  ///
+  /// The returned URL should be opened in the system browser via
+  /// `launchUrl(..., mode: LaunchMode.externalApplication)` so that
+  /// Oura's login cookies persist and the deep-link return works.
+  ///
+  /// Returns:
+  ///   The Oura OAuth URL string, or `null` if the request fails.
+  Future<String?> getOuraAuthUrl() async {
+    try {
+      final response = await _apiClient.get(
+        '/api/v1/integrations/oura/authorize',
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data['auth_url'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Forward the intercepted Oura authorization code to the Cloud Brain
+  /// for server-side token exchange.
+  ///
+  /// Called automatically by [DeeplinkHandler] after the app intercepts
+  /// the `zuralog://oauth/oura?code=XXX&state=YYY` deep link.
+  ///
+  /// Args:
+  ///   code: The short-lived authorization code from Oura (expires quickly).
+  ///   state: The CSRF state parameter validated by the backend.
+  ///   userId: The currently authenticated user's ID, used by the backend
+  ///     to key the stored token.
+  ///
+  /// Returns:
+  ///   `true` if the exchange succeeded and Oura Ring is now connected.
+  Future<bool> handleOuraCallback(
+    String code,
+    String state,
+    String userId,
+  ) async {
+    try {
+      final response = await _apiClient.post(
+        '/api/v1/integrations/oura/exchange',
+        queryParameters: <String, dynamic>{
+          'code': code,
+          'state': state,
+          'user_id': userId,
+        },
+      );
+      final data = response.data as Map<String, dynamic>;
+      return (data['success'] as bool?) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

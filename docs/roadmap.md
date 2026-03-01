@@ -76,7 +76,21 @@
 | P0 | Strava webhook handler + real-time sync | ✅ Done | |
 | P0 | Redis sliding window rate limiter (100/15min, 1K/day) | ✅ Done | |
 
-### Phase 1.7 — Fitbit Integration
+### Phase 1.7 — Oura Ring Integration
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | Oura OAuth 2.0 flow (no PKCE) | ✅ Done | |
+| P1 | `OuraTokenService` (long-lived tokens, refresh on 401) | ✅ Done | |
+| P1 | App-level Redis sliding-window rate limiter (5,000/hr) | ✅ Done | Shared across all users; no response headers to track |
+| P1 | `OuraServer` MCP tools (16 tools) | ✅ Done | Sleep, readiness, activity, HR, SpO2, stress, resilience, cardiovascular age, VO2 max, workouts, sessions, tags, rest mode, sleep time, ring config |
+| P1 | Oura webhook handler + per-app subscription management | ✅ Done | 90-day expiry; auto-renewal Celery task |
+| P1 | Celery periodic sync + webhook auto-renewal | ✅ Done | |
+| P1 | Sandbox mode (`OURA_USE_SANDBOX=true`) | ✅ Done | Mock token for dev testing without real ring |
+| P1 | Oura developer app registered + credentials configured | ❌ Blocked | Requires an Oura Ring to create an account; hardware not yet acquired |
+| P1 | Submit Oura production app review (lift 10-user limit) | ❌ Blocked | Depends on credentials above |
+
+### Phase 1.8 — Fitbit Integration
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
@@ -89,7 +103,7 @@
 | P1 | Fitbit developer app registered + credentials configured | ✅ Done | Server type; `developer@zuralog.com`; credentials in Bitwarden + Railway + local `.env` |
 | P1 | Fitbit webhook subscription registration | 🔜 Planned | Requires deployed endpoint; generate `FITBIT_WEBHOOK_VERIFY_CODE` first |
 
-### Phase 1.8 — Push Notifications
+### Phase 1.9 — Push Notifications
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
@@ -98,7 +112,7 @@
 | P1 | Push notification service | ✅ Done | |
 | P1 | Background insight alerts | 🔜 Planned | Trigger on health data events |
 
-### Phase 1.9 — Subscriptions
+### Phase 1.10 — Subscriptions
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
@@ -106,7 +120,7 @@
 | P1 | Subscription entitlement service | ✅ Done | |
 | P1 | Usage tracking per tier | ✅ Done | |
 
-### Phase 1.10 — Analytics & Reasoning
+### Phase 1.11 — Analytics & Reasoning
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
@@ -179,7 +193,7 @@
 | 2 | Apple Health | 1 | P0 | ✅ Done | Ingest endpoint, MCP | Connected (iOS only) | HealthKit native bridge |
 | 3 | Google Health Connect | 1 | P0 | ✅ Done | Ingest endpoint, MCP | Connected (Android only) | WorkManager |
 | 4 | Fitbit | 1 | P1 | ✅ Done | OAuth+PKCE, 12 MCP tools, webhooks | Connected | |
-| 5 | Oura Ring | 1 | P1 | 🔜 Planned | Not started | Coming Soon | Self-service OAuth; 10-user dev limit |
+| 5 | Oura Ring | 1 | P1 | ❌ Blocked | Code complete: OAuth, 16 MCP tools, webhooks, sync | Coming Soon | All code merged; credentials blocked on Oura Ring hardware (needed to register OAuth app) |
 | 6 | WHOOP | 1 | P1 | 🔜 Planned | Not started | Coming Soon | Requires app approval before launch |
 | 7 | Withings | 1 | P1 | 🔜 Planned | Not started | Planned | Best device ecosystem API |
 | 8 | Polar | 1 | P2 | 📋 Future | Not started | Planned | AccessLink API |

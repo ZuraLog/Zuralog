@@ -149,6 +149,13 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
+      id: 'oura',
+      name: 'Oura Ring',
+      status: IntegrationStatus.available,
+      description: 'Sleep, readiness, activity, HRV, stress, and recovery data from your Oura Ring.',
+      compatibility: PlatformCompatibility.all,
+    ),
+    IntegrationModel(
       id: 'google_health_connect',
       name: 'Google Health Connect',
       // Available on Android; shown in the Available section with a platform
@@ -270,6 +277,20 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Fitbit connection.');
+          }
+        case 'oura':
+          final url = await _oauthRepository.getOuraAuthUrl();
+          if (!context.mounted) break;
+          if (url != null) {
+            // URL obtained — deep-link handler will call handleOuraCallback.
+            _setStatus(integrationId, IntegrationStatus.connected);
+            _analytics?.capture(
+              event: 'integration_connected',
+              properties: {'provider': integrationId},
+            );
+          } else {
+            _setStatus(integrationId, IntegrationStatus.available);
+            _showSnackBar(context, 'Could not start Oura Ring connection.');
           }
         case 'apple_health':
           final granted = await _healthRepository.requestAuthorization();

@@ -313,6 +313,11 @@ abstract final class CompatibleAppsRegistry {
       dataFlowExplanation:
           'Noom reads steps and weight from Apple Health and Health Connect. Zuralog also reads this data for a unified dashboard.',
     ),
+    // NOTE: Oura Ring is now available as a direct OAuth integration in
+    // Zuralog's Direct Integrations section (richer data: readiness scores,
+    // HRV, stress, resilience, SpO2, cardiovascular age, VO2 max, and more).
+    // This entry remains for users who prefer the indirect HealthKit / Health
+    // Connect path, or haven't connected their Oura account directly yet.
     CompatibleApp(
       id: 'oura',
       name: 'Oura Ring',
@@ -321,7 +326,7 @@ abstract final class CompatibleAppsRegistry {
       brandColor: 0xFF514689,
       description: 'Sleep, readiness, and activity tracking.',
       dataFlowExplanation:
-          'Oura Ring syncs sleep stages, heart rate, HRV, and activity to Apple Health and Health Connect. Zuralog reads all of this data automatically.',
+          'Oura Ring syncs sleep stages, heart rate, HRV, and activity to Apple Health and Health Connect. Zuralog reads all of this data automatically. For richer data (readiness scores, stress, resilience, VO2 max), connect directly via the Direct Integrations section.',
     ),
     CompatibleApp(
       id: 'peloton',

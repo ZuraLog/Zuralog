@@ -39,11 +39,11 @@ The two communicate via a REST API with JWT-based authentication. The Cloud Brai
 │  │  Agent Layer: Orchestrator → LLM (Kimi K2.5/OpenRouter)  │   │
 │  │               └── MCP Client → MCP Server Registry       │   │
 │  └──────────────────────────────────────────────────────────┘   │
-│  ┌────────────┐  ┌────────────┐  ┌──────────┐  ┌───────────┐   │
-│  │  Strava    │  │  Fitbit    │  │  Apple   │  │  Deep     │   │
-│  │  MCP       │  │  MCP       │  │  Health  │  │  Link     │   │
-│  │  Server    │  │  Server    │  │  MCP     │  │  Server   │   │
-│  └────────────┘  └────────────┘  └──────────┘  └───────────┘   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  │
+│  │  Strava  │  │  Fitbit  │  │  Oura   │  │  Apple   │  │  Deep  │  │
+│  │  MCP     │  │  MCP     │  │  MCP    │  │  Health  │  │  Link  │  │
+│  │  Server  │  │  Server  │  │  Server │  │  MCP     │  │ Server │  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └────────┘  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  Services: Auth │ Cache │ Push │ Sync │ Rate Limiters    │   │
 │  └──────────────────────────────────────────────────────────┘   │
@@ -83,6 +83,7 @@ cloud-brain/
 │   │   ├── health_data_server_base.py  # Health-specific base (~550 lines)
 │   │   ├── strava_server.py        # Strava MCP tools
 │   │   ├── fitbit_server.py        # Fitbit MCP tools (12 tools)
+│   │   ├── oura_server.py          # Oura MCP tools (16 tools)
 │   │   ├── apple_health_server.py  # HealthKit data ingest tools
 │   │   ├── health_connect_server.py # Health Connect ingest tools
 │   │   ├── deep_link_server.py     # App launch via URI schemes
@@ -97,6 +98,8 @@ cloud-brain/
 │   │   ├── strava_webhooks.py   # Strava webhook handler
 │   │   ├── fitbit_routes.py     # Fitbit OAuth + status endpoints
 │   │   ├── fitbit_webhooks.py   # Fitbit webhook handler
+│   │   ├── oura_routes.py       # Oura OAuth + status endpoints
+│   │   ├── oura_webhooks.py     # Oura webhook handler (per-app subscription, 90-day renewal)
 │   │   ├── analytics.py     # Correlation engine endpoints
 │   │   ├── users.py         # User profile management
 │   │   ├── devices.py       # Device registration (FCM tokens)
@@ -113,6 +116,8 @@ cloud-brain/
 │   │   ├── strava_rate_limiter.py   # App-level sliding window limiter
 │   │   ├── fitbit_token_service.py  # Fitbit OAuth + PKCE token management
 │   │   ├── fitbit_rate_limiter.py   # Per-user token bucket limiter
+│   │   ├── oura_token_service.py    # Oura OAuth token management + sandbox mode
+│   │   ├── oura_rate_limiter.py     # App-level sliding-window limiter (5,000/hr)
 │   │   ├── rate_limiter.py          # Generic rate limiting primitives
 │   │   ├── device_write_service.py  # Write commands to Edge Agent devices
 │   │   ├── user_service.py          # User data helpers
@@ -167,6 +172,7 @@ All external integrations are implemented as **MCP Servers** that expose a stand
 |--------|-------|--------|
 | `StravaServer` | `strava_get_activities`, `strava_create_activity`, `strava_get_athlete_stats` | ✅ Production |
 | `FitbitServer` | 12 tools (activity, HR, HRV, sleep, SpO2, breathing, temp, VO2, weight, nutrition, intraday) | ✅ Production |
+| `OuraServer` | 16 tools covering sleep, readiness, activity, heart rate, SpO2, stress, resilience, cardiovascular age, VO2 max, workouts, sessions, tags, rest mode, sleep time, and ring configuration | ✅ Production |
 | `AppleHealthServer` | Read/write HealthKit data via ingest endpoint | ✅ Production |
 | `HealthConnectServer` | Read/write Health Connect data via ingest endpoint | ✅ Production |
 | `DeepLinkServer` | Launch third-party apps via URI schemes | ✅ Production |
@@ -247,7 +253,7 @@ FCM push notification to user (optional insight)
 ### 3.3 Deep Link Architecture
 
 Zuralog uses the `zuralog://` URI scheme for two purposes:
-1. **OAuth callbacks** — `zuralog://oauth/strava`, `zuralog://oauth/fitbit`
+1. **OAuth callbacks** — `zuralog://oauth/strava`, `zuralog://oauth/fitbit`, `zuralog://oauth/oura`
 2. **External app launching** — `strava://`, `calai://`, etc. (Deep Link Registry)
 
 The `DeepLinkHandler` intercepts incoming links and routes them to the correct feature handler.

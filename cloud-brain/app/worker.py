@@ -98,6 +98,18 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.fitbit_sync.refresh_fitbit_tokens_task",
         "schedule": 3600.0,  # 1 hour
     },
+    "sync-oura-users-15m": {
+        "task": "app.tasks.oura_sync.sync_oura_periodic_task",
+        "schedule": 900.0,  # 15 minutes
+    },
+    "refresh-oura-tokens-4h": {
+        "task": "app.tasks.oura_sync.refresh_oura_tokens_task",
+        "schedule": 14400.0,  # 4 hours
+    },
+    "renew-oura-webhooks-daily": {
+        "task": "app.tasks.oura_sync.renew_oura_webhook_subscriptions_task",
+        "schedule": 86400.0,  # 24 hours
+    },
 }
 
 # Auto-discover tasks in services and tasks modules

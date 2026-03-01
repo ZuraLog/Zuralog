@@ -33,6 +33,11 @@ class Settings(BaseSettings):
         fitbit_redirect_uri: OAuth callback URI registered with Fitbit (Phase 5.1).
         fitbit_webhook_verify_code: Verification code used to validate Fitbit webhook subscriptions (Phase 5.1).
         fitbit_webhook_subscriber_id: Subscriber ID for Fitbit webhook subscriptions (Phase 5.1).
+        oura_client_id: Oura Ring application Client ID (Phase 5.2).
+        oura_client_secret: Oura Ring application Client Secret (Phase 5.2).
+        oura_redirect_uri: OAuth callback URI registered with Oura (Phase 5.2).
+        oura_webhook_verification_token: Token used to verify Oura webhook subscriptions (Phase 5.2).
+        oura_use_sandbox: Use Oura sandbox endpoints for development/testing (Phase 5.2).
         app_env: Current environment (development, staging, production).
         app_debug: Enable debug mode.
     """
@@ -69,6 +74,12 @@ class Settings(BaseSettings):
     fitbit_redirect_uri: str = "zuralog://oauth/fitbit"
     fitbit_webhook_verify_code: str = ""
     fitbit_webhook_subscriber_id: str = ""
+    # Oura Ring OAuth 2.0
+    oura_client_id: str = ""  # OURA_CLIENT_ID
+    oura_client_secret: str = ""  # OURA_CLIENT_SECRET
+    oura_redirect_uri: str = "zuralog://oauth/oura"  # OURA_REDIRECT_URI
+    oura_webhook_verification_token: str = ""  # OURA_WEBHOOK_VERIFICATION_TOKEN
+    oura_use_sandbox: bool = False  # OURA_USE_SANDBOX
     app_env: str = "production"
     app_debug: bool = False
     # Sentry
