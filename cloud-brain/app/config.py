@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     oura_redirect_uri: str = "zuralog://oauth/oura"  # OURA_REDIRECT_URI
     oura_webhook_verification_token: str = ""  # OURA_WEBHOOK_VERIFICATION_TOKEN
     oura_use_sandbox: bool = False  # OURA_USE_SANDBOX
+    # Withings OAuth 2.0
+    withings_client_id: str = ""
+    withings_client_secret: str = ""
+    withings_redirect_uri: str = "https://api.zuralog.com/api/v1/integrations/withings/callback"
     app_env: str = "production"
     app_debug: bool = False
     # Sentry
