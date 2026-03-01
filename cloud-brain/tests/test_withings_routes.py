@@ -96,10 +96,10 @@ class TestWithingsAuthorize:
         assert call_args[1] == "user-xyz"
 
     def test_requires_auth(self, client_with_auth):
-        """GET /authorize without Bearer token returns 403."""
+        """GET /authorize without Bearer token returns 401."""
         c, _, _, _ = client_with_auth
         response = c.get("/api/v1/integrations/withings/authorize")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 class TestWithingsCallback:
