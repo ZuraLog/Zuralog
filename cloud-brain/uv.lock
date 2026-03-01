@@ -105,6 +105,15 @@ wheels = [
 ]
 
 [[package]]
+name = "backoff"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001, upload-time = "2022-10-05T19:19:32.061Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148, upload-time = "2022-10-05T19:19:30.546Z" },
+]
+
+[[package]]
 name = "billiard"
 version = "4.2.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1188,6 +1197,23 @@ wheels = [
 ]
 
 [[package]]
+name = "posthog"
+version = "7.9.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "backoff" },
+    { name = "distro" },
+    { name = "python-dateutil" },
+    { name = "requests" },
+    { name = "six" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/55/50/5c0d9232118fdc1434c1b7bbc1a14de5b310498ede09a7e2123ae1f5f8bd/posthog-7.9.4.tar.gz", hash = "sha256:50acc94ef6267d7030575d2ff54e89e748fac2e98525ac672aeb0423160f77cf", size = 172973, upload-time = "2026-02-25T15:28:47.065Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/6f/794a4e94e3640282e75013ce18e65f0a01afc8d71f733664b4a272f98bce/posthog-7.9.4-py3-none-any.whl", hash = "sha256:414125ddd7a48b9c67feb24d723df1f666af41ad10f8a9a8bbaf5e3b536a2e26", size = 198651, upload-time = "2026-02-25T15:28:45.398Z" },
+]
+
+[[package]]
 name = "prompt-toolkit"
 version = "3.0.52"
 source = { registry = "https://pypi.org/simple" }
@@ -1999,6 +2025,7 @@ dependencies = [
     { name = "httpx" },
     { name = "numpy" },
     { name = "openai" },
+    { name = "posthog" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
@@ -2030,6 +2057,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "openai", specifier = ">=1.60.0" },
+    { name = "posthog", specifier = ">=3.7.0" },
     { name = "pydantic-settings", specifier = ">=2.6.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },

@@ -1,0 +1,25 @@
+# =============================================================================
+# Zuralog Cloud Brain — Railway Config: Celery Beat
+# =============================================================================
+# Used by the "Celery Beat" Railway service.
+# In Railway dashboard: Settings → Source → Config File Path:
+#   cloud-brain/railway.celery-beat.toml
+#
+# Beat is the periodic task scheduler — runs the 15-min sync and 1-hr token
+# refresh schedules defined in app/worker.py beat_schedule.
+# No healthcheck — Celery processes don't serve HTTP.
+# No preDeployCommand — migrations are handled by the web (Zuralog) service.
+# =============================================================================
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "celery -A app.worker beat --loglevel=info"
+
+# No healthcheckPath — Celery is not an HTTP service.
+# Railway will consider the service healthy once the process starts.
+
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
