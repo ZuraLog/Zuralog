@@ -1,5 +1,8 @@
 # Zuralog — Developer Setup Guide
 
+> **Security Notice — Read Before Filling In Any Values**
+> This document is a **setup guide with placeholder values only**. Do **not** paste real API keys, secrets, or credentials into this file. All shared production credentials for this project live in **Bitwarden** — search for `"Zuralog"` in the shared team vault. If a credential is not in Bitwarden, ask the project owner to add it there before sharing it any other way. Never share secrets in chat, email, or comments.
+
 Get the Cloud Brain (backend), Edge Agent (mobile), and Website (Next.js) running locally from a fresh clone.
 
 ## Prerequisites
@@ -100,7 +103,7 @@ Open `.env` and fill in credentials for each service below.
 
 **Team strategy:** The project uses a hybrid database approach — local Docker Postgres for application data, Supabase for auth (GoTrue) only. For team development you have two options:
 
-1. **Shared dev project** (simpler): All developers use the same Supabase project URL and anon key. Distribute keys securely (e.g., via 1Password).
+1. **Shared dev project** (simpler): All developers use the same Supabase project URL and anon key. Distribute keys securely via **Bitwarden**.
 2. **Individual free-tier projects** (isolated): Each developer creates their own free Supabase project. Free tier is more than enough for development.
 
 #### Required: Google OAuth (Social Sign-In)
@@ -183,7 +186,7 @@ Firebase is required for the Flutter app to build. `google-services.json` and `G
 **What each developer needs to do:**
 
 - `google-services.json` and `GoogleService-Info.plist` — already in Git, no action needed
-- `firebase-service-account.json` — share securely (1Password, direct message). Place at `cloud-brain/firebase-service-account.json`. This file is gitignored and must never be committed.
+- `firebase-service-account.json` — share securely via **Bitwarden**. Place at `cloud-brain/firebase-service-account.json`. This file is gitignored and must never be committed.
 - Set in `cloud-brain/.env`:
 
 ```
@@ -215,7 +218,7 @@ PostHog captures backend events (API requests, auth, health ingest, chat, integr
 
 | Variable | Value |
 |---|---|
-| `POSTHOG_API_KEY` | `phc_mR6tpsplNPlIRjEALV2lH0T1YHAGb7YRqRBlLQ1AICO` (shared project key) |
+| `POSTHOG_API_KEY` | `phc_<your-posthog-project-api-key>` (shared project key) |
 | `POSTHOG_HOST` | `https://us.i.posthog.com` |
 
 > **Production (Railway):** These are already set on all three services (Zuralog, Celery Worker, Celery Beat). No Railway action needed.
@@ -463,9 +466,9 @@ PostHog tracking is wired but gracefully skipped when any key is absent. Three v
 
 | Variable | Value |
 |---|---|
-| `NEXT_PUBLIC_POSTHOG_KEY` | `phc_mR6tpsplNPlIRjEALV2lH0T1YHAGb7YRqRBlLQ1AICO` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | `phc_<your-posthog-project-api-key>` |
 | `NEXT_PUBLIC_POSTHOG_HOST` | `https://us.i.posthog.com` |
-| `POSTHOG_API_KEY` | `phc_mR6tpsplNPlIRjEALV2lH0T1YHAGb7YRqRBlLQ1AICO` (same key, no prefix — used server-side in API routes) |
+| `POSTHOG_API_KEY` | `phc_<your-posthog-project-api-key>` (same key, no prefix — used server-side in API routes) |
 
 > **Vercel (production):** All three variables must be set in the Vercel dashboard → Project Settings → Environment Variables. They are **not** auto-deployed from `.env.local`.
 
@@ -758,7 +761,7 @@ This means `GOOGLE_WEB_CLIENT_ID` was not injected at build time. Use `make run`
 
 If you must use `flutter run` directly:
 ```bash
-flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=616346397607-se60r20r85d24teksi3oco8ss77kol0d.apps.googleusercontent.com
+flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=<your-google-web-client-id>
 ```
 
 ### AI features return "LLM unavailable" or model errors
