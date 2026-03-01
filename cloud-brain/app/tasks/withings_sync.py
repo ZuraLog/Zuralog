@@ -78,8 +78,23 @@ _APPLI_FETCH_MAP = {
 }
 
 _WITHINGS_API_BASE = "https://wbsapi.withings.net"
-_WEBHOOK_CALLBACK_URL = "https://api.zuralog.com/api/v1/webhooks/withings"
 _ALL_APPLI_CODES = [1, 2, 4, 16, 44, 54, 62]
+
+
+def _get_webhook_callback_url() -> str:
+    """Build the Withings webhook callback URL from settings.
+
+    Reads WITHINGS_API_BASE_URL (defaults to https://api.zuralog.com) so
+    staging/dev environments register a different URL instead of always
+    pointing at production. The shared secret is appended as a query param
+    (?token=...) — Withings does not support HMAC payload signatures.
+    """
+    base = settings.withings_api_base_url.rstrip("/")
+    url = f"{base}/api/v1/webhooks/withings"
+    secret = settings.withings_webhook_secret
+    if secret:
+        url = f"{url}?token={secret}"
+    return url
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +151,7 @@ async def _fetch_withings(
         return None
 
 
-async def _parse_measure_value(measure: dict) -> float:
+def _parse_measure_value(measure: dict) -> float:
     """Convert Withings measure value + unit to float. unit is a negative power of 10."""
     value = measure.get("value", 0)
     unit = measure.get("unit", 0)
@@ -155,15 +170,12 @@ async def _upsert_weight_measurements(
         date_str = grp_date.strftime("%Y-%m-%d")
 
         weight_kg = None
-        fat_ratio = None
 
         for measure in grp.get("measures", []):
             mtype = measure.get("type")
-            val = await _parse_measure_value(measure)
+            val = _parse_measure_value(measure)
             if mtype == 1:
                 weight_kg = val
-            elif mtype == 6:
-                fat_ratio = val
 
         if weight_kg is None:
             continue
@@ -188,14 +200,11 @@ async def _upsert_weight_measurements(
                 source="withings",
                 date=date_str,
                 weight_kg=weight_kg,
-                body_fat_pct=fat_ratio,
             )
             db.add(record)
             upserted += 1
         else:
             existing.weight_kg = weight_kg
-            if fat_ratio is not None:
-                existing.body_fat_pct = fat_ratio
             upserted += 1
 
     await db.commit()
@@ -220,7 +229,7 @@ async def _upsert_blood_pressure(
 
         for measure in grp.get("measures", []):
             mtype = measure.get("type")
-            val = await _parse_measure_value(measure)
+            val = _parse_measure_value(measure)
             if mtype == 10:
                 systolic = val
             elif mtype == 9:
@@ -359,11 +368,29 @@ async def _sync_by_appli(
 
     if action == "getmeas":
         measure_groups = body.get("measuregrps", [])
-        if appli in (1,):
+        if appli == 1:
             await _upsert_weight_measurements(db, user_id, measure_groups)
         elif appli == 4:
-            await _upsert_blood_pressure(db, user_id, measure_groups)
-        # appli 2 (temperature), 62 (HRV) — store in daily_metrics in future
+            # Appli 4 contains both BP (types 9,10,11) and SpO2 (type 54).
+            # Split groups by measurement type to avoid discarding SpO2 data.
+            bp_groups = [g for g in measure_groups if any(m.get("type") in (9, 10, 11) for m in g.get("measures", []))]
+            spo2_groups = [g for g in measure_groups if any(m.get("type") == 54 for m in g.get("measures", []))]
+            if bp_groups:
+                await _upsert_blood_pressure(db, user_id, bp_groups)
+            if spo2_groups:
+                # TODO(withings): upsert SpO2 into DailyHealthMetrics once
+                # that model gains a spo2_avg column. For now, log so the
+                # data is visible and not silently discarded.
+                for grp in spo2_groups:
+                    for m in grp.get("measures", []):
+                        if m.get("type") == 54:
+                            spo2_val = _parse_measure_value(m) * 100
+                            logger.info(
+                                "Withings SpO2 received (not yet persisted): user=%s spo2=%.1f%%",
+                                user_id,
+                                spo2_val,
+                            )
+        # appli 2 (temperature), 62 (HRV) — logged via Withings API; stored in future
     elif action == "getsummary":
         summaries = body.get("series", [])
         await _upsert_sleep(db, user_id, summaries)
@@ -371,14 +398,21 @@ async def _sync_by_appli(
 
 async def create_withings_webhook_subscriptions(
     access_token: str,
-    callback_url: str = _WEBHOOK_CALLBACK_URL,
+    callback_url: str = "",
 ) -> list[int]:
     """Subscribe a user to all Withings notification categories.
 
     Webhook subscribe calls use Bearer token auth, NOT signed requests.
     Returns the list of appli codes successfully subscribed.
+
+    The shared secret is embedded in callback_url as a ?token=... query
+    parameter (Withings does not support HMAC payload signatures).
     """
+    if not callback_url:
+        callback_url = _get_webhook_callback_url()
+
     subscribed = []
+    failed = []
     for appli in _ALL_APPLI_CODES:
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
@@ -392,13 +426,22 @@ async def create_withings_webhook_subscriptions(
                     subscribed.append(appli)
                     logger.info("Withings webhook subscribed: appli=%d", appli)
                 else:
+                    failed.append(appli)
                     logger.warning(
-                        "Withings webhook subscribe failed: appli=%d status=%s",
+                        "Withings webhook subscribe failed: appli=%d status=%s error=%s",
                         appli,
                         body.get("status"),
+                        body.get("error"),
                     )
         except Exception:
+            failed.append(appli)
             logger.exception("Failed to subscribe to Withings appli %d", appli)
+
+    if failed:
+        sentry_sdk.capture_message(
+            f"Withings webhook subscriptions partially failed: appli_codes={failed}",
+            level="warning",
+        )
 
     return subscribed
 
@@ -427,24 +470,23 @@ def sync_withings_notification_task(
         token_service = WithingsTokenService()
 
         async with async_session() as db:
-            # Find integration by withings_user_id in provider_metadata
+            # Filter by withings_user_id in JSONB provider_metadata column.
+            # Uses Postgres JSONB containment — avoids a Python-side full scan
+            # that would load all active Withings integrations into memory.
             result = await db.execute(
                 select(Integration).where(
                     Integration.provider == "withings",
                     Integration.is_active.is_(True),
+                    Integration.provider_metadata["withings_user_id"].astext == withings_user_id,
                 )
             )
             integrations = result.scalars().all()
 
-            matching = [
-                i for i in integrations if (i.provider_metadata or {}).get("withings_user_id") == withings_user_id
-            ]
-
-            if not matching:
+            if not integrations:
                 logger.warning("No active Withings integration for withings_user_id=%s", withings_user_id)
                 return
 
-            for integration in matching:
+            for integration in integrations:
                 user_id = str(integration.user_id)
                 access_token = await token_service.get_access_token(db, user_id)
                 if not access_token:
@@ -496,13 +538,15 @@ def sync_withings_periodic_task(self) -> None:
 
         for integration in integrations:
             user_id = str(integration.user_id)
-            try:
-                async with async_session() as db:
-                    access_token = await token_service.get_access_token(db, user_id)
-                    if not access_token:
-                        continue
+            for appli in [1, 4, 16, 44]:
+                # Open a fresh session per appli so a failed commit in one appli
+                # does not leave the session in a dirty/invalid state for the next.
+                try:
+                    async with async_session() as db:
+                        access_token = await token_service.get_access_token(db, user_id)
+                        if not access_token:
+                            break  # No token for this user — skip remaining applis too
 
-                    for appli in [1, 4, 16, 44]:
                         await _sync_by_appli(
                             db=db,
                             user_id=user_id,
@@ -511,8 +555,8 @@ def sync_withings_periodic_task(self) -> None:
                             startdate=startdate,
                             enddate=enddate,
                         )
-            except Exception:
-                logger.exception("Withings periodic sync failed for user=%s", user_id)
+                except Exception:
+                    logger.exception("Withings periodic sync failed for user=%s appli=%d", user_id, appli)
 
     try:
         asyncio.run(_run())

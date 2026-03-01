@@ -325,13 +325,13 @@ void main() {
   });
 
   group('IntegrationsNotifier — defaults', () {
-    test('loads all 6 default integrations when no persisted state', () async {
+    test('loads all 8 default integrations when no persisted state', () async {
       SharedPreferences.setMockInitialValues({});
       final notifier = _makeNotifier();
 
       await notifier.loadIntegrations();
 
-      expect(notifier.state.integrations.length, 6);
+      expect(notifier.state.integrations.length, 8);
       expect(notifier.state.isLoading, isFalse);
     });
 

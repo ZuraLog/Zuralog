@@ -15,6 +15,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 
 /// Handles incoming deep links for OAuth callback interception.
 ///
@@ -182,8 +183,8 @@ class DeeplinkHandler {
   /// `zuralog://oauth/withings?success=true` (or `success=false`).
   ///
   /// No client-side code exchange is required — the server already handled it.
-  /// We just log the result and the IntegrationsNotifier state is already
-  /// optimistically set to connected from [connect()].
+  /// On success, reload server state to confirm the connection. On failure,
+  /// revert the optimistic "connected" state set by [connect()].
   static Future<void> _handleWithingsResult(
     Uri uri,
     WidgetRef ref, {
@@ -194,11 +195,16 @@ class DeeplinkHandler {
 
     if (success) {
       onLog('Withings connected successfully!');
+      // Reload from server to confirm persisted state.
+      await ref.read(integrationsProvider.notifier).loadIntegrations();
     } else {
       onLog(
         'Withings connection failed${error != null ? ': $error' : ''}. '
         'Please try again.',
       );
+      // Revert the optimistic "connected" state so the UI shows the correct
+      // disconnected status rather than remaining stuck as "connected".
+      ref.read(integrationsProvider.notifier).disconnect('withings');
     }
   }
 

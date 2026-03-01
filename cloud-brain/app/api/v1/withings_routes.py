@@ -141,7 +141,7 @@ async def withings_callback(
         backfill_withings_data_task.delay(user_id=user_id, days_back=30)
         create_withings_webhook_subscriptions_task.delay(user_id=user_id)
     except Exception:
-        logger.warning("Could not enqueue Withings post-connect tasks for user '%s'", user_id)
+        logger.warning("Could not enqueue Withings post-connect tasks for user '%s'", user_id, exc_info=True)
 
     logger.info("Withings connected for user '%s'", user_id)
 

@@ -21,9 +21,12 @@ Appli codes:
   62 = HRV                        (getmeas: 135)
 """
 
+import hmac
 import logging
 
 from fastapi import APIRouter, Request, Response
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +41,26 @@ async def withings_webhook_event(request: Request) -> Response:
     Never lets processing errors prevent the 200 response.
 
     Withings sends form-encoded data, not JSON.
+
+    Authentication: Withings does not sign webhook payloads with HMAC.
+    We use a shared secret in the callback URL query string
+    (?token=...) as the standard defence against spoofed requests.
     """
+    # Validate shared secret to reject unauthenticated requests.
+    # Withings does not support payload signing, so the secret is a
+    # query parameter registered in the subscription callback URL.
+    expected_secret = settings.withings_webhook_secret
+    if expected_secret:
+        received_token = request.query_params.get("token", "")
+        if not hmac.compare_digest(received_token, expected_secret):
+            logger.warning(
+                "Withings webhook: invalid or missing token from %s",
+                request.client.host if request.client else "unknown",
+            )
+            # Always return 200 to Withings so it doesn't retry unauthenticated
+            # requests indefinitely. The task is simply not enqueued.
+            return Response(status_code=200)
+
     try:
         form_data = await request.form()
         withings_user_id = str(form_data.get("userid", ""))

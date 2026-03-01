@@ -229,11 +229,17 @@ class WithingsTokenService:
         db: AsyncSession,
         user_id: str,
     ) -> Integration | None:
-        """Look up Withings integration for a user."""
+        """Look up active Withings integration for a user.
+
+        Filters by is_active=True, consistent with the Oura pattern.
+        Note: save_tokens() uses its own direct query (without is_active filter)
+        so it can find inactive integrations for reconnection.
+        """
         result = await db.execute(
             select(Integration).where(
                 Integration.user_id == user_id,
                 Integration.provider == "withings",
+                Integration.is_active.is_(True),
             )
         )
         return result.scalar_one_or_none()
@@ -247,8 +253,8 @@ class WithingsTokenService:
         # TODO: Unsubscribe webhooks via Notify - Revoke before deactivating
 
         integration.is_active = False
-        integration.access_token = ""
-        integration.refresh_token = ""
+        integration.access_token = None
+        integration.refresh_token = None
         integration.sync_status = "idle"
         integration.sync_error = None
         await db.commit()
