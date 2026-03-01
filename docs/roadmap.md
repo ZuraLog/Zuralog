@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-01 (Withings integration code complete)
+**Last Updated:** 2026-03-01 (Withings integration complete — code, credentials, and security review)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -194,7 +194,7 @@
 | 3 | Google Health Connect | 1 | P0 | ✅ Done | Ingest endpoint, MCP | Connected (Android only) | WorkManager |
 | 4 | Fitbit | 1 | P1 | ✅ Done | OAuth+PKCE, 12 MCP tools, webhooks | Connected | |
 | 5 | Oura Ring | 1 | P1 | ❌ Blocked | Code complete: OAuth, 16 MCP tools, webhooks, sync | Coming Soon | All code merged; credentials blocked on Oura Ring hardware (needed to register OAuth app) |
-| 6 | Withings | 1 | P1 | 🔄 In Progress | Code complete: HMAC-SHA256 signing, OAuth, 10 MCP tools, webhooks, Celery sync, BloodPressureRecord model | Connected (Available) | Credentials pending (BitWarden → Railway); WITHINGS_CLIENT_ID + WITHINGS_CLIENT_SECRET not yet set |
+| 6 | Withings | 1 | P1 | ✅ Done | HMAC-SHA256 signing, server-side OAuth, 10 MCP tools, webhooks (?token= secret), Celery sync, BloodPressureRecord model | Connected (Available) | Credentials set in Railway; webhook secret set on all 3 services |
 | 7 | WHOOP | 1 | P2 | 📋 Future | Deferred | Coming Soon | Deferred: developer dashboard registration requires an active WHOOP membership (hardware); revisit when user demand justifies acquisition |
 | 8 | Polar | 1 | P2 | 📋 Future | Not started | Planned | AccessLink API |
 | 9 | MapMyFitness | 1 | P2 | 📋 Future | Not started | Planned | 40M users, 700+ activity types |

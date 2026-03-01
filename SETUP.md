@@ -157,6 +157,24 @@ Get the credentials from Bitwarden (search **"Fitbit API - Zuralog"**) and copy 
 
 > **Note:** `FITBIT_WEBHOOK_VERIFY_CODE` and `FITBIT_WEBHOOK_SUBSCRIBER_ID` are not required for local development — leave them empty. They are only needed when setting up the live webhook endpoint on Railway.
 
+#### Required: Withings Integration
+
+Withings OAuth 2.0 is fully implemented with HMAC-SHA256 signed requests, a server-side callback (Withings does not accept custom URI schemes), 10 MCP tools, and real-time webhooks. The API application is already registered at [developer.withings.com](https://developer.withings.com) under `developer@zuralog.com`. You do not need to register a new application.
+
+Get the credentials from Bitwarden (search **"Withings API - Zuralog"**) and copy them into `.env`:
+
+| Variable | Description |
+|---|---|
+| `WITHINGS_CLIENT_ID` | From Bitwarden → "Withings API - Zuralog" → Username |
+| `WITHINGS_CLIENT_SECRET` | From Bitwarden → "Withings API - Zuralog" → Password — **never commit** |
+| `WITHINGS_REDIRECT_URI` | Keep default: `https://api.zuralog.com/api/v1/integrations/withings/callback` |
+| `WITHINGS_API_BASE_URL` | Keep default: `https://api.zuralog.com`. Override for staging: `https://staging-api.zuralog.com` |
+| `WITHINGS_WEBHOOK_SECRET` | Leave **empty** for local development. The production value is set in Railway on all 3 services — copy from Bitwarden → "Withings Webhook Secret" if you need to test webhook delivery locally. |
+
+> **Architectural note:** Unlike other integrations, the Withings redirect URI must be a real HTTPS URL — Withings does not accept `zuralog://` custom scheme URIs at registration time. The backend handles the OAuth callback at `/api/v1/integrations/withings/callback`, exchanges the code within the 30-second window, and then redirects the user's browser to `zuralog://oauth/withings?success=true` to bring the mobile app back into focus.
+
+> **Webhook secret:** Withings does not sign webhook payloads with HMAC. Instead, the shared secret is embedded as a `?token=` query parameter in the callback URL registered with Withings. When `WITHINGS_WEBHOOK_SECRET` is empty (local dev), secret validation is skipped entirely — no errors, no test failures.
+
 #### Coming Soon: Oura Ring Integration
 
 > **Blocked — hardware required.** The Oura integration code is fully implemented (OAuth 2.0, 16 MCP tools, webhooks, Celery sync), but registering an Oura OAuth application requires an active Oura account, which requires owning an Oura Ring. The feature appears as **Coming Soon** in the app until credentials are available.
