@@ -63,6 +63,22 @@ Added during Upstash integration. These are **additional** to the existing `REDI
 
 ---
 
+## Fitbit Integration
+
+The Fitbit app is registered at [dev.fitbit.com](https://dev.fitbit.com) under `developer@zuralog.com` (Server type). Get `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET` from Bitwarden → **"Fitbit API - Zuralog"**.
+
+| Variable | Example | Notes |
+|----------|---------|-------|
+| `FITBIT_CLIENT_ID` | `23V3LJ` | From Bitwarden → "Fitbit API - Zuralog" → Username |
+| `FITBIT_CLIENT_SECRET` | `7d071f...` | From Bitwarden → "Fitbit API - Zuralog" → Password — **⚠️ SEAL THIS** |
+| `FITBIT_REDIRECT_URI` | `zuralog://oauth/fitbit` | Keep this exact value — matches deep link scheme in the Flutter app |
+| `FITBIT_WEBHOOK_VERIFY_CODE` | `openssl rand -hex 32` output | Generate once, set here **before** registering the webhook subscription in the Fitbit dashboard |
+| `FITBIT_WEBHOOK_SUBSCRIBER_ID` | *(assigned by Fitbit)* | Set after webhook subscription is created in the Fitbit developer portal |
+
+> **Webhook setup order:** Set `FITBIT_WEBHOOK_VERIFY_CODE` first → deploy → then register the subscription in [dev.fitbit.com](https://dev.fitbit.com) → Fitbit will assign a Subscriber ID → set `FITBIT_WEBHOOK_SUBSCRIBER_ID`.
+
+---
+
 ## Firebase Push Notifications
 
 | Variable | Value | Notes |

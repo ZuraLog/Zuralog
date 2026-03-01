@@ -86,6 +86,8 @@
 | P1 | `FitbitServer` MCP tools (12 tools) | ✅ Done | Activity, HR, HRV, sleep, SpO2, breathing, temp, VO2, weight, nutrition |
 | P1 | Fitbit webhook handler + subscription management | ✅ Done | |
 | P1 | Celery periodic sync (15min) + token refresh (1hr) | ✅ Done | |
+| P1 | Fitbit developer app registered + credentials configured | ✅ Done | Server type; `developer@zuralog.com`; credentials in Bitwarden + Railway + local `.env` |
+| P1 | Fitbit webhook subscription registration | 🔜 Planned | Requires deployed endpoint; generate `FITBIT_WEBHOOK_VERIFY_CODE` first |
 
 ### Phase 1.8 — Push Notifications
 

@@ -138,22 +138,21 @@ Used for vector embeddings and as an LLM fallback. You can skip this during init
 |---|---|
 | `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 
-#### Production: Fitbit Integration
+#### Required: Fitbit Integration
 
-Fitbit OAuth is fully implemented (OAuth 2.0 + PKCE) with 12 MCP tools and webhook support. When you are ready to test Fitbit locally:
+Fitbit OAuth is fully implemented (OAuth 2.0 + PKCE) with 12 MCP tools and webhook support. The Fitbit API application is already registered at [dev.fitbit.com](https://dev.fitbit.com) under the `developer@zuralog.com` Google account as a **Server** app. You do not need to register a new application.
 
-1. Go to [dev.fitbit.com/apps/new](https://dev.fitbit.com/apps/new) and create an API application.
-2. Set the **OAuth 2.0 Application Type** to "Personal" (for local dev) or "Server" (for production).
-3. Set the **Redirect URL** to `zuralog://oauth/fitbit`.
-4. Copy the **Client ID** and **Client Secret** into `.env`.
+Get the credentials from Bitwarden (search **"Fitbit API - Zuralog"**) and copy them into `.env`:
 
 | Variable | Description |
 |---|---|
-| `FITBIT_CLIENT_ID` | Your Fitbit API app's Client ID |
-| `FITBIT_CLIENT_SECRET` | Your Fitbit API app's Client Secret |
+| `FITBIT_CLIENT_ID` | From Bitwarden → "Fitbit API - Zuralog" → Username |
+| `FITBIT_CLIENT_SECRET` | From Bitwarden → "Fitbit API - Zuralog" → Password — **never commit** |
 | `FITBIT_REDIRECT_URI` | Keep default: `zuralog://oauth/fitbit` |
-| `FITBIT_WEBHOOK_VERIFY_CODE` | Set in Fitbit app settings under Subscriptions |
-| `FITBIT_WEBHOOK_SUBSCRIBER_ID` | Set in Fitbit app settings under Subscriptions |
+| `FITBIT_WEBHOOK_VERIFY_CODE` | Only needed when registering the webhook subscription (production) |
+| `FITBIT_WEBHOOK_SUBSCRIBER_ID` | Assigned by Fitbit after webhook registration (production) |
+
+> **Note:** `FITBIT_WEBHOOK_VERIFY_CODE` and `FITBIT_WEBHOOK_SUBSCRIBER_ID` are not required for local development — leave them empty. They are only needed when setting up the live webhook endpoint on Railway.
 
 #### Deferred: Strava Integration
 
