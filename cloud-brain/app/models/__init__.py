@@ -6,6 +6,7 @@ Alembic's env.py imports from here to discover all models.
 """
 
 from app.database import Base
+from app.models.blood_pressure import BloodPressureRecord  # noqa: F401
 from app.models.conversation import Conversation, Message
 from app.models.daily_metrics import DailyHealthMetrics  # noqa: F401
 from app.models.health_data import (
@@ -23,6 +24,7 @@ from app.models.user_goal import GoalPeriod, UserGoal
 __all__ = [
     "ActivityType",
     "Base",
+    "BloodPressureRecord",
     "Conversation",
     "DailyHealthMetrics",
     "GoalPeriod",

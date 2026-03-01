@@ -5,6 +5,7 @@ Type-safe settings management using Pydantic v2 BaseSettings.
 All values are loaded from environment variables or a .env file.
 """
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -80,6 +81,17 @@ class Settings(BaseSettings):
     oura_redirect_uri: str = "zuralog://oauth/oura"  # OURA_REDIRECT_URI
     oura_webhook_verification_token: str = ""  # OURA_WEBHOOK_VERIFICATION_TOKEN
     oura_use_sandbox: bool = False  # OURA_USE_SANDBOX
+    # Withings OAuth 2.0
+    withings_client_id: str = ""  # WITHINGS_CLIENT_ID
+    withings_client_secret: str = ""  # WITHINGS_CLIENT_SECRET
+    withings_redirect_uri: str = ""  # WITHINGS_REDIRECT_URI
+    # Base URL of the Cloud Brain API (used to construct webhook callback URLs).
+    # Defaults to production; override in staging/local via WITHINGS_API_BASE_URL.
+    withings_api_base_url: str = "https://api.zuralog.com"  # WITHINGS_API_BASE_URL
+    # Shared secret appended as ?token=... to the Withings webhook callback URL.
+    # Withings does not sign webhook payloads with HMAC; this query-param secret
+    # is the standard defence against unauthenticated webhook spoofing.
+    withings_webhook_secret: str = ""  # WITHINGS_WEBHOOK_SECRET
     app_env: str = "production"
     app_debug: bool = False
     # Sentry
@@ -96,6 +108,16 @@ class Settings(BaseSettings):
     # PostHog
     posthog_api_key: str = ""
     posthog_host: str = "https://us.i.posthog.com"
+
+    @model_validator(mode="after")
+    def validate_withings_config(self) -> "Settings":
+        """Fail fast if Withings credentials are configured but redirect URI is missing."""
+        if self.withings_client_id and not self.withings_redirect_uri:
+            raise ValueError(
+                "WITHINGS_REDIRECT_URI must be set when WITHINGS_CLIENT_ID is provided. "
+                "Set it to https://<your-api-domain>/api/v1/integrations/withings/callback"
+            )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

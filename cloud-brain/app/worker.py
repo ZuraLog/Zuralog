@@ -110,6 +110,14 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.oura_sync.renew_oura_webhook_subscriptions_task",
         "schedule": 86400.0,  # 24 hours
     },
+    "sync-withings-users-15m": {
+        "task": "app.tasks.withings_sync.sync_withings_periodic_task",
+        "schedule": 900.0,  # 15 minutes
+    },
+    "refresh-withings-tokens-1h": {
+        "task": "app.tasks.withings_sync.refresh_withings_tokens_task",
+        "schedule": 3600.0,  # 1 hour (tokens expire in 3h, refresh buffer is 30min)
+    },
 }
 
 # Auto-discover tasks in services and tasks modules

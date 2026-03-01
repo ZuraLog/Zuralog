@@ -156,6 +156,15 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       compatibility: PlatformCompatibility.all,
     ),
     IntegrationModel(
+      id: 'withings',
+      name: 'Withings',
+      status: IntegrationStatus.available,
+      description:
+          'Smart scales, sleep mats, blood pressure monitors, and thermometers. '
+          'Body composition, sleep, BP, temperature, and vitals.',
+      compatibility: PlatformCompatibility.all,
+    ),
+    IntegrationModel(
       id: 'google_health_connect',
       name: 'Google Health Connect',
       // Available on Android; shown in the Available section with a platform
@@ -291,6 +300,21 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Oura Ring connection.');
+          }
+        case 'withings':
+          final url = await _oauthRepository.getWithingsAuthUrl();
+          if (!context.mounted) break;
+          if (url != null) {
+            // URL obtained — Withings redirects browser back via server-side
+            // callback; deep-link handler handles zuralog://oauth/withings?success=true.
+            _setStatus(integrationId, IntegrationStatus.connected);
+            _analytics?.capture(
+              event: 'integration_connected',
+              properties: {'provider': integrationId},
+            );
+          } else {
+            _setStatus(integrationId, IntegrationStatus.available);
+            _showSnackBar(context, 'Could not start Withings connection.');
           }
         case 'apple_health':
           final granted = await _healthRepository.requestAuthorization();
