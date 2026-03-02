@@ -15,9 +15,15 @@ This replaces the Phase 1.3 scaffold with a production-ready
 implementation.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 import json
 import logging
-from typing import Any
 
 from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
@@ -69,18 +75,26 @@ class Orchestrator:
         self.llm_client = llm_client or LLMClient()
         self.usage_tracker = usage_tracker
 
-    def _build_tools_for_llm(self) -> list[dict[str, Any]]:
+    def _build_tools_for_llm(
+        self,
+        mcp_tools: list | None = None,
+    ) -> list[dict[str, Any]]:
         """Convert MCP ToolDefinitions to OpenAI function-calling format.
 
         Maps the internal ``ToolDefinition`` model to the format expected
         by the OpenAI API's tools parameter.
 
+        Args:
+            mcp_tools: Pre-resolved tool list. If None, fetches all tools
+                from the MCP client (legacy behaviour, no db session).
+
         Returns:
             A list of tool dicts in OpenAI function-calling schema.
         """
-        mcp_tools = self.mcp_client.get_all_tools()
-        openai_tools = []
+        if mcp_tools is None:
+            mcp_tools = self.mcp_client.get_all_tools()
 
+        openai_tools = []
         for tool in mcp_tools:
             openai_tools.append(
                 {
@@ -92,7 +106,6 @@ class Orchestrator:
                     },
                 }
             )
-
         return openai_tools
 
     async def process_message(
@@ -100,6 +113,7 @@ class Orchestrator:
         user_id: str,
         message: str,
         user_context_suffix: str | None = None,
+        db: AsyncSession | None = None,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
@@ -116,6 +130,9 @@ class Orchestrator:
             message: The user's chat message.
             user_context_suffix: Optional user profile context to append
                 to the system prompt.
+            db: Optional async database session. When provided, tools are
+                filtered to only those for integrations the user has
+                connected. When None, all tools are injected (legacy).
 
         Returns:
             An ``AgentResponse`` containing the assistant's message and
@@ -138,14 +155,20 @@ class Orchestrator:
             {"role": "user", "content": message},
         ]
 
-        # 4. Get available tools
-        tools = self._build_tools_for_llm()
+        # 4. Get available tools — filtered per user if DB session provided
+        if db is not None:
+            mcp_tools = await self.mcp_client.get_tools_for_user(db, user_id)
+        else:
+            mcp_tools = self.mcp_client.get_all_tools()
+        tools = self._build_tools_for_llm(mcp_tools)
 
+        injection_mode = "dynamic" if db is not None else "static"
         logger.info(
-            "Processing message for user '%s' with %d context items and %d tools",
+            "Processing message for user '%s': %d context items, %d tools (%s)",
             user_id,
             len(context_entries),
             len(tools),
+            injection_mode,
         )
 
         # 5. ReAct loop (max MAX_TOOL_TURNS turns)

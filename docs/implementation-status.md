@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-01 (Polar AccessLink integration code complete)  
+**Last Updated:** 2026-03-02 (Dynamic Tool Injection complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -319,6 +319,37 @@ WHOOP was researched and planned as a P1 direct integration. Implementation was 
 **Decision:** Moved to P2/Future. Will revisit when user demand from the WHOOP member segment justifies acquiring hardware. All technical research and the implementation plan are preserved in `.opencode/plans/2026-02-28-direct-integrations-top10-research.md`.
 
 **Next integration:** Withings (P1).
+
+---
+
+## Dynamic Tool Injection (2026-03-02)
+
+**Branch:** `feat/dynamic-tool-injection`  
+**Status:** Complete — squash-merged to main
+
+### What Was Built
+
+A per-user MCP tool filtering layer that injects only the tools for integrations the user has actually connected, rather than all registered MCP tools.
+
+**New file:**
+- `app/services/user_tool_resolver.py` — `UserToolResolver` class with `ALWAYS_ON_SERVERS` frozenset and `PROVIDER_TO_SERVER` allowlist dict. Uses `select(Integration.provider)` (column-only projection — no token data loaded) with `WHERE user_id = ? AND is_active IS TRUE` on the indexed column. Maps provider strings → server names, unions with always-on servers, calls `MCPServerRegistry.get_tools_for_servers()`.
+
+**Modified files:**
+- `app/mcp_servers/registry.py` — Added `get_tools_for_servers(server_names: AbstractSet[str])` filtered aggregation method
+- `app/agent/mcp_client.py` — Added optional `tool_resolver` param to `__init__`; added `get_tools_for_user(db, user_id)` async method
+- `app/agent/orchestrator.py` — `_build_tools_for_llm()` accepts pre-resolved tool list; `process_message()` accepts optional `db: AsyncSession | None = None`
+- `app/main.py` — Wires `UserToolResolver` into `MCPClient` at startup
+- `app/api/v1/chat.py` — Passes `db` session to `orchestrator.process_message()`; removed dead `_get_orchestrator` dependency function
+
+**Test coverage:** 40 new/updated tests across 5 files including an end-to-end integration test.
+
+### Key Decisions
+
+- **Column-only query:** `select(Integration.provider)` — does not load OAuth tokens or metadata into memory. Returns plain strings.
+- **DB query per request (no cache):** ~1ms async Postgres query on indexed `user_id` column. Revisit with Redis only if profiling shows bottleneck.
+- **Fail-open:** DB failure falls back to all tools — chat never breaks due to resolver error.
+- **Backwards-compatible:** All parameters default to `None`; existing call sites unchanged.
+- **Allowlist mapping:** `PROVIDER_TO_SERVER` dict means unknown provider values in DB are silently dropped — no injection risk.
 
 ---
 

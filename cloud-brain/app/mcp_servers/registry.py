@@ -11,6 +11,7 @@ module-level singleton.
 """
 
 import logging
+from collections.abc import Set as AbstractSet
 
 from app.mcp_servers.base_server import BaseMCPServer
 from app.mcp_servers.models import ToolDefinition
@@ -112,4 +113,25 @@ class MCPServerRegistry:
         tools: list[ToolDefinition] = []
         for server in self._servers.values():
             tools.extend(server.get_tools())
+        return tools
+
+    def get_tools_for_servers(self, server_names: AbstractSet[str]) -> list[ToolDefinition]:
+        """Aggregate tool definitions from a subset of registered servers.
+
+        Used by the dynamic tool injection system to return only tools
+        for integrations the user has connected, plus always-on servers.
+
+        Args:
+            server_names: Set of server names to include. Unknown names
+                are silently skipped.
+
+        Returns:
+            A flat list of ``ToolDefinition`` models from the matching
+            servers only.
+        """
+        tools: list[ToolDefinition] = []
+        for name in sorted(server_names):
+            server = self._servers.get(name)
+            if server is not None:
+                tools.extend(server.get_tools())
         return tools

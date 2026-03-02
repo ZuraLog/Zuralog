@@ -179,6 +179,14 @@ All external integrations are implemented as **MCP Servers** that expose a stand
 | `PolarServer` | 14 tools (exercises, daily activity, continuous HR, sleep, nightly recharge, cardio load, SleepWise alertness/bedtime, body temperature, physical info) | ✅ Production |
 | `DeepLinkServer` | Launch third-party apps via URI schemes | ✅ Production |
 
+### Dynamic Tool Injection
+
+The `UserToolResolver` service (`app/services/user_tool_resolver.py`) filters which MCP tools are presented to the LLM on a per-request basis. At chat time, it queries the `integrations` table for the user's active providers, maps them to MCP server names via `PROVIDER_TO_SERVER`, and unions with `ALWAYS_ON_SERVERS` (`apple_health`, `health_connect`, `deep_link`). The filtered list is passed to the Orchestrator via `MCPClient.get_tools_for_user()`.
+
+**Fail-open:** If the DB query fails, the resolver falls back to returning all tools — the same behavior as before dynamic injection was added. This ensures a transient DB error never blocks the chat.
+
+**Token savings:** With 8 servers and ~60 tools, a user with only Strava connected will see ~4 tools instead of ~60 — roughly a 90% reduction in tool tokens for single-integration users.
+
 ---
 
 ## 3. Edge Agent (Flutter Mobile App)

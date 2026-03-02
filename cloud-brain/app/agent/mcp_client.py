@@ -7,11 +7,19 @@ for all tool calls in the system — the orchestrator never talks to
 individual servers directly.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import sentry_sdk
 from app.mcp_servers.models import ToolDefinition, ToolResult
 from app.mcp_servers.registry import MCPServerRegistry
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.services.user_tool_resolver import UserToolResolver
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +35,22 @@ class MCPClient:
         _registry: The shared server registry.
     """
 
-    def __init__(self, registry: MCPServerRegistry) -> None:
+    def __init__(
+        self,
+        registry: MCPServerRegistry,
+        tool_resolver: UserToolResolver | None = None,
+    ) -> None:
         """Create a new MCP client.
 
         Args:
             registry: The application-wide server registry containing
                 all registered MCP servers.
+            tool_resolver: Optional resolver for per-user tool filtering.
+                If None, ``get_tools_for_user()`` falls back to returning
+                all tools (backwards compatibility).
         """
         self._registry = registry
+        self._tool_resolver = tool_resolver
 
     async def execute_tool(
         self,
@@ -94,4 +110,26 @@ class MCPClient:
         Returns:
             A flat list of ``ToolDefinition`` models.
         """
+        return self._registry.get_all_tools()
+
+    async def get_tools_for_user(
+        self,
+        db: AsyncSession,
+        user_id: str,
+    ) -> list[ToolDefinition]:
+        """Get tools filtered by the user's connected integrations.
+
+        Delegates to the ``UserToolResolver`` if one was provided at
+        construction time. Falls back to ``get_all_tools()`` if no
+        resolver is available (backwards compatibility).
+
+        Args:
+            db: An active async database session.
+            user_id: The authenticated user's ID.
+
+        Returns:
+            A filtered list of ``ToolDefinition`` models.
+        """
+        if self._tool_resolver is not None:
+            return await self._tool_resolver.resolve_tools(db, user_id)
         return self._registry.get_all_tools()

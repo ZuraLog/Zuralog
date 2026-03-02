@@ -61,6 +61,7 @@ def client(mock_auth_service, mock_db):
             app.state.auth_service = mock_auth_service
             app.state.mcp_client = MagicMock()
             app.state.mcp_client.get_all_tools.return_value = []
+            app.state.mcp_client.get_tools_for_user = AsyncMock(return_value=[])
             app.state.memory_store = MagicMock()
             app.state.memory_store.query = AsyncMock(return_value=[])
 

@@ -216,7 +216,7 @@
 | Profile photo upload | P2 | 📋 Future | |
 | Data export | P2 | 📋 Future | |
 | Pinecone vector store (AI memory) | P2 | 🔜 Planned | Config env var exists; code not written |
-| Dynamic tool injection | P1 | 🔜 Planned | Only inject MCP tools for integrations the user has connected; prevents context bloat as integration catalog grows; prerequisite for semantic retrieval |
+| Dynamic tool injection | P1 | ✅ Done | Only inject MCP tools for integrations the user has connected; prevents context bloat as integration catalog grows; prerequisite for semantic retrieval |
 | Semantic tool retrieval | P2 | 🔜 Planned | Embed user message + tool descriptions at request time; inject top-K relevant tools only; scales to unlimited integrations without MCP bloat; requires Pinecone |
 | AI-powered morning briefing | P2 | 📋 Future | Daily summary push |
 | Smart reminders | P2 | 📋 Future | "You haven't run in 5 days" |

@@ -74,6 +74,7 @@ from app.services.strava_rate_limiter import StravaRateLimiter
 from app.services.strava_token_service import StravaTokenService
 from app.services.analytics import AnalyticsService
 from app.services.cache_service import CacheService
+from app.services.user_tool_resolver import UserToolResolver
 
 # Configure root logger based on environment.
 logging.basicConfig(
@@ -220,7 +221,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.polar_token_service = polar_token_service
     app.state.polar_rate_limiter = polar_rate_limiter
 
-    app.state.mcp_client = MCPClient(registry=registry)
+    # Dynamic tool injection: resolve tools per user at chat time
+    tool_resolver = UserToolResolver(registry=registry)
+    app.state.mcp_client = MCPClient(registry=registry, tool_resolver=tool_resolver)
     app.state.memory_store = InMemoryStore()
     app.state.llm_client = LLMClient()
     app.state.rate_limiter = RateLimiter()

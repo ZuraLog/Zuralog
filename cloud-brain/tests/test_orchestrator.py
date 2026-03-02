@@ -319,3 +319,71 @@ async def test_no_client_action_when_tool_has_none(orchestrator, mock_mcp_client
     assert isinstance(result, AgentResponse)
     assert result.message == "You walked 8,500 steps today."
     assert result.client_action is None
+
+
+@pytest.mark.asyncio
+async def test_dynamic_tool_injection_uses_user_tools(
+    mock_mcp_client, mock_memory_store, mock_llm_client, mock_usage_tracker,
+):
+    """When a db session is provided, orchestrator uses get_tools_for_user()."""
+    from app.mcp_servers.models import ToolDefinition
+
+    # Setup: get_tools_for_user returns a single tool
+    mock_tool = ToolDefinition(
+        name="strava_get_activities",
+        description="Get Strava activities",
+        input_schema={"type": "object", "properties": {}},
+    )
+    mock_mcp_client.get_tools_for_user = AsyncMock(return_value=[mock_tool])
+
+    # LLM returns a simple text response (no tool calls)
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "Here are your activities!"
+    mock_response.choices[0].message.tool_calls = None
+    mock_response.usage.prompt_tokens = 100
+    mock_response.usage.completion_tokens = 20
+    mock_llm_client.chat.return_value = mock_response
+
+    orchestrator = Orchestrator(
+        mcp_client=mock_mcp_client,
+        memory_store=mock_memory_store,
+        llm_client=mock_llm_client,
+        usage_tracker=mock_usage_tracker,
+    )
+
+    mock_db = AsyncMock()
+    result = await orchestrator.process_message("user-123", "Show my activities", db=mock_db)
+
+    # Verify get_tools_for_user was called with correct args
+    mock_mcp_client.get_tools_for_user.assert_called_once_with(mock_db, "user-123")
+    assert result.message == "Here are your activities!"
+
+    # Verify the LLM received only the filtered tool
+    call_args = mock_llm_client.chat.call_args
+    tools_sent = call_args.kwargs.get("tools")
+    if tools_sent is None and len(call_args.args) > 1:
+        tools_sent = call_args.args[1]
+    assert tools_sent is not None
+    assert len(tools_sent) == 1
+    assert tools_sent[0]["function"]["name"] == "strava_get_activities"
+
+
+@pytest.mark.asyncio
+async def test_no_db_session_falls_back_to_all_tools(
+    orchestrator, mock_mcp_client, mock_llm_client,
+):
+    """Without a db session, orchestrator uses get_all_tools() (backwards compat)."""
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "Hello!"
+    mock_response.choices[0].message.tool_calls = None
+    mock_response.usage.prompt_tokens = 50
+    mock_response.usage.completion_tokens = 10
+    mock_llm_client.chat.return_value = mock_response
+
+    result = await orchestrator.process_message("user-123", "Hi")
+
+    # get_all_tools() should have been called (existing behaviour, no db= arg)
+    mock_mcp_client.get_all_tools.assert_called()
+    assert result.message == "Hello!"

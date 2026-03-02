@@ -126,3 +126,39 @@ class TestMCPServerRegistry:
         """get_all_tools returns empty list on empty registry."""
         registry = MCPServerRegistry()
         assert registry.get_all_tools() == []
+
+    def test_get_tools_for_servers_filters_correctly(self) -> None:
+        """Only returns tools from the specified server names."""
+        registry = MCPServerRegistry()
+        registry.register(ServerA())
+        registry.register(ServerB())
+        tools = registry.get_tools_for_servers({"server_a"})
+        tool_names = [t.name for t in tools]
+        assert "tool_a_1" in tool_names
+        assert "tool_a_2" in tool_names
+        assert "tool_b_1" not in tool_names
+
+    def test_get_tools_for_servers_empty_set_returns_empty(self) -> None:
+        """An empty server set returns no tools."""
+        registry = MCPServerRegistry()
+        registry.register(ServerA())
+        registry.register(ServerB())
+        tools = registry.get_tools_for_servers(set())
+        assert tools == []
+
+    def test_get_tools_for_servers_unknown_name_ignored(self) -> None:
+        """Unknown server names are silently skipped."""
+        registry = MCPServerRegistry()
+        registry.register(ServerA())
+        tools = registry.get_tools_for_servers({"nonexistent_server"})
+        assert tools == []
+
+    def test_get_tools_for_servers_all_names_returns_all(self) -> None:
+        """Passing all registered names returns the same as get_all_tools()."""
+        registry = MCPServerRegistry()
+        registry.register(ServerA())
+        registry.register(ServerB())
+        all_names = {s.name for s in registry.list_all()}
+        filtered = registry.get_tools_for_servers(all_names)
+        all_tools = registry.get_all_tools()
+        assert sorted(t.name for t in filtered) == sorted(t.name for t in all_tools)

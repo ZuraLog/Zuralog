@@ -6,6 +6,7 @@ unknown tools, exception wrapping, and tool aggregation delegation.
 """
 
 import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 from app.agent.mcp_client import MCPClient
 from app.mcp_servers.base_server import BaseMCPServer
@@ -76,6 +77,33 @@ class FailingServer(BaseMCPServer):
 # ---------------------------------------------------------------------------
 
 
+class WeatherServer(BaseMCPServer):
+    """Mock server simulating a weather integration."""
+
+    @property
+    def name(self) -> str:
+        return "weather_server"
+
+    @property
+    def description(self) -> str:
+        return "Mock weather integration."
+
+    def get_tools(self) -> list[ToolDefinition]:
+        return [
+            ToolDefinition(
+                name="get_forecast",
+                description="Get weather forecast.",
+                input_schema={"type": "object", "properties": {}},
+            ),
+        ]
+
+    async def execute_tool(self, tool_name: str, params: dict, user_id: str) -> ToolResult:
+        return ToolResult(success=True, data={"forecast": "sunny"})
+
+    async def get_resources(self, user_id: str) -> list[Resource]:
+        return []
+
+
 class TestMCPClient:
     """Tests for MCPClient tool routing and error handling."""
 
@@ -132,3 +160,38 @@ class TestMCPClient:
         """Empty registry yields empty tool list."""
         client = MCPClient(registry=MCPServerRegistry())
         assert client.get_all_tools() == []
+
+    @pytest.mark.asyncio
+    async def test_get_tools_for_user_delegates_to_resolver(self) -> None:
+        """get_tools_for_user() delegates to the UserToolResolver."""
+        mock_tool = ToolDefinition(
+            name="strava_get_activities",
+            description="Get Strava activities",
+            input_schema={"type": "object", "properties": {}},
+        )
+        mock_resolver = MagicMock()
+        mock_resolver.resolve_tools = AsyncMock(return_value=[mock_tool])
+        mock_db = AsyncMock()
+
+        registry = MCPServerRegistry()
+        client = MCPClient(registry=registry, tool_resolver=mock_resolver)
+
+        tools = await client.get_tools_for_user(mock_db, "user-123")
+        assert len(tools) == 1
+        assert tools[0].name == "strava_get_activities"
+        mock_resolver.resolve_tools.assert_called_once_with(mock_db, "user-123")
+
+    @pytest.mark.asyncio
+    async def test_get_tools_for_user_without_resolver_returns_all(self) -> None:
+        """If no resolver is provided, falls back to get_all_tools() (all tools)."""
+        registry = MCPServerRegistry()
+        registry.register(HealthServer())
+        registry.register(WeatherServer())
+
+        client = MCPClient(registry=registry)  # No resolver
+        mock_db = AsyncMock()
+
+        tools = await client.get_tools_for_user(mock_db, "user-123")
+        # Concrete assertion: 2 servers registered → 2 tools returned
+        assert len(tools) == 2
+        assert {t.name for t in tools} == {"read_steps", "get_forecast"}

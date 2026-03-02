@@ -61,24 +61,6 @@ def _get_auth_service(request: Request) -> AuthService:
     return request.app.state.auth_service
 
 
-def _get_orchestrator(request: Request) -> Orchestrator:
-    """FastAPI dependency that builds an Orchestrator from app state.
-
-    The Orchestrator is constructed per-request using the shared
-    MCP client and memory store from the application lifespan.
-
-    Args:
-        request: The incoming FastAPI request.
-
-    Returns:
-        A configured Orchestrator instance.
-    """
-    return Orchestrator(
-        mcp_client=request.app.state.mcp_client,
-        memory_store=request.app.state.memory_store,
-        llm_client=request.app.state.llm_client,
-    )
-
 
 async def _authenticate_ws(
     websocket: WebSocket,
@@ -196,7 +178,7 @@ async def websocket_chat(
 
                 # Process through the Orchestrator
                 try:
-                    agent_response = await orchestrator.process_message(user_id, message_text)
+                    agent_response = await orchestrator.process_message(user_id, message_text, db=db)
                     if analytics:
                         analytics.capture(
                             distinct_id=user_id,
