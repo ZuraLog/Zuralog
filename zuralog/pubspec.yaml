@@ -42,6 +42,9 @@ dependencies:
   app_links: any  # Deep link / custom URL scheme interception (Phase 1.6)
   cupertino_icons: ^1.0.8
 
+  # Voice Input (Phase STT)
+  speech_to_text: ^7.3.0          # On-device speech recognition (free, offline)
+
   # Push Notifications (Phase 1.9)
   firebase_core: any
   firebase_messaging: any

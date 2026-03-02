@@ -36,6 +36,12 @@
     <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
     <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
 
+    <!-- Voice Input (Phase STT): on-device speech recognition via built-in mic.
+         RECORD_AUDIO is the only permission required for on-device STT.
+         Bluetooth routing is not a Zuralog feature — BLUETOOTH/BLUETOOTH_CONNECT
+         are intentionally omitted to avoid a dangerous-permission Play Store review. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
     <application
         android:label="zuralog"
         android:name="${applicationName}"
@@ -116,6 +122,10 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
+        </intent>
+        <!-- Voice Input (Phase STT): required for speech_to_text on SDK 30+ -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 </manifest>

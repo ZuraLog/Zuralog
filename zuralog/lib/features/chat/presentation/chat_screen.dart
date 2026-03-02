@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/core/theme/theme.dart';
@@ -23,6 +24,7 @@ import 'package:zuralog/features/chat/domain/message.dart';
 import 'package:zuralog/features/chat/presentation/widgets/chat_input_bar.dart';
 import 'package:zuralog/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:zuralog/features/chat/presentation/widgets/typing_indicator.dart';
+import 'package:zuralog/core/speech/speech.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── Chat Screen ───────────────────────────────────────────────────────────────
@@ -102,6 +104,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
+    // Listen for speech state transitions to handle errors and analytics.
+    ref.listen<SpeechState>(speechNotifierProvider, (previous, next) {
+      // ── Error handling ──────────────────────────────────────────────
+      if (next.status == SpeechStatus.error && next.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_speechErrorMessage(next.errorMessage!)),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      // ── Analytics: voice_input_completed ───────────────────────────
+      // Captured here (not in onVoiceStop) so we always read the final
+      // recognized text after the plugin delivers its last result —
+      // the stop callback fires before the final async result arrives.
+      if (previous?.isListening == true && next.isFinal) {
+        ref.read(analyticsServiceProvider).capture(
+          event: 'voice_input_completed',
+          properties: {
+            'text_length': next.recognizedText.length,
+            'has_text': next.recognizedText.isNotEmpty,
+          },
+        );
+      }
+    });
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: isDark
@@ -131,6 +160,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // ── Connection status banner ──────────────────────────────────
           _ConnectionBanner(connectionAsync: connectionAsync),
 
+          // ── Listening indicator ───────────────────────────────────────
+          Builder(builder: (context) {
+            final speechState = ref.watch(speechNotifierProvider);
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: speechState.isListening ? null : 0,
+              clipBehavior: Clip.hardEdge,
+              decoration: const BoxDecoration(),
+              child: speechState.isListening
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceSm,
+                      ),
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      child: Row(
+                        children: [
+                          _PulsingDot(),
+                          const SizedBox(width: AppDimens.spaceSm),
+                          Expanded(
+                            child: Text(
+                              speechState.recognizedText.isEmpty
+                                  ? 'Listening…'
+                                  : speechState.recognizedText,
+                              style: AppTextStyles.body.copyWith(
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            );
+          }),
+
           // ── Message list with pull-to-reconnect ──────────────────────
           Expanded(
             child: RefreshIndicator(
@@ -146,11 +217,53 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
 
           // ── Input bar (pinned at bottom) ──────────────────────────────
-          ChatInputBar(
-            onSend: (text) {
-              ref.read(chatNotifierProvider.notifier).sendMessage(text);
-            },
-          ),
+          Builder(builder: (context) {
+            final speechState = ref.watch(speechNotifierProvider);
+            return ChatInputBar(
+              onSend: (text) {
+                ref.read(chatNotifierProvider.notifier).sendMessage(text);
+              },
+              onVoiceStart: () async {
+                final notifier = ref.read(speechNotifierProvider.notifier);
+
+                // If a previous session ended in error (e.g. permission
+                // permanently denied), don't silently loop — the ref.listen
+                // above will surface a SnackBar. Return early.
+                if (speechState.status == SpeechStatus.error) return;
+
+                // Lazy-initialize on first use.
+                if (!speechState.isAvailable) {
+                  final available = await notifier.initialize();
+                  if (!available && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Speech recognition is not available on this device',
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
+                  }
+                }
+                await notifier.startListening();
+                ref.read(analyticsServiceProvider).capture(
+                  event: 'voice_input_started',
+                );
+              },
+              onVoiceStop: () {
+                // Analytics are captured in the ref.listen above, after the
+                // plugin delivers its final result asynchronously.
+                ref.read(speechNotifierProvider.notifier).stopListening();
+              },
+              onVoiceCancel: () {
+                ref.read(speechNotifierProvider.notifier).cancelListening();
+              },
+              isListening: speechState.isListening,
+              recognizedText: speechState.recognizedText,
+              soundLevel: speechState.soundLevel,
+            );
+          }),
         ],
       ),
     );
@@ -360,6 +473,70 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Speech Error Helper ───────────────────────────────────────────────────────
+
+/// Maps speech recognition error codes to user-friendly messages.
+String _speechErrorMessage(String error) {
+  if (error.contains('permission') || error.contains('denied')) {
+    return 'Microphone permission is required for voice input. '
+        'Please enable it in Settings.';
+  }
+  if (error.contains('network')) {
+    return 'Speech recognition requires a network connection on some devices.';
+  }
+  if (error.contains('busy') || error.contains('recognizer')) {
+    return 'Speech recognition is busy. Please try again.';
+  }
+  return 'Voice input error. Please try again.';
+}
+
+// ── Pulsing Dot ───────────────────────────────────────────────────────────────
+
+/// A small pulsing green dot indicating active listening.
+class _PulsingDot extends StatefulWidget {
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) => Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.primary.withValues(alpha: _animation.value),
         ),
       ),
     );

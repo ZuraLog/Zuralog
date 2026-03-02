@@ -25,14 +25,36 @@ import 'package:zuralog/core/theme/theme.dart';
 /// keyboard — the parent [Scaffold] must set `resizeToAvoidBottomInset: true`.
 class ChatInputBar extends StatefulWidget {
   /// Callback invoked when the user submits a message.
-  ///
-  /// [text] is the trimmed, non-empty message string.
   final void Function(String text) onSend;
 
-  /// Creates a [ChatInputBar].
-  ///
-  /// [onSend] must not be null.
-  const ChatInputBar({super.key, required this.onSend});
+  /// Callback invoked when the user starts a hold-to-talk gesture.
+  final VoidCallback? onVoiceStart;
+
+  /// Callback invoked when the user releases the hold-to-talk gesture.
+  final VoidCallback? onVoiceStop;
+
+  /// Callback invoked when the user cancels voice input (drag away).
+  final VoidCallback? onVoiceCancel;
+
+  /// Whether the speech recognizer is currently listening.
+  final bool isListening;
+
+  /// The current recognized text during a listening session.
+  final String recognizedText;
+
+  /// Microphone sound level (0.0 to 1.0) for visual feedback.
+  final double soundLevel;
+
+  const ChatInputBar({
+    super.key,
+    required this.onSend,
+    this.onVoiceStart,
+    this.onVoiceStop,
+    this.onVoiceCancel,
+    this.isListening = false,
+    this.recognizedText = '',
+    this.soundLevel = 0.0,
+  });
 
   @override
   State<ChatInputBar> createState() => _ChatInputBarState();
@@ -74,6 +96,19 @@ class _ChatInputBarState extends State<ChatInputBar> {
     if (text.isEmpty) return;
     widget.onSend(text);
     _controller.clear();
+  }
+
+  @override
+  void didUpdateWidget(ChatInputBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When listening stops and we have final text, insert it into the field.
+    if (oldWidget.isListening && !widget.isListening) {
+      final text = widget.recognizedText.trim();
+      if (text.isNotEmpty) {
+        _controller.text = text;
+        _controller.selection = TextSelection.collapsed(offset: text.length);
+      }
+    }
   }
 
   @override
@@ -156,6 +191,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
               _SendOrMicButton(
                 hasText: _hasText,
                 onSend: _handleSend,
+                onVoiceStart: widget.onVoiceStart,
+                onVoiceStop: widget.onVoiceStop,
+                onVoiceCancel: widget.onVoiceCancel,
+                isListening: widget.isListening,
+                soundLevel: widget.soundLevel,
               ),
             ],
           ),
@@ -205,16 +245,26 @@ class _AttachButton extends StatelessWidget {
 
 /// The send / mic button at the right of the input bar.
 ///
-/// Shows a mic icon when [hasText] is false, and a filled send icon
-/// (colored [AppColors.primary]) when [hasText] is true.
+/// Shows a send icon when text is present. Shows a hold-to-talk mic button
+/// when the field is empty, with animated visual feedback while listening.
 class _SendOrMicButton extends StatelessWidget {
-  const _SendOrMicButton({required this.hasText, required this.onSend});
+  const _SendOrMicButton({
+    required this.hasText,
+    required this.onSend,
+    this.onVoiceStart,
+    this.onVoiceStop,
+    this.onVoiceCancel,
+    this.isListening = false,
+    this.soundLevel = 0.0,
+  });
 
-  /// Whether the text field currently has content.
   final bool hasText;
-
-  /// Called when the user taps the send button.
   final VoidCallback onSend;
+  final VoidCallback? onVoiceStart;
+  final VoidCallback? onVoiceStop;
+  final VoidCallback? onVoiceCancel;
+  final bool isListening;
+  final double soundLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -238,18 +288,35 @@ class _SendOrMicButton extends StatelessWidget {
               ),
               tooltip: 'Send message',
             )
-          : IconButton(
-              key: const ValueKey('mic'),
-              onPressed: null, // Mic is decorative for now.
-              icon: const Icon(Icons.mic_none_rounded),
-              color: AppColors.textSecondary,
-              iconSize: AppDimens.iconMd,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: AppDimens.touchTargetMin,
-                minHeight: AppDimens.touchTargetMin,
+          : Tooltip(
+              message: 'Hold for voice input',
+              child: GestureDetector(
+                key: const ValueKey('mic'),
+                behavior: HitTestBehavior.opaque,
+                onLongPressStart: (_) => onVoiceStart?.call(),
+                onLongPressEnd: (_) => onVoiceStop?.call(),
+                onLongPressCancel: () => onVoiceCancel?.call(),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: AppDimens.touchTargetMin,
+                  height: AppDimens.touchTargetMin,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isListening
+                        ? AppColors.primary.withValues(
+                            alpha: 0.15 + (soundLevel * 0.25),
+                          )
+                        : Colors.transparent,
+                  ),
+                  child: Icon(
+                    isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                    color: isListening
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                    size: AppDimens.iconMd,
+                  ),
+                ),
               ),
-              tooltip: 'Voice input coming soon',
             ),
     );
   }

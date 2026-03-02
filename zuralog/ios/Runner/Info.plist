@@ -105,6 +105,10 @@
 	<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep, heart rate, HRV, VO2 max, and other vitals) to provide personalized AI coaching and track your fitness goals.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Zuralog needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Zuralog uses speech recognition to convert your voice messages into text for the AI coach chat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Zuralog needs microphone access to hear your voice messages for the AI coach chat.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

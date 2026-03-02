@@ -152,7 +152,7 @@
 | P0 | Apple Sign In (iOS native) | 🔜 Planned | Pending Apple Developer subscription |
 | P0 | Onboarding screens | ✅ Done | |
 | P0 | AI Chat UI (streaming) | ✅ Done | |
-| P0 | Voice input (mic button) | 🔜 Planned | Whisper via OpenAI API |
+| P0 | Voice input (mic button) | ✅ Done | On-device STT via `speech_to_text` Flutter package (free, offline, no API key) |
 | P0 | File attachments in chat | 📋 Future | |
 | P0 | Dashboard (health summary cards) | ✅ Done | |
 | P0 | Integrations Hub screen | ✅ Done | Connected / Available / Coming Soon sections |
@@ -210,7 +210,7 @@
 
 | Feature | Priority | Status | Notes |
 |---------|----------|--------|-------|
-| Voice input (Whisper STT) | P1 | 🔜 Planned | OpenAI `whisper-1` via Cloud Brain `/api/v1/transcribe/` route exists |
+| Voice input (on-device STT) | P1 | ✅ Done | `speech_to_text` Flutter package — on-device, free, no API key; hold-to-talk fills input field for user review before sending |
 | File attachments in chat | P2 | 📋 Future | UI placeholder exists |
 | Apple Sign In | P1 | 🔜 Planned | Pending Apple Developer subscription |
 | Profile photo upload | P2 | 📋 Future | |

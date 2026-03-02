@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-02 (Dynamic Tool Injection complete)  
+**Last Updated:** 2026-03-02 (Voice Input STT complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -128,7 +128,7 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 | Original Plan | Actual Implementation | Reason |
 |--------------|----------------------|--------|
 | `health` Flutter package for unified health API | Native Swift/Kotlin platform channels directly | Better reliability, deeper API access, and avoids third-party wrapper maintenance |
-| `record` package for voice input | Not in pubspec.yaml | Voice input routes through Cloud Brain Whisper endpoint; no local recording library needed |
+| Cloud Whisper STT for voice input | On-device STT via `speech_to_text` Flutter package | Free, offline, no API key required; audio never leaves the device |
 | Apple Sign In (live) | Coming soon (UI shows dialog) | Pending Apple Developer subscription |
 
 ---
@@ -402,3 +402,44 @@ A critical bug in the waitlist signup flow was identified and fixed:
 - Updated API routes to use correct field names
 - Fixed TypeScript types in the frontend
 - Enhanced UI with animated counter and dark-only theme
+
+---
+
+## Voice Input — On-Device STT (2026-03-02)
+
+**Branch:** `feat/voice-input-stt`
+**Status:** Complete
+
+On-device speech-to-text using the `speech_to_text` Flutter package (v7.3.0). Audio never leaves the device. No API key or network required (uses Apple Speech framework on iOS, Google Speech Services on Android).
+
+**New files:**
+- `zuralog/lib/core/speech/speech_state.dart` — Immutable state model (`SpeechStatus` enum, `SpeechState` class with `copyWith`, equality, `toString`)
+- `zuralog/lib/core/speech/speech_service.dart` — Service wrapper around `SpeechToText` plugin (init, listen, stop, cancel, sound level normalization dBFS → 0–1)
+- `zuralog/lib/core/speech/speech_providers.dart` — `SpeechNotifier` (StateNotifier) + `speechNotifierProvider` (Riverpod autoDispose)
+- `zuralog/lib/core/speech/speech.dart` — Barrel export
+- `zuralog/test/core/speech/speech_service_test.dart` — 29 unit tests using `_FakeSpeechToText extends SpeechToText` (hand-rolled fake using `withMethodChannel()` ctor)
+- `zuralog/test/core/speech/speech_providers_test.dart` — 6 unit tests using `_FakeSpeechService extends SpeechService`
+
+**Modified files:**
+- `zuralog/lib/features/chat/presentation/widgets/chat_input_bar.dart` — Hold-to-talk `GestureDetector` on mic button; animated pulsing circle feedback; `didUpdateWidget` inserts recognized text into field on listen stop
+- `zuralog/lib/features/chat/presentation/chat_screen.dart` — Wires `SpeechNotifier` to `ChatInputBar`; listening overlay banner with `_PulsingDot`; speech error SnackBars; PostHog analytics (`voice_input_started`, `voice_input_completed` with `text_length` / `has_text` properties)
+- `zuralog/pubspec.yaml` — Added `speech_to_text: ^7.3.0`
+- `zuralog/ios/Runner/Info.plist` — Added `NSSpeechRecognitionUsageDescription` + `NSMicrophoneUsageDescription`
+- `zuralog/android/app/src/main/AndroidManifest.xml` — Added `RECORD_AUDIO` permission + speech `RecognitionService` query (BLUETOOTH/BLUETOOTH_CONNECT intentionally omitted — not required for on-device mic STT and would trigger Play Store dangerous-permission review)
+- `zuralog/test/features/chat/presentation/widgets/chat_input_bar_test.dart` — Updated for new widget structure; 4 new voice input tests (11 total)
+
+**UX:** Hold-to-talk. User long-presses mic button → listening starts → partial text shown in overlay banner → release → final text fills input field → user reviews/edits → taps send. Cancel by dragging away.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| On-device STT (not Cloud Whisper) | Free, offline, no API key; audio never leaves device; existing `/api/v1/transcribe/` endpoint remains as future option |
+| Hold-to-talk (not tap-to-toggle) | More intuitive for short phrases; matches iMessage/WhatsApp voice note UX; natural start/stop boundary |
+| Fill text field (not auto-send) | Users review and edit transcription before sending; prevents embarrassing mis-transcriptions |
+| Lazy initialization | Speech engine initialized on first mic tap, not app startup; avoids permission prompt on first launch |
+| Hand-rolled fakes (not Mockito) | `SpeechToText` and `SpeechService` are concrete classes with platform channels — cannot be mocked with `@GenerateMocks`; `SpeechToText.withMethodChannel()` is the plugin's `@visibleForTesting` extension point |
+| 30-second listen limit | Apple recommends max 1 minute; 30s is sufficient for chat commands and reduces battery impact |
+| Analytics captured in `ref.listen` (not `onVoiceStop`) | `stopListening()` fires before the plugin's async final result arrives; reading `recognizedText` in the callback gives 0/partial text. `ref.listen` fires on the `isFinal` transition which has the full final text |
+| Error-state early return in `onVoiceStart` | Prevents a permission-denied error from looping silently on every long-press. The `ref.listen` SnackBar already surfaces the error; `onVoiceStart` returns early to avoid re-triggering |
+| `SpeechNotifier` seeded from `currentState` | `autoDispose` notifier re-creates on re-navigation; seeding from the persistent service's `currentState` prevents the notifier from advertising `uninitialized` when the engine is already `ready` |
