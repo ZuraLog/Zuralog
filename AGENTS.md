@@ -24,6 +24,7 @@ All project documentation lives in `docs/`. Read the relevant doc before startin
 | [`docs/roadmap.md`](./docs/roadmap.md) | Living checklist — update status as work completes |
 | [`docs/implementation-status.md`](./docs/implementation-status.md) | Historical record of what was built and how |
 | [`docs/design.md`](./docs/design.md) | Brand colors, typography, design philosophy (exploration-first) |
+| [`docs/screens.md`](./docs/screens.md) | Mobile screen inventory, navigation structure, user intent model, full UI rebuild directive |
 | [`docs/integrations/`](./docs/integrations/) | Per-integration reference (Strava, Fitbit, Apple Health, Health Connect, planned) |
 
 ## Skills
@@ -68,18 +69,22 @@ Each tool writes plans to its own **gitignored** directory. Never use another to
 - OpenCode → `.opencode/plans/` | Cursor → `.cursor/` | AntiGravity → its artifact directory
 
 ### 7. Design System Tokens (Flutter)
-Use the **Frontend Design skill** for all UI/UX decisions — aim for bold, premium designs. No hardcoded hex in widget files.
+Use the **Frontend Design skill** for all UI/UX decisions — aim for award-winning, premium designs. No hardcoded hex in widget files.
 - **Brand color:** Sage Green `#CFE1B9` (`AppColors.primary`)
-- Design philosophy is **exploration-first** — always seek the best UI/UX, see [`docs/design.md`](./docs/design.md)
+- **Dark-first.** Dark mode is the priority and default. Light mode is supported.
+- **Design direction:** Editorial / typographic, Apple Fitness+ caliber. See [`docs/design.md`](./docs/design.md)
+- **Screen inventory:** See [`docs/screens.md`](./docs/screens.md) for all screens, navigation, and the full UI rebuild directive.
 
-| Token | Light | Dark |
-|-------|-------|------|
-| `scaffoldBackgroundColor` | `#FAFAFA` | `#000000` (OLED) |
-| `colorScheme.surface` | `#FFFFFF` | `#1C1C1E` |
+| Token | Value |
+|-------|-------|
+| `scaffoldBackgroundColor` | `#000000` (OLED true black) |
+| `colorScheme.surface` | `#1C1C1E` (elevated surfaces) |
+| `cardBackground` | `#121212` (standard cards) |
 
 - Typography: `AppTextStyles` only — no ad-hoc `TextStyle(...)`.
-- Primary actions: pill `FilledButton` with `AppColors.primary` (Sage Green).
-- Cards: `borderRadius: 24`, soft shadow (light) / 1px border (dark).
+- Primary actions: `FilledButton` with `AppColors.primary` (Sage Green), `borderRadius: 14`.
+- Cards: `borderRadius: 20`, **no border, no shadow** — defined by background color contrast only.
+- Health categories: each has a dedicated color (see `design.md`). Use `AppColors.category*` tokens.
 
 ### 8. Security First
 - Heavily reinforce security: never expose API Keys, implement strict API limits, and proactively prevent abuse.
