@@ -83,7 +83,7 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Modify: `zuralog/lib/core/theme/app_theme.dart`
 
 **What to build:**
-- [ ] Define light mode surface tokens in `design.md`:
+- [x] Define light mode surface tokens in `design.md`:
   - `scaffoldBackgroundColor`: `#FFFFFF`
   - `colorScheme.surface`: `#F2F2F7`
   - `cardBackground`: `#FFFFFF`
@@ -93,11 +93,11 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
   - `textPrimary`: `#000000`
   - `textSecondary`: `#636366`
   - `textTertiary`: `#ABABAB`
-- [ ] Add light mode color constants to `AppColors`
-- [ ] Create `AppTheme.light()` factory alongside existing `AppTheme.dark()`
-- [ ] Category colors remain identical across both themes
-- [ ] Wire theme selector to Riverpod provider (Dark / Light / System)
-- [ ] Test: theme switching produces correct surface/text colors
+- [x] Add light mode color constants to `AppColors`
+- [x] Create `AppTheme.light()` factory alongside existing `AppTheme.dark()`
+- [x] Category colors remain identical across both themes
+- [x] Wire theme selector to Riverpod provider (Dark / Light / System)
+- [x] Test: theme switching produces correct surface/text colors
 
 **Commit:** `feat(design): add light mode color tokens and AppTheme.light()`
 
@@ -110,11 +110,11 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `zuralog/test/core/haptics/haptic_service_test.dart`
 
 **What to build:**
-- [ ] `HapticService` with semantic methods: `light()`, `medium()`, `success()`, `warning()`, `selectionTick()`
-- [ ] Platform channel or `HapticFeedback` Flutter API abstraction
-- [ ] Riverpod provider that reads the haptic toggle from user preferences
-- [ ] When toggle is off, all methods are no-ops
-- [ ] Tests for each haptic type + disabled state
+- [x] `HapticService` with semantic methods: `light()`, `medium()`, `success()`, `warning()`, `selectionTick()`
+- [x] Platform channel or `HapticFeedback` Flutter API abstraction
+- [x] Riverpod provider that reads the haptic toggle from user preferences
+- [x] When toggle is off, all methods are no-ops
+- [x] Tests for each haptic type + disabled state
 
 **Commit:** `feat(design): add HapticService with semantic haptic types`
 
@@ -126,13 +126,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `zuralog/test/shared/widgets/onboarding_tooltip_test.dart`
 
 **What to build:**
-- [ ] `OnboardingTooltip` widget: bubble with pointer arrow, text, "Got it" dismiss button
-- [ ] `surface-700` background, `bodyMedium` text style, 12px radius
-- [ ] Sequential display: only show one tooltip at a time per screen
-- [ ] State stored in `SharedPreferences` per screen key
-- [ ] Riverpod provider for tooltip seen/unseen state
-- [ ] "Reset Tooltips" and "Disable Tooltips" methods for Settings
-- [ ] Tests: show on first visit, dismiss persists, reset re-enables
+- [x] `OnboardingTooltip` widget: bubble with pointer arrow, text, "Got it" dismiss button
+- [x] `surface-700` background, `bodyMedium` text style, 12px radius
+- [x] Sequential display: only show one tooltip at a time per screen
+- [x] State stored in `SharedPreferences` per screen key
+- [x] Riverpod provider for tooltip seen/unseen state
+- [x] "Reset Tooltips" and "Disable Tooltips" methods for Settings
+- [x] Tests: show on first visit, dismiss persists, reset re-enables
 
 **Commit:** `feat(design): add OnboardingTooltip shared widget`
 
@@ -143,14 +143,14 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `zuralog/test/shared/widgets/health_score_widget_test.dart`
 
 **What to build:**
-- [ ] Animated ring/gauge component with color stops: red (0-39), yellow (40-69), green (70-100)
-- [ ] Two size variants: hero (120pt diameter) and compact (48pt diameter)
-- [ ] 800ms `easeOutCubic` fill animation on load
-- [ ] Inner label: score number in `displayLarge`
-- [ ] 7-day trend sparkline below (hero variant only)
-- [ ] AI commentary text slot (hero variant only)
-- [ ] Tappable — accepts `onTap` callback
-- [ ] Tests: renders both variants, correct color for score ranges, animation completes
+- [x] Animated ring/gauge component with color stops: red (0-39), yellow (40-69), green (70-100)
+- [x] Two size variants: hero (120pt diameter) and compact (48pt diameter)
+- [x] 800ms `easeOutCubic` fill animation on load
+- [x] Inner label: score number in `displayLarge`
+- [x] 7-day trend sparkline below (hero variant only)
+- [x] AI commentary text slot (hero variant only)
+- [x] Tappable — accepts `onTap` callback
+- [x] Tests: renders both variants, correct color for score ranges, animation completes
 
 **Commit:** `feat(design): add HealthScoreWidget ring/gauge component`
 
@@ -165,13 +165,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Create: `zuralog/lib/shared/widgets/time_range_selector.dart`
 
 **What to build:**
-- [ ] `StreakBadge`: flame icon + count + optional shield icon for freeze. Inline and standalone variants
-- [ ] `DataMaturityBanner`: progress bar (sage green fill), label ("Data maturity: X of 7 days"), dismiss button
-- [ ] `ConfirmationCard`: in-chat card with data preview, Confirm/Edit buttons. Used for NL logging and memory extraction
-- [ ] `QuickLogSheet`: bottom sheet grid layout with sliders (mood, energy, stress), increment buttons (water), text fields (notes, symptoms), submit bar
-- [ ] `CategoryCard`: health category card with category color accent, sparkline, delta indicator. Supports drag-and-drop reorder mode
-- [ ] `TimeRangeSelector`: segmented control (7D / 30D / 90D / Custom) with `surface-500` background and sage-green active indicator
-- [ ] All components use `AppColors` and `AppTextStyles` — zero hardcoded hex
+- [x] `StreakBadge`: flame icon + count + optional shield icon for freeze. Inline and standalone variants
+- [x] `DataMaturityBanner`: progress bar (sage green fill), label ("Data maturity: X of 7 days"), dismiss button
+- [x] `ConfirmationCard`: in-chat card with data preview, Confirm/Edit buttons. Used for NL logging and memory extraction
+- [x] `QuickLogSheet`: bottom sheet grid layout with sliders (mood, energy, stress), increment buttons (water), text fields (notes, symptoms), submit bar
+- [x] `CategoryCard`: health category card with category color accent, sparkline, delta indicator. Supports drag-and-drop reorder mode
+- [x] `TimeRangeSelector`: segmented control (7D / 30D / 90D / Custom) with `surface-500` background and sage-green active indicator
+- [x] All components use `AppColors` and `AppTextStyles` — zero hardcoded hex
 
 **Commit:** `feat(design): add shared UI components for MVP features`
 
@@ -181,17 +181,17 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Modify: `docs/design.md`
 
 **What to document:**
-- [ ] Light mode color token table (from Task 0.1)
-- [ ] Haptic feedback specification table (interaction → haptic type → platform API)
-- [ ] Onboarding tooltip component spec (background, radius, pointer, text style, dismiss)
-- [ ] Health Score widget spec (sizes, color stops, animation)
-- [ ] Data Maturity indicator spec (height, fill color, label position)
-- [ ] Streak counter badge spec (flame, number, shield, variants)
-- [ ] Quick Log bottom sheet spec (grid layout, slider, increment, submit bar)
-- [ ] File attachment UI spec (button icon, preview cards, upload progress)
-- [ ] Confirmation card spec (layout, buttons, data preview)
-- [ ] Food photo response card spec (food list, macro breakdown, confirm/adjust)
-- [ ] Weekly Story Recap spec (swipeable cards, background gradients, share button)
+- [x] Light mode color token table (from Task 0.1)
+- [x] Haptic feedback specification table (interaction → haptic type → platform API)
+- [x] Onboarding tooltip component spec (background, radius, pointer, text style, dismiss)
+- [x] Health Score widget spec (sizes, color stops, animation)
+- [x] Data Maturity indicator spec (height, fill color, label position)
+- [x] Streak counter badge spec (flame, number, shield, variants)
+- [x] Quick Log bottom sheet spec (grid layout, slider, increment, submit bar)
+- [x] File attachment UI spec (button icon, preview cards, upload progress)
+- [x] Confirmation card spec (layout, buttons, data preview)
+- [x] Food photo response card spec (food list, macro breakdown, confirm/adjust)
+- [x] Weekly Story Recap spec (swipeable cards, background gradients, share button)
 
 **Commit:** `docs(design): add v3.1 component and light mode specifications`
 
