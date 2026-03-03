@@ -382,3 +382,240 @@ All brand assets live in `assets/brand/`. See [architecture.md — ADR 004](./ar
 | Brand fonts | `assets/brand/fonts/` |
 | Flutter copy | `zuralog/assets/` (synced via `scripts/sync-assets.sh`) |
 | Website copy | `website/public/` (synced via `scripts/sync-assets.sh`) |
+
+---
+
+## v3.1 — MVP Component Specifications
+
+Added: 2026-03-03. These specifications cover all new MVP components introduced in the Phase 0 design system rebuild.
+
+---
+
+### Light Mode Color Tokens
+
+Light mode is a first-class theme. It mirrors dark mode's information density but replaces black canvases with white and grey surfaces. Category colors are identical in both themes.
+
+| Token | AppColors constant | Light Hex | Dark Hex | Usage |
+|-------|--------------------|-----------|----------|-------|
+| Scaffold background | `backgroundLight` / `backgroundDark` | `#FFFFFF` | `#000000` | App scaffold (`Scaffold.backgroundColor`) |
+| Surface (colorScheme.surface) | `surfaceLight` / `surfaceDark` | `#F2F2F7` | `#1C1C1E` | Elevated surfaces |
+| Card background | `cardBackgroundLight` / `cardBackgroundDark` | `#FFFFFF` | `#121212` | Standard cards |
+| Elevated surface | `elevatedSurfaceLight` / `elevatedSurfaceDark` | `#FFFFFF` | `#1C1C1E` | Bottom sheets, drawers, modals |
+| Input background | `inputBackgroundLight` / `inputBackgroundDark` | `#F2F2F7` | `#1C1C1E` | Text fields, search bars |
+| Divider / border | `borderLight` / `borderDark` | `#E5E5EA` | `#38383A` | Dividers, card separators |
+| Text primary | `textPrimaryLight` / `textPrimaryDark` | `#000000` | `#F2F2F7` | Headlines, body text |
+| Text secondary | `textSecondaryLight` / `textSecondaryDark` | `#636366` | `#8E8E93` | Captions, labels, metadata |
+| Text tertiary | `textTertiary` | `#ABABAB` | `#ABABAB` | Placeholders, disabled, timestamps |
+
+**Rules:**
+- Category colors are identical in both themes and require no `Light`/`Dark` suffix.
+- `AppColors.primary` (Sage Green `#CFE1B9`) is the same in both modes.
+- Widget files must never use raw hex — always reference `AppColors.*` constants.
+
+---
+
+### Haptic Feedback Specification
+
+All haptic calls go through `HapticService` (never `HapticFeedback` directly). The service is a no-op when the user disables haptics in Appearance Settings.
+
+| Semantic Type | `HapticService` method | Platform API | Trigger Examples |
+|---------------|------------------------|--------------|-----------------|
+| Light | `light()` | `HapticFeedback.lightImpact()` | Tab switch, card tap, list selection, tooltip dismiss |
+| Medium | `medium()` | `HapticFeedback.mediumImpact()` | Send message, confirm log, toggle setting, Quick Log submit |
+| Success | `success()` | `HapticFeedback.heavyImpact()` | Goal reached, streak milestone, achievement unlock, report generated |
+| Warning | `warning()` | `HapticFeedback.vibrate()` | Integration disconnect, anomaly alert, destructive action |
+| Selection tick | `selectionTick()` | `HapticFeedback.selectionClick()` | Picker scrolls, slider drags, drag handles, segmented control |
+
+**Provider:** `hapticServiceProvider` (Riverpod) — reads `hapticEnabledProvider` (SharedPreferences-backed, default `true`).
+
+---
+
+### Onboarding Tooltip Component
+
+One-time coaching bubbles that surface contextual guidance the first time a user visits each screen.
+
+| Property | Value |
+|----------|-------|
+| Background | `#3A3A3C` (dark) / `#EBEBF0` (light) |
+| Border radius | 12px |
+| Padding | 14px horizontal, 10px vertical |
+| Max width | 240px |
+| Body text | `AppTextStyles.caption` |
+| Pointer arrow | 8px equilateral triangle (below bubble by default) |
+| Dismiss button | "Got it" — `AppColors.primary` text, w600 |
+
+**State management:** `tooltipSeenProvider` (AsyncNotifier, SharedPreferences-backed). Key format: `'{screenKey}.{tooltipKey}'`. `TooltipSeenNotifier.reset()` for "Reset Tooltips" in Appearance Settings.
+
+**Sequential display:** Only one tooltip is visible per screen at a time. Multiple tooltips on one screen render in order as each is dismissed.
+
+---
+
+### Health Score Widget
+
+Animated ring/gauge component displaying the composite AI health score (0–100).
+
+| Property | Hero variant | Compact variant |
+|----------|-------------|-----------------|
+| Ring diameter | 120pt | 48pt |
+| Stroke width | 12% of diameter (~14.4pt) | 12% of diameter (~5.8pt) |
+| Score label | `h1` scaled to ~28% of diameter | `caption` w700 |
+| Sparkline | 7-day fl_chart LineChart below ring | — |
+| AI commentary | Text below sparkline | — |
+| Animation | 800ms `easeOutCubic` fill | 800ms `easeOutCubic` fill |
+
+**Color stops:**
+
+| Score | Color | Token |
+|-------|-------|-------|
+| 0–39 | Red | `AppColors.healthScoreRed` (`#FF3B30`) |
+| 40–69 | Amber | `AppColors.healthScoreAmber` (`#FF9F0A`) |
+| 70–100 | Green | `AppColors.healthScoreGreen` (`#30D158`) |
+
+**Track:** category color at 30% opacity (dark) / `borderLight` (light).
+**Null score:** renders a `CircularProgressIndicator` stub inside the ring.
+
+---
+
+### Data Maturity Banner
+
+Progressive disclosure banner shown for the user's first 30 days of data collection.
+
+| Property | Value |
+|----------|-------|
+| Background | `cardBackground` token |
+| Border radius | `radiusCard` (20px) |
+| Progress bar height | 4px |
+| Progress bar fill | `AppColors.primary` (sage green) |
+| Progress track | `#3A3A3C` (dark) / `borderLight` (light) |
+| Label | "Data maturity: X of Y days" — `caption` style |
+| Sub-label | Unlock message — 10pt caption |
+| Dismiss button | `Icons.close_rounded` 16px, `textSecondary` color |
+
+**Milestones:** 7 days (correlations unlock), 14 days (anomaly detection), 30 days (full AI insights).
+**Persistence:** Dismiss state stored via user preferences. "Re-enable" available in Privacy & Data Settings.
+
+---
+
+### Streak Counter Badge
+
+| Property | Inline variant | Standalone variant |
+|----------|---------------|-------------------|
+| Flame icon | 16pt | 28pt |
+| Count text | `caption` w700 | `h2` |
+| Shield icon (freeze active) | ~14pt sage-green | ~24pt sage-green |
+| Flame color | `AppColors.healthScoreAmber` (`#FF9F0A`) | `AppColors.healthScoreAmber` |
+
+**Freeze visual:** When `isFrozen: true`, a shield icon (`Icons.shield_rounded`) in `AppColors.primary` appears to the right of the count, indicating a streak freeze is protecting the streak.
+
+**Milestone celebrations:** At 7, 14, 30, 60, 90, 180, 365 days — trigger a `success()` haptic and show a celebration card on the Today Feed.
+
+---
+
+### Quick Log Bottom Sheet
+
+Rapid manual health data entry, launched from the FAB on Today Feed and from Quick Actions.
+
+| Property | Value |
+|----------|-------|
+| Top border radius | 28px |
+| Reveal animation | 350ms `easeOutCubic` |
+| Background | `elevatedSurface` token |
+| Drag handle | 36px × 4px, `textSecondary` at 40% opacity |
+
+**Sliders (Mood, Energy, Stress):**
+- Range: 1–10, 9 divisions
+- Track height: 4px
+- Color: category-specific (`categoryWellness`, `categoryActivity`, `categoryHeart`)
+- Thumb: 8pt radius
+
+**Water counter:**
+- Decrement/Increment buttons: 36×36pt, `AppColors.primary` at 15% opacity
+- Count: `h2` text
+- Minimum: 0 (decrement disabled at 0)
+
+**Symptom chips:** `FilterChip` — selected state uses `AppColors.primary` at 20% fill + primary border.
+
+**Submit bar:** `FilledButton` full-width, 52pt height, `borderRadius: 14`, `AppColors.primary` fill.
+
+---
+
+### Confirmation Card
+
+In-chat card for NL logging, memory extraction, and food photo confirmations.
+
+| Property | Value |
+|----------|-------|
+| Background | `cardBackground` token |
+| Border radius | 20px |
+| Header text | `h3` (`AppTextStyles.h3`) |
+| Row label | `body` (`AppTextStyles.body`) — `textSecondary` color |
+| Row value | `body` w600 — `textPrimary` color |
+| Dividers | 0.5px `borderLight`/`borderDark` |
+| Confirm button | `FilledButton` — `AppColors.primary`, `borderRadius: 14` |
+| Edit button | `OutlinedButton` — secondary style |
+
+**Variants:**
+- **NL Logging:** Title "Log these entries?" — items are parsed health metrics
+- **Memory Extraction:** Title "Save to memory?" — items are identified health facts
+- **Food Photo:** Title "Nutrition estimate" — items are food name + macro breakdown
+
+**Loading state:** `isLoading: true` replaces confirm button label with 18pt `CircularProgressIndicator`.
+
+---
+
+### File Attachment UI
+
+Used in the Coach Chat Thread for uploading images, PDFs, and text files.
+
+| Element | Spec |
+|---------|------|
+| Attachment button icon | `Icons.attach_file_rounded` 24pt |
+| Camera button icon | `Icons.camera_alt_rounded` 24pt |
+| Max file size | 10 MB per file |
+| Max files per message | 3 |
+| Supported formats | JPEG, PNG, HEIC, PDF, TXT, CSV |
+
+**Preview cards (in message bubble):**
+- Image: thumbnail 80×80pt with rounded corners (8px) + file name below
+- PDF: `Icons.picture_as_pdf_rounded` 32pt + file name + file size
+- Text/CSV: `Icons.description_rounded` 32pt + file name + file size
+
+**Upload progress:** Thin `LinearProgressIndicator` below preview card, `AppColors.primary` fill.
+**Upload complete:** Progress indicator replaced by a checkmark icon (`Icons.check_circle_rounded`, `statusConnected` color).
+
+---
+
+### Food Photo Response Card
+
+Shown in chat after AI analyzes a food photo.
+
+| Property | Value |
+|----------|-------|
+| Layout | `ConfirmationCard` variant with food-specific items |
+| Food list | Each detected food item as a labeled row |
+| Macros | Calories, protein, carbs, fat as sub-rows |
+| Primary action | "Log this meal" — confirms to NL logging flow |
+| Secondary action | "Adjust" — opens inline editing |
+
+---
+
+### Weekly Story Recap (Progress Tab)
+
+Story-style swipeable card sequence shown on the Weekly Report screen.
+
+| Property | Value |
+|----------|-------|
+| Layout | `PageView` with `NeverScrollableScrollPhysics` + swipe gesture |
+| Card count | 6 cards per report |
+| Transition | Horizontal page slide, 300ms `easeOutCubic` |
+| Dot indicator | Row of 6pt dots below PageView, active dot in `AppColors.primary` |
+| Background | Per-card gradient (dark → category color at 20% opacity) |
+| Share button | `Icons.ios_share_rounded` in header — renders widget to image and shares via platform sheet |
+
+**Card sequence:**
+1. **Week Summary** — dates, total health score, mood trend
+2. **Top Metrics** — top 3 categories with deltas
+3. **Streaks & Goals** — current streaks, goals hit/missed
+4. **AI Highlights** — 2–3 insight cards generated by the AI
+5. **Areas for Improvement** — bottom 2 categories with specific advice
+6. **Next Week Focus** — one actionable recommendation

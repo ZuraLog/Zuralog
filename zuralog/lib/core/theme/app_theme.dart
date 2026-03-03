@@ -47,7 +47,7 @@ abstract final class AppTheme {
             onTertiary: Colors.white,
             surface: AppColors.surfaceLight,
             onSurface: AppColors.textPrimaryLight,
-            onSurfaceVariant: AppColors.textSecondary,
+            onSurfaceVariant: AppColors.textSecondaryLight,
             outline: AppColors.borderLight,
             outlineVariant: AppColors.borderLight,
             error: AppColors.accentLight,
@@ -63,7 +63,7 @@ abstract final class AppTheme {
             onTertiary: Colors.white,
             surface: AppColors.surfaceDark,
             onSurface: AppColors.textPrimaryDark,
-            onSurfaceVariant: AppColors.textSecondary,
+            onSurfaceVariant: AppColors.textSecondaryDark,
             outline: AppColors.borderDark,
             outlineVariant: AppColors.borderDark,
             error: AppColors.accentDark,
@@ -77,6 +77,7 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor:
           isLight ? AppColors.backgroundLight : AppColors.backgroundDark,
+
       fontFamily: AppTextStyles.body.fontFamily,
       textTheme: _buildTextTheme(
         isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
@@ -97,13 +98,13 @@ abstract final class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
+        color: isLight
+            ? AppColors.cardBackgroundLight
+            : AppColors.cardBackgroundDark,
         elevation: 0,
+        // No border, no shadow — cards defined by background contrast only.
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          side: isLight
-              ? BorderSide.none
-              : BorderSide(color: AppColors.borderDark),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -171,8 +172,9 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor:
-            isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
+        fillColor: isLight
+            ? AppColors.inputBackgroundLight
+            : AppColors.inputBackgroundDark,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide(
@@ -265,16 +267,34 @@ abstract final class AppTheme {
           horizontal: AppDimens.spaceMd,
           vertical: AppDimens.spaceXs,
         ),
-        iconColor: AppColors.textSecondary,
+        iconColor: isLight
+            ? AppColors.textSecondaryLight
+            : AppColors.textSecondaryDark,
         titleTextStyle: AppTextStyles.body.copyWith(
-          color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
+          color:
+              isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         ),
-        subtitleTextStyle:
-            AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+        subtitleTextStyle: AppTextStyles.caption.copyWith(
+          color: isLight
+              ? AppColors.textSecondaryLight
+              : AppColors.textSecondaryDark,
+        ),
       ),
       iconTheme: IconThemeData(
-        color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
+        color:
+            isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         size: AppDimens.iconMd,
+      ),
+      // Tooltip styling — used by OnboardingTooltip and system tooltips.
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: isLight ? AppColors.surfaceLight : const Color(0xFF3A3A3C),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        textStyle: AppTextStyles.caption.copyWith(
+          color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
     );
   }
