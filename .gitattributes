@@ -1,0 +1,28 @@
+# Normalize all text files to LF on commit and checkout.
+# This prevents Windows CRLF / Unix LF noise across contributors and environments.
+* text=auto eol=lf
+
+# Explicitly binary — never touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.jar binary
+*.apk binary
+*.ipa binary
+*.aab binary
+*.keystore binary
+*.p8 binary
+*.p12 binary
+*.cer binary
