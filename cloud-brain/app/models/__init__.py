@@ -20,22 +20,32 @@ from app.models.integration import Integration
 from app.models.user import SubscriptionTier, User
 from app.models.user_device import UserDevice
 from app.models.user_goal import GoalPeriod, UserGoal
+from app.models.user_preferences import (  # noqa: F401
+    AppTheme,
+    CoachPersona,
+    ProactivityLevel,
+    UserPreferences,
+)
 
 __all__ = [
     "ActivityType",
+    "AppTheme",
     "Base",
     "BloodPressureRecord",
+    "CoachPersona",
     "Conversation",
     "DailyHealthMetrics",
     "GoalPeriod",
     "Integration",
     "Message",
     "NutritionEntry",
+    "ProactivityLevel",
     "SleepRecord",
     "SubscriptionTier",
     "UnifiedActivity",
     "User",
     "UserDevice",
     "UserGoal",
+    "UserPreferences",
     "WeightMeasurement",
 ]
