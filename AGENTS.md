@@ -41,20 +41,6 @@ Check `.agent/skills/` before every task. If a skill applies, **use it**. These 
 | Doc Co-Authoring | [.agent/skills/doc-coauthoring/SKILL.md](./.agent/skills/doc-coauthoring/SKILL.md) |
 | Supabase / Postgres | [.agent/skills/supabase-postgres-best-practices/SKILL.md](./.agent/skills/supabase-postgres-best-practices/SKILL.md) |
 
-### Mandatory Skill Usage
-
-The following skills are **required** — not optional — whenever the task falls into the matching category:
-
-| Trigger | Skill to Load — **ALWAYS** |
-|---------|---------------------------|
-| Any frontend UI/UX work (web or mobile) | Frontend Design |
-| Any Flutter or Dart code | Flutter & Dart |
-| Creating or substantially editing any document | Doc Co-Authoring |
-| Any database work (schema, queries, migrations, RLS) | Supabase / Postgres |
-| Any Python/FastAPI backend work | FastAPI Templates |
-
----
-
 ## Rules
 
 ### 1. Git Discipline
