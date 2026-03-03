@@ -1,6 +1,6 @@
 # Zuralog — Design System & Brand Guidelines
 
-**Version:** 3.0  
+**Version:** 3.1  
 **Last Updated:** 2026-03-03  
 **Status:** Living Document
 

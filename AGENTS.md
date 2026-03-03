@@ -30,7 +30,7 @@ All project documentation lives in `docs/`. Read the relevant doc before startin
 
 ## Skills
 
-Check `.agent/skills/` before every task. If a skill applies, **use it**.
+Check `.agent/skills/` before every task. If a skill applies, **use it**. These are **local project skills** stored in this repository — not global skills.
 
 | Skill | Path |
 |-------|------|

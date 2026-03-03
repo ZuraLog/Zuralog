@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-02 (Voice Input STT complete)  
+**Last Updated:** 2026-03-04 (Phase 0 design system v3.1 + Phase 1 5-tab navigation complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -180,6 +180,50 @@ A full marketing and waitlist site built on Next.js 16:
 |--------------|----------------------|--------|
 | Simple landing page | Full marketing site with legal pages, About, Contact, Support | Required for App Store review + GDPR |
 | Basic animations | Three.js, GSAP, Framer Motion, Lenis | Higher-quality brand impression |
+
+---
+
+## Design System v3.1 + App Shell Rebuild (2026-03-04)
+
+### Phase 0: Design System Foundation
+
+Full design system v3.1 established as the canonical token layer for all future Flutter work.
+
+**Files created:**
+- `zuralog/lib/core/theme/app_colors.dart` — All color tokens: `primary` (Sage Green `#CFE1B9`), OLED `scaffold` (`#000000`), `surface` (`#1C1C1E`), `cardBackground` (`#121212`), category colors (`categoryActivity`, `categorySleep`, `categoryHeart`, `categoryMindfulness`, `categoryNutrition`, `categoryBody`), semantic colors (`success`, `warning`, `error`, `info`), text hierarchy (`textPrimary`…`textQuaternary`)
+- `zuralog/lib/core/theme/app_text_styles.dart` — Typography tokens: `h1`–`h3`, `body`, `caption`, `labelXs` (SF Pro Display / Inter)
+- `zuralog/lib/core/theme/app_dimens.dart` — Spacing (`xs`=4…`xxl`=48), border radius (`cardRadius`=20, `buttonRadius`=14), icon sizes
+- `zuralog/lib/core/theme/app_theme.dart` — `ThemeData` wired to all tokens; dark-first, OLED scaffold
+- `zuralog/lib/core/haptics/haptic_service.dart` + `haptic_providers.dart` + `haptic.dart` barrel — `HapticService` with `selectionClick`, `lightImpact`, `mediumImpact`, `heavyImpact`, `success`, `error`, `warning`
+
+**Key decisions:**
+- Dark-first: `scaffoldBackgroundColor` is OLED true black (`#000000`); light mode tokens present but secondary priority
+- No hardcoded hex in widget files — all widgets import `AppColors.*` and `AppTextStyles.*`
+- Cards: `borderRadius: 20`, no border, no shadow — depth from background color contrast only
+- Primary actions: `FilledButton` with `AppColors.primary`, `borderRadius: 14`
+
+### Phase 1: App Shell & 5-Tab Navigation
+
+Replaced the old 2-tab shell (Dashboard + Chat) with the full 5-tab architecture defined in `screens.md`.
+
+**Files modified:**
+- `zuralog/lib/shared/layout/app_shell.dart` — Rebuilt as 5-tab `NavigationBar` with `BackdropFilter` Gaussian blur (σ=20), frosted glass effect, 200ms curve animation, haptic selection tick via `hapticServiceProvider`, sage green active / `textTertiary` inactive, no indicator pill
+- `zuralog/lib/core/router/app_router.dart` — Rebuilt with `StatefulShellRoute.indexedStack` (5 branches: Today / Data / Coach / Progress / Trends), all settings nested under `/settings`, profile sub-routes under `/profile`, auth guard preserved
+- `zuralog/lib/core/router/route_names.dart` — All 37 route name + path constants
+
+**Files created (placeholder screens):**
+- Today: `today_feed_screen.dart`, `insight_detail_screen.dart`, `notification_history_screen.dart`
+- Data: `health_dashboard_screen.dart`, `category_detail_screen.dart`, `metric_detail_screen.dart` (new `features/data/` directory)
+- Coach: `new_chat_screen.dart`, `chat_thread_screen.dart`
+- Progress: `progress_home_screen.dart`, `goals_screen.dart`, `goal_detail_screen.dart`, `achievements_screen.dart`, `weekly_report_screen.dart`, `journal_screen.dart`
+- Trends: `trends_home_screen.dart`, `correlations_screen.dart`, `reports_screen.dart`, `data_sources_screen.dart`
+- Settings (9 screens): hub, account, notifications, appearance, coach, integrations, privacy, subscription, about
+- Profile: `profile_screen.dart`, `emergency_card_screen.dart`, `emergency_card_edit_screen.dart`
+
+**Key decisions:**
+- `StatefulShellRoute.indexedStack` preserves tab state across navigation (no re-renders on tab switch)
+- Frosted glass nav bar keeps OLED background visible — no opaque bottom chrome
+- All screens are placeholder scaffolds — real implementations follow in Phases 3–8
 
 ---
 

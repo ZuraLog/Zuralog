@@ -1,41 +1,35 @@
 /// Zuralog Edge Agent — GoRouter Configuration.
 ///
-/// Declares [routerProvider], a Riverpod [Provider<GoRouter>] that creates the
+/// Declares [routerProvider] — a Riverpod [Provider<GoRouter>] that creates the
 /// [GoRouter] instance ONCE and uses [refreshListenable] to re-trigger the
-/// [redirect] callback whenever auth state or first-launch flag changes —
-/// without recreating the entire router.
+/// [redirect] callback whenever auth state or first-launch flag changes.
 ///
-/// **Route tree:**
+/// **5-tab route tree:**
 /// ```
-/// /welcome              → WelcomeScreen (Auth Home — Apple/Google/Email)
-/// /onboarding           → OnboardingPageView (shown only on first launch)
-/// /auth/login           → LoginScreen
-/// /auth/register        → RegisterScreen
-/// / (StatefulShellRoute) → AppShell
-///   /dashboard          → DashboardScreen (tab 0)
-///     /dashboard/activity          → CategoryDetailScreen(activity)
-///       /dashboard/activity/:id    → MetricDetailScreen(activity, id)
-///     /dashboard/body              → CategoryDetailScreen(body)
-///       /dashboard/body/:id        → MetricDetailScreen(body, id)
-///     /dashboard/heart             → CategoryDetailScreen(heart)
-///     /dashboard/vitals            → CategoryDetailScreen(vitals)
-///     /dashboard/sleep             → CategoryDetailScreen(sleep)
-///     /dashboard/nutrition         → CategoryDetailScreen(nutrition)
-///     /dashboard/cycle             → CategoryDetailScreen(cycle)
-///     /dashboard/wellness          → CategoryDetailScreen(wellness)
-///     /dashboard/mobility          → CategoryDetailScreen(mobility)
-///     /dashboard/environment       → CategoryDetailScreen(environment)
-///   /chat               → ChatScreen (placeholder, tab 1)
-///   /integrations       → IntegrationsHubScreen (tab 2)
-/// /settings             → SettingsScreen (pushed over shell)
-/// /debug/catalog        → CatalogScreen (dev-only)
+/// /today                            → TodayFeedScreen (tab 0)
+///   /today/insight/:id              → InsightDetailScreen
+///   /today/notifications            → NotificationHistoryScreen
+/// /data                             → HealthDashboardScreen (tab 1)
+///   /data/category/:id              → CategoryDetailScreen
+///   /data/metric/:id                → MetricDetailScreen
+/// /coach                            → NewChatScreen (tab 2)
+///   /coach/thread/:id               → ChatThreadScreen
+/// /progress                         → ProgressHomeScreen (tab 3)
+///   /progress/goals                 → GoalsScreen
+///   /progress/goals/:id             → GoalDetailScreen
+///   /progress/achievements          → AchievementsScreen
+///   /progress/report                → WeeklyReportScreen
+///   /progress/journal               → JournalScreen
+/// /trends                           → TrendsHomeScreen (tab 4)
+///   /trends/correlations            → CorrelationsScreen
+///   /trends/reports                 → ReportsScreen
+///   /trends/sources                 → DataSourcesScreen
+/// /settings                         → SettingsHubScreen (pushed over shell)
+///   /settings/account … /settings/about  → sub-screens
+/// /profile                          → ProfileScreen (pushed over shell)
+///   /profile/emergency-card         → EmergencyCardScreen
+///   /profile/emergency-card/edit    → EmergencyCardEditScreen
 /// ```
-///
-/// **First-launch redirect rule:**
-/// On the very first launch (before [markOnboardingComplete] is called),
-/// any navigation to [welcomePath] is intercepted and redirected to
-/// [onboardingPath]. After completing/skipping onboarding the flag is set
-/// and subsequent launches go directly to [welcomePath].
 library;
 
 import 'package:flutter/foundation.dart';
@@ -58,59 +52,70 @@ import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dar
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
-import 'package:zuralog/features/chat/presentation/chat_screen.dart';
-import 'package:zuralog/features/dashboard/domain/health_category.dart';
-import 'package:zuralog/features/dashboard/presentation/category_detail_screen.dart';
-import 'package:zuralog/features/dashboard/presentation/dashboard_screen.dart';
-import 'package:zuralog/features/dashboard/presentation/metric_detail_screen.dart';
-import 'package:zuralog/features/integrations/presentation/integrations_hub_screen.dart';
-import 'package:zuralog/features/settings/presentation/settings_screen.dart';
+
+// ── Tab 0: Today ──────────────────────────────────────────────────────────────
+import 'package:zuralog/features/today/presentation/today_feed_screen.dart';
+import 'package:zuralog/features/today/presentation/insight_detail_screen.dart';
+import 'package:zuralog/features/today/presentation/notification_history_screen.dart';
+
+// ── Tab 1: Data ───────────────────────────────────────────────────────────────
+import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
+import 'package:zuralog/features/data/presentation/category_detail_screen.dart' as data_screens;
+import 'package:zuralog/features/data/presentation/metric_detail_screen.dart' as data_metric;
+
+// ── Tab 2: Coach ──────────────────────────────────────────────────────────────
+import 'package:zuralog/features/coach/presentation/new_chat_screen.dart';
+import 'package:zuralog/features/coach/presentation/chat_thread_screen.dart';
+
+// ── Tab 3: Progress ───────────────────────────────────────────────────────────
+import 'package:zuralog/features/progress/presentation/progress_home_screen.dart';
+import 'package:zuralog/features/progress/presentation/goals_screen.dart';
+import 'package:zuralog/features/progress/presentation/goal_detail_screen.dart';
+import 'package:zuralog/features/progress/presentation/achievements_screen.dart';
+import 'package:zuralog/features/progress/presentation/weekly_report_screen.dart';
+import 'package:zuralog/features/progress/presentation/journal_screen.dart';
+
+// ── Tab 4: Trends ─────────────────────────────────────────────────────────────
+import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
+import 'package:zuralog/features/trends/presentation/correlations_screen.dart';
+import 'package:zuralog/features/trends/presentation/reports_screen.dart';
+import 'package:zuralog/features/trends/presentation/data_sources_screen.dart';
+
+// ── Settings (pushed over shell) ──────────────────────────────────────────────
+import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
+import 'package:zuralog/features/settings/presentation/account_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/notification_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/appearance_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/coach_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/integrations_screen.dart';
+import 'package:zuralog/features/settings/presentation/privacy_data_screen.dart';
+import 'package:zuralog/features/settings/presentation/subscription_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/about_screen.dart';
+
+// ── Profile (pushed over shell) ───────────────────────────────────────────────
+import 'package:zuralog/features/profile/presentation/profile_screen.dart';
+import 'package:zuralog/features/profile/presentation/emergency_card_screen.dart';
+import 'package:zuralog/features/profile/presentation/emergency_card_edit_screen.dart';
+
+// ── Shell ─────────────────────────────────────────────────────────────────────
 import 'package:zuralog/shared/layout/app_shell.dart';
 
 // ── Auth State → ChangeNotifier Bridge ───────────────────────────────────────
 
-/// Bridges Riverpod's [authStateProvider], [hasSeenOnboardingProvider],
-/// [userProfileProvider], and [isLoadingProfileProvider] to a single
-/// [ChangeNotifier] that [GoRouter] can use as a [refreshListenable].
-///
-/// When any of these providers emits a new value, [notifyListeners] is called
-/// so the router re-evaluates its [redirect] callback without recreating the
-/// [GoRouter]. [isLoadingProfileProvider] is included so the guard can hold
-/// off the questionnaire redirect while the profile fetch is still in-flight.
 class _RouterRefreshListenable extends ChangeNotifier {
-  /// Creates a [_RouterRefreshListenable] that listens to auth, onboarding
-  /// flag, profile state, and profile-loading flag changes via [ref].
   _RouterRefreshListenable(Ref ref) {
-    // Listen to auth state changes.
     ref.listen<AuthState>(authStateProvider, (prev, next) => notifyListeners());
-    // Listen to the onboarding flag to redirect first-timers.
     ref.listen<AsyncValue<bool>>(
       hasSeenOnboardingProvider,
       (prev, next) => notifyListeners(),
     );
-    // Listen to profile changes so the onboarding guard fires as soon as
-    // [onboardingComplete] is set to true after the questionnaire.
-    ref.listen<UserProfile?>(
-      userProfileProvider,
-      (prev, next) => notifyListeners(),
-    );
-    // Listen to the profile-loading flag so the guard re-evaluates once
-    // [load()] completes — preventing a premature questionnaire redirect
-    // while the profile fetch is still in-flight.
-    ref.listen<bool>(
-      isLoadingProfileProvider,
-      (prev, next) => notifyListeners(),
-    );
+    ref.listen<UserProfile?>(userProfileProvider, (prev, next) => notifyListeners());
+    ref.listen<bool>(isLoadingProfileProvider, (prev, next) => notifyListeners());
   }
 }
 
 // ── Router Provider ───────────────────────────────────────────────────────────
 
-/// Riverpod provider that exposes the configured [GoRouter] instance.
-///
-/// The [GoRouter] is created **once** and kept alive for the lifetime of the
-/// provider. Auth-state and onboarding-flag changes are propagated via
-/// [refreshListenable] so only the [redirect] callback is re-evaluated.
 final routerProvider = Provider<GoRouter>((ref) {
   final listenable = _RouterRefreshListenable(ref);
   ref.onDispose(listenable.dispose);
@@ -127,50 +132,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       final authState = ref.read(authStateProvider);
       final location = state.matchedLocation;
 
-      // ── Step 1: Run the auth guard first. ───────────────────────────────
       final authRedirect = authGuardRedirect(
         authState: authState,
         location: location,
       );
       if (authRedirect != null) return authRedirect;
 
-      // ── Step 2: First-launch onboarding redirect. ────────────────────────
-      // Only relevant when the user is unauthenticated and heading to /welcome.
-      // If the onboarding flag is still loading, stay put.
       final onboardingAsync = ref.read(hasSeenOnboardingProvider);
       if (location == RouteNames.welcomePath) {
-        // While the async flag is loading, stay on /welcome (no redirect).
         if (onboardingAsync.isLoading) return null;
         final hasSeen = onboardingAsync.valueOrNull ?? true;
-        if (!hasSeen) {
-          // First launch — show onboarding before the auth home.
-          return RouteNames.onboardingPath;
-        }
+        if (!hasSeen) return RouteNames.onboardingPath;
       }
 
-      // ── Step 3: Post-registration profile questionnaire guard. ───────────
-      // If the user is authenticated but has not completed the profile
-      // questionnaire, redirect them to it — unless they are already there.
-      //
-      // Important: while [isLoadingProfileProvider] is true, the profile
-      // fetch is still in-flight. We must NOT redirect during this window
-      // because [profile] is transiently null even for returning users who
-      // have already completed onboarding. Redirecting here would force
-      // every returning user to re-do the questionnaire on every login.
-      //
-      // Once [load()] completes:
-      //   - profile != null && onboardingComplete == true  → allow through
-      //   - profile != null && onboardingComplete == false → questionnaire
-      //   - profile == null (load failed)                  → questionnaire
-      //     (user can retry; the questionnaire upserts the profile row)
       if (authState == AuthState.authenticated &&
           location != RouteNames.profileQuestionnairePath) {
         final isLoadingProfile = ref.read(isLoadingProfileProvider);
-        if (isLoadingProfile) {
-          // Profile fetch still in-flight — stay put, guard will re-fire
-          // when [isLoadingProfileProvider] flips to false.
-          return null;
-        }
+        if (isLoadingProfile) return null;
         final profile = ref.read(userProfileProvider);
         if (profile == null || !profile.onboardingComplete) {
           return RouteNames.profileQuestionnairePath;
@@ -183,41 +161,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Constructs the nested [GoRoute] list for all 10 health category detail
-/// screens and their per-metric child routes.
-///
-/// Each category gets a `GoRoute` at `/dashboard/{categoryName}` with a
-/// nested `:metricId` child that pushes [MetricDetailScreen].
-///
-/// These routes are registered as `routes:` inside the dashboard [GoRoute]
-/// so they remain within the [StatefulShellBranch] and preserve the bottom
-/// navigation bar.
-List<GoRoute> _buildCategoryRoutes() {
-  return HealthCategory.values.map((category) {
-    return GoRoute(
-      path: category.name,
-      builder: (BuildContext context, GoRouterState state) =>
-          CategoryDetailScreen(category: category),
-      routes: [
-        GoRoute(
-          path: ':metricId',
-          builder: (BuildContext context, GoRouterState state) {
-            final String metricId = state.pathParameters['metricId']!;
-            return MetricDetailScreen(category: category, metricId: metricId);
-          },
-        ),
-      ],
-    );
-  }).toList();
-}
+// ── Route Builder ─────────────────────────────────────────────────────────────
 
-/// Constructs the complete route list for the application.
-///
-/// Returns a flat list of [RouteBase] objects that includes both top-level
-/// routes (welcome, onboarding, auth, settings, debug) and the tabbed shell.
 List<RouteBase> _buildRoutes() {
   return [
-    // ── Onboarding & Auth Home ────────────────────────────────────────────
+    // ── Auth & Onboarding ─────────────────────────────────────────────────
     GoRoute(
       path: RouteNames.welcomePath,
       name: RouteNames.welcome,
@@ -228,8 +176,6 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.onboarding,
       builder: (context, state) => const OnboardingPageView(),
     ),
-
-    // ── Auth Forms ────────────────────────────────────────────────────────
     GoRoute(
       path: RouteNames.loginPath,
       name: RouteNames.login,
@@ -240,19 +186,80 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.register,
       builder: (context, state) => const RegisterScreen(),
     ),
-
-    // ── Post-registration Profile Questionnaire ───────────────────────────
     GoRoute(
       path: RouteNames.profileQuestionnairePath,
       name: RouteNames.profileQuestionnaire,
       builder: (context, state) => const ProfileQuestionnaireScreen(),
     ),
 
-    // ── Settings (pushed over shell) ──────────────────────────────────────
+    // ── Settings (pushed over shell — nested sub-routes) ──────────────────
     GoRoute(
       path: RouteNames.settingsPath,
       name: RouteNames.settings,
-      builder: (context, state) => const SettingsScreen(),
+      builder: (context, state) => const SettingsHubScreen(),
+      routes: [
+        GoRoute(
+          path: 'account',
+          name: RouteNames.settingsAccount,
+          builder: (context, state) => const AccountSettingsScreen(),
+        ),
+        GoRoute(
+          path: 'notifications',
+          name: RouteNames.settingsNotifications,
+          builder: (context, state) => const NotificationSettingsScreen(),
+        ),
+        GoRoute(
+          path: 'appearance',
+          name: RouteNames.settingsAppearance,
+          builder: (context, state) => const AppearanceSettingsScreen(),
+        ),
+        GoRoute(
+          path: 'coach',
+          name: RouteNames.settingsCoach,
+          builder: (context, state) => const CoachSettingsScreen(),
+        ),
+        GoRoute(
+          path: 'integrations',
+          name: RouteNames.settingsIntegrations,
+          builder: (context, state) => const IntegrationsScreen(),
+        ),
+        GoRoute(
+          path: 'privacy',
+          name: RouteNames.settingsPrivacy,
+          builder: (context, state) => const PrivacyDataScreen(),
+        ),
+        GoRoute(
+          path: 'subscription',
+          name: RouteNames.settingsSubscription,
+          builder: (context, state) => const SubscriptionSettingsScreen(),
+        ),
+        GoRoute(
+          path: 'about',
+          name: RouteNames.settingsAbout,
+          builder: (context, state) => const AboutScreen(),
+        ),
+      ],
+    ),
+
+    // ── Profile (pushed over shell) ───────────────────────────────────────
+    GoRoute(
+      path: RouteNames.profilePath,
+      name: RouteNames.profile,
+      builder: (context, state) => const ProfileScreen(),
+      routes: [
+        GoRoute(
+          path: 'emergency-card',
+          name: RouteNames.emergencyCard,
+          builder: (context, state) => const EmergencyCardScreen(),
+          routes: [
+            GoRoute(
+              path: 'edit',
+              name: RouteNames.emergencyCardEdit,
+              builder: (context, state) => const EmergencyCardEditScreen(),
+            ),
+          ],
+        ),
+      ],
     ),
 
     // ── Developer Tools ───────────────────────────────────────────────────
@@ -262,42 +269,151 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) => const CatalogScreen(),
     ),
 
-    // ── Main App Shell (StatefulShellRoute with 3 tab branches) ──────────
+    // ── Main App Shell — 5-tab StatefulShellRoute ─────────────────────────
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return AppShell(navigationShell: navigationShell);
-      },
+      builder: (context, state, navigationShell) =>
+          AppShell(navigationShell: navigationShell),
       branches: [
-        // Tab 0 — Dashboard
+        // ── Tab 0: Today ─────────────────────────────────────────────────
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: RouteNames.dashboardPath,
-              name: RouteNames.dashboard,
-              builder: (context, state) => const DashboardScreen(),
-              routes: _buildCategoryRoutes(),
+              path: RouteNames.todayPath,
+              name: RouteNames.today,
+              builder: (context, state) => const TodayFeedScreen(),
+              routes: [
+                GoRoute(
+                  path: 'insight/:id',
+                  name: RouteNames.insightDetail,
+                  builder: (context, state) => InsightDetailScreen(
+                    insightId: state.pathParameters['id']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'notifications',
+                  name: RouteNames.notificationHistory,
+                  builder: (context, state) =>
+                      const NotificationHistoryScreen(),
+                ),
+              ],
             ),
           ],
         ),
 
-        // Tab 1 — AI Coach Chat
+        // ── Tab 1: Data ───────────────────────────────────────────────────
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: RouteNames.chatPath,
-              name: RouteNames.chat,
-              builder: (context, state) => const ChatScreen(),
+              path: RouteNames.dataPath,
+              name: RouteNames.data,
+              builder: (context, state) => const HealthDashboardScreen(),
+              routes: [
+                GoRoute(
+                  path: 'category/:id',
+                  name: RouteNames.categoryDetail,
+                  builder: (context, state) =>
+                      data_screens.CategoryDetailScreen(
+                        categoryId: state.pathParameters['id']!,
+                      ),
+                ),
+                GoRoute(
+                  path: 'metric/:id',
+                  name: RouteNames.metricDetail,
+                  builder: (context, state) => data_metric.MetricDetailScreen(
+                    metricId: state.pathParameters['id']!,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
 
-        // Tab 2 — Integrations Hub
+        // ── Tab 2: Coach ──────────────────────────────────────────────────
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: RouteNames.integrationsPath,
-              name: RouteNames.integrations,
-              builder: (context, state) => const IntegrationsHubScreen(),
+              path: RouteNames.coachPath,
+              name: RouteNames.coach,
+              builder: (context, state) => const NewChatScreen(),
+              routes: [
+                GoRoute(
+                  path: 'thread/:id',
+                  name: RouteNames.coachThread,
+                  builder: (context, state) => ChatThreadScreen(
+                    conversationId: state.pathParameters['id']!,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // ── Tab 3: Progress ───────────────────────────────────────────────
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RouteNames.progressPath,
+              name: RouteNames.progress,
+              builder: (context, state) => const ProgressHomeScreen(),
+              routes: [
+                GoRoute(
+                  path: 'goals',
+                  name: RouteNames.goals,
+                  builder: (context, state) => const GoalsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':id',
+                      name: RouteNames.goalDetail,
+                      builder: (context, state) => GoalDetailScreen(
+                        goalId: state.pathParameters['id']!,
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: 'achievements',
+                  name: RouteNames.achievements,
+                  builder: (context, state) => const AchievementsScreen(),
+                ),
+                GoRoute(
+                  path: 'report',
+                  name: RouteNames.weeklyReport,
+                  builder: (context, state) => const WeeklyReportScreen(),
+                ),
+                GoRoute(
+                  path: 'journal',
+                  name: RouteNames.journal,
+                  builder: (context, state) => const JournalScreen(),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // ── Tab 4: Trends ─────────────────────────────────────────────────
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RouteNames.trendsPath,
+              name: RouteNames.trends,
+              builder: (context, state) => const TrendsHomeScreen(),
+              routes: [
+                GoRoute(
+                  path: 'correlations',
+                  name: RouteNames.correlations,
+                  builder: (context, state) => const CorrelationsScreen(),
+                ),
+                GoRoute(
+                  path: 'reports',
+                  name: RouteNames.reports,
+                  builder: (context, state) => const ReportsScreen(),
+                ),
+                GoRoute(
+                  path: 'sources',
+                  name: RouteNames.dataSources,
+                  builder: (context, state) => const DataSourcesScreen(),
+                ),
+              ],
             ),
           ],
         ),

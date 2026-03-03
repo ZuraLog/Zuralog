@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-01 (Withings integration complete — code, credentials, and security review)
+**Last Updated:** 2026-03-04 (Phase 0 design system v3.1 + Phase 1 5-tab navigation complete; Phase 2 backend services in progress)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -172,38 +172,38 @@
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Today Feed (curated daily briefing) | 🔜 Planned | New screen — AI-driven insight cards, quick actions, day summary |
-| P0 | Today — Insight Detail | 🔜 Planned | Full-screen insight with data, reasoning, "Discuss with Coach" |
-| P0 | Today — Notification History | 🔜 Planned | Persistent log of all push notifications |
-| P0 | Data — Health Dashboard (customizable) | 🔜 Planned | Rebuild of existing dashboard: drag-and-drop reorder, show/hide toggle, card color customization |
-| P0 | Data — Category Detail (x10) | 🔜 Planned | Rebuild of existing category screens |
-| P0 | Data — Metric Detail | 🔜 Planned | Rebuild of existing metric screen |
-| P0 | Coach — New Chat (Gemini-style) | 🔜 Planned | Rebuild: opens fresh conversation, suggested prompts, integration context banner |
-| P0 | Coach — Conversation Drawer | 🔜 Planned | New: side drawer with conversation history |
-| P0 | Coach — Chat Thread | 🔜 Planned | Rebuild: existing chat with loaded history |
-| P0 | Coach — Quick Actions Sheet | 🔜 Planned | New: bottom sheet with pre-built common tasks |
-| P1 | Progress — Progress Home | 🔜 Planned | New: active goals, streaks, week-over-week comparison |
-| P1 | Progress — Goals | 🔜 Planned | New: goal CRUD (backend `UserGoal` model exists) |
-| P1 | Progress — Goal Detail | 🔜 Planned | New: single goal deep-dive with AI commentary |
-| P1 | Progress — Achievements | 🔜 Planned | New: unlockable badges for behavioral consistency |
-| P1 | Progress — Weekly Report | 🔜 Planned | New: auto-generated weekly summary, shareable |
-| P1 | Progress — Journal / Daily Log | 🔜 Planned | New: mood rating, notes, context tags |
-| P1 | Trends — Trends Home | 🔜 Planned | New: AI correlation cards, time-machine strip |
-| P1 | Trends — Correlations | 🔜 Planned | New: interactive metric correlation explorer (backend exists) |
-| P1 | Trends — Reports | 🔜 Planned | New: monthly health report, exportable |
-| P1 | Trends — Data Sources | 🔜 Planned | New: data provenance transparency screen |
-| P1 | Settings Hub | 🔜 Planned | Rebuild: top-level settings menu |
-| P1 | Settings — Account | 🔜 Planned | New: email, password, linked accounts, delete account |
-| P1 | Settings — Notifications | 🔜 Planned | New: per-category toggles, quiet hours |
-| P1 | Settings — Appearance | 🔜 Planned | New: card colors, layout density |
-| P1 | Settings — Coach Settings | 🔜 Planned | New: persona tone, response length, prompt visibility |
-| P1 | Settings — Integrations | 🔜 Planned | Rebuild of existing Integrations Hub, relocated under Settings |
-| P1 | Settings — Privacy & Data | 🔜 Planned | New: data export, deletion, analytics opt-out, legal links |
-| P1 | Settings — Subscription | 🔜 Planned | Rebuild of existing paywall |
-| P1 | Settings — About | 🔜 Planned | New: version, licenses, support |
-| P2 | Profile (side panel or pushed) | 🔜 Planned | Rebuild of existing profile panel |
-| P2 | Privacy Policy | 🔜 Planned | Legal page |
-| P2 | Terms of Service | 🔜 Planned | Legal page |
+| P0 | Today Feed (curated daily briefing) | 🔄 Route+placeholder done | Phase 3 implementation pending backend services |
+| P0 | Today — Insight Detail | 🔄 Route+placeholder done | Phase 3 |
+| P0 | Today — Notification History | 🔄 Route+placeholder done | Phase 3 |
+| P0 | Data — Health Dashboard (customizable) | 🔄 Route+placeholder done | Phase 5 |
+| P0 | Data — Category Detail (x10) | 🔄 Route+placeholder done | Phase 5 |
+| P0 | Data — Metric Detail | 🔄 Route+placeholder done | Phase 5 |
+| P0 | Coach — New Chat (Gemini-style) | 🔄 Route+placeholder done | Phase 4 |
+| P0 | Coach — Conversation Drawer | 🔜 Planned | Phase 4 |
+| P0 | Coach — Chat Thread | 🔄 Route+placeholder done | Phase 4 |
+| P0 | Coach — Quick Actions Sheet | 🔜 Planned | Phase 4 |
+| P1 | Progress — Progress Home | 🔄 Route+placeholder done | Phase 6 |
+| P1 | Progress — Goals | 🔄 Route+placeholder done | Phase 6 |
+| P1 | Progress — Goal Detail | 🔄 Route+placeholder done | Phase 6 |
+| P1 | Progress — Achievements | 🔄 Route+placeholder done | Phase 6 |
+| P1 | Progress — Weekly Report | 🔄 Route+placeholder done | Phase 6 |
+| P1 | Progress — Journal / Daily Log | 🔄 Route+placeholder done | Phase 6 |
+| P1 | Trends — Trends Home | 🔄 Route+placeholder done | Phase 7 |
+| P1 | Trends — Correlations | 🔄 Route+placeholder done | Phase 7 |
+| P1 | Trends — Reports | 🔄 Route+placeholder done | Phase 7 |
+| P1 | Trends — Data Sources | 🔄 Route+placeholder done | Phase 7 |
+| P1 | Settings Hub | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — Account | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — Notifications | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — Appearance | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — Coach Settings | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — Integrations | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — Privacy & Data | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — Subscription | 🔄 Route+placeholder done | Phase 8 |
+| P1 | Settings — About | 🔄 Route+placeholder done | Phase 8 |
+| P2 | Profile (side panel or pushed) | 🔄 Route+placeholder done | Phase 8 |
+| P2 | Privacy Policy | 🔜 Planned | Phase 8 |
+| P2 | Terms of Service | 🔜 Planned | Phase 8 |
 
 ---
 

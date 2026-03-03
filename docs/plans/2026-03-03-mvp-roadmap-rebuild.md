@@ -210,25 +210,26 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Create: `zuralog/lib/features/shell/app_shell.dart`
 
 **What to build:**
-- [ ] 5-tab bottom nav: Today, Data, Coach, Progress, Trends
-- [ ] Frosted glass effect: `BackdropFilter` with Gaussian blur, `surface-900` at 70% opacity
-- [ ] Active tab: sage-green icon + label. Inactive: `text-tertiary`
-- [ ] 200ms cross-fade tab switch animation
-- [ ] Each tab maintains its own navigation stack (nested `Navigator` or `StatefulShellRoute`)
-- [ ] Settings/Profile pushed from header icons — not tabs
-- [ ] Placeholder screens for each tab root
+- [x] 5-tab bottom nav: Today, Data, Coach, Progress, Trends
+- [x] Frosted glass effect: `BackdropFilter` with Gaussian blur, `surface-900` at 70% opacity
+- [x] Active tab: sage-green icon + label. Inactive: `text-tertiary`
+- [x] 200ms cross-fade tab switch animation
+- [x] Each tab maintains its own navigation stack (nested `Navigator` or `StatefulShellRoute`)
+- [x] Settings/Profile pushed from header icons — not tabs
+- [x] Placeholder screens for each tab root
 
 **Commit:** `feat(nav): rebuild 5-tab bottom navigation scaffold`
 
 ### Task 1.2: GoRouter Route Restructure
 
 **Files:**
-- Modify: `zuralog/lib/core/navigation/app_router.dart`
+- Modify: `zuralog/lib/core/router/app_router.dart`
+- Modify: `zuralog/lib/core/router/route_names.dart`
 
 **What to build:**
-- [ ] `StatefulShellRoute.indexedStack` for 5 tabs
-- [ ] Route definitions for all 37 screens (placeholder widgets initially)
-- [ ] Route paths:
+- [x] `StatefulShellRoute.indexedStack` for 5 tabs
+- [x] Route definitions for all 37 screens (placeholder widgets initially)
+- [x] Route paths:
   - `/today`, `/today/insight/:id`, `/today/notifications`
   - `/data`, `/data/category/:id`, `/data/metric/:id`
   - `/coach`, `/coach/thread/:id`
@@ -236,8 +237,8 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
   - `/trends`, `/trends/correlations`, `/trends/reports`, `/trends/sources`
   - `/settings`, `/settings/account`, `/settings/notifications`, `/settings/appearance`, `/settings/coach`, `/settings/integrations`, `/settings/privacy`, `/settings/subscription`, `/settings/about`
   - `/profile`, `/profile/emergency-card`, `/profile/emergency-card/edit`
-- [ ] Auth guard preserved
-- [ ] Deep link routes preserved
+- [x] Auth guard preserved
+- [x] Deep link routes preserved
 
 **Commit:** `feat(nav): restructure GoRouter with all 37 screen routes`
 

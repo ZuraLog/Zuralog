@@ -7,6 +7,40 @@
 /// **Naming convention:**
 /// - `*Name` — the named route identifier (used with `GoRouter.go`).
 /// - `*Path` — the URL path string (registered in the router config).
+///
+/// **Route tree (5-tab shell):**
+/// ```
+/// /today                          → TodayFeedScreen (tab 0)
+///   /today/insight/:id            → InsightDetailScreen
+///   /today/notifications          → NotificationHistoryScreen
+/// /data                           → HealthDashboardScreen (tab 1)
+///   /data/category/:id            → CategoryDetailScreen
+///   /data/metric/:id              → MetricDetailScreen
+/// /coach                          → NewChatScreen (tab 2)
+///   /coach/thread/:id             → ChatThreadScreen
+/// /progress                       → ProgressHomeScreen (tab 3)
+///   /progress/goals               → GoalsScreen
+///   /progress/goals/:id           → GoalDetailScreen
+///   /progress/achievements        → AchievementsScreen
+///   /progress/report              → WeeklyReportScreen
+///   /progress/journal             → JournalScreen
+/// /trends                         → TrendsHomeScreen (tab 4)
+///   /trends/correlations          → CorrelationsScreen
+///   /trends/reports               → ReportsScreen
+///   /trends/sources               → DataSourcesScreen
+/// /settings                       → SettingsHubScreen (pushed over shell)
+///   /settings/account             → AccountSettingsScreen
+///   /settings/notifications       → NotificationSettingsScreen
+///   /settings/appearance          → AppearanceSettingsScreen
+///   /settings/coach               → CoachSettingsScreen
+///   /settings/integrations        → IntegrationsScreen
+///   /settings/privacy             → PrivacyDataScreen
+///   /settings/subscription        → SubscriptionScreen
+///   /settings/about               → AboutScreen
+/// /profile                        → ProfileScreen (pushed over shell)
+///   /profile/emergency-card       → EmergencyCardScreen
+///   /profile/emergency-card/edit  → EmergencyCardEditScreen
+/// ```
 library;
 
 /// Route name and path constants for the Zuralog application.
@@ -46,65 +80,199 @@ abstract final class RouteNames {
   /// Path for the profile questionnaire screen.
   static const String profileQuestionnairePath = '/auth/profile-questionnaire';
 
-  // ── Main Shell (Tabbed) ───────────────────────────────────────────────────
+  // ── Tab 0: Today ─────────────────────────────────────────────────────────
 
-  /// Name for the dashboard tab (shell root).
-  static const String dashboard = 'dashboard';
+  /// Name for the Today Feed tab root.
+  static const String today = 'today';
 
-  /// Path for the dashboard screen.
-  static const String dashboardPath = '/dashboard';
+  /// Path for the Today Feed screen.
+  static const String todayPath = '/today';
 
-  /// Name for the AI coach chat tab.
-  static const String chat = 'chat';
+  /// Name for the Insight Detail screen.
+  static const String insightDetail = 'insightDetail';
 
-  /// Path for the chat screen.
-  static const String chatPath = '/chat';
+  /// Path for the Insight Detail screen. Parameter: `:id`
+  static const String insightDetailPath = '/today/insight/:id';
 
-  /// Name for the integrations hub tab.
-  static const String integrations = 'integrations';
+  /// Name for the Notification History screen.
+  static const String notificationHistory = 'notificationHistory';
 
-  /// Path for the integrations hub screen.
-  static const String integrationsPath = '/integrations';
+  /// Path for the Notification History screen.
+  static const String notificationHistoryPath = '/today/notifications';
 
-  // ── Pushed Over Shell ────────────────────────────────────────────────────
+  // ── Tab 1: Data ───────────────────────────────────────────────────────────
 
-  /// Name for the settings screen (pushed over the shell, not a tab).
+  /// Name for the Health Dashboard tab root.
+  static const String data = 'data';
+
+  /// Path for the Health Dashboard screen.
+  static const String dataPath = '/data';
+
+  /// Name for the Category Detail screen.
+  static const String categoryDetail = 'categoryDetail';
+
+  /// Path for the Category Detail screen. Parameter: `:id`
+  static const String categoryDetailPath = '/data/category/:id';
+
+  /// Name for the Metric Detail screen.
+  static const String metricDetail = 'metricDetail';
+
+  /// Path for the Metric Detail screen. Parameter: `:id`
+  static const String metricDetailPath = '/data/metric/:id';
+
+  // ── Tab 2: Coach ──────────────────────────────────────────────────────────
+
+  /// Name for the Coach (New Chat) tab root.
+  static const String coach = 'coach';
+
+  /// Path for the New Chat screen.
+  static const String coachPath = '/coach';
+
+  /// Name for the Chat Thread screen.
+  static const String coachThread = 'coachThread';
+
+  /// Path for the Chat Thread screen. Parameter: `:id`
+  static const String coachThreadPath = '/coach/thread/:id';
+
+  // ── Tab 3: Progress ───────────────────────────────────────────────────────
+
+  /// Name for the Progress Home tab root.
+  static const String progress = 'progress';
+
+  /// Path for the Progress Home screen.
+  static const String progressPath = '/progress';
+
+  /// Name for the Goals screen.
+  static const String goals = 'goals';
+
+  /// Path for the Goals screen.
+  static const String goalsPath = '/progress/goals';
+
+  /// Name for the Goal Detail screen.
+  static const String goalDetail = 'goalDetail';
+
+  /// Path for the Goal Detail screen. Parameter: `:id`
+  static const String goalDetailPath = '/progress/goals/:id';
+
+  /// Name for the Achievements screen.
+  static const String achievements = 'achievements';
+
+  /// Path for the Achievements screen.
+  static const String achievementsPath = '/progress/achievements';
+
+  /// Name for the Weekly Report screen.
+  static const String weeklyReport = 'weeklyReport';
+
+  /// Path for the Weekly Report screen.
+  static const String weeklyReportPath = '/progress/report';
+
+  /// Name for the Journal screen.
+  static const String journal = 'journal';
+
+  /// Path for the Journal screen.
+  static const String journalPath = '/progress/journal';
+
+  // ── Tab 4: Trends ─────────────────────────────────────────────────────────
+
+  /// Name for the Trends Home tab root.
+  static const String trends = 'trends';
+
+  /// Path for the Trends Home screen.
+  static const String trendsPath = '/trends';
+
+  /// Name for the Correlations Explorer screen.
+  static const String correlations = 'correlations';
+
+  /// Path for the Correlations screen.
+  static const String correlationsPath = '/trends/correlations';
+
+  /// Name for the Reports screen.
+  static const String reports = 'reports';
+
+  /// Path for the Reports screen.
+  static const String reportsPath = '/trends/reports';
+
+  /// Name for the Data Sources screen.
+  static const String dataSources = 'dataSources';
+
+  /// Path for the Data Sources screen.
+  static const String dataSourcesPath = '/trends/sources';
+
+  // ── Settings (pushed over shell) ─────────────────────────────────────────
+
+  /// Name for the Settings Hub screen (pushed over the shell, not a tab).
   static const String settings = 'settings';
 
-  /// Path for the settings screen.
+  /// Path for the Settings Hub screen.
   static const String settingsPath = '/settings';
 
-  // ── Dashboard Category Detail Routes ─────────────────────────────────────
+  /// Name for the Account Settings screen.
+  static const String settingsAccount = 'settingsAccount';
 
-  /// Path for the Activity category detail screen.
-  static const String categoryActivity = '/dashboard/activity';
+  /// Path for the Account Settings screen.
+  static const String settingsAccountPath = '/settings/account';
 
-  /// Path for the Body Measurements category detail screen.
-  static const String categoryBody = '/dashboard/body';
+  /// Name for the Notification Settings screen.
+  static const String settingsNotifications = 'settingsNotifications';
 
-  /// Path for the Heart category detail screen.
-  static const String categoryHeart = '/dashboard/heart';
+  /// Path for the Notification Settings screen.
+  static const String settingsNotificationsPath = '/settings/notifications';
 
-  /// Path for the Vitals category detail screen.
-  static const String categoryVitals = '/dashboard/vitals';
+  /// Name for the Appearance Settings screen.
+  static const String settingsAppearance = 'settingsAppearance';
 
-  /// Path for the Sleep category detail screen.
-  static const String categorySleep = '/dashboard/sleep';
+  /// Path for the Appearance Settings screen.
+  static const String settingsAppearancePath = '/settings/appearance';
 
-  /// Path for the Nutrition category detail screen.
-  static const String categoryNutrition = '/dashboard/nutrition';
+  /// Name for the Coach Settings screen.
+  static const String settingsCoach = 'settingsCoach';
 
-  /// Path for the Cycle Tracking category detail screen.
-  static const String categoryCycle = '/dashboard/cycle';
+  /// Path for the Coach Settings screen.
+  static const String settingsCoachPath = '/settings/coach';
 
-  /// Path for the Wellness category detail screen.
-  static const String categoryWellness = '/dashboard/wellness';
+  /// Name for the Integrations screen.
+  static const String settingsIntegrations = 'settingsIntegrations';
 
-  /// Path for the Mobility category detail screen.
-  static const String categoryMobility = '/dashboard/mobility';
+  /// Path for the Integrations screen (under Settings).
+  static const String settingsIntegrationsPath = '/settings/integrations';
 
-  /// Path for the Environment category detail screen.
-  static const String categoryEnvironment = '/dashboard/environment';
+  /// Name for the Privacy & Data screen.
+  static const String settingsPrivacy = 'settingsPrivacy';
+
+  /// Path for the Privacy & Data screen.
+  static const String settingsPrivacyPath = '/settings/privacy';
+
+  /// Name for the Subscription screen.
+  static const String settingsSubscription = 'settingsSubscription';
+
+  /// Path for the Subscription screen.
+  static const String settingsSubscriptionPath = '/settings/subscription';
+
+  /// Name for the About screen.
+  static const String settingsAbout = 'settingsAbout';
+
+  /// Path for the About screen.
+  static const String settingsAboutPath = '/settings/about';
+
+  // ── Profile (pushed over shell) ───────────────────────────────────────────
+
+  /// Name for the Profile screen (pushed over the shell, not a tab).
+  static const String profile = 'profile';
+
+  /// Path for the Profile screen.
+  static const String profilePath = '/profile';
+
+  /// Name for the Emergency Health Card screen.
+  static const String emergencyCard = 'emergencyCard';
+
+  /// Path for the Emergency Health Card screen.
+  static const String emergencyCardPath = '/profile/emergency-card';
+
+  /// Name for the Emergency Health Card edit screen.
+  static const String emergencyCardEdit = 'emergencyCardEdit';
+
+  /// Path for the Emergency Health Card edit screen.
+  static const String emergencyCardEditPath = '/profile/emergency-card/edit';
 
   // ── Developer Tools ───────────────────────────────────────────────────────
 
@@ -113,6 +281,14 @@ abstract final class RouteNames {
 
   /// Path for the design system catalog screen.
   static const String debugCatalogPath = '/debug/catalog';
+
+  // ── Legacy aliases (kept for backward compatibility during migration) ──────
+
+  /// Legacy name for dashboard tab — use [today] for new code.
+  static const String dashboard = 'dashboard';
+
+  /// Legacy path for dashboard — routes to [todayPath] in the new shell.
+  static const String dashboardPath = '/dashboard';
 
   // ── Unauthenticated Route Set ─────────────────────────────────────────────
 

@@ -1,27 +1,24 @@
-/// Zuralog Edge Agent — App Shell (Bottom Navigation Scaffold).
+/// Zuralog Edge Agent — App Shell (5-Tab Bottom Navigation Scaffold).
 ///
 /// [AppShell] is the persistent scaffold rendered by [StatefulShellRoute].
-/// It houses the tab body (the active branch's navigator) and a frosted-glass
-/// [NavigationBar] at the bottom with three destinations: Dashboard, Coach,
-/// and Apps.
+/// It houses the active branch navigator and a frosted-glass 5-tab
+/// [NavigationBar] at the bottom.
 ///
-/// **Push-reveal side panel:** When [sidePanelOpenProvider] is `true` the
-/// entire scaffold (content + bottom nav) slides LEFT by 80 % of the screen
-/// width using an animated [Transform.translate]. The [ProfileSidePanelWidget]
-/// occupies the right 80 % of the screen simultaneously. A dark scrim
-/// (up to 60 % opacity) animates in over the translated scaffold to draw
-/// focus to the panel.
+/// **5 tabs:** Today · Data · Coach · Progress · Trends
 ///
-/// Tapping anywhere on the scrim or the 20 % visible content strip dismisses
-/// the panel.
+/// Settings, Profile, and Integrations are accessed from header icons on
+/// individual screens — not from the bottom bar.
 ///
-/// **Frosted glass effect:** A [BackdropFilter] with a Gaussian blur is
-/// applied beneath the [NavigationBar] to create a translucent overlay that
-/// blurs the content scrolling behind it, matching the design spec.
+/// **Frosted glass effect:** A [BackdropFilter] with Gaussian blur is applied
+/// beneath the [NavigationBar]. The translucent background blurs the content
+/// scrolling behind it, matching the design spec (surface-900 at 70% opacity).
 ///
-/// **Tab persistence:** Tab state is preserved across switches because the
-/// router uses [StatefulShellRoute.indexedStack], meaning each branch keeps
-/// its navigator stack alive while inactive.
+/// **Tab persistence:** State is preserved across switches via
+/// [StatefulShellRoute.indexedStack] — each branch keeps its navigator stack
+/// alive while inactive.
+///
+/// **Haptic feedback:** A selection tick fires on every tab switch, respecting
+/// the user's haptic preference via [hapticServiceProvider].
 library;
 
 import 'dart:ui';
@@ -30,256 +27,158 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:zuralog/core/state/side_panel_provider.dart';
-import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/shared/widgets/profile_side_panel.dart';
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-/// The fraction of the screen width the panel occupies (right side).
-const double _kPanelFraction = 0.80;
-
-/// Duration of the push-reveal animation.
-const Duration _kAnimDuration = Duration(milliseconds: 280);
-
-/// Maximum opacity of the scrim that darkens the 20 % exposed content strip.
-const double _kScrimMaxOpacity = 0.60;
+import 'package:zuralog/core/haptics/haptic.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
 
 // ── AppShell ──────────────────────────────────────────────────────────────────
 
 /// The root scaffold for all tabbed screens.
 ///
-/// Converts to a [ConsumerStatefulWidget] so it can watch [sidePanelOpenProvider]
-/// and drive the push-reveal animation. The widget tree is:
+/// Wraps the GoRouter [navigationShell] with a frosted-glass [NavigationBar]
+/// containing 5 destinations: Today, Data, Coach, Progress, Trends.
 ///
-/// ```
-/// Stack (fills screen)
-/// ├── AnimatedBuilder → Transform.translate (entire scaffold slides left)
-/// │   └── Scaffold (body + frosted bottom nav)
-/// ├── AnimatedBuilder → Scrim (darkens exposed 20 % strip, tap-to-close)
-/// └── AnimatedBuilder → Transform.translate (panel slides in from right)
-///     └── ProfileSidePanelWidget (the 80 % right panel)
-/// ```
-///
-/// Usage: This widget is constructed exclusively by the [StatefulShellRoute]
-/// builder in [app_router.dart]; do not instantiate it elsewhere.
-class AppShell extends ConsumerStatefulWidget {
-  /// Creates an [AppShell] with the given [navigationShell].
-  ///
-  /// [navigationShell] is provided by the GoRouter framework and must not
-  /// be stored beyond the lifetime of the build call.
+/// Usage: Constructed exclusively by the [StatefulShellRoute] builder in
+/// [app_router.dart]; do not instantiate elsewhere.
+class AppShell extends ConsumerWidget {
+  /// Creates the [AppShell] for the given [navigationShell].
   const AppShell({super.key, required this.navigationShell});
 
-  /// The stateful navigation shell from GoRouter that manages branch stacks.
+  /// The stateful navigation shell from GoRouter managing per-branch stacks.
   final StatefulNavigationShell navigationShell;
 
-  /// The three navigation destinations displayed in the bottom bar.
+  /// The 5 tab destinations in display order.
+  ///
+  /// Order must match the [StatefulShellBranch] index in [app_router.dart]:
+  /// 0=Today, 1=Data, 2=Coach, 3=Progress, 4=Trends.
   static const List<NavigationDestination> _destinations = [
     NavigationDestination(
-      icon: Icon(Icons.home_rounded),
-      label: 'Home',
-      selectedIcon: Icon(Icons.home_rounded),
+      icon: Icon(Icons.wb_sunny_outlined),
+      selectedIcon: Icon(Icons.wb_sunny_rounded),
+      label: 'Today',
     ),
     NavigationDestination(
-      icon: Icon(Icons.chat_bubble_rounded),
-      label: 'Coach',
+      icon: Icon(Icons.grid_view_outlined),
+      selectedIcon: Icon(Icons.grid_view_rounded),
+      label: 'Data',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.chat_bubble_outline_rounded),
       selectedIcon: Icon(Icons.chat_bubble_rounded),
+      label: 'Coach',
     ),
     NavigationDestination(
-      icon: Icon(Icons.extension_rounded),
-      label: 'Apps',
-      selectedIcon: Icon(Icons.extension_rounded),
+      icon: Icon(Icons.track_changes_outlined),
+      selectedIcon: Icon(Icons.track_changes_rounded),
+      label: 'Progress',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.trending_up_rounded),
+      selectedIcon: Icon(Icons.trending_up_rounded),
+      label: 'Trends',
     ),
   ];
 
-  @override
-  ConsumerState<AppShell> createState() => _AppShellState();
-}
-
-class _AppShellState extends ConsumerState<AppShell>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _animCtrl;
-  late final Animation<double> _slideAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _animCtrl = AnimationController(vsync: this, duration: _kAnimDuration);
-    _slideAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic);
-
-    // Sync animation with the provider in case it is restored.
-    final isOpen = ref.read(sidePanelOpenProvider);
-    if (isOpen) _animCtrl.value = 1.0;
-  }
-
-  @override
-  void dispose() {
-    _animCtrl.dispose();
-    super.dispose();
-  }
-
-  /// Closes the side panel by animating backward and clearing provider state.
-  void _closePanel() {
-    _animCtrl.reverse().then((_) {
-      if (mounted) {
-        ref.read(sidePanelOpenProvider.notifier).state = false;
-      }
-    });
-  }
-
-  /// Switches to the tapped tab branch.
+  /// Switches to the given [index] branch and fires a haptic selection tick.
   ///
-  /// Passing [initialLocation: true] restores the branch to its initial
-  /// location when the user re-taps an already-active tab, matching
-  /// the standard iOS behavior of returning to the root.
-  void _onDestinationSelected(int index) {
-    widget.navigationShell.goBranch(
+  /// Re-tapping the active tab restores the branch to its initial location
+  /// (standard iOS "scroll to top / pop to root" behaviour).
+  void _onDestinationSelected(WidgetRef ref, int index) {
+    ref.read(hapticServiceProvider).selectionTick();
+    navigationShell.goBranch(
       index,
-      initialLocation: index == widget.navigationShell.currentIndex,
+      initialLocation: index == navigationShell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final surfaceColor = colorScheme.surface;
-    final screenWidth = MediaQuery.sizeOf(context).width;
-
-    // Listen to provider so external callers (e.g. dashboard avatar) can
-    // trigger the open animation.
-    final isOpen = ref.watch(sidePanelOpenProvider);
-
-    // If provider opened externally, sync the animation controller.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (isOpen && _animCtrl.status == AnimationStatus.dismissed) {
-        _animCtrl.forward();
-      } else if (!isOpen && _animCtrl.status == AnimationStatus.completed) {
-        _animCtrl.reverse();
-      }
-    });
-
-    return Stack(
-      children: [
-        // ── Scaffold (slides left when panel opens) ──────────────────────
-        AnimatedBuilder(
-          animation: _slideAnim,
-          builder: (context, child) {
-            final dx = -screenWidth * _kPanelFraction * _slideAnim.value;
-            return Transform.translate(
-              offset: Offset(dx, 0),
-              child: child,
-            );
-          },
-          child: Scaffold(
-            // extendBody allows the shell body to render beneath the nav bar,
-            // so content can scroll behind the frosted glass.
-            extendBody: true,
-            body: widget.navigationShell,
-            bottomNavigationBar: _FrostedNavigationBar(
-              currentIndex: widget.navigationShell.currentIndex,
-              surfaceColor: surfaceColor,
-              onDestinationSelected: _onDestinationSelected,
-            ),
-          ),
-        ),
-
-        // ── Scrim (darkens the exposed 20 % strip to focus attention on
-        //    the side panel).  Covers the full screen but only visually
-        //    relevant over the translated scaffold.  The GestureDetector
-        //    captures taps anywhere on the scrim to close the panel.
-        AnimatedBuilder(
-          animation: _slideAnim,
-          builder: (context, child) {
-            final opacity = _kScrimMaxOpacity * _slideAnim.value;
-            if (opacity == 0) return const SizedBox.shrink();
-            return Positioned.fill(
-              child: GestureDetector(
-                onTap: _closePanel,
-                child: ColoredBox(
-                  color: Colors.black.withValues(alpha: opacity),
-                ),
-              ),
-            );
-          },
-        ),
-
-        // ── Side Panel (slides in from the right) ────────────────────────
-        AnimatedBuilder(
-          animation: _slideAnim,
-          builder: (context, child) {
-            // Panel sits at the right edge and slides in from off-screen right.
-            // When fully open: panel left edge = 20 % of screen width.
-            // When fully closed: panel left edge = 100 % (off-screen).
-            final panelWidth = screenWidth * _kPanelFraction;
-            final panelLeft = screenWidth - panelWidth * _slideAnim.value;
-            return Positioned(
-              top: 0,
-              bottom: 0,
-              left: panelLeft,
-              width: panelWidth,
-              child: child!,
-            );
-          },
-          child: ProfileSidePanelWidget(onClose: _closePanel),
-        ),
-      ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      // extendBody lets tab content render behind the translucent nav bar.
+      // Each tab root screen must add appropriate bottom padding to avoid
+      // content being obscured by the nav bar.
+      extendBody: true,
+      body: navigationShell,
+      bottomNavigationBar: _FrostedNavigationBar(
+        currentIndex: navigationShell.currentIndex,
+        onDestinationSelected: (index) => _onDestinationSelected(ref, index),
+      ),
     );
   }
 }
 
 // ── Frosted Navigation Bar ────────────────────────────────────────────────────
 
-/// A frosted-glass [NavigationBar] rendered inside a [BackdropFilter].
+/// A frosted-glass [NavigationBar] with 5 destinations.
 ///
-/// The [ClipRect] confines the blur to the navigation bar area, and
-/// [BackdropFilter] applies a Gaussian blur to whatever is behind it.
-/// The translucent [Container] on top of the blur gives the frosted-glass
-/// effect a tinted fill, and the [NavigationBar] itself is transparent so
-/// the background shows through.
+/// Uses [BackdropFilter] + Gaussian blur to blur the scrolling content behind
+/// the bar. A translucent container gives the frosted tint. The
+/// [NavigationBar] itself is fully transparent so the blur shows through.
+///
+/// Per design spec: no indicator pill — icon/label color change is sufficient
+/// to communicate the active tab. The active color is [AppColors.primary]
+/// (Sage Green) and inactive is [AppColors.textTertiary].
 class _FrostedNavigationBar extends StatelessWidget {
-  /// Creates a [_FrostedNavigationBar].
-  ///
-  /// - [currentIndex] — the currently selected tab index (0-based).
-  /// - [surfaceColor] — the theme's surface color used for the frosted tint.
-  /// - [onDestinationSelected] — callback when a destination is tapped.
   const _FrostedNavigationBar({
     required this.currentIndex,
-    required this.surfaceColor,
     required this.onDestinationSelected,
   });
 
-  /// The active tab index.
+  /// The currently active tab index (0-based).
   final int currentIndex;
-
-  /// The base surface color used for the frosted tint overlay.
-  final Color surfaceColor;
 
   /// Callback invoked with the tapped destination index.
   final ValueChanged<int> onDestinationSelected;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use the scaffold background as the frosted glass tint colour.
+    // Dark mode → #000000 at 70% (OLED black, translucent).
+    // Light mode → #FFFFFF at 70% (white, translucent).
+    final bgColor =
+        isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(
           sigmaX: AppDimens.navBarBlurSigma,
           sigmaY: AppDimens.navBarBlurSigma,
         ),
-        child: Container(
-          // Translucent tint overlay — blends with the blurred background.
-          color: surfaceColor.withValues(alpha: AppDimens.navBarFrostOpacity),
-          child: NavigationBar(
-            // Transparent so the frosted-glass container's color shows through.
-            backgroundColor: Colors.transparent,
-            // Remove the default surface tint from Material 3.
-            surfaceTintColor: Colors.transparent,
-            // Elevation 0 to avoid a shadow that would clash with the blur.
-            elevation: 0,
-            selectedIndex: currentIndex,
-            onDestinationSelected: onDestinationSelected,
-            // indicatorColor deferred to NavigationBarTheme in AppTheme (AppColors.primary at 0.2 opacity).
-            destinations: AppShell._destinations,
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            // Design spec: no indicator pill — color change only.
+            indicatorColor: Colors.transparent,
+            // Active: Sage Green. Inactive: text-tertiary (de-emphasised).
+            iconTheme: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return const IconThemeData(color: AppColors.primary);
+              }
+              return const IconThemeData(color: AppColors.textTertiary);
+            }),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return AppTextStyles.caption
+                    .copyWith(color: AppColors.primary);
+              }
+              return AppTextStyles.caption
+                  .copyWith(color: AppColors.textTertiary);
+            }),
+          ),
+          child: Container(
+            color: bgColor.withValues(alpha: AppDimens.navBarFrostOpacity),
+            child: NavigationBar(
+              // Transparent — frosted container provides the visual background.
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              selectedIndex: currentIndex,
+              onDestinationSelected: onDestinationSelected,
+              // 200ms cross-fade for icon/label transitions.
+              animationDuration: const Duration(milliseconds: 200),
+              destinations: AppShell._destinations,
+            ),
           ),
         ),
       ),
