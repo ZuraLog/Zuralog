@@ -25,6 +25,7 @@ All project documentation lives in `docs/`. Read the relevant doc before startin
 | [`docs/implementation-status.md`](./docs/implementation-status.md) | Historical record of what was built and how |
 | [`docs/design.md`](./docs/design.md) | Brand colors, typography, design philosophy (exploration-first) |
 | [`docs/screens.md`](./docs/screens.md) | Mobile screen inventory, navigation structure, user intent model, full UI rebuild directive |
+| [`docs/mvp-features.md`](./docs/mvp-features.md) | MVP feature specification, post-MVP features, design impact, settings reference, GitHub issues |
 | [`docs/integrations/`](./docs/integrations/) | Per-integration reference (Strava, Fitbit, Apple Health, Health Connect, planned) |
 
 ## Skills
@@ -66,7 +67,7 @@ At final review, delete all temporary artifacts (screenshots, scratch files, tes
 
 ### 6. AI Working Directories
 Each tool writes plans to its own **gitignored** directory. Never use another tool's directory.
-- OpenCode → `.opencode/plans/` | Cursor → `.cursor/` | AntiGravity → its artifact directory
+- Claude Code → `.Claude/plans/` | Cursor → `.cursor/` | AntiGravity → its artifact directory
 
 ### 7. Design System Tokens (Flutter)
 Use the **Frontend Design skill** for all UI/UX decisions — aim for award-winning, premium designs. No hardcoded hex in widget files.
