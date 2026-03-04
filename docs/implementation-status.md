@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-04 (Phase 0 design system v3.1 + Phase 1 5-tab navigation complete)  
+**Last Updated:** 2026-03-04 (Phase 0 design system v3.1 + Phase 1 5-tab navigation + Phase 2 backend MVP services complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -20,11 +20,15 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 - Google OAuth 2.0 (web + mobile)
 
 **Agent Layer**
-- Orchestrator with Reason → Tool → Act loop
+- Orchestrator with Reason → Tool → Act loop; persona/proactivity injected per request
 - OpenRouter client calling `moonshotai/kimi-k2.5` (Kimi K2.5)
 - MCP Client + Server Registry — plug-and-play tool routing
 - Chat endpoint with Server-Sent Events (SSE) streaming
-- Conversation history persistence
+- Conversation history persistence + management (list/rename/archive/delete)
+- Three AI personas: Tough Love / Balanced (default) / Gentle
+- Three proactivity levels: Low / Medium (default) / High
+- `PineconeMemoryStore` — per-user vector namespace; top-5 relevant memories injected per request; falls back to `InMemoryStore` when unconfigured
+- `LogHealthDataTool` — NL logging MCP tool with two-phase confirmation flow
 
 **MCP Servers (all production-registered)**
 - `StravaServer` — activities, stats, create activity
@@ -46,11 +50,57 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 **Infrastructure Services**
 - Celery + Redis (Upstash) for background task queuing
 - Sync scheduler orchestrating all provider syncs
-- Firebase FCM push notification service
+- Firebase FCM push notification service + `send_and_persist()` method
 - RevenueCat webhook handler + subscription entitlement service
 - Upstash cache layer (short/medium/long TTL patterns)
 - SlowAPI rate limiter middleware
 - Sentry error tracking (FastAPI + Celery + SQLAlchemy + httpx)
+- Morning Briefing Celery Beat task (15-min schedule; per-user time window)
+- Smart Reminder Engine (hourly Celery Beat; dedup/quiet hours/frequency cap)
+- Background Alerts (post-ingest: anomaly, goal reached, streak milestone, stale integration)
+
+**Phase 2 — MVP Backend Services (2026-03-04)**
+
+All 24 Phase 2 tasks complete on branch `feat/backend-mvp-services`:
+
+*Health Intelligence*
+- `HealthScoreCalculator` — 6-metric weighted percentile composite score (sleep/HRV/RHR/activity/sleep-consistency/steps); 7-day history; AI commentary
+- `AnomalyDetector` — 2-stddev rolling baseline detection; insight card + FCM push on critical findings
+- `DataMaturityService` — 4-tier maturity (building/ready/strong/excellent); per-feature gating
+- `InsightGenerator` — 8 insight types with time-of-day awareness; Celery post-ingest pipeline
+- `CorrelationSuggester` — goal→gap mapping with 6 goal types; dismissal tracking
+
+*Data Models + CRUD*
+- `JournalEntry` — mood/energy/stress/sleep sliders + tags; one-per-day upsert
+- `QuickLog` — 7 metric types; single + batch submit; feeds analytics
+- `Achievement` + `AchievementTracker` — 18 achievements in 6 categories; push on unlock
+- `UserStreak` + `StreakTracker` — 4 streak types; freeze mechanic (1/week, max 2); milestone celebrations
+- `EmergencyCard` — blood type, allergies, medications, conditions, emergency contacts; feeds AI memory
+- `NotificationLog` — persistence for all FCM pushes; grouped history API; mark-read endpoint
+
+*Reporting*
+- `ReportGenerator` — weekly (WoW deltas + highlights) and monthly (category summaries) generation
+- `reports` table + `/api/v1/reports` endpoints (list/detail/on-demand generate)
+
+*API Endpoints Added*
+- `GET/PUT /api/v1/preferences` (Task 2.1 — already committed)
+- `GET /api/v1/health-score` — today's score + 7-day trend
+- `GET/PATCH /api/v1/insights` — insight card feed
+- `GET /api/v1/achievements`, `GET /api/v1/achievements/recent`
+- `GET /api/v1/streaks`, `POST /api/v1/streaks/{type}/freeze`
+- `GET/PUT /api/v1/emergency-card`
+- `GET/PATCH /api/v1/notifications` — history + mark-read
+- `GET /api/v1/memories`, `DELETE /api/v1/memories/{id}`, `DELETE /api/v1/memories`
+- `GET /api/v1/prompts/suggestions`
+- `GET /api/v1/quick-actions`
+- `GET /api/v1/reports`, `GET /api/v1/reports/generate`
+- `POST /api/v1/chat/{id}/attachments`
+- `GET/POST/PUT/DELETE /api/v1/journal`
+- `POST /api/v1/quick-log`, `POST /api/v1/quick-log/batch`
+
+*Migrations*
+- `b2c3d4e5f6a7` — achievements, user_streaks, journal_entries, quick_logs, emergency_health_cards
+- `d4e5f6a7b8c9` — notification_logs, reports
 
 **Analytics**
 - Correlation analysis engine
