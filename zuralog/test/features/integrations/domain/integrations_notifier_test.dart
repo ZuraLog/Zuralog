@@ -337,13 +337,13 @@ void main() {
   });
 
   group('IntegrationsNotifier — defaults', () {
-    test('loads all 8 default integrations when no persisted state', () async {
+    test('loads all 9 default integrations when no persisted state', () async {
       SharedPreferences.setMockInitialValues({});
       final notifier = _makeNotifier();
 
       await notifier.loadIntegrations();
 
-      expect(notifier.state.integrations.length, 8);
+      expect(notifier.state.integrations.length, 9); // strava, apple_health, fitbit, oura, withings, polar, google_health_connect, garmin, whoop
       expect(notifier.state.isLoading, isFalse);
     });
 

@@ -47,7 +47,7 @@ import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
 import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
-import 'package:zuralog/features/auth/presentation/onboarding/profile_questionnaire_screen.dart';
+import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
@@ -191,7 +191,7 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.profileQuestionnairePath,
       name: RouteNames.profileQuestionnaire,
-      builder: (context, state) => const ProfileQuestionnaireScreen(),
+      builder: (context, state) => const OnboardingFlowScreen(),
     ),
 
     // ── Settings (pushed over shell — nested sub-routes) ──────────────────

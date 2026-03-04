@@ -201,6 +201,22 @@ abstract final class AppColors {
   /// Secondary button background — dark mode (dark translucent grey).
   static const Color secondaryButtonDark = Color(0xFF2C2C2E);
 
+  // ── Brand / Integration Colors ────────────────────────────────────────────
+  // Official brand palette for third-party app integration tiles.
+  // Used only in integration UI (connect_apps_step, integrations hub).
+
+  /// Strava brand orange.
+  static const Color brandStrava = Color(0xFFFC4C02);
+
+  /// Fitbit brand teal.
+  static const Color brandFitbit = Color(0xFF00B0B9);
+
+  /// Oura Ring brand indigo.
+  static const Color brandOura = Color(0xFF514689);
+
+  /// MyFitnessPal brand blue.
+  static const Color brandMfp = Color(0xFF0070D1);
+
   // ── Legacy compatibility alias ────────────────────────────────────────────
   // Kept to avoid breaking existing widgets that reference the old `nutrition`
   // constant. New code should use [categoryNutrition] for consistency.

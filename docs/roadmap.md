@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-04 (feat/data-tab merged — Data tab fully built; mock data layer moved to Phase 9, after all screens complete)
+**Last Updated:** 2026-03-05 (feat/onboarding-rebuild — 6-step onboarding flow built; screens.md updated with all MVP feature additions)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -204,6 +204,10 @@
 | P2 | Profile (side panel or pushed) | ✅ Complete | Phase 8 |
 | P2 | Privacy Policy | ✅ Complete | Phase 8 |
 | P2 | Terms of Service | ✅ Complete | Phase 8 |
+| P0 | Onboarding Flow (6-step rebuild) | ✅ Complete | feat/onboarding-rebuild — replaces ProfileQuestionnaire; Welcome, Goals, Persona, Connect Apps, Notifications, Discovery steps |
+| P0 | Emergency Health Card | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
+| P0 | Emergency Health Card Edit | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
+| P1 | Quick Log Bottom Sheet | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
 
 ### Phase 9 — Mock Data Layer (`--dart-define=USE_MOCK=true`)
 

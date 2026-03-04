@@ -92,14 +92,29 @@ void main() {
     testWidgets('renders all 8 navigation tiles', (tester) async {
       await tester.pumpWidget(_buildHarness());
       await tester.pump();
+
+      // Tiles visible without scrolling.
       expect(find.text('Account'), findsOneWidget);
       expect(find.text('Notifications'), findsOneWidget);
       expect(find.text('Appearance'), findsOneWidget);
       expect(find.text('Coach'), findsOneWidget);
       expect(find.text('Integrations'), findsOneWidget);
-      expect(find.text('Privacy & Data'), findsOneWidget);
       expect(find.text('Subscription'), findsOneWidget);
-      expect(find.text('About'), findsOneWidget);
+
+      // Tiles that may require scrolling — use scrollUntilVisible.
+      await tester.scrollUntilVisible(
+        find.text('Privacy & Data'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Privacy & Data'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('About Zuralog'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('About Zuralog'), findsOneWidget);
     });
 
     testWidgets('Account tile navigates to /settings/account', (tester) async {
@@ -132,6 +147,11 @@ void main() {
         (tester) async {
       await tester.pumpWidget(_buildHarness());
       await tester.pump();
+
+      // Ensure the tile is scrolled into view before tapping.
+      await tester.ensureVisible(find.text('Privacy & Data'));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Privacy & Data'));
       await tester.pumpAndSettle();
       expect(find.text('stub:privacy'), findsOneWidget);

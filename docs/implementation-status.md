@@ -529,3 +529,38 @@ Full Trends tab UI — 4 screens built with Riverpod state management, design sy
 | Scatter plot via `fl_chart` `ScatterChart` | Already a project dependency (used in Progress tab); avoids adding `syncfusion_flutter_charts` which requires a license key |
 | "Coming soon" snackbar for PDF export | PDF generation requires a native plugin (`pdf`, `printing`) not yet in pubspec; surface the intent without a broken flow |
 | `DataFreshness` color thresholds: green ≤1h, yellow ≤24h, red >24h | Matches Apple Health's own staleness UX; users expect sub-hour freshness for wearable data |
+
+---
+
+## Phase 9 — Onboarding Rebuild (2026-03-05)
+
+**Branch:** `feat/onboarding-rebuild`
+**Status:** Complete
+
+Replaced the old 3-field `ProfileQuestionnaireScreen` with a new 6-step paginated `OnboardingFlowScreen`. Updated `docs/screens.md` to v1.2 with all MVP feature additions from `mvp-features.md` Section 8.
+
+**New files:**
+- `zuralog/lib/features/onboarding/presentation/onboarding_flow_screen.dart` — `PageView` container with animated dot indicator, Back/Next bottom nav (hidden on step 0), completion handler writes to `/api/v1/preferences`
+- `zuralog/lib/features/onboarding/presentation/steps/welcome_step.dart` — Animated logo fade/slide, brand headline, "Get Started" CTA
+- `zuralog/lib/features/onboarding/presentation/steps/goals_step.dart` — 2-col multi-select grid of 8 health goals; requires ≥1 selection to advance
+- `zuralog/lib/features/onboarding/presentation/steps/persona_step.dart` — 3 AI persona cards (Tough Love / Balanced / Gentle) + Proactivity slider (Low / Medium / High)
+- `zuralog/lib/features/onboarding/presentation/steps/connect_apps_step.dart` — Informational grid of 6 featured integrations with "Later" badge; no OAuth during onboarding
+- `zuralog/lib/features/onboarding/presentation/steps/notifications_step.dart` — Morning Briefing toggle + time picker, Smart Reminders toggle, Wellness Check-in toggle + time picker
+- `zuralog/lib/features/onboarding/presentation/steps/discovery_step.dart` — "Where did you hear about us?" picker; fires `onboarding_discovery` PostHog event on selection
+
+**Modified files:**
+- `zuralog/lib/core/router/app_router.dart` — Route `profileQuestionnairePath` now imports and instantiates `OnboardingFlowScreen` instead of `ProfileQuestionnaireScreen`
+
+**Documentation updates:**
+- `docs/screens.md` → v1.2: Auth & Onboarding section replaced with 6-step flow spec; Quick Log Bottom Sheet added to Today Tab; Emergency Health Card + Edit added to Settings; all existing screen descriptions updated with MVP feature additions (Health Score hero, Data Maturity banner, Wellness Check-in, streak badges, file attachments, memory management, story-style Weekly Report, personalized AI starters, expanded Notifications settings, Appearance theme/haptics, Coach proactivity selector, Integrations sync badges, Emergency Health Card link in Profile)
+- `docs/roadmap.md` → Onboarding Flow marked ✅ Complete; Emergency Health Card, Emergency Health Card Edit, and Quick Log Bottom Sheet added as 🔜 Planned
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Keep `ProfileQuestionnaireScreen` on disk (unused) | Low risk to leave; avoids git history churn; router no longer references it so it's dead code harmlessly |
+| `ConnectAppsStep` is informational only (no OAuth) | OAuth during onboarding creates drop-off; users who haven't decided which apps to connect are forced to skip anyway; Settings → Integrations is the right context for OAuth |
+| `WelcomeStep` manages its own CTA (Back/Next hidden) | Step 0 has no "Back" destination and a custom "Get Started" CTA — the shared bottom nav would be redundant and visually wrong |
+| `activeThumbColor` instead of deprecated `activeColor` on Switch | `activeColor` was deprecated in Flutter v3.31; `activeThumbColor` is the correct API going forward |
+| PostHog event fired in `DiscoveryStep` on selection (not on complete) | The discovery question is the last step; firing on selection ensures the event is captured even if the user backgrounds the app before tapping "Finish" |

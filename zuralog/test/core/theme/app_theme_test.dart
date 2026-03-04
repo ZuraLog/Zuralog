@@ -65,11 +65,11 @@ void main() {
       expect(family, anyOf(equals('Inter'), isNull));
     });
 
-    test('card shape has 24px corner radius', () {
+    test('card shape has 20px corner radius', () {
       final shape = light.cardTheme.shape as RoundedRectangleBorder?;
       expect(shape, isNotNull);
       final radius = (shape!.borderRadius as BorderRadius).topLeft.x;
-      expect(radius, 24.0);
+      expect(radius, 20.0); // AppDimens.radiusCard = 20
     });
 
     test('ElevatedButton background is Sage Green', () {

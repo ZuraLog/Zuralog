@@ -1,0 +1,254 @@
+/// Zuralog — Onboarding Step 3: AI Persona.
+///
+/// Presents 3 persona cards (Motivator, Analyst, Coach) and a proactivity
+/// slider. The selected persona determines the AI coach's communication style.
+library;
+
+import 'package:flutter/material.dart';
+
+import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
+
+// ── Persona Model ─────────────────────────────────────────────────────────────
+
+class _Persona {
+  const _Persona({
+    required this.id,
+    required this.emoji,
+    required this.title,
+    required this.description,
+  });
+
+  final String id;
+  final String emoji;
+  final String title;
+  final String description;
+}
+
+const List<_Persona> _personas = [
+  _Persona(
+    id: 'motivator',
+    emoji: '🔥',
+    title: 'Motivator',
+    description: 'Energetic, upbeat, pushes you to achieve more every day.',
+  ),
+  _Persona(
+    id: 'analyst',
+    emoji: '📊',
+    title: 'Analyst',
+    description: 'Data-driven, precise, explains the numbers behind your health.',
+  ),
+  _Persona(
+    id: 'coach',
+    emoji: '🧘',
+    title: 'Coach',
+    description: 'Balanced, supportive, focuses on sustainable long-term habits.',
+  ),
+];
+
+// ── Step Widget ────────────────────────────────────────────────────────────────
+
+/// Step 3 — AI persona selection + proactivity toggle.
+class PersonaStep extends StatelessWidget {
+  const PersonaStep({
+    super.key,
+    required this.selectedPersona,
+    required this.proactivity,
+    required this.onPersonaChanged,
+    required this.onProactivityChanged,
+  });
+
+  final String selectedPersona;
+  final double proactivity;
+  final ValueChanged<String> onPersonaChanged;
+  final ValueChanged<double> onProactivityChanged;
+
+  String get _proactivityLabel {
+    if (proactivity < 0.35) return 'Quiet — only when I ask';
+    if (proactivity < 0.7) return 'Balanced';
+    return 'Proactive — daily nudges';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceLg,
+        AppDimens.spaceLg,
+        AppDimens.spaceLg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Heading ────────────────────────────────────────────────────
+          Text(
+            'Choose your\nAI persona',
+            style: AppTextStyles.h1.copyWith(
+              color: colorScheme.onSurface,
+              height: 1.15,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'Pick the coaching style that resonates with you.',
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+          ),
+
+          const SizedBox(height: AppDimens.spaceXl),
+
+          // ── Persona cards ─────────────────────────────────────────────
+          ...List.generate(_personas.length, (index) {
+            final persona = _personas[index];
+            final isSelected = persona.id == selectedPersona;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom:
+                    index < _personas.length - 1 ? AppDimens.spaceMd : 0,
+              ),
+              child: _PersonaCard(
+                persona: persona,
+                isSelected: isSelected,
+                onTap: () => onPersonaChanged(persona.id),
+              ),
+            );
+          }),
+
+          const SizedBox(height: AppDimens.spaceXl),
+
+          // ── Proactivity section ───────────────────────────────────────
+          Text(
+            'Proactivity',
+            style: AppTextStyles.h3.copyWith(color: colorScheme.onSurface),
+          ),
+          const SizedBox(height: AppDimens.spaceXs),
+          Text(
+            'How often should your AI coach reach out?',
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: AppColors.primary,
+              inactiveTrackColor: AppColors.borderDark,
+              thumbColor: AppColors.primary,
+              overlayColor: AppColors.primary.withValues(alpha: 0.1),
+              trackHeight: 4,
+              thumbShape:
+                  const RoundSliderThumbShape(enabledThumbRadius: 10),
+            ),
+            child: Slider(
+              value: proactivity,
+              onChanged: onProactivityChanged,
+            ),
+          ),
+          Center(
+            child: Text(
+              _proactivityLabel,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Persona Card ──────────────────────────────────────────────────────────────
+
+class _PersonaCard extends StatelessWidget {
+  const _PersonaCard({
+    required this.persona,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final _Persona persona;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : colorScheme.surface,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.borderDark,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        child: Row(
+          children: [
+            // Emoji icon in a circle.
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.15)
+                    : colorScheme.onSurface.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                  child: Text(
+                    persona.emoji,
+                    style: AppTextStyles.body.copyWith(fontSize: 22),
+                  ),
+              ),
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    persona.title,
+                    style: AppTextStyles.h3.copyWith(
+                      color: isSelected
+                          ? AppColors.primary
+                          : colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    persona.description,
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            // Selection check.
+            AnimatedOpacity(
+              opacity: isSelected ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.primary,
+                size: AppDimens.iconMd,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

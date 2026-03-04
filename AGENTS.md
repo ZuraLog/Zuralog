@@ -65,6 +65,7 @@ Available MCP servers:
 - Create a new branch (e.g., `feat/task-name`) before executing any plan. **Never work on `main`.**
 - Commit and push at every logical checkpoint. Do not wait for perfection.
 - Merge only when the entire phase is complete with zero errors/warnings. **Squash merge** to keep `main` history clean.
+- When available (e.g., OpenCode), use **Claude Haiku 4.5** as the subagent model for git operations to save costs.
 
 ### 3. Context Awareness
 Before starting work, read the relevant docs in `docs/` for context — `architecture.md` for backend tasks, `design.md` for UI tasks, the relevant file in `docs/integrations/` for integration work. Do not assume — verify against the actual codebase.
