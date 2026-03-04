@@ -50,9 +50,3 @@ final coachQuickActionsProvider =
     FutureProvider<List<QuickAction>>((ref) async {
   return ref.read(coachRepositoryProvider).fetchQuickActions();
 });
-
-// ── Active Conversation Notifier ──────────────────────────────────────────────
-
-/// Tracks the ID of the currently open conversation (null = new chat).
-final activeConversationIdProvider =
-    StateProvider<String?>((ref) => null);

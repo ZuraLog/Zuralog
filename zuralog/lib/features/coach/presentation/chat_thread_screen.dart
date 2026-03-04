@@ -11,7 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:zuralog/core/haptics/haptic_providers.dart';
+import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -53,6 +53,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     // In production: append message to provider, stream AI response.
     // Scroll to bottom after state update.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
@@ -67,6 +68,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   Widget build(BuildContext context) {
     final messagesAsync =
         ref.watch(coachMessagesProvider(widget.conversationId));
+    // Watch unconditionally so title stays reactive regardless of load order.
+    final conversations = ref.watch(coachConversationsProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -76,8 +79,6 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
         title: messagesAsync.maybeWhen(
           data: (msgs) {
             // Derive title from conversation list if available.
-            final conversations =
-                ref.watch(coachConversationsProvider).valueOrNull;
             final convo = conversations?.where(
               (c) => c.id == widget.conversationId,
             ).firstOrNull;

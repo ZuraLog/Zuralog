@@ -236,39 +236,3 @@ class QuickAction {
   @override
   int get hashCode => id.hashCode;
 }
-
-// ── Integration Context ───────────────────────────────────────────────────────
-
-/// A connected integration that the AI coach can access.
-@immutable
-class IntegrationContext {
-  /// Creates an [IntegrationContext].
-  const IntegrationContext({
-    required this.id,
-    required this.name,
-    required this.iconPath,
-    this.lastSynced,
-  });
-
-  /// Integration identifier (e.g., 'fitbit', 'strava').
-  final String id;
-
-  /// Display name (e.g., 'Fitbit').
-  final String name;
-
-  /// Asset path to the integration icon.
-  final String iconPath;
-
-  /// When data was last synced from this integration.
-  final DateTime? lastSynced;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is IntegrationContext &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-}
