@@ -182,6 +182,15 @@ class ApiClient {
   Future<Response<dynamic>> patch(String path, {Map<String, dynamic>? body}) =>
       _dio.patch(path, data: body);
 
+  /// Sends a DELETE request to the given [path].
+  ///
+  /// Used for resource deletion operations. Returns the Dio [Response]
+  /// containing the server's response (typically 204 No Content on success).
+  Future<Response<dynamic>> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) => _dio.delete(path, queryParameters: queryParameters);
+
   // -------------------------------------------------------------------------
   // Error Helpers
   // -------------------------------------------------------------------------

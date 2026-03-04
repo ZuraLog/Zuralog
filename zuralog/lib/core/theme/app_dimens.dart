@@ -39,6 +39,9 @@ abstract final class AppDimens {
   /// Button corner radius — pill-shaped (fully rounded).
   static const double radiusButton = 100;
 
+  /// Medium button corner radius — 14px per AGENTS.md primary action spec.
+  static const double radiusButtonMd = 14;
+
   /// Input field corner radius.
   static const double radiusInput = 12;
 
