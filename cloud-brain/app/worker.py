@@ -130,6 +130,27 @@ celery_app.conf.beat_schedule = {
         "task": "polar.check_webhook_status",
         "schedule": 86400.0,  # 24 hours
     },
+    # Phase 2 — notification / reminder / report / alert tasks
+    "send-morning-briefings-15m": {
+        "task": "app.tasks.morning_briefing_task.send_morning_briefings_task",
+        "schedule": 900.0,  # 15 minutes
+    },
+    "evaluate-reminders-1h": {
+        "task": "app.tasks.smart_reminder_tasks.evaluate_reminders_task",
+        "schedule": 3600.0,  # 1 hour
+    },
+    "generate-weekly-reports-monday": {
+        "task": "app.tasks.report_tasks.generate_weekly_reports_task",
+        "schedule": 604800.0,  # 7 days — triggered Monday 06:00 UTC via crontab
+    },
+    "generate-monthly-reports-1st": {
+        "task": "app.tasks.report_tasks.generate_monthly_reports_task",
+        "schedule": 2592000.0,  # ~30 days — triggered 1st of month 06:00 UTC
+    },
+    "check-stale-integrations-daily": {
+        "task": "app.tasks.insight_tasks.check_stale_integrations_task",
+        "schedule": 86400.0,  # 24 hours
+    },
 }
 
 # Auto-discover tasks in services and tasks modules

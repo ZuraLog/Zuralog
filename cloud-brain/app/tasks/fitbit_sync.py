@@ -966,3 +966,123 @@ def backfill_fitbit_data_task(user_id: str, days_back: int = 30) -> dict[str, An
             return {"status": "ok", "days_back": days_back, **totals}
 
     return asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# Fitbit Webhook Subscription Registration Task
+# ---------------------------------------------------------------------------
+
+
+@celery_app.task(name="app.tasks.fitbit_sync.register_fitbit_webhook_task")
+def register_fitbit_webhook_task() -> dict[str, Any]:
+    """Register Fitbit webhook API subscriptions for the app.
+
+    This task must be run **once after deployment** with a valid
+    ``FITBIT_WEBHOOK_VERIFY_CODE`` and ``FITBIT_WEBHOOK_SUBSCRIBER_ID``
+    configured in the environment.
+
+    Fitbit Subscription API docs:
+      https://dev.fitbit.com/build/reference/web-api/subscriptions/
+
+    Registers subscriptions for all four supported collection types:
+      - activities
+      - body
+      - foods
+      - sleep
+
+    Each subscription is registered via:
+      POST https://api.fitbit.com/1/user/-/{collection_type}/apiSubscriptions/{subscriber_id}.json
+
+    Authentication:
+      Uses app-level Basic Auth (client_id:client_secret) — NOT user OAuth tokens.
+      This is the Fitbit "App Subscription" model where Fitbit pushes notifications
+      for ALL users who have authorized the app.
+
+    Returns:
+        Dict with ``registered`` list of collection types and any ``errors``.
+
+    Usage:
+        # One-time setup after deploying to production:
+        celery -A app.worker call app.tasks.fitbit_sync.register_fitbit_webhook_task
+    """
+    from app.config import settings as _settings  # noqa: PLC0415
+
+    logger.info("register_fitbit_webhook_task: starting Fitbit webhook registration")
+
+    if not _settings.fitbit_webhook_verify_code:
+        logger.error("register_fitbit_webhook_task: FITBIT_WEBHOOK_VERIFY_CODE not set — aborting")
+        return {"status": "error", "reason": "FITBIT_WEBHOOK_VERIFY_CODE not configured"}
+
+    if not _settings.fitbit_webhook_subscriber_id:
+        logger.error("register_fitbit_webhook_task: FITBIT_WEBHOOK_SUBSCRIBER_ID not set — aborting")
+        return {"status": "error", "reason": "FITBIT_WEBHOOK_SUBSCRIBER_ID not configured"}
+
+    if not _settings.fitbit_client_id or not _settings.fitbit_client_secret:
+        logger.error("register_fitbit_webhook_task: Fitbit OAuth credentials not set — aborting")
+        return {"status": "error", "reason": "FITBIT_CLIENT_ID or FITBIT_CLIENT_SECRET not configured"}
+
+    subscriber_id = _settings.fitbit_webhook_subscriber_id
+    collections = ["activities", "body", "foods", "sleep"]
+    registered: list[str] = []
+    errors: list[dict] = []
+
+    async def _run() -> dict[str, Any]:
+        import base64  # noqa: PLC0415
+
+        credentials = base64.b64encode(
+            f"{_settings.fitbit_client_id}:{_settings.fitbit_client_secret}".encode()
+        ).decode()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for collection in collections:
+                url = f"{_FITBIT_API_BASE}/1/user/-/{collection}/apiSubscriptions/{subscriber_id}.json"
+                logger.info(
+                    "register_fitbit_webhook_task: registering %s subscription",
+                    collection,
+                )
+                try:
+                    resp = await client.post(
+                        url,
+                        headers={
+                            "Authorization": f"Basic {credentials}",
+                            "Content-Type": "application/json",
+                            "Accept-Language": "en_US",
+                        },
+                    )
+                    if resp.status_code in (200, 201):
+                        registered.append(collection)
+                        logger.info(
+                            "register_fitbit_webhook_task: %s subscription registered (HTTP %d)",
+                            collection,
+                            resp.status_code,
+                        )
+                    else:
+                        errors.append(
+                            {
+                                "collection": collection,
+                                "status_code": resp.status_code,
+                                "body": resp.text[:500],
+                            }
+                        )
+                        logger.warning(
+                            "register_fitbit_webhook_task: %s failed: HTTP %d — %s",
+                            collection,
+                            resp.status_code,
+                            resp.text[:200],
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    errors.append({"collection": collection, "error": str(exc)})
+                    logger.exception(
+                        "register_fitbit_webhook_task: %s error: %s",
+                        collection,
+                        exc,
+                    )
+
+        logger.info(
+            "register_fitbit_webhook_task: complete — registered=%s errors=%d",
+            registered,
+            len(errors),
+        )
+        return {"status": "ok", "registered": registered, "errors": errors}
+
+    return asyncio.run(_run())

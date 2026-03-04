@@ -100,5 +100,5 @@ abstract final class AppDimens {
   static const double navBarBlurSigma = 20;
 
   /// Navigation bar frosted glass background opacity.
-  static const double navBarFrostOpacity = 0.85;
+  static const double navBarFrostOpacity = 0.70;
 }

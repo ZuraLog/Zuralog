@@ -734,6 +734,44 @@ make build-prod-ios
 
 ---
 
+## AI Agent Tooling
+
+### Git Operations — Use CLI, Not GitHub MCP
+
+All git operations (branch creation, committing, pushing, status, log, diff) must use the **`git` CLI** executed programmatically via shell commands. Do **not** enable the GitHub MCP server for these tasks — `git` handles the full branch/commit/push workflow without it.
+
+```bash
+# Create and switch to a feature branch
+git checkout -b feat/my-feature
+
+# Stage and commit
+git add .
+git commit -m "feat(scope): description"
+
+# Push with tracking
+git push -u origin feat/my-feature
+```
+
+**Only enable the GitHub MCP server** when a task explicitly requires the GitHub REST/GraphQL API and cannot be accomplished with `git` or the `gh` CLI — for example: querying GitHub Actions run status by ID, reading PR review comment threads, or automating issue management via the API. If `git` or `gh` can do it, use those tools.
+
+```bash
+# gh CLI handles most GitHub-specific operations without the MCP server
+gh pr create --title "..." --body "..."
+gh pr list
+gh issue create --title "..."
+gh run list
+```
+
+### MCP Servers in Use
+
+| MCP Server | Purpose | When to Enable |
+|---|---|---|
+| **Supabase** | Schema inspection, migration validation, RLS verification | Always enabled during backend work |
+| **GitHub** | GitHub API (PR reviews, Actions, issue automation) | Only when `git`/`gh` CLI cannot accomplish the task |
+| **Filesystem** | File read/write/edit | Built into Claude Code — always available |
+
+---
+
 ## Troubleshooting
 
 ### `flutter` not found after install

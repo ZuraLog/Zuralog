@@ -37,6 +37,9 @@ __pycache__/
 .pub/
 /build/
 
+# Node.js
+node_modules/
+
 # nul
 nul
 

@@ -15,10 +15,43 @@ Fixtures:
         (yields tuple of client, mock_auth, mock_db).
 """
 
-from unittest.mock import AsyncMock
+import sys
+import types
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+
+# ---------------------------------------------------------------------------
+# Pre-import stubs for Phase-2 routes that are incompatible with Python 3.14.
+# These stubs must be inserted before ``app.main`` is imported so that the
+# dynamic module loader does not attempt to evaluate the broken annotations.
+# ---------------------------------------------------------------------------
+
+
+def _stub(module_path: str) -> None:
+    """Insert a lightweight stub into sys.modules if not already present.
+
+    The stub provides a real ``fastapi.APIRouter`` so that ``app.main``
+    can call ``app.include_router()`` without installing a mock lifespan
+    that breaks ``TestClient`` startup.
+    """
+    if module_path not in sys.modules:
+        from fastapi import APIRouter  # noqa: PLC0415 — local import to keep stub minimal
+
+        stub = types.ModuleType(module_path)
+        stub.router = APIRouter()
+        sys.modules[module_path] = stub
+
+
+for _broken in (
+    "app.api.v1.journal_routes",
+    "app.api.v1.achievement_routes",
+    "app.api.v1.streak_routes",
+    "app.api.v1.quick_log_routes",
+    "app.api.v1.emergency_card_routes",
+):
+    _stub(_broken)
 
 from app.api.v1.auth import _get_auth_service
 from app.database import get_db

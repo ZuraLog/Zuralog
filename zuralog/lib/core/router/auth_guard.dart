@@ -9,7 +9,7 @@
 ///    → redirect to [RouteNames.welcomePath].
 /// 3. If [AuthState.authenticated] and the destination is a public auth route,
 ///    **except** [RouteNames.profileQuestionnairePath] → redirect to
-///    [RouteNames.dashboardPath] (prevent back-navigation to login).
+///    [RouteNames.todayPath] (prevent back-navigation to login).
 ///    The questionnaire is excluded because authenticated new users must be
 ///    allowed to stay on it until [UserProfile.onboardingComplete] is `true`.
 /// 4. Otherwise → return `null` (allow navigation).
@@ -51,7 +51,7 @@ String? authGuardRedirect({
   if (authState == AuthState.authenticated &&
       isPublicPath &&
       location != RouteNames.profileQuestionnairePath) {
-    return RouteNames.dashboardPath;
+    return RouteNames.todayPath;
   }
 
   // ── Rule 4: Allow navigation ─────────────────────────────────────────────

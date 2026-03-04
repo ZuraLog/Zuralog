@@ -20,7 +20,6 @@ import base64
 import hashlib
 import logging
 import os
-import secrets
 from datetime import datetime, timedelta, timezone
 
 import httpx

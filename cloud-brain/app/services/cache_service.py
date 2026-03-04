@@ -10,7 +10,6 @@ Celery and the RateLimiter — both share the same Upstash database
 but communicate via different protocols (REST vs TCP).
 """
 
-import hashlib
 import json
 import logging
 from collections.abc import Callable

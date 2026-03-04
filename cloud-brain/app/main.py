@@ -28,6 +28,8 @@ from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.health_score_routes import router as health_score_router
+from app.api.v1.preferences_routes import router as preferences_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
@@ -45,6 +47,14 @@ from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.transcribe import router as transcribe_router
 from app.api.v1.users import router as users_router
 from app.api.v1.webhooks import router as webhooks_router
+from app.api.v1.achievement_routes import router as achievement_router
+from app.api.v1.streak_routes import router as streak_router
+from app.api.v1.journal_routes import router as journal_router
+from app.api.v1.quick_log_routes import router as quick_log_router
+from app.api.v1.emergency_card_routes import router as emergency_card_router
+from app.api.v1.notification_routes import router as notification_router
+from app.api.v1.report_routes import router as report_router
+from app.api.v1.attachments import router as attachments_router
 from app.config import settings
 from app.database import async_session
 from app.limiter import limiter
@@ -291,6 +301,16 @@ app.include_router(polar_router, prefix="/api/v1")  # Polar integration
 app.include_router(polar_webhook_router, prefix="/api/v1")  # Polar webhooks
 app.include_router(withings_router, prefix="/api/v1")  # Withings integration
 app.include_router(withings_webhook_router, prefix="/api/v1")  # Withings webhooks
+app.include_router(preferences_router, prefix="/api/v1")  # Phase 2 — user preferences
+app.include_router(health_score_router, prefix="/api/v1")  # Phase 2 — health score
+app.include_router(achievement_router, prefix="/api/v1")  # Phase 2 — achievements
+app.include_router(streak_router, prefix="/api/v1")  # Phase 2 — streaks
+app.include_router(journal_router, prefix="/api/v1")  # Phase 2 — journal entries
+app.include_router(quick_log_router, prefix="/api/v1")  # Phase 2 — quick logs
+app.include_router(emergency_card_router, prefix="/api/v1")  # Phase 2 — emergency card
+app.include_router(notification_router, prefix="/api/v1")  # Phase 2 — notification centre
+app.include_router(report_router, prefix="/api/v1")  # Phase 2 — weekly/monthly reports
+app.include_router(attachments_router, prefix="/api/v1")  # Phase 2 — chat attachments
 
 
 @app.get("/health")

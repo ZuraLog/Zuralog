@@ -20,22 +20,55 @@ from app.models.integration import Integration
 from app.models.user import SubscriptionTier, User
 from app.models.user_device import UserDevice
 from app.models.user_goal import GoalPeriod, UserGoal
+from app.models.user_preferences import (  # noqa: F401
+    CoachPersona,
+    ProactivityLevel,
+    Theme,
+    UnitsSystem,
+    UserPreferences,
+)
+from app.models.achievement import ACHIEVEMENT_REGISTRY, Achievement  # noqa: F401
+from app.models.user_streak import StreakType, UserStreak  # noqa: F401
+from app.models.journal_entry import JournalEntry  # noqa: F401
+from app.models.quick_log import MetricType, QuickLog  # noqa: F401
+from app.models.emergency_card import EmergencyHealthCard  # noqa: F401
+from app.models.insight import Insight, InsightType  # noqa: F401
+from app.models.notification_log import NotificationLog, NotificationType  # noqa: F401
+from app.models.report import Report, ReportType  # noqa: F401
 
 __all__ = [
+    "ACHIEVEMENT_REGISTRY",
     "ActivityType",
     "Base",
     "BloodPressureRecord",
+    "CoachPersona",
     "Conversation",
     "DailyHealthMetrics",
+    "EmergencyHealthCard",
     "GoalPeriod",
+    "Insight",
+    "InsightType",
     "Integration",
+    "JournalEntry",
     "Message",
+    "MetricType",
+    "NotificationLog",
+    "NotificationType",
     "NutritionEntry",
+    "ProactivityLevel",
+    "QuickLog",
+    "Report",
+    "ReportType",
     "SleepRecord",
+    "StreakType",
     "SubscriptionTier",
+    "Theme",
     "UnifiedActivity",
+    "UnitsSystem",
     "User",
     "UserDevice",
     "UserGoal",
+    "UserPreferences",
+    "UserStreak",
     "WeightMeasurement",
 ]

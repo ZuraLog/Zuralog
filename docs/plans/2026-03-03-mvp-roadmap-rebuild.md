@@ -260,11 +260,11 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_preferences_routes.py`
 
 **What to build:**
-- [ ] `UserPreferences` model: `user_id`, `coach_persona` (enum: tough_love/balanced/gentle), `proactivity_level` (enum: low/medium/high), `dashboard_layout` (JSON — card order + visibility + colors), `notification_settings` (JSON — all toggles from mvp-features.md Section 10), `theme` (enum: dark/light/system), `haptic_enabled` (bool), `tooltips_enabled` (bool), `onboarding_complete` (bool), `morning_briefing_time` (time), `checkin_reminder_time` (time), `quiet_hours_start` (time), `quiet_hours_end` (time), `goals` (JSON array)
-- [ ] CRUD endpoints: `GET /api/v1/preferences`, `PUT /api/v1/preferences`, `PATCH /api/v1/preferences` (partial update)
-- [ ] Default values populated on first access
-- [ ] RLS: users can only access their own preferences
-- [ ] Tests: CRUD operations, defaults, partial update, auth guard
+- [x] `UserPreferences` model: `user_id`, `coach_persona` (enum: tough_love/balanced/gentle), `proactivity_level` (enum: low/medium/high), `dashboard_layout` (JSON — card order + visibility + colors), `notification_settings` (JSON — all toggles from mvp-features.md Section 10), `theme` (enum: dark/light/system), `haptic_enabled` (bool), `tooltips_enabled` (bool), `onboarding_complete` (bool), `morning_briefing_time` (time), `checkin_reminder_time` (time), `quiet_hours_start` (time), `quiet_hours_end` (time), `goals` (JSON array)
+- [x] CRUD endpoints: `GET /api/v1/preferences`, `PUT /api/v1/preferences`, `PATCH /api/v1/preferences` (partial update)
+- [x] Default values populated on first access
+- [x] RLS: users can only access their own preferences
+- [x] Tests: CRUD operations, defaults, partial update, auth guard
 
 **Commit:** `feat(api): add UserPreferences model and CRUD endpoints`
 
@@ -277,15 +277,15 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_health_score.py`
 
 **What to build:**
-- [ ] `HealthScoreCalculator` service:
+- [x] `HealthScoreCalculator` service:
   - Inputs: sleep duration/quality (30%), HRV (20%), resting HR (15%), activity vs baseline (15%), sleep consistency (10%), steps vs goal (10%)
   - Normalize each input to 0-100 sub-score based on 30-day personal history (percentile)
   - Missing inputs excluded — weights redistribute proportionally
   - Minimum: 1 sleep OR 1 activity source required
   - Returns: composite score (0-100), sub-scores dict, AI commentary string, 7-day history
-- [ ] `GET /api/v1/health-score` endpoint (returns today's score + 7-day trend)
-- [ ] Celery task: recalculate score when new health data is ingested
-- [ ] Tests: full data, partial data, no data edge case, score ranges, commentary generation
+- [x] `GET /api/v1/health-score` endpoint (returns today's score + 7-day trend)
+- [x] Celery task: recalculate score when new health data is ingested
+- [x] Tests: full data, partial data, no data edge case, score ranges, commentary generation
 
 **Commit:** `feat(api): add Health Score calculation engine and endpoint`
 
@@ -297,15 +297,15 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_anomaly_detector.py`
 
 **What to build:**
-- [ ] `AnomalyDetector` service:
+- [x] `AnomalyDetector` service:
   - 30-day rolling average + standard deviation per metric per user
   - Trigger when reading > 2 standard deviations from mean
   - Minimum 14 days of data before activating
   - Returns: metric name, current value, baseline, deviation magnitude, severity (normal/elevated/critical)
-- [ ] Post-ingest Celery pipeline hook: check new data for anomalies
-- [ ] Generate anomaly insight cards (stored in insights table)
-- [ ] Push notification for critical severity anomalies
-- [ ] Tests: below threshold, above threshold, insufficient data, severity levels
+- [x] Post-ingest Celery pipeline hook: check new data for anomalies
+- [x] Generate anomaly insight cards (stored in insights table)
+- [x] Push notification for critical severity anomalies
+- [x] Tests: below threshold, above threshold, insufficient data, severity levels
 
 **Commit:** `feat(api): add Metric Anomaly Detection service`
 
@@ -318,17 +318,17 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_pinecone_memory_store.py`
 
 **What to build:**
-- [ ] `PineconeMemoryStore` implementing `MemoryStore` protocol
-- [ ] Namespace per user (Supabase user ID)
-- [ ] `save_memory(user_id, text, metadata)`: embed text → upsert to Pinecone
-- [ ] `query_memory(user_id, query, top_k=5)`: embed query → similarity search
-- [ ] `list_memories(user_id)`: list all stored memories with metadata
-- [ ] `delete_memory(user_id, memory_id)`: delete single memory
-- [ ] `clear_memories(user_id)`: delete all memories for user
-- [ ] Orchestrator integration: inject top-5 relevant memories into system prompt per request
-- [ ] Memory extraction: identify health-relevant statements in conversation and auto-store
-- [ ] API endpoints for Privacy & Data settings: `GET /api/v1/memories`, `DELETE /api/v1/memories/:id`, `DELETE /api/v1/memories`
-- [ ] Tests: CRUD operations, query relevance, namespace isolation, orchestrator integration
+- [x] `PineconeMemoryStore` implementing `MemoryStore` protocol
+- [x] Namespace per user (Supabase user ID)
+- [x] `save_memory(user_id, text, metadata)`: embed text → upsert to Pinecone
+- [x] `query_memory(user_id, query, top_k=5)`: embed query → similarity search
+- [x] `list_memories(user_id)`: list all stored memories with metadata
+- [x] `delete_memory(user_id, memory_id)`: delete single memory
+- [x] `clear_memories(user_id)`: delete all memories for user
+- [x] Orchestrator integration: inject top-5 relevant memories into system prompt per request
+- [x] Memory extraction: identify health-relevant statements in conversation and auto-store
+- [x] API endpoints for Privacy & Data settings: `GET /api/v1/memories`, `DELETE /api/v1/memories/:id`, `DELETE /api/v1/memories`
+- [x] Tests: CRUD operations, query relevance, namespace isolation, orchestrator integration
 
 **Commit:** `feat(api): add Pinecone vector store for AI long-term memory`
 
@@ -340,11 +340,11 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/agent/test_prompts.py`
 
 **What to build:**
-- [ ] Three persona system prompts: Tough Love, Balanced, Gentle
-- [ ] Proactivity level modifiers injected into system prompt
-- [ ] Memory-aware prompt template: `{base_persona} + {proactivity_modifier} + {relevant_memories} + {connected_integrations}`
-- [ ] Dynamic prompt assembly per request based on user preferences
-- [ ] Tests: correct persona selection, proactivity modifier injection, memory inclusion
+- [x] Three persona system prompts: Tough Love, Balanced, Gentle
+- [x] Proactivity level modifiers injected into system prompt
+- [x] Memory-aware prompt template: `{base_persona} + {proactivity_modifier} + {relevant_memories} + {connected_integrations}`
+- [x] Dynamic prompt assembly per request based on user preferences
+- [x] Tests: correct persona selection, proactivity modifier injection, memory inclusion
 
 **Commit:** `feat(agent): add configurable AI persona system prompts`
 
@@ -359,14 +359,14 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_insight_generator.py`
 
 **What to build:**
-- [ ] `Insight` model: `id`, `user_id`, `type` (enum: sleep_analysis, activity_progress, nutrition_summary, anomaly_alert, goal_nudge, correlation_discovery, streak_milestone, welcome), `title`, `body`, `data` (JSON — charts, numbers, sources), `reasoning` (AI explanation), `priority`, `created_at`, `read_at`, `dismissed_at`
-- [ ] `InsightGenerator` expansion:
+- [x] `Insight` model: `id`, `user_id`, `type` (enum: sleep_analysis, activity_progress, nutrition_summary, anomaly_alert, goal_nudge, correlation_discovery, streak_milestone, welcome), `title`, `body`, `data` (JSON — charts, numbers, sources), `reasoning` (AI explanation), `priority`, `created_at`, `read_at`, `dismissed_at`
+- [x] `InsightGenerator` expansion:
   - Generate daily insight cards after new health data ingestion (Celery)
   - Types: sleep analysis, activity progress, anomaly alerts, goal nudges, correlation discoveries
   - Time-of-Day awareness: morning/afternoon/evening/night content priority
   - Data Maturity awareness: adjust content based on data maturity level
-- [ ] API endpoints: `GET /api/v1/insights` (paginated, filtered by type/date), `PATCH /api/v1/insights/:id` (mark read/dismissed)
-- [ ] Tests: insight generation for each type, time-awareness, pagination, auth
+- [x] API endpoints: `GET /api/v1/insights` (paginated, filtered by type/date), `PATCH /api/v1/insights/:id` (mark read/dismissed)
+- [x] Tests: insight generation for each type, time-awareness, pagination, auth
 
 **Commit:** `feat(api): expand InsightGenerator with daily card pipeline`
 
@@ -377,11 +377,11 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_conversation_management.py`
 
 **What to build:**
-- [ ] `GET /api/v1/conversations` — list all conversations (title, created_at, preview snippet, message_count)
-- [ ] `PATCH /api/v1/conversations/:id` — rename, archive
-- [ ] `DELETE /api/v1/conversations/:id` — soft delete
-- [ ] AI-generated title on first user message (if not already implemented)
-- [ ] Tests: list, rename, archive, delete, auth guard
+- [x] `GET /api/v1/conversations` — list all conversations (title, created_at, preview snippet, message_count)
+- [x] `PATCH /api/v1/conversations/:id` — rename, archive
+- [x] `DELETE /api/v1/conversations/:id` — soft delete
+- [x] AI-generated title on first user message (if not already implemented)
+- [x] Tests: list, rename, archive, delete, auth guard
 
 **Commit:** `feat(api): add conversation list, rename, archive, delete endpoints`
 
@@ -392,12 +392,12 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_prompt_suggestions.py`
 
 **What to build:**
-- [ ] `GET /api/v1/prompts/suggestions` — returns 3-5 contextual prompt suggestions based on:
+- [x] `GET /api/v1/prompts/suggestions` — returns 3-5 contextual prompt suggestions based on:
   - User's latest synced data (recent anomalies, sleep trends, activity patterns)
   - User's goals
   - Time of day
-- [ ] Fallback to smart defaults when data is insufficient
-- [ ] Tests: with data, without data, time-based variation
+- [x] Fallback to smart defaults when data is insufficient
+- [x] Tests: with data, without data, time-based variation
 
 **Commit:** `feat(api): add personalized AI prompt suggestions endpoint`
 
@@ -408,14 +408,14 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_quick_actions.py`
 
 **What to build:**
-- [ ] `GET /api/v1/quick-actions` — returns prioritized action list based on:
+- [x] `GET /api/v1/quick-actions` — returns prioritized action list based on:
   - Time of day (morning/afternoon/evening/night)
   - Recent events (post-workout detection, new integration connected)
   - Data gaps (no water logged, no check-in today)
   - Goal proximity (800 steps from goal)
   - Proactivity level (low = fewer suggestions)
-- [ ] Each action: `id`, `title`, `subtitle`, `icon`, `prompt` (pre-filled chat message)
-- [ ] Tests: time-based actions, event-based actions, proactivity filtering
+- [x] Each action: `id`, `title`, `subtitle`, `icon`, `prompt` (pre-filled chat message)
+- [x] Tests: time-based actions, event-based actions, proactivity filtering
 
 **Commit:** `feat(api): add contextual Quick Actions endpoint`
 
@@ -429,18 +429,18 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_achievement_tracker.py`
 
 **What to build:**
-- [ ] `Achievement` model: `id`, `user_id`, `achievement_key` (string), `unlocked_at` (timestamp, nullable)
-- [ ] Achievement definitions (hard-coded registry):
+- [x] `Achievement` model: `id`, `user_id`, `achievement_key` (string), `unlocked_at` (timestamp, nullable)
+- [x] Achievement definitions (hard-coded registry):
   - Getting Started: first_integration, first_chat, first_insight
   - Consistency: streak_7, streak_30, streak_90, streak_365
   - Goals: first_goal, goals_5_complete, overachiever
   - Data: connected_3, data_rich_30, full_picture_5_categories
   - Coach: conversations_50, insights_100, memories_20
   - Health: improved_bedtime, personal_best, anomaly_aware_10
-- [ ] `AchievementTracker` service: check-and-unlock after relevant events
-- [ ] Push notification on unlock
-- [ ] API: `GET /api/v1/achievements` (all with locked/unlocked state), `GET /api/v1/achievements/recent` (last 5 unlocked)
-- [ ] Tests: unlock conditions, duplicate prevention, notification trigger
+- [x] `AchievementTracker` service: check-and-unlock after relevant events
+- [x] Push notification on unlock
+- [x] API: `GET /api/v1/achievements` (all with locked/unlocked state), `GET /api/v1/achievements/recent` (last 5 unlocked)
+- [x] Tests: unlock conditions, duplicate prevention, notification trigger
 
 **Commit:** `feat(api): add Achievement model and tracking service`
 
@@ -453,13 +453,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_streak_tracker.py`
 
 **What to build:**
-- [ ] `UserStreak` model: `user_id`, `streak_type` (enum: engagement, steps, workouts, checkin), `current_count`, `longest_count`, `last_activity_date`, `freeze_count` (max 2), `freeze_used_this_week`
-- [ ] Streak types: engagement (any data logged), step goal met, workout days, wellness check-in
-- [ ] Freeze mechanic: 1 free freeze per week, accumulates up to 2
-- [ ] Milestone celebrations at: 7, 14, 30, 60, 90, 180, 365 days
-- [ ] API: `GET /api/v1/streaks`, `POST /api/v1/streaks/:type/freeze` (use a freeze)
-- [ ] Celery task: end-of-day streak evaluation
-- [ ] Tests: increment, break, freeze, milestone detection, weekly freeze reset
+- [x] `UserStreak` model: `user_id`, `streak_type` (enum: engagement, steps, workouts, checkin), `current_count`, `longest_count`, `last_activity_date`, `freeze_count` (max 2), `freeze_used_this_week`
+- [x] Streak types: engagement (any data logged), step goal met, workout days, wellness check-in
+- [x] Freeze mechanic: 1 free freeze per week, accumulates up to 2
+- [x] Milestone celebrations at: 7, 14, 30, 60, 90, 180, 365 days
+- [x] API: `GET /api/v1/streaks`, `POST /api/v1/streaks/:type/freeze` (use a freeze)
+- [x] Celery task: end-of-day streak evaluation
+- [x] Tests: increment, break, freeze, milestone detection, weekly freeze reset
 
 **Commit:** `feat(api): add streak tracking engine with freeze mechanic`
 
@@ -472,10 +472,10 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_journal_routes.py`
 
 **What to build:**
-- [ ] `JournalEntry` model: `id`, `user_id`, `date`, `mood` (1-10), `energy` (1-10), `stress` (1-10), `sleep_quality` (1-10, optional), `notes` (text), `tags` (JSON array: "rest day", "stressful", "traveled", etc.), `created_at`
-- [ ] CRUD endpoints: `POST`, `GET` (by date range), `PUT`, `DELETE`
-- [ ] One entry per day constraint (upsert behavior)
-- [ ] Tests: create, update, list by date range, one-per-day constraint, auth
+- [x] `JournalEntry` model: `id`, `user_id`, `date`, `mood` (1-10), `energy` (1-10), `stress` (1-10), `sleep_quality` (1-10, optional), `notes` (text), `tags` (JSON array: "rest day", "stressful", "traveled", etc.), `created_at`
+- [x] CRUD endpoints: `POST`, `GET` (by date range), `PUT`, `DELETE`
+- [x] One entry per day constraint (upsert behavior)
+- [x] Tests: create, update, list by date range, one-per-day constraint, auth
 
 **Commit:** `feat(api): add JournalEntry model and CRUD endpoints`
 
@@ -488,13 +488,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_quick_log_routes.py`
 
 **What to build:**
-- [ ] `QuickLog` model: `id`, `user_id`, `metric_type` (enum: water, mood, energy, stress, sleep_quality, pain, notes), `value` (float, nullable), `text_value` (string, nullable for pain/notes), `tags` (JSON array for symptom chips), `logged_at`
-- [ ] `POST /api/v1/quick-log` — single entry
-- [ ] `POST /api/v1/quick-log/batch` — batch submit (entire check-in at once)
-- [ ] `GET /api/v1/quick-log` — history by date range and metric type
-- [ ] Shared storage with Wellness Check-in (same model, different access point)
-- [ ] Feed into analytics engine for correlations
-- [ ] Tests: single log, batch, history query, analytics feed
+- [x] `QuickLog` model: `id`, `user_id`, `metric_type` (enum: water, mood, energy, stress, sleep_quality, pain, notes), `value` (float, nullable), `text_value` (string, nullable for pain/notes), `tags` (JSON array for symptom chips), `logged_at`
+- [x] `POST /api/v1/quick-log` — single entry
+- [x] `POST /api/v1/quick-log/batch` — batch submit (entire check-in at once)
+- [x] `GET /api/v1/quick-log` — history by date range and metric type
+- [x] Shared storage with Wellness Check-in (same model, different access point)
+- [x] Feed into analytics engine for correlations
+- [x] Tests: single log, batch, history query, analytics feed
 
 **Commit:** `feat(api): add QuickLog model and endpoints for manual data entry`
 
@@ -507,10 +507,10 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_emergency_card_routes.py`
 
 **What to build:**
-- [ ] `EmergencyHealthCard` model: `user_id`, `blood_type`, `allergies` (JSON array), `medications` (JSON array), `conditions` (JSON array), `emergency_contacts` (JSON array of {name, relationship, phone}), `updated_at`
-- [ ] CRUD: `GET`, `PUT` (upsert)
-- [ ] Feed key fields into AI memory (medications, allergies, conditions)
-- [ ] Tests: create, update, read, memory integration
+- [x] `EmergencyHealthCard` model: `user_id`, `blood_type`, `allergies` (JSON array), `medications` (JSON array), `conditions` (JSON array), `emergency_contacts` (JSON array of {name, relationship, phone}), `updated_at`
+- [x] CRUD: `GET`, `PUT` (upsert)
+- [x] Feed key fields into AI memory (medications, allergies, conditions)
+- [x] Tests: create, update, read, memory integration
 
 **Commit:** `feat(api): add EmergencyHealthCard model and endpoints`
 
@@ -524,11 +524,11 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_notification_routes.py`
 
 **What to build:**
-- [ ] `NotificationLog` model: `id`, `user_id`, `title`, `body`, `type` (enum: insight, anomaly, streak, achievement, reminder, briefing, integration_alert), `deep_link` (URI for tap navigation), `sent_at`, `read_at`
-- [ ] Modify `PushService.send()` to persist every sent notification
-- [ ] `GET /api/v1/notifications` — paginated history grouped by day
-- [ ] `PATCH /api/v1/notifications/:id` — mark read
-- [ ] Tests: persistence on send, history query, grouping, mark read
+- [x] `NotificationLog` model: `id`, `user_id`, `title`, `body`, `type` (enum: insight, anomaly, streak, achievement, reminder, briefing, integration_alert), `deep_link` (URI for tap navigation), `sent_at`, `read_at`
+- [x] Modify `PushService.send()` to persist every sent notification
+- [x] `GET /api/v1/notifications` — paginated history grouped by day
+- [x] `PATCH /api/v1/notifications/:id` — mark read
+- [x] Tests: persistence on send, history query, grouping, mark read
 
 **Commit:** `feat(api): persist push notifications for Notification History screen`
 
@@ -540,16 +540,16 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/tasks/test_morning_briefing_task.py`
 
 **What to build:**
-- [ ] Celery Beat schedule: runs every 15 minutes, checks which users have briefing time in the current window
-- [ ] Per-user briefing generation:
+- [x] Celery Beat schedule: runs every 15 minutes, checks which users have briefing time in the current window
+- [x] Per-user briefing generation:
   - Sleep recap (if sleep data available)
   - What the body needs today (based on trends)
   - One actionable suggestion
   - Graceful fallback when data is limited
-- [ ] Send via FCM push notification
-- [ ] Persist as insight card in Today Feed
-- [ ] Respect user preference: enabled/disabled, Pro/Free tier
-- [ ] Tests: briefing generation, time-window matching, fallback, tier gating
+- [x] Send via FCM push notification
+- [x] Persist as insight card in Today Feed
+- [x] Respect user preference: enabled/disabled, Pro/Free tier
+- [x] Tests: briefing generation, time-window matching, fallback, tier gating
 
 **Commit:** `feat(api): add Morning Briefing Celery task with per-user scheduling`
 
@@ -562,17 +562,17 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_smart_reminder.py`
 
 **What to build:**
-- [ ] `SmartReminderEngine`:
+- [x] `SmartReminderEngine`:
   - Pattern-based reminders (from behavioral history)
   - Gap-based reminders (missing expected data)
   - Goal-based reminders (proximity to targets)
   - Celebration reminders (positive milestones)
-- [ ] Frequency cap: max 3/day per user (configurable: 1/2/3)
-- [ ] Deduplication: same topic not repeated within 48 hours
-- [ ] Quiet Hours respect
-- [ ] Per-category toggles from user preferences
-- [ ] Celery periodic task: evaluate and send reminders
-- [ ] Tests: each reminder type, frequency cap, dedup, quiet hours
+- [x] Frequency cap: max 3/day per user (configurable: 1/2/3)
+- [x] Deduplication: same topic not repeated within 48 hours
+- [x] Quiet Hours respect
+- [x] Per-category toggles from user preferences
+- [x] Celery periodic task: evaluate and send reminders
+- [x] Tests: each reminder type, frequency cap, dedup, quiet hours
 
 **Commit:** `feat(api): add Smart Reminder engine with frequency cap and dedup`
 
@@ -585,13 +585,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_report_generator.py`
 
 **What to build:**
-- [ ] `ReportGenerator`:
+- [x] `ReportGenerator`:
   - Weekly: total workouts, avg sleep, calorie adherence, top insight, week-over-week comparison, AI highlights
   - Monthly: category summaries, top correlations, goal progress, trend directions, AI recommendations
-- [ ] Report data model: `id`, `user_id`, `type` (weekly/monthly), `period_start`, `period_end`, `data` (JSON), `created_at`
-- [ ] Celery tasks: weekly (Monday 6am), monthly (1st of month 6am)
-- [ ] API: `GET /api/v1/reports` (list), `GET /api/v1/reports/:id` (detail)
-- [ ] Tests: weekly generation, monthly generation, data edge cases
+- [x] Report data model: `id`, `user_id`, `type` (weekly/monthly), `period_start`, `period_end`, `data` (JSON), `created_at`
+- [x] Celery tasks: weekly (Monday 6am), monthly (1st of month 6am)
+- [x] API: `GET /api/v1/reports` (list), `GET /api/v1/reports/:id` (detail)
+- [x] Tests: weekly generation, monthly generation, data edge cases
 
 **Commit:** `feat(api): add weekly and monthly report generation`
 
@@ -602,13 +602,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_correlation_suggester.py`
 
 **What to build:**
-- [ ] `CorrelationSuggester`:
+- [x] `CorrelationSuggester`:
   - Input: user goals + connected integrations + available data categories
   - Output: suggestions for what to track to unlock better insights
   - Goal→gap mapping (per mvp-features.md Feature J)
   - Dismissal tracking: suggestion not shown again for 30 days after dismiss
-- [ ] Integrated into insight generation pipeline (surfaces as Today Feed cards and Trends suggestions)
-- [ ] Tests: each goal→gap mapping, dismissal persistence, connected-app filtering
+- [x] Integrated into insight generation pipeline (surfaces as Today Feed cards and Trends suggestions)
+- [x] Tests: each goal→gap mapping, dismissal persistence, connected-app filtering
 
 **Commit:** `feat(api): add Correlation Suggestion engine for data gap recommendations`
 
@@ -619,12 +619,12 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/services/test_data_maturity.py`
 
 **What to build:**
-- [ ] `DataMaturityService`:
+- [x] `DataMaturityService`:
   - Calculate maturity level: Building (1-6 days), Ready (7-13), Strong (14-29), Excellent (30+)
   - Count days with data per user
   - Per-feature soft gating info: correlations (7d), anomaly detection (14d), Health Score footnote (<7d)
-- [ ] Integrated into insight and prompt endpoints
-- [ ] Tests: each maturity level, per-feature gating thresholds
+- [x] Integrated into insight and prompt endpoints
+- [x] Tests: each maturity level, per-feature gating thresholds
 
 **Commit:** `feat(api): add Data Maturity service for progressive feature transparency`
 
@@ -636,12 +636,12 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/agent/test_log_health_data.py`
 
 **What to build:**
-- [ ] `log_health_data` MCP tool that:
+- [x] `log_health_data` MCP tool that:
   - Parses natural language input for loggable data (hydration, mood, energy, stress, nutrition, activity, notes, supplements)
   - Returns structured confirmation payload (metric, value, timestamp) for the client to render as a confirmation card
   - On user confirmation: write to QuickLog + feed into analytics
   - Key facts also stored in long-term memory
-- [ ] Tests: parse various NL inputs, confirmation payload structure, write-on-confirm
+- [x] Tests: parse various NL inputs, confirmation payload structure, write-on-confirm
 
 **Commit:** `feat(agent): add NL logging confirmation flow with structured confirmation cards`
 
@@ -653,14 +653,14 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: `cloud-brain/tests/api/test_attachments.py`
 
 **What to build:**
-- [ ] `POST /api/v1/chat/:conversation_id/attachments` — upload file (10MB max, 3 per message)
-- [ ] Supported formats: JPEG, PNG, HEIC, PDF, TXT, CSV
-- [ ] File passed to Kimi K2.5 as multimodal input in conversation context
-- [ ] Memory extraction: AI identifies health facts → stored in Pinecone
-- [ ] Confirmation card returned listing extracted facts
-- [ ] Food photo detection: if image contains food, return nutrition estimate card
-- [ ] No permanent file storage — extracted knowledge persists in memory only
-- [ ] Tests: upload, format validation, size limit, memory extraction, food detection
+- [x] `POST /api/v1/chat/:conversation_id/attachments` — upload file (10MB max, 3 per message)
+- [x] Supported formats: JPEG, PNG, HEIC, PDF, TXT, CSV
+- [x] File passed to Kimi K2.5 as multimodal input in conversation context
+- [x] Memory extraction: AI identifies health facts → stored in Pinecone
+- [x] Confirmation card returned listing extracted facts
+- [x] Food photo detection: if image contains food, return nutrition estimate card
+- [x] No permanent file storage — extracted knowledge persists in memory only
+- [x] Tests: upload, format validation, size limit, memory extraction, food detection
 
 **Commit:** `feat(api): add file attachment pipeline with memory extraction`
 
@@ -671,9 +671,9 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Test: existing test file
 
 **What to build:**
-- [ ] Generate `FITBIT_WEBHOOK_VERIFY_CODE`
-- [ ] Register Fitbit webhook subscription via deployed endpoint
-- [ ] Tests: subscription creation, verification code handling
+- [x] Generate `FITBIT_WEBHOOK_VERIFY_CODE`
+- [x] Register Fitbit webhook subscription via deployed endpoint
+- [x] Tests: subscription creation, verification code handling
 
 **Commit:** `feat(api): register Fitbit webhook subscription`
 
@@ -684,13 +684,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Modify: `cloud-brain/app/services/push_service.py`
 
 **What to build:**
-- [ ] Trigger push notifications on health data events:
+- [x] Trigger push notifications on health data events:
   - New anomaly detected → push
   - Goal reached → push
   - Streak milestone → push
   - Integration stale (24h+ no sync) → push
-- [ ] Respect user notification preferences and quiet hours
-- [ ] Tests: each trigger type, preference respect, quiet hours
+- [x] Respect user notification preferences and quiet hours
+- [x] Tests: each trigger type, preference respect, quiet hours
 
 **Commit:** `feat(api): add background insight alert triggers`
 

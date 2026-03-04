@@ -25,7 +25,6 @@ Architecture notes:
 import asyncio
 import logging
 from datetime import date, datetime, timedelta, timezone
-from typing import Any
 
 import httpx
 import sentry_sdk

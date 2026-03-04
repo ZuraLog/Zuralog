@@ -130,29 +130,29 @@ abstract final class AppColors {
   /// Sleep — Night sky, calm. Apple sleep convention.
   static const Color categorySleep = Color(0xFF5E5CE6);
 
-  /// Body — Mass, weight, composition.
-  static const Color categoryBody = Color(0xFFFF9F0A);
+  /// Body — Mass, weight, composition. Neutral/clinical blue.
+  static const Color categoryBody = Color(0xFF64D2FF);
 
   /// Heart — Cardio health, heart rate.
   static const Color categoryHeart = Color(0xFFFF375F);
 
-  /// Vitals — Blood pressure, oxygen, temperature.
-  static const Color categoryVitals = Color(0xFFFF6B35);
+  /// Vitals — Blood pressure, oxygen, temperature. Medical blue.
+  static const Color categoryVitals = Color(0xFF6AC4DC);
 
-  /// Nutrition — Food, calories, macros.
-  static const Color categoryNutrition = Color(0xFF9B59B6);
+  /// Nutrition — Food, calories, macros. Warm orange.
+  static const Color categoryNutrition = Color(0xFFFF9F0A);
 
   /// Cycle — Menstrual / reproductive health.
-  static const Color categoryCycle = Color(0xFFFF2D55);
+  static const Color categoryCycle = Color(0xFFFF6482);
 
-  /// Wellness — Mood, stress, energy subjective check-in.
-  static const Color categoryWellness = Color(0xFF64D2FF);
+  /// Wellness — Mood, stress, energy subjective check-in. Purple/mindfulness.
+  static const Color categoryWellness = Color(0xFFBF5AF2);
 
-  /// Mobility — Flexibility, range of motion, recovery.
-  static const Color categoryMobility = Color(0xFF00C7BE);
+  /// Mobility — Flexibility, range of motion, recovery. Bright yellow/active.
+  static const Color categoryMobility = Color(0xFFFFD60A);
 
-  /// Environment — Air quality, UV index, weather exposure.
-  static const Color categoryEnvironment = Color(0xFF34C759);
+  /// Environment — Air quality, UV index, weather exposure. Teal/nature.
+  static const Color categoryEnvironment = Color(0xFF63E6BE);
 
   // ── Health Score Ring Color Stops ─────────────────────────────────────────
 
