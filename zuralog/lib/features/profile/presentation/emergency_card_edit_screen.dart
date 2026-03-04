@@ -13,7 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'emergency_card_screen.dart' show emergencyCardProvider, EmergencyCardData, EmergencyContact;
+import 'package:zuralog/features/profile/domain/emergency_card_models.dart';
+import 'emergency_card_screen.dart' show emergencyCardProvider;
 
 // ── EmergencyCardEditScreen ───────────────────────────────────────────────────
 
@@ -47,7 +48,10 @@ class _EmergencyCardEditScreenState
   @override
   void initState() {
     super.initState();
-    final card = ref.read(emergencyCardProvider);
+    // The provider is AsyncNotifierProvider — unwrap current value.
+    // If still loading or errored, start from empty defaults.
+    final card =
+        ref.read(emergencyCardProvider).valueOrNull ?? const EmergencyCardData();
     _bloodType = card.bloodType;
     _allergies = List<String>.from(card.allergies);
     _medications = List<String>.from(card.medications);
@@ -74,13 +78,16 @@ class _EmergencyCardEditScreenState
         .where((c) => c.name.trim().isNotEmpty)
         .toList();
 
-    ref.read(emergencyCardProvider.notifier).state = EmergencyCardData(
-      bloodType: _bloodType,
-      allergies: _allergies,
-      medications: _medications,
-      conditions: _conditions,
-      contacts: trimmed,
-    );
+    // Persist via AsyncNotifier — writes to FlutterSecureStorage.
+    ref.read(emergencyCardProvider.notifier).save(
+          EmergencyCardData(
+            bloodType: _bloodType,
+            allergies: _allergies,
+            medications: _medications,
+            conditions: _conditions,
+            contacts: trimmed,
+          ),
+        );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

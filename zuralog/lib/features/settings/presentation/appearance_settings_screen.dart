@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
           SliverList(
             delegate: SliverChildListDelegate([
               // ── THEME section ─────────────────────────────────────────────
-              const _SectionHeader('THEME'),
+              const SettingsSectionLabel('THEME'),
               _ThemeSelector(
                 selected: theme,
                 onSelected: (v) =>
@@ -106,7 +107,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               ),
 
               // ── EXPERIENCE section ────────────────────────────────────────
-              const _SectionHeader('EXPERIENCE'),
+              const SettingsSectionLabel('EXPERIENCE'),
               _SettingsGroup(
                 children: [
                   _ToggleRow(
@@ -122,7 +123,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               ),
 
               // ── TOOLTIPS section ──────────────────────────────────────────
-              const _SectionHeader('TOOLTIPS'),
+              const SettingsSectionLabel('TOOLTIPS'),
               _SettingsGroup(
                 children: [
                   _ToggleRow(
@@ -146,7 +147,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               ),
 
               // ── DASHBOARD COLORS section ──────────────────────────────────
-              const _SectionHeader('DASHBOARD COLORS'),
+              const SettingsSectionLabel('DASHBOARD COLORS'),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
@@ -173,34 +174,6 @@ class AppearanceSettingsScreen extends ConsumerWidget {
             ]),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── _SectionHeader ─────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelXs.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
@@ -675,7 +648,7 @@ class _ColorSwatch extends StatelessWidget {
   /// Returns black or white for the checkmark, depending on swatch luminance.
   Color _contrastColor(Color c) {
     final luminance = c.computeLuminance();
-    return luminance > 0.35 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+    return luminance > 0.35 ? AppColors.backgroundDark : AppColors.textPrimaryDark;
   }
 }
 

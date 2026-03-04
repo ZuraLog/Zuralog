@@ -14,16 +14,20 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 
 // ── Local state ───────────────────────────────────────────────────────────────
 
 @immutable
 class _ProfileState {
   const _ProfileState({
-    this.displayName = 'Alex Rivera',
-    this.email = 'alex@example.com',
-    this.memberSince = 'January 2026',
-    this.tier = 'Pro',
+    // TODO(auth): Wire displayName, email, memberSince, and tier to the
+    // authenticated user provider from core/di/ once the auth layer is
+    // connected (Phase 9). These defaults are empty placeholders only.
+    this.displayName = '',
+    this.email = '',
+    this.memberSince = '',
+    this.tier = 'Free',
     this.isEditingName = false,
   });
 
@@ -114,7 +118,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           // ── Emergency Health Card link ───────────────────────────────────
-          const SliverToBoxAdapter(child: _SectionHeader('HEALTH & SAFETY')),
+          const SliverToBoxAdapter(child: SettingsSectionLabel('HEALTH & SAFETY')),
           SliverToBoxAdapter(
             child: Padding(
               padding:
@@ -124,7 +128,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           // ── Account section ──────────────────────────────────────────────
-          const SliverToBoxAdapter(child: _SectionHeader('ACCOUNT')),
+          const SliverToBoxAdapter(child: SettingsSectionLabel('ACCOUNT')),
           SliverToBoxAdapter(
             child: Padding(
               padding:
@@ -134,7 +138,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           // ── Activity stats ───────────────────────────────────────────────
-          const SliverToBoxAdapter(child: _SectionHeader('ACTIVITY')),
+          const SliverToBoxAdapter(child: SettingsSectionLabel('ACTIVITY')),
           SliverToBoxAdapter(
             child: Padding(
               padding:
@@ -229,12 +233,10 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
                   color: AppColors.primary.withValues(alpha: 0.20),
                   shape: BoxShape.circle,
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     'AR',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
+                    style: AppTextStyles.h1.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
@@ -658,32 +660,6 @@ class _SignOutButton extends StatelessWidget {
 }
 
 // ── Shared sub-widgets ─────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelXs.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
 
 class _Divider extends StatelessWidget {
   const _Divider();

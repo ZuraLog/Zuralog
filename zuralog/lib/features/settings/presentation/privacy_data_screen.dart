@@ -14,6 +14,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ class PrivacyDataScreen extends ConsumerWidget {
           SliverList(
             delegate: SliverChildListDelegate([
               // ── AI MEMORY section ──────────────────────────────────────
-              _SectionLabel('AI Memory'),
+              const SettingsSectionLabel('AI Memory'),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
@@ -179,7 +180,7 @@ class PrivacyDataScreen extends ConsumerWidget {
               ),
 
               // ── PRIVACY section ────────────────────────────────────────
-              _SectionLabel('Privacy'),
+              const SettingsSectionLabel('Privacy'),
               _SettingsCard(
                 children: [
                   _ToggleRow(
@@ -216,7 +217,7 @@ class PrivacyDataScreen extends ConsumerWidget {
               ),
 
               // ── DATA section ───────────────────────────────────────────
-              _SectionLabel('Data'),
+              const SettingsSectionLabel('Data'),
               _SettingsCard(
                 children: [
                   _ExportDataRow(
@@ -232,13 +233,16 @@ class PrivacyDataScreen extends ConsumerWidget {
                   const _Divider(),
                   _DeleteDataRow(
                     onConfirmed: () {
-                      // TODO(phase9): Wire to API delete endpoint.
+                      // TODO(phase9): Wire to Supabase delete-all-data API endpoint.
+                      // Do not show a success message until the API call succeeds.
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'All data deletion initiated',
+                            'Data deletion is not yet available. '
+                            'Contact support@zuralog.com to request erasure.',
                           ),
                           behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 6),
                         ),
                       );
                     },
@@ -247,7 +251,7 @@ class PrivacyDataScreen extends ConsumerWidget {
               ),
 
               // ── LEGAL section ──────────────────────────────────────────
-              _SectionLabel('Legal'),
+              const SettingsSectionLabel('Legal'),
               _SettingsCard(
                 children: [
                   _TapRow(
@@ -276,32 +280,6 @@ class PrivacyDataScreen extends ConsumerWidget {
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.labelXs.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
 
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.children});

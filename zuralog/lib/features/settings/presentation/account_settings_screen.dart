@@ -13,6 +13,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 
 // ── AccountSettingsScreen ─────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Credentials section ─────────────────────────────────────────
-          _SectionLabel(label: 'Credentials'),
+          const SettingsSectionLabel('Credentials'),
           _SettingsGroup(
             tiles: [
               _AccountTile(
@@ -69,12 +70,12 @@ class AccountSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Linked accounts ─────────────────────────────────────────────
-          _SectionLabel(label: 'Linked Accounts'),
+          const SettingsSectionLabel('Linked Accounts'),
           _SettingsGroup(
             tiles: [
               _AccountTile(
                 icon: Icons.g_mobiledata_rounded,
-                iconColor: const Color(0xFF4285F4),
+                iconColor: AppColors.googleBlue,
                 title: 'Google',
                 subtitle: 'Linked',
                 onTap: () {},
@@ -94,7 +95,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Goals ───────────────────────────────────────────────────────
-          _SectionLabel(label: 'Health Goals'),
+          const SettingsSectionLabel('Health Goals'),
           _SettingsGroup(
             tiles: [
               _AccountTile(
@@ -108,7 +109,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Emergency Health Card ────────────────────────────────────────
-          _SectionLabel(label: 'Medical'),
+          const SettingsSectionLabel('Medical'),
           _SettingsGroup(
             tiles: [
               _AccountTile(
@@ -122,7 +123,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Danger Zone ─────────────────────────────────────────────────
-          _SectionLabel(label: 'Danger Zone'),
+          const SettingsSectionLabel('Danger Zone'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: Container(
@@ -209,34 +210,6 @@ class _ProfileSummaryCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── _SectionLabel ─────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.labelXs.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
@@ -402,27 +375,27 @@ const _kGoals = [
   ('Stay Consistent', Icons.emoji_events_rounded),
 ];
 
+/// File-scoped provider — persists goal selections across sheet dismissals.
+/// TODO(phase9): Replace with a proper goals repository backed by Supabase.
+final _selectedGoalsProvider =
+    StateProvider<Set<int>>((_) => const {0, 2});
+
 void _showGoalsEditor(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _GoalsEditorSheet(),
+    builder: (_) => const _GoalsEditorSheet(),
   );
 }
 
-class _GoalsEditorSheet extends StatefulWidget {
+class _GoalsEditorSheet extends ConsumerWidget {
   const _GoalsEditorSheet();
 
   @override
-  State<_GoalsEditorSheet> createState() => _GoalsEditorSheetState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(_selectedGoalsProvider);
 
-class _GoalsEditorSheetState extends State<_GoalsEditorSheet> {
-  final Set<int> _selected = {0, 2};
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(
         top: MediaQuery.of(context).size.height * 0.3,
@@ -479,15 +452,17 @@ class _GoalsEditorSheetState extends State<_GoalsEditorSheet> {
                 itemCount: _kGoals.length,
                 itemBuilder: (context, index) {
                   final (label, icon) = _kGoals[index];
-                  final isSelected = _selected.contains(index);
+                  final isSelected = selected.contains(index);
                   return GestureDetector(
-                    onTap: () => setState(() {
+                    onTap: () {
+                      final next = Set<int>.from(selected);
                       if (isSelected) {
-                        _selected.remove(index);
+                        next.remove(index);
                       } else {
-                        _selected.add(index);
+                        next.add(index);
                       }
-                    }),
+                      ref.read(_selectedGoalsProvider.notifier).state = next;
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
@@ -751,7 +726,18 @@ void _showDeleteAccountDialog(BuildContext context) {
         TextButton(
           onPressed: () {
             Navigator.pop(context);
-            // TODO: trigger delete account API call
+            // TODO(phase9): Call Supabase delete-account API endpoint here.
+            // For now, show an honest message — do not silently no-op.
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Account deletion is not yet available. '
+                  'Please contact support@zuralog.com to request deletion.',
+                ),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 6),
+              ),
+            );
           },
           child: Text(
             'Delete',

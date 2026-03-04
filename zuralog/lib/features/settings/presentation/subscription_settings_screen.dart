@@ -291,6 +291,8 @@ class _UpgradeCard extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceMd),
 
             // Price
+            // TODO(phase9): Replace with RevenueCat product pricing fetched
+            // at runtime — prices vary by locale, currency, and promotions.
             Text(
               '\$9.99 / month',
               style:
