@@ -172,9 +172,9 @@
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Today Feed (curated daily briefing) | 🔄 Route+placeholder done | Phase 3 implementation pending backend services |
-| P0 | Today — Insight Detail | 🔄 Route+placeholder done | Phase 3 |
-| P0 | Today — Notification History | 🔄 Route+placeholder done | Phase 3 |
+| P0 | Today Feed (curated daily briefing) | ✅ Done | Phase 3 complete — Health Score hero, insight cards, quick actions, wellness check-in, streak, Quick Log FAB |
+| P0 | Today — Insight Detail | ✅ Done | Phase 3 complete — bar chart, AI reasoning, source chips, Discuss with Coach CTA |
+| P0 | Today — Notification History | ✅ Done | Phase 3 complete — grouped by day, unread indicators, deep-link routing |
 | P0 | Data — Health Dashboard (customizable) | 🔄 Route+placeholder done | Phase 5 |
 | P0 | Data — Category Detail (x10) | 🔄 Route+placeholder done | Phase 5 |
 | P0 | Data — Metric Detail | 🔄 Route+placeholder done | Phase 5 |

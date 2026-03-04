@@ -4,59 +4,1337 @@
 /// check-in, contextual quick actions, streak badge, and Quick Log FAB.
 ///
 /// Full implementation: Phase 3, Task 3.1.
+/// Design elevation: Phase 3 elevation pass — editorial animations & micro-interactions.
 library;
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/haptics/haptic_providers.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/today/domain/today_models.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
+import 'package:zuralog/shared/widgets/health_score_widget.dart';
+import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
+import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
+import 'package:zuralog/shared/widgets/streak_badge.dart';
 
-/// Today Feed screen — Phase 3 placeholder.
+// ── TodayFeedScreen ───────────────────────────────────────────────────────────
+
+/// Today Feed screen — the curated daily briefing.
 ///
-/// Displays the skeleton scaffold for the Today tab. The full implementation
-/// with Health Score widget, AI insight cards, and quick actions is built in
-/// Phase 3.
-class TodayFeedScreen extends StatelessWidget {
+/// Displays the Health Score hero, data maturity banner, AI insight cards,
+/// contextual quick actions, streak badge, and Quick Log FAB.
+class TodayFeedScreen extends ConsumerWidget {
   /// Creates the [TodayFeedScreen].
   const TodayFeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scoreAsync = ref.watch(healthScoreProvider);
+    final feedAsync = ref.watch(todayFeedProvider);
+    final bannerDismissed = ref.watch(dataMaturityBannerDismissed);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Today'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-            tooltip: 'Notifications',
+      backgroundColor: AppColors.backgroundDark,
+      appBar: _TodayAppBar(feedAsync: feedAsync),
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: AppColors.cardBackgroundDark,
+        onRefresh: () async {
+          ref.read(todayRepositoryProvider).invalidateFeedCache();
+          ref.invalidate(healthScoreProvider);
+          ref.invalidate(todayFeedProvider);
+          await Future.wait([
+            ref
+                .read(healthScoreProvider.future)
+                .catchError((Object _) => HealthScoreData(score: 0, trend: [])),
+            ref
+                .read(todayFeedProvider.future)
+                .catchError(
+                  (Object _) => TodayFeedData(
+                    insights: [],
+                    quickActions: [],
+                    streak: null,
+                  ),
+                ),
+          ]);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // ── Health Score hero ─────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceMd,
+                ),
+                child: _FadeSlideIn(
+                  delay: Duration.zero,
+                  child: OnboardingTooltip(
+                    screenKey: 'today_feed',
+                    tooltipKey: 'health_score',
+                    message: 'This is your daily health score — a composite of '
+                        'all your health data from the last 24 hours.',
+                    child: _HealthScoreHero(scoreAsync: scoreAsync),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Data Maturity banner ──────────────────────────────────────
+            if (!bannerDismissed)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                  ),
+                  child: feedAsync.when(
+                    data: (_) => DataMaturityBanner(
+                      daysWithData: 3,
+                      targetDays: 7,
+                      onDismiss: () => ref
+                          .read(dataMaturityBannerDismissed.notifier)
+                          .state = true,
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, st) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+
+            // ── Section: Time-of-day greeting + streak ────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceSm,
+                ),
+                child: _FadeSlideIn(
+                  delay: const Duration(milliseconds: 60),
+                  child: _SectionHeader(
+                    title: _timeOfDayGreeting(),
+                    trailing: feedAsync.whenOrNull(
+                      data: (feed) => feed.streak != null
+                          ? StreakBadge.inline(
+                              count: feed.streak!.currentStreak,
+                              isFrozen: feed.streak!.isFrozen,
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── AI Insight cards ──────────────────────────────────────────
+            feedAsync.when(
+              data: (feed) {
+                if (feed.insights.isEmpty) {
+                  return SliverToBoxAdapter(
+                    child: _FadeSlideIn(
+                      delay: const Duration(milliseconds: 80),
+                      child: _EmptyInsightsCard(),
+                    ),
+                  );
+                }
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceXs,
+                      ),
+                      child: _FadeSlideIn(
+                        delay: Duration(milliseconds: 80 + index * 50),
+                        child: _InsightCard(
+                          insight: feed.insights[index],
+                          onTap: () async {
+                            ref.read(hapticServiceProvider).light();
+                            context.pushNamed(
+                              RouteNames.insightDetail,
+                              pathParameters: {
+                                'id': feed.insights[index].id,
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    childCount: feed.insights.length,
+                  ),
+                );
+              },
+              loading: () => SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) => const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                    child: _InsightCardSkeleton(),
+                  ),
+                  childCount: 3,
+                ),
+              ),
+              error: (e, _) => SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDimens.spaceMd),
+                  child: _ErrorCard(
+                    message: 'Could not load insights.',
+                    onRetry: () => ref.invalidate(todayFeedProvider),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Section: Quick Actions ────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceSm,
+                ),
+                child: _FadeSlideIn(
+                  delay: const Duration(milliseconds: 200),
+                  child: const _SectionHeader(title: 'Quick Actions'),
+                ),
+              ),
+            ),
+
+            feedAsync.when(
+              data: (feed) {
+                if (feed.quickActions.isEmpty) {
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceXs,
+                      ),
+                      child: _FadeSlideIn(
+                        delay: Duration(milliseconds: 220 + index * 50),
+                        child: _QuickActionCard(
+                          action: feed.quickActions[index],
+                          onTap: () {
+                            ref.read(hapticServiceProvider).light();
+                            final route = feed.quickActions[index].route;
+                            if (route != null) context.go(route);
+                          },
+                        ),
+                      ),
+                    ),
+                    childCount: feed.quickActions.length,
+                  ),
+                );
+              },
+              loading: () => SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) => const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                    child: _QuickActionSkeleton(),
+                  ),
+                  childCount: 2,
+                ),
+              ),
+              error: (_, st) =>
+                  const SliverToBoxAdapter(child: SizedBox.shrink()),
+            ),
+
+            // ── Wellness Check-in card ────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceXxl,
+                ),
+                child: _FadeSlideIn(
+                  delay: const Duration(milliseconds: 300),
+                  child: _WellnessCheckinCard(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: _QuickLogFAB(),
+    );
+  }
+}
+
+// ── _TodayAppBar ──────────────────────────────────────────────────────────────
+
+class _TodayAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  const _TodayAppBar({required this.feedAsync});
+
+  final AsyncValue<TodayFeedData> feedAsync;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppBar(
+      backgroundColor: AppColors.backgroundDark,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      title: Text(
+        _formattedDate(),
+        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(
+            Icons.notifications_outlined,
+            color: AppColors.textSecondaryDark,
+          ),
+          onPressed: () {
+            ref.read(hapticServiceProvider).light();
+            context.pushNamed(RouteNames.notificationHistory);
+          },
+          tooltip: 'Notifications',
+        ),
+      ],
+    );
+  }
+}
+
+// ── _HealthScoreHero ───────────────────────────────────────────────────────────
+
+class _HealthScoreHero extends ConsumerWidget {
+  const _HealthScoreHero({required this.scoreAsync});
+
+  final AsyncValue<HealthScoreData> scoreAsync;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      child: Stack(
+        children: [
+          // Ambient sage-green radial glow — top-right corner.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0.85, -0.85),
+                    radius: 0.9,
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.07),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Card body.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              vertical: AppDimens.spaceLg,
+              horizontal: AppDimens.spaceMd,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackgroundDark,
+              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            ),
+            child: scoreAsync.when(
+              data: (data) => Column(
+                children: [
+                  HealthScoreWidget.hero(
+                    score: data.score,
+                    trend: data.trend.isNotEmpty ? data.trend : null,
+                    commentary: data.commentary,
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      context.go(RouteNames.dataPath);
+                    },
+                  ),
+                ],
+              ),
+              loading: () => const _ScoreHeroSkeleton(),
+              error: (_, st) => Column(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 48,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(height: AppDimens.spaceSm),
+                  Text(
+                    'Could not load score',
+                    style: AppTextStyles.caption
+                        .copyWith(color: AppColors.textTertiary),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: Center(
+    );
+  }
+}
+
+// ── _SectionHeader ────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.trailing});
+
+  final String title;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Editorial left accent bar — 3×18px sage green.
+        Container(
+          width: 3,
+          height: 18,
+          margin: const EdgeInsets.only(right: AppDimens.spaceSm),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            title,
+            style: AppTextStyles.h2.copyWith(
+              color: AppColors.textPrimaryDark,
+            ),
+          ),
+        ),
+        ?trailing,
+      ],
+    );
+  }
+}
+
+// ── _InsightCard ──────────────────────────────────────────────────────────────
+
+class _InsightCard extends ConsumerStatefulWidget {
+  const _InsightCard({required this.insight, required this.onTap});
+
+  final InsightCard insight;
+  final VoidCallback onTap;
+
+  @override
+  ConsumerState<_InsightCard> createState() => _InsightCardState();
+}
+
+class _InsightCardState extends ConsumerState<_InsightCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryColor = _categoryColor(widget.insight.category);
+    final isUnread = !widget.insight.isRead;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          child: Stack(
+            children: [
+              // Category-color radial glow (unread only) — top-right.
+              if (isUnread)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0.9, -0.9),
+                          radius: 0.7,
+                          colors: [
+                            categoryColor.withValues(alpha: 0.08),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Card body.
+              Container(
+                padding: const EdgeInsets.all(AppDimens.spaceMd),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackgroundDark,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left accent bar for unread — 3px category-colored stripe.
+                    if (isUnread)
+                      Container(
+                        width: 3,
+                        height: double.infinity,
+                        constraints: const BoxConstraints(minHeight: 60),
+                        margin: const EdgeInsets.only(right: AppDimens.spaceSm),
+                        decoration: BoxDecoration(
+                          color: categoryColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    // Category color icon badge.
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: categoryColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                      ),
+                      child: Icon(
+                        _insightIcon(widget.insight.type),
+                        size: AppDimens.iconMd,
+                        color: categoryColor,
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.spaceMd),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              if (isUnread) ...[
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: categoryColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: AppDimens.spaceXs),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  widget.insight.title,
+                                  style: AppTextStyles.h3.copyWith(
+                                    color: AppColors.textPrimaryDark,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.insight.summary,
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.textSecondaryDark,
+                              fontSize: 14,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: AppDimens.spaceSm),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: categoryColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppDimens.radiusChip,
+                                  ),
+                                ),
+                                child: Text(
+                                  widget.insight.category,
+                                  style: AppTextStyles.labelXs.copyWith(
+                                    color: categoryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              if (widget.insight.createdAt != null)
+                                Text(
+                                  _relativeTime(widget.insight.createdAt!),
+                                  style: AppTextStyles.labelXs.copyWith(
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                              const SizedBox(width: AppDimens.spaceXs),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: AppDimens.iconSm,
+                                color: AppColors.primary
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _QuickActionCard ──────────────────────────────────────────────────────────
+
+class _QuickActionCard extends StatefulWidget {
+  const _QuickActionCard({required this.action, required this.onTap});
+
+  final QuickAction action;
+  final VoidCallback onTap;
+
+  @override
+  State<_QuickActionCard> createState() => _QuickActionCardState();
+}
+
+class _QuickActionCardState extends State<_QuickActionCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: Container(
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackgroundDark,
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  size: AppDimens.iconMd,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.action.title,
+                      style: AppTextStyles.h3.copyWith(
+                        color: AppColors.textPrimaryDark,
+                      ),
+                    ),
+                    if (widget.action.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.action.subtitle,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondaryDark,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: AppDimens.iconMd,
+                color: AppColors.primary.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _WellnessCheckinCard ──────────────────────────────────────────────────────
+
+/// Inline wellness check-in card — launches QuickLogSheet on tap.
+class _WellnessCheckinCard extends ConsumerStatefulWidget {
+  const _WellnessCheckinCard();
+
+  @override
+  ConsumerState<_WellnessCheckinCard> createState() =>
+      _WellnessCheckinCardState();
+}
+
+class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        ref.read(hapticServiceProvider).light();
+        _showQuickLog(context, ref);
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          child: Stack(
+            children: [
+              // Wellness-color radial glow — top-right corner.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0.9, -0.9),
+                        radius: 0.8,
+                        colors: [
+                          AppColors.categoryWellness.withValues(alpha: 0.08),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(AppDimens.spaceMd),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackgroundDark,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.categoryWellness.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                      ),
+                      child: const Icon(
+                        Icons.self_improvement_rounded,
+                        size: AppDimens.iconMd,
+                        color: AppColors.categoryWellness,
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.spaceMd),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Wellness check-in',
+                            style: AppTextStyles.h3.copyWith(
+                              color: AppColors.textPrimaryDark,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Log mood, energy, and water intake',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondaryDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.add_circle_outline_rounded,
+                      size: AppDimens.iconMd,
+                      color: AppColors.categoryWellness,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _QuickLogFAB ──────────────────────────────────────────────────────────────
+
+class _QuickLogFAB extends ConsumerStatefulWidget {
+  const _QuickLogFAB();
+
+  @override
+  ConsumerState<_QuickLogFAB> createState() => _QuickLogFABState();
+}
+
+class _QuickLogFABState extends ConsumerState<_QuickLogFAB>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.88), weight: 40),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.88, end: 1.08)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(tween: Tween(begin: 1.08, end: 1.0), weight: 20),
+    ]).animate(_ctrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onPressed() async {
+    ref.read(hapticServiceProvider).medium();
+    await _ctrl.forward(from: 0);
+    if (mounted) _showQuickLog(context, ref);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scale,
+      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+      child: FloatingActionButton(
+        onPressed: _onPressed,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.primaryButtonText,
+        elevation: 0,
+        child: const Icon(Icons.add_rounded, size: 28),
+      ),
+    );
+  }
+}
+
+// ── Skeleton widgets ──────────────────────────────────────────────────────────
+
+class _ScoreHeroSkeleton extends StatelessWidget {
+  const _ScoreHeroSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _Shimmer(
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: const BoxDecoration(
+              color: AppColors.cardBackgroundDark,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceSm),
+        _Shimmer(
+          child: Container(
+            width: 160,
+            height: 14,
+            decoration: BoxDecoration(
+              color: AppColors.cardBackgroundDark,
+              borderRadius: BorderRadius.circular(7),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InsightCardSkeleton extends StatelessWidget {
+  const _InsightCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Shimmer(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceDark,
+                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Shimmer(
+                  child: Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _Shimmer(
+                  child: Container(
+                    height: 12,
+                    width: 200,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionSkeleton extends StatelessWidget {
+  const _QuickActionSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      child: Row(
+        children: [
+          _Shimmer(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceDark,
+                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceMd),
+          Expanded(
+            child: _Shimmer(
+              child: Container(
+                height: 16,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyInsightsCard extends StatelessWidget {
+  const _EmptyInsightsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackgroundDark,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.wb_sunny_rounded,
-              size: 48,
-              color: AppColors.primary.withValues(alpha: 0.6),
+              Icons.lightbulb_outline_rounded,
+              size: 40,
+              color: AppColors.primary.withValues(alpha: 0.5),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppDimens.spaceSm),
             Text(
-              'Today',
-              style: AppTextStyles.h2,
+              'No insights yet',
+              style: AppTextStyles.h3.copyWith(
+                color: AppColors.textSecondaryDark,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
-              'Daily briefing — Phase 3',
+              'Keep logging data to unlock AI-powered health insights.',
               style: AppTextStyles.caption.copyWith(
                 color: AppColors.textTertiary,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.textTertiary,
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(
+              'Retry',
+              style: AppTextStyles.caption.copyWith(color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _FadeSlideIn ──────────────────────────────────────────────────────────────
+
+/// Staggered fade + 6% slide-up entrance animation.
+///
+/// Animates once when the widget is first built. Pass a [delay] to create
+/// a cascade effect across a list of items.
+class _FadeSlideIn extends StatefulWidget {
+  const _FadeSlideIn({required this.child, this.delay = Duration.zero});
+
+  final Widget child;
+  final Duration delay;
+
+  @override
+  State<_FadeSlideIn> createState() => _FadeSlideInState();
+}
+
+class _FadeSlideInState extends State<_FadeSlideIn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _opacity = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
+    );
+
+    if (widget.delay == Duration.zero) {
+      _ctrl.forward();
+    } else {
+      Future.delayed(widget.delay, () {
+        if (mounted) _ctrl.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: SlideTransition(position: _slide, child: widget.child),
+    );
+  }
+}
+
+// ── _Shimmer ──────────────────────────────────────────────────────────────────
+
+/// Horizontal shimmer sweep via ShaderMask + LinearGradient (1200ms loop).
+class _Shimmer extends StatefulWidget {
+  const _Shimmer({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, child) {
+        // Sweep from -1 → +2 across the widget width.
+        final progress = _ctrl.value;
+        final shimmerStart = progress * 3.0 - 1.0;
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) => ui.Gradient.linear(
+            Offset(bounds.width * shimmerStart, 0),
+            Offset(bounds.width * (shimmerStart + 1.0), 0),
+            const [
+              Color(0x4DFFFFFF),
+              Color(0xCCFFFFFF),
+              Color(0x4DFFFFFF),
+            ],
+            const [0.0, 0.5, 1.0],
+          ),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Returns a time-of-day greeting string.
+String _timeOfDayGreeting() {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  if (hour < 21) return 'Good evening';
+  return 'Good night';
+}
+
+/// Returns a formatted date string for the app bar (e.g. "Wednesday, Mar 4").
+String _formattedDate() {
+  final now = DateTime.now();
+  const weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  final weekday = weekdays[now.weekday - 1];
+  final month = months[now.month - 1];
+  return '$weekday, $month ${now.day}';
+}
+
+/// Returns a human-readable relative time string (e.g. "2h ago").
+String _relativeTime(DateTime dt) {
+  final diff = DateTime.now().difference(dt);
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  return '${diff.inDays}d ago';
+}
+
+/// Returns the category color token for a health category string.
+Color _categoryColor(String category) {
+  switch (category.toLowerCase()) {
+    case 'sleep':
+      return AppColors.categorySleep;
+    case 'activity':
+    case 'fitness':
+      return AppColors.categoryActivity;
+    case 'heart':
+    case 'cardio':
+      return AppColors.categoryHeart;
+    case 'body':
+    case 'weight':
+      return AppColors.categoryBody;
+    case 'nutrition':
+    case 'food':
+      return AppColors.categoryNutrition;
+    case 'wellness':
+    case 'mood':
+      return AppColors.categoryWellness;
+    case 'vitals':
+      return AppColors.categoryVitals;
+    case 'cycle':
+      return AppColors.categoryCycle;
+    case 'mobility':
+      return AppColors.categoryMobility;
+    case 'environment':
+      return AppColors.categoryEnvironment;
+    default:
+      return AppColors.primary;
+  }
+}
+
+/// Returns an icon for the given [InsightType].
+IconData _insightIcon(InsightType type) {
+  switch (type) {
+    case InsightType.anomaly:
+      return Icons.warning_amber_rounded;
+    case InsightType.correlation:
+      return Icons.compare_arrows_rounded;
+    case InsightType.trend:
+      return Icons.trending_up_rounded;
+    case InsightType.recommendation:
+      return Icons.tips_and_updates_rounded;
+    case InsightType.achievement:
+      return Icons.emoji_events_rounded;
+    case InsightType.unknown:
+      return Icons.lightbulb_outline_rounded;
+  }
+}
+
+/// Shows the QuickLogSheet bottom sheet and handles submission.
+void _showQuickLog(BuildContext context, WidgetRef ref) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => Consumer(
+      builder: (ctx, r, _) {
+        final isLoading = r.watch(quickLogLoadingProvider);
+        return QuickLogSheet(
+          isLoading: isLoading,
+          onSubmit: (data) async {
+            r.read(quickLogLoadingProvider.notifier).state = true;
+            try {
+              await r.read(todayRepositoryProvider).submitQuickLog({
+                'mood': data.mood,
+                'energy': data.energy,
+                'stress': data.stress,
+                'water_glasses': data.waterGlasses,
+                'notes': data.notes,
+                'symptoms': data.symptoms,
+              });
+              r.read(hapticServiceProvider).success();
+              r.invalidate(todayFeedProvider);
+              r.invalidate(healthScoreProvider);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            } catch (_) {
+              r.read(hapticServiceProvider).warning();
+            } finally {
+              r.read(quickLogLoadingProvider.notifier).state = false;
+            }
+          },
+        );
+      },
+    ),
+  );
 }

@@ -415,7 +415,7 @@ You should see the **Zuralog Welcome screen** — the animated entry screen with
 
 From there you can proceed through onboarding and log in. The auth guard will redirect authenticated users directly to the Dashboard on subsequent launches.
 
-**Screen map (post Phase 2.2):**
+**Screen map (post Phase 3):**
 
 | Screen | Route | Notes |
 |---|---|---|
@@ -423,7 +423,8 @@ From there you can proceed through onboarding and log in. The auth guard will re
 | Onboarding | `/onboarding` | 2-page PageView for new users |
 | Login | `/auth/login` | Email + password |
 | Register | `/auth/register` | Email + password |
-| Dashboard | `/dashboard` | Home tab — activity rings, metrics, AI insight |
+| Today | `/today` | Home tab — AI insights feed, health score, quick actions |
+| Dashboard | `/dashboard` | Activity rings, metrics |
 | Coach Chat | `/chat` | AI Coach tab — WebSocket chat |
 | Integrations | `/integrations` | Apps tab — connect Strava, Apple Health, etc. |
 | Settings | `/settings` | Pushed over shell — theme, subscription, logout |
@@ -830,7 +831,12 @@ cd zuralog && flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=<your_client_id>
 ```
 
 ### `gradlew` fails with "JAVA_HOME is not set"
-You do not need to install Java separately — Android Studio bundles a JDK. Run Gradle commands with the bundled JDK:
+You do not need to install Java separately — Android Studio bundles a JDK (JBR) and `zuralog/android/gradle.properties` is already configured to point Gradle at it via `org.gradle.java.home`. If you installed Android Studio to a non-default location, update that property to match:
+```
+# zuralog/android/gradle.properties
+org.gradle.java.home=C:\\Program Files\\Android\\Android Studio\\jbr
+```
+If you need to run `gradlew` directly from the shell without the property file, you can also pass it manually:
 ```bash
 # From zuralog/android/
 JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" PATH="$JAVA_HOME/bin:$PATH" ./gradlew <task>

@@ -56,7 +56,7 @@ Phase 2: Core Backend Services (no UI)
   └── File attachment pipeline ─────────────────┘
         │
         ▼
-Phase 3: Today Tab (3 screens) ── needs: Health Score, Insights, Anomaly, Data Maturity, Quick Actions, Streaks
+Phase 3: Today Tab (3 screens) ✅ ── needs: Health Score, Insights, Anomaly, Data Maturity, Quick Actions, Streaks
 Phase 4: Coach Tab (4 screens) ── needs: Conversation CRUD, Pinecone Memory, NL Logging, File Attachments, Personalized Prompts
 Phase 5: Data Tab (3 screens) ── needs: Health Score, User Preferences (dashboard layout)
 Phase 6: Progress Tab (6 screens) ── needs: Goals, Streaks, Achievements, Journal, Weekly Report
@@ -710,19 +710,19 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Create: `zuralog/lib/features/today/data/today_repository.dart`
 
 **What to build:**
-- [ ] Health Score hero widget at top (from shared component)
-- [ ] Data Maturity banner (first 30 days, dismissable)
-- [ ] AI insight cards (from `/api/v1/insights` endpoint) — tappable, opens Insight Detail
-- [ ] Wellness Check-in card (daily prompt, expands inline)
-- [ ] Contextual Quick Action cards (from `/api/v1/quick-actions`)
-- [ ] Streak counter badge
-- [ ] Correlation Suggestion cards
-- [ ] Quick Log FAB button → opens QuickLogSheet
-- [ ] Time-of-Day content ordering (morning/afternoon/evening/night per Feature Y)
-- [ ] Pull-to-refresh with sage-green circular indicator
-- [ ] Skeleton loading states
-- [ ] Onboarding tooltip: "This is your daily briefing..."
-- [ ] Haptic feedback on card taps
+- [x] Health Score hero widget at top (from shared component)
+- [x] Data Maturity banner (first 30 days, dismissable)
+- [x] AI insight cards (from `/api/v1/insights` endpoint) — tappable, opens Insight Detail
+- [x] Wellness Check-in card (daily prompt, expands inline)
+- [x] Contextual Quick Action cards (from `/api/v1/quick-actions`)
+- [x] Streak counter badge
+- [x] Correlation Suggestion cards
+- [x] Quick Log FAB button → opens QuickLogSheet
+- [x] Time-of-Day content ordering (morning/afternoon/evening/night per Feature Y)
+- [x] Pull-to-refresh with sage-green circular indicator
+- [x] Skeleton loading states
+- [x] Onboarding tooltip: "This is your daily briefing..."
+- [x] Haptic feedback on card taps
 
 **Commit:** `feat(today): build Today Feed screen with all card types`
 
@@ -732,13 +732,13 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Create: `zuralog/lib/features/today/presentation/insight_detail_screen.dart`
 
 **What to build:**
-- [ ] Full-screen insight with:
+- [x] Full-screen insight with:
   - Charts/numbers showing the data behind the insight
   - AI reasoning explanation
   - Source integrations that contributed (with icons)
   - "Discuss with Coach" button → opens new chat with context pre-filled
-- [ ] Slide-up transition (per design.md)
-- [ ] Haptic feedback on "Discuss with Coach" tap
+- [x] Slide-up transition (per design.md)
+- [x] Haptic feedback on "Discuss with Coach" tap
 
 **Commit:** `feat(today): build Insight Detail screen`
 
@@ -748,11 +748,11 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 - Create: `zuralog/lib/features/today/presentation/notification_history_screen.dart`
 
 **What to build:**
-- [ ] Scrollable list of all past push notifications from `/api/v1/notifications`
-- [ ] Grouped by day
-- [ ] Tapping a notification deep-links to relevant insight/metric
-- [ ] Accessible from bell icon in Today header
-- [ ] Mark as read on view
+- [x] Scrollable list of all past push notifications from `/api/v1/notifications`
+- [x] Grouped by day
+- [x] Tapping a notification deep-links to relevant insight/metric
+- [x] Accessible from bell icon in Today header
+- [x] Mark as read on view
 
 **Commit:** `feat(today): build Notification History screen`
 
