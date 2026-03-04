@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-04 (feat/data-tab merged — Data tab fully built; mock data layer planned for Phase 5.1)
+**Last Updated:** 2026-03-04 (feat/data-tab merged — Data tab fully built; mock data layer moved to Phase 9, after all screens complete)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -205,15 +205,23 @@
 | P2 | Privacy Policy | 🔜 Planned | Phase 8 |
 | P2 | Terms of Service | 🔜 Planned | Phase 8 |
 
-### Phase 5.1 — Mock Data Layer (`--dart-define=USE_MOCK=true`)
+### Phase 9 — Mock Data Layer (`--dart-define=USE_MOCK=true`)
+
+> **Prerequisite:** Every screen in Phases 3–8 must be fully built before this phase starts. Mock seed data must cover the complete app.
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P1 | Extract abstract interface for `DataRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
 | P1 | Extract abstract interface for `TodayRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
-| P1 | `MockDataRepository` — rich seed data (all 10 categories, sparklines, charts) | 🔜 Planned | Covers Health Dashboard, Category Detail, Metric Detail |
+| P1 | Extract abstract interface for `DataRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
+| P1 | Extract abstract interface for `CoachRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
+| P1 | Extract abstract interface for `ProgressRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
+| P1 | Extract abstract interface for `TrendsRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
 | P1 | `MockTodayRepository` — seed insights, quick actions, streak, notifications | 🔜 Planned | Covers Today Feed, Insight Detail, Notification History |
-| P1 | Wire via Riverpod `overrideWith` in `main.dart` (`USE_MOCK=true`) | 🔜 Planned | `--dart-define=USE_MOCK=true` at build/run time; zero overhead in production |
+| P1 | `MockDataRepository` — seed data (all 10 categories, sparklines, charts) | 🔜 Planned | Covers Health Dashboard, Category Detail, Metric Detail |
+| P1 | `MockCoachRepository` — seed conversations, quick action prompts | 🔜 Planned | Covers New Chat, Chat Thread, Conversation Drawer |
+| P1 | `MockProgressRepository` — seed goals, achievements, journal, weekly report | 🔜 Planned | Covers all Progress tab screens |
+| P1 | `MockTrendsRepository` — seed correlations, reports, data source list | 🔜 Planned | Covers all Trends tab screens |
+| P1 | Wire all mocks via Riverpod `overrideWith` in `main.dart` | 🔜 Planned | `--dart-define=USE_MOCK=true` at build/run time; zero overhead in production |
 | P1 | `Makefile` `run-mock` target + `.vscode/launch.json` config | 🔜 Planned | One-click mock launch in VS Code and terminal |
 
 ---
