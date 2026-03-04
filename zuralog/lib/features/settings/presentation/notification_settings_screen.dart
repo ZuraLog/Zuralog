@@ -10,6 +10,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -116,6 +118,12 @@ class NotificationSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(_notificationStateProvider);
     final notifier = ref.read(_notificationStateProvider.notifier);
+    final analytics = ref.read(analyticsServiceProvider);
+
+    void trackToggle(String setting, bool enabled) => analytics.capture(
+          event: AnalyticsEvents.notificationSettingChanged,
+          properties: {'setting': setting, 'enabled': enabled},
+        );
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -141,8 +149,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Morning Briefing',
                 subtitle: 'Daily AI-generated health summary',
                 value: state.morningBriefingEnabled,
-                onChanged: (v) =>
-                    notifier.state = state.copyWith(morningBriefingEnabled: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(morningBriefingEnabled: v);
+                  trackToggle('morning_briefing', v);
+                },
               ),
               if (state.morningBriefingEnabled) ...[
                 _Divider(),
@@ -168,8 +178,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Smart Reminders',
                 subtitle: 'AI-personalized nudges based on your patterns',
                 value: state.smartRemindersEnabled,
-                onChanged: (v) =>
-                    notifier.state = state.copyWith(smartRemindersEnabled: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(smartRemindersEnabled: v);
+                  trackToggle('smart_reminders', v);
+                },
               ),
               if (state.smartRemindersEnabled) ...[
                 _Divider(),
@@ -177,38 +189,53 @@ class NotificationSettingsScreen extends ConsumerWidget {
                   title: 'Pattern-based',
                   subtitle: 'Reminders based on your behavior history',
                   value: state.patternReminders,
-                  onChanged: (v) =>
-                      notifier.state = state.copyWith(patternReminders: v),
+                  onChanged: (v) {
+                    notifier.state = state.copyWith(patternReminders: v);
+                    trackToggle('pattern_reminders', v);
+                  },
                 ),
                 _Divider(),
                 _SubToggleRow(
                   title: 'Data gaps',
                   subtitle: 'Remind when expected data is missing',
                   value: state.gapReminders,
-                  onChanged: (v) =>
-                      notifier.state = state.copyWith(gapReminders: v),
+                  onChanged: (v) {
+                    notifier.state = state.copyWith(gapReminders: v);
+                    trackToggle('gap_reminders', v);
+                  },
                 ),
                 _Divider(),
                 _SubToggleRow(
                   title: 'Goal progress',
                   subtitle: 'Nudges when you\'re close to your goals',
                   value: state.goalReminders,
-                  onChanged: (v) =>
-                      notifier.state = state.copyWith(goalReminders: v),
+                  onChanged: (v) {
+                    notifier.state = state.copyWith(goalReminders: v);
+                    trackToggle('goal_reminders', v);
+                  },
                 ),
                 _Divider(),
                 _SubToggleRow(
                   title: 'Celebrations',
                   subtitle: 'Positive milestones and personal bests',
                   value: state.celebrationReminders,
-                  onChanged: (v) =>
-                      notifier.state = state.copyWith(celebrationReminders: v),
+                  onChanged: (v) {
+                    notifier.state = state.copyWith(celebrationReminders: v);
+                    trackToggle('celebration_reminders', v);
+                  },
                 ),
                 _Divider(),
                 _FrequencyRow(
                   value: state.reminderFrequency,
-                  onChanged: (v) =>
-                      notifier.state = state.copyWith(reminderFrequency: v),
+                  onChanged: (v) {
+                    notifier.state = state.copyWith(reminderFrequency: v);
+                    analytics.capture(
+                      event: AnalyticsEvents.notificationFrequencyChanged,
+                      properties: {
+                        'frequency': v == 1 ? 'low' : v == 2 ? 'medium' : 'high',
+                      },
+                    );
+                  },
                 ),
               ],
             ],
@@ -224,8 +251,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Streak Reminders',
                 subtitle: 'Keep your streaks alive',
                 value: state.streakReminders,
-                onChanged: (v) =>
-                    notifier.state = state.copyWith(streakReminders: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(streakReminders: v);
+                  trackToggle('streak_reminders', v);
+                },
               ),
               _Divider(),
               _ToggleRow(
@@ -234,8 +263,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Achievement Unlocked',
                 subtitle: 'Celebrate new badges',
                 value: state.achievementNotifications,
-                onChanged: (v) => notifier.state =
-                    state.copyWith(achievementNotifications: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(achievementNotifications: v);
+                  trackToggle('achievement_notifications', v);
+                },
               ),
               _Divider(),
               _ToggleRow(
@@ -244,8 +275,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Anomaly Alerts',
                 subtitle: 'Critical health metric deviations',
                 value: state.anomalyAlerts,
-                onChanged: (v) =>
-                    notifier.state = state.copyWith(anomalyAlerts: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(anomalyAlerts: v);
+                  trackToggle('anomaly_alerts', v);
+                },
               ),
               _Divider(),
               _ToggleRow(
@@ -254,8 +287,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Integration Alerts',
                 subtitle: 'When a connected app stops syncing',
                 value: state.integrationAlerts,
-                onChanged: (v) =>
-                    notifier.state = state.copyWith(integrationAlerts: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(integrationAlerts: v);
+                  trackToggle('integration_alerts', v);
+                },
               ),
             ],
           ),
@@ -270,8 +305,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Daily Check-in Reminder',
                 subtitle: 'Log mood, energy, and water intake',
                 value: state.wellnessCheckinEnabled,
-                onChanged: (v) =>
-                    notifier.state = state.copyWith(wellnessCheckinEnabled: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(wellnessCheckinEnabled: v);
+                  trackToggle('wellness_checkin', v);
+                },
               ),
               if (state.wellnessCheckinEnabled) ...[
                 _Divider(),
@@ -297,8 +334,10 @@ class NotificationSettingsScreen extends ConsumerWidget {
                 title: 'Quiet Hours',
                 subtitle: 'Silence all notifications during set hours',
                 value: state.quietHoursEnabled,
-                onChanged: (v) =>
-                    notifier.state = state.copyWith(quietHoursEnabled: v),
+                onChanged: (v) {
+                  notifier.state = state.copyWith(quietHoursEnabled: v);
+                  trackToggle('quiet_hours', v);
+                },
               ),
               if (state.quietHoursEnabled) ...[
                 _Divider(),

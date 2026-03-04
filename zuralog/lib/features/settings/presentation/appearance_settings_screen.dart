@@ -8,6 +8,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -102,8 +104,13 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               const SettingsSectionLabel('THEME'),
               _ThemeSelector(
                 selected: theme,
-                onSelected: (v) =>
-                    ref.read(_themeModeProvider.notifier).state = v,
+                onSelected: (v) {
+                  ref.read(_themeModeProvider.notifier).state = v;
+                  ref.read(analyticsServiceProvider).capture(
+                    event: AnalyticsEvents.themeChanged,
+                    properties: {'theme': v},
+                  );
+                },
               ),
 
               // ── EXPERIENCE section ────────────────────────────────────────
@@ -116,8 +123,13 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     title: 'Haptic Feedback',
                     subtitle: 'Vibration on interactions',
                     value: haptic,
-                    onChanged: (v) =>
-                        ref.read(_hapticFeedbackProvider.notifier).state = v,
+                    onChanged: (v) {
+                      ref.read(_hapticFeedbackProvider.notifier).state = v;
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.hapticToggled,
+                        properties: {'enabled': v},
+                      );
+                    },
                   ),
                 ],
               ),

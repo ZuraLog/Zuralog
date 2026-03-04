@@ -15,6 +15,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -279,6 +281,14 @@ class _CorrelationCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).light();
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.correlationTapped,
+          properties: {
+            'metric_a': highlight.metricA,
+            'metric_b': highlight.metricB,
+            'direction': highlight.direction.name,
+          },
+        );
         onTap();
       },
       child: Container(
@@ -483,6 +493,10 @@ class _QuickNavButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).light();
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.trendsNavTapped,
+          properties: {'section': item.label.toLowerCase()},
+        );
         context.push(item.routePath);
       },
       child: Container(

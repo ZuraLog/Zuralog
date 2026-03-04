@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -50,6 +51,14 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
+    ref.read(analyticsServiceProvider).capture(
+      event: 'coach_message_sent',
+      properties: {
+        'source': 'thread',
+        'conversation_id': widget.conversationId,
+        'char_count': text.length,
+      },
+    );
     _inputCtrl.clear();
 
     // Start a Sentry performance transaction to measure AI response latency.

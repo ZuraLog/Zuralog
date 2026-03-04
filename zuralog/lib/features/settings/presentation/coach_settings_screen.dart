@@ -8,6 +8,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -187,8 +189,13 @@ class CoachSettingsScreen extends ConsumerWidget {
                 return _PersonaCard(
                   persona: persona,
                   isActive: isActive,
-                  onTap: () =>
-                      ref.read(_personaProvider.notifier).state = persona.key,
+                  onTap: () {
+                    ref.read(_personaProvider.notifier).state = persona.key;
+                    ref.read(analyticsServiceProvider).capture(
+                      event: AnalyticsEvents.personaChanged,
+                      properties: {'persona': persona.key},
+                    );
+                  },
                 );
               },
             ),
@@ -227,8 +234,13 @@ class CoachSettingsScreen extends ConsumerWidget {
                   // Chip row
                   _ProactivityChipRow(
                     selectedKey: selectedProactivity,
-                    onSelected: (key) =>
-                        ref.read(_proactivityProvider.notifier).state = key,
+                    onSelected: (key) {
+                      ref.read(_proactivityProvider.notifier).state = key;
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.proactivityChanged,
+                        properties: {'level': key},
+                      );
+                    },
                   ),
                 ],
               ),

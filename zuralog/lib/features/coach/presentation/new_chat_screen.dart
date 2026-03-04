@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -80,6 +81,13 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
+    ref.read(analyticsServiceProvider).capture(
+      event: 'coach_message_sent',
+      properties: {
+        'source': 'new_chat',
+        'char_count': text.length,
+      },
+    );
     _inputCtrl.clear();
     // In production: create a new conversation via the repository, then push
     // to the thread screen. For Phase 10 we just navigate to a stub thread.
@@ -91,6 +99,10 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
   void _onSuggestionTap(String text) {
     ref.read(hapticServiceProvider).light();
+    ref.read(analyticsServiceProvider).capture(
+      event: 'coach_suggestion_tapped',
+      properties: {'suggestion_text': text},
+    );
     _inputCtrl.text = text;
     _inputFocus.requestFocus();
   }
@@ -696,6 +708,10 @@ class _QuickActionsSheet extends ConsumerWidget {
                       action: actions[i],
                       onTap: () {
                         ref.read(hapticServiceProvider).medium();
+                        ref.read(analyticsServiceProvider).capture(
+                          event: 'coach_quick_action_tapped',
+                          properties: {'title': actions[i].title},
+                        );
                         onActionTap(actions[i].prompt);
                       },
                     ),

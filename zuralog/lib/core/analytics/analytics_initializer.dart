@@ -4,12 +4,15 @@
 /// that are sent with every PostHog event. Place this widget
 /// early in the widget tree (e.g., inside ZuralogApp's build).
 ///
-/// Also observes app lifecycle to capture app_opened and app_backgrounded.
+/// Also observes app lifecycle to capture app_opened and app_backgrounded,
+/// and tracks session duration via sessionStarted / sessionSummary events.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io' show Platform;
+import 'analytics_events.dart';
 import 'analytics_service.dart';
 
 class AnalyticsInitializer extends ConsumerStatefulWidget {
@@ -25,6 +28,8 @@ class AnalyticsInitializer extends ConsumerStatefulWidget {
 class _AnalyticsInitializerState extends ConsumerState<AnalyticsInitializer>
     with WidgetsBindingObserver {
   bool _initialized = false;
+  DateTime? _sessionStart;
+  int _sessionStartHour = 0;
 
   @override
   void initState() {
@@ -37,6 +42,32 @@ class _AnalyticsInitializerState extends ConsumerState<AnalyticsInitializer>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _startSession() {
+    _sessionStart = DateTime.now();
+    _sessionStartHour = _sessionStart!.hour;
+    ref.read(analyticsServiceProvider).capture(
+      event: AnalyticsEvents.sessionStarted,
+      properties: {
+        'hour_of_day': _sessionStartHour,
+        'day_of_week': _sessionStart!.weekday,
+      },
+    );
+  }
+
+  void _endSession() {
+    final start = _sessionStart;
+    if (start == null) return;
+    final durationSeconds = DateTime.now().difference(start).inSeconds;
+    ref.read(analyticsServiceProvider).capture(
+      event: AnalyticsEvents.sessionSummary,
+      properties: {
+        'duration_seconds': durationSeconds,
+        'hour_of_day': _sessionStartHour,
+      },
+    );
+    _sessionStart = null;
   }
 
   Future<void> _initAnalytics() async {
@@ -59,6 +90,8 @@ class _AnalyticsInitializerState extends ConsumerState<AnalyticsInitializer>
         'platform': Platform.isIOS ? 'ios' : 'android',
         'app_version': packageInfo.version,
       });
+
+      _startSession();
     } catch (e) {
       debugPrint('AnalyticsInitializer._initAnalytics failed: $e');
     }
@@ -71,6 +104,7 @@ class _AnalyticsInitializerState extends ConsumerState<AnalyticsInitializer>
 
     switch (state) {
       case AppLifecycleState.paused:
+        _endSession();
         analytics.capture(event: 'app_backgrounded');
         analytics.flush();
         break;
@@ -78,6 +112,7 @@ class _AnalyticsInitializerState extends ConsumerState<AnalyticsInitializer>
         analytics.capture(event: 'app_opened', properties: {
           'resume': true,
         });
+        _startSession();
         break;
       default:
         break;

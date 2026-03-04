@@ -8,6 +8,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -276,6 +278,15 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
     if (_isNew) {
       await ref.read(hapticServiceProvider).medium();
     }
+    final achievement = widget.achievement;
+    ref.read(analyticsServiceProvider).capture(
+      event: AnalyticsEvents.achievementViewed,
+      properties: {
+        'achievement_key': achievement.key,
+        'is_unlocked': achievement.isUnlocked,
+        'is_new': _isNew,
+      },
+    );
   }
 
   Color _categoryColor(AchievementCategory cat) {

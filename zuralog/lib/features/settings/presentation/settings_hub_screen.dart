@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -29,6 +31,14 @@ class SettingsHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    void openSection(String title, String path) {
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.settingsSectionOpened,
+        properties: {'section': title.toLowerCase()},
+      );
+      context.push(path);
+    }
+
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       body: CustomScrollView(
@@ -68,14 +78,14 @@ class SettingsHubScreen extends ConsumerWidget {
                   iconColor: AppColors.categoryWellness,
                   title: 'Account',
                   subtitle: 'Email, password, linked accounts',
-                  onTap: () => context.push(RouteNames.settingsAccountPath),
+                  onTap: () => openSection('Account', RouteNames.settingsAccountPath),
                 ),
                 _SettingsTile(
                   icon: Icons.workspace_premium_rounded,
                   iconColor: AppColors.categoryNutrition,
                   title: 'Subscription',
                   subtitle: 'Plan, billing, restore purchases',
-                  onTap: () => context.push(RouteNames.settingsSubscriptionPath),
+                  onTap: () => openSection('Subscription', RouteNames.settingsSubscriptionPath),
                 ),
               ],
             ),
@@ -93,21 +103,21 @@ class SettingsHubScreen extends ConsumerWidget {
                   title: 'Notifications',
                   subtitle: 'Reminders, briefings, quiet hours',
                   onTap: () =>
-                      context.push(RouteNames.settingsNotificationsPath),
+                      openSection('Notifications', RouteNames.settingsNotificationsPath),
                 ),
                 _SettingsTile(
                   icon: Icons.palette_rounded,
                   iconColor: AppColors.primaryDark,
                   title: 'Appearance',
                   subtitle: 'Theme, haptics, tooltips',
-                  onTap: () => context.push(RouteNames.settingsAppearancePath),
+                  onTap: () => openSection('Appearance', RouteNames.settingsAppearancePath),
                 ),
                 _SettingsTile(
                   icon: Icons.psychology_rounded,
                   iconColor: AppColors.categorySleep,
                   title: 'Coach',
                   subtitle: 'AI persona, proactivity level',
-                  onTap: () => context.push(RouteNames.settingsCoachPath),
+                  onTap: () => openSection('Coach', RouteNames.settingsCoachPath),
                 ),
               ],
             ),
@@ -125,14 +135,14 @@ class SettingsHubScreen extends ConsumerWidget {
                   title: 'Integrations',
                   subtitle: 'Connected apps and services',
                   onTap: () =>
-                      context.push(RouteNames.settingsIntegrationsPath),
+                      openSection('Integrations', RouteNames.settingsIntegrationsPath),
                 ),
                 _SettingsTile(
                   icon: Icons.lock_rounded,
                   iconColor: AppColors.categoryVitals,
                   title: 'Privacy & Data',
                   subtitle: 'AI memory, data export, analytics',
-                  onTap: () => context.push(RouteNames.settingsPrivacyPath),
+                  onTap: () => openSection('Privacy & Data', RouteNames.settingsPrivacyPath),
                 ),
               ],
             ),
@@ -149,7 +159,7 @@ class SettingsHubScreen extends ConsumerWidget {
                   iconColor: AppColors.categoryBody,
                   title: 'About Zuralog',
                   subtitle: 'Version, licenses, support',
-                  onTap: () => context.push(RouteNames.settingsAboutPath),
+                  onTap: () => openSection('About Zuralog', RouteNames.settingsAboutPath),
                 ),
               ],
             ),

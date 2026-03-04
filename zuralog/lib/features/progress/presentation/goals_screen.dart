@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -61,6 +62,10 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     final repo = ref.read(progressRepositoryProvider);
     try {
       await repo.deleteGoal(goalId);
+      ref.read(analyticsServiceProvider).capture(
+        event: 'goal_deleted',
+        properties: {'goal_id': goalId},
+      );
       ref.invalidate(goalsProvider);
       ref.invalidate(progressHomeProvider);
     } catch (_) {
@@ -109,9 +114,21 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
             }
             return _GoalsList(
               goals: goals,
-              onTap: (goal) => context.push(
-                RouteNames.goalDetailPath.replaceFirst(':id', goal.id),
-              ),
+              onTap: (goal) {
+                ref.read(analyticsServiceProvider).capture(
+                  event: 'goal_tapped',
+                  properties: {
+                    'goal_id': goal.id,
+                    'goal_type': goal.type.name,
+                    'progress_percent':
+                        (goal.progressFraction * 100).round(),
+                    'is_completed': goal.isCompleted,
+                  },
+                );
+                context.push(
+                  RouteNames.goalDetailPath.replaceFirst(':id', goal.id),
+                );
+              },
               onLongPress: _openEditSheet,
               onDelete: _deleteGoal,
             );

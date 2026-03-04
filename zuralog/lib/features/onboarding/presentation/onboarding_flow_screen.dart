@@ -25,6 +25,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -165,6 +166,44 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   Future<void> _handleNext() async {
+    // Fire step-specific analytics before advancing.
+    final analytics = ref.read(analyticsServiceProvider);
+    analytics.capture(
+      event: AnalyticsEvents.onboardingStepCompleted,
+      properties: {'step': _currentPage + 1},
+    );
+
+    // Page 1 (index 1) = Goals step.
+    if (_currentPage == 1) {
+      analytics.capture(
+        event: AnalyticsEvents.onboardingGoalsSelected,
+        properties: {'goals_count': _selectedGoals.length},
+      );
+    }
+
+    // Page 2 (index 2) = Persona step.
+    if (_currentPage == 2) {
+      analytics.capture(
+        event: AnalyticsEvents.onboardingPersonaSelected,
+        properties: {
+          'persona': _selectedPersona,
+          'proactivity': _proactivityApiKey(_proactivity),
+        },
+      );
+    }
+
+    // Page 4 (index 4) = Notifications step.
+    if (_currentPage == 4) {
+      analytics.capture(
+        event: AnalyticsEvents.onboardingNotificationToggled,
+        properties: {
+          'morning_briefing': _morningBriefingEnabled,
+          'smart_reminders': _smartRemindersEnabled,
+          'wellness_checkin': _wellnessCheckInEnabled,
+        },
+      );
+    }
+
     if (_currentPage < _pages.length - 1) {
       await _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
@@ -177,6 +216,10 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   void _handleBack() {
     if (_currentPage > 0 && !_isSubmitting) {
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.onboardingStepBack,
+        properties: {'from_step': _currentPage + 1},
+      );
       _pageController.previousPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
@@ -210,10 +253,21 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         },
       );
 
-      // 2. Fire PostHog discovery event (only on successful completion, once).
+      // 2. Fire PostHog completion events.
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.onboardingCompleted,
+        properties: {
+          'goals_count': _selectedGoals.length,
+          'persona': _selectedPersona,
+          'proactivity': _proactivityApiKey(_proactivity),
+          'morning_briefing': _morningBriefingEnabled,
+          'wellness_checkin_enabled': _wellnessCheckInEnabled,
+          'discovery_source': _discoverySource ?? 'skipped',
+        },
+      );
       if (_discoverySource != null) {
         ref.read(analyticsServiceProvider).capture(
-          event: 'onboarding_discovery',
+          event: AnalyticsEvents.onboardingDiscoverySource,
           properties: {'source': _discoverySource},
         );
       }

@@ -14,6 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -41,6 +45,8 @@ class InsightDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
+  bool _viewEventFired = false;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +62,33 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(insightDetailProvider(widget.insightId));
+
+    // Fire viewed event once when detail data is first available.
+    detailAsync.whenOrNull(data: (detail) {
+      if (!_viewEventFired) {
+        _viewEventFired = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ref.read(analyticsServiceProvider).capture(
+            event: AnalyticsEvents.insightDetailViewed,
+            properties: {
+              'insight_id': widget.insightId,
+              'insight_type': detail.type.name,
+              'category': detail.category,
+            },
+          );
+          // First-use guard.
+          SharedPreferences.getInstance().then((prefs) {
+            if (prefs.getBool('analytics_first_insight_viewed') != true) {
+              prefs.setBool('analytics_first_insight_viewed', true);
+              ref.read(analyticsServiceProvider).capture(
+                event: AnalyticsEvents.firstInsightViewed,
+              );
+            }
+          });
+        });
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -371,6 +404,13 @@ class _DetailBody extends ConsumerWidget {
               child: _PressScaleButton(
                 onPressed: () {
                   ref.read(hapticServiceProvider).medium();
+                  ref.read(analyticsServiceProvider).capture(
+                    event: AnalyticsEvents.insightDetailCoachTapped,
+                    properties: {
+                      'insight_id': detail.id,
+                      'insight_type': detail.type.name,
+                    },
+                  );
                   context.go(
                     '${RouteNames.coachPath}?context=insight&id=${detail.id}',
                   );

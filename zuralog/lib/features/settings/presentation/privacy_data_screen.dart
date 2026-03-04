@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -146,13 +148,16 @@ class PrivacyDataScreen extends ConsumerWidget {
                           final isLast = index == memoryItems.length - 1;
                           return Column(
                             children: [
-                              _MemoryItemRow(
+                               _MemoryItemRow(
                                 text: item,
                                 onDelete: () {
                                   final updated = List<String>.from(
                                     memoryItems,
                                   )..removeAt(index);
                                   memoryNotifier.state = updated;
+                                  ref.read(analyticsServiceProvider).capture(
+                                    event: AnalyticsEvents.memoryDeleted,
+                                  );
                                 },
                               ),
                               if (!isLast) const _Divider(),
@@ -175,6 +180,9 @@ class PrivacyDataScreen extends ConsumerWidget {
                   enabled: memoryItems.isNotEmpty,
                   onConfirmed: () {
                     memoryNotifier.state = [];
+                    ref.read(analyticsServiceProvider).capture(
+                      event: AnalyticsEvents.allMemoriesCleared,
+                    );
                   },
                 ),
               ),
@@ -222,6 +230,9 @@ class PrivacyDataScreen extends ConsumerWidget {
                 children: [
                   _ExportDataRow(
                     onTap: () {
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.dataExportRequested,
+                      );
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Data export coming soon'),
@@ -233,6 +244,9 @@ class PrivacyDataScreen extends ConsumerWidget {
                   const _Divider(),
                   _DeleteDataRow(
                     onConfirmed: () {
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.accountDeleteRequested,
+                      );
                       // TODO(phase9): Wire to Supabase delete-all-data API endpoint.
                       // Do not show a success message until the API call succeeds.
                       ScaffoldMessenger.of(context).showSnackBar(

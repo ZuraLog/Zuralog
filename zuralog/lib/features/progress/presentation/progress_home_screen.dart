@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -840,31 +842,39 @@ class _DeltaChip extends StatelessWidget {
 
 // ── _QuickNavRow ──────────────────────────────────────────────────────────────
 
-class _QuickNavRow extends StatelessWidget {
+class _QuickNavRow extends ConsumerWidget {
   const _QuickNavRow();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    void trackAndPush(String label, String path) {
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.progressNavTapped,
+        properties: {'section': label.toLowerCase()},
+      );
+      context.push(path);
+    }
+
     final items = [
       _QuickNavItem(
         icon: Icons.flag_rounded,
         label: 'Goals',
-        onTap: () => context.push(RouteNames.goalsPath),
+        onTap: () => trackAndPush('Goals', RouteNames.goalsPath),
       ),
       _QuickNavItem(
         icon: Icons.emoji_events_rounded,
         label: 'Achievements',
-        onTap: () => context.push(RouteNames.achievementsPath),
+        onTap: () => trackAndPush('Achievements', RouteNames.achievementsPath),
       ),
       _QuickNavItem(
         icon: Icons.bar_chart_rounded,
         label: 'Report',
-        onTap: () => context.push(RouteNames.weeklyReportPath),
+        onTap: () => trackAndPush('Report', RouteNames.weeklyReportPath),
       ),
       _QuickNavItem(
         icon: Icons.book_rounded,
         label: 'Journal',
-        onTap: () => context.push(RouteNames.journalPath),
+        onTap: () => trackAndPush('Journal', RouteNames.journalPath),
       ),
     ];
 

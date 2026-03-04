@@ -19,6 +19,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -122,8 +124,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     switch (result) {
       case AuthSuccess():
         // GoRouter auth guard navigates to dashboard automatically.
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.loginCompleted,
+          properties: {'method': 'email'},
+        );
         break;
       case AuthFailure(:final message):
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.loginFailed,
+          properties: {'method': 'email', 'error_type': message},
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),

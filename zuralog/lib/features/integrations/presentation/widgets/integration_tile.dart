@@ -9,6 +9,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -110,7 +112,13 @@ class IntegrationTile extends ConsumerWidget {
 
     // Dim the tile when coming soon OR when incompatible with this platform.
     if (isComingSoon) {
-      tile = Opacity(opacity: 0.5, child: tile);
+      tile = GestureDetector(
+        onTap: () => ref.read(analyticsServiceProvider).capture(
+              event: AnalyticsEvents.comingSoonIntegrationTapped,
+              properties: {'provider': integration.id},
+            ),
+        child: Opacity(opacity: 0.5, child: tile),
+      );
     } else if (isIncompatible) {
       tile = Opacity(opacity: 0.45, child: tile);
     }
@@ -164,9 +172,15 @@ class _StatusControl extends ConsumerWidget {
               onPressed: () => showDisconnectSheet(
                 context,
                 integration,
-                () => ref
-                    .read(integrationsProvider.notifier)
-                    .disconnect(integration.id),
+                () {
+                  ref
+                      .read(integrationsProvider.notifier)
+                      .disconnect(integration.id);
+                  ref.read(analyticsServiceProvider).capture(
+                    event: AnalyticsEvents.integrationDisconnected,
+                    properties: {'integration_id': integration.id},
+                  );
+                },
               ),
             ),
           ],
@@ -174,9 +188,15 @@ class _StatusControl extends ConsumerWidget {
 
       case IntegrationStatus.available:
         return _ConnectButton(
-          onPressed: () => ref
-              .read(integrationsProvider.notifier)
-              .connect(integration.id, context),
+          onPressed: () {
+            ref
+                .read(integrationsProvider.notifier)
+                .connect(integration.id, context);
+            ref.read(analyticsServiceProvider).capture(
+              event: AnalyticsEvents.integrationConnected,
+              properties: {'integration_id': integration.id},
+            );
+          },
         );
     }
   }

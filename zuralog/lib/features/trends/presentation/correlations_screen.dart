@@ -19,6 +19,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -146,8 +148,13 @@ class _MetricPickerRow extends ConsumerWidget {
             selectedId: metricAId,
             metrics: metrics,
             excludeId: metricBId,
-            onSelected: (id) =>
-                ref.read(selectedMetricAProvider.notifier).state = id,
+            onSelected: (id) {
+              ref.read(selectedMetricAProvider.notifier).state = id;
+              ref.read(analyticsServiceProvider).capture(
+                event: AnalyticsEvents.correlationMetricSelected,
+                properties: {'position': 'metric_a', 'metric_id': id},
+              );
+            },
           ),
         ),
         Padding(
@@ -164,8 +171,13 @@ class _MetricPickerRow extends ConsumerWidget {
             selectedId: metricBId,
             metrics: metrics,
             excludeId: metricAId,
-            onSelected: (id) =>
-                ref.read(selectedMetricBProvider.notifier).state = id,
+            onSelected: (id) {
+              ref.read(selectedMetricBProvider.notifier).state = id;
+              ref.read(analyticsServiceProvider).capture(
+                event: AnalyticsEvents.correlationMetricSelected,
+                properties: {'position': 'metric_b', 'metric_id': id},
+              );
+            },
           ),
         ),
       ],
@@ -385,9 +397,13 @@ class _TimeRangeSelector extends ConsumerWidget {
               child: _RangeChip(
                 label: range.label,
                 isSelected: selected == range,
-                onTap: () =>
-                    ref.read(selectedTimeRangeProvider.notifier).state =
-                        range,
+                onTap: () {
+                  ref.read(selectedTimeRangeProvider.notifier).state = range;
+                  ref.read(analyticsServiceProvider).capture(
+                    event: AnalyticsEvents.timeRangeChanged,
+                    properties: {'range': range.label, 'context': 'correlations'},
+                  );
+                },
               ),
             ),
           )
@@ -474,8 +490,13 @@ class _LagSelector extends ConsumerWidget {
                 child: _RangeChip(
                   label: label,
                   isSelected: selectedDays == i,
-                  onTap: () =>
-                      ref.read(selectedLagDaysProvider.notifier).state = i,
+                  onTap: () {
+                    ref.read(selectedLagDaysProvider.notifier).state = i;
+                    ref.read(analyticsServiceProvider).capture(
+                      event: AnalyticsEvents.correlationLagChanged,
+                      properties: {'lag_days': i},
+                    );
+                  },
                 ),
               ),
             );

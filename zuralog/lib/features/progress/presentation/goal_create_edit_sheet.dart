@@ -8,6 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -99,6 +103,13 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           deadline: deadlineIso,
         );
         await haptics.light();
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.goalUpdated,
+          properties: {
+            'goal_type': widget.initialGoal!.type.name,
+            'has_deadline': deadlineIso != null,
+          },
+        );
       } else {
         await repo.createGoal(
           type: _selectedType,
@@ -109,6 +120,22 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           deadline: deadlineIso,
         );
         await haptics.medium();
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.goalCreated,
+          properties: {
+            'goal_type': _selectedType.name,
+            'period': _selectedPeriod.name,
+            'has_deadline': deadlineIso != null,
+          },
+        );
+        // First-use guard.
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getBool('analytics_first_goal_created') != true) {
+          await prefs.setBool('analytics_first_goal_created', true);
+          ref.read(analyticsServiceProvider).capture(
+            event: AnalyticsEvents.firstGoalCreated,
+          );
+        }
       }
 
       ref.invalidate(goalsProvider);

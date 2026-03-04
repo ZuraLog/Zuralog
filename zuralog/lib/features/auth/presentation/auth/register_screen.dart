@@ -22,6 +22,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -127,8 +129,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         // The router guard (in app_router.dart Step 3) redirects authenticated
         // users with onboardingComplete == false to the profile questionnaire
         // automatically. No explicit navigation call is needed here.
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.signUpCompleted,
+          properties: {'method': 'email'},
+        );
         break;
       case AuthFailure(:final message):
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.signUpFailed,
+          properties: {'method': 'email', 'error_type': message},
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),

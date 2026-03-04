@@ -13,6 +13,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -235,6 +239,12 @@ class TodayFeedScreen extends ConsumerWidget {
                           action: feed.quickActions[index],
                           onTap: () {
                             ref.read(hapticServiceProvider).light();
+                            ref.read(analyticsServiceProvider).capture(
+                              event: AnalyticsEvents.quickActionTapped,
+                              properties: {
+                                'title': feed.quickActions[index].title,
+                              },
+                            );
                             final route = feed.quickActions[index].route;
                             if (route != null) context.go(route);
                           },
@@ -312,6 +322,9 @@ class _TodayAppBar extends ConsumerWidget implements PreferredSizeWidget {
           ),
           onPressed: () {
             ref.read(hapticServiceProvider).light();
+            ref.read(analyticsServiceProvider).capture(
+              event: AnalyticsEvents.notificationHistoryViewed,
+            );
             context.pushNamed(RouteNames.notificationHistory);
           },
           tooltip: 'Notifications',
@@ -375,6 +388,9 @@ class _HealthScoreHero extends ConsumerWidget {
                     commentary: data.commentary,
                     onTap: () {
                       ref.read(hapticServiceProvider).light();
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.healthScoreTapped,
+                      );
                       context.go(RouteNames.dataPath);
                     },
                   ),
@@ -465,6 +481,15 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
         setState(() => _pressed = false);
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.insightCardTapped,
+          properties: {
+            'insight_id': widget.insight.id,
+            'insight_type': widget.insight.type.name,
+            'category': widget.insight.category,
+            'is_unread': !widget.insight.isRead,
+          },
+        );
         widget.onTap();
       },
       onTapCancel: () => setState(() => _pressed = false),
@@ -854,6 +879,10 @@ class _QuickLogFABState extends ConsumerState<_QuickLogFAB>
 
   Future<void> _onPressed() async {
     ref.read(hapticServiceProvider).medium();
+    ref.read(analyticsServiceProvider).capture(
+      event: AnalyticsEvents.quickLogOpened,
+      properties: {'source': 'fab'},
+    );
     await _ctrl.forward(from: 0);
     if (mounted) _showQuickLog(context, ref);
   }
@@ -1328,6 +1357,26 @@ void _showQuickLog(BuildContext context, WidgetRef ref) {
                 'symptoms': data.symptoms,
               });
               r.read(hapticServiceProvider).success();
+              r.read(analyticsServiceProvider).capture(
+                event: AnalyticsEvents.quickLogSubmitted,
+                properties: {
+                  'has_mood': data.mood > 0,
+                  'has_energy': data.energy > 0,
+                  'has_stress': data.stress > 0,
+                  'water_glasses': data.waterGlasses,
+                  'has_notes': data.notes.isNotEmpty,
+                  'symptoms_count': data.symptoms.length,
+                },
+              );
+              // First-use guard.
+              SharedPreferences.getInstance().then((prefs) {
+                if (prefs.getBool('analytics_first_quick_log') != true) {
+                  prefs.setBool('analytics_first_quick_log', true);
+                  r.read(analyticsServiceProvider).capture(
+                    event: AnalyticsEvents.firstQuickLog,
+                  );
+                }
+              });
               r.invalidate(todayFeedProvider);
               r.invalidate(healthScoreProvider);
               if (ctx.mounted) Navigator.of(ctx).pop();
