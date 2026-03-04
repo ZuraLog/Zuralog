@@ -40,6 +40,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/analytics/posthog_navigator_observer.dart';
+import 'package:zuralog/core/monitoring/sentry_error_boundary.dart';
+import 'package:zuralog/core/monitoring/sentry_router_observer.dart';
 
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
@@ -128,6 +130,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: kDebugMode,
     observers: [
       SentryNavigatorObserver(),
+      SentryRouterObserver(),
       PostHogNavigatorObserver(ref.read(analyticsServiceProvider)),
     ],
     redirect: (BuildContext context, GoRouterState state) {
@@ -171,84 +174,136 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.welcomePath,
       name: RouteNames.welcome,
-      builder: (context, state) => const WelcomeScreen(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'auth.welcome',
+        showBackButton: false,
+        child: WelcomeScreen(),
+      ),
     ),
     GoRoute(
       path: RouteNames.onboardingPath,
       name: RouteNames.onboarding,
-      builder: (context, state) => const OnboardingPageView(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'auth.onboarding',
+        showBackButton: false,
+        child: OnboardingPageView(),
+      ),
     ),
     GoRoute(
       path: RouteNames.loginPath,
       name: RouteNames.login,
-      builder: (context, state) => const LoginScreen(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'auth.login',
+        showBackButton: false,
+        child: LoginScreen(),
+      ),
     ),
     GoRoute(
       path: RouteNames.registerPath,
       name: RouteNames.register,
-      builder: (context, state) => const RegisterScreen(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'auth.register',
+        child: RegisterScreen(),
+      ),
     ),
     GoRoute(
       path: RouteNames.profileQuestionnairePath,
       name: RouteNames.profileQuestionnaire,
-      builder: (context, state) => const OnboardingFlowScreen(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'auth.profile_questionnaire',
+        showBackButton: false,
+        child: OnboardingFlowScreen(),
+      ),
     ),
 
     // ── Settings (pushed over shell — nested sub-routes) ──────────────────
     GoRoute(
       path: RouteNames.settingsPath,
       name: RouteNames.settings,
-      builder: (context, state) => const SettingsHubScreen(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'settings',
+        child: SettingsHubScreen(),
+      ),
       routes: [
         GoRoute(
           path: 'account',
           name: RouteNames.settingsAccount,
-          builder: (context, state) => const AccountSettingsScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.account',
+            child: AccountSettingsScreen(),
+          ),
         ),
         GoRoute(
           path: 'notifications',
           name: RouteNames.settingsNotifications,
-          builder: (context, state) => const NotificationSettingsScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.notifications',
+            child: NotificationSettingsScreen(),
+          ),
         ),
         GoRoute(
           path: 'appearance',
           name: RouteNames.settingsAppearance,
-          builder: (context, state) => const AppearanceSettingsScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.appearance',
+            child: AppearanceSettingsScreen(),
+          ),
         ),
         GoRoute(
           path: 'coach',
           name: RouteNames.settingsCoach,
-          builder: (context, state) => const CoachSettingsScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.coach',
+            child: CoachSettingsScreen(),
+          ),
         ),
         GoRoute(
           path: 'integrations',
           name: RouteNames.settingsIntegrations,
-          builder: (context, state) => const IntegrationsScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.integrations',
+            child: IntegrationsScreen(),
+          ),
         ),
         GoRoute(
           path: 'privacy',
           name: RouteNames.settingsPrivacy,
-          builder: (context, state) => const PrivacyDataScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.privacy',
+            child: PrivacyDataScreen(),
+          ),
         ),
         GoRoute(
           path: 'subscription',
           name: RouteNames.settingsSubscription,
-          builder: (context, state) => const SubscriptionSettingsScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.subscription',
+            child: SubscriptionSettingsScreen(),
+          ),
         ),
         GoRoute(
           path: 'about',
           name: RouteNames.settingsAbout,
-          builder: (context, state) => const AboutScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.about',
+            child: AboutScreen(),
+          ),
         ),
         GoRoute(
           path: 'privacy-policy',
           name: RouteNames.settingsPrivacyPolicy,
-          builder: (context, state) => const PrivacyPolicyScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.privacy_policy',
+            child: PrivacyPolicyScreen(),
+          ),
         ),
         GoRoute(
           path: 'terms',
           name: RouteNames.settingsTerms,
-          builder: (context, state) => const TermsOfServiceScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.terms',
+            child: TermsOfServiceScreen(),
+          ),
         ),
       ],
     ),
@@ -257,17 +312,26 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.profilePath,
       name: RouteNames.profile,
-      builder: (context, state) => const ProfileScreen(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'profile',
+        child: ProfileScreen(),
+      ),
       routes: [
         GoRoute(
           path: 'emergency-card',
           name: RouteNames.emergencyCard,
-          builder: (context, state) => const EmergencyCardScreen(),
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'profile.emergency_card',
+            child: EmergencyCardScreen(),
+          ),
           routes: [
             GoRoute(
               path: 'edit',
               name: RouteNames.emergencyCardEdit,
-              builder: (context, state) => const EmergencyCardEditScreen(),
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'profile.emergency_card_edit',
+                child: EmergencyCardEditScreen(),
+              ),
             ),
           ],
         ),
@@ -278,7 +342,10 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: RouteNames.debugCatalogPath,
       name: RouteNames.debugCatalog,
-      builder: (context, state) => const CatalogScreen(),
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'dev.catalog',
+        child: CatalogScreen(),
+      ),
     ),
 
     // ── Main App Shell — 5-tab StatefulShellRoute ─────────────────────────
@@ -292,20 +359,28 @@ List<RouteBase> _buildRoutes() {
             GoRoute(
               path: RouteNames.todayPath,
               name: RouteNames.today,
-              builder: (context, state) => const TodayFeedScreen(),
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'today',
+                child: TodayFeedScreen(),
+              ),
               routes: [
                 GoRoute(
                   path: 'insight/:id',
                   name: RouteNames.insightDetail,
-                  builder: (context, state) => InsightDetailScreen(
-                    insightId: state.pathParameters['id']!,
+                  builder: (context, state) => SentryErrorBoundary(
+                    module: 'today.insight_detail',
+                    child: InsightDetailScreen(
+                      insightId: state.pathParameters['id']!,
+                    ),
                   ),
                 ),
                 GoRoute(
                   path: 'notifications',
                   name: RouteNames.notificationHistory,
-                  builder: (context, state) =>
-                      const NotificationHistoryScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'today.notifications',
+                    child: NotificationHistoryScreen(),
+                  ),
                 ),
               ],
             ),
@@ -318,21 +393,29 @@ List<RouteBase> _buildRoutes() {
             GoRoute(
               path: RouteNames.dataPath,
               name: RouteNames.data,
-              builder: (context, state) => const HealthDashboardScreen(),
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'data',
+                child: HealthDashboardScreen(),
+              ),
               routes: [
                 GoRoute(
                   path: 'category/:id',
                   name: RouteNames.categoryDetail,
-                  builder: (context, state) =>
-                      data_screens.CategoryDetailScreen(
-                        categoryId: state.pathParameters['id']!,
-                      ),
+                  builder: (context, state) => SentryErrorBoundary(
+                    module: 'data.category_detail',
+                    child: data_screens.CategoryDetailScreen(
+                      categoryId: state.pathParameters['id']!,
+                    ),
+                  ),
                 ),
                 GoRoute(
                   path: 'metric/:id',
                   name: RouteNames.metricDetail,
-                  builder: (context, state) => data_metric.MetricDetailScreen(
-                    metricId: state.pathParameters['id']!,
+                  builder: (context, state) => SentryErrorBoundary(
+                    module: 'data.metric_detail',
+                    child: data_metric.MetricDetailScreen(
+                      metricId: state.pathParameters['id']!,
+                    ),
                   ),
                 ),
               ],
@@ -346,13 +429,19 @@ List<RouteBase> _buildRoutes() {
             GoRoute(
               path: RouteNames.coachPath,
               name: RouteNames.coach,
-              builder: (context, state) => const NewChatScreen(),
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'coach',
+                child: NewChatScreen(),
+              ),
               routes: [
                 GoRoute(
                   path: 'thread/:id',
                   name: RouteNames.coachThread,
-                  builder: (context, state) => ChatThreadScreen(
-                    conversationId: state.pathParameters['id']!,
+                  builder: (context, state) => SentryErrorBoundary(
+                    module: 'coach.thread',
+                    child: ChatThreadScreen(
+                      conversationId: state.pathParameters['id']!,
+                    ),
                   ),
                 ),
               ],
@@ -366,18 +455,27 @@ List<RouteBase> _buildRoutes() {
             GoRoute(
               path: RouteNames.progressPath,
               name: RouteNames.progress,
-              builder: (context, state) => const ProgressHomeScreen(),
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'progress',
+                child: ProgressHomeScreen(),
+              ),
               routes: [
                 GoRoute(
                   path: 'goals',
                   name: RouteNames.goals,
-                  builder: (context, state) => const GoalsScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'progress.goals',
+                    child: GoalsScreen(),
+                  ),
                   routes: [
                     GoRoute(
                       path: ':id',
                       name: RouteNames.goalDetail,
-                      builder: (context, state) => GoalDetailScreen(
-                        goalId: state.pathParameters['id']!,
+                      builder: (context, state) => SentryErrorBoundary(
+                        module: 'progress.goal_detail',
+                        child: GoalDetailScreen(
+                          goalId: state.pathParameters['id']!,
+                        ),
                       ),
                     ),
                   ],
@@ -385,17 +483,26 @@ List<RouteBase> _buildRoutes() {
                 GoRoute(
                   path: 'achievements',
                   name: RouteNames.achievements,
-                  builder: (context, state) => const AchievementsScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'progress.achievements',
+                    child: AchievementsScreen(),
+                  ),
                 ),
                 GoRoute(
                   path: 'report',
                   name: RouteNames.weeklyReport,
-                  builder: (context, state) => const WeeklyReportScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'progress.weekly_report',
+                    child: WeeklyReportScreen(),
+                  ),
                 ),
                 GoRoute(
                   path: 'journal',
                   name: RouteNames.journal,
-                  builder: (context, state) => const JournalScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'progress.journal',
+                    child: JournalScreen(),
+                  ),
                 ),
               ],
             ),
@@ -408,22 +515,34 @@ List<RouteBase> _buildRoutes() {
             GoRoute(
               path: RouteNames.trendsPath,
               name: RouteNames.trends,
-              builder: (context, state) => const TrendsHomeScreen(),
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'trends',
+                child: TrendsHomeScreen(),
+              ),
               routes: [
                 GoRoute(
                   path: 'correlations',
                   name: RouteNames.correlations,
-                  builder: (context, state) => const CorrelationsScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'trends.correlations',
+                    child: CorrelationsScreen(),
+                  ),
                 ),
                 GoRoute(
                   path: 'reports',
                   name: RouteNames.reports,
-                  builder: (context, state) => const ReportsScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'trends.reports',
+                    child: ReportsScreen(),
+                  ),
                 ),
                 GoRoute(
                   path: 'sources',
                   name: RouteNames.dataSources,
-                  builder: (context, state) => const DataSourcesScreen(),
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'trends.data_sources',
+                    child: DataSourcesScreen(),
+                  ),
                 ),
               ],
             ),

@@ -300,3 +300,33 @@
 | Smart reminders | P2 | 📋 Future | "You haven't run in 5 days" |
 | Bi-directional triggers | P3 | 📋 Future | "If sleep < 30%, reschedule workout" |
 | Notion / YNAB / Todoist integration | P3 | 📋 Future | Life OS phase |
+
+---
+
+## Observability & Monitoring
+
+### Task 11.1 — PostHog Analytics
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | PostHog backend (FastAPI middleware) | ✅ Done | `PostHogAnalyticsMiddleware` capturing all API events |
+| P1 | PostHog Flutter SDK integration | ✅ Done | Screen views, user actions, health sync events |
+| P1 | PostHog website (Next.js) | ✅ Done | Pageviews, waitlist signups |
+
+### Task 11.2 — Sentry Error Boundaries & Performance Monitoring
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | Flutter `SentryErrorBoundary` widget (all routes) | ✅ Done | All GoRouter routes wrapped; graceful fallback UI |
+| P1 | Flutter `SentryBreadcrumbs` static helpers | ✅ Done | `apiRequest`, `aiMessageSent`, `healthSync`, `authEvent`, `userAction`, `navigation`, `aiResponseReceived` |
+| P1 | Flutter `SentryRouterObserver` navigation breadcrumbs | ✅ Done | Registered in GoRouter observers |
+| P1 | Flutter auth breadcrumbs (`auth_providers.dart`) | ✅ Done | Login/register/social/logout all instrumented |
+| P1 | Flutter chat breadcrumbs (`chat_repository.dart`) | ✅ Done | `connect`, `fetchHistory`, `sendMessage` |
+| P1 | Flutter health sync breadcrumbs (`health_sync_service.dart`) | ✅ Done | `started`, `completed`, `failed` states with `recordCount` |
+| P1 | Flutter AI chat performance transaction (`chat_thread_screen.dart`) | ✅ Done | `Sentry.startTransaction('ai.chat_response', 'ai')` on send |
+| P1 | Backend `StarletteIntegration` + `CeleryIntegration` | ✅ Done | Added alongside existing `FastApiIntegration` in `main.py` |
+| P1 | Backend orchestrator spans + error groups | ✅ Done | `ai.process_message` transaction; `ai.llm_call` + `ai.tool_call` child spans; custom fingerprints for LLM/tool failures |
+| P1 | Backend LLM failure tagging (`llm_client.py`) | ✅ Done | `ai.error_type=llm_failure` + `ai.model` tags on both `chat` and `stream_chat` |
+| P1 | Backend health ingest span (`health_ingest.py`) | ✅ Done | `db.health_ingest` span wraps `db.commit()` |
+| P1 | Backend Celery task spans (`report_tasks.py`) | ✅ Done | `task.report_generation` span + `task.type` tag for weekly/monthly |
+| P1 | Backend memory store error groups (`pinecone_memory_store.py`) | ✅ Done | `memory_store_failure` fingerprint + `ai.error_type=memory_store_error` tag on save/query |

@@ -91,6 +91,8 @@ class LLMClient:
         try:
             response = await self._client.chat.completions.create(**kwargs)
         except APIError as e:
+            sentry_sdk.set_tag("ai.error_type", "llm_failure")
+            sentry_sdk.set_tag("ai.model", self.model)
             sentry_sdk.capture_exception(e)
             raise
 
@@ -135,5 +137,7 @@ class LLMClient:
         try:
             return await self._client.chat.completions.create(**kwargs)
         except APIError as e:
+            sentry_sdk.set_tag("ai.error_type", "llm_failure")
+            sentry_sdk.set_tag("ai.model", self.model)
             sentry_sdk.capture_exception(e)
             raise

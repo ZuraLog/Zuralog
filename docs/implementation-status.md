@@ -1,7 +1,8 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-05 (Phase 10 Engagement & Polish complete)  
+**Last Updated:** 2026-03-05 (Task 11.2 Sentry Error Boundaries & Performance Monitoring complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
+
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
 
@@ -599,3 +600,41 @@ Completed the engagement and polish layer across the entire app. Coach screens w
 | `ConsumerStatefulWidget` for `QuickLogSheet` | Sheet needed Riverpod for haptics; no clean way to thread haptic service through props |
 | `_LoadingState` → animated shimmer (not `shimmer` package) | Zero additional dependency; `AnimationController` + `Color.lerp` achieves identical visual result |
 | `OnboardingTooltip` on AppBar titles (not mid-screen) | Titles are the natural tap target on first encounter; tooltip fires once (SharedPreferences key) and never again |
+
+---
+
+## Task 11.2 — Sentry Error Boundaries & Performance Monitoring
+
+**Branch:** `feat/sentry-boundaries`
+**Status:** Complete
+
+Added comprehensive Sentry instrumentation across the full Zuralog stack — Flutter Edge Agent and Python/FastAPI Cloud Brain.
+
+**New files (Flutter):**
+- `zuralog/lib/core/monitoring/sentry_error_boundary.dart` — `SentryErrorBoundary` StatefulWidget; wraps any child with a Sentry-reported error capture and a themed fallback UI (safe black screen with primary-color retry)
+- `zuralog/lib/core/monitoring/sentry_breadcrumbs.dart` — `SentryBreadcrumbs` abstract class with static typed helpers: `apiRequest`, `aiMessageSent`, `healthSync`, `authEvent`, `userAction`, `navigation`, `aiResponseReceived`
+- `zuralog/lib/core/monitoring/sentry_router_observer.dart` — `SentryRouterObserver` extending `NavigatorObserver`; emits structured `navigation` breadcrumbs on every route push/pop
+
+**Modified files (Flutter):**
+- `app_router.dart` — All GoRouter routes (25+) wrapped in `SentryErrorBoundary` with `module` tags; `SentryRouterObserver` added to observers
+- `auth_providers.dart` — `authEvent` breadcrumbs for login/register/social/logout (attempt + success/failure)
+- `chat_repository.dart` — `apiRequest` breadcrumbs on `connect` and `fetchHistory`; `aiMessageSent` breadcrumb on `sendMessage`
+- `health_sync_service.dart` — `healthSync` breadcrumbs for `started`/`completed` (with `recordCount`)/`failed`; properly structured try/catch
+- `chat_thread_screen.dart` — `Sentry.startTransaction('ai.chat_response', 'ai')` started on send with `conversation_id` tag; finished on post-frame callback (placeholder for streaming completion hook)
+
+**Modified files (Backend):**
+- `main.py` — Added `StarletteIntegration(transaction_style="endpoint")` + `CeleryIntegration()` to Sentry init integrations list
+- `orchestrator.py` — Full `process_message` wrapped in `sentry_sdk.start_transaction(op="ai.process_message")`; child `ai.llm_call` span per LLM turn; child `ai.tool_call` span per tool execution with `tool.name` tag; custom fingerprints `["llm_failure", "{{ default }}"]` and `["tool_call_failure", func_name]` for AI error groups
+- `llm_client.py` — `ai.error_type=llm_failure` + `ai.model` tags set before `capture_exception` in both `chat()` and `stream_chat()` except blocks
+- `health_ingest.py` — `db.health_ingest` span wrapping `db.commit()` with record count in description
+- `report_tasks.py` — `task.type=weekly/monthly` tag at task start; `task.report_generation` span wrapping `generator.generate_weekly/monthly()`
+- `pinecone_memory_store.py` — `memory_store_failure` fingerprint + `ai.error_type=memory_store_error` + `memory.operation=save/query` tags in `save_memory` and `query_memory` except blocks
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| `SentryErrorBoundary` as a Flutter widget (not a global handler) | Per-screen isolation: one crashed screen doesn't crash the app; module tags route issues to the right team/alert |
+| `start_transaction` in `_sendMessage` finishes on post-frame (not stream end) | Chat streaming is not yet wired in production; the stub is correct — replace finish call with stream completion callback when streaming lands |
+| `push_scope` for tool call / memory store fingerprints | Scope is ephemeral per-exception; prevents fingerprint bleed across concurrent requests |
+| `StarletteIntegration` added alongside `FastApiIntegration` | FastAPI is built on Starlette; both needed for full request lifecycle tracing including middleware spans |

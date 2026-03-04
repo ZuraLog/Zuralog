@@ -67,6 +67,7 @@ def generate_weekly_reports_task() -> dict:
         Dict with ``generated`` and ``skipped`` counts.
     """
     logger.info("generate_weekly_reports_task: starting weekly report generation")
+    sentry_sdk.set_tag("task.type", "weekly")
 
     async def _run() -> dict:
         generator = ReportGenerator()
@@ -96,11 +97,12 @@ def generate_weekly_reports_task() -> dict:
                         skipped += 1
                         continue
 
-                    report = await generator.generate_weekly(
-                        user_id=user.id,
-                        week_start=week_start,
-                        session=db,
-                    )
+                    with sentry_sdk.start_span(op="task.report_generation", description="generate_weekly"):
+                        report = await generator.generate_weekly(
+                            user_id=user.id,
+                            week_start=week_start,
+                            session=db,
+                        )
 
                     week_end = week_start + timedelta(days=6)
                     db_report = Report(
@@ -156,6 +158,7 @@ def generate_monthly_reports_task() -> dict:
         Dict with ``generated`` and ``skipped`` counts.
     """
     logger.info("generate_monthly_reports_task: starting monthly report generation")
+    sentry_sdk.set_tag("task.type", "monthly")
 
     async def _run() -> dict:
         generator = ReportGenerator()
@@ -186,11 +189,12 @@ def generate_monthly_reports_task() -> dict:
                         skipped += 1
                         continue
 
-                    report = await generator.generate_monthly(
-                        user_id=user.id,
-                        month_start=month_start,
-                        session=db,
-                    )
+                    with sentry_sdk.start_span(op="task.report_generation", description="generate_monthly"):
+                        report = await generator.generate_monthly(
+                            user_id=user.id,
+                            month_start=month_start,
+                            session=db,
+                        )
 
                     db_report = Report(
                         user_id=user.id,

@@ -29,6 +29,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+import sentry_sdk
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -338,6 +340,11 @@ class PineconeMemoryStore:
             )
         except Exception:
             logger.exception("PineconeMemoryStore: failed to save memory for user '%s'", user_id)
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("ai.error_type", "memory_store_error")
+                scope.set_tag("memory.operation", "save")
+                scope.fingerprint = ["memory_store_failure", "{{ default }}"]
+                sentry_sdk.capture_exception()
             raise
 
         return memory_id
@@ -389,6 +396,11 @@ class PineconeMemoryStore:
             return entries
         except Exception:
             logger.exception("PineconeMemoryStore: failed to query memory for user '%s'", user_id)
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("ai.error_type", "memory_store_error")
+                scope.set_tag("memory.operation", "query")
+                scope.fingerprint = ["memory_store_failure", "{{ default }}"]
+                sentry_sdk.capture_exception()
             return []
 
     async def list_memories(self, user_id: str) -> list[MemoryEntry]:

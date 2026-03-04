@@ -13,6 +13,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 
@@ -64,6 +65,10 @@ class HealthSyncService {
     _analytics?.capture(
       event: 'health_sync_started',
       properties: {'platform': platform},
+    );
+    SentryBreadcrumbs.healthSync(
+      platform: platform,
+      status: 'started',
     );
     try {
       final now = DateTime.now();
@@ -160,6 +165,11 @@ class HealthSyncService {
           'record_count': workouts.length,
         },
       );
+      SentryBreadcrumbs.healthSync(
+        platform: platform,
+        status: 'completed',
+        recordCount: workouts.length,
+      );
       return true;
     } catch (e, st) {
       Sentry.captureException(e, stackTrace: st);
@@ -171,6 +181,10 @@ class HealthSyncService {
           'platform': platform,
           'error': e.toString(),
         },
+      );
+      SentryBreadcrumbs.healthSync(
+        platform: platform,
+        status: 'failed',
       );
       return false;
     }

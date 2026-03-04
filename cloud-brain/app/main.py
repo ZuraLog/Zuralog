@@ -18,6 +18,8 @@ import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -126,6 +128,8 @@ if settings.sentry_dsn:
         enable_tracing=True,
         integrations=[
             FastApiIntegration(transaction_style="endpoint"),
+            StarletteIntegration(transaction_style="endpoint"),
+            CeleryIntegration(),
         ],
     )
     logging.info("Sentry initialized for Cloud Brain (%s)", settings.app_env)

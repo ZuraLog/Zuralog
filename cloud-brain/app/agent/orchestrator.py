@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 import json
 import logging
 
+import sentry_sdk
+
 from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
@@ -138,140 +140,163 @@ class Orchestrator:
             An ``AgentResponse`` containing the assistant's message and
             an optional ``client_action`` dict for the Edge Agent.
         """
-        # 1. Build system prompt
-        system_prompt = build_system_prompt(user_context_suffix)
+        with sentry_sdk.start_transaction(op="ai.process_message", name="orchestrator.process_message") as txn:
+            txn.set_tag("user_id", user_id)
+            txn.set_tag("tool_injection_mode", "dynamic" if db is not None else "static")
 
-        # 2. Retrieve relevant context from memory
-        context_entries = await self.memory_store.query(user_id, query_text=message, limit=5)
-        context_text = ""
-        if context_entries:
-            context_text = "\n\n## Relevant Context\n"
-            for entry in context_entries:
-                context_text += f"- {entry.get('text', '')}\n"
+            # 1. Build system prompt
+            system_prompt = build_system_prompt(user_context_suffix)
 
-        # 3. Build initial messages
-        messages: list[dict[str, Any]] = [
-            {"role": "system", "content": system_prompt + context_text},
-            {"role": "user", "content": message},
-        ]
+            # 2. Retrieve relevant context from memory
+            context_entries = await self.memory_store.query(user_id, query_text=message, limit=5)
+            context_text = ""
+            if context_entries:
+                context_text = "\n\n## Relevant Context\n"
+                for entry in context_entries:
+                    context_text += f"- {entry.get('text', '')}\n"
 
-        # 4. Get available tools — filtered per user if DB session provided
-        if db is not None:
-            mcp_tools = await self.mcp_client.get_tools_for_user(db, user_id)
-        else:
-            mcp_tools = self.mcp_client.get_all_tools()
-        tools = self._build_tools_for_llm(mcp_tools)
+            # 3. Build initial messages
+            messages: list[dict[str, Any]] = [
+                {"role": "system", "content": system_prompt + context_text},
+                {"role": "user", "content": message},
+            ]
 
-        injection_mode = "dynamic" if db is not None else "static"
-        logger.info(
-            "Processing message for user '%s': %d context items, %d tools (%s)",
-            user_id,
-            len(context_entries),
-            len(tools),
-            injection_mode,
-        )
+            # 4. Get available tools — filtered per user if DB session provided
+            if db is not None:
+                mcp_tools = await self.mcp_client.get_tools_for_user(db, user_id)
+            else:
+                mcp_tools = self.mcp_client.get_all_tools()
+            tools = self._build_tools_for_llm(mcp_tools)
 
-        # 5. ReAct loop (max MAX_TOOL_TURNS turns)
-        last_client_action: dict[str, Any] | None = None
-        for turn in range(MAX_TOOL_TURNS):
-            response = await self.llm_client.chat(
-                messages,
-                tools=tools if tools else None,
+            injection_mode = "dynamic" if db is not None else "static"
+            logger.info(
+                "Processing message for user '%s': %d context items, %d tools (%s)",
+                user_id,
+                len(context_entries),
+                len(tools),
+                injection_mode,
             )
 
-            # Track token usage for billing / analytics
-            if self.usage_tracker:
-                try:
-                    await self.usage_tracker.track_from_response(user_id, response)
-                except Exception:
-                    logger.warning(
-                        "Failed to track usage for user '%s' on turn %d",
-                        user_id,
-                        turn + 1,
-                        exc_info=True,
-                    )
-
-            assistant_message = response.choices[0].message
-
-            # Check for tool calls
-            if assistant_message.tool_calls:
-                # Add assistant message with tool calls to history
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": assistant_message.content,
-                        "tool_calls": [
-                            {
-                                "id": tc.id,
-                                "type": "function",
-                                "function": {
-                                    "name": tc.function.name,
-                                    "arguments": tc.function.arguments,
-                                },
-                            }
-                            for tc in assistant_message.tool_calls
-                        ],
-                    }
-                )
-
-                # Execute each tool call
-                for tool_call in assistant_message.tool_calls:
-                    func_name = tool_call.function.name
+            # 5. ReAct loop (max MAX_TOOL_TURNS turns)
+            last_client_action: dict[str, Any] | None = None
+            for turn in range(MAX_TOOL_TURNS):
+                with sentry_sdk.start_span(op="ai.llm_call", description=f"LLM turn {turn + 1}") as llm_span:
+                    llm_span.set_tag("turn", turn + 1)
                     try:
-                        arguments = json.loads(tool_call.function.arguments)
-                    except json.JSONDecodeError:
-                        arguments = {}
+                        response = await self.llm_client.chat(
+                            messages,
+                            tools=tools if tools else None,
+                        )
+                    except Exception as llm_exc:
+                        sentry_sdk.set_tag("ai.error_type", "llm_failure")
+                        with sentry_sdk.push_scope() as scope:
+                            scope.fingerprint = ["llm_failure", "{{ default }}"]
+                            sentry_sdk.capture_exception(llm_exc)
+                        raise
 
-                    logger.info(
-                        "Turn %d: executing tool '%s' with args %s",
-                        turn + 1,
-                        func_name,
-                        arguments,
-                    )
+                # Track token usage for billing / analytics
+                if self.usage_tracker:
+                    try:
+                        await self.usage_tracker.track_from_response(user_id, response)
+                    except Exception:
+                        logger.warning(
+                            "Failed to track usage for user '%s' on turn %d",
+                            user_id,
+                            turn + 1,
+                            exc_info=True,
+                        )
 
-                    # Execute via MCP
-                    result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
+                assistant_message = response.choices[0].message
 
-                    # Extract client_action if tool returned one (e.g. deep links)
-                    if result.success and isinstance(result.data, dict) and "client_action" in result.data:
-                        last_client_action = result.data
-
-                    # Build tool result message
-                    if result.success:
-                        result_content = json.dumps(result.data)
-                    else:
-                        result_content = json.dumps({"error": result.error or "Tool execution failed"})
-
+                # Check for tool calls
+                if assistant_message.tool_calls:
+                    # Add assistant message with tool calls to history
                     messages.append(
                         {
-                            "role": "tool",
-                            "tool_call_id": tool_call.id,
-                            "content": result_content,
+                            "role": "assistant",
+                            "content": assistant_message.content,
+                            "tool_calls": [
+                                {
+                                    "id": tc.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": tc.function.name,
+                                        "arguments": tc.function.arguments,
+                                    },
+                                }
+                                for tc in assistant_message.tool_calls
+                            ],
                         }
                     )
 
-                # Continue loop — LLM will process tool results
-                continue
+                    # Execute each tool call
+                    for tool_call in assistant_message.tool_calls:
+                        func_name = tool_call.function.name
+                        try:
+                            arguments = json.loads(tool_call.function.arguments)
+                        except json.JSONDecodeError:
+                            arguments = {}
 
-            # No tool calls — return final text response
-            final_content = assistant_message.content or ""
-            logger.info(
-                "Final response for user '%s' after %d turn(s)",
+                        logger.info(
+                            "Turn %d: executing tool '%s' with args %s",
+                            turn + 1,
+                            func_name,
+                            arguments,
+                        )
+
+                        # Execute via MCP — wrapped in a Sentry span per tool call
+                        with sentry_sdk.start_span(op="ai.tool_call", description=func_name) as tool_span:
+                            tool_span.set_tag("tool.name", func_name)
+                            tool_span.set_tag("turn", turn + 1)
+                            try:
+                                result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
+                            except Exception as tool_exc:
+                                sentry_sdk.set_tag("ai.error_type", "tool_call_failure")
+                                with sentry_sdk.push_scope() as scope:
+                                    scope.fingerprint = ["tool_call_failure", func_name]
+                                    sentry_sdk.capture_exception(tool_exc)
+                                raise
+
+                        # Extract client_action if tool returned one (e.g. deep links)
+                        if result.success and isinstance(result.data, dict) and "client_action" in result.data:
+                            last_client_action = result.data
+
+                        # Build tool result message
+                        if result.success:
+                            result_content = json.dumps(result.data)
+                        else:
+                            result_content = json.dumps({"error": result.error or "Tool execution failed"})
+
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "content": result_content,
+                            }
+                        )
+
+                    # Continue loop — LLM will process tool results
+                    continue
+
+                # No tool calls — return final text response
+                final_content = assistant_message.content or ""
+                logger.info(
+                    "Final response for user '%s' after %d turn(s)",
+                    user_id,
+                    turn + 1,
+                )
+                return AgentResponse(
+                    message=final_content,
+                    client_action=last_client_action,
+                )
+
+            # Safety: max turns exceeded
+            logger.warning(
+                "Max tool turns (%d) exceeded for user '%s'",
+                MAX_TOOL_TURNS,
                 user_id,
-                turn + 1,
             )
             return AgentResponse(
-                message=final_content,
-                client_action=last_client_action,
+                message="I'm having trouble retrieving all the information right now. "
+                "Please try again or rephrase your question.",
             )
-
-        # Safety: max turns exceeded
-        logger.warning(
-            "Max tool turns (%d) exceeded for user '%s'",
-            MAX_TOOL_TURNS,
-            user_id,
-        )
-        return AgentResponse(
-            message="I'm having trouble retrieving all the information right now. "
-            "Please try again or rephrase your question.",
-        )

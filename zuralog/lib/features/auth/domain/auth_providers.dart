@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
 import 'package:zuralog/features/auth/data/auth_repository.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/auth/domain/social_auth_credentials.dart';
@@ -101,10 +102,12 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// On success also fires a profile load (fire-and-forget).
   Future<AuthResult> login(String email, String password) async {
     state = AuthState.loading;
+    SentryBreadcrumbs.authEvent(event: 'login_attempt', method: 'email');
     final result = await _authRepository.login(email, password);
 
     switch (result) {
       case AuthSuccess(:final userId):
+        SentryBreadcrumbs.authEvent(event: 'login_success', method: 'email');
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
@@ -124,6 +127,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
           properties: {'method': 'email'},
         );
       case AuthFailure():
+        SentryBreadcrumbs.authEvent(event: 'login_failure', method: 'email');
         state = AuthState.unauthenticated;
     }
 
@@ -138,10 +142,12 @@ class AuthStateNotifier extends Notifier<AuthState> {
   /// On success also fires a profile load (fire-and-forget).
   Future<AuthResult> register(String email, String password) async {
     state = AuthState.loading;
+    SentryBreadcrumbs.authEvent(event: 'register_attempt', method: 'email');
     final result = await _authRepository.register(email, password);
 
     switch (result) {
       case AuthSuccess(:final userId):
+        SentryBreadcrumbs.authEvent(event: 'register_success', method: 'email');
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
@@ -162,6 +168,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
           properties: {'method': 'email'},
         );
       case AuthFailure():
+        SentryBreadcrumbs.authEvent(event: 'register_failure', method: 'email');
         state = AuthState.unauthenticated;
     }
 
@@ -186,6 +193,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
   ///   [AuthResult] — [AuthSuccess] on success, [AuthFailure] on failure.
   Future<AuthResult> socialLogin(SocialAuthCredentials credentials) async {
     state = AuthState.loading;
+    SentryBreadcrumbs.authEvent(
+      event: 'social_login_attempt',
+      method: credentials.provider.name,
+    );
     final result = await _authRepository.socialLogin(
       provider: credentials.provider.name,
       idToken: credentials.idToken,
@@ -195,6 +206,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
 
     switch (result) {
       case AuthSuccess(:final userId):
+        SentryBreadcrumbs.authEvent(
+          event: 'social_login_success',
+          method: credentials.provider.name,
+        );
         state = AuthState.authenticated;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
@@ -213,6 +228,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
           properties: {'method': credentials.provider.name},
         );
       case AuthFailure():
+        SentryBreadcrumbs.authEvent(
+          event: 'social_login_failure',
+          method: credentials.provider.name,
+        );
         state = AuthState.unauthenticated;
     }
 
@@ -227,6 +246,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
   Future<void> logout() async {
     // Analytics: reset identity before clearing auth state (fire-and-forget).
     ref.read(analyticsServiceProvider).reset();
+    SentryBreadcrumbs.authEvent(event: 'logout');
     state = AuthState.loading;
     await _authRepository.logout();
     ref.read(userEmailProvider.notifier).state = '';
@@ -243,6 +263,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
   void forceLogout() {
     // Analytics: reset identity on force logout (fire-and-forget).
     ref.read(analyticsServiceProvider).reset();
+    SentryBreadcrumbs.authEvent(event: 'force_logout');
     ref.read(userEmailProvider.notifier).state = '';
     ref.read(userProfileProvider.notifier).clear();
     state = AuthState.unauthenticated;

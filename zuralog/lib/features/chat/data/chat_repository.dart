@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/features/chat/domain/message.dart';
@@ -55,6 +56,10 @@ class ChatRepository {
   ///
   /// [token] is the user's JWT auth token.
   void connect(String token) {
+    SentryBreadcrumbs.apiRequest(
+      method: 'CONNECT',
+      path: 'ws://cloud-brain/chat',
+    );
     _wsClient.connect(token);
   }
 
@@ -62,6 +67,10 @@ class ChatRepository {
   ///
   /// [text] is the message content to send.
   void sendMessage(String text) {
+    SentryBreadcrumbs.aiMessageSent(
+      messageLength: text.length,
+      conversationId: 'active',
+    );
     _wsClient.send(text);
   }
 
@@ -70,6 +79,10 @@ class ChatRepository {
   /// Returns a list of conversation maps with nested messages.
   /// Returns an empty list on error.
   Future<List<dynamic>> fetchHistory() async {
+    SentryBreadcrumbs.apiRequest(
+      method: 'GET',
+      path: '/api/v1/chat/history',
+    );
     try {
       final response = await _apiClient.get('/api/v1/chat/history');
       return response.data as List<dynamic>;

@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -50,10 +51,22 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     if (text.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
     _inputCtrl.clear();
+
+    // Start a Sentry performance transaction to measure AI response latency.
+    final transaction = Sentry.startTransaction(
+      'ai.chat_response',
+      'ai',
+      description: 'AI coach chat response',
+    );
+    transaction.setTag('conversation_id', widget.conversationId);
+
     // In production: append message to provider, stream AI response.
     // Scroll to bottom after state update.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        transaction.finish(status: const SpanStatus.cancelled());
+        return;
+      }
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
@@ -61,6 +74,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           curve: Curves.easeOut,
         );
       }
+      // TODO(streaming): finish transaction when streaming response completes.
+      // For now, finish immediately — replace with stream completion callback.
+      transaction.finish(status: const SpanStatus.ok());
     });
   }
 

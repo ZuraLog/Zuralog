@@ -297,7 +297,8 @@ async def ingest_health_data(
             )
     counts["daily_metrics"] = len(body.daily_metrics)
 
-    await db.commit()
+    with sentry_sdk.start_span(op="db.health_ingest", description=f"commit {sum(counts.values())} records"):
+        await db.commit()
     total = sum(counts.values())
     logger.info("Health ingest user=%s source=%s counts=%s", user_id, source, counts)
 
