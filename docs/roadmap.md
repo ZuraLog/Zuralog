@@ -188,10 +188,10 @@
 | P1 | Progress — Achievements | 🔄 Route+placeholder done | Phase 6 |
 | P1 | Progress — Weekly Report | 🔄 Route+placeholder done | Phase 6 |
 | P1 | Progress — Journal / Daily Log | 🔄 Route+placeholder done | Phase 6 |
-| P1 | Trends — Trends Home | 🔄 Route+placeholder done | Phase 7 |
-| P1 | Trends — Correlations | 🔄 Route+placeholder done | Phase 7 |
-| P1 | Trends — Reports | 🔄 Route+placeholder done | Phase 7 |
-| P1 | Trends — Data Sources | 🔄 Route+placeholder done | Phase 7 |
+ | P1 | Trends — Trends Home | ✅ Complete | Phase 7 |
+ | P1 | Trends — Correlations | ✅ Complete | Phase 7 |
+ | P1 | Trends — Reports | ✅ Complete | Phase 7 |
+ | P1 | Trends — Data Sources | ✅ Complete | Phase 7 |
 | P1 | Settings Hub | 🔄 Route+placeholder done | Phase 8 |
 | P1 | Settings — Account | 🔄 Route+placeholder done | Phase 8 |
 | P1 | Settings — Notifications | 🔄 Route+placeholder done | Phase 8 |

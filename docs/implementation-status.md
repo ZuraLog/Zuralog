@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-04 (Phase 0 design system v3.1 + Phase 1 5-tab navigation complete)  
+**Last Updated:** 2026-03-04 (Phase 7 Trends tab complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -487,3 +487,31 @@ On-device speech-to-text using the `speech_to_text` Flutter package (v7.3.0). Au
 | Analytics captured in `ref.listen` (not `onVoiceStop`) | `stopListening()` fires before the plugin's async final result arrives; reading `recognizedText` in the callback gives 0/partial text. `ref.listen` fires on the `isFinal` transition which has the full final text |
 | Error-state early return in `onVoiceStart` | Prevents a permission-denied error from looping silently on every long-press. The `ref.listen` SnackBar already surfaces the error; `onVoiceStart` returns early to avoid re-triggering |
 | `SpeechNotifier` seeded from `currentState` | `autoDispose` notifier re-creates on re-navigation; seeding from the persistent service's `currentState` prevents the notifier from advertising `uninitialized` when the engine is already `ready` |
+
+---
+
+## Phase 7 — Trends Tab (2026-03-04)
+
+**Branch:** `feat/trends-tab`
+**Status:** Complete
+
+Full Trends tab UI — 4 screens built with Riverpod state management, design system tokens, and dark-first layout.
+
+**New files:**
+- `zuralog/lib/features/trends/domain/trends_models.dart` — Domain models: `CorrelationHighlight`, `TimePeriodSummary`, `MetricHighlight`, `TrendsHomeData`, `AvailableMetric`, `ScatterPoint`, `CorrelationAnalysis`, `CorrelationTimeRange`, `GeneratedReport`, `ReportCategorySummary`, `TrendDirection`, `ReportList`, `DataFreshness`, `DataSource`, `DataSourceList`
+- `zuralog/lib/features/trends/data/trends_repository.dart` — Data layer with 5-min TTL cache; endpoints: trends home, available metrics, correlation analysis (uncached family keyed by metric pair + time range + lag), reports, data sources
+- `zuralog/lib/features/trends/providers/trends_providers.dart` — Riverpod providers: `trendsRepositoryProvider`, `trendsHomeProvider`, `availableMetricsProvider`, `selectedMetricAProvider`, `selectedMetricBProvider`, `selectedLagDaysProvider`, `selectedTimeRangeProvider`, `CorrelationKey` + `correlationAnalysisProvider` family, `reportsProvider`, `dataSourcesProvider`
+- `zuralog/lib/features/trends/presentation/trends_home_screen.dart` — AI correlation cards, horizontal time-machine strip, quick-nav row (Explorer/Reports/Sources), loading skeleton, error state, onboarding empty state, pull-to-refresh
+- `zuralog/lib/features/trends/presentation/correlations_screen.dart` — Two-metric picker (bottom sheet grouped by health category), time-range chips (7D/30D/90D), lag-day selector (same day/+1/+2/+3), scatter plot (`fl_chart` `ScatterChart`), Pearson coefficient card, AI annotation card, picker-prompt empty state
+- `zuralog/lib/features/trends/presentation/reports_screen.dart` — Report list with category avatar dots, `_ReportDetailSheet` modal (category summaries, trend direction chips, top correlations, AI recommendations), export PDF + share placeholders with "coming soon" snackbar
+- `zuralog/lib/features/trends/presentation/data_sources_screen.dart` — Connected/Not Connected grouped sections, per-source freshness dot (green/yellow/red based on `DataFreshness`), last sync timestamp, data type chips, Reconnect/Connect → `settingsIntegrationsPath`
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Uncached `correlationAnalysisProvider` family | Correlation queries are keyed by 3 independent state variables; caching at repository layer would require LRU eviction logic; provider-level invalidation is simpler and sufficient |
+| `CorrelationKey` value class for family key | Riverpod family requires a single key; `CorrelationKey` bundles metricA + metricB + timeRange + lagDays with `==`/`hashCode` to deduplicate in-flight requests |
+| Scatter plot via `fl_chart` `ScatterChart` | Already a project dependency (used in Progress tab); avoids adding `syncfusion_flutter_charts` which requires a license key |
+| "Coming soon" snackbar for PDF export | PDF generation requires a native plugin (`pdf`, `printing`) not yet in pubspec; surface the intent without a broken flow |
+| `DataFreshness` color thresholds: green ≤1h, yellow ≤24h, red >24h | Matches Apple Health's own staleness UX; users expect sub-hour freshness for wearable data |
