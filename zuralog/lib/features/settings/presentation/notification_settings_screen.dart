@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/analytics/feature_flag_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -110,12 +111,42 @@ final _notificationStateProvider =
 // ── NotificationSettingsScreen ────────────────────────────────────────────────
 
 /// Notification preferences screen — toggles, time pickers, frequency selector.
-class NotificationSettingsScreen extends ConsumerWidget {
+class NotificationSettingsScreen extends ConsumerStatefulWidget {
   /// Creates the [NotificationSettingsScreen].
   const NotificationSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
+}
+
+class _NotificationSettingsScreenState
+    extends ConsumerState<NotificationSettingsScreen> {
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed reminder frequency from PostHog feature flag on first open.
+    // Only applies if the user hasn't changed the value in this session
+    // (state is still at the default of 2 / medium).
+    ref
+        .read(featureFlagServiceProvider)
+        .notificationFrequencyDefault()
+        .then((freq) {
+      if (!mounted) return;
+      final currentState = ref.read(_notificationStateProvider);
+      if (currentState.reminderFrequency == 2) {
+        ref.read(_notificationStateProvider.notifier).state =
+            currentState.copyWith(reminderFrequency: freq);
+      }
+    });
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(_notificationStateProvider);
     final notifier = ref.read(_notificationStateProvider.notifier);
     final analytics = ref.read(analyticsServiceProvider);

@@ -176,7 +176,6 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.welcome,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.welcome',
-        showBackButton: false,
         child: WelcomeScreen(),
       ),
     ),
@@ -185,7 +184,6 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.onboarding,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.onboarding',
-        showBackButton: false,
         child: OnboardingPageView(),
       ),
     ),
@@ -194,7 +192,6 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.login,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.login',
-        showBackButton: false,
         child: LoginScreen(),
       ),
     ),
@@ -211,7 +208,6 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.profileQuestionnaire,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.profile_questionnaire',
-        showBackButton: false,
         child: OnboardingFlowScreen(),
       ),
     ),

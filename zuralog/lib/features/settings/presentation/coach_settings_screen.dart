@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/analytics/feature_flag_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -105,13 +106,40 @@ const List<_ProactivityOption> _proactivityOptions = [
 ///
 /// Uses a [CustomScrollView] with [SliverAppBar] large-title and
 /// [SliverList] content sections. Local UI state is managed via
-/// [StateProvider]s and Riverpod's [ConsumerWidget].
-class CoachSettingsScreen extends ConsumerWidget {
+/// [StateProvider]s and Riverpod's [ConsumerStatefulWidget].
+class CoachSettingsScreen extends ConsumerStatefulWidget {
   /// Creates a [CoachSettingsScreen].
   const CoachSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CoachSettingsScreen> createState() =>
+      _CoachSettingsScreenState();
+}
+
+class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed AI persona from PostHog feature flag on first open.
+    // Only applies if the user hasn't changed the value in this session
+    // (state is still at the hard-coded default of 'balanced').
+    ref
+        .read(featureFlagServiceProvider)
+        .aiPersonaDefault()
+        .then((persona) {
+      if (!mounted) return;
+      if (ref.read(_personaProvider) == 'balanced') {
+        ref.read(_personaProvider.notifier).state = persona;
+      }
+    });
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
     final selectedPersona = ref.watch(_personaProvider);
     final selectedProactivity = ref.watch(_proactivityProvider);
 

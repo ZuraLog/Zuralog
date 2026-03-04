@@ -27,6 +27,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/analytics/feature_flag_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -81,50 +82,68 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  // ── Feature flag: onboarding step order ───────────────────────────────────
+
+  /// Controls whether Goals (index 1) or Persona (index 2) comes first.
+  /// Loaded asynchronously from PostHog in [initState]; defaults to
+  /// `'goals_first'` so the UI is never blocked.
+  String _stepOrder = 'goals_first';
+
   // ── Step pages (single source of truth for page count) ────────────────────
 
-  late final List<Widget> _pages = [
-    // Step 1 — Welcome (manages its own CTA)
-    WelcomeStep(onNext: _handleNext),
-
-    // Step 2 — Goals
-    GoalsStep(
+  /// Returns the ordered list of onboarding pages, swapping Goals and Persona
+  /// when the `onboarding_step_order` flag is `'persona_first'`.
+  List<Widget> get _pages {
+    final goalsStep = GoalsStep(
       selectedGoals: _selectedGoals,
       onGoalsChanged: (goals) => setState(() => _selectedGoals = goals),
-    ),
+    );
 
-    // Step 3 — AI Persona
-    PersonaStep(
+    final personaStep = PersonaStep(
       selectedPersona: _selectedPersona,
       proactivity: _proactivity,
       onPersonaChanged: (p) => setState(() => _selectedPersona = p),
       onProactivityChanged: (v) => setState(() => _proactivity = v),
-    ),
+    );
 
-    // Step 4 — Connect Apps (informational)
-    const ConnectAppsStep(),
+    final step2 = _stepOrder == 'persona_first' ? personaStep : goalsStep;
+    final step3 = _stepOrder == 'persona_first' ? goalsStep : personaStep;
 
-    // Step 5 — Notifications
-    NotificationsStep(
-      morningBriefingEnabled: _morningBriefingEnabled,
-      morningBriefingTime: _morningBriefingTime,
-      smartRemindersEnabled: _smartRemindersEnabled,
-      wellnessCheckInEnabled: _wellnessCheckInEnabled,
-      onMorningBriefingChanged: (v) =>
-          setState(() => _morningBriefingEnabled = v),
-      onMorningTimeChanged: (t) => setState(() => _morningBriefingTime = t),
-      onSmartRemindersChanged: (v) =>
-          setState(() => _smartRemindersEnabled = v),
-      onWellnessCheckInChanged: (v) =>
-          setState(() => _wellnessCheckInEnabled = v),
-    ),
+    return [
+      // Step 1 — Welcome (manages its own CTA)
+      WelcomeStep(onNext: _handleNext),
 
-    // Step 6 — Discovery
-    DiscoveryStep(
-      selectedSource: _discoverySource,
-      onSourceChanged: (s) => setState(() => _discoverySource = s),
-    ),
-  ];
+      // Step 2 — Goals or Persona (flag-controlled)
+      step2,
+
+      // Step 3 — Persona or Goals (flag-controlled)
+      step3,
+
+      // Step 4 — Connect Apps (informational)
+      const ConnectAppsStep(),
+
+      // Step 5 — Notifications
+      NotificationsStep(
+        morningBriefingEnabled: _morningBriefingEnabled,
+        morningBriefingTime: _morningBriefingTime,
+        smartRemindersEnabled: _smartRemindersEnabled,
+        wellnessCheckInEnabled: _wellnessCheckInEnabled,
+        onMorningBriefingChanged: (v) =>
+            setState(() => _morningBriefingEnabled = v),
+        onMorningTimeChanged: (t) => setState(() => _morningBriefingTime = t),
+        onSmartRemindersChanged: (v) =>
+            setState(() => _smartRemindersEnabled = v),
+        onWellnessCheckInChanged: (v) =>
+            setState(() => _wellnessCheckInEnabled = v),
+      ),
+
+      // Step 6 — Discovery
+      DiscoveryStep(
+        selectedSource: _discoverySource,
+        onSourceChanged: (s) => setState(() => _discoverySource = s),
+      ),
+    ];
+  }
 
   // ── Collected state from each step ────────────────────────────────────────
 
@@ -158,6 +177,19 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
+  void initState() {
+    super.initState();
+    // Load onboarding step order from PostHog feature flag.
+    // Safe default ('goals_first') is already set, so UI renders immediately.
+    ref
+        .read(featureFlagServiceProvider)
+        .onboardingStepOrder()
+        .then((order) {
+      if (mounted) setState(() => _stepOrder = order);
+    });
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
@@ -173,16 +205,18 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       properties: {'step': _currentPage + 1},
     );
 
-    // Page 1 (index 1) = Goals step.
-    if (_currentPage == 1) {
+    // Page at index 1 or 2 = Goals step (position depends on flag).
+    final goalsIndex = _stepOrder == 'persona_first' ? 2 : 1;
+    if (_currentPage == goalsIndex) {
       analytics.capture(
         event: AnalyticsEvents.onboardingGoalsSelected,
         properties: {'goals_count': _selectedGoals.length},
       );
     }
 
-    // Page 2 (index 2) = Persona step.
-    if (_currentPage == 2) {
+    // Page at index 1 or 2 = Persona step (position depends on flag).
+    final personaIndex = _stepOrder == 'persona_first' ? 1 : 2;
+    if (_currentPage == personaIndex) {
       analytics.capture(
         event: AnalyticsEvents.onboardingPersonaSelected,
         properties: {

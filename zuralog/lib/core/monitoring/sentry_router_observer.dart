@@ -15,7 +15,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 /// push, pop, and replace navigation event.
 class SentryRouterObserver extends NavigatorObserver {
   /// Creates a [SentryRouterObserver].
-  const SentryRouterObserver();
+  SentryRouterObserver();
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
