@@ -2,55 +2,44 @@
 Zuralog Cloud Brain — User Preferences API.
 
 Endpoints:
-  GET  /api/v1/preferences  — Return current user's preferences, auto-creating
-                              with defaults on first call (upsert behaviour).
-  PUT  /api/v1/preferences  — Full replacement of all preference fields.
-  PATCH /api/v1/preferences — Partial update (only provided fields are changed).
+  GET   /api/v1/preferences  — Return current user's preferences, auto-creating
+                               with defaults on first call (upsert behaviour).
+  PUT   /api/v1/preferences  — Full replacement of all preference fields.
+  PATCH /api/v1/preferences  — Partial update (only provided fields are changed).
 
-All endpoints are auth-guarded; users can only access their own preferences.
+All endpoints are auth-guarded via ``get_current_user``; users can only access
+their own preferences row.
 """
 
 import logging
-from datetime import time
+import re
 from typing import Any
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_current_user
 from app.database import get_db
+from app.models.user import User
 from app.models.user_preferences import UserPreferences
-from app.services.cache_service import CacheService, cached
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/preferences", tags=["preferences"])
 
 # ---------------------------------------------------------------------------
-# Valid enum values
+# Valid enum values — enforced at the route layer (not by the DB)
 # ---------------------------------------------------------------------------
 
-_VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
-_VALID_PROACTIVITY = {"low", "medium", "high"}
-_VALID_THEMES = {"dark", "light", "system"}
+_VALID_PERSONAS: frozenset[str] = frozenset({"tough_love", "balanced", "gentle"})
+_VALID_PROACTIVITY: frozenset[str] = frozenset({"low", "medium", "high"})
+_VALID_THEMES: frozenset[str] = frozenset({"dark", "light", "system"})
 
-# ---------------------------------------------------------------------------
-# Default values applied on first-access creation
-# ---------------------------------------------------------------------------
-
-_DEFAULT_NOTIFICATION_SETTINGS: dict[str, Any] = {
-    "morning_briefing_enabled": True,
-    "smart_reminders_enabled": True,
-    "reminder_frequency": 2,
-    "streak_reminders": True,
-    "achievement_notifications": True,
-    "anomaly_alerts": True,
-    "integration_alerts": True,
-    "wellness_checkin_reminder": False,
-}
+# HH:MM in 24-hour format
+_TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 # ---------------------------------------------------------------------------
 # Pydantic schemas
@@ -58,15 +47,13 @@ _DEFAULT_NOTIFICATION_SETTINGS: dict[str, Any] = {
 
 
 class PreferencesResponse(BaseModel):
-    """Full preferences payload returned to the client.
+    """Full preferences payload returned to the client."""
 
-    All nullable fields are omitted when None (exclude_none on serialise).
-    """
-
+    user_id: str
     coach_persona: str
     proactivity_level: str
-    dashboard_layout: Any = None
-    notification_settings: dict[str, Any] | None = None
+    dashboard_layout: dict
+    notification_settings: dict
     theme: str
     haptic_enabled: bool
     tooltips_enabled: bool
@@ -75,18 +62,18 @@ class PreferencesResponse(BaseModel):
     checkin_reminder_time: str | None = None
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
-    goals: list[str] | None = None
+    goals: list
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
-class PreferencesUpdateRequest(BaseModel):
-    """Body for PUT (full replacement) — all optional with defaults."""
+class PreferencesUpdate(BaseModel):
+    """Body for PATCH — all fields optional; only provided fields are changed."""
 
     coach_persona: str | None = Field(None, description="tough_love | balanced | gentle")
     proactivity_level: str | None = Field(None, description="low | medium | high")
-    dashboard_layout: Any | None = None
-    notification_settings: dict[str, Any] | None = None
+    dashboard_layout: dict | None = None
+    notification_settings: dict | None = None
     theme: str | None = Field(None, description="dark | light | system")
     haptic_enabled: bool | None = None
     tooltips_enabled: bool | None = None
@@ -95,90 +82,92 @@ class PreferencesUpdateRequest(BaseModel):
     checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
-    goals: list[str] | None = None
+    goals: list | None = None
+
+
+class PreferencesCreate(BaseModel):
+    """Body for PUT (full replacement) — all fields optional; unset fields use defaults."""
+
+    coach_persona: str | None = Field(None, description="tough_love | balanced | gentle")
+    proactivity_level: str | None = Field(None, description="low | medium | high")
+    dashboard_layout: dict | None = None
+    notification_settings: dict | None = None
+    theme: str | None = Field(None, description="dark | light | system")
+    haptic_enabled: bool | None = None
+    tooltips_enabled: bool | None = None
+    onboarding_complete: bool | None = None
+    morning_briefing_time: str | None = Field(None, description="HH:MM (24-hour)")
+    checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
+    goals: list | None = None
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Validation helpers
 # ---------------------------------------------------------------------------
 
 
-def _parse_time(value: str | None) -> time | None:
-    """Parse an 'HH:MM' string to a :class:`datetime.time`.
+def _validate_time_fields(data: dict[str, Any]) -> None:
+    """Validate HH:MM format for all time string fields.
 
     Args:
-        value: Time string in 24-hour ``HH:MM`` format, or ``None``.
-
-    Returns:
-        :class:`datetime.time` or ``None``.
+        data: Dict of field names to values (non-None only).
 
     Raises:
-        HTTPException: 422 if the string cannot be parsed.
+        HTTPException: 422 if any time string does not match HH:MM.
     """
-    if value is None:
-        return None
-    try:
-        parts = value.strip().split(":")
-        return time(int(parts[0]), int(parts[1]))
-    except (ValueError, IndexError):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Invalid time format '{value}'. Expected HH:MM.",
-        )
+    time_fields = (
+        "morning_briefing_time",
+        "checkin_reminder_time",
+        "quiet_hours_start",
+        "quiet_hours_end",
+    )
+    for field in time_fields:
+        value = data.get(field)
+        if value is not None and not _TIME_RE.match(value):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid time format for '{field}': '{value}'. Expected HH:MM.",
+            )
 
 
-def _time_str(t: time | None) -> str | None:
-    """Format a :class:`datetime.time` as ``HH:MM``, or ``None``."""
-    return t.strftime("%H:%M") if t else None
-
-
-def _prefs_to_response(prefs: UserPreferences) -> dict[str, Any]:
-    """Convert a ``UserPreferences`` ORM object to a serialisable dict."""
-    return {
-        "coach_persona": prefs.coach_persona,
-        "proactivity_level": prefs.proactivity_level,
-        "dashboard_layout": prefs.dashboard_layout,
-        "notification_settings": prefs.notification_settings,
-        "theme": prefs.theme,
-        "haptic_enabled": prefs.haptic_enabled,
-        "tooltips_enabled": prefs.tooltips_enabled,
-        "onboarding_complete": prefs.onboarding_complete,
-        "morning_briefing_time": _time_str(prefs.morning_briefing_time),
-        "checkin_reminder_time": _time_str(prefs.checkin_reminder_time),
-        "quiet_hours_start": _time_str(prefs.quiet_hours_start),
-        "quiet_hours_end": _time_str(prefs.quiet_hours_end),
-        "goals": prefs.goals,
-    }
-
-
-def _validate_update(body: PreferencesUpdateRequest) -> None:
-    """Validate enum-valued fields in the update body.
+def _validate_enums(data: dict[str, Any]) -> None:
+    """Validate enum-valued fields.
 
     Args:
-        body: Incoming update request.
+        data: Dict of field names to values (non-None only).
 
     Raises:
         HTTPException: 400 if any enum field contains an invalid value.
     """
-    if body.coach_persona and body.coach_persona not in _VALID_PERSONAS:
+    if "coach_persona" in data and data["coach_persona"] not in _VALID_PERSONAS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"coach_persona must be one of: {sorted(_VALID_PERSONAS)}",
         )
-    if body.proactivity_level and body.proactivity_level not in _VALID_PROACTIVITY:
+    if "proactivity_level" in data and data["proactivity_level"] not in _VALID_PROACTIVITY:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"proactivity_level must be one of: {sorted(_VALID_PROACTIVITY)}",
         )
-    if body.theme and body.theme not in _VALID_THEMES:
+    if "theme" in data and data["theme"] not in _VALID_THEMES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"theme must be one of: {sorted(_VALID_THEMES)}",
         )
 
 
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
 async def _get_or_create_prefs(user_id: str, db: AsyncSession) -> UserPreferences:
     """Fetch or auto-create the user's preferences row with defaults.
+
+    This implements the upsert-on-first-access pattern: if no row exists for
+    the user, a new one is created with all default values before returning.
 
     Args:
         user_id: Authenticated user's ID.
@@ -193,10 +182,7 @@ async def _get_or_create_prefs(user_id: str, db: AsyncSession) -> UserPreference
     prefs = result.scalar_one_or_none()
 
     if prefs is None:
-        prefs = UserPreferences(
-            user_id=user_id,
-            notification_settings=_DEFAULT_NOTIFICATION_SETTINGS,
-        )
+        prefs = UserPreferences(user_id=user_id)
         db.add(prefs)
         await db.commit()
         await db.refresh(prefs)
@@ -205,80 +191,94 @@ async def _get_or_create_prefs(user_id: str, db: AsyncSession) -> UserPreference
     return prefs
 
 
+def _apply_update(prefs: UserPreferences, data: dict[str, Any]) -> None:
+    """Apply a dict of field values onto the ORM instance.
+
+    Args:
+        prefs: The :class:`UserPreferences` ORM instance to mutate.
+        data: Field-name-to-value mapping (already filtered to non-None).
+    """
+    for field, value in data.items():
+        setattr(prefs, field, value)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
 
-@router.get("", summary="Get user preferences")
-@cached(prefix="preferences", ttl=300, key_params=["user_id"])
+@router.get("", summary="Get user preferences", response_model=PreferencesResponse)
 async def get_preferences(
     request: Request,
-    user_id: str = Depends(get_authenticated_user_id),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
+) -> PreferencesResponse:
     """Return the current user's preferences, creating defaults on first call.
 
+    If no preferences row exists for the authenticated user it is created
+    automatically with all default values (upsert on first access).
+
     Args:
-        request: Incoming FastAPI request (used for Sentry context).
-        user_id: Authenticated user ID (injected by dependency).
+        request: Incoming FastAPI request.
+        current_user: Authenticated :class:`User` ORM instance.
         db: Async database session.
 
     Returns:
-        Full preferences dict.
+        The user's full :class:`PreferencesResponse`.
     """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
+    sentry_sdk.set_user({"id": current_user.id})
 
-    prefs = await _get_or_create_prefs(user_id, db)
-    return _prefs_to_response(prefs)
+    prefs = await _get_or_create_prefs(current_user.id, db)
+    return PreferencesResponse.model_validate(prefs)
 
 
-@router.put("", summary="Replace user preferences (full update)")
+@router.put("", summary="Replace user preferences (full update)", response_model=PreferencesResponse)
 async def put_preferences(
     request: Request,
-    body: PreferencesUpdateRequest,
-    user_id: str = Depends(get_authenticated_user_id),
+    body: PreferencesCreate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
+) -> PreferencesResponse:
     """Full replacement of the user's preferences.
 
     Any field omitted from the request body is left at its current value
-    (or default if not yet set). Equivalent to PATCH for convenience.
+    (or default if the row does not yet exist). Equivalent to PATCH for
+    convenience — both endpoints apply only provided fields.
 
     Args:
         request: Incoming FastAPI request.
         body: Preference fields to update.
-        user_id: Authenticated user ID.
+        current_user: Authenticated :class:`User` ORM instance.
         db: Async database session.
 
     Returns:
-        Updated preferences dict.
-    """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
-    _validate_update(body)
+        Updated :class:`PreferencesResponse`.
 
-    prefs = await _get_or_create_prefs(user_id, db)
-    _apply_update(prefs, body)
+    Raises:
+        HTTPException: 400 for invalid enum values.
+        HTTPException: 422 for malformed time strings.
+    """
+    sentry_sdk.set_user({"id": current_user.id})
+
+    data = body.model_dump(exclude_none=True)
+    _validate_enums(data)
+    _validate_time_fields(data)
+
+    prefs = await _get_or_create_prefs(current_user.id, db)
+    _apply_update(prefs, data)
     await db.commit()
     await db.refresh(prefs)
 
-    # Invalidate cache
-    cache: CacheService | None = getattr(request.app.state, "cache_service", None)
-    if cache:
-        await cache.delete(CacheService.make_key("preferences", user_id))
-
-    return _prefs_to_response(prefs)
+    return PreferencesResponse.model_validate(prefs)
 
 
-@router.patch("", summary="Partially update user preferences")
+@router.patch("", summary="Partially update user preferences", response_model=PreferencesResponse)
 async def patch_preferences(
     request: Request,
-    body: PreferencesUpdateRequest,
-    user_id: str = Depends(get_authenticated_user_id),
+    body: PreferencesUpdate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, Any]:
+) -> PreferencesResponse:
     """Partially update the user's preferences.
 
     Only fields present (non-None) in the body are changed. This is the
@@ -287,70 +287,25 @@ async def patch_preferences(
     Args:
         request: Incoming FastAPI request.
         body: Partial preference update payload.
-        user_id: Authenticated user ID.
+        current_user: Authenticated :class:`User` ORM instance.
         db: Async database session.
 
     Returns:
-        Full updated preferences dict.
-    """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
-    _validate_update(body)
+        Full updated :class:`PreferencesResponse`.
 
-    prefs = await _get_or_create_prefs(user_id, db)
-    _apply_update(prefs, body, partial=True)
+    Raises:
+        HTTPException: 400 for invalid enum values.
+        HTTPException: 422 for malformed time strings.
+    """
+    sentry_sdk.set_user({"id": current_user.id})
+
+    data = body.model_dump(exclude_none=True)
+    _validate_enums(data)
+    _validate_time_fields(data)
+
+    prefs = await _get_or_create_prefs(current_user.id, db)
+    _apply_update(prefs, data)
     await db.commit()
     await db.refresh(prefs)
 
-    # Invalidate cache
-    cache: CacheService | None = getattr(request.app.state, "cache_service", None)
-    if cache:
-        await cache.delete(CacheService.make_key("preferences", user_id))
-
-    return _prefs_to_response(prefs)
-
-
-# ---------------------------------------------------------------------------
-# Internal update helper
-# ---------------------------------------------------------------------------
-
-
-def _apply_update(
-    prefs: UserPreferences,
-    body: PreferencesUpdateRequest,
-    partial: bool = False,
-) -> None:
-    """Apply update body fields onto the ORM instance.
-
-    Args:
-        prefs: The ORM instance to mutate.
-        body: Incoming update payload.
-        partial: When True, skip fields that are None in the body.
-    """
-    updates = body.model_dump(exclude_none=True) if partial else body.model_dump()
-
-    field_map = {
-        "coach_persona": "coach_persona",
-        "proactivity_level": "proactivity_level",
-        "dashboard_layout": "dashboard_layout",
-        "notification_settings": "notification_settings",
-        "theme": "theme",
-        "haptic_enabled": "haptic_enabled",
-        "tooltips_enabled": "tooltips_enabled",
-        "onboarding_complete": "onboarding_complete",
-        "goals": "goals",
-    }
-
-    for body_field, model_field in field_map.items():
-        if body_field in updates:
-            setattr(prefs, model_field, updates[body_field])
-
-    # Time fields require parsing from HH:MM strings
-    for body_field, model_field in [
-        ("morning_briefing_time", "morning_briefing_time"),
-        ("checkin_reminder_time", "checkin_reminder_time"),
-        ("quiet_hours_start", "quiet_hours_start"),
-        ("quiet_hours_end", "quiet_hours_end"),
-    ]:
-        if body_field in updates:
-            setattr(prefs, model_field, _parse_time(updates[body_field]))
+    return PreferencesResponse.model_validate(prefs)

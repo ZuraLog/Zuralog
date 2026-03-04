@@ -113,13 +113,15 @@ class Orchestrator:
         user_id: str,
         message: str,
         user_context_suffix: str | None = None,
+        persona: str = "balanced",
+        proactivity: str = "medium",
         db: AsyncSession | None = None,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
         Implements the full ReAct-style conversation loop:
-        1. Build system prompt with user context.
-        2. Retrieve relevant memories.
+        1. Build system prompt with user context (persona + proactivity).
+        2. Retrieve relevant memories and inject into prompt.
         3. Get available tools from MCP registry.
         4. Loop: LLM inference -> tool execution -> feed results back.
         5. Return a structured ``AgentResponse`` with the text and
@@ -128,8 +130,9 @@ class Orchestrator:
         Args:
             user_id: The authenticated user's ID.
             message: The user's chat message.
-            user_context_suffix: Optional user profile context to append
-                to the system prompt.
+            user_context_suffix: Optional legacy context to append to prompt.
+            persona: Coach persona: ``tough_love``, ``balanced``, or ``gentle``.
+            proactivity: Proactivity level: ``low``, ``medium``, or ``high``.
             db: Optional async database session. When provided, tools are
                 filtered to only those for integrations the user has
                 connected. When None, all tools are injected (legacy).
@@ -138,24 +141,25 @@ class Orchestrator:
             An ``AgentResponse`` containing the assistant's message and
             an optional ``client_action`` dict for the Edge Agent.
         """
-        # 1. Build system prompt
-        system_prompt = build_system_prompt(user_context_suffix)
+        # 1. Retrieve relevant memories first (needed for prompt injection)
+        context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
+        memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
 
-        # 2. Retrieve relevant context from memory
-        context_entries = await self.memory_store.query(user_id, query_text=message, limit=5)
-        context_text = ""
-        if context_entries:
-            context_text = "\n\n## Relevant Context\n"
-            for entry in context_entries:
-                context_text += f"- {entry.get('text', '')}\n"
+        # Build system prompt with persona, proactivity, and memory context
+        system_prompt = build_system_prompt(
+            persona=persona,
+            proactivity=proactivity,
+            memories=memory_texts if memory_texts else None,
+            user_context_suffix=user_context_suffix,
+        )
 
-        # 3. Build initial messages
+        # 2. Build initial messages (memories already injected into system prompt)
         messages: list[dict[str, Any]] = [
-            {"role": "system", "content": system_prompt + context_text},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": message},
         ]
 
-        # 4. Get available tools — filtered per user if DB session provided
+        # 3. Get available tools — filtered per user if DB session provided
         if db is not None:
             mcp_tools = await self.mcp_client.get_tools_for_user(db, user_id)
         else:
@@ -164,9 +168,9 @@ class Orchestrator:
 
         injection_mode = "dynamic" if db is not None else "static"
         logger.info(
-            "Processing message for user '%s': %d context items, %d tools (%s)",
+            "Processing message for user '%s': %d memory items, %d tools (%s)",
             user_id,
-            len(context_entries),
+            len(memory_texts),
             len(tools),
             injection_mode,
         )

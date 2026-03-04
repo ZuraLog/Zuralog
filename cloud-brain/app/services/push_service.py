@@ -5,11 +5,24 @@ Sends push notifications via Firebase Cloud Messaging (FCM).
 Gated behind the ``fcm_credentials_path`` setting — returns None
 if no credentials are configured, allowing graceful degradation
 during development.
+
+Key methods
+-----------
+``send_notification``       — Send a push to a single device token (existing).
+``send_data_message``       — Send a silent data-only message (existing).
+``send_and_persist``        — Send to all user devices AND persist a
+                              ``NotificationLog`` row (new, Phase 2).
 """
 
 import logging
+import uuid
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from app.config import settings
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +119,110 @@ class PushService:
         except Exception:
             logger.exception("FCM send failed")
             return None
+
+    async def send_and_persist(
+        self,
+        user_id: str,
+        title: str,
+        body: str,
+        notification_type: str,
+        deep_link: str | None = None,
+        data: dict[str, str] | None = None,
+        db: "AsyncSession | None" = None,
+    ) -> bool:
+        """Send a push notification to all of the user's registered devices
+        and persist a ``NotificationLog`` row for the notification centre.
+
+        The FCM send is attempted first. Persistence is then attempted
+        regardless of FCM availability — even if no push was delivered, the
+        notification still appears in the user's in-app history.
+
+        Both FCM failures and persistence failures are caught and logged;
+        this method **never raises**.
+
+        Args:
+            user_id: Zuralog user ID who should receive the notification.
+            title: Notification title text.
+            body: Notification body text.
+            notification_type: Category string (e.g. ``"insight"``,
+                ``"streak"``). See ``NOTIFICATION_TYPES`` in
+                ``notification_log.py``.
+            deep_link: Optional URI for in-app navigation (e.g.
+                ``zuralog://insights/abc123``).
+            data: Optional FCM data payload (all values must be strings).
+            db: Optional async session. When provided, the ``NotificationLog``
+                row is added to this session (caller must commit). When
+                ``None``, a short-lived session is created internally.
+
+        Returns:
+            ``True`` if the push was sent to at least one device token,
+            ``False`` if FCM is not configured or all sends failed.
+        """
+        # ------------------------------------------------------------------
+        # 1. Look up user device tokens and attempt FCM delivery
+        # ------------------------------------------------------------------
+        push_sent = False
+
+        if _fcm_initialized:
+            try:
+                from sqlalchemy import select
+
+                from app.database import async_session as _session_factory
+                from app.models.user_device import UserDevice
+
+                async with _session_factory() as _token_db:
+                    token_result = await _token_db.execute(
+                        select(UserDevice.fcm_token).where(
+                            UserDevice.user_id == user_id,
+                            UserDevice.fcm_token.isnot(None),
+                        )
+                    )
+                    tokens: list[str] = [row[0] for row in token_result.all() if row[0]]
+
+                for token in tokens:
+                    msg_id = self.send_notification(token, title, body, data)
+                    if msg_id is not None:
+                        push_sent = True
+
+            except Exception:
+                logger.exception(
+                    "send_and_persist: FCM delivery failed for user=%s", user_id
+                )
+
+        # ------------------------------------------------------------------
+        # 2. Persist to notification_logs regardless of push outcome
+        # ------------------------------------------------------------------
+        try:
+            from app.models.notification_log import NotificationLog
+
+            log_row = NotificationLog(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                title=title,
+                body=body,
+                type=notification_type,
+                deep_link=deep_link,
+                sent_at=datetime.now(timezone.utc),
+            )
+
+            if db is not None:
+                db.add(log_row)
+                await db.flush()
+            else:
+                from app.database import async_session as _factory
+
+                async with _factory() as _persist_db:
+                    _persist_db.add(log_row)
+                    await _persist_db.commit()
+
+        except Exception:
+            logger.exception(
+                "send_and_persist: persistence failed for user=%s — push was %s",
+                user_id,
+                "sent" if push_sent else "not sent",
+            )
+
+        return push_sent
 
     def send_data_message(
         self,

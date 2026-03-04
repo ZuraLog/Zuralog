@@ -130,6 +130,14 @@ celery_app.conf.beat_schedule = {
         "task": "polar.check_webhook_status",
         "schedule": 86400.0,  # 24 hours
     },
+    "send-morning-briefings-15m": {
+        "task": "app.tasks.morning_briefing_task.send_morning_briefings",
+        "schedule": 900.0,  # 15 minutes
+    },
+    "send-smart-reminders-1h": {
+        "task": "app.tasks.smart_reminder_tasks.send_smart_reminders",
+        "schedule": 3600.0,  # 1 hour
+    },
 }
 
 # Auto-discover tasks in services and tasks modules
