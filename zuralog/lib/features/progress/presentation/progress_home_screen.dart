@@ -11,12 +11,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── ProgressHomeScreen ────────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
   }
 
   Future<void> _onRefresh() async {
+    ref.read(hapticServiceProvider).medium();
     ref.invalidate(progressHomeProvider);
     // Wait for the new value to settle (swallow errors — UI handles them).
     try {
@@ -71,7 +74,13 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
       appBar: AppBar(
         backgroundColor: AppColors.backgroundDark,
         surfaceTintColor: Colors.transparent,
-        title: Text('Progress', style: AppTextStyles.h2),
+        title: OnboardingTooltip(
+          screenKey: 'progress_home',
+          tooltipKey: 'welcome',
+          message: 'Set goals and I\'ll track your streaks automatically. '
+              'Consistency is what matters most.',
+          child: Text('Progress', style: AppTextStyles.h2),
+        ),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: AppDimens.spaceMd),
@@ -117,16 +126,104 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
 
 // ── _LoadingState ─────────────────────────────────────────────────────────────
 
-class _LoadingState extends StatelessWidget {
+class _LoadingState extends StatefulWidget {
   const _LoadingState();
 
   @override
+  State<_LoadingState> createState() => _LoadingStateState();
+}
+
+class _LoadingStateState extends State<_LoadingState>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerCtrl;
+  late final Animation<double> _shimmerAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _shimmerAnim = CurvedAnimation(
+      parent: _shimmerCtrl,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _shimmerCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: AppColors.primary,
-        strokeWidth: 2.5,
-      ),
+    return AnimatedBuilder(
+      animation: _shimmerAnim,
+      builder: (context, _) {
+        final shimmerColor = Color.lerp(
+          AppColors.surfaceDark,
+          AppColors.cardBackgroundDark,
+          _shimmerAnim.value,
+        )!;
+        return ListView(
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          children: [
+            // Hero ring skeleton
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: shimmerColor,
+                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            // Section label
+            Container(
+              height: 16,
+              width: 80,
+              decoration: BoxDecoration(
+                color: shimmerColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            // Goal cards x3
+            for (int i = 0; i < 3; i++) ...[
+              Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: shimmerColor,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceSm),
+            ],
+            const SizedBox(height: AppDimens.spaceMd),
+            // Streaks section
+            Container(
+              height: 16,
+              width: 64,
+              decoration: BoxDecoration(
+                color: shimmerColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            for (int i = 0; i < 2; i++) ...[
+              Container(
+                height: 64,
+                decoration: BoxDecoration(
+                  color: shimmerColor,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceSm),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -306,7 +403,7 @@ class _ContentView extends StatelessWidget {
 
 // ── _SectionHeader ────────────────────────────────────────────────────────────
 
-class _SectionHeader extends StatelessWidget {
+class _SectionHeader extends ConsumerWidget {
   const _SectionHeader({
     required this.title,
     this.trailingLabel,
@@ -318,7 +415,7 @@ class _SectionHeader extends StatelessWidget {
   final VoidCallback? onTrailingTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -332,7 +429,10 @@ class _SectionHeader extends StatelessWidget {
           const Spacer(),
           if (trailingLabel != null && onTrailingTap != null)
             GestureDetector(
-              onTap: onTrailingTap,
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onTrailingTap!();
+              },
               child: Text(
                 trailingLabel!,
                 style: AppTextStyles.bodyMedium.copyWith(
@@ -785,7 +885,7 @@ class _QuickNavRow extends StatelessWidget {
   }
 }
 
-class _QuickNavItem extends StatelessWidget {
+class _QuickNavItem extends ConsumerWidget {
   const _QuickNavItem({
     required this.icon,
     required this.label,
@@ -797,9 +897,12 @@ class _QuickNavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        ref.read(hapticServiceProvider).light();
+        onTap();
+      },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: AppDimens.touchTargetMin + 8,

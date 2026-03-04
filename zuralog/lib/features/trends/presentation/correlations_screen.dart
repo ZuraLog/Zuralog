@@ -19,6 +19,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -172,7 +173,7 @@ class _MetricPickerRow extends ConsumerWidget {
   }
 }
 
-class _MetricPickerButton extends StatelessWidget {
+class _MetricPickerButton extends ConsumerWidget {
   const _MetricPickerButton({
     required this.label,
     required this.selectedId,
@@ -219,10 +220,13 @@ class _MetricPickerButton extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedLabel = _selectedLabel();
     return GestureDetector(
-      onTap: () => _showPicker(context),
+      onTap: () {
+        ref.read(hapticServiceProvider).light();
+        _showPicker(context);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -392,7 +396,7 @@ class _TimeRangeSelector extends ConsumerWidget {
   }
 }
 
-class _RangeChip extends StatelessWidget {
+class _RangeChip extends ConsumerWidget {
   const _RangeChip({
     required this.label,
     required this.isSelected,
@@ -404,9 +408,12 @@ class _RangeChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        ref.read(hapticServiceProvider).selectionTick();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,

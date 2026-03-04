@@ -1301,7 +1301,7 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 ### Task 10.1: Haptic Integration Across All Screens
 
 **What to build:**
-- [ ] Wire `HapticService` calls to all interaction points:
+- [x] Wire `HapticService` calls to all interaction points:
   - Light: tab switches, card taps, list selections, tooltip dismissals
   - Medium: send message, confirm log, toggle setting, submit Quick Log
   - Success: goal reached, streak milestone, achievement unlock, report generated
@@ -1313,28 +1313,28 @@ Phase 11: Observability & QA ── needs: Everything built (PostHog events, Sen
 ### Task 10.2: Onboarding Tooltips Across All Screens
 
 **What to build:**
-- [ ] Wire `OnboardingTooltip` to:
+- [x] Wire `OnboardingTooltip` to:
   - Today Feed, Health Dashboard, Coach (New Chat), Progress Home, Trends Home, Quick Log
-- [ ] Content per mvp-features.md Feature T
+- [x] Content per mvp-features.md Feature T
 
 **Commit:** `feat(ux): add onboarding tooltips to all major screens`
 
 ### Task 10.3: Skeleton Loading States
 
 **What to build:**
-- [ ] Add shimmer skeleton screens to:
+- [x] Add shimmer skeleton screens to:
   - Today Feed, Health Dashboard, Coach (loading history), Progress Home, Trends Home
-- [ ] Base: `surface-800`, highlight: `surface-600`, 1200ms loop
-- [ ] Shapes match content layout
+- [x] Base: `surface-800`, highlight: `surface-600`, 1200ms loop
+- [x] Shapes match content layout
 
 **Commit:** `feat(ux): add skeleton loading states to all tab root screens`
 
 ### Task 10.4: Pull-to-Refresh
 
 **What to build:**
-- [ ] Custom sage-green circular progress indicator on:
+- [x] Custom sage-green circular progress indicator on:
   - Today Feed, Health Dashboard, Progress Home, Trends Home
-- [ ] Triggers data refresh from backend
+- [x] Triggers data refresh from backend
 
 **Commit:** `feat(ux): add custom pull-to-refresh to all tab root screens`
 

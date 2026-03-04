@@ -15,12 +15,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
+import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── TrendsHomeScreen ──────────────────────────────────────────────────────────
@@ -36,7 +38,13 @@ class TrendsHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trends'),
+        title: OnboardingTooltip(
+          screenKey: 'trends_home',
+          tooltipKey: 'welcome',
+          message: 'This is where patterns hide. '
+              'I\'ll surface correlations you\'d never find on your own.',
+          child: const Text('Trends'),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: AppDimens.spaceMd),
@@ -64,7 +72,10 @@ class _TrendsHomeBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(trendsHomeProvider),
+      onRefresh: () async {
+        ref.read(hapticServiceProvider).light();
+        ref.invalidate(trendsHomeProvider);
+      },
       color: AppColors.primary,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -231,7 +242,7 @@ class _TimePeriodCard extends StatelessWidget {
 
 // ── Correlation Card ──────────────────────────────────────────────────────────
 
-class _CorrelationCard extends StatelessWidget {
+class _CorrelationCard extends ConsumerWidget {
   const _CorrelationCard({
     required this.highlight,
     required this.onTap,
@@ -261,12 +272,15 @@ class _CorrelationCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final accentColor = _parseHex(highlight.categoryColorHex);
     final coeffAbs = highlight.coefficient.abs();
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        ref.read(hapticServiceProvider).light();
+        onTap();
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.cardBackgroundDark,
@@ -460,14 +474,17 @@ class _QuickNavItem {
   final String routePath;
 }
 
-class _QuickNavButton extends StatelessWidget {
+class _QuickNavButton extends ConsumerWidget {
   const _QuickNavButton({required this.item});
   final _QuickNavItem item;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: () => context.push(item.routePath),
+      onTap: () {
+        ref.read(hapticServiceProvider).light();
+        context.push(item.routePath);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(
           vertical: AppDimens.spaceMd,

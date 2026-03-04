@@ -178,16 +178,16 @@
 | P0 | Data — Health Dashboard (customizable) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Category Detail (x10) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Metric Detail | ✅ Done | Phase 5 — feat/data-tab |
-| P0 | Coach — New Chat (Gemini-style) | 🔄 Route+placeholder done | Phase 4 |
-| P0 | Coach — Conversation Drawer | 🔜 Planned | Phase 4 |
-| P0 | Coach — Chat Thread | 🔄 Route+placeholder done | Phase 4 |
-| P0 | Coach — Quick Actions Sheet | 🔜 Planned | Phase 4 |
-| P1 | Progress — Progress Home | 🔄 Route+placeholder done | Phase 6 |
-| P1 | Progress — Goals | 🔄 Route+placeholder done | Phase 6 |
-| P1 | Progress — Goal Detail | 🔄 Route+placeholder done | Phase 6 |
-| P1 | Progress — Achievements | 🔄 Route+placeholder done | Phase 6 |
-| P1 | Progress — Weekly Report | 🔄 Route+placeholder done | Phase 6 |
-| P1 | Progress — Journal / Daily Log | 🔄 Route+placeholder done | Phase 6 |
+| P0 | Coach — New Chat (Gemini-style) | ✅ Done | Phase 10 — full rebuild: haptics, shimmer skeleton, conversation drawer, quick actions sheet, suggestion chips |
+| P0 | Coach — Conversation Drawer | ✅ Done | Phase 10 — DraggableScrollableSheet with conversation list |
+| P0 | Coach — Chat Thread | ✅ Done | Phase 10 — message bubbles, typing indicator, shimmer skeleton |
+| P0 | Coach — Quick Actions Sheet | ✅ Done | Phase 10 — 2-column grid, 6 quick actions |
+| P1 | Progress — Progress Home | ✅ Done | Phase 10 — OnboardingTooltip, shimmer skeleton loading, haptics |
+| P1 | Progress — Goals | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
+| P1 | Progress — Goal Detail | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
+| P1 | Progress — Achievements | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
+| P1 | Progress — Weekly Report | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
+| P1 | Progress — Journal / Daily Log | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
  | P1 | Trends — Trends Home | ✅ Complete | Phase 7 |
  | P1 | Trends — Correlations | ✅ Complete | Phase 7 |
  | P1 | Trends — Reports | ✅ Complete | Phase 7 |
@@ -207,7 +207,7 @@
 | P0 | Onboarding Flow (6-step rebuild) | ✅ Complete | feat/onboarding-rebuild — replaces ProfileQuestionnaire; Welcome, Goals, Persona, Connect Apps, Notifications, Discovery steps |
 | P0 | Emergency Health Card | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
 | P0 | Emergency Health Card Edit | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
-| P1 | Quick Log Bottom Sheet | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
+| P1 | Quick Log Bottom Sheet | ✅ Done | Phase 10 — OnboardingTooltip, haptics (submit, water, chips), ConsumerStatefulWidget |
 
 ### Phase 9 — Mock Data Layer (`--dart-define=USE_MOCK=true`)
 
@@ -227,6 +227,20 @@
 | P1 | `MockTrendsRepository` — seed correlations, reports, data source list | 🔜 Planned | Covers all Trends tab screens |
 | P1 | Wire all mocks via Riverpod `overrideWith` in `main.dart` | 🔜 Planned | `--dart-define=USE_MOCK=true` at build/run time; zero overhead in production |
 | P1 | `Makefile` `run-mock` target + `.vscode/launch.json` config | 🔜 Planned | One-click mock launch in VS Code and terminal |
+
+---
+
+## Phase 10 — Engagement & Polish (`feat/engagement-polish`)
+
+> **Branch:** `feat/engagement-polish` → squash merged to `main`
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Haptics across all screens | ✅ Done | All tab roots, Coach screens, Quick Log, Reports, Data Sources |
+| P0 | OnboardingTooltip on all major screens | ✅ Done | Health Dashboard, Progress, Trends, Coach New Chat, Quick Log |
+| P0 | Shimmer skeleton loading | ✅ Done | Coach (both screens), Progress Home (replaces spinner), Trends Home |
+| P0 | Pull-to-refresh (sage-green) + haptic | ✅ Done | All tab roots — Today, Data, Progress, Trends |
+| P1 | Apple Sign In | ⛔ Blocked | Requires Apple Developer subscription |
 
 ---
 

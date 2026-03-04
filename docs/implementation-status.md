@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-04 (Phase 7 Trends tab complete)  
+**Last Updated:** 2026-03-05 (Phase 10 Engagement & Polish complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -564,3 +564,38 @@ Replaced the old 3-field `ProfileQuestionnaireScreen` with a new 6-step paginate
 | `WelcomeStep` manages its own CTA (Back/Next hidden) | Step 0 has no "Back" destination and a custom "Get Started" CTA — the shared bottom nav would be redundant and visually wrong |
 | `activeThumbColor` instead of deprecated `activeColor` on Switch | `activeColor` was deprecated in Flutter v3.31; `activeThumbColor` is the correct API going forward |
 | PostHog event fired in `DiscoveryStep` on selection (not on complete) | The discovery question is the last step; firing on selection ensures the event is captured even if the user backgrounds the app before tapping "Finish" |
+
+---
+
+## Phase 10 — Engagement & Polish
+
+**Branch:** `feat/engagement-polish`
+**Status:** Complete (Tasks 10.1–10.4; Task 10.5 Apple Sign In blocked on Apple Developer subscription)
+
+Completed the engagement and polish layer across the entire app. Coach screens were Phase 4 placeholders — fully rebuilt from scratch with production-grade implementations.
+
+**New files:**
+- `zuralog/lib/features/coach/domain/coach_models.dart` — Domain models: `Conversation`, `ChatMessage`, `MessageRole`, `PromptSuggestion`, `QuickAction`, `IntegrationContext`
+- `zuralog/lib/features/coach/data/coach_repository.dart` — Abstract `CoachRepository` interface + `MockCoachRepository` with realistic seed data
+- `zuralog/lib/features/coach/providers/coach_providers.dart` — Riverpod providers: conversations, messages (family), suggestions, quick actions, active conversation ID
+
+**Modified files:**
+- `new_chat_screen.dart` — Full rebuild: `OnboardingTooltip` on brand icon, animated shimmer `_CoachLoadingSkeleton` (1200ms), `_ConversationDrawer` bottom sheet, `_QuickActionsSheet` (2-col grid), `_ChatInputBar`, `_SuggestionChip` grid, haptics throughout
+- `chat_thread_screen.dart` — Full rebuild: `_MessageBubble` (user sage-green / AI surface-dark), `_TypingIndicator` (3-dot animated), `_MessagesLoadingSkeleton`, `_ChatInputBar`, haptics throughout
+- `progress_home_screen.dart` — Added `OnboardingTooltip` on title, replaced `_LoadingState` plain spinner with animated shimmer skeleton (goal cards + streaks shapes), haptics on refresh/nav/section headers
+- `trends_home_screen.dart` — Added `OnboardingTooltip` on title, haptic on pull-to-refresh trigger, haptics on correlation cards + quick-nav buttons
+- `correlations_screen.dart` — Haptics on range chips (`selectionTick`) + metric picker button (`light`)
+- `reports_screen.dart` — Haptic on card tap (`light`) + refresh trigger (`light`); `_ReportCard` → `ConsumerWidget`
+- `data_sources_screen.dart` — Haptic on connect/reconnect button (`medium`) + refresh trigger (`light`); `_DataSourceCard` → `ConsumerWidget`
+- `quick_log_sheet.dart` — `ConsumerStatefulWidget`; haptic on submit (`success`), water buttons (`light`), symptom chips (`selectionTick`); `OnboardingTooltip` on title
+- `health_dashboard_screen.dart` — `OnboardingTooltip` on AppBar title (existing haptics + skeletons preserved)
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Coach screens rebuilt from scratch (not patched) | Phase 4 stubs were center-column text with zero functionality — patching would require rewriting anyway |
+| `MockCoachRepository` rather than live API calls | Coach AI is a backend feature (Gemini); mock enables full UI testing without API keys |
+| `ConsumerStatefulWidget` for `QuickLogSheet` | Sheet needed Riverpod for haptics; no clean way to thread haptic service through props |
+| `_LoadingState` → animated shimmer (not `shimmer` package) | Zero additional dependency; `AnimationController` + `Color.lerp` achieves identical visual result |
+| `OnboardingTooltip` on AppBar titles (not mid-screen) | Titles are the natural tap target on first encounter; tooltip fires once (SharedPreferences key) and never again |

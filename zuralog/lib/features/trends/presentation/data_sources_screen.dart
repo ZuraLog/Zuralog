@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -67,7 +68,10 @@ class _DataSourcesList extends ConsumerWidget {
     final disconnected = sources.where((s) => !s.isConnected).toList();
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(dataSourcesProvider),
+      onRefresh: () async {
+        ref.read(hapticServiceProvider).light();
+        ref.invalidate(dataSourcesProvider);
+      },
       color: AppColors.primary,
       child: ListView(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -112,7 +116,7 @@ class _SectionLabel extends StatelessWidget {
 
 // ── Data Source Card ──────────────────────────────────────────────────────────
 
-class _DataSourceCard extends StatelessWidget {
+class _DataSourceCard extends ConsumerWidget {
   const _DataSourceCard({required this.source});
   final DataSource source;
 
@@ -146,7 +150,7 @@ class _DataSourceCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final freshnessColor = _freshnessColor(source.freshness);
 
     return Container(
@@ -279,8 +283,10 @@ class _DataSourceCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () =>
-                    context.push(RouteNames.settingsIntegrationsPath),
+                onPressed: () {
+                  ref.read(hapticServiceProvider).medium();
+                  context.push(RouteNames.settingsIntegrationsPath);
+                },
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.primaryButtonText,

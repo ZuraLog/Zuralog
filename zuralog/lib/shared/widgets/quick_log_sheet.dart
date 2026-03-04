@@ -35,10 +35,13 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 
 // ── QuickLogData ──────────────────────────────────────────────────────────────
 
@@ -65,7 +68,7 @@ class QuickLogData {
 // ── QuickLogSheet ─────────────────────────────────────────────────────────────
 
 /// Modal bottom sheet for rapid manual health data entry.
-class QuickLogSheet extends StatefulWidget {
+class QuickLogSheet extends ConsumerStatefulWidget {
   /// Creates a [QuickLogSheet].
   const QuickLogSheet({super.key, required this.onSubmit, this.isLoading = false});
 
@@ -76,10 +79,10 @@ class QuickLogSheet extends StatefulWidget {
   final bool isLoading;
 
   @override
-  State<QuickLogSheet> createState() => _QuickLogSheetState();
+  ConsumerState<QuickLogSheet> createState() => _QuickLogSheetState();
 }
 
-class _QuickLogSheetState extends State<QuickLogSheet> {
+class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
   // ── State fields ───────────────────────────────────────────────────────────
   double _mood = 7;
   double _energy = 6;
@@ -107,6 +110,7 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
   }
 
   void _submit() {
+    ref.read(hapticServiceProvider).success();
     widget.onSubmit(
       QuickLogData(
         mood: _mood,
@@ -157,9 +161,15 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             // Title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              child: Text(
-                'Quick Log',
-                style: AppTextStyles.h2.copyWith(color: textPrimary),
+              child: OnboardingTooltip(
+                screenKey: 'quick_log',
+                tooltipKey: 'welcome',
+                message: 'Tap here anytime to quickly log water, mood, '
+                    'energy, or anything else.',
+                child: Text(
+                  'Quick Log',
+                  style: AppTextStyles.h2.copyWith(color: textPrimary),
+                ),
               ),
             ),
             const SizedBox(height: AppDimens.spaceMd),
@@ -211,9 +221,15 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                       textColor: textPrimary,
                       secondaryColor: textSecondary,
                       onDecrement: () {
-                        if (_water > 0) setState(() => _water--);
+                        if (_water > 0) {
+                          ref.read(hapticServiceProvider).light();
+                          setState(() => _water--);
+                        }
                       },
-                      onIncrement: () => setState(() => _water++),
+                      onIncrement: () {
+                        ref.read(hapticServiceProvider).light();
+                        setState(() => _water++);
+                      },
                     ),
                     const SizedBox(height: AppDimens.spaceLg),
 
@@ -249,6 +265,7 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                             ),
                             selected: _selectedSymptoms.contains(symptom),
                             onSelected: (selected) {
+                              ref.read(hapticServiceProvider).selectionTick();
                               setState(() {
                                 if (selected) {
                                   _selectedSymptoms.add(symptom);

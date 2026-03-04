@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -60,7 +61,10 @@ class _ReportsList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(reportsProvider),
+      onRefresh: () async {
+        ref.read(hapticServiceProvider).light();
+        ref.invalidate(reportsProvider);
+      },
       color: AppColors.primary,
       child: ListView.separated(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -92,7 +96,7 @@ class _ReportsList extends ConsumerWidget {
 
 // ── Report Card ───────────────────────────────────────────────────────────────
 
-class _ReportCard extends StatelessWidget {
+class _ReportCard extends ConsumerWidget {
   const _ReportCard({required this.report, required this.onTap});
   final GeneratedReport report;
   final VoidCallback onTap;
@@ -111,9 +115,12 @@ class _ReportCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        ref.read(hapticServiceProvider).light();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(

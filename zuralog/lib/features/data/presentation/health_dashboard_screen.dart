@@ -25,6 +25,7 @@ import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/category_card.dart';
+import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
 // ── HealthDashboardScreen ─────────────────────────────────────────────────────
@@ -55,9 +56,15 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Data',
-          style: AppTextStyles.h2,
+        title: OnboardingTooltip(
+          screenKey: 'health_dashboard',
+          tooltipKey: 'welcome',
+          message: 'This is your data command center. Long-press a card to '
+              'reorder, or tap the edit button to show/hide categories.',
+          child: Text(
+            'Data',
+            style: AppTextStyles.h2,
+          ),
         ),
         actions: [
           if (_isEditMode)
