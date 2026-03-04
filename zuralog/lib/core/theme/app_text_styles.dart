@@ -96,4 +96,15 @@ abstract final class AppTextStyles {
         letterSpacing: 0,
         height: 1.3,
       );
+
+  /// Body Medium — 14pt Regular.
+  ///
+  /// Used for secondary body text, meta descriptions, and insight card content.
+  static TextStyle get bodyMedium => TextStyle(
+        fontFamily: _fontFamily,
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        letterSpacing: -0.15,
+        height: 1.43,
+      );
 }

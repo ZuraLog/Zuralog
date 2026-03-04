@@ -207,4 +207,12 @@ abstract final class AppColors {
 
   /// @deprecated Use [categoryNutrition] instead.
   static const Color nutrition = categoryNutrition;
+
+  // ── Shimmer / skeleton loading ────────────────────────────────────────────
+
+  /// Shimmer base color — used as the skeleton background in loading states.
+  static const Color shimmerBase = Color(0x4DFFFFFF);
+
+  /// Shimmer highlight color — the sweep highlight over the skeleton.
+  static const Color shimmerHighlight = Color(0xCCFFFFFF);
 }

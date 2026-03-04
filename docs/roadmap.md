@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-04 (Phase 0 design system v3.1 + Phase 1 5-tab navigation complete; Phase 2 backend services in progress)
+**Last Updated:** 2026-03-04 (feat/data-tab merged — Data tab fully built; mock data layer planned for Phase 5.1)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -175,9 +175,9 @@
 | P0 | Today Feed (curated daily briefing) | ✅ Done | Phase 3 complete — Health Score hero, insight cards, quick actions, wellness check-in, streak, Quick Log FAB |
 | P0 | Today — Insight Detail | ✅ Done | Phase 3 complete — bar chart, AI reasoning, source chips, Discuss with Coach CTA |
 | P0 | Today — Notification History | ✅ Done | Phase 3 complete — grouped by day, unread indicators, deep-link routing |
-| P0 | Data — Health Dashboard (customizable) | 🔄 Route+placeholder done | Phase 5 |
-| P0 | Data — Category Detail (x10) | 🔄 Route+placeholder done | Phase 5 |
-| P0 | Data — Metric Detail | 🔄 Route+placeholder done | Phase 5 |
+| P0 | Data — Health Dashboard (customizable) | ✅ Done | Phase 5 — feat/data-tab |
+| P0 | Data — Category Detail (x10) | ✅ Done | Phase 5 — feat/data-tab |
+| P0 | Data — Metric Detail | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Coach — New Chat (Gemini-style) | 🔄 Route+placeholder done | Phase 4 |
 | P0 | Coach — Conversation Drawer | 🔜 Planned | Phase 4 |
 | P0 | Coach — Chat Thread | 🔄 Route+placeholder done | Phase 4 |
@@ -204,6 +204,17 @@
 | P2 | Profile (side panel or pushed) | 🔄 Route+placeholder done | Phase 8 |
 | P2 | Privacy Policy | 🔜 Planned | Phase 8 |
 | P2 | Terms of Service | 🔜 Planned | Phase 8 |
+
+### Phase 5.1 — Mock Data Layer (`--dart-define=USE_MOCK=true`)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | Extract abstract interface for `DataRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
+| P1 | Extract abstract interface for `TodayRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
+| P1 | `MockDataRepository` — rich seed data (all 10 categories, sparklines, charts) | 🔜 Planned | Covers Health Dashboard, Category Detail, Metric Detail |
+| P1 | `MockTodayRepository` — seed insights, quick actions, streak, notifications | 🔜 Planned | Covers Today Feed, Insight Detail, Notification History |
+| P1 | Wire via Riverpod `overrideWith` in `main.dart` (`USE_MOCK=true`) | 🔜 Planned | `--dart-define=USE_MOCK=true` at build/run time; zero overhead in production |
+| P1 | `Makefile` `run-mock` target + `.vscode/launch.json` config | 🔜 Planned | One-click mock launch in VS Code and terminal |
 
 ---
 

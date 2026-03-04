@@ -33,8 +33,8 @@ abstract final class AppDimens {
 
   // ── Corner Radii ─────────────────────────────────────────────────────────
 
-  /// Card corner radius — 24px per view-design.md Section 1.3.
-  static const double radiusCard = 24;
+  /// Card corner radius — 20px per AGENTS.md design system specification.
+  static const double radiusCard = 20;
 
   /// Button corner radius — pill-shaped (fully rounded).
   static const double radiusButton = 100;

@@ -23,6 +23,7 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
+import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
 import 'package:zuralog/shared/widgets/streak_badge.dart';
 
@@ -307,13 +308,17 @@ class _TodayAppBar extends ConsumerWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(
             Icons.notifications_outlined,
-            color: AppColors.textSecondaryDark,
+            color: AppColors.textSecondary,
           ),
           onPressed: () {
             ref.read(hapticServiceProvider).light();
             context.pushNamed(RouteNames.notificationHistory);
           },
           tooltip: 'Notifications',
+        ),
+        const Padding(
+          padding: EdgeInsets.only(right: AppDimens.spaceMd),
+          child: ProfileAvatarButton(),
         ),
       ],
     );
@@ -558,9 +563,8 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                           const SizedBox(height: 4),
                           Text(
                             widget.insight.summary,
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.textSecondaryDark,
-                              fontSize: 14,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
                             ),
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
@@ -683,7 +687,7 @@ class _QuickActionCardState extends State<_QuickActionCard> {
                       Text(
                         widget.action.subtitle,
                         style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -788,7 +792,7 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
                           Text(
                             'Log mood, energy, and water intake',
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textSecondaryDark,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
@@ -1028,7 +1032,7 @@ class _EmptyInsightsCard extends StatelessWidget {
             Text(
               'No insights yet',
               style: AppTextStyles.h3.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 4),
@@ -1196,9 +1200,9 @@ class _ShimmerState extends State<_Shimmer>
             Offset(bounds.width * shimmerStart, 0),
             Offset(bounds.width * (shimmerStart + 1.0), 0),
             const [
-              Color(0x4DFFFFFF),
-              Color(0xCCFFFFFF),
-              Color(0x4DFFFFFF),
+              AppColors.shimmerBase,
+              AppColors.shimmerHighlight,
+              AppColors.shimmerBase,
             ],
             const [0.0, 0.5, 1.0],
           ),

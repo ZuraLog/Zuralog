@@ -12,15 +12,22 @@
 /// ```
 ///
 /// Navigation destinations exposed by the panel:
-///   1. Profile — navigates to the Settings screen.
-///   2. Settings — navigates to the Settings screen.
-///   3. Sign Out — logs out the current user.
+///   1. Account          — navigates to Account Settings.
+///   2. Notifications    — navigates to Notification Settings.
+///   3. Appearance       — navigates to Appearance Settings.
+///   4. Coach            — navigates to Coach Settings.
+///   5. Integrations     — navigates to Integrations screen.
+///   6. Privacy & Data   — navigates to Privacy & Data screen.
+///   7. Subscription     — navigates to Subscription screen.
+///   8. About            — navigates to About screen.
+///   9. Sign Out         — logs out the current user.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -61,7 +68,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
 
     return Material(
       color: cs.surface,
-      elevation: 8,
+      elevation: 0,
       child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -128,18 +135,74 @@ class ProfileSidePanelWidget extends ConsumerWidget {
               // ── Navigation Links ─────────────────────────────────────────
               _NavItem(
                 icon: Icons.person_outline_rounded,
-                label: 'Profile',
+                label: 'Account',
                 onTap: () {
+                  ref.read(hapticServiceProvider).light();
                   onClose();
-                  context.push(RouteNames.settingsPath);
+                  context.push(RouteNames.settingsAccountPath);
                 },
               ),
               _NavItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
+                icon: Icons.notifications_none_rounded,
+                label: 'Notifications',
                 onTap: () {
+                  ref.read(hapticServiceProvider).light();
                   onClose();
-                  context.push(RouteNames.settingsPath);
+                  context.push(RouteNames.settingsNotificationsPath);
+                },
+              ),
+              _NavItem(
+                icon: Icons.palette_outlined,
+                label: 'Appearance',
+                onTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  onClose();
+                  context.push(RouteNames.settingsAppearancePath);
+                },
+              ),
+              _NavItem(
+                icon: Icons.psychology_outlined,
+                label: 'Coach',
+                onTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  onClose();
+                  context.push(RouteNames.settingsCoachPath);
+                },
+              ),
+              _NavItem(
+                icon: Icons.link_rounded,
+                label: 'Integrations',
+                onTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  onClose();
+                  context.push(RouteNames.settingsIntegrationsPath);
+                },
+              ),
+              _NavItem(
+                icon: Icons.shield_outlined,
+                label: 'Privacy & Data',
+                onTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  onClose();
+                  context.push(RouteNames.settingsPrivacyPath);
+                },
+              ),
+              _NavItem(
+                icon: Icons.star_outline_rounded,
+                label: 'Subscription',
+                onTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  onClose();
+                  context.push(RouteNames.settingsSubscriptionPath);
+                },
+              ),
+              _NavItem(
+                icon: Icons.info_outline_rounded,
+                label: 'About',
+                onTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  onClose();
+                  context.push(RouteNames.settingsAboutPath);
                 },
               ),
 
@@ -158,6 +221,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
                 label: 'Sign Out',
                 color: isDark ? AppColors.accentDark : AppColors.accentLight,
                 onTap: () async {
+                  ref.read(hapticServiceProvider).light();
                   onClose();
                   await ref.read(authStateProvider.notifier).logout();
                   if (context.mounted) {
@@ -216,7 +280,7 @@ class _NavItem extends StatelessWidget {
       trailing: color == null
           ? Icon(
               Icons.chevron_right_rounded,
-              color: cs.onSurfaceVariant,
+              color: AppColors.textTertiary,
               size: AppDimens.iconSm,
             )
           : null,
