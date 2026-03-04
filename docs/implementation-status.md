@@ -111,10 +111,24 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 - iOS: HealthKit native bridge with `HKObserverQuery` background observers, `HKAnchoredObjectQuery` incremental sync, 30-day initial backfill, iOS Keychain JWT persistence for background-only sync
 - Android: Health Connect WorkManager periodic task, EncryptedSharedPreferences JWT persistence, 30-day initial backfill
 
-**Settings**
-- User profile display
-- Preferences management
-- Data export placeholder ("Coming soon")
+**Settings & Profile — Phase 8 (12 screens, fully built)**
+
+- **Settings Hub** — iOS-style grouped list, icon badges, section labels, `SliverAppBar` large-title header; routes to all settings sub-screens
+- **Account Settings** — name, email, password change rows; destructive Delete Account with confirmation dialog
+- **Notification Settings** — granular per-category toggles (Coach insights, workout reminders, streak alerts, weekly reports, security); time-range picker for quiet hours
+- **Appearance Settings** — Dark / Light / System theme selector with visual tile picker; language selector
+- **Coach Settings** — AI coach persona toggle, coaching style selector (3 options), response detail level, proactive suggestions toggle, data sharing consent toggle
+- **Integrations Management** — status tiles for all connected integrations (Strava, Apple Health, Health Connect, Fitbit, Oura Ring) with connect/disconnect actions; routes back to main Integrations screen
+- **Privacy & Data** — data export request, analytics opt-out, delete all data with confirmation; links to Privacy Policy and Terms of Service screens
+- **Subscription** — Free vs. Pro tier comparison; feature matrix; upgrade CTA (RevenueCat); restore purchases
+- **About** — app version, build number, acknowledgements; links to Privacy Policy and Terms of Service screens
+- **Profile Screen** — avatar with initials fallback, inline name edit, subscription tier badge, Emergency Health Card banner, account stats (joined date, workouts logged), sign-out
+- **Emergency Health Card (view)** — high-contrast read-only view (blood type, allergies, conditions, medications, 3 emergency contacts); formatted for first-responder legibility
+- **Emergency Health Card (edit)** — blood type picker, tag-style chip inputs for allergies/conditions/medications, 3 structured contact editors; persisted via `emergencyCardProvider`
+- **Privacy Policy** — full GDPR/CCPA-compliant policy (11 sections); `SliverAppBar` + scrollable rich text
+- **Terms of Service** — full ToS (13 sections, medical disclaimer); same layout
+
+Legal routes added: `/settings/privacy-policy`, `/settings/terms` in `route_names.dart` + `app_router.dart`
 
 **Subscription**
 - RevenueCat paywall (Pro upgrade flow)

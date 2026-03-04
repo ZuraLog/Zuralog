@@ -91,6 +91,8 @@ import 'package:zuralog/features/settings/presentation/integrations_screen.dart'
 import 'package:zuralog/features/settings/presentation/privacy_data_screen.dart';
 import 'package:zuralog/features/settings/presentation/subscription_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/about_screen.dart';
+import 'package:zuralog/features/settings/presentation/privacy_policy_screen.dart';
+import 'package:zuralog/features/settings/presentation/terms_of_service_screen.dart';
 
 // ── Profile (pushed over shell) ───────────────────────────────────────────────
 import 'package:zuralog/features/profile/presentation/profile_screen.dart';
@@ -237,6 +239,16 @@ List<RouteBase> _buildRoutes() {
           path: 'about',
           name: RouteNames.settingsAbout,
           builder: (context, state) => const AboutScreen(),
+        ),
+        GoRoute(
+          path: 'privacy-policy',
+          name: RouteNames.settingsPrivacyPolicy,
+          builder: (context, state) => const PrivacyPolicyScreen(),
+        ),
+        GoRoute(
+          path: 'terms',
+          name: RouteNames.settingsTerms,
+          builder: (context, state) => const TermsOfServiceScreen(),
         ),
       ],
     ),

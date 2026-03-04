@@ -1,4 +1,4 @@
-/// Settings Hub Screen — top-level settings menu.
+/// Settings Hub Screen — top-level settings navigation menu.
 ///
 /// Entry point for all settings: Account, Notifications, Appearance, Coach,
 /// Integrations, Privacy & Data, Subscription, About. Pushed from gear icon
@@ -8,74 +8,155 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 
-/// Settings Hub screen — Phase 8 placeholder.
+/// Settings Hub — the top-level settings navigation screen.
 ///
-/// Provides minimal navigation to all settings sub-screens so that
-/// the routing structure can be verified before Phase 8 builds the
-/// full implementation.
-class SettingsHubScreen extends StatelessWidget {
+/// Provides a grouped list of all setting categories. Each row uses a
+/// category-color icon badge, title, subtitle, and trailing chevron.
+///
+/// Design: editorial / premium Apple-Settings-caliber layout with
+/// section groupings and a frosted-glass header area.
+class SettingsHubScreen extends ConsumerWidget {
   /// Creates the [SettingsHubScreen].
   const SettingsHubScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        children: [
-          _SettingsTile(
-            icon: Icons.person_rounded,
-            title: 'Account',
-            subtitle: 'Email, password, linked accounts',
-            onTap: () => context.push(RouteNames.settingsAccountPath),
+      backgroundColor: AppColors.backgroundDark,
+      body: CustomScrollView(
+        slivers: [
+          // ── Large-title app bar ──────────────────────────────────────────
+          SliverAppBar(
+            backgroundColor: AppColors.backgroundDark,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            pinned: true,
+            expandedHeight: 100,
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(
+                left: AppDimens.spaceMd,
+                bottom: 16,
+              ),
+              title: Text(
+                'Settings',
+                style: AppTextStyles.h2.copyWith(
+                  color: AppColors.textPrimaryDark,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              collapseMode: CollapseMode.parallax,
+            ),
           ),
-          _SettingsTile(
-            icon: Icons.notifications_rounded,
-            title: 'Notifications',
-            subtitle: 'Reminders, briefings, quiet hours',
-            onTap: () => context.push(RouteNames.settingsNotificationsPath),
+
+          // ── Section 1: Account & Profile ─────────────────────────────────
+          _SectionHeader(title: 'Account'),
+
+          SliverToBoxAdapter(
+            child: _SettingsGroup(
+              tiles: [
+                _SettingsTile(
+                  icon: Icons.person_rounded,
+                  iconColor: AppColors.categoryWellness,
+                  title: 'Account',
+                  subtitle: 'Email, password, linked accounts',
+                  onTap: () => context.push(RouteNames.settingsAccountPath),
+                ),
+                _SettingsTile(
+                  icon: Icons.workspace_premium_rounded,
+                  iconColor: AppColors.categoryNutrition,
+                  title: 'Subscription',
+                  subtitle: 'Plan, billing, restore purchases',
+                  onTap: () => context.push(RouteNames.settingsSubscriptionPath),
+                ),
+              ],
+            ),
           ),
-          _SettingsTile(
-            icon: Icons.palette_rounded,
-            title: 'Appearance',
-            subtitle: 'Theme, haptics, tooltips',
-            onTap: () => context.push(RouteNames.settingsAppearancePath),
+
+          // ── Section 2: Experience ────────────────────────────────────────
+          _SectionHeader(title: 'Experience'),
+
+          SliverToBoxAdapter(
+            child: _SettingsGroup(
+              tiles: [
+                _SettingsTile(
+                  icon: Icons.notifications_rounded,
+                  iconColor: AppColors.categoryHeart,
+                  title: 'Notifications',
+                  subtitle: 'Reminders, briefings, quiet hours',
+                  onTap: () =>
+                      context.push(RouteNames.settingsNotificationsPath),
+                ),
+                _SettingsTile(
+                  icon: Icons.palette_rounded,
+                  iconColor: AppColors.primaryDark,
+                  title: 'Appearance',
+                  subtitle: 'Theme, haptics, tooltips',
+                  onTap: () => context.push(RouteNames.settingsAppearancePath),
+                ),
+                _SettingsTile(
+                  icon: Icons.psychology_rounded,
+                  iconColor: AppColors.categorySleep,
+                  title: 'Coach',
+                  subtitle: 'AI persona, proactivity level',
+                  onTap: () => context.push(RouteNames.settingsCoachPath),
+                ),
+              ],
+            ),
           ),
-          _SettingsTile(
-            icon: Icons.psychology_rounded,
-            title: 'Coach',
-            subtitle: 'AI persona, proactivity level',
-            onTap: () => context.push(RouteNames.settingsCoachPath),
+
+          // ── Section 3: Data & Integrations ───────────────────────────────
+          _SectionHeader(title: 'Data & Privacy'),
+
+          SliverToBoxAdapter(
+            child: _SettingsGroup(
+              tiles: [
+                _SettingsTile(
+                  icon: Icons.extension_rounded,
+                  iconColor: AppColors.categoryActivity,
+                  title: 'Integrations',
+                  subtitle: 'Connected apps and services',
+                  onTap: () =>
+                      context.push(RouteNames.settingsIntegrationsPath),
+                ),
+                _SettingsTile(
+                  icon: Icons.lock_rounded,
+                  iconColor: AppColors.categoryVitals,
+                  title: 'Privacy & Data',
+                  subtitle: 'AI memory, data export, analytics',
+                  onTap: () => context.push(RouteNames.settingsPrivacyPath),
+                ),
+              ],
+            ),
           ),
-          _SettingsTile(
-            icon: Icons.extension_rounded,
-            title: 'Integrations',
-            subtitle: 'Connected apps and services',
-            onTap: () => context.push(RouteNames.settingsIntegrationsPath),
+
+          // ── Section 4: About ─────────────────────────────────────────────
+          _SectionHeader(title: 'About'),
+
+          SliverToBoxAdapter(
+            child: _SettingsGroup(
+              tiles: [
+                _SettingsTile(
+                  icon: Icons.info_rounded,
+                  iconColor: AppColors.categoryBody,
+                  title: 'About Zuralog',
+                  subtitle: 'Version, licenses, support',
+                  onTap: () => context.push(RouteNames.settingsAboutPath),
+                ),
+              ],
+            ),
           ),
-          _SettingsTile(
-            icon: Icons.lock_rounded,
-            title: 'Privacy & Data',
-            subtitle: 'AI memory, data export, analytics',
-            onTap: () => context.push(RouteNames.settingsPrivacyPath),
-          ),
-          _SettingsTile(
-            icon: Icons.workspace_premium_rounded,
-            title: 'Subscription',
-            subtitle: 'Plan, billing, restore purchases',
-            onTap: () => context.push(RouteNames.settingsSubscriptionPath),
-          ),
-          _SettingsTile(
-            icon: Icons.info_rounded,
-            title: 'About',
-            subtitle: 'Version, licenses, support',
-            onTap: () => context.push(RouteNames.settingsAboutPath),
+
+          const SliverToBoxAdapter(
+            child: SizedBox(height: AppDimens.spaceXxl),
           ),
         ],
       ),
@@ -83,34 +164,163 @@ class SettingsHubScreen extends StatelessWidget {
   }
 }
 
-/// Reusable list tile for a settings navigation row.
-class _SettingsTile extends StatelessWidget {
+// ── _SectionHeader ────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          AppDimens.spaceLg,
+          AppDimens.spaceMd,
+          AppDimens.spaceXs,
+        ),
+        child: Text(
+          title.toUpperCase(),
+          style: AppTextStyles.labelXs.copyWith(
+            color: AppColors.textTertiary,
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _SettingsGroup ────────────────────────────────────────────────────────────
+
+/// Grouped container for a set of settings tiles — rounded card, no shadow.
+class _SettingsGroup extends StatelessWidget {
+  const _SettingsGroup({required this.tiles});
+
+  final List<_SettingsTile> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardBackgroundDark,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
+        child: Column(
+          children: [
+            for (int i = 0; i < tiles.length; i++) ...[
+              tiles[i],
+              if (i < tiles.length - 1)
+                Padding(
+                  padding: const EdgeInsets.only(left: 68),
+                  child: Container(
+                    height: 1,
+                    color: AppColors.borderDark.withValues(alpha: 0.5),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _SettingsTile ─────────────────────────────────────────────────────────────
+
+/// Premium settings tile — icon badge, title, subtitle, tap animation, chevron.
+class _SettingsTile extends StatefulWidget {
   const _SettingsTile({
     required this.icon,
+    required this.iconColor,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
+  final Color iconColor;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
   @override
+  State<_SettingsTile> createState() => _SettingsTileState();
+}
+
+class _SettingsTileState extends State<_SettingsTile> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.textTertiary),
-      title: Text(title, style: AppTextStyles.body),
-      subtitle: Text(
-        subtitle,
-        style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        color: _pressed
+            ? AppColors.borderDark.withValues(alpha: 0.3)
+            : Colors.transparent,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: 14,
+        ),
+        child: Row(
+          children: [
+            // Color icon badge.
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: widget.iconColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+              ),
+              child: Icon(
+                widget.icon,
+                size: 20,
+                color: widget.iconColor,
+              ),
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            // Title + subtitle.
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textPrimaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.subtitle,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Trailing chevron.
+            Icon(
+              Icons.chevron_right_rounded,
+              size: AppDimens.iconMd,
+              color: AppColors.textTertiary,
+            ),
+          ],
+        ),
       ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.textTertiary,
-      ),
-      onTap: onTap,
     );
   }
 }

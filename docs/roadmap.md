@@ -192,18 +192,18 @@
  | P1 | Trends — Correlations | ✅ Complete | Phase 7 |
  | P1 | Trends — Reports | ✅ Complete | Phase 7 |
  | P1 | Trends — Data Sources | ✅ Complete | Phase 7 |
-| P1 | Settings Hub | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — Account | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — Notifications | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — Appearance | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — Coach Settings | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — Integrations | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — Privacy & Data | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — Subscription | 🔄 Route+placeholder done | Phase 8 |
-| P1 | Settings — About | 🔄 Route+placeholder done | Phase 8 |
-| P2 | Profile (side panel or pushed) | 🔄 Route+placeholder done | Phase 8 |
-| P2 | Privacy Policy | 🔜 Planned | Phase 8 |
-| P2 | Terms of Service | 🔜 Planned | Phase 8 |
+| P1 | Settings Hub | ✅ Complete | Phase 8 |
+| P1 | Settings — Account | ✅ Complete | Phase 8 |
+| P1 | Settings — Notifications | ✅ Complete | Phase 8 |
+| P1 | Settings — Appearance | ✅ Complete | Phase 8 |
+| P1 | Settings — Coach Settings | ✅ Complete | Phase 8 |
+| P1 | Settings — Integrations | ✅ Complete | Phase 8 |
+| P1 | Settings — Privacy & Data | ✅ Complete | Phase 8 |
+| P1 | Settings — Subscription | ✅ Complete | Phase 8 |
+| P1 | Settings — About | ✅ Complete | Phase 8 |
+| P2 | Profile (side panel or pushed) | ✅ Complete | Phase 8 |
+| P2 | Privacy Policy | ✅ Complete | Phase 8 |
+| P2 | Terms of Service | ✅ Complete | Phase 8 |
 
 ### Phase 9 — Mock Data Layer (`--dart-define=USE_MOCK=true`)
 
