@@ -330,3 +330,12 @@
 | P1 | Backend health ingest span (`health_ingest.py`) | ✅ Done | `db.health_ingest` span wraps `db.commit()` |
 | P1 | Backend Celery task spans (`report_tasks.py`) | ✅ Done | `task.report_generation` span + `task.type` tag for weekly/monthly |
 | P1 | Backend memory store error groups (`pinecone_memory_store.py`) | ✅ Done | `memory_store_failure` fingerprint + `ai.error_type=memory_store_error` tag on save/query |
+
+### Task 11.3 — PostHog Feature Flags / A/B Testing Readiness
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | `FeatureFlagService` + `FeatureFlags` constants | ✅ Done | `core/analytics/feature_flag_service.dart`; typed wrappers around `AnalyticsService.getFeatureFlagPayload` with safe defaults |
+| P1 | `onboarding_step_order` flag wired into `OnboardingFlowScreen` | ✅ Done | Step 2/3 order (Goals/Persona) is flag-controlled; analytics indices are flag-aware |
+| P1 | `notification_frequency_default` flag wired into `NotificationSettingsScreen` | ✅ Done | Seeds `reminderFrequency` initial state from PostHog on first open |
+| P1 | `ai_persona_default` flag wired into `CoachSettingsScreen` | ✅ Done | Seeds `_personaProvider` initial value from PostHog on first open |

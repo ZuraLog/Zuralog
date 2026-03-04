@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-05 (Task 11.2 Sentry Error Boundaries & Performance Monitoring complete)  
+**Last Updated:** 2026-03-05 (Task 11.3 PostHog Feature Flags / A/B Testing Readiness complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 
@@ -638,3 +638,28 @@ Added comprehensive Sentry instrumentation across the full Zuralog stack — Flu
 | `start_transaction` in `_sendMessage` finishes on post-frame (not stream end) | Chat streaming is not yet wired in production; the stub is correct — replace finish call with stream completion callback when streaming lands |
 | `push_scope` for tool call / memory store fingerprints | Scope is ephemeral per-exception; prevents fingerprint bleed across concurrent requests |
 | `StarletteIntegration` added alongside `FastApiIntegration` | FastAPI is built on Starlette; both needed for full request lifecycle tracing including middleware spans |
+
+---
+
+## Phase 11.3 — PostHog Feature Flags / A/B Testing Readiness
+
+Added a typed feature flag layer on top of the existing `AnalyticsService`, enabling PostHog-driven A/B test variants to be gated in future without code changes.
+
+**New files (Flutter):**
+- `zuralog/lib/core/analytics/feature_flag_service.dart` — `FeatureFlags` abstract class (3 flag key constants) + `FeatureFlagService` typed wrapper (`onboardingStepOrder()`, `notificationFrequencyDefault()`, `aiPersonaDefault()`) + `featureFlagServiceProvider` Riverpod provider. All methods return safe defaults on PostHog failure.
+
+**Modified files (Flutter):**
+- `onboarding_flow_screen.dart` — Converted `late final _pages` to a computed getter; `_stepOrder` field loaded async from `onboarding_step_order` flag in `initState`; analytics step index checks are now flag-aware (Goals/Persona indices swapped when `persona_first`)
+- `notification_settings_screen.dart` — Converted `ConsumerWidget` → `ConsumerStatefulWidget`; `initState` loads `notification_frequency_default` flag and seeds `reminderFrequency` initial state if still at default
+- `coach_settings_screen.dart` — Converted `ConsumerWidget` → `ConsumerStatefulWidget`; `initState` loads `ai_persona_default` flag and seeds `_personaProvider` if still at default
+- `sentry_error_boundary.dart` — Removed unused `_handleError` / `_DefaultErrorFallback` (dead code from pre-existing `Sentry.withScope` API removal); `SentryWidget` handles automatic capture
+- `sentry_router_observer.dart` — Removed invalid `const` from constructor (`NavigatorObserver` super is non-const)
+- `app_router.dart` — Removed `showBackButton` parameter (no longer on `SentryErrorBoundary`)
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Flag loaded in `initState` with safe default already set | UI renders immediately with the default; flag value is applied in the same frame once resolved, with no visible flicker |
+| Guard `reminderFrequency == 2` / `_personaProvider == 'balanced'` before seeding | Prevents overwriting a value the user already changed in the same session |
+| Analytics goal/persona indices computed from `_stepOrder` | Events must reflect *content* at each step, not raw page index, so PostHog funnels remain accurate under both variants |
