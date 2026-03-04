@@ -373,13 +373,14 @@ class ReportGenerator:
 
         # Workout delta highlight
         wow_workouts = deltas.get("workouts", "0")
+        _period_label = {"weekly": "week", "monthly": "month"}.get(period, period)
         if wow_workouts.startswith("+") and wow_workouts != "+0":
             highlights.append(
-                f"Active days up {wow_workouts} vs the previous {period.replace('ly', '')} — great progress."
+                f"Active days up {wow_workouts} vs the previous {_period_label} — great progress."
             )
         elif wow_workouts.startswith("-"):
             highlights.append(
-                f"Active days down {wow_workouts} vs the previous {period.replace('ly', '')}. Try to maintain consistency."
+                f"Active days down {wow_workouts} vs the previous {_period_label}. Try to maintain consistency."
             )
 
         # Heart rate highlight

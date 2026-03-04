@@ -26,15 +26,16 @@ from __future__ import annotations
 import logging
 
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import check_rate_limit, get_current_user
 from app.database import get_db
 from app.models.conversation import Conversation
 from app.models.user import User
 from app.services.attachment_processor import AttachmentProcessor
+from app.services.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ attachments_router = APIRouter(
 async def upload_attachment(
     conversation_id: str,
     file: UploadFile,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -101,6 +103,13 @@ async def upload_attachment(
     """
     sentry_sdk.set_tag("api.module", "attachments")
     sentry_sdk.set_user({"id": str(user.id)})
+
+    # ------------------------------------------------------------------
+    # 0. Rate limit check
+    # ------------------------------------------------------------------
+    rate_limiter: RateLimiter | None = getattr(request.app.state, "rate_limiter", None)
+    if rate_limiter:
+        await check_rate_limit({"id": str(user.id)}, rate_limiter, db)
 
     # ------------------------------------------------------------------
     # 1. Verify conversation ownership

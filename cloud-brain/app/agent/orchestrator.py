@@ -195,6 +195,14 @@ class Orchestrator:
                         exc_info=True,
                     )
 
+            if not response.choices:
+                logger.warning(
+                    "Orchestrator: empty choices in LLM response for user '%s' on turn %d — stopping",
+                    user_id,
+                    turn + 1,
+                )
+                break
+
             assistant_message = response.choices[0].message
 
             # Check for tool calls

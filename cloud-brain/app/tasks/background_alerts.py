@@ -33,6 +33,7 @@ Architecture
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -138,8 +139,16 @@ def check_user_events(user_id: str) -> dict[str, Any]:
                     )
                 )
                 row = pref_result.scalar_one_or_none()
-                if row:
-                    notification_settings = row if isinstance(row, dict) else {}
+                if row is not None:
+                    if isinstance(row, dict):
+                        notification_settings = row
+                    elif isinstance(row, str):
+                        try:
+                            notification_settings = json.loads(row)
+                        except (ValueError, TypeError):
+                            notification_settings = {}
+                    else:
+                        notification_settings = {}
         except Exception:
             logger.warning(
                 "check_user_events: could not load notification preferences "
@@ -169,22 +178,23 @@ def check_user_events(user_id: str) -> dict[str, Any]:
                     )
                     anomalies = anomaly_result.scalars().all()
 
-                for anomaly in anomalies:
-                    sent = await push_service.send_and_persist(
-                        user_id=user_id,
-                        title="Unusual health pattern detected",
-                        body=anomaly.body or "An anomaly was detected in your recent health data.",
-                        notification_type="anomaly_alert",
-                        deep_link=f"zuralog://insights/{anomaly.id}",
-                        data={"insight_id": str(anomaly.id), "type": "anomaly_alert"},
-                    )
-                    if sent:
-                        results["anomalies_notified"] += 1
-                        logger.info(
-                            "check_user_events: anomaly notification sent for user=%s insight=%s",
-                            user_id,
-                            anomaly.id,
+                    for anomaly in anomalies:
+                        sent = await push_service.send_and_persist(
+                            user_id=user_id,
+                            title="Unusual health pattern detected",
+                            body=anomaly.body or "An anomaly was detected in your recent health data.",
+                            notification_type="anomaly_alert",
+                            deep_link=f"zuralog://insights/{anomaly.id}",
+                            data={"insight_id": str(anomaly.id), "type": "anomaly_alert"},
+                            db=db,
                         )
+                        if sent:
+                            results["anomalies_notified"] += 1
+                            logger.info(
+                                "check_user_events: anomaly notification sent for user=%s insight=%s",
+                                user_id,
+                                anomaly.id,
+                            )
 
             except Exception:
                 logger.exception(
@@ -262,6 +272,7 @@ def check_user_events(user_id: str) -> dict[str, Any]:
                                     "target": str(goal.target_value),
                                     "actual": str(actual_value),
                                 },
+                                db=db,
                             )
                             if sent:
                                 results["goals_notified"] += 1
@@ -298,33 +309,34 @@ def check_user_events(user_id: str) -> dict[str, Any]:
                     )
                     milestone_streaks = streaks_result.scalars().all()
 
-                for streak in milestone_streaks:
-                    count = streak.current_count
-                    streak_label = streak.streak_type.replace("_", " ").title()
-                    sent = await push_service.send_and_persist(
-                        user_id=user_id,
-                        title=f"{count}-day streak!",
-                        body=(
-                            f"You've maintained your {streak_label} streak "
-                            f"for {count} day{'s' if count != 1 else ''}. "
-                            "Keep it up!"
-                        ),
-                        notification_type="streak_milestone",
-                        deep_link="zuralog://streaks",
-                        data={
-                            "streak_type": streak.streak_type,
-                            "current_count": str(count),
-                        },
-                    )
-                    if sent:
-                        results["streaks_notified"] += 1
-                        logger.info(
-                            "check_user_events: streak milestone notification sent "
-                            "user=%s streak_type=%s count=%d",
-                            user_id,
-                            streak.streak_type,
-                            count,
+                    for streak in milestone_streaks:
+                        count = streak.current_count
+                        streak_label = streak.streak_type.replace("_", " ").title()
+                        sent = await push_service.send_and_persist(
+                            user_id=user_id,
+                            title=f"{count}-day streak!",
+                            body=(
+                                f"You've maintained your {streak_label} streak "
+                                f"for {count} day{'s' if count != 1 else ''}. "
+                                "Keep it up!"
+                            ),
+                            notification_type="streak_milestone",
+                            deep_link="zuralog://streaks",
+                            data={
+                                "streak_type": streak.streak_type,
+                                "current_count": str(count),
+                            },
+                            db=db,
                         )
+                        if sent:
+                            results["streaks_notified"] += 1
+                            logger.info(
+                                "check_user_events: streak milestone notification sent "
+                                "user=%s streak_type=%s count=%d",
+                                user_id,
+                                streak.streak_type,
+                                count,
+                            )
 
             except Exception:
                 logger.exception(
@@ -354,58 +366,62 @@ def check_user_events(user_id: str) -> dict[str, Any]:
                     )
                     integrations = integrations_result.scalars().all()
 
-                for integration in integrations:
-                    last_sync = integration.last_synced_at
+                    for integration in integrations:
+                        last_sync = integration.last_synced_at
 
-                    # Treat None (never synced) and old timestamps as stale
-                    is_stale: bool
-                    if last_sync is None:
-                        is_stale = True
-                    else:
-                        # last_synced_at may be a datetime or a string — normalise
-                        if isinstance(last_sync, str):
-                            try:
-                                last_sync_dt = datetime.fromisoformat(last_sync)
-                                if last_sync_dt.tzinfo is None:
-                                    last_sync_dt = last_sync_dt.replace(
-                                        tzinfo=timezone.utc
-                                    )
-                            except ValueError:
-                                is_stale = True
-                                last_sync_dt = None
-                            else:
-                                is_stale = last_sync_dt < stale_cutoff
+                        # Treat None (never synced) and old timestamps as stale
+                        is_stale: bool
+                        if last_sync is None:
+                            is_stale = True
                         else:
-                            last_sync_dt = last_sync
-                            if last_sync_dt.tzinfo is None:
-                                last_sync_dt = last_sync_dt.replace(tzinfo=timezone.utc)
-                            is_stale = last_sync_dt < stale_cutoff
+                            # last_synced_at may be a datetime or a string — normalise
+                            if isinstance(last_sync, str):
+                                try:
+                                    last_sync_dt = datetime.fromisoformat(last_sync)
+                                    if last_sync_dt.tzinfo is None:
+                                        last_sync_dt = last_sync_dt.replace(
+                                            tzinfo=timezone.utc
+                                        )
+                                    is_stale = last_sync_dt < stale_cutoff
+                                except ValueError:
+                                    logger.warning(
+                                        "check_user_events: unparseable last_synced_at "
+                                        "for integration %s — skipping stale check",
+                                        integration.id,
+                                    )
+                                    continue
+                            else:
+                                last_sync_dt = last_sync
+                                if last_sync_dt.tzinfo is None:
+                                    last_sync_dt = last_sync_dt.replace(tzinfo=timezone.utc)
+                                is_stale = last_sync_dt < stale_cutoff
 
-                    if is_stale:
-                        provider_label = integration.provider.replace("_", " ").title()
-                        sent = await push_service.send_and_persist(
-                            user_id=user_id,
-                            title=f"Sync your {provider_label}",
-                            body=(
-                                f"Your {provider_label} data hasn't been synced "
-                                f"in over {_INTEGRATION_STALE_HOURS} hours. "
-                                "Open the app to refresh."
-                            ),
-                            notification_type="integration_stale",
-                            deep_link=f"zuralog://integrations/{integration.provider}",
-                            data={
-                                "provider": integration.provider,
-                                "integration_id": str(integration.id),
-                            },
-                        )
-                        if sent:
-                            results["stale_integrations_notified"] += 1
-                            logger.info(
-                                "check_user_events: stale integration notification sent "
-                                "user=%s provider=%s",
-                                user_id,
-                                integration.provider,
+                        if is_stale:
+                            provider_label = integration.provider.replace("_", " ").title()
+                            sent = await push_service.send_and_persist(
+                                user_id=user_id,
+                                title=f"Sync your {provider_label}",
+                                body=(
+                                    f"Your {provider_label} data hasn't been synced "
+                                    f"in over {_INTEGRATION_STALE_HOURS} hours. "
+                                    "Open the app to refresh."
+                                ),
+                                notification_type="integration_stale",
+                                deep_link=f"zuralog://integrations/{integration.provider}",
+                                data={
+                                    "provider": integration.provider,
+                                    "integration_id": str(integration.id),
+                                },
+                                db=db,
                             )
+                            if sent:
+                                results["stale_integrations_notified"] += 1
+                                logger.info(
+                                    "check_user_events: stale integration notification sent "
+                                    "user=%s provider=%s",
+                                    user_id,
+                                    integration.provider,
+                                )
 
             except Exception:
                 logger.exception(

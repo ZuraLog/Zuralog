@@ -217,6 +217,12 @@ async def create_quick_log_batch(
             detail="Batch cannot be empty.",
         )
 
+    if len(body) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Batch exceeds maximum of 100 entries.",
+        )
+
     # Validate all entries before persisting any
     for item in body:
         _validate_metric_type(item.metric_type)

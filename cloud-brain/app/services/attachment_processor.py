@@ -264,13 +264,24 @@ class AttachmentProcessor:
             "context_message": context_message,
         }
 
+    # Magic byte signatures for server-side MIME verification.
+    # Mapping: normalised MIME type -> list of valid magic-byte prefixes.
+    _MAGIC_BYTES: dict[str, list[bytes]] = {
+        "image/jpeg": [b"\xff\xd8\xff"],
+        "image/png": [b"\x89PNG\r\n\x1a\n"],
+        "image/heic": [],  # HEIC containers vary; skip magic-byte check
+        "application/pdf": [b"%PDF"],
+        "text/plain": [],   # No reliable magic bytes for plain text
+        "text/csv": [],     # No reliable magic bytes for CSV
+    }
+
     @staticmethod
     def validate(file_bytes: bytes, content_type: str) -> None:
         """Validate file content type and size.
 
-        Uses ``mimetypes`` to cross-check the declared content type is
-        one of the allowed MIME types, and verifies the payload does not
-        exceed ``MAX_SIZE_BYTES``.
+        Checks the declared MIME type against the allowlist, verifies the
+        payload does not exceed ``MAX_SIZE_BYTES``, and performs magic-byte
+        verification for JPEG, PNG, and PDF files.
 
         Args:
             file_bytes: Raw file bytes to validate.
@@ -279,6 +290,7 @@ class AttachmentProcessor:
         Raises:
             ValueError: If the MIME type is not in ``ALLOWED_TYPES``.
             ValueError: If the file size exceeds ``MAX_SIZE_BYTES``.
+            ValueError: If the magic bytes do not match the declared type.
         """
         # Normalise MIME type (strip parameters such as "; charset=utf-8")
         normalised_type = content_type.split(";")[0].strip().lower()
@@ -297,6 +309,15 @@ class AttachmentProcessor:
                 f"File size {size / (1024 * 1024):.1f} MB exceeds the "
                 f"{max_mb:.0f} MB limit."
             )
+
+        # Magic-byte verification for types with known signatures
+        magic_prefixes = AttachmentProcessor._MAGIC_BYTES.get(normalised_type, [])
+        if magic_prefixes:
+            if not any(file_bytes.startswith(prefix) for prefix in magic_prefixes):
+                raise ValueError(
+                    f"File content does not match declared type '{normalised_type}'. "
+                    "The file may be corrupt or mislabelled."
+                )
 
     # -----------------------------------------------------------------------
     # Private helpers
@@ -421,8 +442,12 @@ class AttachmentProcessor:
         size_kb = size_bytes / 1024
         size_label = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
 
+        # Sanitise filename before embedding in LLM prompt to prevent prompt injection.
+        # Strip newlines, control characters, and truncate to 255 chars.
+        safe_filename = re.sub(r'[\r\n\x00-\x1f"\'`]', "", filename)[:255]
+
         lines: list[str] = [
-            f"[Attachment] The user has shared a {file_type}: '{filename}' "
+            f"[Attachment] The user has shared a {file_type}: '{safe_filename}' "
             f"({content_type}, {size_label}).",
         ]
 

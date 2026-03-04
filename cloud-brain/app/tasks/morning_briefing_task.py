@@ -171,12 +171,12 @@ def send_morning_briefings() -> dict:
                     )
                 )
                 all_prefs = result.scalars().all()
-            except Exception:
+            except Exception as exc:
                 logger.error(
                     "send_morning_briefings: failed to query user_preferences",
                     exc_info=True,
                 )
-                sentry_sdk.capture_exception()
+                sentry_sdk.capture_exception(exc)
                 return {"processed": 0, "sent": 0, "errors": 1}
 
             now_utc = datetime.now(timezone.utc)

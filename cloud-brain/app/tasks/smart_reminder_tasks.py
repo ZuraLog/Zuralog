@@ -67,12 +67,12 @@ def send_smart_reminders() -> dict:
                     .distinct()
                 )
                 active_user_ids = [row[0] for row in result.fetchall()]
-            except Exception:
+            except Exception as exc:
                 logger.error(
                     "send_smart_reminders: failed to query active users",
                     exc_info=True,
                 )
-                sentry_sdk.capture_exception()
+                sentry_sdk.capture_exception(exc)
                 return {"users_evaluated": 0, "total_sent": 0, "errors": 1}
 
             logger.info(

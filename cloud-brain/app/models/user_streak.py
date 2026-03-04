@@ -12,9 +12,11 @@ Models:
 """
 
 import uuid
+from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
 from app.database import Base
 
@@ -54,12 +56,20 @@ class UserStreak(Base):
         index=True,
     )
     streak_type: Mapped[str] = mapped_column(String)
-    current_count: Mapped[int] = mapped_column(Integer, default=0)
-    longest_count: Mapped[int] = mapped_column(Integer, default=0)
+    current_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    longest_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_activity_date: Mapped[str | None] = mapped_column(
         String,
         nullable=True,
         default=None,
     )
-    freeze_count: Mapped[int] = mapped_column(Integer, default=0)
-    freeze_used_this_week: Mapped[bool] = mapped_column(Boolean, default=False)
+    freeze_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    freeze_used_this_week: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        default=lambda: datetime.now(timezone.utc),
+    )

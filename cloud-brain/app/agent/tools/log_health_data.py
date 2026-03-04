@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import re
 import uuid
 from datetime import datetime, timezone
@@ -173,6 +174,65 @@ def _extract_scale_metric(
         "unit": "/10",
         "label": f"{label_prefix}: {value}/10",
     }
+
+
+def _validate_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate and sanitise a single parsed entry before DB write.
+
+    Rejects entries with an unknown metric_type or a non-finite value.
+    Truncates ``text_value`` and ``label`` to safe lengths.
+
+    Args:
+        entry: A dict from ``_parse_entries`` or caller-supplied ``parsed_entries``.
+
+    Returns:
+        The (possibly mutated) entry if valid, or ``None`` to skip it.
+    """
+    # Import here to avoid circular deps — same pattern used elsewhere in the file
+    from app.models.quick_log import VALID_METRIC_TYPES  # noqa: PLC0415
+
+    metric_type = entry.get("metric_type", "")
+    if metric_type not in VALID_METRIC_TYPES:
+        logger.warning(
+            "_validate_entry: unknown metric_type '%s' — skipping entry", metric_type
+        )
+        return None
+
+    value = entry.get("value")
+    if value is not None:
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            logger.warning(
+                "_validate_entry: non-numeric value '%s' for metric_type '%s' — skipping",
+                value,
+                metric_type,
+            )
+            return None
+        if not math.isfinite(value):
+            logger.warning(
+                "_validate_entry: non-finite value %s for metric_type '%s' — skipping",
+                value,
+                metric_type,
+            )
+            return None
+        # Clamp scale metrics to [1, 10]; water to [0, 100 litres]
+        if metric_type in ("mood", "energy", "stress", "sleep_quality", "pain"):
+            value = max(1.0, min(10.0, value))
+        elif metric_type == "water":
+            value = max(0.0, min(100.0, value))
+        entry = dict(entry)
+        entry["value"] = value
+
+    # Truncate text fields to prevent excessively large DB writes
+    if entry.get("text_value") is not None:
+        entry = dict(entry)
+        entry["text_value"] = str(entry["text_value"])[:2000]
+    if entry.get("label") is not None:
+        entry = dict(entry)
+        entry["label"] = str(entry["label"])[:500]
+
+    return entry
 
 
 def _parse_entries(message: str) -> list[dict[str, Any]]:
@@ -346,7 +406,14 @@ class LogHealthDataTool:
         # ------------------------------------------------------------------
         # Phase 2: Commit
         # ------------------------------------------------------------------
-        entries_to_log: list[dict[str, Any]] = pre_parsed or _parse_entries(message)
+        raw_entries: list[dict[str, Any]] = pre_parsed or _parse_entries(message)
+        # Validate and sanitise every entry — especially important for
+        # LLM-supplied parsed_entries which arrive as unvalidated JSON.
+        entries_to_log: list[dict[str, Any]] = [
+            validated
+            for entry in raw_entries
+            if (validated := _validate_entry(entry)) is not None
+        ]
         if not entries_to_log:
             return {
                 "status": "no_data",

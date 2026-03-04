@@ -217,16 +217,17 @@ class SmartReminderEngine:
 
         # --- Celebration: streak milestone ---
         try:
-            from sqlalchemy import func, select
-            from app.models.daily_metrics import DailyHealthMetrics
+            from sqlalchemy import select
+            from app.models.user_streak import UserStreak
 
-            # Count consecutive days with data up to and including today
+            # Use the actual consecutive streak count from the UserStreak table
             streak_result = await db.execute(
-                select(func.count(DailyHealthMetrics.date.distinct())).where(
-                    DailyHealthMetrics.user_id == user_id,
+                select(UserStreak.current_count).where(
+                    UserStreak.user_id == user_id,
+                    UserStreak.streak_type == "engagement",
                 )
             )
-            streak_days = streak_result.scalar_one() or 0
+            streak_days = streak_result.scalar_one_or_none() or 0
 
             milestones = {7, 14, 30, 50, 100}
             if streak_days in milestones:
@@ -333,6 +334,7 @@ class SmartReminderEngine:
                     )
                     db.add(log)
                     await db.commit()
+                    sent_count += 1
                 except Exception:
                     logger.debug(
                         "smart_reminder: could not persist notification log for user=%s",
@@ -340,8 +342,6 @@ class SmartReminderEngine:
                         exc_info=True,
                     )
                     await db.rollback()
-
-                sent_count += 1
                 logger.info(
                     "smart_reminder: sent reminder type=%s for user=%s",
                     reminder["type"],

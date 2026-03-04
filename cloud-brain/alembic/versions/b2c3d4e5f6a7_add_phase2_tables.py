@@ -180,11 +180,10 @@ def upgrade() -> None:
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("now()"),
+            nullable=True,
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_id", "date", name="uq_journal_entry_user_date"),
+        sa.UniqueConstraint("user_id", "date", name="uq_journal_entries_user_date"),
     )
     op.create_index(
         "ix_journal_entries_user_id",

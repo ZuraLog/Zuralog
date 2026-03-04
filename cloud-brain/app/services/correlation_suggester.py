@@ -83,6 +83,25 @@ _CATEGORY_SUGGESTIONS: dict[str, dict[str, str]] = {
 # replace this in a later phase.
 # ---------------------------------------------------------------------------
 _dismissal_cache: dict[str, bool] = {}
+_DISMISSAL_CACHE_MAX_SIZE: int = 10_000  # prevent unbounded growth
+
+
+def _dismissal_cache_set(key: str, value: bool) -> None:
+    """Set a key in the dismissal cache with a max-size guard.
+
+    Evicts the oldest 20% of entries when the cache reaches
+    ``_DISMISSAL_CACHE_MAX_SIZE`` to keep memory bounded.
+
+    Args:
+        key: Cache key to set.
+        value: Cache value.
+    """
+    if len(_dismissal_cache) >= _DISMISSAL_CACHE_MAX_SIZE:
+        evict_count = max(1, _DISMISSAL_CACHE_MAX_SIZE // 5)
+        keys_to_evict = list(_dismissal_cache.keys())[:evict_count]
+        for k in keys_to_evict:
+            _dismissal_cache.pop(k, None)
+    _dismissal_cache[key] = value
 
 
 class CorrelationSuggester:
@@ -248,7 +267,7 @@ class CorrelationSuggester:
             user_id: The user performing the dismissal.
         """
         cache_key = f"{user_id}:{suggestion_id}"
-        _dismissal_cache[cache_key] = True
+        _dismissal_cache_set(cache_key, True)
         logger.info(
             "correlation_suggester: user=%s dismissed suggestion=%s",
             user_id,

@@ -19,13 +19,15 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, Column, DateTime, String, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import check_rate_limit
 from app.api.v1.deps import get_authenticated_user_id
 from app.database import Base, get_db
+from app.services.rate_limiter import RateLimiter
 from app.services.report_generator import ReportGenerator
 
 logger = logging.getLogger(__name__)
@@ -171,6 +173,7 @@ def _report_to_detail(row: Report) -> ReportDetailResponse:
 
 @router.get("/generate", summary="Generate a health report on-demand")
 async def generate_report(
+    request: Request,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
     type: str = Query("weekly", pattern="^(weekly|monthly)$", description="Report type"),
@@ -200,6 +203,11 @@ async def generate_report(
     Raises:
         HTTPException: 400 if ``date`` is not a valid ISO date.
     """
+    # Rate limit: report generation is expensive
+    rate_limiter: RateLimiter | None = getattr(request.app.state, "rate_limiter", None)
+    if rate_limiter:
+        await check_rate_limit({"id": user_id}, rate_limiter, db)
+
     try:
         period_start = date.fromisoformat(date_str)
     except ValueError:

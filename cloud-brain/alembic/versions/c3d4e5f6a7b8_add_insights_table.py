@@ -5,7 +5,7 @@ Each row is a prioritised card surfaced to the user's dashboard after
 health data ingest.
 
 Revision ID: c3d4e5f6a7b8
-Revises: a1b2c3d4e5f6
+Revises: f1e2d3c4b5a6
 Create Date: 2026-03-04 00:00:00.000000
 
 """

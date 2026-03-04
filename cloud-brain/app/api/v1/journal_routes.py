@@ -16,7 +16,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,7 +46,7 @@ class JournalEntryCreate(BaseModel):
         tags: Array of tag strings. Defaults to empty list.
     """
 
-    date: str  # YYYY-MM-DD
+    date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
     mood: int | None = None
     energy: int | None = None
     stress: int | None = None
