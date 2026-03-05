@@ -201,6 +201,12 @@ abstract final class AnalyticsEvents {
   static const String integrationSyncFailed = 'integration_sync_failed';
   /// Include `provider` (string).
   static const String integrationSyncStarted = 'integration_sync_started';
+  /// Include `platform` ('apple_health' | 'health_connect').
+  static const String healthSyncStarted = 'health_sync_started';
+  /// Include `platform` ('apple_health' | 'health_connect'), `record_count` (int).
+  static const String healthSyncCompleted = 'health_sync_completed';
+  /// Include `platform` ('apple_health' | 'health_connect'), `error_type` (string).
+  static const String healthSyncFailed = 'health_sync_failed';
   /// Include `record_count` (int).
   static const String healthKitSyncCompleted = 'health_kit_sync_completed';
   /// Include `error_type` (string).

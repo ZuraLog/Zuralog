@@ -167,7 +167,7 @@ async def polar_exchange(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="polar_connected",
+            event="integration_connected",
             properties={"provider": "polar"},
         )
 
@@ -218,7 +218,7 @@ async def polar_disconnect(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="polar_disconnected",
+            event="integration_disconnected",
             properties={"provider": "polar"},
         )
 

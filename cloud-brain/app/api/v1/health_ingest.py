@@ -310,7 +310,7 @@ async def ingest_health_data(
             properties={
                 "platform": source,
                 "record_count": total,
-                "source": "manual",
+                "source": "device_ingest",
             },
         )
 

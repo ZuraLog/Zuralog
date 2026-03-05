@@ -5,6 +5,7 @@
 /// type-safe REST methods for communicating with the Cloud Brain backend.
 library;
 
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sentry_dio/sentry_dio.dart';
@@ -45,16 +46,23 @@ class ApiClient {
   ///
   /// [dio] and [storage] can be injected for testing.
   ApiClient({
-    String baseUrl = const String.fromEnvironment(
-      'BASE_URL',
-      defaultValue: 'http://10.0.2.2:8001',
-    ),
+    String? baseUrl,
     this.onUnauthenticated,
     Dio? dio,
     FlutterSecureStorage? storage,
   }) : _dio = dio ?? Dio(),
        _storage = storage ?? const FlutterSecureStorage() {
-    _dio.options.baseUrl = baseUrl;
+    final String envUrl = const String.fromEnvironment(
+      'BASE_URL',
+      defaultValue: '',
+    );
+    final String defaultUrl = Platform.isIOS
+        ? 'http://127.0.0.1:8001'
+        : 'http://10.0.2.2:8001';
+    final String finalUrl =
+        baseUrl ?? (envUrl.isNotEmpty ? envUrl : defaultUrl);
+
+    _dio.options.baseUrl = finalUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
 

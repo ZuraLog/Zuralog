@@ -7,6 +7,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -79,10 +80,15 @@ class WsClient {
 
   /// Derives the WebSocket URL from the shared `BASE_URL` env var.
   static String _deriveWsUrl() {
-    const httpUrl = String.fromEnvironment(
+    final String envUrl = const String.fromEnvironment(
       'BASE_URL',
-      defaultValue: 'http://10.0.2.2:8001',
+      defaultValue: '',
     );
+    final String defaultUrl = Platform.isIOS
+        ? 'http://127.0.0.1:8001'
+        : 'http://10.0.2.2:8001';
+    final String httpUrl = envUrl.isNotEmpty ? envUrl : defaultUrl;
+
     return httpUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
@@ -201,6 +207,15 @@ class WsClient {
   void send(String message) {
     if (_channel == null || _status != ConnectionStatus.connected) return;
     _channel?.sink.add(jsonEncode({'message': message}));
+  }
+
+  /// Sends a raw JSON map to the Cloud Brain.
+  ///
+  /// Used for messages with attachments or other structured payloads.
+  /// Does nothing if not connected.
+  void sendJson(Map<String, Object?> payload) {
+    if (_channel == null || _status != ConnectionStatus.connected) return;
+    _channel?.sink.add(jsonEncode(payload));
   }
 
   /// Closes the WebSocket connection gracefully.

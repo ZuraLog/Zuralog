@@ -124,10 +124,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     switch (result) {
       case AuthSuccess():
         // GoRouter auth guard navigates to dashboard automatically.
-        ref.read(analyticsServiceProvider).capture(
-          event: AnalyticsEvents.loginCompleted,
-          properties: {'method': 'email'},
-        );
+        // Analytics: loginCompleted is captured in AuthStateNotifier.login().
         break;
       case AuthFailure(:final message):
         ref.read(analyticsServiceProvider).capture(

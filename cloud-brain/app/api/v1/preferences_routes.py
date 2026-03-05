@@ -295,10 +295,32 @@ class PreferencesResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+_TIME_FIELDS = {
+    "morning_briefing_time",
+    "checkin_reminder_time",
+    "quiet_hours_start",
+    "quiet_hours_end",
+}
+
+
+def _parse_time(value: str | None) -> "datetime.time | None":
+    """Parse a HH:MM or HH:MM:SS string into a ``datetime.time``.
+
+    Returns ``None`` if the input is ``None``.
+    """
+    if value is None:
+        return None
+    import datetime
+
+    parts = value.split(":")
+    return datetime.time(int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0)
+
+
 def _apply_update(prefs: UserPreferences, data: dict) -> None:
     """Apply a mapping of field→value onto a UserPreferences instance.
 
     Skips the ``id`` and ``user_id`` keys to prevent accidental overwrites.
+    Converts time-string fields to ``datetime.time`` objects.
 
     Args:
         prefs: The ORM instance to mutate.
@@ -307,6 +329,8 @@ def _apply_update(prefs: UserPreferences, data: dict) -> None:
     protected = {"id", "user_id"}
     for field, value in data.items():
         if field not in protected:
+            if field in _TIME_FIELDS and isinstance(value, str):
+                value = _parse_time(value)
             setattr(prefs, field, value)
 
 

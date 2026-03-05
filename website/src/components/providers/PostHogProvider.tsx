@@ -21,8 +21,9 @@ import { useEffect, Suspense } from "react";
 // Initialize PostHog client-side only (runs once when module is first loaded)
 if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-    api_host:
-      process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+    // Route through /ingest proxy to bypass ad blockers
+    api_host: "/ingest",
+    ui_host: "https://us.i.posthog.com",
 
     // Manual pageview capture — Next.js App Router uses client-side navigation
     // which doesn't trigger full page loads, so we track manually via PostHogPageView
@@ -44,13 +45,33 @@ if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     // Persistence via localStorage + cookie (survives page refreshes)
     persistence: "localStorage+cookie",
 
-    // Strip accidentally captured email from set properties
+    // Strip accidentally captured PII from all property paths
     sanitize_properties: (properties) => {
+      // Remove email from $set and $set_once
       if (properties["$set"]?.email) {
-        return {
-          ...properties,
-          $set: { ...properties["$set"], email: undefined },
-        };
+        delete properties["$set"].email;
+      }
+      if (properties["$set_once"]?.email) {
+        delete properties["$set_once"].email;
+      }
+      // Remove top-level email (autocapture can grab form field values)
+      if (properties.email) {
+        delete properties.email;
+      }
+      // Strip sensitive query params from URL properties
+      for (const urlKey of ["$current_url", "$referrer"] as const) {
+        const val = properties[urlKey];
+        if (typeof val === "string" && val.includes("?")) {
+          try {
+            const u = new URL(val);
+            for (const param of ["email", "token", "secret", "password"]) {
+              u.searchParams.delete(param);
+            }
+            properties[urlKey] = u.toString();
+          } catch {
+            // Not a valid URL — leave as-is
+          }
+        }
       }
       return properties;
     },

@@ -8,8 +8,10 @@ This provides a complete picture of API usage in PostHog without
 needing to instrument every individual route handler.
 """
 
+import hashlib
 import logging
 import time
+from datetime import datetime, timezone
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -48,10 +50,19 @@ class PostHogAnalyticsMiddleware(BaseHTTPMiddleware):
 
         # Extract user_id from request state (set by auth middleware)
         user_id = getattr(getattr(request, "state", None), "user_id", None)
-        if request.client:
-            distinct_id = user_id or f"anon_{request.client.host}"
+        if user_id:
+            distinct_id = user_id
+        elif request.client:
+            # Hash the IP to avoid storing raw PII in PostHog.
+            # Daily salt rotation prevents long-term IP tracking while
+            # preserving within-day session continuity.
+            day_salt = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            ip_hash = hashlib.sha256(
+                f"{request.client.host}:{day_salt}".encode()
+            ).hexdigest()[:12]
+            distinct_id = f"anon_{ip_hash}"
         else:
-            distinct_id = user_id or "anon_unknown"
+            distinct_id = "anon_unknown"
 
         # Get analytics service from app state
         analytics = getattr(request.app.state, "analytics_service", None)

@@ -12,8 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/chat/domain/attachment.dart';
 import 'package:zuralog/features/chat/domain/message.dart';
+import 'package:zuralog/features/chat/presentation/widgets/audio_attachment_view.dart';
 import 'package:zuralog/features/chat/presentation/widgets/deep_link_card.dart';
+import 'package:zuralog/features/chat/presentation/widgets/image_attachment_view.dart';
 
 // ── Message Bubble ────────────────────────────────────────────────────────────
 
@@ -61,10 +64,19 @@ class MessageBubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
+                // Attachments rendered before text content.
+                for (final att in message.attachments)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
+                    child: att.type == AttachmentType.image
+                        ? ImageAttachmentView(attachment: att)
+                        : AudioAttachmentView(attachment: att),
+                  ),
+
                 // Content: either a DeepLinkCard or a text bubble.
                 if (message.clientAction != null)
                   DeepLinkCard(clientAction: message.clientAction!)
-                else
+                else if (message.content.isNotEmpty)
                   _BubbleBody(message: message, isUser: _isUser),
 
                 // Timestamp.

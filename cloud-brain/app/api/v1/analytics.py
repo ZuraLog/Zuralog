@@ -26,6 +26,7 @@ from app.api.v1.analytics_schemas import (
     UserGoalRequest,
     WeeklyTrendsResponse,
 )
+from app.api.v1.deps import get_authenticated_user_id
 from app.database import get_db
 from app.models.user_goal import GoalPeriod, UserGoal
 from app.services.cache_service import cached
@@ -311,3 +312,27 @@ async def dashboard_insight(
         goals=goals,
         trends=trends,
     )
+
+
+@router.get("/dashboard-summary")
+async def dashboard_summary(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+) -> dict:
+    """Return aggregated dashboard data for the Data tab.
+
+    Returns category summaries with today's primary values and 7-day
+    sparkline trends. For now returns an empty scaffold that lets the
+    Flutter client render its empty state gracefully.
+
+    Args:
+        request: Incoming FastAPI request.
+        user_id: Authenticated user ID from JWT.
+
+    Returns:
+        dict with ``categories`` list and ``visible_order`` array.
+    """
+    return {
+        "categories": [],
+        "visible_order": [],
+    }

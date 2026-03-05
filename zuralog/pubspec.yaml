@@ -63,6 +63,11 @@ dependencies:
   sign_in_with_apple: ^6.1.4      # Native Apple Sign In (iOS; web-based on Android)
   crypto: ^3.0.6                  # SHA-256 nonce hashing for Apple Sign In
 
+  # Chat Attachments (images + voice notes)
+  image_picker: ^1.1.2            # Camera / photo library picker
+  record: ^6.0.0                  # Audio recording
+  audioplayers: ^6.1.0            # Audio playback in message bubbles
+
   # App metadata (version, build number) — used by AnalyticsInitializer
   package_info_plus: any
 

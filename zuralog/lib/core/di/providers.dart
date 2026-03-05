@@ -16,6 +16,7 @@ import 'package:zuralog/core/storage/local_db.dart';
 import 'package:zuralog/core/storage/sync_status_store.dart';
 import 'package:zuralog/features/auth/data/social_auth_service.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/chat/data/attachment_repository.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 import 'package:zuralog/features/analytics/data/analytics_repository.dart';
 import 'package:zuralog/features/integrations/data/oauth_repository.dart';
@@ -110,4 +111,9 @@ final socialAuthServiceProvider = Provider<SocialAuthService>((ref) {
     defaultValue: '',
   );
   return SocialAuthService(googleWebClientId: googleWebClientId);
+});
+
+/// Provides a singleton [AttachmentRepository] for uploading chat attachments.
+final attachmentRepositoryProvider = Provider<AttachmentRepository>((ref) {
+  return AttachmentRepository(apiClient: ref.read(apiClientProvider));
 });

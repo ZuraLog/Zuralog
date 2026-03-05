@@ -34,10 +34,20 @@ import posthog as _posthog  # noqa: E402
 
 _settings = settings  # capture for signal handler closure
 
+
+def _on_posthog_error(error: Exception, items: list) -> None:
+    """PostHog error callback — log but never raise."""
+    logger.warning("PostHog flush error: %s (items=%d)", error, len(items))
+
+
 if settings.posthog_api_key:
     _posthog.api_key = settings.posthog_api_key
     _posthog.host = settings.posthog_host
-    logger.info("PostHog initialized for Celery worker")
+    _posthog.debug = settings.app_env == "development"
+    _posthog.on_error = _on_posthog_error
+    _posthog.max_queue_size = 100
+    _posthog.flush_interval = 5.0
+    logger.info("PostHog initialized for Celery worker (host=%s)", settings.posthog_host)
 
 from celery.signals import worker_shutdown  # noqa: E402
 

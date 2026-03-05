@@ -61,7 +61,7 @@ class OnboardingFlowScreen extends ConsumerStatefulWidget {
 /// Maps the UI persona IDs used in [PersonaStep] to the API enum values
 /// accepted by `/api/v1/preferences` (`CoachPersona` enum on the backend).
 const Map<String, String> _personaApiKey = {
-  'motivator': 'toughLove',
+  'motivator': 'tough_love',
   'analyst': 'balanced',
   'coach': 'gentle',
 };
@@ -312,7 +312,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           );
 
       if (!mounted) return;
-      context.go(RouteNames.dashboardPath);
+      context.go(RouteNames.todayPath);
     } catch (e, st) {
       Sentry.captureException(e, stackTrace: st);
       debugPrint('[OnboardingFlow] Save failed: $e\n$st');

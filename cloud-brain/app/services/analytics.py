@@ -181,7 +181,9 @@ class AnalyticsService:
         if not self.enabled:
             return default
         try:
-            result = posthog.feature_enabled(flag_key, distinct_id)
+            result = posthog.feature_enabled(
+                flag_key, distinct_id, send_feature_flag_events=False
+            )
             return bool(result) if result is not None else default
         except Exception:
             logger.warning(

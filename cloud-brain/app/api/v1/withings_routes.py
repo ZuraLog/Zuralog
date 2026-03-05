@@ -149,7 +149,7 @@ async def withings_callback(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="withings_connected",
+            event="integration_connected",
             properties={"provider": "withings"},
         )
 
@@ -202,7 +202,7 @@ async def withings_disconnect(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="withings_disconnected",
+            event="integration_disconnected",
             properties={"provider": "withings"},
         )
 

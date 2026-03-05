@@ -188,7 +188,7 @@ async def fitbit_exchange(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="fitbit_connected",
+            event="integration_connected",
             properties={"provider": "fitbit"},
         )
 
@@ -273,7 +273,7 @@ async def fitbit_disconnect(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="fitbit_disconnected",
+            event="integration_disconnected",
             properties={"provider": "fitbit"},
         )
 

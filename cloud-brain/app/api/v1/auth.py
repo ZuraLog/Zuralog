@@ -150,6 +150,13 @@ async def login(
 
     analytics = _get_analytics(request)
     if analytics:
+        analytics.identify(
+            distinct_id=result["user_id"],
+            properties={
+                "platform": request.headers.get("x-platform", "unknown"),
+                "subscription_tier": "free",
+            },
+        )
         analytics.capture(
             distinct_id=result["user_id"],
             event="user_logged_in",
@@ -189,7 +196,22 @@ async def logout(
     Raises:
         HTTPException: 400 if logout fails.
     """
+    # Extract user_id before invalidating the token so the event
+    # is attributed to the correct user.
+    user_id = getattr(getattr(request, "state", None), "user_id", None)
+
     await auth_service.sign_out(credentials.credentials)
+
+    analytics = _get_analytics(request)
+    if analytics and user_id:
+        analytics.capture(
+            distinct_id=user_id,
+            event="user_logged_out",
+            properties={
+                "platform": request.headers.get("x-platform", "unknown"),
+            },
+        )
+
     return MessageResponse(message="Logged out successfully")
 
 
@@ -236,6 +258,29 @@ async def social_login(
     # back to the provider user_id as an identifier in that edge case.
     email = result["email"] or f"{body.provider}:{result['user_id']}"
     await sync_user_to_db(db, result["user_id"], email)
+
+    analytics = _get_analytics(request)
+    if analytics:
+        platform = request.headers.get("x-platform", "unknown")
+        analytics.identify(
+            distinct_id=result["user_id"],
+            properties={
+                "platform": platform,
+                "subscription_tier": "free",
+                "auth_provider": body.provider,
+            },
+        )
+        # Supabase GoTrue handles create-or-login for social providers;
+        # we track as user_logged_in since we cannot reliably distinguish
+        # first sign-in from returning sign-in at this layer.
+        analytics.capture(
+            distinct_id=result["user_id"],
+            event="user_logged_in",
+            properties={
+                "method": body.provider,
+                "platform": platform,
+            },
+        )
 
     return AuthResponse(
         user_id=result["user_id"],

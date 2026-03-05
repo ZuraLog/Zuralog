@@ -28,6 +28,14 @@ class HealthKitBridge: NSObject {
         HKQuantityType(.restingHeartRate),
         HKQuantityType(.heartRateVariabilitySDNN),
         HKQuantityType(.vo2Max),
+        HKQuantityType(.distanceWalkingRunning),
+        HKQuantityType(.flightsClimbed),
+        HKQuantityType(.bodyFatPercentage),
+        HKQuantityType(.respiratoryRate),
+        HKQuantityType(.oxygenSaturation),
+        HKQuantityType(.heartRate),
+        HKQuantityType(.bloodPressureSystolic),
+        HKQuantityType(.bloodPressureDiastolic),
     ]
 
     /// Data types we request write access for.
@@ -394,6 +402,142 @@ class HealthKitBridge: NSObject {
             DispatchQueue.main.async { completion(mlPerKgMin, nil) }
         }
 
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Distance
+
+    /// Fetches cumulative walking + running distance for a specific day.
+    func fetchDistance(date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        let distType = HKQuantityType(.distanceWalkingRunning)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        let query = HKStatisticsQuery(quantityType: distType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, error in
+            guard let sum = result?.sumQuantity() else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let meters = sum.doubleValue(for: HKUnit.meter())
+            DispatchQueue.main.async { completion(meters, nil) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Flights Climbed
+
+    /// Fetches cumulative flights climbed for a specific day.
+    func fetchFlights(date: Date, completion: @escaping (Double?, Error?) -> Void) {
+        let flightType = HKQuantityType(.flightsClimbed)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        let query = HKStatisticsQuery(quantityType: flightType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, error in
+            guard let sum = result?.sumQuantity() else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let count = sum.doubleValue(for: HKUnit.count())
+            DispatchQueue.main.async { completion(count, nil) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Body Fat Percentage
+
+    /// Fetches the most recent body fat percentage sample.
+    func fetchBodyFat(completion: @escaping (Double?, Error?) -> Void) {
+        let bfType = HKQuantityType(.bodyFatPercentage)
+        let query = HKSampleQuery(sampleType: bfType, predicate: nil, limit: 1,
+                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let pct = sample.quantity.doubleValue(for: HKUnit.percent()) * 100.0
+            DispatchQueue.main.async { completion(pct, nil) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Respiratory Rate
+
+    /// Fetches the most recent respiratory rate sample (breaths per minute).
+    func fetchRespiratoryRate(completion: @escaping (Double?, Error?) -> Void) {
+        let rrType = HKQuantityType(.respiratoryRate)
+        let query = HKSampleQuery(sampleType: rrType, predicate: nil, limit: 1,
+                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let rate = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            DispatchQueue.main.async { completion(rate, nil) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Oxygen Saturation
+
+    /// Fetches the most recent oxygen saturation (SpO2) sample.
+    func fetchOxygenSaturation(completion: @escaping (Double?, Error?) -> Void) {
+        let spO2Type = HKQuantityType(.oxygenSaturation)
+        let query = HKSampleQuery(sampleType: spO2Type, predicate: nil, limit: 1,
+                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let pct = sample.quantity.doubleValue(for: HKUnit.percent()) * 100.0
+            DispatchQueue.main.async { completion(pct, nil) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Heart Rate
+
+    /// Fetches the most recent heart rate sample (bpm).
+    func fetchHeartRate(completion: @escaping (Double?, Error?) -> Void) {
+        let hrType = HKQuantityType(.heartRate)
+        let query = HKSampleQuery(sampleType: hrType, predicate: nil, limit: 1,
+                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let bpm = sample.quantity.doubleValue(for: HKUnit(from: "count/min"))
+            DispatchQueue.main.async { completion(bpm, nil) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Blood Pressure
+
+    /// Fetches the most recent blood pressure reading (systolic + diastolic).
+    func fetchBloodPressure(completion: @escaping ([String: Any]?, Error?) -> Void) {
+        let bpType = HKCorrelationType(.bloodPressure)
+        let query = HKSampleQuery(sampleType: bpType, predicate: nil, limit: 1,
+                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
+            guard let correlation = samples?.first as? HKCorrelation else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let systolicSamples = correlation.objects(for: HKQuantityType(.bloodPressureSystolic))
+            let diastolicSamples = correlation.objects(for: HKQuantityType(.bloodPressureDiastolic))
+            guard let sys = systolicSamples.first as? HKQuantitySample,
+                  let dia = diastolicSamples.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil, error) }
+                return
+            }
+            let mmHg = HKUnit.millimeterOfMercury()
+            let data: [String: Any] = [
+                "systolic": sys.quantity.doubleValue(for: mmHg),
+                "diastolic": dia.quantity.doubleValue(for: mmHg),
+            ]
+            DispatchQueue.main.async { completion(data, nil) }
+        }
         healthStore.execute(query)
     }
 

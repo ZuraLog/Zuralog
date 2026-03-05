@@ -62,8 +62,11 @@ class _SentryErrorBoundaryState extends State<SentryErrorBoundary> {
 
   @override
   Widget build(BuildContext context) {
-    return SentryWidget(
-      child: widget.child,
-    );
+    // NOTE: Do NOT wrap in SentryWidget here. SentryWidget uses a static
+    // GlobalKey internally, so only one instance can exist in the tree at
+    // a time. When multiple tabs render in an IndexedStack, duplicates
+    // cause the widget tree to be truncated. The top-level app already
+    // has Sentry integration via SentryFlutter.init().
+    return widget.child;
   }
 }

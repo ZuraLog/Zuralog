@@ -22,7 +22,7 @@ import { rateLimiter } from '@/lib/rate-limit';
 import { deleteCached } from "@/lib/cache";
 import { generateReferralCode } from '@/lib/referral';
 import { getResendClient, FROM_EMAIL } from '@/lib/resend';
-import { captureServerEvent } from '@/lib/posthog-server';
+import { captureServerEvent, hashDistinctId } from '@/lib/posthog-server';
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
@@ -137,8 +137,9 @@ export async function POST(request: NextRequest) {
       await deleteCached("website:waitlist:stats");
       await deleteCached("website:waitlist:leaderboard");
 
-      // Fire-and-forget — analytics must never add latency to the signup response
-      captureServerEvent(email, "waitlist_signup_server", {
+      // Fire-and-forget — analytics must never add latency to the signup response.
+      // Hash email to avoid storing PII as a PostHog person identifier.
+      captureServerEvent(hashDistinctId(email), "waitlist_signup_server", {
         referral_code: referredByCode || null,
         position: inserted.queue_position,
         source: request.headers.get("referer") || "direct",
