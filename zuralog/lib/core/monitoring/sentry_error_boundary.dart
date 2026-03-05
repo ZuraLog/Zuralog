@@ -20,10 +20,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-/// A widget that catches errors in its subtree and reports them to Sentry.
+/// A widget that adds Sentry navigation breadcrumbs when a screen mounts.
 ///
-/// Acts as a Flutter error boundary using [SentryWidget] for automatic
-/// error capture and Sentry breadcrumb tracking for navigation context.
+/// Records a Sentry breadcrumb in [initState] for navigation context.
+/// The [module] string identifies the screen in the Sentry dashboard.
 class SentryErrorBoundary extends StatefulWidget {
   /// The widget subtree to protect.
   final Widget child;
@@ -62,8 +62,6 @@ class _SentryErrorBoundaryState extends State<SentryErrorBoundary> {
 
   @override
   Widget build(BuildContext context) {
-    return SentryWidget(
-      child: widget.child,
-    );
+    return widget.child;
   }
 }

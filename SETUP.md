@@ -3,6 +3,26 @@
 > **Security Notice — Read Before Filling In Any Values**
 > This document is a **setup guide with placeholder values only**. Do **not** paste real API keys, secrets, or credentials into this file. All shared production credentials for this project live in **Bitwarden** — search for `"Zuralog"` in the shared team vault. If a credential is not in Bitwarden, ask the project owner to add it there before sharing it any other way. Never share secrets in chat, email, or comments.
 
+---
+
+## Agent Quick-Start
+
+**If you are an AI agent reading this file**, do not assume anything. Ask the developer these questions before suggesting any command:
+
+1. **What platform are you on?** — Windows / macOS / Linux
+2. **What do you want to run?** — Mobile app (Flutter) / Backend (Cloud Brain) / Website (Next.js)
+3. *(Flutter only)* **Which device?** — Android emulator / iOS Simulator / Physical device
+4. *(Flutter only)* **Development or production?**
+   - **Development** (`--debug`, connects to your local backend at `http://10.0.2.2:8001` / `localhost:8001`) → `make run` / `make run-ios`
+   - **Production** (`--release`, connects to `https://api.zuralog.com`) → `make run-prod` / `make run-ios-prod`
+5. *(Flutter dev only)* **Do you want mock data?**
+   - **Yes** (no backend required, instant UI iteration) → `make run-mock`
+   - **No** (real API calls to local backend, Docker must be running) → `make run`
+
+Use the answers to select exactly one command from the [run target table](#run-target-decision-table) below. Never run a command that requires a backend the developer hasn't confirmed is running.
+
+---
+
 Get the Cloud Brain (backend), Edge Agent (mobile), and Website (Next.js) running locally from a fresh clone.
 
 ## Prerequisites
@@ -400,11 +420,31 @@ flutter devices
 
 3. Run the app using `make` from the project root (required for Google Sign-In):
 
+#### Run Target Decision Table
+
+| Target | Flutter mode | Backend | Mock data? | Use when… |
+|---|---|---|---|---|
+| `make run` | `--debug` | local (`10.0.2.2:8001`) | YES (auto) | Default dev — backend running locally |
+| `make run-mock` | `--debug` | **none required** | YES (forced) | UI work, no backend needed |
+| `make run-prod` | `--release` | `api.zuralog.com` | NO | Verify prod behaviour on emulator |
+| `make run-ios` | `--debug` | local (`localhost:8001`) | YES (auto) | iOS Simulator, backend running locally |
+| `make run-ios-prod` | `--release` | `api.zuralog.com` | NO | Verify prod behaviour on iOS Simulator |
+| `make run-device` | `--debug` | local (`DEVICE_IP:8001`) | YES (auto) | Physical device, backend running locally |
+| `make run-device-prod` | `--release` | `api.zuralog.com` | NO | Physical device against prod API |
+
+**Mock data** is controlled by Flutter's `kDebugMode`. Debug builds (`--debug`) automatically activate `MockRepository` in each feature provider. Release builds (`--release`) always call the real API — there is no way to use mock data in a release build.
+
+**Physical device (`run-device`):** Set `DEVICE_IP=192.168.x.x` in `cloud-brain/.env` to your machine's LAN IP. `run-device` will fail with a clear error if `DEVICE_IP` is not set.
+
 ```bash
 # From Life-Logger/ (project root)
-make run          # Android emulator
-make run-ios      # iOS Simulator
-make run-device   # Physical device (update IP in Makefile first)
+make run              # Android emulator — dev, local backend, mock data
+make run-mock         # Android emulator — dev, no backend required
+make run-prod         # Android emulator — release, api.zuralog.com
+make run-ios          # iOS Simulator — dev, local backend, mock data
+make run-ios-prod     # iOS Simulator — release, api.zuralog.com
+make run-device       # Physical device — dev (set DEVICE_IP in .env first)
+make run-device-prod  # Physical device — release, api.zuralog.com
 ```
 
 > **Why `make run` instead of `flutter run`?** The app requires `GOOGLE_WEB_CLIENT_ID` and `SENTRY_DSN` to be injected at build time via `--dart-define`. `make run` reads both automatically from `cloud-brain/.env` and passes them through. Bare `flutter run` skips this — Google Sign-In will return a null token and Sentry will be disabled.
@@ -465,21 +505,15 @@ From there you can proceed through onboarding and log in. The auth guard will re
 
 ### 3e-i. Running with Mock Data
 
-Pass `--dart-define=USE_MOCK_DATA=true` to run the app against in-process mock repositories instead of the live backend. This is useful for UI development, design iteration, or when you don't have all API credentials configured yet.
+Use `make run-mock` to run against in-process mock repositories with no live backend required. This is the fastest way to iterate on UI — no Docker, no Cloud Brain, no API credentials needed beyond `GOOGLE_WEB_CLIENT_ID`.
 
 ```bash
-# Android emulator — mock data, no live backend required
-cd zuralog && flutter run \
-  -d emulator-5554 \
-  --dart-define=GOOGLE_WEB_CLIENT_ID=$(grep -m1 '^GOOGLE_WEB_CLIENT_ID=' ../cloud-brain/.env | cut -d'=' -f2-) \
-  --dart-define=SENTRY_DSN=$(grep -m1 '^SENTRY_DSN=' ../cloud-brain/.env | cut -d'=' -f2-) \
-  --dart-define=APP_ENV=development \
-  --dart-define=USE_MOCK_DATA=true
+make run-mock   # Android emulator, debug, mock data, no backend required
 ```
 
-The backend and Docker services are not required when `USE_MOCK_DATA=true` — only the emulator needs to be running.
+Mock data is active whenever `kDebugMode` is `true` (i.e., any `--debug` build). All `make run` / `make run-ios` / `make run-device` targets are debug builds, so they also use mock data automatically. `make run-mock` additionally passes `USE_MOCK_DATA=true` for explicit clarity.
 
-> **Note:** The `make run` target does not currently pass `USE_MOCK_DATA`. Use the manual `flutter run` command above when you want mock mode.
+> **Release builds never use mock data.** `make run-prod`, `make run-ios-prod`, and `make run-device-prod` compile with `--release`, which sets `kDebugMode=false` and routes all feature providers to the real API.
 
 ### 3f. Configuring the API URL
 
@@ -488,24 +522,9 @@ The app connects to `http://10.0.2.2:8001` by default — `10.0.2.2` is the Andr
 Override for different environments using `make`:
 
 ```bash
-make run-ios     # iOS Simulator — uses http://localhost:8001
-make run-device  # Physical device — update BASE_URL in Makefile to your LAN IP first
-```
-
-Or manually if needed:
-
-```bash
-# iOS Simulator
-flutter run --dart-define=BASE_URL=http://localhost:8001 \
-            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id> \
-            --dart-define=SENTRY_DSN=<sentry-dsn> \
-            --dart-define=APP_ENV=development
-
-# Physical device
-flutter run --dart-define=BASE_URL=http://192.168.1.100:8001 \
-            --dart-define=GOOGLE_WEB_CLIENT_ID=<your-web-client-id> \
-            --dart-define=SENTRY_DSN=<sentry-dsn> \
-            --dart-define=APP_ENV=development
+make run-ios          # iOS Simulator — uses http://localhost:8001
+make run-device       # Physical device — set DEVICE_IP=192.168.x.x in cloud-brain/.env first
+make run-prod         # Production — uses https://api.zuralog.com
 ```
 
 > Make sure the backend server is bound to `0.0.0.0:8001` (not `127.0.0.1`) so it is reachable from the emulator.
@@ -766,13 +785,18 @@ make build-prod-ios
 | Flutter static analysis | `cd zuralog && flutter analyze` — or `make analyze` |
 | Flutter tests | `cd zuralog && flutter test` — or `make test` |
 | List connected devices | `flutter devices` |
-| Run on Android emulator | `make run` |
-| Run on iOS Simulator | `make run-ios` |
-| Run on physical device | `make run-device` |
+| **Android emulator — dev (local backend, mock data)** | `make run` |
+| **Android emulator — dev (no backend, mock data only)** | `make run-mock` |
+| **Android emulator — prod (api.zuralog.com, real data)** | `make run-prod` |
+| **iOS Simulator — dev (local backend, mock data)** | `make run-ios` |
+| **iOS Simulator — prod (api.zuralog.com, real data)** | `make run-ios-prod` |
+| **Physical device — dev (set DEVICE_IP in .env first)** | `make run-device` |
+| **Physical device — prod (api.zuralog.com, real data)** | `make run-device-prod` |
 | Build debug APK | `make build-apk` |
-| Build release App Bundle | `make build-appbundle` |
+| Build release App Bundle (prod) | `make build-appbundle` |
+| Build release IPA (prod) | `make build-prod-ios` |
 
-> All `make` targets for Flutter automatically inject `GOOGLE_WEB_CLIENT_ID` from `cloud-brain/.env`. Never use bare `flutter run` if Google Sign-In needs to work.
+> All `make` targets automatically inject `GOOGLE_WEB_CLIENT_ID`, `SENTRY_DSN`, and `POSTHOG_API_KEY` from `cloud-brain/.env`. Never use bare `flutter run` if Google Sign-In needs to work.
 
 ### Website (`website/`)
 

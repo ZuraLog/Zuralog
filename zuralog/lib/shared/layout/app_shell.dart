@@ -1,27 +1,4 @@
 /// Zuralog Edge Agent — App Shell (5-Tab Bottom Navigation Scaffold).
-///
-/// [AppShell] is the persistent scaffold rendered by [StatefulShellRoute].
-/// It houses the active branch navigator and a frosted-glass 5-tab
-/// [NavigationBar] at the bottom.
-///
-/// **5 tabs:** Today · Data · Coach · Progress · Trends
-///
-/// **Profile Side Panel:** A right-side push-reveal drawer controlled by
-/// [sidePanelOpenProvider]. Tapping the [ProfileAvatarButton] in any tab
-/// AppBar opens the panel; tapping the backdrop or navigating from inside
-/// closes it. The main content slides left while the panel slides in from
-/// the right (320px wide, 400ms easeInOutCubic).
-///
-/// **Frosted glass effect:** A [BackdropFilter] with Gaussian blur is applied
-/// beneath the [NavigationBar]. The translucent background blurs the content
-/// scrolling behind it, matching the design spec (surface-900 at 70% opacity).
-///
-/// **Tab persistence:** State is preserved across switches via
-/// [StatefulShellRoute.indexedStack] — each branch keeps its navigator stack
-/// alive while inactive.
-///
-/// **Haptic feedback:** A selection tick fires on every tab switch, respecting
-/// the user's haptic preference via [hapticServiceProvider].
 library;
 
 import 'dart:ui';
@@ -37,37 +14,14 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/profile_side_panel.dart';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-/// Width of the side panel when fully open.
 const double _kPanelWidth = 320.0;
+const Duration _kPanelDuration = Duration(milliseconds: 300);
 
-/// Duration for the push-reveal open/close animation.
-const Duration _kPanelDuration = Duration(milliseconds: 400);
-
-/// Easing for the push-reveal.
-const Curve _kPanelCurve = Curves.easeInOutCubic;
-
-// ── AppShell ──────────────────────────────────────────────────────────────────
-
-/// The root scaffold for all tabbed screens.
-///
-/// Wraps the GoRouter [navigationShell] with a frosted-glass [NavigationBar]
-/// and a right-side [ProfileSidePanelWidget] push-reveal drawer.
-///
-/// Usage: Constructed exclusively by the [StatefulShellRoute] builder in
-/// [app_router.dart]; do not instantiate elsewhere.
 class AppShell extends ConsumerWidget {
-  /// Creates the [AppShell] for the given [navigationShell].
   const AppShell({super.key, required this.navigationShell});
 
-  /// The stateful navigation shell from GoRouter managing per-branch stacks.
   final StatefulNavigationShell navigationShell;
 
-  /// The 5 tab destinations in display order.
-  ///
-  /// Order must match the [StatefulShellBranch] index in [app_router.dart]:
-  /// 0=Today, 1=Data, 2=Coach, 3=Progress, 4=Trends.
   static const List<NavigationDestination> _destinations = [
     NavigationDestination(
       icon: Icon(Icons.wb_sunny_outlined),
@@ -96,12 +50,7 @@ class AppShell extends ConsumerWidget {
     ),
   ];
 
-  /// Switches to the given [index] branch and fires a haptic selection tick.
-  ///
-  /// Re-tapping the active tab restores the branch to its initial location
-  /// (standard iOS "scroll to top / pop to root" behaviour).
   void _onDestinationSelected(WidgetRef ref, int index) {
-    // Close side panel on tab switch.
     if (ref.read(sidePanelOpenProvider)) {
       ref.read(sidePanelOpenProvider.notifier).state = false;
     }
@@ -117,48 +66,31 @@ class AppShell extends ConsumerWidget {
     final isPanelOpen = ref.watch(sidePanelOpenProvider);
 
     return Scaffold(
-      // extendBody lets tab content render behind the translucent nav bar.
       extendBody: true,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          // ── Main content (slides left when panel opens) ───────────────────
-          AnimatedSlide(
-            offset: isPanelOpen
-                ? Offset(-_kPanelWidth / MediaQuery.sizeOf(context).width, 0)
-                : Offset.zero,
-            duration: _kPanelDuration,
-            curve: _kPanelCurve,
-            child: navigationShell,
-          ),
+          // Main content — always full size, no transforms.
+          navigationShell,
 
-          // ── Backdrop (tapping closes panel) ──────────────────────────────
-          AnimatedOpacity(
-            opacity: isPanelOpen ? 0.35 : 0.0,
-            duration: _kPanelDuration,
-            curve: _kPanelCurve,
-            child: IgnorePointer(
-              ignoring: !isPanelOpen,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () =>
-                    ref.read(sidePanelOpenProvider.notifier).state = false,
-                child: const ColoredBox(
-                  color: AppColors.black,
-                  child: SizedBox.expand(),
-                ),
+          // Backdrop — only present when panel is open.
+          if (isPanelOpen)
+            GestureDetector(
+              onTap: () =>
+                  ref.read(sidePanelOpenProvider.notifier).state = false,
+              child: ColoredBox(
+                color: AppColors.black.withValues(alpha: 0.45),
+                child: const SizedBox.expand(),
               ),
             ),
-          ),
 
-          // ── Side panel (slides in from right) ────────────────────────────
+          // Side panel — slides in from the right.
           AnimatedPositioned(
             duration: _kPanelDuration,
-            curve: _kPanelCurve,
+            curve: Curves.easeInOutCubic,
             top: 0,
             bottom: 0,
-            right: isPanelOpen
-                ? 0
-                : -_kPanelWidth,
+            right: isPanelOpen ? 0 : -_kPanelWidth,
             width: _kPanelWidth,
             child: ProfileSidePanelWidget(
               onClose: () =>
@@ -169,8 +101,7 @@ class AppShell extends ConsumerWidget {
       ),
       bottomNavigationBar: _FrostedNavigationBar(
         currentIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) =>
-            _onDestinationSelected(ref, index),
+        onDestinationSelected: (index) => _onDestinationSelected(ref, index),
       ),
     );
   }

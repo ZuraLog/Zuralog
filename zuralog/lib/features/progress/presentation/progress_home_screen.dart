@@ -170,7 +170,12 @@ class _LoadingStateState extends State<_LoadingState>
           _shimmerAnim.value,
         )!;
         return ListView(
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          padding: const EdgeInsets.fromLTRB(
+            AppDimens.spaceMd,
+            AppDimens.spaceMd,
+            AppDimens.spaceMd,
+            AppDimens.bottomNavHeight + AppDimens.spaceMd,
+          ),
           children: [
             // Hero ring skeleton
             Container(
@@ -360,7 +365,7 @@ class _ContentView extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.only(
-        bottom: AppDimens.spaceXxl,
+        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
       ),
       children: [
         // Goals section

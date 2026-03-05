@@ -278,7 +278,7 @@ class TodayFeedScreen extends ConsumerWidget {
                   AppDimens.spaceMd,
                   AppDimens.spaceLg,
                   AppDimens.spaceMd,
-                  AppDimens.spaceXxl,
+                  AppDimens.bottomNavHeight + AppDimens.spaceMd,
                 ),
                 child: _FadeSlideIn(
                   delay: const Duration(milliseconds: 300),

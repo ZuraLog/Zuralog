@@ -10,16 +10,29 @@ SHELL := /bin/bash
 
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-.PHONY: run run-ios run-device analyze test build-apk build-appbundle build-prod build-prod-ios
+.PHONY: run run-mock run-prod run-ios run-ios-prod run-device run-device-prod \
+        analyze test build-apk build-appbundle build-prod build-prod-ios
 
 run:
 	"$(MAKE)" -C "$(ROOT)/.." run
 
+run-mock:
+	"$(MAKE)" -C "$(ROOT)/.." run-mock
+
+run-prod:
+	"$(MAKE)" -C "$(ROOT)/.." run-prod
+
 run-ios:
 	"$(MAKE)" -C "$(ROOT)/.." run-ios
 
+run-ios-prod:
+	"$(MAKE)" -C "$(ROOT)/.." run-ios-prod
+
 run-device:
 	"$(MAKE)" -C "$(ROOT)/.." run-device
+
+run-device-prod:
+	"$(MAKE)" -C "$(ROOT)/.." run-device-prod
 
 analyze:
 	"$(MAKE)" -C "$(ROOT)/.." analyze

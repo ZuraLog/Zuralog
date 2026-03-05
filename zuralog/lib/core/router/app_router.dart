@@ -141,7 +141,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         authState: authState,
         location: location,
       );
-      if (authRedirect != null) return authRedirect;
+      if (authRedirect != null) {
+        return authRedirect;
+      }
 
       final onboardingAsync = ref.read(hasSeenOnboardingProvider);
       if (location == RouteNames.welcomePath) {
@@ -153,7 +155,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (authState == AuthState.authenticated &&
           location != RouteNames.profileQuestionnairePath) {
         final isLoadingProfile = ref.read(isLoadingProfileProvider);
-        if (isLoadingProfile) return null;
+        if (isLoadingProfile) {
+          return null;
+        }
         final profile = ref.read(userProfileProvider);
         if (profile == null || !profile.onboardingComplete) {
           return RouteNames.profileQuestionnairePath;

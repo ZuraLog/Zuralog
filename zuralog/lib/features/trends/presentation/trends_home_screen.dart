@@ -128,7 +128,7 @@ class _TrendsHomeBody extends ConsumerWidget {
           ),
 
           const SliverToBoxAdapter(
-            child: SizedBox(height: AppDimens.spaceXxl),
+            child: SizedBox(height: AppDimens.bottomNavHeight + AppDimens.spaceMd),
           ),
         ],
       ),
