@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-05 (feat/onboarding-rebuild — 6-step onboarding flow built; screens.md updated with all MVP feature additions)
+**Last Updated:** 2026-03-05 (fix/mobile-sprint-1 — Mobile bug fix sprint 1 complete; Android name fix, brand icons, OnboardingTooltip overflow fix, mock data layer, STT wired, file attachment picker)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -152,8 +152,8 @@
 | P0 | Apple Sign In (iOS native) | 🔜 Planned | Pending Apple Developer subscription |
 | P0 | Onboarding screens | ✅ Done | |
 | P0 | AI Chat UI (streaming) | ✅ Done | |
-| P0 | Voice input (mic button) | ✅ Done | On-device STT via `speech_to_text` Flutter package (free, offline, no API key) |
-| P0 | File attachments in chat | 📋 Future | |
+| P0 | Voice input (mic button) | ✅ Done | On-device STT via `speech_to_text` Flutter package (free, offline, no API key) — wired to mic button in Coach tab |
+| P0 | File attachments in chat | ✅ Done | `attachment_picker_sheet.dart` + `attachment_preview_bar.dart`; image/file picker with inline preview strip |
 | P0 | Dashboard (health summary cards) | ✅ Done | |
 | P0 | Integrations Hub screen | ✅ Done | Connected / Available / Coming Soon sections |
 | P0 | Settings screen | ✅ Done | |
@@ -215,17 +215,17 @@
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P1 | Extract abstract interface for `TodayRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
-| P1 | Extract abstract interface for `DataRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
+| P1 | Extract abstract interface for `TodayRepository` | ✅ Done | `TodayRepositoryInterface` in `today_repository.dart`; `kDebugMode` guard in provider |
+| P1 | Extract abstract interface for `DataRepository` | ✅ Done | `DataRepositoryInterface` in `data_repository.dart`; `kDebugMode` guard in provider |
 | P1 | Extract abstract interface for `CoachRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
-| P1 | Extract abstract interface for `ProgressRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
-| P1 | Extract abstract interface for `TrendsRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
-| P1 | `MockTodayRepository` — seed insights, quick actions, streak, notifications | 🔜 Planned | Covers Today Feed, Insight Detail, Notification History |
-| P1 | `MockDataRepository` — seed data (all 10 categories, sparklines, charts) | 🔜 Planned | Covers Health Dashboard, Category Detail, Metric Detail |
+| P1 | Extract abstract interface for `ProgressRepository` | ✅ Done | `ProgressRepositoryInterface` in `progress_repository.dart`; `kDebugMode` guard in provider |
+| P1 | Extract abstract interface for `TrendsRepository` | ✅ Done | `TrendsRepositoryInterface` in `trends_repository.dart`; `kDebugMode` guard in provider |
+| P1 | `MockTodayRepository` — seed insights, quick actions, streak, notifications | ✅ Done | `mock_today_repository.dart`; covers Today Feed, Insight Detail, Notification History |
+| P1 | `MockDataRepository` — seed data (all 10 categories, sparklines, charts) | ✅ Done | `mock_data_repository.dart`; covers Health Dashboard, Category Detail, Metric Detail |
 | P1 | `MockCoachRepository` — seed conversations, quick action prompts | 🔜 Planned | Covers New Chat, Chat Thread, Conversation Drawer |
-| P1 | `MockProgressRepository` — seed goals, achievements, journal, weekly report | 🔜 Planned | Covers all Progress tab screens |
-| P1 | `MockTrendsRepository` — seed correlations, reports, data source list | 🔜 Planned | Covers all Trends tab screens |
-| P1 | Wire all mocks via Riverpod `overrideWith` in `main.dart` | 🔜 Planned | `--dart-define=USE_MOCK=true` at build/run time; zero overhead in production |
+| P1 | `MockProgressRepository` — seed goals, achievements, journal, weekly report | ✅ Done | `mock_progress_repository.dart`; covers all Progress tab screens |
+| P1 | `MockTrendsRepository` — seed correlations, reports, data source list | ✅ Done | `mock_trends_repository.dart`; covers all Trends tab screens |
+| P1 | Wire all mocks via `kDebugMode` guard in providers | ✅ Done | `if (kDebugMode)` swap in Today/Data/Progress/Trends providers; zero overhead in production |
 | P1 | `Makefile` `run-mock` target + `.vscode/launch.json` config | 🔜 Planned | One-click mock launch in VS Code and terminal |
 
 ---
@@ -288,8 +288,8 @@
 
 | Feature | Priority | Status | Notes |
 |---------|----------|--------|-------|
-| Voice input (on-device STT) | P1 | ✅ Done | `speech_to_text` Flutter package — on-device, free, no API key; hold-to-talk fills input field for user review before sending |
-| File attachments in chat | P2 | 📋 Future | UI placeholder exists |
+| Voice input (on-device STT) | P1 | ✅ Done | `speech_to_text` Flutter package — on-device, free, no API key; hold-to-talk fills input field for user review before sending; wired to Coach mic button |
+| File attachments in chat | P2 | ✅ Done | `attachment_picker_sheet.dart` + `attachment_preview_bar.dart`; image/file picker with inline preview strip; remove action per attachment |
 | Apple Sign In | P1 | 🔜 Planned | Pending Apple Developer subscription |
 | Profile photo upload | P2 | 📋 Future | |
 | Data export | P2 | 📋 Future | |

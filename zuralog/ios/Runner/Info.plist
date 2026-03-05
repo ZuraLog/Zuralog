@@ -115,6 +115,10 @@
 		<string>processing</string>
 		<string>remote-notification</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>ZuraLog uses the camera to capture food photos for AI nutrition analysis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ZuraLog accesses your photo library to attach images to coach messages.</string>
 
 </dict>
 </plist>

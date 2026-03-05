@@ -14,16 +14,22 @@
 /// - [selectedGoalIdProvider]       — transient: ID of goal being viewed
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/progress/data/mock_progress_repository.dart';
 import 'package:zuralog/features/progress/data/progress_repository.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
-/// Singleton [ProgressRepository] wired to the shared [apiClientProvider].
-final progressRepositoryProvider = Provider<ProgressRepository>((ref) {
+/// Singleton [ProgressRepositoryInterface] wired to the shared [apiClientProvider].
+///
+/// In debug builds (`kDebugMode`) a [MockProgressRepository] is returned so
+/// the Progress tab renders correctly without a running backend.
+final progressRepositoryProvider = Provider<ProgressRepositoryInterface>((ref) {
+  if (kDebugMode) return const MockProgressRepository();
   return ProgressRepository(apiClient: ref.read(apiClientProvider));
 });
 

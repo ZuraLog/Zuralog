@@ -13,16 +13,22 @@
 /// - [dataMaturityBannerDismissed]    — whether the banner was dismissed
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/today/data/mock_today_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
-/// Singleton [TodayRepository] wired to the shared [apiClientProvider].
-final todayRepositoryProvider = Provider<TodayRepository>((ref) {
+/// Singleton [TodayRepositoryInterface] wired to the shared [apiClientProvider].
+///
+/// In debug builds (`kDebugMode`) a [MockTodayRepository] is returned so the
+/// Today tab renders correctly without a running backend.
+final todayRepositoryProvider = Provider<TodayRepositoryInterface>((ref) {
+  if (kDebugMode) return const MockTodayRepository();
   return TodayRepository(apiClient: ref.read(apiClientProvider));
 });
 

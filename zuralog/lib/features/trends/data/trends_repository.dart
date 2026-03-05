@@ -15,13 +15,33 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 
+// ── TrendsRepositoryInterface ─────────────────────────────────────────────────
+
+/// Abstract contract for the Trends repository.
+///
+/// Implemented by [TrendsRepository] (production) and
+/// [MockTrendsRepository] (debug).
+abstract interface class TrendsRepositoryInterface {
+  Future<TrendsHomeData> getTrendsHome();
+  Future<AvailableMetricList> getAvailableMetrics();
+  Future<CorrelationAnalysis> getCorrelationAnalysis({
+    required String metricAId,
+    required String metricBId,
+    required int lagDays,
+    required CorrelationTimeRange timeRange,
+  });
+  Future<ReportList> getReports({int page = 1});
+  Future<DataSourceList> getDataSources();
+  void invalidateAll();
+}
+
 // ── TrendsRepository ──────────────────────────────────────────────────────────
 
 /// Repository for all Trends-tab network operations.
 ///
 /// Injected via [trendsRepositoryProvider]. All public methods throw
 /// [DioException] on network errors unless a cached fallback is available.
-class TrendsRepository {
+class TrendsRepository implements TrendsRepositoryInterface {
   /// Creates a [TrendsRepository] backed by [apiClient].
   TrendsRepository({required ApiClient apiClient}) : _api = apiClient;
 
@@ -41,6 +61,7 @@ class TrendsRepository {
   /// Fetches the aggregated Trends Home screen data.
   ///
   /// Falls back to stale cache on network error if available.
+  @override
   Future<TrendsHomeData> getTrendsHome() async {
     if (_homeCache != null && !_homeCache!.isExpired) {
       return _homeCache!.value;
@@ -65,6 +86,7 @@ class TrendsRepository {
   // ── Available Metrics ─────────────────────────────────────────────────────
 
   /// Fetches the list of metrics available for correlation analysis.
+  @override
   Future<AvailableMetricList> getAvailableMetrics() async {
     if (_metricsCache != null && !_metricsCache!.isExpired) {
       return _metricsCache!.value;
@@ -87,6 +109,7 @@ class TrendsRepository {
   ///
   /// This call is NOT cached — each unique metric pair/lag/range combination
   /// should fetch fresh data.
+  @override
   Future<CorrelationAnalysis> getCorrelationAnalysis({
     required String metricAId,
     required String metricBId,
@@ -109,6 +132,7 @@ class TrendsRepository {
   // ── Reports ───────────────────────────────────────────────────────────────
 
   /// Fetches the list of generated monthly reports.
+  @override
   Future<ReportList> getReports({int page = 1}) async {
     if (page == 1 && _reportsCache != null && !_reportsCache!.isExpired) {
       return _reportsCache!.value;
@@ -130,6 +154,7 @@ class TrendsRepository {
   // ── Data Sources ──────────────────────────────────────────────────────────
 
   /// Fetches the data provenance list (per-integration sync status).
+  @override
   Future<DataSourceList> getDataSources() async {
     if (_dataSourcesCache != null && !_dataSourcesCache!.isExpired) {
       return _dataSourcesCache!.value;
@@ -149,6 +174,7 @@ class TrendsRepository {
   // ── Cache Invalidation ────────────────────────────────────────────────────
 
   /// Invalidates all caches, forcing fresh fetches on next access.
+  @override
   void invalidateAll() {
     _homeCache = null;
     _metricsCache = null;

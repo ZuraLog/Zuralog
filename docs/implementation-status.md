@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-05 (Task 11.3 PostHog Feature Flags / A/B Testing Readiness complete)  
+**Last Updated:** 2026-03-05 (fix/mobile-sprint-1 — Mobile bug fix sprint 1 complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 
@@ -663,3 +663,60 @@ Added a typed feature flag layer on top of the existing `AnalyticsService`, enab
 | Flag loaded in `initState` with safe default already set | UI renders immediately with the default; flag value is applied in the same frame once resolved, with no visible flicker |
 | Guard `reminderFrequency == 2` / `_personaProvider == 'balanced'` before seeding | Prevents overwriting a value the user already changed in the same session |
 | Analytics goal/persona indices computed from `_stepOrder` | Events must reflect *content* at each step, not raw page index, so PostHog funnels remain accurate under both variants |
+
+---
+
+## Mobile Bug Fix Sprint 1 (2026-03-05)
+
+**Branch:** `fix/mobile-sprint-1`
+**Status:** Complete — 11 commits
+
+Bug fixes and feature completions addressing polish and usability issues surfaced after Phase 10.
+
+### Fixes
+
+**Android app name capitalisation** — `AndroidManifest.xml` `android:label` corrected from `zuralog` to `ZuraLog` (commit `2934720`).
+
+**OnboardingTooltip overflow rewrite** — `onboarding_tooltip.dart` rewritten with Flutter `Overlay` instead of `Stack`-positioned absolute coordinates. The old implementation positioned tooltips relative to the widget's local coordinate space, causing overflow when the widget was near screen edges. The `Overlay` approach measures the global position of the target widget and places the tooltip layer above everything else in the widget tree, eliminating all overflow. (commit `2f8de31`)
+
+**iOS app icons alpha channel removed** — All iOS `AppIcon.appiconset` PNGs regenerated without alpha channel. Apple App Store rejects icon submissions that contain transparency. (commit `57acaf9`)
+
+### Features
+
+**App launcher icons from brand logo** — Android mipmap icons and iOS AppIcon assets regenerated from `ZuraLog-Logo-Main.png` via `flutter_launcher_icons`. Replaces placeholder Flutter blue icons with the ZuraLog brand mark. `assets/images/icon_source.png` added as canonical source. (commit `cfacd03`)
+
+**In-app brand SVG in Coach tab** — Coach New Chat screen and Chat Thread screen now render the `ZuraLog.svg` brand mark as the coach avatar / icon instead of a generic `Icons.auto_awesome` Material icon. `assets/images/ZuraLog.svg` asset registered in `pubspec.yaml`. (commit `3a87cff`)
+
+**Mock data layer — Today, Data, Progress, Trends tabs** — Four mock repositories implemented with realistic seed data, all guarded by `kDebugMode`:
+
+| Repository | File | Screens covered |
+|-----------|------|----------------|
+| `MockTodayRepository` | `mock_today_repository.dart` | Today Feed, Insight Detail, Notification History |
+| `MockDataRepository` | `mock_data_repository.dart` | Health Dashboard, Category Detail, Metric Detail |
+| `MockProgressRepository` | `mock_progress_repository.dart` | Progress Home, Goals, Achievements, Weekly Report, Journal |
+| `MockTrendsRepository` | `mock_trends_repository.dart` | Trends Home, Correlations, Reports, Data Sources |
+
+Each repository's provider file uses `if (kDebugMode) return MockXRepository()` — zero overhead in release builds. Abstract interfaces (`XRepositoryInterface`) extracted in each repository file as the contract. (commits `0a3c7eb`, `0ba667d`, `38d2e8e`)
+
+**STT wired to Coach mic button** — `speech_providers.dart` updated so `SpeechNotifier` works with the rebuilt Coach screens (`new_chat_screen.dart`, `chat_thread_screen.dart`). The mic button in `_ChatInputBar` on both Coach screens now triggers hold-to-talk STT; recognized text fills the input field for user review before sending. (commit `81f0f61`)
+
+**File attachment picker + preview in Coach chat** — Two new widgets:
+- `attachment_picker_sheet.dart` — Bottom sheet with camera, photo library, and file picker options (using `image_picker` + `file_picker`)
+- `attachment_preview_bar.dart` — Horizontal scrolling preview strip above the input bar; each attachment chip has a remove button
+
+Both widgets are wired into `chat_thread_screen.dart` and `new_chat_screen.dart`. Attachment state is held locally in the screen's `StatefulWidget`. (commits `2dc677a`, `ad4b367`)
+
+### Code Review Fixes (commit `ad4b367`)
+
+Post-implementation code review pass:
+- Removed redundant null checks in attachment state handlers
+- Corrected `mounted` guard placement in async callbacks
+- Consistent error handling pattern across both chat screens
+- No new `print()`/`debugPrint()` statements introduced in any sprint commit
+
+### Analyze Status
+
+`flutter analyze` reports 23 issues (all pre-existing, none introduced by this sprint):
+- 2 `warning` — `dead_code` + `dead_null_aware_expression` in `analytics_service.dart` (pre-existing)
+- 2 `warning` — `experimental_member_use` in `main.dart` (Sentry experimental APIs; pre-existing)
+- 19 `info` — `use_null_aware_elements` across `sentry_breadcrumbs.dart` + `progress_repository.dart` (pre-existing); `dangling_library_doc_comments` + `unintended_html_in_doc_comment` in analytics files (pre-existing)

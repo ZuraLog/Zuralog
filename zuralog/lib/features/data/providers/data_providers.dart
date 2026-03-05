@@ -12,16 +12,22 @@
 /// - [dashboardLayoutProvider]      — mutable dashboard card order/visibility
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/data/data/data_repository.dart';
+import 'package:zuralog/features/data/data/mock_data_repository.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
-/// Singleton [DataRepository] wired to the shared [apiClientProvider].
-final dataRepositoryProvider = Provider<DataRepository>((ref) {
+/// Singleton [DataRepositoryInterface] wired to the shared [apiClientProvider].
+///
+/// In debug builds (`kDebugMode`) a [MockDataRepository] is returned so the
+/// Data tab renders correctly without a running backend.
+final dataRepositoryProvider = Provider<DataRepositoryInterface>((ref) {
+  if (kDebugMode) return const MockDataRepository();
   return DataRepository(apiClient: ref.read(apiClientProvider));
 });
 

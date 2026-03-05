@@ -54,6 +54,10 @@ dependencies:
   purchases_ui_flutter: ^8.0.0
   http: ^1.6.0
 
+  # File & Image Attachment (Coach chat)
+  file_picker: ^8.1.7
+  image_picker: ^1.1.2
+
   # Phase 2.2 — Screen Implementation
   flutter_markdown_plus: any   # Markdown rendering for AI chat responses (Phase 2.2.2)
   fl_chart: any           # Sparkline and trend charts for Dashboard (Phase 2.2.3)
@@ -85,6 +89,7 @@ dev_dependencies:
   plugin_platform_interface: any
   url_launcher_platform_interface: any
   mockito: ^5.4.6
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
@@ -105,3 +110,12 @@ flutter:
     - assets/fonts/
     - assets/icons/
     - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon_source.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/images/icon_source.png"
+  remove_alpha_ios: true

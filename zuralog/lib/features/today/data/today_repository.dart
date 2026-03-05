@@ -21,13 +21,48 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
+// ── TodayRepositoryInterface ──────────────────────────────────────────────────
+
+/// Abstract contract for all Today-tab data operations.
+///
+/// Implemented by [TodayRepository] (real) and [MockTodayRepository] (debug).
+abstract interface class TodayRepositoryInterface {
+  /// Fetches the current health score and 7-day trend.
+  Future<HealthScoreData> getHealthScore();
+
+  /// Fetches all feed data in parallel: insights, quick actions, and streak.
+  Future<TodayFeedData> getTodayFeed();
+
+  /// Invalidates the feed cache, forcing the next [getTodayFeed] call to
+  /// fetch fresh data from the server.
+  void invalidateFeedCache();
+
+  /// Fetches the full detail for a single insight by [id].
+  Future<InsightDetail> getInsightDetail(String id);
+
+  /// Marks insight [id] as read.
+  Future<void> markInsightRead(String id);
+
+  /// Dismisses insight [id].
+  Future<void> dismissInsight(String id);
+
+  /// Submits a quick-log payload.
+  Future<void> submitQuickLog(Map<String, dynamic> payload);
+
+  /// Fetches the paginated notification history.
+  Future<NotificationPage> getNotifications({int page = 1});
+
+  /// Marks notification [id] as read.
+  Future<void> markNotificationRead(String id);
+}
+
 // ── TodayRepository ──────────────────────────────────────────────────────────
 
 /// Repository for all Today-tab data.
 ///
 /// Injected via [todayRepositoryProvider]. All public methods throw
 /// [DioException] on network errors unless a cached fallback is available.
-class TodayRepository {
+class TodayRepository implements TodayRepositoryInterface {
   /// Creates a [TodayRepository] backed by the given [ApiClient].
   TodayRepository({required ApiClient apiClient}) : _api = apiClient;
 
@@ -45,6 +80,7 @@ class TodayRepository {
   /// Fetches the current health score and 7-day trend.
   ///
   /// Results are cached for 5 minutes. Falls back to stale cache on error.
+  @override
   Future<HealthScoreData> getHealthScore() async {
     if (_scoreCache != null && !_scoreCache!.isExpired) {
       return _scoreCache!.value;
@@ -68,6 +104,7 @@ class TodayRepository {
   ///
   /// Cached for 5 minutes. Each constituent call can fail independently;
   /// partial data is returned rather than failing the entire feed.
+  @override
   Future<TodayFeedData> getTodayFeed() async {
     if (_feedCache != null && !_feedCache!.isExpired) {
       return _feedCache!.value;
@@ -91,6 +128,7 @@ class TodayRepository {
 
   /// Invalidates the feed cache, forcing the next [getTodayFeed] call to
   /// fetch fresh data from the server.
+  @override
   void invalidateFeedCache() {
     _feedCache = null;
     _scoreCache = null;
@@ -114,18 +152,21 @@ class TodayRepository {
   }
 
   /// Fetches the full detail for a single insight by [id].
+  @override
   Future<InsightDetail> getInsightDetail(String id) async {
     final response = await _api.get('/api/v1/insights/$id');
     return InsightDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Marks insight [id] as read.
+  @override
   Future<void> markInsightRead(String id) async {
     await _api.patch('/api/v1/insights/$id', body: {'status': 'read'});
     _feedCache = null; // Invalidate so the read state refreshes.
   }
 
   /// Dismisses insight [id].
+  @override
   Future<void> dismissInsight(String id) async {
     await _api.patch('/api/v1/insights/$id', body: {'status': 'dismissed'});
     _feedCache = null;
@@ -162,6 +203,7 @@ class TodayRepository {
   ///
   /// [payload] — a map with keys `mood`, `energy`, `stress`,
   /// `water_glasses`, `notes`, `symptoms`.
+  @override
   Future<void> submitQuickLog(Map<String, dynamic> payload) async {
     await _api.post('/api/v1/quick-log', data: payload);
     invalidateFeedCache();
@@ -172,6 +214,7 @@ class TodayRepository {
   /// Fetches the paginated notification history.
   ///
   /// [page] — 1-indexed page number.
+  @override
   Future<NotificationPage> getNotifications({int page = 1}) async {
     final response = await _api.get(
       '/api/v1/notifications',
@@ -181,6 +224,7 @@ class TodayRepository {
   }
 
   /// Marks notification [id] as read.
+  @override
   Future<void> markNotificationRead(String id) async {
     await _api.patch('/api/v1/notifications/$id', body: {'read': true});
   }

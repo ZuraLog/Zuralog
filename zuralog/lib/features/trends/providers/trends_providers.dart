@@ -16,16 +16,22 @@
 /// - [dataSourcesProvider]              — async data sources list
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/trends/data/mock_trends_repository.dart';
 import 'package:zuralog/features/trends/data/trends_repository.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
-/// Singleton [TrendsRepository] wired to the shared [apiClientProvider].
-final trendsRepositoryProvider = Provider<TrendsRepository>((ref) {
+/// Singleton [TrendsRepositoryInterface] wired to the shared [apiClientProvider].
+///
+/// In debug builds, returns [MockTrendsRepository] so every Trends screen
+/// renders correctly without a live backend connection.
+final trendsRepositoryProvider = Provider<TrendsRepositoryInterface>((ref) {
+  if (kDebugMode) return const MockTrendsRepository();
   return TrendsRepository(apiClient: ref.read(apiClientProvider));
 });
 

@@ -409,6 +409,40 @@ make run-device   # Physical device (update IP in Makefile first)
 
 > **Why `make run` instead of `flutter run`?** The app requires `GOOGLE_WEB_CLIENT_ID` and `SENTRY_DSN` to be injected at build time via `--dart-define`. `make run` reads both automatically from `cloud-brain/.env` and passes them through. Bare `flutter run` skips this — Google Sign-In will return a null token and Sentry will be disabled.
 
+#### Launching the emulator from the command line (without Android Studio UI)
+
+If Android Studio is not open, you can launch an AVD directly from the shell. The emulator binary location differs by platform:
+
+```bash
+# macOS
+~/Library/Android/sdk/emulator/emulator -avd <AVD_NAME> -no-snapshot-load &
+
+# Linux
+~/Android/Sdk/emulator/emulator -avd <AVD_NAME> -no-snapshot-load &
+
+# Windows (Git Bash) — $LOCALAPPDATA expands automatically
+"$LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" -avd <AVD_NAME> -no-snapshot-load &
+```
+
+List your available AVD names first:
+
+```bash
+flutter emulators
+# or directly:
+# macOS/Linux:  ~/Android/Sdk/emulator/emulator -list-avds
+# Windows:      "$LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" -list-avds
+```
+
+Wait ~60–120 seconds for the emulator to reach the home screen, then verify with:
+
+```bash
+flutter devices          # should show the emulator
+# or
+adb devices              # should show "emulator-5554  device"
+```
+
+> **`flutter emulators --launch <id>` vs direct launch:** `flutter emulators --launch` is a convenience wrapper that exits immediately after spawning the emulator process. On some setups this can race with the AVD lock file — if the emulator exits silently with code 1, use the direct `emulator.exe`/`emulator` command above instead, which keeps the process alive in the foreground (or append `&` to background it).
+
 You should see the **Zuralog Welcome screen** — the animated entry screen with the Zuralog logo.
 
 > **PostHog analytics in debug builds:** Analytics is disabled by default in `kDebugMode` to prevent test events polluting production data. To enable it locally (e.g., when verifying event instrumentation), add `--dart-define=ENABLE_ANALYTICS=true` to your `flutter run` command or `make` target.
@@ -428,6 +462,24 @@ From there you can proceed through onboarding and log in. The auth guard will re
 | Coach Chat | `/chat` | AI Coach tab — WebSocket chat |
 | Integrations | `/integrations` | Apps tab — connect Strava, Apple Health, etc. |
 | Settings | `/settings` | Pushed over shell — theme, subscription, logout |
+
+### 3e-i. Running with Mock Data
+
+Pass `--dart-define=USE_MOCK_DATA=true` to run the app against in-process mock repositories instead of the live backend. This is useful for UI development, design iteration, or when you don't have all API credentials configured yet.
+
+```bash
+# Android emulator — mock data, no live backend required
+cd zuralog && flutter run \
+  -d emulator-5554 \
+  --dart-define=GOOGLE_WEB_CLIENT_ID=$(grep -m1 '^GOOGLE_WEB_CLIENT_ID=' ../cloud-brain/.env | cut -d'=' -f2-) \
+  --dart-define=SENTRY_DSN=$(grep -m1 '^SENTRY_DSN=' ../cloud-brain/.env | cut -d'=' -f2-) \
+  --dart-define=APP_ENV=development \
+  --dart-define=USE_MOCK_DATA=true
+```
+
+The backend and Docker services are not required when `USE_MOCK_DATA=true` — only the emulator needs to be running.
+
+> **Note:** The `make run` target does not currently pass `USE_MOCK_DATA`. Use the manual `flutter run` command above when you want mock mode.
 
 ### 3f. Configuring the API URL
 
@@ -887,6 +939,66 @@ The project pins `sqlite3_flutter_libs: ^0.5.0`. Do **not** upgrade this to `0.6
 
 ### Emulator screen looks wrong / minSdk errors
 The project requires **minSdk 28** (Android 9) due to the Health Connect dependency. Create your emulator with a system image of API 28 or higher. API 34 (Android 14) is recommended for the best Health Connect support.
+
+### Emulator exits silently with code 1 / "Running multiple emulators with the same AVD is an experimental feature"
+
+This error means a stale AVD lock file was left behind by a crashed or force-killed emulator process. The fix is to delete the lock files and relaunch.
+
+**Step 1 — Kill any lingering emulator processes.**
+
+```bash
+# macOS / Linux
+pkill -f emulator
+
+# Windows (Git Bash — PowerShell syntax required for Stop-Process)
+powershell.exe -Command "Get-Process -Name 'emulator' -ErrorAction SilentlyContinue | Stop-Process -Force"
+```
+
+**Step 2 — Remove the stale lock files.** AVD data lives at:
+
+- **macOS / Linux:** `~/.android/avd/<AVD_NAME>.avd/`
+- **Windows:** `%USERPROFILE%\.android\avd\<AVD_NAME>.avd\`
+
+```bash
+# macOS / Linux
+rm -rf ~/.android/avd/<AVD_NAME>.avd/hardware-qemu.ini.lock \
+        ~/.android/avd/<AVD_NAME>.avd/multiinstance.lock
+
+# Windows (Git Bash)
+rm -rf "$USERPROFILE/.android/avd/<AVD_NAME>.avd/hardware-qemu.ini.lock" \
+        "$USERPROFILE/.android/avd/<AVD_NAME>.avd/multiinstance.lock"
+```
+
+**Step 3 — Relaunch** using the direct emulator binary (see [Launching the emulator from the command line](#launching-the-emulator-from-the-command-line-without-android-studio-ui) above).
+
+> **Note:** `hardware-qemu.ini.lock` and `multiinstance.lock` are *directories* (not plain files) on some platforms — use `rm -rf`, not `rm`.
+
+### `flutter emulators --launch` exits immediately without showing the emulator
+
+`flutter emulators --launch` is a fire-and-forget wrapper: it spawns the emulator child process and exits. On Windows especially, this can mean the child process is silently killed when the parent shell exits. Use the direct `emulator.exe` command instead:
+
+```bash
+# Windows (Git Bash) — runs in background, keeps process alive
+"$LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" -avd <AVD_NAME> -no-snapshot-load &
+
+# macOS / Linux
+~/Library/Android/sdk/emulator/emulator -avd <AVD_NAME> -no-snapshot-load &   # macOS
+~/Android/Sdk/emulator/emulator -avd <AVD_NAME> -no-snapshot-load &           # Linux
+```
+
+Wait ~60–120 seconds, then confirm with `adb devices` (should show `emulator-5554  device`).
+
+### Android emulator slow to appear in `flutter devices`
+
+`flutter devices` only lists devices that ADB has enumerated. The emulator must fully boot before ADB marks it as `device` (not `offline`). Check the actual ADB state:
+
+```bash
+adb devices
+# emulator-5554   offline   ← still booting, wait more
+# emulator-5554   device    ← ready
+```
+
+On a typical developer machine (8–16 GB RAM) expect 60–120 seconds from emulator launch to `device` state. Slow disk I/O (spinning HDD) can push this to 3–5 minutes.
 
 ### Google Sign-In works in debug but fails after a Play Store release
 The Android OAuth client in Google Cloud Console is registered with the **debug keystore SHA-1** (`3F:E9:FF:6A:41:D9:E0:45:94:77:BC:6C:D0:A0:E7:33:A2:DE:A2:55`). Release builds are signed with a completely different keystore, so Google will reject sign-in attempts from a release APK/AAB.

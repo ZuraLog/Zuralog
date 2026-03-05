@@ -15,13 +15,86 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 
+// ── ProgressRepositoryInterface ───────────────────────────────────────────────
+
+/// Abstract contract for all Progress-tab data operations.
+///
+/// Implemented by [ProgressRepository] (real) and
+/// [MockProgressRepository] (debug).
+abstract interface class ProgressRepositoryInterface {
+  /// Fetches the aggregated Progress Home screen data.
+  Future<ProgressHomeData> getProgressHome();
+
+  /// Fetches all goals for the authenticated user.
+  Future<GoalList> getGoals();
+
+  /// Creates a new goal. Invalidates goals cache on success.
+  Future<Goal> createGoal({
+    required GoalType type,
+    required GoalPeriod period,
+    required String title,
+    required double targetValue,
+    required String unit,
+    String? deadline,
+  });
+
+  /// Updates an existing goal. Invalidates goals cache on success.
+  Future<Goal> updateGoal({
+    required String goalId,
+    String? title,
+    double? targetValue,
+    String? unit,
+    String? deadline,
+  });
+
+  /// Deletes a goal by ID. Invalidates goals cache on success.
+  Future<void> deleteGoal(String goalId);
+
+  /// Fetches the full achievement gallery (locked and unlocked).
+  Future<AchievementList> getAchievements();
+
+  /// Fetches the latest weekly report.
+  Future<WeeklyReport> getWeeklyReport();
+
+  /// Fetches a page of journal entries. [page] is 1-based.
+  Future<JournalPage> getJournal({int page = 1});
+
+  /// Creates a new journal entry. Invalidates journal cache on success.
+  Future<JournalEntry> createJournalEntry({
+    required String date,
+    required int mood,
+    required int energy,
+    required int stress,
+    int? sleepQuality,
+    required String notes,
+    required List<String> tags,
+  });
+
+  /// Updates an existing journal entry. Invalidates journal cache on success.
+  Future<JournalEntry> updateJournalEntry({
+    required String entryId,
+    int? mood,
+    int? energy,
+    int? stress,
+    int? sleepQuality,
+    String? notes,
+    List<String>? tags,
+  });
+
+  /// Deletes a journal entry by ID. Invalidates journal cache on success.
+  Future<void> deleteJournalEntry(String entryId);
+
+  /// Invalidates all caches, forcing fresh fetches on next access.
+  void invalidateAll();
+}
+
 // ── ProgressRepository ────────────────────────────────────────────────────────
 
 /// Repository for all Progress-tab network operations.
 ///
 /// Injected via [progressRepositoryProvider]. All public methods throw
 /// [DioException] on network errors unless a cached fallback is available.
-class ProgressRepository {
+class ProgressRepository implements ProgressRepositoryInterface {
   /// Creates a [ProgressRepository] backed by [apiClient].
   ProgressRepository({required ApiClient apiClient}) : _api = apiClient;
 
@@ -42,6 +115,7 @@ class ProgressRepository {
   /// Fetches the aggregated Progress Home screen data.
   ///
   /// Falls back to stale cache on network error if available.
+  @override
   Future<ProgressHomeData> getProgressHome() async {
     if (_homeCache != null && !_homeCache!.isExpired) {
       return _homeCache!.value;
@@ -68,6 +142,7 @@ class ProgressRepository {
   // ── Goals ─────────────────────────────────────────────────────────────────
 
   /// Fetches all goals for the authenticated user.
+  @override
   Future<GoalList> getGoals() async {
     if (_goalsCache != null && !_goalsCache!.isExpired) {
       return _goalsCache!.value;
@@ -84,6 +159,7 @@ class ProgressRepository {
   }
 
   /// Creates a new goal. Invalidates goals cache on success.
+  @override
   Future<Goal> createGoal({
     required GoalType type,
     required GoalPeriod period,
@@ -109,6 +185,7 @@ class ProgressRepository {
   }
 
   /// Updates an existing goal. Invalidates goals cache on success.
+  @override
   Future<Goal> updateGoal({
     required String goalId,
     String? title,
@@ -131,6 +208,7 @@ class ProgressRepository {
   }
 
   /// Deletes a goal by ID. Invalidates goals cache on success.
+  @override
   Future<void> deleteGoal(String goalId) async {
     await _api.delete('/api/v1/goals/$goalId');
     _goalsCache = null;
@@ -140,6 +218,7 @@ class ProgressRepository {
   // ── Achievements ──────────────────────────────────────────────────────────
 
   /// Fetches the full achievement gallery (locked and unlocked).
+  @override
   Future<AchievementList> getAchievements() async {
     if (_achievementsCache != null && !_achievementsCache!.isExpired) {
       return _achievementsCache!.value;
@@ -160,6 +239,7 @@ class ProgressRepository {
   // ── Weekly Report ─────────────────────────────────────────────────────────
 
   /// Fetches the latest weekly report.
+  @override
   Future<WeeklyReport> getWeeklyReport() async {
     if (_weeklyReportCache != null && !_weeklyReportCache!.isExpired) {
       return _weeklyReportCache!.value;
@@ -185,6 +265,7 @@ class ProgressRepository {
   // ── Journal ───────────────────────────────────────────────────────────────
 
   /// Fetches a page of journal entries. [page] is 1-based.
+  @override
   Future<JournalPage> getJournal({int page = 1}) async {
     if (page == 1 && _journalCache != null && !_journalCache!.isExpired) {
       return _journalCache!.value;
@@ -204,6 +285,7 @@ class ProgressRepository {
   }
 
   /// Creates a new journal entry. Invalidates journal cache on success.
+  @override
   Future<JournalEntry> createJournalEntry({
     required String date,
     required int mood,
@@ -230,6 +312,7 @@ class ProgressRepository {
   }
 
   /// Updates an existing journal entry. Invalidates journal cache on success.
+  @override
   Future<JournalEntry> updateJournalEntry({
     required String entryId,
     int? mood,
@@ -255,6 +338,7 @@ class ProgressRepository {
   }
 
   /// Deletes a journal entry by ID. Invalidates journal cache on success.
+  @override
   Future<void> deleteJournalEntry(String entryId) async {
     await _api.delete('/api/v1/journal/$entryId');
     _journalCache = null;
@@ -263,6 +347,7 @@ class ProgressRepository {
   // ── Cache Invalidation ────────────────────────────────────────────────────
 
   /// Invalidates all caches, forcing fresh fetches on next access.
+  @override
   void invalidateAll() {
     _homeCache = null;
     _goalsCache = null;

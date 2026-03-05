@@ -15,13 +15,41 @@ import 'package:dio/dio.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 
+// ── DataRepositoryInterface ───────────────────────────────────────────────────
+
+/// Abstract contract for all Data-tab data operations.
+///
+/// Implemented by [DataRepository] (real) and [MockDataRepository] (debug).
+abstract interface class DataRepositoryInterface {
+  /// Fetches the aggregated dashboard data — all category summaries.
+  Future<DashboardData> getDashboard();
+
+  /// Fetches all metrics for a [categoryId] over the given [timeRange].
+  Future<CategoryDetailData> getCategoryDetail({
+    required String categoryId,
+    required String timeRange,
+  });
+
+  /// Fetches deep-dive data for a single [metricId] over [timeRange].
+  Future<MetricDetailData> getMetricDetail({
+    required String metricId,
+    required String timeRange,
+  });
+
+  /// Persists a new dashboard layout via the user preferences API.
+  Future<void> saveDashboardLayout(DashboardLayout layout);
+
+  /// Invalidates all caches, forcing fresh fetches.
+  void invalidateAll();
+}
+
 // ── DataRepository ────────────────────────────────────────────────────────────
 
 /// Repository for all Data-tab network operations.
 ///
 /// Injected via [dataRepositoryProvider]. All public methods throw
 /// [DioException] on network errors unless a cached fallback is available.
-class DataRepository {
+class DataRepository implements DataRepositoryInterface {
   /// Creates a [DataRepository] backed by [apiClient].
   DataRepository({required ApiClient apiClient}) : _api = apiClient;
 
@@ -52,6 +80,7 @@ class DataRepository {
   /// Fetches the aggregated dashboard data — all category summaries.
   ///
   /// Falls back to stale cache on network error if available.
+  @override
   Future<DashboardData> getDashboard() async {
     if (_dashboardCache != null && !_dashboardCache!.isExpired) {
       return _dashboardCache!.value;
@@ -75,6 +104,7 @@ class DataRepository {
   /// Fetches all metrics for a [categoryId] over the given [timeRange].
   ///
   /// Cache key: `$categoryId:$timeRange`.
+  @override
   Future<CategoryDetailData> getCategoryDetail({
     required String categoryId,
     required String timeRange,
@@ -113,6 +143,7 @@ class DataRepository {
   /// Fetches deep-dive data for a single [metricId] over [timeRange].
   ///
   /// Cache key: `$metricId:$timeRange`.
+  @override
   Future<MetricDetailData> getMetricDetail({
     required String metricId,
     required String timeRange,
@@ -153,6 +184,7 @@ class DataRepository {
   // ── Dashboard Layout ──────────────────────────────────────────────────────
 
   /// Persists a new dashboard layout via the user preferences API.
+  @override
   Future<void> saveDashboardLayout(DashboardLayout layout) async {
     await _api.patch(
       '/api/v1/preferences',
@@ -162,6 +194,7 @@ class DataRepository {
   }
 
   /// Invalidates all caches, forcing fresh fetches.
+  @override
   void invalidateAll() {
     _dashboardCache = null;
     _categoryCache.clear();

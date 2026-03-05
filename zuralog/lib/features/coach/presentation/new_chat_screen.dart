@@ -10,15 +10,20 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/core/speech/speech_providers.dart';
+import 'package:zuralog/core/speech/speech_state.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
+import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
+import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
@@ -81,13 +86,12 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
-    ref.read(analyticsServiceProvider).capture(
-      event: 'coach_message_sent',
-      properties: {
-        'source': 'new_chat',
-        'char_count': text.length,
-      },
-    );
+    ref
+        .read(analyticsServiceProvider)
+        .capture(
+          event: 'coach_message_sent',
+          properties: {'source': 'new_chat', 'char_count': text.length},
+        );
     _inputCtrl.clear();
     // In production: create a new conversation via the repository, then push
     // to the thread screen. For Phase 10 we just navigate to a stub thread.
@@ -99,10 +103,12 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
   void _onSuggestionTap(String text) {
     ref.read(hapticServiceProvider).light();
-    ref.read(analyticsServiceProvider).capture(
-      event: 'coach_suggestion_tapped',
-      properties: {'suggestion_text': text},
-    );
+    ref
+        .read(analyticsServiceProvider)
+        .capture(
+          event: 'coach_suggestion_tapped',
+          properties: {'suggestion_text': text},
+        );
     _inputCtrl.text = text;
     _inputFocus.requestFocus();
   }
@@ -193,10 +199,15 @@ class _CoachEmptyState extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.chat_bubble_rounded,
-                size: 36,
-                color: AppColors.primary,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: SvgPicture.asset(
+                  'assets/images/ZuraLog.svg',
+                  colorFilter: const ColorFilter.mode(
+                    AppColors.primary,
+                    BlendMode.srcIn,
+                  ),
+                ),
               ),
             ),
           ),
@@ -209,9 +220,7 @@ class _CoachEmptyState extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Ask me anything. I have full context from\nyour connected apps and health history.',
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppDimens.spaceXl),
@@ -233,10 +242,12 @@ class _CoachEmptyState extends StatelessWidget {
               spacing: AppDimens.spaceSm,
               runSpacing: AppDimens.spaceSm,
               children: suggestions
-                  .map((s) => _SuggestionChip(
-                        text: s.text,
-                        onTap: () => onSuggestionTap(s.text),
-                      ))
+                  .map(
+                    (s) => _SuggestionChip(
+                      text: s.text,
+                      onTap: () => onSuggestionTap(s.text),
+                    ),
+                  )
                   .toList(),
             ),
           ],
@@ -270,10 +281,7 @@ class _SuggestionChip extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppColors.cardBackgroundDark,
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-          border: Border.all(
-            color: AppColors.borderDark,
-            width: 1,
-          ),
+          border: Border.all(color: AppColors.borderDark, width: 1),
         ),
         child: Text(
           text,
@@ -288,7 +296,7 @@ class _SuggestionChip extends ConsumerWidget {
 
 // ── _ChatInputBar ─────────────────────────────────────────────────────────────
 
-class _ChatInputBar extends ConsumerWidget {
+class _ChatInputBar extends ConsumerStatefulWidget {
   const _ChatInputBar({
     required this.controller,
     required this.focusNode,
@@ -300,79 +308,197 @@ class _ChatInputBar extends ConsumerWidget {
   final VoidCallback onSend;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ChatInputBar> createState() => _ChatInputBarState();
+}
+
+class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
+  final List<PendingAttachment> _attachments = [];
+  bool _isSending = false;
+
+  Future<void> _handleSend() async {
+    final text = widget.controller.text.trim();
+    if (text.isEmpty && _attachments.isEmpty) return;
+    if (_isSending) return;
+    _isSending = true;
+
+    try {
+      // Mock upload attachments before sending.
+      // TODO(supabase): pass attachmentUrls to onSend once backend upload is wired
+      List<String> attachmentUrls = [];
+      if (_attachments.isNotEmpty) {
+        // TODO(supabase): replace with real Supabase Storage upload
+        for (final a in _attachments) {
+          await Future.delayed(const Duration(milliseconds: 800));
+          attachmentUrls.add(
+            'https://mock.supabase.co/storage/attachments/${a.name}',
+          );
+        }
+      }
+
+      setState(() => _attachments.clear());
+      widget.onSend();
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final speechState = ref.watch(speechNotifierProvider);
+    final isListening = speechState.status == SpeechStatus.listening;
+
+    // Sync recognized text to input field.
+    ref.listen<SpeechState>(speechNotifierProvider, (prev, next) {
+      // Stream partial results while listening.
+      if (next.recognizedText.isNotEmpty && !next.isFinal) {
+        widget.controller.text = next.recognizedText;
+        widget.controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: widget.controller.text.length),
+        );
+      }
+      // Commit final transcript when listening ends.
+      if (prev?.isFinal == false &&
+          next.isFinal &&
+          next.recognizedText.isNotEmpty) {
+        widget.controller.text = next.recognizedText;
+        widget.controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: widget.controller.text.length),
+        );
+      }
+      // Show error snackbar.
+      if (next.status == SpeechStatus.error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage ?? 'Microphone unavailable'),
+          ),
+        );
+      }
+    });
+
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceSm,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd + MediaQuery.of(context).padding.bottom,
-      ),
       decoration: BoxDecoration(
         color: AppColors.backgroundDark,
         border: Border(
-          top: BorderSide(
-            color: AppColors.borderDark,
-            width: 0.5,
-          ),
+          top: BorderSide(color: AppColors.borderDark, width: 0.5),
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Attachment
-          _InputIconButton(
-            icon: Icons.add_circle_outline_rounded,
-            onTap: () => ref.read(hapticServiceProvider).light(),
-            tooltip: 'Attach',
+          // ── Attachment previews ──────────────────────────────────────────
+          AttachmentPreviewBar(
+            attachments: _attachments,
+            onRemove: (i) => setState(() => _attachments.removeAt(i)),
           ),
-          const SizedBox(width: AppDimens.spaceSm),
-          // Text field
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.inputBackgroundDark,
-                borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-              ),
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                maxLines: 5,
-                minLines: 1,
-                style: AppTextStyles.body,
-                decoration: InputDecoration(
-                  hintText: 'Message your coach…',
-                  hintStyle: AppTextStyles.body.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceSm,
+          // ── Input row ────────────────────────────────────────────────────
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppDimens.spaceMd,
+              AppDimens.spaceSm,
+              AppDimens.spaceMd,
+              AppDimens.spaceMd + MediaQuery.of(context).padding.bottom,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Attachment
+                _InputIconButton(
+                  icon: Icons.add_circle_outline_rounded,
+                  onTap: () async {
+                    if (_attachments.length >= 3) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Maximum 3 attachments per message'),
+                        ),
+                      );
+                      return;
+                    }
+                    ref.read(hapticServiceProvider).light();
+                    await showModalBottomSheet<void>(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                      builder: (_) => AttachmentPickerSheet(
+                        onAttachment: (attachment) {
+                          setState(() => _attachments.add(attachment));
+                        },
+                      ),
+                    );
+                  },
+                  tooltip: 'Attach',
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                // Text field
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.inputBackgroundDark,
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusInput),
+                    ),
+                    child: TextField(
+                      controller: widget.controller,
+                      focusNode: widget.focusNode,
+                      maxLines: 5,
+                      minLines: 1,
+                      style: AppTextStyles.body,
+                      decoration: InputDecoration(
+                        hintText: 'Message your coach…',
+                        hintStyle: AppTextStyles.body.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                          vertical: AppDimens.spaceSm,
+                        ),
+                      ),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _handleSend(),
+                    ),
                   ),
                 ),
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend(),
-              ),
+                const SizedBox(width: AppDimens.spaceSm),
+                // Send / Voice
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: widget.controller,
+                  builder: (context, value, _) {
+                    final hasText = value.text.trim().isNotEmpty;
+                    final hasContent = hasText || _attachments.isNotEmpty;
+                    if (hasContent) {
+                      return _InputIconButton(
+                        icon: Icons.arrow_upward_rounded,
+                        filled: true,
+                        onTap: _handleSend,
+                        tooltip: 'Send',
+                      );
+                    }
+                    return _InputIconButton(
+                      icon: isListening
+                          ? Icons.stop_circle_rounded
+                          : Icons.mic_none_rounded,
+                      filled: false,
+                      activeColor: isListening ? AppColors.statusError : null,
+                      onTap: () {
+                        if (isListening) {
+                          ref
+                              .read(speechNotifierProvider.notifier)
+                              .stopListening();
+                          ref.read(hapticServiceProvider).light();
+                        } else {
+                          ref.read(hapticServiceProvider).medium();
+                          ref
+                              .read(speechNotifierProvider.notifier)
+                              .startListening();
+                        }
+                      },
+                      tooltip: isListening ? 'Stop listening' : 'Voice input',
+                    );
+                  },
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          // Send / Voice
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) {
-              final hasText = value.text.trim().isNotEmpty;
-              return _InputIconButton(
-                icon: hasText
-                    ? Icons.arrow_upward_rounded
-                    : Icons.mic_none_rounded,
-                filled: hasText,
-                onTap: hasText
-                    ? onSend
-                    : () => ref.read(hapticServiceProvider).light(),
-                tooltip: hasText ? 'Send' : 'Voice input',
-              );
-            },
           ),
         ],
       ),
@@ -386,12 +512,16 @@ class _InputIconButton extends ConsumerWidget {
     required this.onTap,
     required this.tooltip,
     this.filled = false,
+    this.activeColor,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final String tooltip;
   final bool filled;
+
+  /// Override icon color (e.g. red when mic is recording).
+  final Color? activeColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -403,17 +533,16 @@ class _InputIconButton extends ConsumerWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: filled
-                ? AppColors.primary
-                : AppColors.inputBackgroundDark,
+            color: filled ? AppColors.primary : AppColors.inputBackgroundDark,
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
             size: 20,
-            color: filled
-                ? AppColors.primaryButtonText
-                : AppColors.textSecondaryDark,
+            color: activeColor ??
+                (filled
+                    ? AppColors.primaryButtonText
+                    : AppColors.textSecondaryDark),
           ),
         ),
       ),
@@ -469,10 +598,7 @@ class _ConversationDrawer extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        'Conversations',
-                        style: AppTextStyles.h3,
-                      ),
+                      child: Text('Conversations', style: AppTextStyles.h3),
                     ),
                     IconButton(
                       icon: const Icon(Icons.add_rounded),
@@ -537,10 +663,7 @@ class _ConversationDrawer extends ConsumerWidget {
 }
 
 class _ConversationTile extends StatelessWidget {
-  const _ConversationTile({
-    required this.conversation,
-    required this.onTap,
-  });
+  const _ConversationTile({required this.conversation, required this.onTap});
 
   final Conversation conversation;
   final VoidCallback onTap;
@@ -698,20 +821,22 @@ class _QuickActionsSheet extends ConsumerWidget {
                     padding: const EdgeInsets.all(AppDimens.spaceMd),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: AppDimens.spaceSm,
-                      crossAxisSpacing: AppDimens.spaceSm,
-                      childAspectRatio: 1.6,
-                    ),
+                          crossAxisCount: 2,
+                          mainAxisSpacing: AppDimens.spaceSm,
+                          crossAxisSpacing: AppDimens.spaceSm,
+                          childAspectRatio: 1.6,
+                        ),
                     itemCount: actions.length,
                     itemBuilder: (_, i) => _QuickActionTile(
                       action: actions[i],
                       onTap: () {
                         ref.read(hapticServiceProvider).medium();
-                        ref.read(analyticsServiceProvider).capture(
-                          event: 'coach_quick_action_tapped',
-                          properties: {'title': actions[i].title},
-                        );
+                        ref
+                            .read(analyticsServiceProvider)
+                            .capture(
+                              event: 'coach_quick_action_tapped',
+                              properties: {'title': actions[i].title},
+                            );
                         onActionTap(actions[i].prompt);
                       },
                     ),
@@ -802,8 +927,10 @@ class _CoachLoadingSkeletonState extends State<_CoachLoadingSkeleton>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _shimmerAnim =
-        CurvedAnimation(parent: _shimmerCtrl, curve: Curves.easeInOut);
+    _shimmerAnim = CurvedAnimation(
+      parent: _shimmerCtrl,
+      curve: Curves.easeInOut,
+    );
   }
 
   @override

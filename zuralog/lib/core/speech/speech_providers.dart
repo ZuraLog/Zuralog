@@ -58,6 +58,11 @@ class SpeechNotifier extends StateNotifier<SpeechState> {
 
   @override
   void dispose() {
+    // Stop any active listening session before cancelling the subscription
+    // to prevent the underlying mic session from lingering up to 30 seconds.
+    if (state.status == SpeechStatus.listening) {
+      _service.cancelListening();
+    }
     _subscription?.cancel();
     super.dispose();
   }
