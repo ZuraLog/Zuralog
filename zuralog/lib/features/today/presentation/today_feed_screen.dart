@@ -205,30 +205,28 @@ class TodayFeedScreen extends ConsumerWidget {
               ),
             ),
 
-            // ── Section: Quick Actions ────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: _FadeSlideIn(
-                  delay: const Duration(milliseconds: 200),
-                  child: const _SectionHeader(title: 'Quick Actions'),
+            // ── Section: Quick Actions (hidden on error) ─────────────────
+            if (feedAsync.hasValue &&
+                feedAsync.value!.quickActions.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
+                  ),
+                  child: _FadeSlideIn(
+                    delay: const Duration(milliseconds: 200),
+                    child: const _SectionHeader(title: 'Quick Actions'),
+                  ),
                 ),
               ),
-            ),
-
-            feedAsync.when(
-              data: (feed) {
-                if (feed.quickActions.isEmpty) {
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => Padding(
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final actions = feedAsync.value!.quickActions;
+                    return Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.spaceMd,
                         vertical: AppDimens.spaceXs,
@@ -236,26 +234,41 @@ class TodayFeedScreen extends ConsumerWidget {
                       child: _FadeSlideIn(
                         delay: Duration(milliseconds: 220 + index * 50),
                         child: _QuickActionCard(
-                          action: feed.quickActions[index],
+                          action: actions[index],
                           onTap: () {
                             ref.read(hapticServiceProvider).light();
                             ref.read(analyticsServiceProvider).capture(
                               event: AnalyticsEvents.quickActionTapped,
                               properties: {
-                                'title': feed.quickActions[index].title,
+                                'title': actions[index].title,
                               },
                             );
-                            final route = feed.quickActions[index].route;
+                            final route = actions[index].route;
                             if (route != null) context.go(route);
                           },
                         ),
                       ),
-                    ),
-                    childCount: feed.quickActions.length,
+                    );
+                  },
+                  childCount: feedAsync.value!.quickActions.length,
+                ),
+              ),
+            ] else if (feedAsync.isLoading) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
                   ),
-                );
-              },
-              loading: () => SliverList(
+                  child: _FadeSlideIn(
+                    delay: const Duration(milliseconds: 200),
+                    child: const _SectionHeader(title: 'Quick Actions'),
+                  ),
+                ),
+              ),
+              SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => const Padding(
                     padding: EdgeInsets.symmetric(
@@ -267,9 +280,7 @@ class TodayFeedScreen extends ConsumerWidget {
                   childCount: 2,
                 ),
               ),
-              error: (_, st) =>
-                  const SliverToBoxAdapter(child: SizedBox.shrink()),
-            ),
+            ],
 
             // ── Wellness Check-in card ────────────────────────────────────
             SliverToBoxAdapter(
@@ -378,6 +389,7 @@ class _HealthScoreHero extends ConsumerWidget {
             decoration: BoxDecoration(
               color: AppColors.cardBackgroundDark,
               borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              border: Border.all(color: AppColors.borderDark),
             ),
             child: scoreAsync.when(
               data: (data) => Column(
@@ -397,20 +409,68 @@ class _HealthScoreHero extends ConsumerWidget {
                 ],
               ),
               loading: () => const _ScoreHeroSkeleton(),
-              error: (_, st) => Column(
-                children: [
-                  const Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: AppColors.textTertiary,
+              error: (_, st) => GestureDetector(
+                onTap: () => ref.invalidate(healthScoreProvider),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppDimens.spaceSm,
                   ),
-                  const SizedBox(height: AppDimens.spaceSm),
-                  Text(
-                    'Could not load score',
-                    style: AppTextStyles.caption
-                        .copyWith(color: AppColors.textTertiary),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Small placeholder ring with dash.
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.textTertiary.withValues(alpha: 0.3),
+                            width: 4,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '—',
+                            style: AppTextStyles.h3.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.spaceMd),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Score unavailable',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.refresh_rounded,
+                                size: 12,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: AppDimens.spaceXs),
+                              Text(
+                                'Tap to retry',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -525,6 +585,11 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                 decoration: BoxDecoration(
                   color: AppColors.cardBackgroundDark,
                   borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                  border: Border.all(
+                    color: isUnread
+                        ? categoryColor.withValues(alpha: 0.20)
+                        : AppColors.borderDark,
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -680,6 +745,7 @@ class _QuickActionCardState extends State<_QuickActionCard> {
           decoration: BoxDecoration(
             color: AppColors.cardBackgroundDark,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            border: Border.all(color: AppColors.borderDark),
           ),
           child: Row(
             children: [
@@ -786,6 +852,9 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
                 decoration: BoxDecoration(
                   color: AppColors.cardBackgroundDark,
                   borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                  border: Border.all(
+                    color: AppColors.categoryWellness.withValues(alpha: 0.15),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -948,6 +1017,7 @@ class _InsightCardSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBackgroundDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        border: Border.all(color: AppColors.borderDark),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1006,6 +1076,7 @@ class _QuickActionSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBackgroundDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        border: Border.all(color: AppColors.borderDark),
       ),
       child: Row(
         children: [
@@ -1045,30 +1116,42 @@ class _EmptyInsightsCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceLg,
+          vertical: AppDimens.spaceXl,
+        ),
         decoration: BoxDecoration(
           color: AppColors.cardBackgroundDark,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          border: Border.all(color: AppColors.borderDark),
         ),
         child: Column(
           children: [
-            Icon(
-              Icons.lightbulb_outline_rounded,
-              size: 40,
-              color: AppColors.primary.withValues(alpha: 0.5),
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
+              ),
+              child: Icon(
+                Icons.lightbulb_outline_rounded,
+                size: 28,
+                color: AppColors.primary.withValues(alpha: 0.7),
+              ),
             ),
-            const SizedBox(height: AppDimens.spaceSm),
+            const SizedBox(height: AppDimens.spaceMd),
             Text(
               'No insights yet',
               style: AppTextStyles.h3.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.textPrimaryDark,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppDimens.spaceXs),
             Text(
-              'Keep logging data to unlock AI-powered health insights.',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
+              'Keep logging data to unlock\nAI-powered health insights.',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1092,27 +1175,50 @@ class _ErrorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBackgroundDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        border: Border.all(color: AppColors.borderDark),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: AppColors.textTertiary,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.statusError.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            ),
+            child: Icon(
+              Icons.wifi_off_rounded,
+              size: 18,
+              color: AppColors.statusError.withValues(alpha: 0.6),
+            ),
           ),
           const SizedBox(width: AppDimens.spaceSm),
           Expanded(
             child: Text(
               message,
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textTertiary,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ),
-          TextButton(
-            onPressed: onRetry,
-            child: Text(
-              'Retry',
-              style: AppTextStyles.caption.copyWith(color: AppColors.primary),
+          GestureDetector(
+            onTap: onRetry,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppDimens.radiusButton),
+              ),
+              child: Text(
+                'Retry',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
