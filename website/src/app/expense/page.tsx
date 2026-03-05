@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, RoundedBox, Float, Sphere, Torus } from "@react-three/drei";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants, type Transition } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import * as THREE from "three";
@@ -99,7 +99,7 @@ function computeKPIs(active: ActiveExpense[], pipeline: PipelineExpense[]) {
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
-  show: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: "easeOut" } }),
+  show: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: "easeOut" as const } }),
 };
 
 const staggerContainer = {
@@ -107,14 +107,14 @@ const staggerContainer = {
   show: { transition: { staggerChildren: 0.04 } },
 };
 
-const tableRow = {
+const tableRow: Variants = {
   hidden: { opacity: 0, x: -12 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.3, ease: "easeOut" } },
+  show: { opacity: 1, x: 0, transition: { duration: 0.3, ease: "easeOut" as const } as Transition },
 };
 
-const scaleIn = {
+const scaleIn: Variants = {
   hidden: { opacity: 0, scale: 0.9 },
-  show: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } },
+  show: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" as const } as Transition },
 };
 
 /* ─────────────────────────────────────────────────────────────
