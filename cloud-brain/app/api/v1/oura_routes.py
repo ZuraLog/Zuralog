@@ -140,7 +140,7 @@ async def oura_exchange(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="oura_connected",
+            event="integration_connected",
             properties={"provider": "oura"},
         )
 
@@ -193,7 +193,7 @@ async def oura_disconnect(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="oura_disconnected",
+            event="integration_disconnected",
             properties={"provider": "oura"},
         )
 

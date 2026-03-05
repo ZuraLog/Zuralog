@@ -57,6 +57,10 @@ from app.api.v1.emergency_card_routes import router as emergency_card_router
 from app.api.v1.notification_routes import router as notification_router
 from app.api.v1.report_routes import router as report_router
 from app.api.v1.attachments import router as attachments_router
+from app.api.v1.insight_routes import router as insight_router
+from app.api.v1.progress_routes import router as progress_router
+from app.api.v1.quick_actions import router as quick_actions_router
+from app.api.v1.trends_routes import router as trends_router
 from app.config import settings
 from app.database import async_session
 from app.limiter import limiter
@@ -315,6 +319,10 @@ app.include_router(emergency_card_router, prefix="/api/v1")  # Phase 2 — emerg
 app.include_router(notification_router, prefix="/api/v1")  # Phase 2 — notification centre
 app.include_router(report_router, prefix="/api/v1")  # Phase 2 — weekly/monthly reports
 app.include_router(attachments_router, prefix="/api/v1")  # Phase 2 — chat attachments
+app.include_router(insight_router, prefix="/api/v1")  # Phase 2 — AI insights
+app.include_router(quick_actions_router, prefix="/api/v1")  # Phase 2 — quick actions
+app.include_router(progress_router, prefix="/api/v1")  # Phase 3 — progress home
+app.include_router(trends_router, prefix="/api/v1")  # Phase 3 — trends home
 
 
 @app.get("/health")

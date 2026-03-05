@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -117,7 +118,7 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
       // server side will be the authoritative source for plan tracking.
       final purchasedTier = state.tier;
       ref.read(analyticsServiceProvider).capture(
-        event: 'subscription_started',
+        event: AnalyticsEvents.subscriptionUpgradeCompleted,
         properties: {'plan': purchasedTier.name},
       );
     }
@@ -135,7 +136,7 @@ class SubscriptionNotifier extends Notifier<SubscriptionState> {
       // Analytics: see note in presentPaywall() about tier after refresh.
       final purchasedTier = state.tier;
       ref.read(analyticsServiceProvider).capture(
-        event: 'subscription_started',
+        event: AnalyticsEvents.subscriptionUpgradeCompleted,
         properties: {'plan': purchasedTier.name},
       );
     }

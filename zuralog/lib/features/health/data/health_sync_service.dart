@@ -12,6 +12,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
 import 'package:zuralog/core/network/api_client.dart';
@@ -63,7 +64,7 @@ class HealthSyncService {
     final platform = Platform.isIOS ? 'apple_health' : 'health_connect';
     // Analytics: track sync start (fire-and-forget).
     _analytics?.capture(
-      event: 'health_sync_started',
+      event: AnalyticsEvents.healthSyncStarted,
       properties: {'platform': platform},
     );
     SentryBreadcrumbs.healthSync(
@@ -159,7 +160,7 @@ class HealthSyncService {
       );
       // Analytics: track sync success (fire-and-forget).
       _analytics?.capture(
-        event: 'health_sync_completed',
+        event: AnalyticsEvents.healthSyncCompleted,
         properties: {
           'platform': platform,
           'record_count': workouts.length,
@@ -176,10 +177,10 @@ class HealthSyncService {
       debugPrint('[HealthSync] Sync failed: $e\n$st');
       // Analytics: track sync failure (fire-and-forget).
       _analytics?.capture(
-        event: 'health_sync_failed',
+        event: AnalyticsEvents.healthSyncFailed,
         properties: {
           'platform': platform,
-          'error': e.toString(),
+          'error_type': e.runtimeType.toString(),
         },
       );
       SentryBreadcrumbs.healthSync(

@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { getResendClient, FROM_EMAIL } from '@/lib/resend';
 import { checkRateLimit } from "@/lib/rate-limit";
-import { captureServerEvent } from '@/lib/posthog-server';
+import { captureServerEvent, hashDistinctId } from '@/lib/posthog-server';
 
 /** Expected request body shape */
 interface ContactBody {
@@ -136,9 +136,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Fire-and-forget — analytics must never delay or break the contact response
-      captureServerEvent(data.email, "contact_form_server", {
-        subject: data.subject,
+      // Fire-and-forget — analytics must never delay or break the contact response.
+      // Hash email to avoid storing PII as a PostHog person identifier.
+      // Omit subject (potential PII); keep message_length for volume analysis.
+      captureServerEvent(hashDistinctId(data.email), "contact_form_server", {
         message_length: data.message.length,
       }).catch(() => {});
 

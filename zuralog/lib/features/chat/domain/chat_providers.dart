@@ -11,10 +11,13 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/network/ws_client.dart';
+import 'package:zuralog/features/chat/data/attachment_repository.dart';
 import 'package:zuralog/features/chat/data/chat_repository.dart';
+import 'package:zuralog/features/chat/domain/attachment.dart';
 import 'package:zuralog/features/chat/domain/message.dart';
 
 // ── Chat State ────────────────────────────────────────────────────────────────
@@ -124,7 +127,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
     // Analytics: fire chat_opened once per session when WebSocket connects.
     if (!_chatOpened) {
       _chatOpened = true;
-      _ref.read(analyticsServiceProvider).capture(event: 'chat_opened');
+      _ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.conversationOpened,
+      );
     }
 
     final subscription = _repository.messages.listen(
@@ -165,9 +170,54 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     // Analytics: capture message sent event (fire-and-forget).
     _ref.read(analyticsServiceProvider).capture(
-      event: 'chat_message_sent',
-      properties: {'message_length': text.length},
+      event: AnalyticsEvents.coachMessageSent,
+      properties: {'char_count': text.length},
     );
+  }
+
+  /// Uploads attachments then sends a message with them to the Cloud Brain.
+  ///
+  /// [text] is the message content (may be empty for voice-only).
+  /// [pendingAttachments] are local files to upload first.
+  /// [attachmentRepo] handles the multipart upload to the backend.
+  ///
+  /// Optimistically adds the message to local state, uploads each
+  /// attachment, then sends the full payload via WebSocket.
+  Future<void> sendMessageWithAttachments(
+    String text,
+    List<ChatAttachment> pendingAttachments,
+    AttachmentRepository attachmentRepo,
+  ) async {
+    if (text.trim().isEmpty && pendingAttachments.isEmpty) return;
+
+    // Optimistic: show the message immediately with pending attachments.
+    final userMessage = ChatMessage(
+      role: 'user',
+      content: text.trim(),
+      attachments: pendingAttachments,
+    );
+
+    state = state.copyWith(
+      messages: [...state.messages, userMessage],
+      isTyping: true,
+      error: null,
+    );
+
+    // Upload each attachment sequentially.
+    final uploaded = <ChatAttachment>[];
+    for (final att in pendingAttachments) {
+      if (att.localPath == null) continue;
+      try {
+        final result = await attachmentRepo.uploadAttachment(att.localPath!);
+        uploaded.add(result);
+      } catch (e) {
+        // Mark failed but continue with others.
+        uploaded.add(att.copyWith(status: AttachmentStatus.failed));
+      }
+    }
+
+    // Send via WebSocket with uploaded attachment metadata.
+    _repository.sendMessageWithAttachments(text.trim(), uploaded);
   }
 
   /// Fetches conversation history from the REST API.

@@ -17,8 +17,8 @@ final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
 });
 
 class AnalyticsService {
-  /// The PostHog SDK instance.
-  Posthog get _posthog => Posthog();
+  /// The PostHog SDK singleton.
+  final Posthog _posthog = Posthog();
 
   /// Whether analytics is enabled.
   /// Disabled in debug mode by default; can be overridden via --dart-define.
@@ -156,7 +156,7 @@ class AnalyticsService {
   /// Get the payload of a feature flag (for multivariate flags).
   ///
   /// Returns null if the flag doesn't exist or evaluation fails.
-  Future<dynamic> getFeatureFlagPayload(String flagKey) async {
+  Future<Object?> getFeatureFlagPayload(String flagKey) async {
     if (!enabled) return null;
     try {
       return await _posthog.getFeatureFlagPayload(flagKey);
@@ -206,15 +206,15 @@ class AnalyticsService {
   // Lifecycle Helpers
   // ---------------------------------------------------------------------------
 
-  /// Request a flush of any pending events.
+  /// Flush any pending events to PostHog.
   ///
-  /// Call on app backgrounding to ensure all events are sent.
+  /// Call on app backgrounding to ensure events captured in the
+  /// current session (e.g., app_backgrounded, session_summary) are
+  /// not lost if the OS terminates the process.
   Future<void> flush() async {
     if (!enabled) return;
     try {
-      // posthog_flutter auto-flushes on app lifecycle changes via native SDK.
-      // This method exists as a hook for explicit flush requests.
-      debugPrint('PostHog flush requested');
+      await _posthog.flush();
     } catch (e) {
       debugPrint('PostHog flush failed: $e');
     }

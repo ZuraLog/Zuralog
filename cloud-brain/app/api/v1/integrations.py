@@ -157,7 +157,7 @@ async def strava_exchange(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="strava_connected",
+            event="integration_connected",
             properties={"provider": "strava"},
         )
 
@@ -234,7 +234,7 @@ async def strava_disconnect(
     if analytics:
         analytics.capture(
             distinct_id=user_id,
-            event="strava_disconnected",
+            event="integration_disconnected",
             properties={"provider": "strava"},
         )
 

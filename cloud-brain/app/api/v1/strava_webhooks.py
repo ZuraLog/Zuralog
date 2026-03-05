@@ -134,16 +134,9 @@ async def strava_webhook_event(request: Request, event: StravaWebhookEvent) -> d
             event.object_type,
         )
 
-    analytics = getattr(request.app.state, "analytics_service", None)
-    if analytics:
-        analytics.capture(
-            distinct_id=f"strava:{event.owner_id}",  # Strava owner_id; no Zuralog user_id in webhook context
-            event="webhook_received",
-            properties={
-                "provider": "strava",
-                "event_type": f"{event.object_type}.{event.aspect_type}",
-                "processed": True,
-            },
-        )
+    # PostHog capture removed: webhook context only has the Strava owner_id,
+    # not the Zuralog user_id. Using provider IDs as distinct_id creates
+    # orphaned person profiles. Downstream Celery tasks already track
+    # health_data_ingested with the correct user_id.
 
     return {"received": True}

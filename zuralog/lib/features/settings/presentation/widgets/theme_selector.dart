@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -59,11 +60,8 @@ class ThemeSelector extends ConsumerWidget {
             onTap: () {
               ref.read(themeModeProvider.notifier).state = ThemeMode.system;
               ref.read(analyticsServiceProvider).capture(
-                event: 'settings_changed',
-                properties: {
-                  'setting_name': 'theme',
-                  'new_value': ThemeMode.system.name,
-                },
+                event: AnalyticsEvents.themeChanged,
+                properties: {'theme': ThemeMode.system.name},
               );
             },
           ),
@@ -75,11 +73,8 @@ class ThemeSelector extends ConsumerWidget {
             onTap: () {
               ref.read(themeModeProvider.notifier).state = ThemeMode.light;
               ref.read(analyticsServiceProvider).capture(
-                event: 'settings_changed',
-                properties: {
-                  'setting_name': 'theme',
-                  'new_value': ThemeMode.light.name,
-                },
+                event: AnalyticsEvents.themeChanged,
+                properties: {'theme': ThemeMode.light.name},
               );
             },
           ),
@@ -91,11 +86,8 @@ class ThemeSelector extends ConsumerWidget {
             onTap: () {
               ref.read(themeModeProvider.notifier).state = ThemeMode.dark;
               ref.read(analyticsServiceProvider).capture(
-                event: 'settings_changed',
-                properties: {
-                  'setting_name': 'theme',
-                  'new_value': ThemeMode.dark.name,
-                },
+                event: AnalyticsEvents.themeChanged,
+                properties: {'theme': ThemeMode.dark.name},
               );
             },
           ),

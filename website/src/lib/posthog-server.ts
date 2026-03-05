@@ -8,6 +8,7 @@
  * tracking calls safe no-ops.
  */
 
+import { createHash } from "crypto";
 import { PostHog } from "posthog-node";
 
 // Use globalThis to survive Next.js hot-reloads in development
@@ -46,12 +47,22 @@ export function getServerPostHog(): PostHog | null {
 }
 
 /**
+ * Hash a raw identifier (email, IP) into a non-reversible distinct ID.
+ *
+ * Prevents PII from being stored as PostHog person identifiers while
+ * maintaining consistent identity for the same input.
+ */
+export function hashDistinctId(raw: string): string {
+  return createHash("sha256").update(raw).digest("hex").slice(0, 16);
+}
+
+/**
  * Capture a server-side event and immediately flush to PostHog.
  *
  * Prefer this over calling capture() + flushAsync() manually.
  * Safe to call when POSTHOG_API_KEY is not set — returns immediately.
  *
- * @param distinctId - User identifier (email for pre-auth, Supabase UID for auth'd)
+ * @param distinctId - Pre-hashed user identifier (use hashDistinctId for PII)
  * @param event - Event name
  * @param properties - Optional event properties (no PII)
  */
@@ -64,7 +75,7 @@ export async function captureServerEvent(
   if (!ph) return;
   try {
     await ph.captureImmediate({ distinctId, event, properties });
-  } catch {
-    // Analytics must never break server logic
+  } catch (error) {
+    console.warn("[posthog] captureImmediate failed:", error);
   }
 }

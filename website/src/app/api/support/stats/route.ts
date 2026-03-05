@@ -20,7 +20,7 @@ import { createClient } from '@supabase/supabase-js';
 import { fetchAllBmcSupporters } from '@/lib/bmc';
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getCached, setCached } from "@/lib/cache";
-import { getServerPostHog } from '@/lib/posthog-server';
+import { captureServerEvent, hashDistinctId } from '@/lib/posthog-server';
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
@@ -52,16 +52,12 @@ export async function GET(request: Request) {
       const cacheKey = "website:support:stats";
       const cachedStats = await getCached<{ totalFundsRaised: number; totalSupporters: number; leaderboard: Array<{ rank: number; name: string; amount: number }> }>(cacheKey);
       if (cachedStats) {
-        // Fire-and-forget: track cache-served page view (don't await on GET endpoints)
-        const posthog = getServerPostHog();
-        if (posthog) {
-          const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-          posthog.capture({
-            distinctId: `anon_${ip}`,
-            event: "support_stats_viewed",
-            properties: { cached: true },
-          });
-        }
+        // Fire-and-forget: track cache-served page view.
+        // Hash IP to avoid storing PII; use captureImmediate for serverless safety.
+        const cachedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+        captureServerEvent(hashDistinctId(`anon_${cachedIp}`), "support_stats_viewed", {
+          cached: true,
+        }).catch(() => {});
         return NextResponse.json(cachedStats, {
           headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
         });
@@ -130,16 +126,11 @@ export async function GET(request: Request) {
       };
       await setCached(cacheKey, statsResponse, 300); // 5 minutes
 
-      // Fire-and-forget: track fresh (non-cached) page view
-      const posthog = getServerPostHog();
-      if (posthog) {
-        const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-        posthog.capture({
-          distinctId: `anon_${ip}`,
-          event: "support_stats_viewed",
-          properties: { cached: false },
-        });
-      }
+      // Fire-and-forget: track fresh (non-cached) page view.
+      const freshIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+      captureServerEvent(hashDistinctId(`anon_${freshIp}`), "support_stats_viewed", {
+        cached: false,
+      }).catch(() => {});
 
       return NextResponse.json(statsResponse, {
         headers: {

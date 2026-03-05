@@ -129,10 +129,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         // The router guard (in app_router.dart Step 3) redirects authenticated
         // users with onboardingComplete == false to the profile questionnaire
         // automatically. No explicit navigation call is needed here.
-        ref.read(analyticsServiceProvider).capture(
-          event: AnalyticsEvents.signUpCompleted,
-          properties: {'method': 'email'},
-        );
+        // Analytics: signUpCompleted is captured in AuthStateNotifier.register().
         break;
       case AuthFailure(:final message):
         ref.read(analyticsServiceProvider).capture(

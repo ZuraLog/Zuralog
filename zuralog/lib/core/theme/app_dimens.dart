@@ -92,7 +92,7 @@ abstract final class AppDimens {
   static const double integrationPillHeight = 64;
 
   /// Integration rail scrollable row height (pill + breathing room).
-  static const double integrationRailHeight = 72;
+  static const double integrationRailHeight = 84;
 
   /// Health ring outer diameter.
   static const double ringDiameter = 180;

@@ -13,6 +13,7 @@ import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/network/ws_client.dart';
+import 'package:zuralog/features/chat/domain/attachment.dart';
 import 'package:zuralog/features/chat/domain/message.dart';
 
 /// Repository that manages the chat data flow.
@@ -74,18 +75,32 @@ class ChatRepository {
     _wsClient.send(text);
   }
 
+  /// Sends a chat message with file attachments to the Cloud Brain.
+  ///
+  /// [text] is the message content (may be empty for voice-only messages).
+  /// [attachments] is the list of uploaded attachments to include.
+  void sendMessageWithAttachments(
+    String text,
+    List<ChatAttachment> attachments,
+  ) {
+    _wsClient.sendJson({
+      'message': text,
+      'attachments': attachments.map((a) => a.toJson()).toList(),
+    });
+  }
+
   /// Fetches conversation history from the REST API.
   ///
   /// Returns a list of conversation maps with nested messages.
   /// Returns an empty list on error.
-  Future<List<dynamic>> fetchHistory() async {
+  Future<List<Object?>> fetchHistory() async {
     SentryBreadcrumbs.apiRequest(
       method: 'GET',
       path: '/api/v1/chat/history',
     );
     try {
       final response = await _apiClient.get('/api/v1/chat/history');
-      return response.data as List<dynamic>;
+      return response.data as List<Object?>;
     } catch (e) {
       return [];
     }

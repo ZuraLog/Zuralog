@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
@@ -112,10 +113,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
-        // Analytics: identify first so the login event is attributed to the
-        // identified user (not the anonymous ID) in PostHog (fire-and-forget).
+        // Analytics: await identify so the login event is attributed to the
+        // identified user, then reload feature flags for user-specific targeting.
         final analytics = ref.read(analyticsServiceProvider);
-        analytics.identify(
+        await analytics.identify(
           userId: userId,
           properties: {
             'subscription_tier': 'free',
@@ -123,9 +124,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
           },
         );
         analytics.capture(
-          event: 'user_logged_in',
+          event: AnalyticsEvents.loginCompleted,
           properties: {'method': 'email'},
         );
+        analytics.reloadFeatureFlags();
       case AuthFailure():
         SentryBreadcrumbs.authEvent(event: 'login_failure', method: 'email');
         state = AuthState.unauthenticated;
@@ -152,10 +154,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
-        // Analytics: identify first so the signup event is attributed to the
-        // identified user (not the anonymous ID) in PostHog (fire-and-forget).
+        // Analytics: await identify so the signup event is attributed to the
+        // identified user, then reload feature flags for user-specific targeting.
         final analytics = ref.read(analyticsServiceProvider);
-        analytics.identify(
+        await analytics.identify(
           userId: userId,
           properties: {
             'signup_date': DateTime.now().toIso8601String(),
@@ -164,9 +166,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
           },
         );
         analytics.capture(
-          event: 'user_signed_up',
+          event: AnalyticsEvents.signUpCompleted,
           properties: {'method': 'email'},
         );
+        analytics.reloadFeatureFlags();
       case AuthFailure():
         SentryBreadcrumbs.authEvent(event: 'register_failure', method: 'email');
         state = AuthState.unauthenticated;
@@ -213,10 +216,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
         state = AuthState.authenticated;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
-        // Analytics: identify first so the login event is attributed to the
-        // identified user (not the anonymous ID) in PostHog (fire-and-forget).
+        // Analytics: await identify so the login event is attributed to the
+        // identified user, then reload feature flags for user-specific targeting.
         final analytics = ref.read(analyticsServiceProvider);
-        analytics.identify(
+        await analytics.identify(
           userId: userId,
           properties: {
             'subscription_tier': 'free',
@@ -224,9 +227,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
           },
         );
         analytics.capture(
-          event: 'user_logged_in',
+          event: AnalyticsEvents.loginCompleted,
           properties: {'method': credentials.provider.name},
         );
+        analytics.reloadFeatureFlags();
       case AuthFailure():
         SentryBreadcrumbs.authEvent(
           event: 'social_login_failure',

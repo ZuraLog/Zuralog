@@ -223,6 +223,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onSend: (text) {
                 ref.read(chatNotifierProvider.notifier).sendMessage(text);
               },
+              onSendWithAttachments: (text, attachments) {
+                final attachmentRepo = ref.read(attachmentRepositoryProvider);
+                ref
+                    .read(chatNotifierProvider.notifier)
+                    .sendMessageWithAttachments(text, attachments, attachmentRepo);
+              },
               onVoiceStart: () async {
                 final notifier = ref.read(speechNotifierProvider.notifier);
 

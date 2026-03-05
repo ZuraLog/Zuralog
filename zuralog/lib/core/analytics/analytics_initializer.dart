@@ -85,10 +85,11 @@ class _AnalyticsInitializerState extends ConsumerState<AnalyticsInitializer>
         'build_number': packageInfo.buildNumber,
       });
 
-      // Track app opened
-      await analytics.capture(event: 'app_opened', properties: {
+      // Track app opened (cold start)
+      await analytics.capture(event: AnalyticsEvents.appOpened, properties: {
         'platform': Platform.isIOS ? 'ios' : 'android',
         'app_version': packageInfo.version,
+        'is_cold_start': true,
       });
 
       _startSession();
@@ -105,12 +106,12 @@ class _AnalyticsInitializerState extends ConsumerState<AnalyticsInitializer>
     switch (state) {
       case AppLifecycleState.paused:
         _endSession();
-        analytics.capture(event: 'app_backgrounded');
+        analytics.capture(event: AnalyticsEvents.appBackgrounded);
         analytics.flush();
         break;
       case AppLifecycleState.resumed:
-        analytics.capture(event: 'app_opened', properties: {
-          'resume': true,
+        analytics.capture(event: AnalyticsEvents.appOpened, properties: {
+          'is_cold_start': false,
         });
         _startSession();
         break;

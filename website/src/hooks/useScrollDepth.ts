@@ -29,30 +29,39 @@ export function useScrollDepth() {
   }, [pathname]);
 
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      if (docHeight <= 0) return;
+      if (ticking) return;
+      ticking = true;
 
-      const scrollPercent = Math.min(
-        100,
-        Math.round((scrollTop / docHeight) * 100)
-      );
-      const milestones = [25, 50, 75, 100];
+      requestAnimationFrame(() => {
+        ticking = false;
 
-      for (const milestone of milestones) {
-        if (
-          scrollPercent >= milestone &&
-          !milestonesHit.current.has(milestone)
-        ) {
-          milestonesHit.current.add(milestone);
-          posthog?.capture("page_scrolled", {
-            depth: milestone,
-            path: pathname,
-          });
+        const scrollTop = window.scrollY;
+        const docHeight =
+          document.documentElement.scrollHeight - window.innerHeight;
+        if (docHeight <= 0) return;
+
+        const scrollPercent = Math.min(
+          100,
+          Math.round((scrollTop / docHeight) * 100)
+        );
+        const milestones = [25, 50, 75, 100];
+
+        for (const milestone of milestones) {
+          if (
+            scrollPercent >= milestone &&
+            !milestonesHit.current.has(milestone)
+          ) {
+            milestonesHit.current.add(milestone);
+            posthog?.capture("page_scrolled", {
+              depth: milestone,
+              path: pathname,
+            });
+          }
         }
-      }
+      });
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });

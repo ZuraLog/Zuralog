@@ -133,11 +133,11 @@ class _FrostedNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Use the scaffold background as the frosted glass tint colour.
-    // Dark mode → #000000 at 70% (OLED black, translucent).
-    // Light mode → #FFFFFF at 70% (white, translucent).
+    // Dark mode → near-opaque OLED black so icons remain visible over blur.
+    // Light mode → translucent white for frosted glass effect.
     final bgColor =
         isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final opacity = isDark ? 0.92 : AppDimens.navBarFrostOpacity;
 
     return ClipRect(
       child: BackdropFilter(
@@ -166,7 +166,7 @@ class _FrostedNavigationBar extends StatelessWidget {
             }),
           ),
           child: Container(
-            color: bgColor.withValues(alpha: AppDimens.navBarFrostOpacity),
+            color: bgColor.withValues(alpha: opacity),
             child: NavigationBar(
               // Transparent — frosted container provides the visual background.
               backgroundColor: Colors.transparent,

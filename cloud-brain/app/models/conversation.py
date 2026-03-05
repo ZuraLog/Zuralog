@@ -9,6 +9,7 @@ an ordered sequence of messages with roles (user, assistant, system).
 import uuid
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -88,6 +89,7 @@ class Message(Base):
     )
     role: Mapped[str] = mapped_column(String)
     content: Mapped[str] = mapped_column(Text)
+    attachments: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[str] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
