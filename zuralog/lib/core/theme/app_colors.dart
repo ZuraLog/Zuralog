@@ -23,9 +23,15 @@ import 'package:flutter/material.dart';
 abstract final class AppColors {
   // ── Brand ────────────────────────────────────────────────────────────────
 
-  /// Sage Green — Main actions, active states, brand identity.
-  /// Same value in both light and dark modes.
+  /// Sage Green — Main actions, active states, brand identity (dark mode).
   static const Color primary = Color(0xFFCFE1B9);
+
+  /// Forest Green — Primary color for light mode only.
+  ///
+  /// Sage Green (#CFE1B9) has insufficient contrast (~1.4:1) on white
+  /// backgrounds. Forest Green (#3A7D44) passes WCAG AA at ~4.8:1 on white
+  /// while remaining on-brand. Used as [ColorScheme.primary] in light theme.
+  static const Color primaryOnLight = Color(0xFF3A7D44);
 
   /// Sage Dark — Pressed states on primary elements.
   static const Color primaryDark = Color(0xFFA8C68A);
