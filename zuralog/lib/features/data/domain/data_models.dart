@@ -57,7 +57,10 @@ enum HealthCategory {
   }
 
   /// Deserializes from a raw API string slug.
-  static HealthCategory fromString(String? raw) {
+  ///
+  /// Returns `null` for unrecognised slugs so callers can filter them out
+  /// rather than silently mapping unknown data to a wrong category.
+  static HealthCategory? fromString(String? raw) {
     switch (raw?.toLowerCase()) {
       case 'activity':
         return HealthCategory.activity;
@@ -80,8 +83,8 @@ enum HealthCategory {
       case 'environment':
         return HealthCategory.environment;
       default:
-        debugPrint('[HealthCategory] Unknown category slug: "$raw". Falling back to activity.');
-        return HealthCategory.activity;
+        debugPrint('[HealthCategory] Unknown category slug: "$raw" — skipping.');
+        return null;
     }
   }
 }
@@ -118,11 +121,13 @@ class CategorySummary {
   /// ISO-8601 timestamp of last data update. Null when not provided.
   final String? lastUpdated;
 
-  /// Deserializes from a JSON map.
-  factory CategorySummary.fromJson(Map<String, dynamic> json) {
+  /// Deserializes from a JSON map. Returns `null` for unrecognised categories.
+  static CategorySummary? fromJson(Map<String, dynamic> json) {
+    final category = HealthCategory.fromString(json['category'] as String?);
+    if (category == null) return null;
     final rawTrend = json['trend'] as List<dynamic>?;
     return CategorySummary(
-      category: HealthCategory.fromString(json['category'] as String?),
+      category: category,
       primaryValue: json['primary_value'] as String? ?? '—',
       unit: json['unit'] as String?,
       deltaPercent: (json['delta_percent'] as num?)?.toDouble(),
@@ -155,6 +160,7 @@ class DashboardData {
     return DashboardData(
       categories: rawCats
           .map((e) => CategorySummary.fromJson(e as Map<String, dynamic>))
+          .whereType<CategorySummary>()
           .toList(),
       visibleOrder: rawOrder.map((e) => e as String).toList(),
     );
@@ -268,7 +274,9 @@ class CategoryDetailData {
   factory CategoryDetailData.fromJson(Map<String, dynamic> json) {
     final rawMetrics = json['metrics'] as List<dynamic>? ?? [];
     return CategoryDetailData(
-      category: HealthCategory.fromString(json['category'] as String?),
+      // Fall back to activity for a category-level unknown — this shouldn't
+      // happen in practice since the server validates the slug.
+      category: HealthCategory.fromString(json['category'] as String?) ?? HealthCategory.activity,
       metrics: rawMetrics
           .map((e) => MetricSeries.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -301,7 +309,7 @@ class MetricDetailData {
   factory MetricDetailData.fromJson(Map<String, dynamic> json) {
     return MetricDetailData(
       series: MetricSeries.fromJson(json['series'] as Map<String, dynamic>),
-      category: HealthCategory.fromString(json['category'] as String?),
+      category: HealthCategory.fromString(json['category'] as String?) ?? HealthCategory.activity,
       aiInsight: json['ai_insight'] as String?,
     );
   }
@@ -316,6 +324,7 @@ class DashboardLayout {
     required this.orderedCategories,
     required this.hiddenCategories,
     this.categoryColorOverrides = const {},
+    this.bannerDismissed = false,
   });
 
   /// Category names in display order (all categories, including hidden).
@@ -328,11 +337,14 @@ class DashboardLayout {
   /// Key: category.name (e.g. 'activity'), Value: ARGB int (Color.value).
   final Map<String, int> categoryColorOverrides;
 
+  /// Whether the user has dismissed the [DataMaturityBanner].
+  final bool bannerDismissed;
+
   /// Default layout: all 10 categories visible in canonical order.
-  static DashboardLayout get defaultLayout => DashboardLayout(
-        orderedCategories: HealthCategory.values.map((c) => c.name).toList(),
-        hiddenCategories: const {},
-        categoryColorOverrides: const {},
+  static DashboardLayout get defaultLayout => const DashboardLayout(
+        orderedCategories: [],
+        hiddenCategories: {},
+        categoryColorOverrides: {},
       );
 
   /// Deserializes from the user preferences JSON.
@@ -344,7 +356,8 @@ class DashboardLayout {
     return DashboardLayout(
       orderedCategories: rawOrder.map((e) => e as String).toList(),
       hiddenCategories: rawHidden.map((e) => e as String).toSet(),
-      categoryColorOverrides: rawColors.map((k, v) => MapEntry(k, v as int)),
+      categoryColorOverrides: rawColors.map((k, v) => MapEntry(k, (v as num).toInt())),
+      bannerDismissed: json['banner_dismissed'] as bool? ?? false,
     );
   }
 
@@ -353,5 +366,21 @@ class DashboardLayout {
         'ordered_categories': orderedCategories,
         'hidden_categories': hiddenCategories.toList(),
         'category_color_overrides': categoryColorOverrides,
+        'banner_dismissed': bannerDismissed,
       };
+
+  /// Returns a copy with the given fields replaced.
+  DashboardLayout copyWith({
+    List<String>? orderedCategories,
+    Set<String>? hiddenCategories,
+    Map<String, int>? categoryColorOverrides,
+    bool? bannerDismissed,
+  }) =>
+      DashboardLayout(
+        orderedCategories: orderedCategories ?? this.orderedCategories,
+        hiddenCategories: hiddenCategories ?? this.hiddenCategories,
+        categoryColorOverrides:
+            categoryColorOverrides ?? this.categoryColorOverrides,
+        bannerDismissed: bannerDismissed ?? this.bannerDismissed,
+      );
 }

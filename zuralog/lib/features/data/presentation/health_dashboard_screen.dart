@@ -169,7 +169,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                   AppDimens.spaceSm,
                 ),
                 child: scoreAsync.when(
-                  loading: () => _HealthScoreHeroSkeleton(),
+                  loading: () => const _HealthScoreHeroSkeleton(),
                   error: (err, stack) => const SizedBox.shrink(),
                   data: (score) => _ScoreHeroCard(score: score),
                 ),
@@ -177,24 +177,36 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
             ),
 
             // ── Data Maturity Banner ─────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  0,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: DataMaturityBanner(
-                  daysWithData: 7,
-                  // TODO: wire to real provider once analytics endpoint returns this
-                  targetDays: 7,
-                  onDismiss: () {
-                    // TODO: persist dismissal preference
-                  },
+            if (!layout.bannerDismissed)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    0,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
+                  ),
+                  child: DataMaturityBanner(
+                    // MED-06: count categories with real data from the dashboard
+                    daysWithData: dashAsync.valueOrNull?.visibleOrder.length ?? 0,
+                    targetDays: 7,
+                    onDismiss: () {
+                      // MED-06: persist dismissal in layout so it survives restarts
+                      final updated = layout.copyWith(bannerDismissed: true);
+                      ref.read(dashboardLayoutProvider.notifier).state = updated;
+                      unawaited(Future(() async {
+                        try {
+                          await ref
+                              .read(dataRepositoryProvider)
+                              .saveDashboardLayout(updated);
+                        } catch (e) {
+                          debugPrint('[Dashboard] saveDashboardLayout error (banner): $e');
+                        }
+                      }));
+                    },
+                  ),
                 ),
               ),
-            ),
 
             // ── Section title ────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -225,7 +237,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                       horizontal: AppDimens.spaceMd,
                       vertical: AppDimens.spaceXs,
                     ),
-                    child: _CardSkeleton(),
+                    child: const _CardSkeleton(),
                   ),
                   childCount: 6,
                 ),
@@ -255,11 +267,16 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                 ),
               ),
               data: (dashboard) {
-                // Seed layout from API on first load if still at default.
+                // MED-03: Only seed layout from API if the preferences loader
+                // has resolved to null (i.e. no persisted layout exists) AND
+                // the layout is still at default. This prevents overwriting a
+                // layout that was already restored by dashboardLayoutLoaderProvider.
+                final loaderState = ref.read(dashboardLayoutLoaderProvider);
+                final hasPersistedLayout = loaderState.valueOrNull != null;
                 final currentLayout = ref.read(dashboardLayoutProvider);
-                if (dashboard.visibleOrder.isNotEmpty &&
-                    currentLayout.orderedCategories ==
-                        DashboardLayout.defaultLayout.orderedCategories) {
+                if (!hasPersistedLayout &&
+                    dashboard.visibleOrder.isNotEmpty &&
+                    currentLayout.orderedCategories.isEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     ref.read(dashboardLayoutProvider.notifier).state =
                         DashboardLayout(
@@ -675,6 +692,8 @@ class _ColorPickerSheet extends StatelessWidget {
 // ── Skeleton widgets ──────────────────────────────────────────────────────────
 
 class _HealthScoreHeroSkeleton extends StatelessWidget {
+  const _HealthScoreHeroSkeleton();
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -691,6 +710,8 @@ class _HealthScoreHeroSkeleton extends StatelessWidget {
 }
 
 class _CardSkeleton extends StatelessWidget {
+  const _CardSkeleton();
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

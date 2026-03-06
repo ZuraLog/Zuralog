@@ -42,7 +42,7 @@ final class MockDataRepository implements DataRepositoryInterface {
     required String timeRange,
   }) async {
     await Future<void>.delayed(_delay);
-    final category = HealthCategory.fromString(categoryId);
+    final category = HealthCategory.fromString(categoryId) ?? HealthCategory.activity;
     return CategoryDetailData(
       category: category,
       metrics: _mockMetricsFor(category, timeRange),

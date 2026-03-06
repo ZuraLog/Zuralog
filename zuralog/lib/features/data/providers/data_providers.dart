@@ -37,7 +37,7 @@ final dataRepositoryProvider = Provider<DataRepositoryInterface>((ref) {
 ///
 /// Invalidate with [ref.invalidate(dashboardProvider)] after a pull-to-refresh.
 final dashboardProvider = FutureProvider<DashboardData>((ref) async {
-  final repo = ref.read(dataRepositoryProvider);
+  final repo = ref.watch(dataRepositoryProvider);
   return repo.getDashboard();
 });
 
@@ -82,7 +82,7 @@ class CategoryDetailParams {
 final categoryDetailProvider =
     FutureProvider.family<CategoryDetailData, CategoryDetailParams>(
         (ref, params) async {
-  final repo = ref.read(dataRepositoryProvider);
+  final repo = ref.watch(dataRepositoryProvider);
   return repo.getCategoryDetail(
     categoryId: params.categoryId,
     timeRange: params.timeRange,
@@ -121,7 +121,7 @@ class MetricDetailParams {
 final metricDetailProvider =
     FutureProvider.family<MetricDetailData, MetricDetailParams>(
         (ref, params) async {
-  final repo = ref.read(dataRepositoryProvider);
+  final repo = ref.watch(dataRepositoryProvider);
   return repo.getMetricDetail(
     metricId: params.metricId,
     timeRange: params.timeRange,
@@ -146,7 +146,7 @@ final dashboardLayoutProvider =
 /// Screens should `ref.listen` this provider or use `addPostFrameCallback` to
 /// seed [dashboardLayoutProvider] when data arrives.
 final dashboardLayoutLoaderProvider = FutureProvider<DashboardLayout?>((ref) async {
-  final repo = ref.read(dataRepositoryProvider);
+  final repo = ref.watch(dataRepositoryProvider);
   try {
     return await repo.getPersistedLayout();
   } catch (e) {

@@ -56,7 +56,7 @@ _analytics_service = AnalyticsService()
 @cached(prefix="analytics.daily_summary", ttl=300, key_params=["user_id", "date_str"])
 async def daily_summary(
     request: Request,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_authenticated_user_id),
     date_str: str | None = Query(
         None,
         description="ISO-8601 date (YYYY-MM-DD). Defaults to today.",
@@ -98,7 +98,7 @@ async def daily_summary(
 @cached(prefix="analytics.weekly_trends", ttl=300, key_params=["user_id"])
 async def weekly_trends(
     request: Request,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> WeeklyTrendsResponse:
     """Get 7-day trend data for dashboard charts.
@@ -121,7 +121,7 @@ async def weekly_trends(
 @cached(prefix="analytics.correlation", ttl=900, key_params=["user_id", "days"])
 async def sleep_activity_correlation(
     request: Request,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_authenticated_user_id),
     days: int = Query(30, ge=7, le=365, description="Lookback days"),
     lag: int = Query(0, ge=0, le=7, description="Day lag for activity"),
     db: AsyncSession = Depends(get_db),
@@ -155,7 +155,7 @@ async def sleep_activity_correlation(
 async def metric_trend(
     request: Request,
     metric: str,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_authenticated_user_id),
     window_size: int = Query(7, ge=3, le=30, description="Window size"),
     db: AsyncSession = Depends(get_db),
 ) -> TrendResponse:
@@ -186,7 +186,7 @@ async def metric_trend(
 @cached(prefix="analytics.goals", ttl=300, key_params=["user_id"])
 async def get_goals(
     request: Request,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> list[GoalProgressResponse]:
     """Get progress for all active user goals.
@@ -209,7 +209,7 @@ async def get_goals(
 async def create_or_update_goal(
     request: Request,
     body: UserGoalRequest,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> GoalProgressResponse:
     """Create or update a user goal (upsert by user_id + metric).
@@ -283,7 +283,7 @@ async def create_or_update_goal(
 @cached(prefix="analytics.dashboard_insight", ttl=300, key_params=["user_id"])
 async def dashboard_insight(
     request: Request,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> DashboardInsightResponse:
     """Get the dashboard insight of the day.
@@ -626,9 +626,35 @@ async def category_detail(
     from datetime import timedelta
     from sqlalchemy import text as sql_text
 
+    # HIGH-04: normalise category slug before any branching
+    category = category.lower().strip()
+
+    # HIGH-03: reject unknown range values — never silently fall back
+    VALID_RANGES = {"7D", "30D", "90D"}
+    if time_range.upper() not in VALID_RANGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid time_range '{time_range}'. Must be one of: 7D, 30D, 90D.",
+        )
+
     days_map = {"7D": 7, "30D": 30, "90D": 90}
-    days = days_map.get(time_range.upper(), 7)
+    days = days_map[time_range.upper()]
     since = (date.today() - timedelta(days=days)).isoformat()
+
+    # HIGH-01: allowlists for dynamic SQL identifiers
+    ALLOWED_COLUMNS: frozenset[str] = frozenset({
+        "steps", "active_calories", "distance_meters",
+        "resting_heart_rate", "hrv_ms", "heart_rate_avg",
+        "body_fat_percentage", "oxygen_saturation", "respiratory_rate",
+        "vo2_max", "flights_climbed",
+        "hours", "quality_score",
+        "weight_kg",
+        "calories", "protein_grams", "carbs_grams", "fat_grams",
+    })
+    ALLOWED_TABLES: frozenset[str] = frozenset({
+        "daily_health_metrics", "sleep_records", "weight_measurements",
+        "nutrition_entries",
+    })
 
     def _make_series(
         metric_id: str,
@@ -675,6 +701,7 @@ async def category_detail(
             ("active_calories", "active_calories", "Active Calories", "kcal"),
             ("distance_meters", "distance", "Distance", "m"),
         ]:
+            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
                 sql_text(f"SELECT date, {col} FROM daily_health_metrics "
                          "WHERE user_id = :uid AND date >= :since AND "
@@ -709,6 +736,7 @@ async def category_detail(
             ("hrv_ms", "hrv", "Heart Rate Variability", "ms"),
             ("heart_rate_avg", "heart_rate_avg", "Avg Heart Rate", "bpm"),
         ]:
+            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
                 sql_text(f"SELECT date, {col} FROM daily_health_metrics "
                          "WHERE user_id = :uid AND date >= :since AND "
@@ -742,6 +770,7 @@ async def category_detail(
             ("oxygen_saturation", "spo2", "Blood Oxygen", "%"),
             ("respiratory_rate", "respiratory_rate", "Respiratory Rate", "brpm"),
         ]:
+            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
                 sql_text(f"SELECT date, {col} FROM daily_health_metrics "
                          "WHERE user_id = :uid AND date >= :since AND "
@@ -759,6 +788,7 @@ async def category_detail(
             ("carbs_grams", "carbs", "Carbohydrates", "g"),
             ("fat_grams", "fat", "Fat", "g"),
         ]:
+            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
                 sql_text(f"SELECT date, {col} FROM nutrition_entries "
                          "WHERE user_id = :uid AND date >= :since AND "
@@ -774,6 +804,7 @@ async def category_detail(
             ("hrv_ms", "hrv", "HRV", "ms"),
             ("vo2_max", "vo2max", "VO₂ Max", "ml/kg/min"),
         ]:
+            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
                 sql_text(f"SELECT date, {col} FROM daily_health_metrics "
                          "WHERE user_id = :uid AND date >= :since AND "
@@ -799,7 +830,7 @@ async def category_detail(
         pass
 
     else:
-        raise HTTPException(status_code=400, detail=f"Unknown category: {category}")
+        raise HTTPException(status_code=400, detail="Invalid category")
 
     return CategoryDetailResponse(
         category=category,
@@ -837,9 +868,32 @@ async def metric_detail(
     from datetime import timedelta
     from sqlalchemy import text as sql_text
 
+    # HIGH-03: reject unknown range values — never silently fall back
+    VALID_RANGES = {"7D", "30D", "90D"}
+    if time_range.upper() not in VALID_RANGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid time_range '{time_range}'. Must be one of: 7D, 30D, 90D.",
+        )
+
     days_map = {"7D": 7, "30D": 30, "90D": 90}
-    days = days_map.get(time_range.upper(), 7)
+    days = days_map[time_range.upper()]
     since = (date.today() - timedelta(days=days)).isoformat()
+
+    # HIGH-01: allowlists for dynamic SQL identifiers
+    ALLOWED_COLUMNS: frozenset[str] = frozenset({
+        "steps", "active_calories", "distance_meters",
+        "resting_heart_rate", "hrv_ms", "heart_rate_avg",
+        "body_fat_percentage", "oxygen_saturation", "respiratory_rate",
+        "vo2_max", "flights_climbed",
+        "hours", "quality_score",
+        "weight_kg",
+        "calories", "protein_grams", "carbs_grams", "fat_grams",
+    })
+    ALLOWED_TABLES: frozenset[str] = frozenset({
+        "daily_health_metrics", "sleep_records", "weight_measurements",
+        "nutrition_entries",
+    })
 
     # Map metric_id → (table, column, display_name, unit, source, category)
     METRIC_MAP: dict[str, tuple[str, str, str, str, str, str]] = {
@@ -864,9 +918,13 @@ async def metric_detail(
     }
 
     if metric_id not in METRIC_MAP:
-        raise HTTPException(status_code=404, detail=f"Unknown metric: {metric_id}")
+        raise HTTPException(status_code=404, detail="Invalid metric")
 
     table, col, display_name, unit, source, category = METRIC_MAP[metric_id]
+
+    # HIGH-01: guard dynamic identifiers against the allowlists
+    assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
+    assert table in ALLOWED_TABLES, f"Blocked unsafe table: {table}"
 
     result = await db.execute(
         sql_text(

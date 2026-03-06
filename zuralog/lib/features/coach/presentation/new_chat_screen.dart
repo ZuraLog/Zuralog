@@ -8,6 +8,7 @@
 /// conversation drawer, quick actions sheet, and skeleton loading state.
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -339,9 +340,11 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
         // TODO(supabase): replace with real Supabase Storage upload
         for (final a in _attachments) {
           await Future.delayed(const Duration(milliseconds: 800));
-          attachmentUrls.add(
-            'https://mock.supabase.co/storage/attachments/${a.name}',
-          );
+          if (kDebugMode) {
+            attachmentUrls.add(
+              'https://mock.supabase.co/storage/attachments/${a.name}',
+            );
+          }
         }
       }
 

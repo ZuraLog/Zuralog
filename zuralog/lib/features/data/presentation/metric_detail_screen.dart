@@ -26,7 +26,9 @@ import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 String _sourceLabel(String? source) {
   if (source == null || source.isEmpty) return 'Unknown source';
-  switch (source.toLowerCase()) {
+  // LOW-02: clamp to prevent abnormally long source strings
+  final s = source.length > 50 ? source.substring(0, 50) : source;
+  switch (s.toLowerCase()) {
     case 'apple_health':
     case 'apple health':
       return 'from Apple Health';
@@ -40,7 +42,7 @@ String _sourceLabel(String? source) {
     case 'google fit':
       return 'from Google Fit';
     default:
-      return 'from ${source[0].toUpperCase()}${source.substring(1)}';
+      return 'from ${s[0].toUpperCase()}${s.substring(1)}';
   }
 }
 
@@ -172,7 +174,9 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
   @override
   void didUpdateWidget(_MetricDetailBody old) {
     super.didUpdateWidget(old);
-    if (old.selectedRange != widget.selectedRange) {
+    // LOW-04: also replay animation when custom date range changes
+    if (old.selectedRange != widget.selectedRange ||
+        old.customRange != widget.customRange) {
       _controller
         ..reset()
         ..forward();
@@ -539,10 +543,13 @@ class _SourceAttribution extends StatelessWidget {
           color: AppColors.textTertiary,
         ),
         const SizedBox(width: AppDimens.spaceXs),
-        Text(
-          _sourceLabel(source),
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textTertiary,
+        Flexible(
+          child: Text(
+            _sourceLabel(source),
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textTertiary,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -759,8 +766,10 @@ class _AskCoachButton extends ConsumerWidget {
       ),
       onPressed: () {
         final currentVal = currentValue ?? '';
-        final prefill = 'Tell me about my $metricName'
+        var prefill = 'Tell me about my $metricName'
             '${currentVal.isNotEmpty ? ': $currentVal${unit.isNotEmpty ? ' $unit' : ''}' : ''}';
+        // HIGH-05: prevent abnormally large strings from reaching the coach input
+        if (prefill.length > 500) prefill = prefill.substring(0, 500);
         ref.read(coachPrefillProvider.notifier).state = prefill;
         context.go(RouteNames.coachPath);
       },

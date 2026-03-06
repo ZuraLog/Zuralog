@@ -41,7 +41,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
   DateTimeRange? _customRange;
 
   HealthCategory get _category =>
-      HealthCategory.fromString(widget.categoryId);
+      HealthCategory.fromString(widget.categoryId) ?? HealthCategory.activity;
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +202,18 @@ class _MetricChartCardState extends State<_MetricChartCard>
       curve: Curves.easeOutCubic,
     );
     _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(_MetricChartCard old) {
+    super.didUpdateWidget(old);
+    // MED-02: replay animation when the data series changes (e.g. time range switch)
+    if (old.series.metricId != widget.series.metricId ||
+        old.series.dataPoints.length != widget.series.dataPoints.length) {
+      _controller
+        ..reset()
+        ..forward();
+    }
   }
 
   @override

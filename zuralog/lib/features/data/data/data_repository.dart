@@ -136,7 +136,7 @@ class DataRepository implements DataRepositoryInterface {
       if (cached != null) return cached.value;
       // Return empty stub.
       return CategoryDetailData(
-        category: HealthCategory.fromString(categoryId),
+        category: HealthCategory.fromString(categoryId) ?? HealthCategory.activity,
         metrics: [],
         timeRange: timeRange,
       );
