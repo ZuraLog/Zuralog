@@ -59,7 +59,9 @@ class PreferencesResponse(BaseModel):
     haptic_enabled: bool
     tooltips_enabled: bool
     onboarding_complete: bool
+    morning_briefing_enabled: bool = True
     morning_briefing_time: str | None = None
+    checkin_reminder_enabled: bool = False
     checkin_reminder_time: str | None = None
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
@@ -80,7 +82,9 @@ class PreferencesUpdate(BaseModel):
     haptic_enabled: bool | None = None
     tooltips_enabled: bool | None = None
     onboarding_complete: bool | None = None
+    morning_briefing_enabled: bool | None = None
     morning_briefing_time: str | None = Field(None, description="HH:MM (24-hour)")
+    checkin_reminder_enabled: bool | None = None
     checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
@@ -99,7 +103,9 @@ class PreferencesCreate(BaseModel):
     haptic_enabled: bool | None = None
     tooltips_enabled: bool | None = None
     onboarding_complete: bool | None = None
+    morning_briefing_enabled: bool | None = None
     morning_briefing_time: str | None = Field(None, description="HH:MM (24-hour)")
+    checkin_reminder_enabled: bool | None = None
     checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
@@ -160,11 +166,15 @@ def _validate_enums(data: dict[str, Any]) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"theme must be one of: {sorted(_VALID_THEMES)}",
         )
-    if "fitness_level" in data and data["fitness_level"] not in _VALID_FITNESS_LEVELS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"fitness_level must be one of: {sorted(_VALID_FITNESS_LEVELS)}",
-        )
+    if "fitness_level" in data:
+        # Treat empty string as "not provided" — remove it from the update dict
+        if data["fitness_level"] == "":
+            del data["fitness_level"]
+        elif data["fitness_level"] not in _VALID_FITNESS_LEVELS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"fitness_level must be one of: {sorted(_VALID_FITNESS_LEVELS)}",
+            )
 
 
 # ---------------------------------------------------------------------------

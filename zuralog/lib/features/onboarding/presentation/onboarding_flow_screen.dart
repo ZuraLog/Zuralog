@@ -311,13 +311,15 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         'goals': _selectedGoals,
         'coach_persona': _personaApiKey[_selectedPersona] ?? 'gentle',
         'proactivity_level': _proactivityApiKey(_proactivity),
-        'morning_briefing_enabled': _morningBriefingEnabled,
         'morning_briefing_time': morningTime,
         // Backend field is `checkin_reminder_enabled`
         'checkin_reminder_enabled': _wellnessCheckInEnabled,
-        // New field (v3.2): backend may ignore until field is added to schema.
-        'fitness_level': _fitnessLevel ?? '',
       };
+      // Only include fitness_level when the user actually selected one —
+      // sending an empty string causes backend validation to reject the request.
+      if (_fitnessLevel != null && _fitnessLevel!.isNotEmpty) {
+        body['fitness_level'] = _fitnessLevel;
+      }
 
       if (_nickname.isNotEmpty) {
         body['nickname'] = _nickname;
