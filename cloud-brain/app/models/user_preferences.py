@@ -10,10 +10,11 @@ notification toggles, appearance, onboarding state, scheduling times,
 and the user's high-level goal selection.
 """
 
+import datetime
 import enum
 import uuid
 
-from sqlalchemy import Boolean, DateTime, JSON, String
+from sqlalchemy import Boolean, DateTime, JSON, String, Time
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -159,11 +160,11 @@ class UserPreferences(Base):
         nullable=False,
     )
 
-    # Notification scheduling — stored as HH:MM strings (DB type: time)
-    morning_briefing_time: Mapped[str | None] = mapped_column(
-        String,
+    # Notification scheduling — stored as TIME in the DB
+    morning_briefing_time: Mapped[datetime.time | None] = mapped_column(
+        Time,
         nullable=True,
-        comment="HH:MM — local clock time for the morning briefing push",
+        comment="Local clock time for the morning briefing push",
     )
 
     # Wellness check-in
@@ -173,10 +174,10 @@ class UserPreferences(Base):
         server_default="false",
         nullable=False,
     )
-    checkin_reminder_time: Mapped[str | None] = mapped_column(
-        String,
+    checkin_reminder_time: Mapped[datetime.time | None] = mapped_column(
+        Time,
         nullable=True,
-        comment="HH:MM — local clock time for the wellness check-in reminder",
+        comment="Local clock time for the wellness check-in reminder",
     )
 
     # Quiet hours
@@ -186,15 +187,15 @@ class UserPreferences(Base):
         server_default="false",
         nullable=False,
     )
-    quiet_hours_start: Mapped[str | None] = mapped_column(
-        String,
+    quiet_hours_start: Mapped[datetime.time | None] = mapped_column(
+        Time,
         nullable=True,
-        comment="HH:MM — start of quiet hours (no push notifications)",
+        comment="Start of quiet hours (no push notifications)",
     )
-    quiet_hours_end: Mapped[str | None] = mapped_column(
-        String,
+    quiet_hours_end: Mapped[datetime.time | None] = mapped_column(
+        Time,
         nullable=True,
-        comment="HH:MM — end of quiet hours",
+        comment="End of quiet hours",
     )
 
     # High-level goal types

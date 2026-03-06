@@ -23,63 +23,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Create the insights table."""
-    op.create_table(
-        'insights',
-        sa.Column('id', sa.String(), nullable=False),
-        sa.Column('user_id', sa.String(), nullable=False),
-        sa.Column('type', sa.String(), nullable=False),
-        sa.Column('title', sa.String(), nullable=False),
-        sa.Column('body', sa.String(), nullable=False),
-        sa.Column(
-            'data',
-            sa.JSON(),
-            nullable=False,
-            server_default='{}',
-            comment='Chart data, source metrics, numeric deltas',
-        ),
-        sa.Column(
-            'reasoning',
-            sa.String(),
-            nullable=True,
-            comment='Optional LLM explanation of why this insight was generated',
-        ),
-        sa.Column(
-            'priority',
-            sa.Integer(),
-            nullable=False,
-            server_default='5',
-            comment='1 = highest priority, 10 = lowest',
-        ),
-        sa.Column(
-            'created_at',
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text('now()'),
-        ),
-        sa.Column(
-            'read_at',
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment='Set when the client sends PATCH action=read',
-        ),
-        sa.Column(
-            'dismissed_at',
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment='Set when the client sends PATCH action=dismiss',
-        ),
-        sa.PrimaryKeyConstraint('id'),
-    )
-    op.create_index(
-        'ix_insights_user_id',
-        'insights',
-        ['user_id'],
-        unique=False,
-    )
+    # No-op: insights is created idempotently by g2b3c4d5e6f7.
+    # This orphaned branch was superseded before being merged.
+    pass
 
 
 def downgrade() -> None:
-    """Drop the insights table and its index."""
-    op.drop_index('ix_insights_user_id', table_name='insights')
-    op.drop_table('insights')
+    pass

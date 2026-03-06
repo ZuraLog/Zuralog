@@ -114,6 +114,7 @@ class _RouterRefreshListenable extends ChangeNotifier {
     );
     ref.listen<UserProfile?>(userProfileProvider, (prev, next) => notifyListeners());
     ref.listen<bool>(isLoadingProfileProvider, (prev, next) => notifyListeners());
+    ref.listen<bool>(profileLoadFailedProvider, (prev, next) => notifyListeners());
   }
 }
 
@@ -151,14 +152,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (!hasSeen) return RouteNames.onboardingPath;
       }
 
-      if (authState == AuthState.authenticated &&
-          location != RouteNames.profileQuestionnairePath) {
+      if (authState == AuthState.authenticated) {
         final isLoadingProfile = ref.read(isLoadingProfileProvider);
         if (isLoadingProfile) {
           return null;
         }
         final profile = ref.read(userProfileProvider);
-        if (profile == null || !profile.onboardingComplete) {
+        // If onboarding is complete and we're on any pre-app screen
+        // (welcome, onboarding pages, questionnaire), redirect to Today.
+        final preAppPaths = {
+          RouteNames.welcomePath,
+          RouteNames.onboardingPath,
+          RouteNames.profileQuestionnairePath,
+        };
+        if (preAppPaths.contains(location) &&
+            profile != null &&
+            profile.onboardingComplete) {
+          return RouteNames.todayPath;
+        }
+        if (!preAppPaths.contains(location) &&
+            (profile == null || !profile.onboardingComplete)) {
+          // Don't redirect to the questionnaire if the profile fetch failed
+          // (e.g. network error, expired token). Leave the user where they are.
+          if (ref.read(profileLoadFailedProvider)) return null;
           return RouteNames.profileQuestionnairePath;
         }
       }

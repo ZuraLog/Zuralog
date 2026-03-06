@@ -25,7 +25,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Create notification_logs and reports tables."""
+    # No-op: notification_logs and reports are created by f1a2b3c4d5e7.
+    # This orphaned branch was superseded before being merged.
+    return
 
     # ------------------------------------------------------------------
     # notification_logs

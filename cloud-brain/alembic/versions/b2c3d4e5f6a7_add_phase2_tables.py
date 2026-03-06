@@ -26,6 +26,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # No-op: all tables here are created idempotently by g2b3c4d5e6f7.
+    # This orphaned branch was superseded before being merged.
+    return
+
     """Create Phase 2 tables: achievements, user_streaks, journal_entries, quick_logs, emergency_health_cards."""
 
     # ------------------------------------------------------------------

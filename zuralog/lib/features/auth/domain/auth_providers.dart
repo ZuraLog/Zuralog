@@ -88,6 +88,12 @@ class AuthStateNotifier extends Notifier<AuthState> {
   Future<void> checkAuthStatus() async {
     state = AuthState.loading;
     final isLoggedIn = await _authRepository.isLoggedIn();
+    if (isLoggedIn) {
+      // Mark profile as loading BEFORE setting authenticated so the router
+      // never sees: authenticated + isLoadingProfile=false + profile=null,
+      // which would incorrectly redirect to the questionnaire.
+      ref.read(isLoadingProfileProvider.notifier).state = true;
+    }
     state = isLoggedIn ? AuthState.authenticated : AuthState.unauthenticated;
     if (isLoggedIn) {
       // ignore: discarded_futures
@@ -109,6 +115,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
     switch (result) {
       case AuthSuccess(:final userId):
         SentryBreadcrumbs.authEvent(event: 'login_success', method: 'email');
+        ref.read(isLoadingProfileProvider.notifier).state = true;
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
@@ -150,6 +157,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
     switch (result) {
       case AuthSuccess(:final userId):
         SentryBreadcrumbs.authEvent(event: 'register_success', method: 'email');
+        ref.read(isLoadingProfileProvider.notifier).state = true;
         state = AuthState.authenticated;
         ref.read(userEmailProvider.notifier).state = email;
         // ignore: discarded_futures
@@ -213,6 +221,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
           event: 'social_login_success',
           method: credentials.provider.name,
         );
+        ref.read(isLoadingProfileProvider.notifier).state = true;
         state = AuthState.authenticated;
         // ignore: discarded_futures
         ref.read(userProfileProvider.notifier).load();
@@ -323,7 +332,18 @@ final userProfileProvider = NotifierProvider<UserProfileNotifier, UserProfile?>(
 /// login) would be incorrectly sent to the questionnaire.
 ///
 /// `true` only while [UserProfileNotifier.load] is executing.
+///
+/// See also [profileLoadFailedProvider] for the error state.
 final isLoadingProfileProvider = StateProvider<bool>((ref) => false);
+
+/// `true` if the last [UserProfileNotifier.load] call threw an error.
+///
+/// The router guard reads this to avoid redirecting to the questionnaire when
+/// the profile fetch fails (e.g. expired token, network error). In that case
+/// the user should stay on or be returned to the auth screens rather than
+/// being sent into an incomplete onboarding flow.
+final profileLoadFailedProvider = StateProvider<bool>((ref) => false);
+
 
 /// Notifier that manages the current user's [UserProfile] state.
 ///
@@ -343,12 +363,14 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
   /// allowing the UI to degrade gracefully (e.g., fallback greeting).
   Future<void> load() async {
     ref.read(isLoadingProfileProvider.notifier).state = true;
+    ref.read(profileLoadFailedProvider.notifier).state = false;
     try {
       final repo = ref.read(authRepositoryProvider);
       state = await repo.fetchProfile();
     } catch (e, st) {
       Sentry.captureException(e, stackTrace: st);
       debugPrint('[UserProfileNotifier.load] Profile fetch failed: $e\n$st');
+      ref.read(profileLoadFailedProvider.notifier).state = true;
     } finally {
       ref.read(isLoadingProfileProvider.notifier).state = false;
     }
@@ -387,7 +409,7 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
   /// Clears the cached profile state (called on logout).
   void clear() {
     state = null;
-    // Also reset the loading flag so the router guard starts fresh.
     ref.read(isLoadingProfileProvider.notifier).state = false;
+    ref.read(profileLoadFailedProvider.notifier).state = false;
   }
 }

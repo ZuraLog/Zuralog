@@ -11,13 +11,14 @@ All endpoints are auth-guarded via ``get_current_user``; users can only access
 their own preferences row.
 """
 
+import datetime
 import logging
 import re
 from typing import Any
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,17 +61,32 @@ class PreferencesResponse(BaseModel):
     tooltips_enabled: bool
     onboarding_complete: bool
     morning_briefing_enabled: bool = True
-    morning_briefing_time: str | None = None
+    morning_briefing_time: str | datetime.time | None = None
     checkin_reminder_enabled: bool = False
-    checkin_reminder_time: str | None = None
+    checkin_reminder_time: str | datetime.time | None = None
     quiet_hours_enabled: bool = False
-    quiet_hours_start: str | None = None
-    quiet_hours_end: str | None = None
+    quiet_hours_start: str | datetime.time | None = None
+    quiet_hours_end: str | datetime.time | None = None
     goals: list | None = None
     units_system: str = "metric"
     fitness_level: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="after")
+    def _serialize_times(self) -> "PreferencesResponse":
+        """Convert datetime.time fields to HH:MM strings for the client."""
+        time_fields = (
+            "morning_briefing_time",
+            "checkin_reminder_time",
+            "quiet_hours_start",
+            "quiet_hours_end",
+        )
+        for field in time_fields:
+            val = getattr(self, field)
+            if isinstance(val, datetime.time):
+                setattr(self, field, val.strftime("%H:%M"))
+        return self
 
 
 class PreferencesUpdate(BaseModel):
@@ -214,14 +230,31 @@ async def _get_or_create_prefs(user_id: str, db: AsyncSession) -> UserPreference
     return prefs
 
 
+_TIME_FIELDS: frozenset[str] = frozenset({
+    "morning_briefing_time",
+    "checkin_reminder_time",
+    "quiet_hours_start",
+    "quiet_hours_end",
+})
+
+
+def _parse_time(value: str) -> datetime.time:
+    """Convert an HH:MM string to a datetime.time (already validated by _validate_time_fields)."""
+    return datetime.datetime.strptime(value, "%H:%M").time()
+
+
 def _apply_update(prefs: UserPreferences, data: dict[str, Any]) -> None:
     """Apply a dict of field values onto the ORM instance.
+
+    Converts HH:MM strings to datetime.time for TIME columns before setting.
 
     Args:
         prefs: The :class:`UserPreferences` ORM instance to mutate.
         data: Field-name-to-value mapping (already filtered to non-None).
     """
     for field, value in data.items():
+        if field in _TIME_FIELDS and isinstance(value, str):
+            value = _parse_time(value)
         setattr(prefs, field, value)
 
 

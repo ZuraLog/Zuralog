@@ -118,7 +118,7 @@ class ConnectAppsStep extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: AppDimens.spaceMd,
               crossAxisSpacing: AppDimens.spaceMd,
-              childAspectRatio: 1.1,
+              childAspectRatio: 1.0,
             ),
             itemCount: _featuredApps.length,
             itemBuilder: (context, index) =>

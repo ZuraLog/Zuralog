@@ -591,7 +591,8 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                         : AppColors.borderDark,
                   ),
                 ),
-                child: Row(
+                child: IntrinsicHeight(
+                  child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Left accent bar for unread — 3px category-colored stripe.
@@ -702,6 +703,7 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             ],
