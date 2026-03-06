@@ -373,6 +373,15 @@ async def dashboard_summary(
     categories: list[CategorySummaryItem] = []
     visible_order: list[str] = []
 
+    # DIAG: confirm user_id and row counts seen by this function
+    diag = await db.execute(
+        sql_text(
+            "SELECT COUNT(*) FROM daily_health_metrics WHERE user_id = :uid"
+        ),
+        {"uid": user_id},
+    )
+    print(f"[DIAG dashboard_summary] user_id={user_id!r} dhm_rows={diag.scalar()}", flush=True)
+
     # ── Activity ──────────────────────────────────────────────────────────────
     result = await db.execute(
         sql_text(
