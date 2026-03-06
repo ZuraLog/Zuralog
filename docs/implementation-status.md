@@ -1,9 +1,34 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-06 (design/v3.2-auth-onboarding — Design system v3.2, auth & onboarding full redesign)  
+**Last Updated:** 2026-03-06 (feat/data-screen-complete — Data screen feature completion)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Data Screen — Feature Completion (feat/data-screen-complete, 2026-03-06)
+
+All missing Data tab features from the `screens.md` / `mvp-features.md` specification are now implemented.
+
+**Flutter — 11 files changed:**
+- `health_dashboard_screen.dart` — Replaced inline `_HealthScoreHero` (CircularProgressIndicator) with `HealthScoreWidget.hero` (CustomPainter ring, 800ms easeOutCubic animation, 7-day sparkline, AI commentary); added `DataMaturityBanner` between score hero and category cards; `initState` restores `DashboardLayout` from `dashboardLayoutLoaderProvider` on cold-start; edit mode color picker via `_ColorPickerSheet` bottom sheet (14-color palette); color overrides wired through all `CategoryCard` usages
+- `data_models.dart` — `DashboardLayout.categoryColorOverrides: Map<String,int>` added with full JSON round-trip
+- `category_card.dart` — `onColorPick` callback; palette icon in `_EditModeControls`
+- `time_range_selector.dart` — `customDateRange` + `onCustomRangePicked`; Custom segment opens `showDateRangePicker` with sage-green theme
+- `category_detail_screen.dart` / `metric_detail_screen.dart` — wired custom date range into cache key and TimeRangeSelector
+- `metric_detail_screen.dart` — `_AskCoachButton` sets `coachPrefillProvider` with `"Tell me about my [Metric]: [value] [unit]"` before navigating to Coach tab
+- `coach_providers.dart` — `coachPrefillProvider StateProvider<String?>` added
+- `new_chat_screen.dart` — `ref.listen(coachPrefillProvider)` injects prefill into input and clears after consumption
+- `data_providers.dart` — `dashboardLayoutLoaderProvider FutureProvider<DashboardLayout?>` added
+- `data_repository.dart` — `getPersistedLayout()` added to interface and real implementation (GET `/api/v1/preferences`)
+- `mock_data_repository.dart` — All 10 categories now have real metrics: Nutrition (calories, protein), Body (weight, body fat), Vitals (SpO₂, respiratory rate), Wellness (HRV, stress), Mobility (flights climbed), Cycle (phase), Environment (noise exposure)
+
+**Backend — 2 files changed:**
+- `analytics_schemas.py` — 6 new Pydantic models: `CategorySummaryItem`, `DashboardSummaryResponse`, `MetricDataPointItem`, `MetricSeriesItem`, `CategoryDetailResponse`, `MetricDetailResponse`
+- `analytics.py` — `/dashboard-summary` stub replaced with real 14-day queries across 8 tables (delta %, sparkline trends, visible_order); new `/category` endpoint (7D/30D/90D, dispatches by category slug); new `/metric` endpoint (18-metric METRIC_MAP, full time-series, template AI insight)
+
+**Demo data:** Supabase `demo-full@zuralog.dev` verified current with 30 days of data through 2026-03-06.
 
 ---
 
