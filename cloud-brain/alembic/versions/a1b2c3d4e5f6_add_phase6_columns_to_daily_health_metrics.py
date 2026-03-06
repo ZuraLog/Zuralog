@@ -24,22 +24,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Add Phase 6 health metric columns."""
-    op.add_column(
-        'daily_health_metrics',
-        sa.Column('body_fat_percentage', sa.Float(), nullable=True),
-    )
-    op.add_column(
-        'daily_health_metrics',
-        sa.Column('respiratory_rate', sa.Float(), nullable=True),
-    )
-    op.add_column(
-        'daily_health_metrics',
-        sa.Column('oxygen_saturation', sa.Float(), nullable=True),
-    )
-    op.add_column(
-        'daily_health_metrics',
-        sa.Column('heart_rate_avg', sa.Float(), nullable=True),
-    )
+    # Use IF NOT EXISTS to be idempotent — columns may already exist in the DB.
+    op.execute("ALTER TABLE daily_health_metrics ADD COLUMN IF NOT EXISTS body_fat_percentage FLOAT")
+    op.execute("ALTER TABLE daily_health_metrics ADD COLUMN IF NOT EXISTS respiratory_rate FLOAT")
+    op.execute("ALTER TABLE daily_health_metrics ADD COLUMN IF NOT EXISTS oxygen_saturation FLOAT")
+    op.execute("ALTER TABLE daily_health_metrics ADD COLUMN IF NOT EXISTS heart_rate_avg FLOAT")
 
 
 def downgrade() -> None:
