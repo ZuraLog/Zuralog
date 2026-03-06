@@ -37,6 +37,7 @@ router = APIRouter(prefix="/preferences", tags=["preferences"])
 _VALID_PERSONAS: frozenset[str] = frozenset({"tough_love", "balanced", "gentle"})
 _VALID_PROACTIVITY: frozenset[str] = frozenset({"low", "medium", "high"})
 _VALID_THEMES: frozenset[str] = frozenset({"dark", "light", "system"})
+_VALID_FITNESS_LEVELS: frozenset[str] = frozenset({"beginner", "active", "athletic"})
 
 # HH:MM in 24-hour format
 _TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -63,6 +64,7 @@ class PreferencesResponse(BaseModel):
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
     goals: list
+    fitness_level: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -83,6 +85,7 @@ class PreferencesUpdate(BaseModel):
     quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
     goals: list | None = None
+    fitness_level: str | None = Field(None, description="beginner | active | athletic")
 
 
 class PreferencesCreate(BaseModel):
@@ -101,6 +104,7 @@ class PreferencesCreate(BaseModel):
     quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
     goals: list | None = None
+    fitness_level: str | None = Field(None, description="beginner | active | athletic")
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +160,11 @@ def _validate_enums(data: dict[str, Any]) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"theme must be one of: {sorted(_VALID_THEMES)}",
         )
+    if "fitness_level" in data and data["fitness_level"] not in _VALID_FITNESS_LEVELS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"fitness_level must be one of: {sorted(_VALID_FITNESS_LEVELS)}",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -176,9 +185,7 @@ async def _get_or_create_prefs(user_id: str, db: AsyncSession) -> UserPreference
     Returns:
         The existing or newly-created :class:`UserPreferences` instance.
     """
-    result = await db.execute(
-        select(UserPreferences).where(UserPreferences.user_id == user_id)
-    )
+    result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
     prefs = result.scalar_one_or_none()
 
     if prefs is None:

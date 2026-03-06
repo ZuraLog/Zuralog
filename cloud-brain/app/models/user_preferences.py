@@ -65,6 +65,8 @@ class UserPreferences(Base):
         checkin_reminder_time: HH:MM string for the wellness check-in reminder.
         quiet_hours_start: HH:MM string for start of the quiet-hours window.
         quiet_hours_end: HH:MM string for end of the quiet-hours window.
+        fitness_level: Self-assessed fitness level from onboarding Step 5.
+            One of: 'beginner', 'active', 'athletic'. Nullable.
         goals: JSON array of goal-type strings.
         updated_at: Timestamp of last modification (server-managed).
     """
@@ -159,6 +161,13 @@ class UserPreferences(Base):
         String,
         nullable=True,
         comment="HH:MM — end of quiet hours",
+    )
+
+    # Self-assessed fitness level (set during onboarding Step 5)
+    fitness_level: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="beginner | active | athletic — set during onboarding",
     )
 
     # High-level goal types
