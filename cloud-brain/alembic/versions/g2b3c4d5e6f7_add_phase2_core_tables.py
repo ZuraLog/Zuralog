@@ -33,97 +33,42 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     # user_preferences
     # ------------------------------------------------------------------
-    op.create_table(
-        "user_preferences",
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column(
-            "user_id",
-            sa.String(),
-            nullable=False,
-            comment="FK to users.id, deleted when user is deleted",
-        ),
-        sa.Column(
-            "coach_persona",
-            sa.String(),
-            nullable=False,
-            server_default="balanced",
-            comment="tough_love | balanced | gentle",
-        ),
-        sa.Column(
-            "proactivity_level",
-            sa.String(),
-            nullable=False,
-            server_default="medium",
-            comment="low | medium | high",
-        ),
-        sa.Column("dashboard_layout", sa.JSON(), nullable=True),
-        sa.Column("notification_settings", sa.JSON(), nullable=True),
-        sa.Column(
-            "theme",
-            sa.String(),
-            nullable=False,
-            server_default="dark",
-            comment="dark | light | system",
-        ),
-        sa.Column(
-            "haptic_enabled",
-            sa.Boolean(),
-            nullable=False,
-            server_default="true",
-        ),
-        sa.Column(
-            "tooltips_enabled",
-            sa.Boolean(),
-            nullable=False,
-            server_default="true",
-        ),
-        sa.Column(
-            "onboarding_complete",
-            sa.Boolean(),
-            nullable=False,
-            server_default="false",
-        ),
-        sa.Column(
-            "morning_briefing_enabled",
-            sa.Boolean(),
-            nullable=False,
-            server_default="false",
-        ),
-        sa.Column("morning_briefing_time", sa.Time(), nullable=True),
-        sa.Column(
-            "checkin_reminder_enabled",
-            sa.Boolean(),
-            nullable=False,
-            server_default="false",
-        ),
-        sa.Column("checkin_reminder_time", sa.Time(), nullable=True),
-        sa.Column(
-            "quiet_hours_enabled",
-            sa.Boolean(),
-            nullable=False,
-            server_default="false",
-        ),
-        sa.Column("quiet_hours_start", sa.Time(), nullable=True),
-        sa.Column("quiet_hours_end", sa.Time(), nullable=True),
-        sa.Column("goals", sa.JSON(), nullable=True),
-        sa.Column(
-            "units_system",
-            sa.String(),
-            nullable=False,
-            server_default="metric",
-            comment="metric | imperial",
-        ),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.PrimaryKeyConstraint("id"),
+    # Use raw SQL with IF NOT EXISTS so this migration is idempotent.
+    # The table may have been created manually in the database before this
+    # migration was introduced.
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            id VARCHAR NOT NULL PRIMARY KEY,
+            user_id VARCHAR NOT NULL,
+            coach_persona VARCHAR NOT NULL DEFAULT 'balanced',
+            proactivity_level VARCHAR NOT NULL DEFAULT 'medium',
+            dashboard_layout JSON,
+            notification_settings JSON,
+            theme VARCHAR NOT NULL DEFAULT 'dark',
+            haptic_enabled BOOLEAN NOT NULL DEFAULT true,
+            tooltips_enabled BOOLEAN NOT NULL DEFAULT true,
+            onboarding_complete BOOLEAN NOT NULL DEFAULT false,
+            morning_briefing_enabled BOOLEAN NOT NULL DEFAULT false,
+            morning_briefing_time TIME,
+            checkin_reminder_enabled BOOLEAN NOT NULL DEFAULT false,
+            checkin_reminder_time TIME,
+            quiet_hours_enabled BOOLEAN NOT NULL DEFAULT false,
+            quiet_hours_start TIME,
+            quiet_hours_end TIME,
+            goals JSON,
+            units_system VARCHAR NOT NULL DEFAULT 'metric',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ
+        )
+    """)
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_user_preferences_user_id "
+        "ON user_preferences (user_id)"
     )
-    op.create_index("ix_user_preferences_user_id", "user_preferences", ["user_id"])
-    op.create_index("ix_user_preferences_user_id_unique", "user_preferences", ["user_id"], unique=True)
+    op.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_preferences_user_id_unique "
+        "ON user_preferences (user_id)"
+    )
 
     # ------------------------------------------------------------------
     # achievements

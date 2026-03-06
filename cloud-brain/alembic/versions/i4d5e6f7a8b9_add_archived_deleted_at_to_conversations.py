@@ -20,24 +20,14 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "conversations",
-        sa.Column(
-            "archived",
-            sa.Boolean(),
-            nullable=False,
-            server_default="false",
-            comment="True when the user has archived this conversation",
-        ),
+    # Use IF NOT EXISTS to be idempotent in case columns were added manually.
+    op.execute(
+        "ALTER TABLE conversations "
+        "ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false"
     )
-    op.add_column(
-        "conversations",
-        sa.Column(
-            "deleted_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="Soft-delete timestamp; non-null means deleted",
-        ),
+    op.execute(
+        "ALTER TABLE conversations "
+        "ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ"
     )
 
 
