@@ -30,8 +30,6 @@ from app.models.user_preferences import (  # noqa: F401
     AppTheme,
     CoachPersona,
     ProactivityLevel,
-    Theme,
-    UnitsSystem,
     UserPreferences,
 )
 from app.models.achievement import ACHIEVEMENT_REGISTRY, Achievement  # noqa: F401
@@ -72,9 +70,7 @@ __all__ = [
     "SleepRecord",
     "StreakType",
     "SubscriptionTier",
-    "Theme",
     "UnifiedActivity",
-    "UnitsSystem",
     "User",
     "UserDevice",
     "UserGoal",
