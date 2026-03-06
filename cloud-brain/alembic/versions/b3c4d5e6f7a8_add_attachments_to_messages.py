@@ -22,7 +22,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column("messages", sa.Column("attachments", JSONB, nullable=True))
+    # Use IF NOT EXISTS to be idempotent — the column may already exist in the DB.
+    op.execute(
+        "ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachments JSONB"
+    )
 
 
 def downgrade() -> None:
