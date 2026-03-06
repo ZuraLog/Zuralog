@@ -23,6 +23,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
@@ -136,8 +137,10 @@ class _DetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoryColor = _categoryColor(detail.category);
 
-    return CustomScrollView(
-      slivers: [
+    return SafeArea(
+      top: false,
+      child: CustomScrollView(
+        slivers: [
         // ── Header: full-bleed category gradient wash + title ─────────────
         SliverToBoxAdapter(
           child: _FadeSlideIn(
@@ -411,9 +414,11 @@ class _DetailBody extends ConsumerWidget {
                       'insight_type': detail.type.name,
                     },
                   );
-                  context.go(
-                    '${RouteNames.coachPath}?context=insight&id=${detail.id}',
-                  );
+                  final prefill = 'I\'d like to discuss this insight: ${detail.title}'.length > 500
+                      ? 'I\'d like to discuss this insight: ${detail.title}'.substring(0, 500)
+                      : 'I\'d like to discuss this insight: ${detail.title}';
+                  ref.read(coachPrefillProvider.notifier).state = prefill;
+                  context.go(RouteNames.coachPath);
                 },
                 child: FilledButton.icon(
                   onPressed: null, // handled by _PressScaleButton
@@ -437,7 +442,8 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }

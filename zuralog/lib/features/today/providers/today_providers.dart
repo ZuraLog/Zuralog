@@ -10,7 +10,8 @@
 /// - [todayFeedProvider]              — async aggregated feed data
 /// - [insightDetailProvider]          — family: detail for a single insight
 /// - [notificationsProvider]          — async first page of notifications
-/// - [dataMaturityBannerDismissed]    — whether the banner was dismissed
+/// - [dataMaturityBannerDismissed]    — whether the progress banner was dismissed
+/// - [todayBannerSessionDismissed]    — whether the "still building" banner was dismissed this session
 library;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -79,11 +80,18 @@ final notificationsProvider = FutureProvider<NotificationPage>((ref) async {
 
 // ── Data Maturity Banner ───────────────────────────────────────────────────────
 
-/// Whether the data maturity banner has been dismissed in this session.
+/// Whether the data maturity progress banner has been dismissed this session.
 ///
-/// Resets on app restart (session-scoped). Persisting the dismissal to
-/// SharedPreferences is a post-MVP enhancement.
+/// Session-scoped only. Permanent dismissal is stored via [DashboardLayout.bannerDismissed]
+/// (Data tab) and SharedPreferences (Today tab).
 final dataMaturityBannerDismissed = StateProvider<bool>((ref) => false);
+
+/// Whether the "still building" reminder banner has been dismissed this session.
+///
+/// Resets on cold start — the banner will re-appear next session if data is
+/// still insufficient. Permanent dismissal is handled separately via
+/// [todayBannerPermanentlyDismissed].
+final todayBannerSessionDismissed = StateProvider<bool>((ref) => false);
 
 // ── Quick Log Loading ─────────────────────────────────────────────────────────
 

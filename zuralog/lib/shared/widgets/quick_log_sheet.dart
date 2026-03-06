@@ -70,13 +70,21 @@ class QuickLogData {
 /// Modal bottom sheet for rapid manual health data entry.
 class QuickLogSheet extends ConsumerStatefulWidget {
   /// Creates a [QuickLogSheet].
-  const QuickLogSheet({super.key, required this.onSubmit, this.isLoading = false});
+  const QuickLogSheet({
+    super.key,
+    required this.onSubmit,
+    this.isLoading = false,
+    this.initialMetric,
+  });
 
   /// Called with the completed [QuickLogData] when the user taps Submit.
   final ValueChanged<QuickLogData> onSubmit;
 
   /// When `true` the submit button shows a loading indicator.
   final bool isLoading;
+
+  /// Optional metric to scroll to on open: 'mood' | 'energy' | 'stress' | 'water'.
+  final String? initialMetric;
 
   @override
   ConsumerState<QuickLogSheet> createState() => _QuickLogSheetState();
@@ -89,7 +97,14 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
   double _stress = 4;
   int _water = 0;
   final _notesCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
   final Set<String> _selectedSymptoms = {};
+
+  // GlobalKeys for scroll-to-metric support.
+  final _moodKey = GlobalKey();
+  final _energyKey = GlobalKey();
+  final _stressKey = GlobalKey();
+  final _waterKey = GlobalKey();
 
   static const List<String> _symptomOptions = [
     'Headache',
@@ -104,9 +119,43 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialMetric != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToMetric(widget.initialMetric!);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _notesCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _scrollToMetric(String metric) {
+    GlobalKey? key;
+    switch (metric) {
+      case 'mood':
+        key = _moodKey;
+      case 'energy':
+        key = _energyKey;
+      case 'stress':
+        key = _stressKey;
+      case 'water':
+        key = _waterKey;
+      default:
+        return;
+    }
+    final ctx = key.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _submit() {
@@ -180,6 +229,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                 maxHeight: MediaQuery.of(context).size.height * 0.65,
               ),
               child: SingleChildScrollView(
+                controller: _scrollCtrl,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
                 ),
@@ -188,6 +238,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                   children: [
                     // ── Sliders ─────────────────────────────────────────────
                     _SliderRow(
+                      key: _moodKey,
                       label: 'Mood',
                       value: _mood,
                       color: AppColors.categoryWellness,
@@ -197,6 +248,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                     ),
                     const SizedBox(height: AppDimens.spaceSm),
                     _SliderRow(
+                      key: _energyKey,
                       label: 'Energy',
                       value: _energy,
                       color: AppColors.categoryActivity,
@@ -206,6 +258,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                     ),
                     const SizedBox(height: AppDimens.spaceSm),
                     _SliderRow(
+                      key: _stressKey,
                       label: 'Stress',
                       value: _stress,
                       color: AppColors.categoryHeart,
@@ -217,6 +270,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
 
                     // ── Water counter ───────────────────────────────────────
                     _WaterCounter(
+                      key: _waterKey,
                       count: _water,
                       textColor: textPrimary,
                       secondaryColor: textSecondary,
@@ -334,6 +388,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
 
 class _SliderRow extends StatelessWidget {
   const _SliderRow({
+    super.key,
     required this.label,
     required this.value,
     required this.color,
@@ -400,6 +455,7 @@ class _SliderRow extends StatelessWidget {
 
 class _WaterCounter extends StatelessWidget {
   const _WaterCounter({
+    super.key,
     required this.count,
     required this.textColor,
     required this.secondaryColor,
