@@ -1,9 +1,27 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-06 (feat/data-screen-complete — Data screen feature completion)  
+**Last Updated:** 2026-03-07  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Railway Deploy Fix (main, 2026-03-07)
+
+Fixed 9 consecutive Railway deployment failures that had been blocking all backend deploys since 2026-03-06 05:53.
+
+**Root causes fixed:**
+1. **`rootDirectory` misconfigured** — Railway service instance had `rootDirectory: "/cloud-brain"` (absolute path) instead of `"cloud-brain"` (relative). Fixed via Railway GraphQL API (`serviceInstanceUpdate`). This caused the build to fail immediately with "Could not find root directory".
+2. **Non-idempotent Alembic migration** — `b3c4d5e6f7a8_add_attachments_to_messages` used `op.add_column()` without `IF NOT EXISTS`. The `messages.attachments` column already existed in the DB, so `alembic upgrade head` crashed with `DuplicateColumnError` on every deploy. Three other migrations had the same pattern (`050d7af3bdcf`, `a1b2c3d4e5f6`, `c8d60f5c8771`) — all fixed.
+
+**Backend API now confirmed working:**
+- `GET /api/v1/analytics/dashboard-summary` returns 8 categories with real data, sparklines, and deltas for the demo user.
+
+**Flutter-side bug not yet fixed (outstanding):**
+- Data tab category cards are empty even with mock data in debug mode.
+- Screen turns black after navigating to Settings and back.
+- Suspected causes: `hiddenCategories` filtering out all items, or `AnimationController` disposal in `HealthScoreWidget.hero`. See bug report in session notes.
 
 ---
 

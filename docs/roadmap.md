@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-06 (feat/data-screen-complete — Data screen feature completion: HealthScoreWidget.hero, DataMaturityBanner, accent color overrides, custom date picker, Coach deep-link, 3 backend analytics endpoints)
+**Last Updated:** 2026-03-07 (fix Railway deploys + idempotent migrations — Data tab category cards still pending Flutter-side fix)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
