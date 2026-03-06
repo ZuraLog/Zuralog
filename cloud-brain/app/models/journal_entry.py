@@ -1,17 +1,15 @@
 """
 Zuralog Cloud Brain — Journal Entry Model.
 
-Represents a daily wellness journal entry. Each user may have at most one
-entry per calendar date (enforced by a unique constraint). Entries capture
-subjective mood, energy, stress, and sleep quality scores alongside free-text
-notes and user-defined tags.
+Daily journal entries capture subjective wellness metrics (mood, energy,
+stress, sleep quality), free-text notes, and tags. The unique constraint on
+(user_id, date) enforces one entry per user per calendar day; POST upserts
+into this constraint to allow idempotent updates.
 """
 
 import uuid
-from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Integer, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import DateTime, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -19,24 +17,33 @@ from app.database import Base
 
 
 class JournalEntry(Base):
-    """A single daily wellness journal entry for one user.
+    """A daily wellness journal entry for a single user.
+
+    One entry per user per calendar day (enforced by the unique constraint
+    on ``user_id`` + ``date``). All rating fields are optional 1–10 integers.
 
     Attributes:
-        id: UUID primary key (auto-generated).
-        user_id: Owner's user ID (indexed for per-user queries).
-        date: Calendar date of the entry (indexed for range queries).
-        mood: Subjective mood score 1–10 (optional).
-        energy: Subjective energy score 1–10 (optional).
-        stress: Subjective stress score 1–10 (optional).
-        sleep_quality: Subjective sleep quality score 1–10 (optional).
-        notes: Free-text notes (optional).
-        tags: JSON list of string tags (optional), e.g. ``["headache", "tired"]``.
-        created_at: Row creation timestamp (server-side default).
-        updated_at: Timestamp of last update.
+        id: UUID primary key.
+        user_id: Supabase UID of the owning user. Indexed for list queries.
+        date: Calendar date in YYYY-MM-DD format. Indexed for range queries.
+        mood: Subjective mood rating 1–10. Nullable.
+        energy: Subjective energy rating 1–10. Nullable.
+        stress: Subjective stress rating 1–10. Nullable.
+        sleep_quality: Subjective sleep quality rating 1–10. Nullable.
+        notes: Free-text journal notes. Nullable.
+        tags: JSON array of tag strings (e.g. ["headache", "travel"]).
+        created_at: Server-managed creation timestamp.
+        updated_at: Server-managed last-update timestamp. Nullable.
     """
 
     __tablename__ = "journal_entries"
-    __table_args__ = (UniqueConstraint("user_id", "date", name="uq_journal_user_date"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "date",
+            name="uq_journal_entries_user_date",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         String,
@@ -45,48 +52,62 @@ class JournalEntry(Base):
     )
     user_id: Mapped[str] = mapped_column(
         String,
-        index=True,
-        nullable=False,
-    )
-    date: Mapped[date] = mapped_column(
-        Date,
         nullable=False,
         index=True,
+        comment="Supabase UID of the owning user",
     )
+    date: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        index=True,
+        comment="Calendar date in YYYY-MM-DD format",
+    )
+
+    # Subjective wellness ratings (1–10, all optional)
     mood: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
-        comment="Subjective mood score 1–10",
+        comment="Subjective mood rating 1–10",
     )
     energy: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
-        comment="Subjective energy score 1–10",
+        comment="Subjective energy rating 1–10",
     )
     stress: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
-        comment="Subjective stress score 1–10",
+        comment="Subjective stress rating 1–10",
     )
     sleep_quality: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
-        comment="Subjective sleep quality score 1–10",
+        comment="Subjective sleep quality rating 1–10",
     )
+
+    # Free-text notes
     notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+        comment="Free-text journal notes",
     )
-    tags: Mapped[list | None] = mapped_column(
+
+    # Structured metadata
+    tags: Mapped[list] = mapped_column(
         JSON,
-        nullable=True,
-        comment="List of string tags, e.g. ['headache', 'tired']",
+        default=list,
+        server_default="[]",
+        nullable=False,
+        comment="Array of tag strings",
     )
-    created_at: Mapped[datetime] = mapped_column(
+
+    # Timestamps
+    created_at: Mapped[str] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
+        nullable=False,
     )
-    updated_at: Mapped[datetime | None] = mapped_column(
+    updated_at: Mapped[str | None] = mapped_column(
         DateTime(timezone=True),
         onupdate=func.now(),
         nullable=True,

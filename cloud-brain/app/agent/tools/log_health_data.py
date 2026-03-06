@@ -1,428 +1,469 @@
 """
-Zuralog Cloud Brain — NL Health Data Logging Tool.
+Zuralog Cloud Brain — Log Health Data MCP Tool.
 
-Parses natural language input to extract loggable health data items
-(water, mood, energy, stress, weight, sleep, steps, notes) and writes
-confirmed items to the QuickLog table.
+Implements a two-phase natural-language health logging flow:
 
-Two-step flow:
-  1. parse_nl_for_logging(text) → LogConfirmationPayload
-     Client shows a confirmation card to the user.
-  2. write_confirmed_logs(payload, user_id, session) → int
-     After user confirms, persist the parsed items.
+**Phase 1 — Parse (default)**
+  The LLM calls this tool with ``{"message": "<user text>"}``. The tool
+  parses the message for loggable health metrics using heuristics/regex and
+  returns a ``pending_confirmation`` response with structured entries and a
+  human-readable confirmation prompt. The LLM relays this to the user.
 
-Supported patterns (examples):
-  "I drank 3 glasses of water"          → water: 3
-  "feeling a 7/10 today"                → mood: 7
-  "mood is great"                       → mood: 8 (mapped from text)
-  "energy level 4"                      → energy: 4
-  "stress is high"                      → stress: 8 (mapped from text)
-  "weight is 75kg"                      → weight: 75
-  "slept 7.5 hours"                     → sleep_quality (hours noted)
-  "walked 10,000 steps"                 → steps: 10000
-  note: "had a headache today"          → notes: "had a headache today"
+**Phase 2 — Commit (after user confirms)**
+  The LLM calls the tool again with ``{"message": "...", "confirmed": true}``.
+  The tool writes the previously-parsed entries to the ``quick_logs`` database
+  table via SQLAlchemy and returns a ``logged`` response.
+
+This tool is NOT a FastAPI route or Celery task — it is registered with the
+MCPClient and executed by the Orchestrator during the ReAct tool-call loop.
+
+Supported metric types (from ``quick_logs`` VALID_METRIC_TYPES):
+  - water   — e.g. "2 liters of water", "500ml", "8 oz of water"
+  - mood    — e.g. "mood 7/10", "feeling a 6 today"
+  - energy  — e.g. "energy level 8", "energy 4/10"
+  - stress  — e.g. "stress 9/10", "really stressed, 8"
+  - notes   — catch-all free-text when no specific metric is found
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import math
 import re
 import uuid
-from dataclasses import dataclass
 from datetime import datetime, timezone
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.quick_log import MetricType, QuickLog
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
-# Dataclasses
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class LoggableItem:
-    """A single parsed loggable health data point.
-
-    Attributes:
-        metric_type: Canonical metric name (aligned with MetricType enum values
-            plus 'weight', 'sleep_hours', 'steps').
-        value: Numeric value (e.g. 7.5 for sleep hours). None for text-only.
-        text_value: Text value for notes or descriptive entries.
-        unit: Unit string (e.g. "cups", "kg", "hours"). May be None.
-        confidence: Parser confidence 0–1. < 0.5 = low confidence.
-        raw_text: The original text fragment that produced this item.
-    """
-
-    metric_type: str
-    value: float | None
-    text_value: str | None
-    unit: str | None
-    confidence: float
-    raw_text: str
-
-
-@dataclass
-class LogConfirmationPayload:
-    """Pending log items awaiting user confirmation.
-
-    Attributes:
-        items: Parsed loggable items.
-        confirmation_id: UUID string the client references when confirming.
-        summary: Human-readable summary for the confirmation card UI.
-    """
-
-    items: list[LoggableItem]
-    confirmation_id: str
-    summary: str
-
-
-# ---------------------------------------------------------------------------
-# Text → score mappings
+# Regex patterns for metric extraction
 # ---------------------------------------------------------------------------
 
-_MOOD_TEXT_MAP: dict[str, float] = {
-    "terrible": 1.0,
-    "awful": 1.0,
-    "horrible": 1.0,
-    "bad": 3.0,
-    "poor": 3.0,
-    "rough": 3.0,
-    "okay": 5.0,
-    "ok": 5.0,
-    "alright": 5.0,
-    "fine": 5.0,
-    "meh": 5.0,
-    "good": 7.0,
-    "well": 7.0,
-    "decent": 6.0,
-    "great": 8.0,
-    "amazing": 9.0,
-    "fantastic": 9.0,
-    "excellent": 9.0,
-    "perfect": 10.0,
-    "incredible": 10.0,
-}
+# Water: "2 liters", "500 ml", "8 oz", "1.5 l of water", "2L"
+_WATER_PATTERN = re.compile(
+    r"""
+    (?P<value>[\d]+(?:\.\d+)?)          # numeric value (int or decimal)
+    \s*                                  # optional whitespace
+    (?P<unit>liters?|litres?|l\b|ml\b|milliliters?|oz\b|ounces?|cups?)
+    (?:\s+(?:of\s+)?water)?             # optional "of water" suffix
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
 
-_STRESS_TEXT_MAP: dict[str, float] = {
-    "none": 0.0,
-    "no stress": 0.0,
-    "calm": 1.0,
-    "relaxed": 1.0,
-    "low": 2.0,
-    "minimal": 2.0,
-    "moderate": 5.0,
-    "some": 5.0,
-    "medium": 5.0,
-    "high": 8.0,
-    "stressed": 8.0,
-    "anxious": 8.0,
-    "very high": 9.0,
-    "overwhelming": 10.0,
-    "extreme": 10.0,
-}
+# Mood: "mood 7/10", "feeling a 7", "mood: 8", "i'm a 7 today"
+_MOOD_PATTERN = re.compile(
+    r"""
+    (?:mood|feeling|feel)\s*[:\-]?\s*   # trigger word
+    (?:a\s+)?                            # optional article
+    (?P<value>\d+(?:\.\d+)?)            # numeric score
+    (?:/10)?                             # optional /10 denominator
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
 
-_ENERGY_TEXT_MAP: dict[str, float] = {
-    "exhausted": 1.0,
-    "drained": 1.0,
-    "tired": 3.0,
-    "fatigued": 3.0,
-    "low": 3.0,
-    "okay": 5.0,
-    "moderate": 5.0,
-    "good": 7.0,
-    "energetic": 8.0,
-    "great": 8.0,
-    "very energetic": 9.0,
-    "high": 9.0,
-    "amazing": 10.0,
-}
+# Energy: "energy 8/10", "energy level 6"
+_ENERGY_PATTERN = re.compile(
+    r"""
+    energy(?:\s+level)?\s*[:\-]?\s*     # trigger word
+    (?P<value>\d+(?:\.\d+)?)            # numeric score
+    (?:/10)?                             # optional /10 denominator
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+# Stress: "stress 9/10", "stress level 7"
+_STRESS_PATTERN = re.compile(
+    r"""
+    stress(?:\s+level)?\s*[:\-]?\s*     # trigger word
+    (?P<value>\d+(?:\.\d+)?)            # numeric score
+    (?:/10)?                             # optional /10 denominator
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+# Unit normalisation helpers
+_LITRE_UNITS = {"liter", "litre", "liters", "litres", "l"}
+_ML_UNITS = {"ml", "milliliter", "milliliters"}
+_OZ_UNITS = {"oz", "ounce", "ounces"}
+_CUP_UNITS = {"cup", "cups"}
+
+_ML_PER_LITRE = 1000.0
+_ML_PER_OZ = 29.5735
+_ML_PER_CUP = 236.588
 
 
-def _map_text_to_score(text: str, mapping: dict[str, float]) -> float | None:
-    """Map a descriptive word to a numeric score.
+# ---------------------------------------------------------------------------
+# Metric extraction helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_water(message: str) -> dict[str, Any] | None:
+    """Parse a water intake mention from the message.
+
+    Normalises the value to litres for consistency.
 
     Args:
-        text: The word/phrase to map.
-        mapping: Dict of text → score.
+        message: Raw user message text.
 
     Returns:
-        Numeric score, or None if no match.
+        A parsed entry dict or ``None`` if no water mention is found.
     """
-    text_lower = text.lower().strip()
-    return mapping.get(text_lower)
+    match = _WATER_PATTERN.search(message)
+    if not match:
+        return None
+
+    raw_value = float(match.group("value"))
+    unit = match.group("unit").lower().rstrip("s")  # normalise plural
+
+    # Normalise to litres
+    if unit in _LITRE_UNITS or unit == "l":
+        value_litres = raw_value
+        display_unit = "liters"
+    elif unit in _ML_UNITS or unit == "ml":
+        value_litres = raw_value / _ML_PER_LITRE
+        display_unit = "ml"
+    elif unit in _OZ_UNITS or unit == "oz":
+        value_litres = (raw_value * _ML_PER_OZ) / _ML_PER_LITRE
+        display_unit = "oz"
+    elif unit in _CUP_UNITS:
+        value_litres = (raw_value * _ML_PER_CUP) / _ML_PER_LITRE
+        display_unit = "cups"
+    else:
+        value_litres = raw_value
+        display_unit = unit
+
+    return {
+        "metric_type": "water",
+        "value": round(value_litres, 3),
+        "unit": "liters",
+        "label": f"Water intake: {raw_value} {display_unit}",
+        "_raw_value": raw_value,
+        "_raw_unit": display_unit,
+    }
 
 
-# ---------------------------------------------------------------------------
-# Pattern definitions
-# ---------------------------------------------------------------------------
-
-_PATTERNS: list[tuple[str, str, str | None]] = [
-    # (regex, metric_type, unit_if_fixed)
-    # Water
-    (r"drank?\s+(\d+(?:\.\d+)?)\s*(glasses?|cups?|liters?|litres?|ml|oz)", "water", None),
-    (r"(\d+(?:\.\d+)?)\s*(glasses?|cups?|liters?|litres?|ml|oz)\s+of\s+water", "water", None),
-    # Mood — numeric
-    (r"(?:mood|feeling|feel)\s+(?:is\s+)?(?:a\s+)?(\d+(?:\.\d+)?)\s*(?:/10)?", "mood", None),
-    (r"feeling\s+a\s+(\d+(?:\.\d+)?)\s*/\s*10", "mood", "/10"),
-    # Mood — text
-    (
-        r"(?:feeling|mood is|mood:)\s+(terrible|awful|horrible|bad|poor|rough|okay|ok|alright|fine|meh|good|well|decent|great|amazing|fantastic|excellent|perfect|incredible)",
-        "mood_text",
-        None,
-    ),
-    # Energy — numeric
-    (r"energy\s+(?:level\s+)?(?:is\s+)?(\d+(?:\.\d+)?)\s*(?:/10)?", "energy", None),
-    # Energy — text
-    (r"(?:feeling|energy is|energy:)\s+(exhausted|drained|tired|fatigued|energetic|good)", "energy_text", None),
-    # Stress — numeric
-    (r"stress\s+(?:level\s+)?(?:is\s+)?(\d+(?:\.\d+)?)\s*(?:/10)?", "stress", None),
-    # Stress — text
-    (
-        r"stress(?:\s+is|:)\s+(none|calm|relaxed|low|minimal|moderate|some|medium|high|stressed|anxious|very\s+high|overwhelming|extreme)",
-        "stress_text",
-        None,
-    ),
-    # Weight
-    (r"weigh\s+(\d+(?:\.\d+)?)\s*(kg|lbs?|pounds?|kilograms?)", "weight", None),
-    (r"weight\s+(?:is\s+)?(\d+(?:\.\d+)?)\s*(kg|lbs?|pounds?|kilograms?)", "weight", None),
-    # Sleep
-    (r"slept?\s+(\d+(?:\.\d+)?)\s*(hours?|hrs?)", "sleep_hours", "hours"),
-    (r"(\d+(?:\.\d+)?)\s*(hours?|hrs?)\s+of\s+sleep", "sleep_hours", "hours"),
-    # Steps
-    (r"walked?\s+(\d[\d,]*)\s+steps?", "steps", "steps"),
-    (r"(\d[\d,]*)\s+steps?", "steps", "steps"),
-    # Distance
-    (r"ran?\s+(\d+(?:\.\d+)?)\s*(km|kilometers?|miles?|mi)", "steps", None),  # approximate
-    # Notes — quoted
-    (r'note:\s*"([^"]+)"', "notes", None),
-    (r"note:\s*(.+?)(?:\.|$)", "notes", None),
-]
-
-
-# ---------------------------------------------------------------------------
-# Parser
-# ---------------------------------------------------------------------------
-
-
-def parse_nl_for_logging(text: str) -> LogConfirmationPayload:
-    """Parse natural language input to extract loggable health data items.
+def _extract_scale_metric(
+    pattern: re.Pattern[str],
+    metric_type: str,
+    label_prefix: str,
+    message: str,
+) -> dict[str, Any] | None:
+    """Parse a 1-10 scale metric (mood, energy, stress).
 
     Args:
-        text: Free-form user input string.
+        pattern: Compiled regex pattern with a ``value`` group.
+        metric_type: The QuickLog metric_type string.
+        label_prefix: Human-readable prefix for the confirmation label.
+        message: Raw user message text.
 
     Returns:
-        LogConfirmationPayload with parsed items, confirmation ID, and summary.
+        A parsed entry dict or ``None`` if the pattern does not match.
     """
-    if not text or not text.strip():
-        return LogConfirmationPayload(
-            items=[],
-            confirmation_id=str(uuid.uuid4()),
-            summary="No loggable health data detected.",
+    match = pattern.search(message)
+    if not match:
+        return None
+
+    raw_value = float(match.group("value"))
+    # Clamp to valid 1-10 range
+    value = max(1.0, min(10.0, raw_value))
+    return {
+        "metric_type": metric_type,
+        "value": value,
+        "unit": "/10",
+        "label": f"{label_prefix}: {value}/10",
+    }
+
+
+def _validate_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate and sanitise a single parsed entry before DB write.
+
+    Rejects entries with an unknown metric_type or a non-finite value.
+    Truncates ``text_value`` and ``label`` to safe lengths.
+
+    Args:
+        entry: A dict from ``_parse_entries`` or caller-supplied ``parsed_entries``.
+
+    Returns:
+        The (possibly mutated) entry if valid, or ``None`` to skip it.
+    """
+    # Import here to avoid circular deps — same pattern used elsewhere in the file
+    from app.models.quick_log import VALID_METRIC_TYPES  # noqa: PLC0415
+
+    metric_type = entry.get("metric_type", "")
+    if metric_type not in VALID_METRIC_TYPES:
+        logger.warning(
+            "_validate_entry: unknown metric_type '%s' — skipping entry", metric_type
         )
+        return None
 
-    items: list[LoggableItem] = []
-    text_lower = text.lower()
-
-    for pattern, metric_type, default_unit in _PATTERNS:
-        match = re.search(pattern, text_lower, re.IGNORECASE)
-        if not match:
-            continue
-
-        if metric_type.endswith("_text"):
-            # Text-to-score mapping
-            word = match.group(1).strip()
-            base_metric = metric_type.replace("_text", "")
-            mapping = {"mood": _MOOD_TEXT_MAP, "energy": _ENERGY_TEXT_MAP, "stress": _STRESS_TEXT_MAP}.get(
-                base_metric, {}
+    value = entry.get("value")
+    if value is not None:
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            logger.warning(
+                "_validate_entry: non-numeric value '%s' for metric_type '%s' — skipping",
+                value,
+                metric_type,
             )
-            score = _map_text_to_score(word, mapping)
-            if score is not None:
-                items.append(
-                    LoggableItem(
-                        metric_type=base_metric,
-                        value=score,
-                        text_value=word,
-                        unit="/10",
-                        confidence=0.75,
-                        raw_text=match.group(0),
-                    )
-                )
-        elif metric_type == "notes":
-            note_text = match.group(1).strip()
-            if note_text:
-                items.append(
-                    LoggableItem(
-                        metric_type="notes",
-                        value=None,
-                        text_value=note_text,
-                        unit=None,
-                        confidence=0.9,
-                        raw_text=match.group(0),
-                    )
-                )
-        else:
-            raw_value = match.group(1).replace(",", "")
-            try:
-                value = float(raw_value)
-            except ValueError:
-                continue
-
-            # Determine unit
-            unit = default_unit
-            if len(match.groups()) >= 2:
-                unit = match.group(2) if match.group(2) else default_unit
-
-            # Normalize water to cups if possible
-            if metric_type == "water" and unit:
-                unit_lower = unit.lower()
-                if unit_lower in ("ml",):
-                    value = round(value / 240, 1)  # 240ml ≈ 1 cup
-                    unit = "cups"
-                elif unit_lower in ("liter", "litre", "liters", "litres", "l"):
-                    value = round(value * 4.2, 1)
-                    unit = "cups"
-
-            # Confidence heuristics
-            confidence = 0.9
-            if metric_type in ("mood", "energy", "stress") and value > 10:
-                confidence = 0.5  # Suspicious — could be misparse
-
-            items.append(
-                LoggableItem(
-                    metric_type=metric_type,
-                    value=value,
-                    text_value=None,
-                    unit=unit,
-                    confidence=confidence,
-                    raw_text=match.group(0),
-                )
+            return None
+        if not math.isfinite(value):
+            logger.warning(
+                "_validate_entry: non-finite value %s for metric_type '%s' — skipping",
+                value,
+                metric_type,
             )
+            return None
+        # Clamp scale metrics to [1, 10]; water to [0, 100 litres]
+        if metric_type in ("mood", "energy", "stress", "sleep_quality", "pain"):
+            value = max(1.0, min(10.0, value))
+        elif metric_type == "water":
+            value = max(0.0, min(100.0, value))
+        entry = dict(entry)
+        entry["value"] = value
 
-    # Deduplicate: keep highest-confidence item per metric_type
-    seen: dict[str, LoggableItem] = {}
-    for item in items:
-        if item.metric_type not in seen or item.confidence > seen[item.metric_type].confidence:
-            seen[item.metric_type] = item
-    items = list(seen.values())
+    # Truncate text fields to prevent excessively large DB writes
+    if entry.get("text_value") is not None:
+        entry = dict(entry)
+        entry["text_value"] = str(entry["text_value"])[:2000]
+    if entry.get("label") is not None:
+        entry = dict(entry)
+        entry["label"] = str(entry["label"])[:500]
 
-    summary = _build_summary(items)
+    return entry
 
-    return LogConfirmationPayload(
-        items=items,
-        confirmation_id=str(uuid.uuid4()),
-        summary=summary,
+
+def _parse_entries(message: str) -> list[dict[str, Any]]:
+    """Extract all loggable health entries from a natural-language message.
+
+    Applies water, mood, energy, and stress patterns in order. If none
+    match, treats the entire message as a free-text notes entry.
+
+    Args:
+        message: Raw user input text.
+
+    Returns:
+        A list of parsed entry dicts (may be empty if nothing is recognised).
+    """
+    entries: list[dict[str, Any]] = []
+
+    water = _extract_water(message)
+    if water:
+        entries.append(water)
+
+    mood = _extract_scale_metric(_MOOD_PATTERN, "mood", "Mood", message)
+    if mood:
+        entries.append(mood)
+
+    energy = _extract_scale_metric(_ENERGY_PATTERN, "energy", "Energy", message)
+    if energy:
+        entries.append(energy)
+
+    stress = _extract_scale_metric(_STRESS_PATTERN, "stress", "Stress", message)
+    if stress:
+        entries.append(stress)
+
+    return entries
+
+
+def _build_confirmation_message(entries: list[dict[str, Any]]) -> str:
+    """Build the human-readable confirmation string shown to the user.
+
+    Args:
+        entries: Parsed metric entry dicts.
+
+    Returns:
+        A formatted string listing what will be logged.
+    """
+    items = ", ".join(e["label"] for e in entries)
+    return f"I'll log: {items}. Confirm?"
+
+
+# ---------------------------------------------------------------------------
+# Tool class
+# ---------------------------------------------------------------------------
+
+
+class LogHealthDataTool:
+    """MCP tool for parsing and logging health data from natural language.
+
+    Implements a two-phase confirmation flow:
+      1. First call (no ``confirmed`` flag): parse the message and return a
+         ``pending_confirmation`` response for the user to review.
+      2. Second call (``confirmed: true``): write the entries to the database
+         and return a ``logged`` response.
+
+    Attributes:
+        name: MCP tool identifier.
+        description: Natural-language description shown to the LLM.
+        input_schema: JSON Schema for the tool's input arguments.
+    """
+
+    name = "log_health_data"
+
+    description = (
+        "Parse and log health data mentioned by the user in natural language. "
+        "Use this when the user says things like 'I drank 2 liters of water', "
+        "'I'm feeling a 7/10 today', 'I took ibuprofen', "
+        "'Had 1800 calories for lunch', 'energy level 8', 'stress 9/10'."
     )
 
+    input_schema: dict[str, Any] = {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+            "message": {
+                "type": "string",
+                "description": (
+                    "The natural-language text from the user that contains "
+                    "health data to log (e.g. 'I drank 2 liters of water')."
+                ),
+            },
+            "confirmed": {
+                "type": "boolean",
+                "description": (
+                    "Set to true on the second call (after the user confirms) "
+                    "to actually write the entries to the database."
+                ),
+                "default": False,
+            },
+            "parsed_entries": {
+                "type": "array",
+                "description": (
+                    "The entries array from the previous pending_confirmation "
+                    "response. Required when confirmed=true to avoid re-parsing."
+                ),
+                "items": {"type": "object"},
+            },
+        },
+    }
 
-def _build_summary(items: list[LoggableItem]) -> str:
-    """Build a human-readable summary string for the confirmation card.
+    async def execute(
+        self,
+        arguments: dict[str, Any],
+        user_id: str,
+        db: Any,
+    ) -> dict[str, Any]:
+        """Execute the tool in parse or commit mode.
 
-    Args:
-        items: Parsed loggable items.
+        **Parse mode** (default, ``confirmed`` not set or ``False``):
+          Parses ``message`` for health metrics and returns a structured
+          ``pending_confirmation`` response with the detected entries.
 
-    Returns:
-        Summary string.
-    """
-    if not items:
-        return "No loggable health data detected."
+        **Commit mode** (``confirmed=True``):
+          Writes the entries from ``parsed_entries`` (or re-parsed from
+          ``message``) to the ``quick_logs`` table.
 
-    parts: list[str] = []
-    for item in items:
-        if item.metric_type == "water":
-            parts.append(f"💧 Water: {item.value} {item.unit or 'units'}")
-        elif item.metric_type == "mood":
-            parts.append(f"😊 Mood: {item.value}/10")
-        elif item.metric_type == "energy":
-            parts.append(f"⚡ Energy: {item.value}/10")
-        elif item.metric_type == "stress":
-            parts.append(f"🧘 Stress: {item.value}/10")
-        elif item.metric_type == "weight":
-            parts.append(f"⚖️ Weight: {item.value} {item.unit or 'kg'}")
-        elif item.metric_type == "sleep_hours":
-            parts.append(f"😴 Sleep: {item.value} hours")
-        elif item.metric_type == "steps":
-            val = int(item.value) if item.value else 0
-            parts.append(f"👟 Steps: {val:,}")
-        elif item.metric_type == "notes":
-            parts.append(f"📝 Note: {item.text_value}")
-        else:
-            parts.append(f"{item.metric_type}: {item.value}")
+        Args:
+            arguments: Tool input dict matching ``input_schema``.
+            user_id: Authenticated user ID used as the ``user_id`` FK.
+            db: Async SQLAlchemy session for database writes.
 
-    return " | ".join(parts)
+        Returns:
+            A result dict with one of the following ``status`` values:
 
+            - ``"pending_confirmation"`` — entries detected, awaiting user OK.
+            - ``"logged"`` — entries written to DB (commit mode).
+            - ``"no_data"`` — no loggable metrics found in the message.
+            - ``"error"`` — an unexpected error occurred during commit.
+        """
+        message: str = arguments.get("message", "")
+        confirmed: bool = bool(arguments.get("confirmed", False))
+        pre_parsed: list[dict[str, Any]] | None = arguments.get("parsed_entries")
 
-# ---------------------------------------------------------------------------
-# Write confirmed logs
-# ---------------------------------------------------------------------------
+        # ------------------------------------------------------------------
+        # Phase 1: Parse
+        # ------------------------------------------------------------------
+        if not confirmed:
+            entries = _parse_entries(message)
+            if not entries:
+                logger.info(
+                    "log_health_data: no parseable metrics in message for user '%s'.",
+                    user_id,
+                )
+                return {
+                    "status": "no_data",
+                    "message": "I couldn't find any loggable health data in that message. "
+                    "Try saying something like 'I drank 2 liters of water' "
+                    "or 'mood 7/10'.",
+                }
 
-# Map NL metric types to QuickLog MetricType values
-_METRIC_TYPE_MAP: dict[str, str] = {
-    "water": MetricType.WATER.value,
-    "mood": MetricType.MOOD.value,
-    "energy": MetricType.ENERGY.value,
-    "stress": MetricType.STRESS.value,
-    "weight": MetricType.NOTES.value,  # No dedicated weight type — log as notes with value
-    "sleep_hours": MetricType.SLEEP_QUALITY.value,
-    "steps": MetricType.NOTES.value,  # No dedicated steps quick-log type
-    "notes": MetricType.NOTES.value,
-}
+            confirmation = _build_confirmation_message(entries)
+            logger.info(
+                "log_health_data: parsed %d entries for user '%s': %s",
+                len(entries),
+                user_id,
+                [e["label"] for e in entries],
+            )
+            return {
+                "status": "pending_confirmation",
+                "entries": entries,
+                "confirmation_message": confirmation,
+            }
 
+        # ------------------------------------------------------------------
+        # Phase 2: Commit
+        # ------------------------------------------------------------------
+        raw_entries: list[dict[str, Any]] = pre_parsed or _parse_entries(message)
+        # Validate and sanitise every entry — especially important for
+        # LLM-supplied parsed_entries which arrive as unvalidated JSON.
+        entries_to_log: list[dict[str, Any]] = [
+            validated
+            for entry in raw_entries
+            if (validated := _validate_entry(entry)) is not None
+        ]
+        if not entries_to_log:
+            return {
+                "status": "no_data",
+                "message": "No entries to log.",
+            }
 
-async def write_confirmed_logs(
-    confirmation_payload: LogConfirmationPayload,
-    user_id: str,
-    session: AsyncSession,
-) -> int:
-    """Persist confirmed log items to the QuickLog table.
+        try:
+            # Import inside function to avoid circular imports at module level
+            from app.models.quick_log import QuickLog  # noqa: PLC0415
 
-    Only writes items with confidence >= 0.5.
+            now_iso = datetime.now(timezone.utc).isoformat()
+            logged_entries = []
 
-    Args:
-        confirmation_payload: The payload previously returned by parse_nl_for_logging.
-        user_id: Zuralog user ID (authenticated caller).
-        session: Open async DB session.
+            for entry in entries_to_log:
+                metric_type = entry.get("metric_type", "notes")
+                value = entry.get("value")
+                label = entry.get("label", "")
 
-    Returns:
-        Number of rows written.
-    """
-    written = 0
-    now = datetime.now(timezone.utc)
+                log = QuickLog(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    metric_type=metric_type,
+                    value=float(value) if value is not None else None,
+                    text_value=label if metric_type == "notes" else None,
+                    tags=[],
+                    logged_at=now_iso,
+                )
+                db.add(log)
+                logged_entries.append(
+                    {"id": log.id, "metric_type": metric_type, "label": label}
+                )
 
-    for item in confirmation_payload.items:
-        if item.confidence < 0.5:
-            logger.debug("Skipping low-confidence item: %s (%.2f)", item.metric_type, item.confidence)
-            continue
+            await asyncio.shield(db.commit())
+            logger.info(
+                "log_health_data: committed %d entries for user '%s'.",
+                len(logged_entries),
+                user_id,
+            )
+            return {
+                "status": "logged",
+                "logged_count": len(logged_entries),
+                "entries": logged_entries,
+                "message": f"Logged {len(logged_entries)} metric(s) successfully.",
+            }
 
-        metric_type_value = _METRIC_TYPE_MAP.get(item.metric_type, MetricType.NOTES.value)
-
-        # Build a text_value note for types without a dedicated slot.
-        text_val = item.text_value
-        if item.metric_type in ("weight", "steps") and item.value is not None:
-            label = item.metric_type.replace("_", " ").title()
-            unit_str = f" {item.unit}" if item.unit else ""
-            text_val = f"{label}: {item.value}{unit_str}"
-
-        log_entry = QuickLog(
-            user_id=user_id,
-            metric_type=metric_type_value,
-            value=item.value,
-            text_value=text_val,
-            logged_at=now,
-        )
-        session.add(log_entry)
-        written += 1
-
-    if written:
-        await session.commit()
-        logger.info(
-            "write_confirmed_logs: wrote %d entries for user %s (confirmation_id=%s)",
-            written,
-            user_id,
-            confirmation_payload.confirmation_id,
-        )
-
-    return written
+        except Exception:
+            logger.exception(
+                "log_health_data: commit failed for user '%s'.", user_id
+            )
+            return {
+                "status": "error",
+                "message": "An error occurred while saving your health data. Please try again.",
+            }

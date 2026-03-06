@@ -1,210 +1,288 @@
 """
-Zuralog Cloud Brain — Quick Log API Routes.
-
-Low-friction endpoints for logging individual health metric data points.
-Supports single-entry and atomic batch submission, plus time-range history
-queries with optional metric-type filtering.
+Zuralog Cloud Brain — Quick Log API.
 
 Endpoints:
-    POST /api/v1/quick-log         — Log a single metric entry
-    POST /api/v1/quick-log/batch   — Atomically log multiple entries
-    GET  /api/v1/quick-log         — Query history by date range and type
+  POST /api/v1/quick-log          — Log a single metric entry.
+  POST /api/v1/quick-log/batch    — Log multiple metric entries at once.
+  GET  /api/v1/quick-log          — Query log history with optional filters.
+
+All endpoints are auth-guarded; users can only access their own logs.
+Multiple logs per day are permitted (no uniqueness constraint). The GET
+endpoint supports filtering by metric_type and date range.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Any
+import uuid
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Query, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_authenticated_user_id
 from app.database import get_db
-from app.models.quick_log import MetricType, QuickLog
+from app.models.quick_log import QuickLog, VALID_METRIC_TYPES
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(
-    prefix="/quick-log",
-    tags=["quick-log"],
-)
-
+router = APIRouter(prefix="/quick-log", tags=["quick-log"])
 
 # ---------------------------------------------------------------------------
-# Schemas
+# Pydantic schemas
 # ---------------------------------------------------------------------------
 
 
-class QuickLogRequest(BaseModel):
-    """Request body for a single quick-log entry.
+class QuickLogCreate(BaseModel):
+    """Payload for a single quick-log entry.
 
     Attributes:
-        metric_type: The metric category to log.
-        value: Numeric value (required for scored metrics; optional for
-            notes/symptoms).
-        text_value: Text content (required for notes/symptoms; optional
-            for scored metrics).
-        tags: Symptom chip list (optional).
-        logged_at: Override the timestamp. Defaults to server time when
-            not provided.
+        metric_type: One of: water, mood, energy, stress, sleep_quality, pain, notes.
+        value: Numeric measurement value. Optional for text-only metrics.
+        text_value: Free-text content. Optional for numeric-only metrics.
+        tags: Array of tag strings. Defaults to empty list.
+        logged_at: ISO datetime string. Defaults to server time if not provided.
     """
 
-    metric_type: MetricType
+    metric_type: str
     value: float | None = None
     text_value: str | None = None
-    tags: list[str] | None = None
-    logged_at: datetime | None = Field(
-        default=None,
-        description="Defaults to now when not provided",
-    )
+    tags: list[str] = []
+    logged_at: str | None = None  # ISO datetime; defaults to now if not provided
 
 
 class QuickLogResponse(BaseModel):
-    """API response for a quick-log entry."""
+    """Single quick-log entry payload returned to the client.
+
+    Attributes:
+        id: UUID primary key.
+        user_id: Owning user's ID.
+        metric_type: The logged metric type.
+        value: Numeric measurement value or None.
+        text_value: Free-text content or None.
+        tags: Array of tag strings.
+        logged_at: ISO timestamp of when the metric was recorded.
+    """
 
     id: str
     user_id: str
     metric_type: str
     value: float | None
     text_value: str | None
-    tags: list[str] | None
-    logged_at: Any
-    created_at: Any
+    tags: list
+    logged_at: str
 
-    model_config = {"from_attributes": True}
-
-
-class BatchQuickLogRequest(BaseModel):
-    """Request body for atomically submitting multiple quick-log entries.
-
-    Attributes:
-        entries: List of quick-log items to persist in a single transaction.
-    """
-
-    entries: list[QuickLogRequest] = Field(min_length=1)
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=QuickLogResponse)
-async def create_quick_log(
-    body: QuickLogRequest,
-    user_id: str = Depends(get_authenticated_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> QuickLog:
-    """Log a single health metric data point.
+def _validate_metric_type(metric_type: str) -> None:
+    """Validate that metric_type is one of the allowed values.
 
     Args:
-        body: The metric payload.
-        user_id: Authenticated user ID from JWT.
-        db: Injected async database session.
+        metric_type: The metric type string to validate.
+
+    Raises:
+        HTTPException: 422 if the value is not in VALID_METRIC_TYPES.
+    """
+    if metric_type not in VALID_METRIC_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Invalid metric_type '{metric_type}'. "
+                f"Must be one of: {sorted(VALID_METRIC_TYPES)}."
+            ),
+        )
+
+
+def _resolve_logged_at(logged_at: str | None) -> str:
+    """Resolve the logged_at timestamp, defaulting to UTC now.
+
+    Args:
+        logged_at: ISO datetime string provided by the client, or None.
 
     Returns:
-        The created :class:`QuickLog` row.
+        ISO datetime string to store.
     """
-    entry = QuickLog(
+    if logged_at:
+        return logged_at
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _log_to_response(log: QuickLog) -> dict:
+    """Serialize a QuickLog ORM object to a response dict.
+
+    Args:
+        log: The ORM instance to serialize.
+
+    Returns:
+        Dict suitable for the QuickLogResponse schema.
+    """
+    return {
+        "id": log.id,
+        "user_id": log.user_id,
+        "metric_type": log.metric_type,
+        "value": log.value,
+        "text_value": log.text_value,
+        "tags": log.tags or [],
+        "logged_at": str(log.logged_at),
+    }
+
+
+def _build_log(user_id: str, body: QuickLogCreate) -> QuickLog:
+    """Construct a QuickLog ORM instance from a create payload.
+
+    Args:
+        user_id: Authenticated user ID.
+        body: Incoming create payload.
+
+    Returns:
+        Unsaved QuickLog ORM instance.
+    """
+    return QuickLog(
+        id=str(uuid.uuid4()),
         user_id=user_id,
-        metric_type=body.metric_type.value,
+        metric_type=body.metric_type,
         value=body.value,
         text_value=body.text_value,
         tags=body.tags,
-        logged_at=body.logged_at or datetime.now(tz=timezone.utc),
+        logged_at=_resolve_logged_at(body.logged_at),
     )
-    db.add(entry)
-    await db.commit()
-    await db.refresh(entry)
-    return entry
 
 
-@router.post(
-    "/batch",
-    status_code=status.HTTP_201_CREATED,
-    response_model=list[QuickLogResponse],
-)
-async def batch_create_quick_logs(
-    body: BatchQuickLogRequest,
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("", summary="Log a single metric entry")
+async def create_quick_log(
+    body: QuickLogCreate,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
-) -> list[QuickLog]:
-    """Atomically log multiple metric data points in a single transaction.
-
-    All entries are committed together; if any entry fails validation the
-    entire batch is rejected.
+) -> dict:
+    """Record a single rapid-log metric entry.
 
     Args:
-        body: Batch payload containing one or more quick-log entries.
-        user_id: Authenticated user ID from JWT.
-        db: Injected async database session.
+        body: Metric type, value, and optional metadata.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
 
     Returns:
-        List of created :class:`QuickLog` rows.
+        The created QuickLogResponse.
+
+    Raises:
+        HTTPException: 422 if metric_type is not a valid value.
     """
-    now = datetime.now(tz=timezone.utc)
-    logs: list[QuickLog] = []
+    _validate_metric_type(body.metric_type)
 
-    for item in body.entries:
-        log = QuickLog(
-            user_id=user_id,
-            metric_type=item.metric_type.value,
-            value=item.value,
-            text_value=item.text_value,
-            tags=item.tags,
-            logged_at=item.logged_at or now,
+    log = _build_log(user_id, body)
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    logger.info("Quick log created: user=%s type=%s", user_id, body.metric_type)
+    return _log_to_response(log)
+
+
+@router.post("/batch", summary="Log multiple metric entries at once")
+async def create_quick_log_batch(
+    body: list[QuickLogCreate],
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Record multiple rapid-log metric entries in a single request.
+
+    All entries in the batch are validated before any are persisted. If any
+    entry has an invalid metric_type the entire batch is rejected.
+
+    Args:
+        body: List of metric entries to create.
+        user_id: Authenticated user ID.
+        db: Async database session.
+
+    Returns:
+        List of created QuickLogResponse dicts.
+
+    Raises:
+        HTTPException: 400 if the batch is empty.
+        HTTPException: 422 if any entry has an invalid metric_type.
+    """
+    if not body:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Batch cannot be empty.",
         )
-        db.add(log)
-        logs.append(log)
 
+    if len(body) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Batch exceeds maximum of 100 entries.",
+        )
+
+    # Validate all entries before persisting any
+    for item in body:
+        _validate_metric_type(item.metric_type)
+
+    logs = [_build_log(user_id, item) for item in body]
+    db.add_all(logs)
     await db.commit()
 
+    # Refresh all to get server-assigned values
     for log in logs:
         await db.refresh(log)
 
-    return logs
+    logger.info("Batch quick log created: user=%s count=%d", user_id, len(logs))
+    return [_log_to_response(log) for log in logs]
 
 
-@router.get("", response_model=list[QuickLogResponse])
-async def get_quick_log_history(
-    metric_type: MetricType | None = Query(default=None, description="Filter by type"),
-    start: datetime | None = Query(default=None, description="Inclusive start UTC datetime"),
-    end: datetime | None = Query(default=None, description="Inclusive end UTC datetime"),
+@router.get("", summary="Query quick-log history")
+async def list_quick_logs(
+    metric_type: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
-) -> list[QuickLog]:
-    """Return quick-log history with optional metric type and time filters.
+) -> list[dict]:
+    """List quick-log entries for the authenticated user with optional filters.
 
-    Defaults to the last 30 days when no range is specified.
+    Results are ordered newest-first. Date filters compare against the
+    ``logged_at`` timestamp column using lexicographic ISO string ordering.
 
     Args:
-        metric_type: Optional filter to a single metric category.
-        start: Inclusive lower bound for ``logged_at``. Defaults to 30d ago.
-        end: Inclusive upper bound for ``logged_at``. Defaults to now.
-        user_id: Authenticated user ID from JWT.
-        db: Injected async database session.
+        metric_type: Filter to a specific metric type. Optional.
+        date_from: Earliest logged_at to include (ISO datetime string). Optional.
+        date_to: Latest logged_at to include (ISO datetime string). Optional.
+        limit: Maximum entries to return. Defaults to 50.
+        offset: Number of entries to skip. Defaults to 0.
+        user_id: Authenticated user ID.
+        db: Async database session.
 
     Returns:
-        List of :class:`QuickLog` rows ordered by ``logged_at`` descending.
+        List of QuickLogResponse dicts.
+
+    Raises:
+        HTTPException: 422 if metric_type filter is not a valid value.
     """
-    now = datetime.now(tz=timezone.utc)
-    effective_end = end or now
-    effective_start = start or (now - timedelta(days=30))
-
-    query = (
-        select(QuickLog)
-        .where(
-            QuickLog.user_id == user_id,
-            QuickLog.logged_at >= effective_start,
-            QuickLog.logged_at <= effective_end,
-        )
-        .order_by(QuickLog.logged_at.desc())
-    )
-
     if metric_type is not None:
-        query = query.where(QuickLog.metric_type == metric_type.value)
+        _validate_metric_type(metric_type)
+
+    query = select(QuickLog).where(QuickLog.user_id == user_id)
+
+    if metric_type:
+        query = query.where(QuickLog.metric_type == metric_type)
+    if date_from:
+        query = query.where(QuickLog.logged_at >= date_from)
+    if date_to:
+        query = query.where(QuickLog.logged_at <= date_to)
+
+    query = query.order_by(QuickLog.logged_at.desc()).offset(offset).limit(limit)
 
     result = await db.execute(query)
-    return list(result.scalars().all())
+    logs = result.scalars().all()
+    return [_log_to_response(log) for log in logs]

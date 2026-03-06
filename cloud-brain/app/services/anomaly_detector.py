@@ -1,30 +1,33 @@
-"""
-Zuralog Cloud Brain — Anomaly Detector Service.
+"""AnomalyDetector — detects metric anomalies using rolling statistics.
 
-Detects statistically significant deviations in user health metrics by
-computing rolling 30-day baselines and flagging values that exceed two
-standard deviations from the mean.
+For each trackable metric (resting_heart_rate, hrv_ms, steps,
+active_calories, sleep_hours, sleep_quality) the detector pulls up to
+30 days of data for the user, computes a rolling mean and standard
+deviation, and flags values that deviate more than 2 standard deviations
+from the baseline.
 
-Modules:
-    AnomalySeverity: Classification enum for deviation magnitude.
-    AnomalyResult: Structured result dataclass for a single anomaly.
-    AnomalyDetector: Service that queries the DB and runs detection logic.
+Severity levels
+---------------
+- ``normal``:   abs deviation < 2.0 stddev
+- ``elevated``: 2.0 ≤ abs deviation < 3.0 stddev
+- ``critical``: abs deviation ≥ 3.0 stddev
+
+Minimum data requirement
+------------------------
+At least 14 days of non-null observations are required before the
+detector will report anomalies for a metric. Metrics with fewer
+observations are silently skipped.
 """
 
 from __future__ import annotations
 
 import logging
 import math
-import uuid
-from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
-from enum import Enum
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from datetime import date, timedelta
 
-from sqlalchemy import select
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.daily_metrics import DailyHealthMetrics
 from app.models.health_data import SleepRecord
@@ -32,451 +35,305 @@ from app.models.health_data import SleepRecord
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Thresholds
+# Constants
 # ---------------------------------------------------------------------------
 
-_MIN_DATA_POINTS: int = 14
-"""Minimum number of historical observations required before anomaly detection
-is activated for a metric.  Below this threshold there is insufficient data to
-establish a reliable baseline."""
+_LOOKBACK_DAYS = 30
+_MIN_DATA_POINTS = 14
 
-_ELEVATED_THRESHOLD: float = 2.0
-"""Deviation beyond this many standard deviations (inclusive) triggers an
-ELEVATED anomaly."""
-
-_CRITICAL_THRESHOLD: float = 2.5
-"""Deviation at or beyond this many standard deviations triggers a CRITICAL
-anomaly."""
-
-# ---------------------------------------------------------------------------
-# Metric columns to inspect on DailyHealthMetrics
-# ---------------------------------------------------------------------------
-
-_SCALAR_METRICS: list[str] = [
-    "steps",
-    "active_calories",
-    "resting_heart_rate",
-    "hrv_ms",
-    "vo2_max",
-    "body_fat_percentage",
-    "respiratory_rate",
-    "oxygen_saturation",
-]
-"""Ordered list of DailyHealthMetrics column names evaluated by the detector."""
+_ELEVATED_THRESHOLD = 2.0
+_CRITICAL_THRESHOLD = 3.0
 
 
 # ---------------------------------------------------------------------------
-# Public dataclasses / enums
+# Result dataclass
 # ---------------------------------------------------------------------------
-
-
-class AnomalySeverity(Enum):
-    """Severity classification for a detected anomaly.
-
-    Members:
-        NORMAL: Value is within expected range (no anomaly).
-        ELEVATED: Value deviates 2.0–2.49 standard deviations from baseline.
-        CRITICAL: Value deviates >= 2.5 standard deviations from baseline.
-    """
-
-    NORMAL = "normal"
-    ELEVATED = "elevated"
-    CRITICAL = "critical"
 
 
 @dataclass
 class AnomalyResult:
-    """Result of an anomaly check for a single health metric.
+    """Describes a single metric anomaly detected for a user.
 
     Attributes:
-        metric_name: Name of the health metric (e.g. ``"steps"``).
-        current_value: Today's observed value for the metric.
-        baseline_mean: 30-day rolling mean of the metric.
-        baseline_std: 30-day rolling standard deviation of the metric.
-        deviation_magnitude: Absolute deviation in standard-deviation units.
-        severity: Classified severity of the anomaly.
-        detected_at: UTC timestamp when the anomaly was detected.
+        metric: Name of the metric (e.g. ``"resting_heart_rate"``).
+        current_value: The value observed on the target date.
+        baseline_mean: Rolling mean over the lookback window.
+        baseline_stddev: Rolling population stddev over the lookback window.
+        deviation_magnitude: How many stddevs ``current_value`` is from mean.
+        severity: ``"normal"`` | ``"elevated"`` | ``"critical"``.
+        direction: ``"high"`` if current > mean, else ``"low"``.
     """
 
-    metric_name: str
+    metric: str
     current_value: float
     baseline_mean: float
-    baseline_std: float
+    baseline_stddev: float
     deviation_magnitude: float
-    severity: AnomalySeverity
-    detected_at: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    severity: str  # "normal" | "elevated" | "critical"
+    direction: str  # "high" | "low"
 
 
 # ---------------------------------------------------------------------------
-# Helper statistics
+# Helper — rolling statistics
 # ---------------------------------------------------------------------------
 
 
 def _mean(values: list[float]) -> float:
-    """Compute arithmetic mean of a non-empty list.
-
-    Args:
-        values: List of float values. Must not be empty.
-
-    Returns:
-        Arithmetic mean as a float.
-    """
+    """Return arithmetic mean of *values*. Assumes non-empty list."""
     return sum(values) / len(values)
 
 
-def _std(values: list[float], mean: float) -> float:
-    """Compute population standard deviation.
-
-    Uses population (N) denominator, consistent with how rolling baselines
-    are typically reported in health analytics contexts.
-
-    Args:
-        values: List of float values.
-        mean: Pre-computed mean of the list.
-
-    Returns:
-        Population standard deviation as a float, or 0.0 for a single point.
-    """
-    if len(values) < 2:
-        return 0.0
+def _stddev(values: list[float], mean: float) -> float:
+    """Return population standard deviation of *values*."""
     variance = sum((v - mean) ** 2 for v in values) / len(values)
     return math.sqrt(variance)
 
 
-def _classify_severity(deviation: float) -> AnomalySeverity:
-    """Map a deviation magnitude to an AnomalySeverity level.
-
-    Args:
-        deviation: Absolute deviation in standard-deviation units.
-
-    Returns:
-        CRITICAL if deviation >= 2.5, ELEVATED if >= 2.0, else NORMAL.
-    """
+def _classify_severity(deviation: float) -> str:
+    """Map an absolute deviation in stddevs to a severity label."""
     if deviation >= _CRITICAL_THRESHOLD:
-        return AnomalySeverity.CRITICAL
+        return "critical"
     if deviation >= _ELEVATED_THRESHOLD:
-        return AnomalySeverity.ELEVATED
-    return AnomalySeverity.NORMAL
+        return "elevated"
+    return "normal"
 
 
 # ---------------------------------------------------------------------------
-# Main service
+# Main detector class
 # ---------------------------------------------------------------------------
 
 
 class AnomalyDetector:
-    """Service that detects statistical anomalies in a user's health metrics.
+    """Detects health metric anomalies using rolling population statistics.
 
-    Queries ``daily_health_metrics`` and ``sleep_records`` for the last 30
-    days and applies a rolling-baseline z-score check.  Only metrics with
-    at least ``_MIN_DATA_POINTS`` (14) non-null observations activate the
-    check; metrics with fewer data points are silently skipped.
+    The detector queries ``DailyHealthMetrics`` and ``SleepRecord`` tables
+    for the 30 days preceding (and including) *target_date*. It computes a
+    rolling mean and stddev for each metric and flags observations that
+    deviate more than 2 stddevs from the baseline.
 
     Usage::
 
         detector = AnomalyDetector()
-        results = await detector.check_for_anomalies(user_id, session)
-        if results:
-            await detector.store_anomaly_insights(user_id, results, session)
+        anomalies = await detector.check_user_metrics(user_id, db)
     """
 
-    # ------------------------------------------------------------------
-    # Core detection
-    # ------------------------------------------------------------------
-
-    async def check_for_anomalies(
+    async def check_user_metrics(
         self,
         user_id: str,
-        session: AsyncSession,
+        db: AsyncSession,
+        target_date: date | None = None,
     ) -> list[AnomalyResult]:
-        """Run anomaly detection across all monitored health metrics.
-
-        Queries the last 30 days of ``daily_health_metrics`` rows for the
-        user.  For each scalar metric listed in ``_SCALAR_METRICS``, collects
-        all non-null values from the *prior* 29 days as the baseline, then
-        compares today's value against that baseline.  Applies the same logic
-        to ``sleep_records`` for sleep-duration anomalies.
+        """Run anomaly detection across all tracked metrics for *user_id*.
 
         Args:
-            user_id: The authenticated user's Supabase ID.
-            session: An active async SQLAlchemy session.
+            user_id: The user to analyse.
+            db: An active async database session.
+            target_date: The date to treat as "today". Defaults to
+                ``date.today()`` when not specified.
 
         Returns:
-            A list of :class:`AnomalyResult` objects, one per metric where an
-            anomaly (ELEVATED or CRITICAL) was detected.  Returns an empty
-            list if no anomalies are found or insufficient data exists.
+            A (possibly empty) list of :class:`AnomalyResult` instances
+            whose ``severity`` is ``"elevated"`` or ``"critical"``.
+            Metrics that are ``"normal"`` or that lack sufficient data
+            are omitted from the returned list.
         """
-        today = date.today()
-        window_start = (today - timedelta(days=29)).isoformat()  # 30-day window incl. today
-        today_str = today.isoformat()
+        if target_date is None:
+            target_date = date.today()
 
-        # Fetch all rows for the rolling window
-        stmt = (
-            select(DailyHealthMetrics)
-            .where(
-                DailyHealthMetrics.user_id == user_id,
-                DailyHealthMetrics.date >= window_start,
-                DailyHealthMetrics.date <= today_str,
-            )
-            .order_by(DailyHealthMetrics.date)
-        )
-        result = await session.execute(stmt)
-        rows: list[DailyHealthMetrics] = list(result.scalars().all())
+        # Fetch raw data from both tables for the lookback window.
+        daily_rows = await self._fetch_daily_metrics(user_id, db, target_date)
+        sleep_rows = await self._fetch_sleep_records(user_id, db, target_date)
 
-        logger.debug(
-            "AnomalyDetector: %d daily_health_metrics rows for user '%s' in window [%s, %s]",
-            len(rows),
-            user_id,
-            window_start,
-            today_str,
-        )
+        results: list[AnomalyResult] = []
 
-        anomalies: list[AnomalyResult] = []
-
-        # --- Scalar metrics --------------------------------------------------
-        for metric in _SCALAR_METRICS:
-            anomaly = self._check_scalar_metric(metric, today_str, rows)
+        # --- DailyHealthMetrics-backed metrics ---
+        for metric in ("resting_heart_rate", "hrv_ms", "steps", "active_calories"):
+            anomaly = self._analyse_daily_metric(metric, daily_rows, target_date)
             if anomaly is not None:
-                anomalies.append(anomaly)
+                results.append(anomaly)
 
-        # --- Sleep duration --------------------------------------------------
-        sleep_anomaly = await self._check_sleep_duration(user_id, today_str, window_start, session)
-        if sleep_anomaly is not None:
-            anomalies.append(sleep_anomaly)
+        # --- SleepRecord-backed metrics ---
+        sleep_hours_anomaly = self._analyse_sleep_metric("sleep_hours", "hours", sleep_rows, target_date)
+        if sleep_hours_anomaly is not None:
+            results.append(sleep_hours_anomaly)
 
-        logger.info(
-            "AnomalyDetector: %d anomalies detected for user '%s'",
-            len(anomalies),
-            user_id,
+        sleep_quality_anomaly = self._analyse_sleep_metric("sleep_quality", "quality_score", sleep_rows, target_date)
+        if sleep_quality_anomaly is not None:
+            results.append(sleep_quality_anomaly)
+
+        return results
+
+    # ------------------------------------------------------------------
+    # Private — data fetching
+    # ------------------------------------------------------------------
+
+    async def _fetch_daily_metrics(
+        self,
+        user_id: str,
+        db: AsyncSession,
+        target_date: date,
+    ) -> list[DailyHealthMetrics]:
+        """Return up to 30 days of DailyHealthMetrics rows for *user_id*.
+
+        Includes the target date and the preceding ``_LOOKBACK_DAYS - 1`` days.
+        When a user has multiple sources for the same day, all rows are
+        returned; the per-metric analysis picks values on a first-valid basis.
+        """
+        start_date = (target_date - timedelta(days=_LOOKBACK_DAYS - 1)).isoformat()
+        end_date = target_date.isoformat()
+
+        stmt = select(DailyHealthMetrics).where(
+            and_(
+                DailyHealthMetrics.user_id == user_id,
+                DailyHealthMetrics.date >= start_date,
+                DailyHealthMetrics.date <= end_date,
+            )
         )
-        return anomalies
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def _fetch_sleep_records(
+        self,
+        user_id: str,
+        db: AsyncSession,
+        target_date: date,
+    ) -> list[SleepRecord]:
+        """Return up to 30 days of SleepRecord rows for *user_id*."""
+        start_date = (target_date - timedelta(days=_LOOKBACK_DAYS - 1)).isoformat()
+        end_date = target_date.isoformat()
+
+        stmt = select(SleepRecord).where(
+            and_(
+                SleepRecord.user_id == user_id,
+                SleepRecord.date >= start_date,
+                SleepRecord.date <= end_date,
+            )
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Private — analysis helpers
     # ------------------------------------------------------------------
 
-    def _check_scalar_metric(
+    def _analyse_daily_metric(
         self,
         metric: str,
-        today_str: str,
         rows: list[DailyHealthMetrics],
+        target_date: date,
     ) -> AnomalyResult | None:
-        """Evaluate a single scalar metric for anomalous behaviour.
+        """Analyse one daily metric column and return an anomaly if found.
 
-        Splits the rows into baseline (all days *before* today) and today's
-        observation.  Requires at least ``_MIN_DATA_POINTS`` non-null values
-        across both sets before performing the z-score check.
+        Builds a date-keyed map from the fetched rows, taking the first
+        non-null value encountered per day (in case multiple sources exist).
+        Returns ``None`` when there is insufficient data or no anomaly.
+        """
+        target_date_str = target_date.isoformat()
+
+        # Build date → value map; keep first non-null per date.
+        date_values: dict[str, float] = {}
+        for row in rows:
+            if row.date in date_values:
+                continue  # already have a value for this day
+            raw = getattr(row, metric, None)
+            if raw is not None:
+                date_values[row.date] = float(raw)
+
+        return self._compute_anomaly(metric, date_values, target_date_str)
+
+    def _analyse_sleep_metric(
+        self,
+        metric_name: str,
+        column: str,
+        rows: list[SleepRecord],
+        target_date: date,
+    ) -> AnomalyResult | None:
+        """Analyse a SleepRecord column and return an anomaly if found."""
+        target_date_str = target_date.isoformat()
+
+        date_values: dict[str, float] = {}
+        for row in rows:
+            if row.date in date_values:
+                continue
+            raw = getattr(row, column, None)
+            if raw is not None:
+                date_values[row.date] = float(raw)
+
+        return self._compute_anomaly(metric_name, date_values, target_date_str)
+
+    @staticmethod
+    def _compute_anomaly(
+        metric: str,
+        date_values: dict[str, float],
+        target_date_str: str,
+    ) -> AnomalyResult | None:
+        """Core statistical computation.
 
         Args:
-            metric: Column name on :class:`DailyHealthMetrics`.
-            today_str: ISO date string for the current day (``YYYY-MM-DD``).
-            rows: Pre-fetched rows for the 30-day window, including today.
+            metric: Human-readable metric label.
+            date_values: Mapping of ``YYYY-MM-DD`` → float value for the
+                full lookback window (may include the target date).
+            target_date_str: The target date as ``YYYY-MM-DD``.
 
         Returns:
-            An :class:`AnomalyResult` if the deviation exceeds the threshold,
-            otherwise ``None``.
+            An :class:`AnomalyResult` with ``severity != "normal"`` if an
+            anomaly is detected, otherwise ``None``.
         """
-        baseline_values: list[float] = []
-        today_value: float | None = None
+        current_value = date_values.get(target_date_str)
+        if current_value is None:
+            # No data point on the target date; nothing to evaluate.
+            logger.debug("AnomalyDetector: no data for metric='%s' on date='%s'", metric, target_date_str)
+            return None
 
-        for row in rows:
-            val = getattr(row, metric, None)
-            if val is None:
-                continue
-            val = float(val)
-            if row.date == today_str:
-                # Take the latest row for today (last write wins)
-                today_value = val
-            else:
-                baseline_values.append(val)
+        # Collect all historical values (excluding the target date) to form
+        # the baseline window. The target date itself is not included in
+        # the baseline statistics to avoid self-referential inflation.
+        historical_values = [v for d, v in date_values.items() if d != target_date_str]
 
-        # Include today in the count for the minimum-data-points gate
-        total_points = len(baseline_values) + (1 if today_value is not None else 0)
-        if total_points < _MIN_DATA_POINTS:
+        if len(historical_values) < _MIN_DATA_POINTS:
             logger.debug(
-                "Metric '%s': only %d data points (need %d) — skipping",
+                "AnomalyDetector: insufficient baseline data for metric='%s' "
+                "(%d points, need %d)",
                 metric,
-                total_points,
+                len(historical_values),
                 _MIN_DATA_POINTS,
             )
             return None
 
-        if today_value is None:
-            return None
+        mean = _mean(historical_values)
+        stddev = _stddev(historical_values, mean)
 
-        if not baseline_values:
-            return None
+        if stddev == 0.0:
+            # All baseline values are identical — any deviation is infinite.
+            # Treat the current value as anomalous only if it differs from mean.
+            deviation = 0.0 if current_value == mean else float("inf")
+        else:
+            deviation = abs(current_value - mean) / stddev
 
-        mean = _mean(baseline_values)
-        std = _std(baseline_values, mean)
-
-        if std == 0.0:
-            # All baseline values identical — cannot compute deviation
-            return None
-
-        deviation = abs(today_value - mean) / std
         severity = _classify_severity(deviation)
-
-        if severity == AnomalySeverity.NORMAL:
+        if severity == "normal":
             return None
+
+        direction = "high" if current_value > mean else "low"
 
         logger.info(
-            "Anomaly detected — metric='%s' value=%.2f mean=%.2f std=%.2f deviation=%.2f severity=%s",
+            "AnomalyDetector: %s anomaly — metric='%s' current=%.2f mean=%.2f "
+            "stddev=%.2f deviation=%.2f direction=%s",
+            severity,
             metric,
-            today_value,
+            current_value,
             mean,
-            std,
+            stddev,
             deviation,
-            severity.value,
+            direction,
         )
 
         return AnomalyResult(
-            metric_name=metric,
-            current_value=today_value,
+            metric=metric,
+            current_value=current_value,
             baseline_mean=mean,
-            baseline_std=std,
+            baseline_stddev=stddev,
             deviation_magnitude=deviation,
             severity=severity,
-        )
-
-    async def _check_sleep_duration(
-        self,
-        user_id: str,
-        today_str: str,
-        window_start: str,
-        session: AsyncSession,
-    ) -> AnomalyResult | None:
-        """Evaluate sleep duration for anomalous behaviour.
-
-        Fetches ``sleep_records`` for the 30-day window and applies the same
-        z-score logic as the scalar metrics.
-
-        Args:
-            user_id: The authenticated user's Supabase ID.
-            today_str: ISO date string for the current day.
-            window_start: ISO date string for the start of the 30-day window.
-            session: An active async SQLAlchemy session.
-
-        Returns:
-            An :class:`AnomalyResult` for ``sleep_duration_hours`` if an
-            anomaly is detected, otherwise ``None``.
-        """
-        stmt = (
-            select(SleepRecord)
-            .where(
-                SleepRecord.user_id == user_id,
-                SleepRecord.date >= window_start,
-                SleepRecord.date <= today_str,
-            )
-            .order_by(SleepRecord.date)
-        )
-        result = await session.execute(stmt)
-        sleep_rows: list[SleepRecord] = list(result.scalars().all())
-
-        baseline_values: list[float] = []
-        today_value: float | None = None
-
-        for row in sleep_rows:
-            if row.hours is None:
-                continue
-            val = float(row.hours)
-            if row.date == today_str:
-                today_value = val
-            else:
-                baseline_values.append(val)
-
-        total_points = len(baseline_values) + (1 if today_value is not None else 0)
-        if total_points < _MIN_DATA_POINTS:
-            return None
-
-        if today_value is None or not baseline_values:
-            return None
-
-        mean = _mean(baseline_values)
-        std = _std(baseline_values, mean)
-
-        if std == 0.0:
-            return None
-
-        deviation = abs(today_value - mean) / std
-        severity = _classify_severity(deviation)
-
-        if severity == AnomalySeverity.NORMAL:
-            return None
-
-        return AnomalyResult(
-            metric_name="sleep_duration_hours",
-            current_value=today_value,
-            baseline_mean=mean,
-            baseline_std=std,
-            deviation_magnitude=deviation,
-            severity=severity,
-        )
-
-    # ------------------------------------------------------------------
-    # Insight storage
-    # ------------------------------------------------------------------
-
-    async def store_anomaly_insights(
-        self,
-        user_id: str,
-        anomalies: list[AnomalyResult],
-        session: AsyncSession,
-    ) -> None:
-        """Persist detected anomalies as insight records.
-
-        Each :class:`AnomalyResult` is stored as an ``Insight`` row via the
-        ``app.models.insight`` model (available from Phase 2 onwards).  If the
-        model is unavailable at import time the method logs a warning and
-        returns without raising.
-
-        Args:
-            user_id: The authenticated user's Supabase ID.
-            anomalies: List of anomalies to persist.
-            session: An active async SQLAlchemy session.
-        """
-        if not anomalies:
-            return
-
-        try:
-            from app.models.insight import Insight  # type: ignore[import]
-        except ImportError:
-            logger.warning("app.models.insight not yet available — anomaly insights not stored")
-            return
-
-        for anomaly in anomalies:
-            title = f"{anomaly.metric_name.replace('_', ' ').title()} anomaly detected"
-            body = (
-                f"Today's {anomaly.metric_name} ({anomaly.current_value:.1f}) "
-                f"deviates {anomaly.deviation_magnitude:.1f}σ from your 30-day "
-                f"baseline (mean {anomaly.baseline_mean:.1f}, "
-                f"std {anomaly.baseline_std:.1f}). "
-                f"Severity: {anomaly.severity.value}."
-            )
-            data = {
-                "metric_name": anomaly.metric_name,
-                "current_value": anomaly.current_value,
-                "baseline_mean": anomaly.baseline_mean,
-                "baseline_std": anomaly.baseline_std,
-                "deviation_magnitude": anomaly.deviation_magnitude,
-                "severity": anomaly.severity.value,
-                "detected_at": anomaly.detected_at.isoformat(),
-            }
-            priority = 2 if anomaly.severity == AnomalySeverity.CRITICAL else 3
-            insight = Insight(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                type="anomaly_alert",
-                title=title,
-                body=body,
-                data=data,
-                priority=priority,
-            )
-            session.add(insight)
-
-        await session.commit()
-        logger.info(
-            "Stored %d anomaly insight(s) for user '%s'",
-            len(anomalies),
-            user_id,
+            direction=direction,
         )

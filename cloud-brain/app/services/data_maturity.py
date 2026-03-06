@@ -1,25 +1,20 @@
 """
 Zuralog Cloud Brain — Data Maturity Service.
 
-Calculates a user's "data maturity level" based on how many days of
-health data they have recorded. This drives progressive feature unlock:
-more data → more powerful AI features become available.
+Determines how many days of health data a user has accumulated and maps
+that count to a maturity level.  The maturity level gates features that
+require a baseline of historical data (e.g. anomaly detection, correlations).
 
-Levels:
-  BUILDING  (1–6 days)   — basic tracking only
-  READY     (7–13 days)  — health score, correlations, weekly report
-  STRONG    (14–29 days) — anomaly detection, trend analysis
-  EXCELLENT (30+ days)   — advanced insights, full correlation engine
-
-Thresholds are defined as class constants and can be adjusted without
-changing any other code.
+Levels
+------
+building  (1–6 days)   — Too early for meaningful analysis.
+ready     (7–13 days)  — Basic insights available.
+strong    (14–29 days) — Anomaly detection and full insights active.
+excellent (30+ days)   — All features active with high confidence.
 """
 
-from __future__ import annotations
-
 import logging
-from dataclasses import dataclass
-from enum import Enum
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,204 +24,140 @@ from app.models.daily_metrics import DailyHealthMetrics
 logger = logging.getLogger(__name__)
 
 
-class MaturityLevel(str, Enum):
-    """Data maturity tier.
-
-    Attributes:
-        BUILDING: 1–6 days of data. Basic tracking only.
-        READY: 7–13 days. Weekly report and correlations unlock.
-        STRONG: 14–29 days. Anomaly detection and trend analysis unlock.
-        EXCELLENT: 30+ days. Full advanced insights unlock.
-    """
-
-    BUILDING = "building"
-    READY = "ready"
-    STRONG = "strong"
-    EXCELLENT = "excellent"
-
-
-@dataclass
-class DataMaturityResult:
-    """The data maturity assessment for a single user.
-
-    Attributes:
-        level: Current MaturityLevel.
-        days_with_data: Total distinct days with any health data.
-        percentage: Progress toward the next level (0–100).
-        features_unlocked: List of feature names available at this level.
-        features_locked: List of feature names not yet available.
-        next_milestone_days: Days remaining until the next maturity level.
-    """
-
-    level: MaturityLevel
-    days_with_data: int
-    percentage: float
-    features_unlocked: list[str]
-    features_locked: list[str]
-    next_milestone_days: int
-
-
 class DataMaturityService:
-    """Calculate data maturity level and feature availability for a user.
+    """Service for evaluating a user's health data maturity level.
 
-    Class Constants:
-        FEATURE_THRESHOLDS: Feature name → minimum days_with_data required.
-        _LEVEL_THRESHOLDS: Days required to enter each MaturityLevel.
-        _LEVEL_ORDER: List of levels in ascending order.
+    Maturity is determined by counting the number of distinct calendar days
+    for which the user has at least one ``DailyHealthMetrics`` row. Richer
+    feature sets are unlocked as more days of data accumulate.
+
+    Usage::
+
+        svc = DataMaturityService()
+        info = await svc.get_maturity(user_id, db)
+        # {"days": 12, "level": "ready", "label": "Ready", "features": {...}}
     """
 
-    FEATURE_THRESHOLDS: dict[str, int] = {
-        "health_score_full": 7,
-        "anomaly_detection": 14,
-        "correlations": 7,
-        "weekly_report": 7,
-        "trend_analysis": 14,
-        "advanced_insights": 30,
-    }
-
-    _LEVEL_THRESHOLDS: dict[MaturityLevel, int] = {
-        MaturityLevel.BUILDING: 1,
-        MaturityLevel.READY: 7,
-        MaturityLevel.STRONG: 14,
-        MaturityLevel.EXCELLENT: 30,
-    }
-
-    _LEVEL_ORDER: list[MaturityLevel] = [
-        MaturityLevel.BUILDING,
-        MaturityLevel.READY,
-        MaturityLevel.STRONG,
-        MaturityLevel.EXCELLENT,
+    LEVELS: list[dict[str, Any]] = [
+        {
+            "level": "building",
+            "min_days": 1,
+            "max_days": 6,
+            "label": "Building",
+        },
+        {
+            "level": "ready",
+            "min_days": 7,
+            "max_days": 13,
+            "label": "Ready",
+        },
+        {
+            "level": "strong",
+            "min_days": 14,
+            "max_days": 29,
+            "label": "Strong",
+        },
+        {
+            "level": "excellent",
+            "min_days": 30,
+            "max_days": None,
+            "label": "Excellent",
+        },
     ]
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    async def get_maturity(self, user_id: str, db: AsyncSession) -> dict[str, Any]:
+        """Return the current data maturity level for a user.
 
-    async def get_maturity(self, user_id: str, session: AsyncSession) -> DataMaturityResult:
-        """Calculate data maturity level for a user.
-
-        Counts the distinct calendar days on which the user has at least
-        one DailyHealthMetrics row (from any source).
+        Counts distinct dates in ``daily_health_metrics`` for the given
+        user, then maps the count to a level and computes feature gates.
 
         Args:
-            user_id: Zuralog user ID.
-            session: Open async DB session.
+            user_id: The user to evaluate.
+            db: Active async database session.
 
         Returns:
-            Populated DataMaturityResult.
+            A dict with the following keys:
+
+            - ``days``: Total distinct days of data (int).
+            - ``level``: Maturity level string (e.g. ``"ready"``).
+            - ``label``: Human-readable label (e.g. ``"Ready"``).
+            - ``features``: Feature gate dict from :meth:`get_feature_gates`.
         """
-        days_with_data = await self._count_days_with_data(user_id, session)
+        try:
+            stmt = select(
+                func.count(DailyHealthMetrics.date.distinct())
+            ).where(DailyHealthMetrics.user_id == user_id)
+            result = await db.execute(stmt)
+            days: int = result.scalar_one() or 0
+        except Exception:
+            logger.exception(
+                "data_maturity: failed to count days for user=%s", user_id
+            )
+            days = 0
 
-        level = self._level_for_days(days_with_data)
-        percentage = self._progress_percentage(days_with_data, level)
-        next_milestone = self._next_milestone_days(days_with_data, level)
+        level_info = self._classify(days)
+        features = self.get_feature_gates(days)
 
-        unlocked = [feature for feature, threshold in self.FEATURE_THRESHOLDS.items() if days_with_data >= threshold]
-        locked = [feature for feature, threshold in self.FEATURE_THRESHOLDS.items() if days_with_data < threshold]
-
-        return DataMaturityResult(
-            level=level,
-            days_with_data=days_with_data,
-            percentage=percentage,
-            features_unlocked=sorted(unlocked),
-            features_locked=sorted(locked),
-            next_milestone_days=next_milestone,
+        logger.debug(
+            "data_maturity: user=%s days=%d level=%s",
+            user_id,
+            days,
+            level_info["level"],
         )
 
-    def get_feature_available(self, feature: str, days_with_data: int) -> bool:
-        """Check if a specific feature is available given the user's data days.
+        return {
+            "days": days,
+            "level": level_info["level"],
+            "label": level_info["label"],
+            "features": features,
+        }
+
+    def get_feature_gates(self, days: int) -> dict[str, bool]:
+        """Return feature availability flags based on the number of data days.
+
+        Feature gates:
+        - ``correlations``: Enabled once the user has ≥ 7 days of data.
+          At least one week is needed for any meaningful cross-metric
+          correlation.
+        - ``anomaly_detection``: Enabled at ≥ 14 days — requires a two-week
+          baseline to distinguish noise from genuine anomalies.
+        - ``health_score_footnote``: ``True`` when the user has < 7 days of
+          data — the client should render a disclaimer noting the score is
+          preliminary.
+        - ``full_insights``: Enabled at ≥ 14 days, when the analytics engine
+          has enough history for confident recommendations.
 
         Args:
-            feature: Feature name (must be in FEATURE_THRESHOLDS).
-            days_with_data: Number of days with health data.
+            days: Number of distinct days of data the user has.
 
         Returns:
-            True if the feature is available, False if not yet unlocked.
-            Returns True for unknown features (fail-open for unregistered features).
+            Dict mapping feature name to bool availability flag.
         """
-        threshold = self.FEATURE_THRESHOLDS.get(feature)
-        if threshold is None:
-            logger.warning("Unknown feature '%s' in get_feature_available", feature)
-            return True
-        return days_with_data >= threshold
+        return {
+            "correlations": days >= 7,
+            "anomaly_detection": days >= 14,
+            "health_score_footnote": days < 7,
+            "full_insights": days >= 14,
+        }
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    async def _count_days_with_data(user_id: str, session: AsyncSession) -> int:
-        """Count distinct calendar days with at least one health metric.
+    def _classify(self, days: int) -> dict[str, Any]:
+        """Map a day count to the appropriate maturity level dict.
 
         Args:
-            user_id: Zuralog user ID.
-            session: Open async DB session.
+            days: Number of distinct days of health data.
 
         Returns:
-            Count of distinct date strings in DailyHealthMetrics.
+            A level dict from :attr:`LEVELS` (always returns a dict —
+            returns the last level if ``days`` exceeds all thresholds).
         """
-        stmt = select(func.count(func.distinct(DailyHealthMetrics.date))).where(
-            DailyHealthMetrics.user_id == user_id,
-        )
-        result = await session.execute(stmt)
-        count = result.scalar_one_or_none()
-        return int(count) if count else 0
+        if days == 0:
+            # No data yet — return building level with "no data" semantics
+            return {"level": "building", "label": "Building"}
 
-    def _level_for_days(self, days: int) -> MaturityLevel:
-        """Return the MaturityLevel that corresponds to the given day count.
+        for level in self.LEVELS:
+            max_days = level["max_days"]
+            if max_days is None or days <= max_days:
+                return level
 
-        Args:
-            days: Number of days with health data.
-
-        Returns:
-            The highest MaturityLevel the user has reached.
-        """
-        level = MaturityLevel.BUILDING
-        for lvl in self._LEVEL_ORDER:
-            if days >= self._LEVEL_THRESHOLDS[lvl]:
-                level = lvl
-        return level
-
-    def _progress_percentage(self, days: int, level: MaturityLevel) -> float:
-        """Calculate progress toward the next maturity level (0.0–100.0).
-
-        Returns 100.0 if the user has reached the highest level (EXCELLENT).
-
-        Args:
-            days: Days with data.
-            level: Current MaturityLevel.
-
-        Returns:
-            Percentage as a float in range [0.0, 100.0].
-        """
-        if level == MaturityLevel.EXCELLENT:
-            return 100.0
-
-        level_idx = self._LEVEL_ORDER.index(level)
-        current_threshold = self._LEVEL_THRESHOLDS[level]
-        next_level = self._LEVEL_ORDER[level_idx + 1]
-        next_threshold = self._LEVEL_THRESHOLDS[next_level]
-
-        span = next_threshold - current_threshold
-        progress = days - current_threshold
-        return round(min(max((progress / span) * 100, 0.0), 100.0), 1)
-
-    def _next_milestone_days(self, days: int, level: MaturityLevel) -> int:
-        """Calculate how many more days are needed to reach the next level.
-
-        Returns 0 if the user has already reached EXCELLENT.
-
-        Args:
-            days: Days with data.
-            level: Current MaturityLevel.
-
-        Returns:
-            Number of additional days needed.
-        """
-        if level == MaturityLevel.EXCELLENT:
-            return 0
-
-        level_idx = self._LEVEL_ORDER.index(level)
-        next_level = self._LEVEL_ORDER[level_idx + 1]
-        next_threshold = self._LEVEL_THRESHOLDS[next_level]
-        return max(next_threshold - days, 0)
+        # days > all max values — return the last (highest) level
+        return self.LEVELS[-1]

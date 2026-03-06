@@ -1,324 +1,479 @@
 """
-Zuralog Cloud Brain — Attachment Processor.
+Zuralog Cloud Brain — Attachment Processor Service.
 
-Processes uploaded files (images, PDFs, text, CSV) and extracts health-relevant
-facts without permanently storing the raw file. Extracted knowledge is persisted
-to the vector memory store (Pinecone) for future AI recall.
+Validates and processes files uploaded via the chat attachment endpoint.
+Extracts text content from documents, detects food images by filename
+heuristics, and identifies health-relevant facts from text content.
 
-Design decisions:
-- No permanent file storage — we extract knowledge and discard the bytes.
-- Images are described via LLM vision, then health facts extracted.
-- Food photo detection: if image contains food, return nutrition estimate.
-- PDF/TXT/CSV: text extracted directly, then summarised.
-- Max 10MB per file, max 3 files per message.
+No ML/AI calls are made here — LLM-based analysis happens downstream
+when the extracted context is injected into the conversation.
 """
 
 from __future__ import annotations
 
-import csv
-import io
 import logging
+import mimetypes
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Constants
+# Food-related filename keywords used for image heuristic detection
 # ---------------------------------------------------------------------------
-
-_FOOD_KEYWORDS = frozenset(
-    [
-        "food",
-        "meal",
-        "dish",
-        "plate",
-        "bowl",
-        "salad",
-        "sandwich",
-        "burger",
-        "pizza",
-        "pasta",
-        "rice",
-        "soup",
-        "steak",
-        "chicken",
-        "fish",
-        "fruit",
-        "vegetable",
-        "snack",
-        "breakfast",
+_FOOD_KEYWORDS: frozenset[str] = frozenset(
+    {
         "lunch",
         "dinner",
-        "dessert",
+        "breakfast",
+        "food",
+        "meal",
+        "snack",
+        "eat",
+        "eating",
+        "recipe",
+        "dish",
         "drink",
+        "beverage",
+        "fruit",
+        "vegetable",
+        "salad",
+        "burger",
+        "pizza",
+        "sandwich",
+        "soup",
+        "dessert",
         "coffee",
-        "tea",
-        "juice",
         "smoothie",
-        "chocolate",
-        "cake",
-        "bread",
-        "egg",
-        "cheese",
-        "yogurt",
-        "oats",
-        "cereal",
-    ]
+        "protein",
+        "plate",
+    }
 )
+
+# ---------------------------------------------------------------------------
+# Health keyword patterns for fact extraction from text content
+# ---------------------------------------------------------------------------
+_HEALTH_PATTERNS: list[tuple[str, str]] = [
+    # Medication
+    (
+        r"\b(?:medication|medicine|drug|prescription|pill|tablet|capsule|dose|dosage)"
+        r"(?:\s*:\s*|\s+is\s+|\s+)([^\.\n,;]{1,80})",
+        "medication",
+    ),
+    # Allergy
+    (
+        r"\b(?:allerg(?:y|ic|ies)|intoleran(?:ce|t))(?:\s*:\s*|\s+to\s+|\s+)([^\.\n,;]{1,80})",
+        "allergy",
+    ),
+    # Diagnosis / condition
+    (
+        r"\b(?:diagnos(?:ed|is)|condition|disorder|syndrome|disease)"
+        r"(?:\s*:\s*|\s+with\s+|\s+of\s+|\s+)([^\.\n,;]{1,80})",
+        "diagnosis",
+    ),
+    # Calories
+    (
+        r"\b(\d[\d,\.]*)\s*(?:kcal|calories?|cal\b)",
+        "calories",
+    ),
+    # Weight / body weight
+    (
+        r"\b(?:weight|bodyweight|bw)\s*(?::\s*|is\s*|=\s*)?(\d[\d,\.]*)\s*(?:kg|lbs?|pounds?|kilograms?)",
+        "weight",
+    ),
+    # Blood pressure
+    (
+        r"\b(?:blood\s*pressure|bp)\s*(?::\s*|is\s*|=\s*)?(\d{2,3}\s*/\s*\d{2,3})\s*(?:mmhg)?",
+        "blood_pressure",
+    ),
+    # Heart rate
+    (
+        r"\b(?:heart\s*rate|pulse|resting\s+hr|rhr)\s*(?::\s*|is\s*|=\s*|of\s*)?(\d{2,3})\s*(?:bpm|beats\s+per\s+minute)?",
+        "heart_rate",
+    ),
+    # Blood glucose / sugar
+    (
+        r"\b(?:blood\s*(?:glucose|sugar)|glucose)\s*(?::\s*|is\s*|=\s*)?(\d[\d,\.]*)\s*(?:mg/dl|mmol/l)?",
+        "blood_glucose",
+    ),
+    # HRV
+    (
+        r"\b(?:hrv|heart\s+rate\s+variability)\s*(?::\s*|is\s*|=\s*)?(\d[\d,\.]*)\s*(?:ms)?",
+        "hrv",
+    ),
+    # Sleep duration
+    (
+        r"\b(?:slept?|sleep\s+duration|sleep\s+time)\s*(?::\s*|for\s*|=\s*)?(\d[\d,\.]*)\s*(?:hours?|hrs?)",
+        "sleep",
+    ),
+    # Steps
+    (
+        r"\b(\d[\d,\.]*)\s*steps?\b",
+        "steps",
+    ),
+    # VO2 max
+    (
+        r"\b(?:vo2\s*max|cardio\s+fitness)\s*(?::\s*|is\s*|=\s*)?(\d[\d,\.]*)",
+        "vo2_max",
+    ),
+    # Body fat
+    (
+        r"\b(?:body\s*fat|bf\s*%|fat\s*percentage)\s*(?::\s*|is\s*|=\s*)?(\d[\d,\.]*)\s*%?",
+        "body_fat",
+    ),
+]
+
+# Pre-compile all patterns for performance
+_COMPILED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(pat, re.IGNORECASE), label) for pat, label in _HEALTH_PATTERNS
+]
 
 
 class AttachmentProcessor:
-    """Processes uploaded file attachments and extracts health-relevant information.
+    """Service for validating and processing user-uploaded files.
 
-    All processing is in-memory — no files are written to disk or persisted to
-    object storage. Extracted facts are stored in the vector memory store.
+    Validates file type and size, extracts text content from documents,
+    detects food images by filename heuristics, and identifies
+    health-relevant facts for injection into the LLM conversation context.
 
-    Class Constants:
-        ALLOWED_TYPES: Set of accepted MIME types.
-        MAX_SIZE_BYTES: Maximum file size (10 MB).
+    All operations are synchronous (no async I/O or ML calls).
+
+    Class Attributes:
+        ALLOWED_TYPES: Mapping of allowed MIME types to canonical extensions.
+        MAX_SIZE_BYTES: Maximum file size accepted (10 MB).
+        MAX_PER_MESSAGE: Maximum number of attachments allowed per message.
     """
 
-    ALLOWED_TYPES: frozenset[str] = frozenset(
-        [
-            "image/jpeg",
-            "image/png",
-            "image/heic",
-            "application/pdf",
-            "text/plain",
-            "text/csv",
-        ]
-    )
-    MAX_SIZE_BYTES: int = 10 * 1024 * 1024  # 10MB
+    ALLOWED_TYPES: dict[str, str] = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/heic": ".heic",
+        "application/pdf": ".pdf",
+        "text/plain": ".txt",
+        "text/csv": ".csv",
+    }
 
+    MAX_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB
+    MAX_PER_MESSAGE: int = 3
+
+    # -----------------------------------------------------------------------
+    # Public API
+    # -----------------------------------------------------------------------
+
+    @staticmethod
     async def process(
-        self,
-        file_content: bytes,
-        content_type: str,
+        file_bytes: bytes,
         filename: str,
+        content_type: str,
         user_id: str,
-        memory_store,
-        llm_client,
     ) -> dict[str, Any]:
-        """Process an uploaded file and return extracted facts.
+        """Process an uploaded file and return structured metadata.
+
+        Steps:
+        1. Validate content type and size (raises ``ValueError`` on failure).
+        2. Detect whether the file is a food image via filename heuristics.
+        3. Extract text content: decode text/CSV files; note that PDF
+           extraction is not yet available.
+        4. Extract health-relevant facts from any text content.
+        5. Build a context message suitable for injection into the LLM prompt.
 
         Args:
-            file_content: Raw file bytes.
-            content_type: MIME type of the file.
-            filename: Original filename.
-            user_id: Zuralog user ID.
-            memory_store: Vector store for persisting extracted facts.
-                Expected interface: ``await memory_store.add(text, metadata)``.
-            llm_client: LLM client for vision description.
-                Expected interface: ``await llm_client.describe_image(bytes)``.
+            file_bytes: Raw file content in memory.
+            filename: Original filename as provided by the client.
+            content_type: MIME type declared by the client.
+            user_id: ID of the uploading user (used for logging).
 
         Returns:
-            Dict with ``extracted_facts`` (list[str]), ``food_data`` (dict | None),
-            ``content_type``, ``filename``, ``size_bytes``.
+            A structured result dict with keys:
+                - ``type``: ``"image"`` or ``"document"``.
+                - ``filename``: The original filename.
+                - ``content_type``: The validated MIME type.
+                - ``size_bytes``: File size in bytes.
+                - ``extracted_text``: Decoded text for text/CSV; ``None``
+                  for images and PDFs.
+                - ``is_food_image``: ``True`` if the image filename contains
+                  food-related keywords.
+                - ``health_facts``: List of extracted health-relevant fact
+                  strings from the text content.
+                - ``context_message``: A plain-English summary ready to
+                  inject into the LLM context window.
 
         Raises:
-            ValueError: If file exceeds size limit or has an unsupported type.
+            ValueError: If the content type is not allowed or the file
+                exceeds ``MAX_SIZE_BYTES``.
         """
-        if len(file_content) > self.MAX_SIZE_BYTES:
-            raise ValueError(f"File size {len(file_content)} bytes exceeds {self.MAX_SIZE_BYTES} byte limit")
+        # Step 1 — validate
+        AttachmentProcessor.validate(file_bytes, content_type)
 
-        if content_type not in self.ALLOWED_TYPES:
-            raise ValueError(f"Unsupported content type: {content_type}")
+        logger.info(
+            "AttachmentProcessor.process: user=%s filename=%r content_type=%s size=%d",
+            user_id,
+            filename,
+            content_type,
+            len(file_bytes),
+        )
 
-        extracted_facts: list[str] = []
-        food_data: dict | None = None
+        size_bytes: int = len(file_bytes)
+        is_image: bool = content_type.startswith("image/")
+        file_type: str = "image" if is_image else "document"
 
-        if content_type in ("image/jpeg", "image/png", "image/heic"):
-            description, food_data = await self._process_image(file_content, content_type, llm_client)
-            if description:
-                extracted_facts.append(description)
+        # Step 2 — food image detection
+        is_food_image: bool = False
+        if is_image:
+            is_food_image = AttachmentProcessor._detect_food_image(filename)
+            logger.debug(
+                "AttachmentProcessor.process: is_food_image=%s for filename=%r",
+                is_food_image,
+                filename,
+            )
 
-        else:
-            text = await self._extract_text(file_content, content_type)
-            if text.strip():
-                # Summarise long text to extract health-relevant facts.
-                summary = await self._summarise_health_facts(text, llm_client)
-                if summary:
-                    extracted_facts.append(summary)
+        # Step 3 — extract text content
+        extracted_text: str | None = AttachmentProcessor._extract_text(
+            file_bytes, content_type
+        )
 
-        # Persist to vector memory store if facts were extracted.
-        if extracted_facts and memory_store is not None:
-            combined = "\n".join(extracted_facts)
-            try:
-                await memory_store.add(
-                    combined,
-                    metadata={
-                        "user_id": user_id,
-                        "source": "attachment",
-                        "filename": filename,
-                        "content_type": content_type,
-                    },
-                )
-            except Exception:  # noqa: BLE001
-                logger.exception(
-                    "Failed to persist attachment facts to memory store for user %s",
-                    user_id,
-                )
+        # Step 4 — identify health facts from any text
+        health_facts: list[str] = []
+        if extracted_text:
+            health_facts = AttachmentProcessor._extract_health_facts(extracted_text)
+            logger.debug(
+                "AttachmentProcessor.process: found %d health fact(s) in %r",
+                len(health_facts),
+                filename,
+            )
+
+        # Step 5 — build context message for LLM injection
+        context_message: str = AttachmentProcessor._build_context_message(
+            filename=filename,
+            content_type=content_type,
+            file_type=file_type,
+            size_bytes=size_bytes,
+            extracted_text=extracted_text,
+            is_food_image=is_food_image,
+            health_facts=health_facts,
+        )
 
         return {
-            "extracted_facts": extracted_facts,
-            "food_data": food_data,
-            "content_type": content_type,
+            "type": file_type,
             "filename": filename,
-            "size_bytes": len(file_content),
+            "content_type": content_type,
+            "size_bytes": size_bytes,
+            "extracted_text": extracted_text,
+            "is_food_image": is_food_image,
+            "health_facts": health_facts,
+            "context_message": context_message,
         }
 
-    def _is_food_image(self, description: str) -> bool:
-        """Check if an image description suggests food content.
+    # Magic byte signatures for server-side MIME verification.
+    # Mapping: normalised MIME type -> list of valid magic-byte prefixes.
+    _MAGIC_BYTES: dict[str, list[bytes]] = {
+        "image/jpeg": [b"\xff\xd8\xff"],
+        "image/png": [b"\x89PNG\r\n\x1a\n"],
+        "image/heic": [],  # HEIC containers vary; skip magic-byte check
+        "application/pdf": [b"%PDF"],
+        "text/plain": [],   # No reliable magic bytes for plain text
+        "text/csv": [],     # No reliable magic bytes for CSV
+    }
+
+    @staticmethod
+    def validate(file_bytes: bytes, content_type: str) -> None:
+        """Validate file content type and size.
+
+        Checks the declared MIME type against the allowlist, verifies the
+        payload does not exceed ``MAX_SIZE_BYTES``, and performs magic-byte
+        verification for JPEG, PNG, and PDF files.
 
         Args:
-            description: LLM-generated image description string.
+            file_bytes: Raw file bytes to validate.
+            content_type: MIME type declared by the client.
 
-        Returns:
-            True if the description contains food-related keywords.
+        Raises:
+            ValueError: If the MIME type is not in ``ALLOWED_TYPES``.
+            ValueError: If the file size exceeds ``MAX_SIZE_BYTES``.
+            ValueError: If the magic bytes do not match the declared type.
         """
-        description_lower = description.lower()
-        return any(keyword in description_lower for keyword in _FOOD_KEYWORDS)
+        # Normalise MIME type (strip parameters such as "; charset=utf-8")
+        normalised_type = content_type.split(";")[0].strip().lower()
 
-    async def _extract_text(self, content: bytes, content_type: str) -> str:
-        """Extract text content from PDF, TXT, or CSV files.
+        if normalised_type not in AttachmentProcessor.ALLOWED_TYPES:
+            allowed = ", ".join(sorted(AttachmentProcessor.ALLOWED_TYPES.keys()))
+            raise ValueError(
+                f"Unsupported file type '{normalised_type}'. "
+                f"Allowed types: {allowed}."
+            )
+
+        size = len(file_bytes)
+        if size > AttachmentProcessor.MAX_SIZE_BYTES:
+            max_mb = AttachmentProcessor.MAX_SIZE_BYTES / (1024 * 1024)
+            raise ValueError(
+                f"File size {size / (1024 * 1024):.1f} MB exceeds the "
+                f"{max_mb:.0f} MB limit."
+            )
+
+        # Magic-byte verification for types with known signatures
+        magic_prefixes = AttachmentProcessor._MAGIC_BYTES.get(normalised_type, [])
+        if magic_prefixes:
+            if not any(file_bytes.startswith(prefix) for prefix in magic_prefixes):
+                raise ValueError(
+                    f"File content does not match declared type '{normalised_type}'. "
+                    "The file may be corrupt or mislabelled."
+                )
+
+    # -----------------------------------------------------------------------
+    # Private helpers
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def _detect_food_image(filename: str) -> bool:
+        """Return True if the filename suggests the image depicts food.
+
+        Checks whether any of the food-related keywords appear as a
+        whole word (case-insensitive) in the filename stem.
 
         Args:
-            content: Raw file bytes.
-            content_type: MIME type of the file.
+            filename: The original upload filename.
 
         Returns:
-            Extracted text string (may be empty).
+            ``True`` if a food keyword is found in the filename.
         """
-        if content_type == "text/plain":
+        # Strip extension and lower-case for comparison
+        stem = filename.rsplit(".", 1)[0].lower()
+        # Tokenise on non-word characters so "lunch2" still matches "lunch"
+        tokens = set(re.split(r"\W+|_", stem))
+        return bool(tokens & _FOOD_KEYWORDS)
+
+    @staticmethod
+    def _extract_text(file_bytes: bytes, content_type: str) -> str | None:
+        """Attempt to extract plain text from the file.
+
+        - ``text/plain`` and ``text/csv``: decoded as UTF-8 (with
+          latin-1 fallback).
+        - ``application/pdf``: extraction is not yet available; a note
+          string is returned so callers can communicate this to users.
+        - Images: always returns ``None`` (no text extraction).
+
+        Args:
+            file_bytes: Raw file bytes.
+            content_type: Normalised MIME type of the file.
+
+        Returns:
+            Extracted or explanatory text string, or ``None`` for images.
+        """
+        normalised = content_type.split(";")[0].strip().lower()
+
+        if normalised in ("text/plain", "text/csv"):
             try:
-                return content.decode("utf-8", errors="replace")
-            except Exception:  # noqa: BLE001
-                return ""
+                return file_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                try:
+                    return file_bytes.decode("latin-1")
+                except Exception:
+                    logger.warning(
+                        "_extract_text: could not decode text file — returning None"
+                    )
+                    return None
 
-        if content_type == "text/csv":
-            return self._extract_csv_text(content)
+        if normalised == "application/pdf":
+            return "PDF content extraction not yet available."
 
-        if content_type == "application/pdf":
-            return self._extract_pdf_text(content)
-
-        return ""
-
-    @staticmethod
-    def _extract_csv_text(content: bytes) -> str:
-        """Convert CSV bytes to a plain-text representation.
-
-        Args:
-            content: CSV file bytes.
-
-        Returns:
-            Text representation with headers and rows.
-        """
-        try:
-            text = content.decode("utf-8", errors="replace")
-            reader = csv.DictReader(io.StringIO(text))
-            lines: list[str] = []
-            if reader.fieldnames:
-                lines.append("Columns: " + ", ".join(reader.fieldnames))
-            for i, row in enumerate(reader):
-                if i >= 50:  # Cap rows for LLM context
-                    lines.append(f"... and {i} more rows")
-                    break
-                lines.append(", ".join(f"{k}: {v}" for k, v in row.items()))
-            return "\n".join(lines)
-        except Exception:  # noqa: BLE001
-            logger.exception("CSV extraction failed")
-            return ""
+        # Images — no text extraction
+        return None
 
     @staticmethod
-    def _extract_pdf_text(content: bytes) -> str:
-        """Extract text from a PDF file using pypdf if available.
+    def _extract_health_facts(text: str) -> list[str]:
+        """Scan text for health-relevant facts using regex patterns.
 
-        Falls back to a placeholder message if pypdf is not installed.
-
-        Args:
-            content: PDF file bytes.
-
-        Returns:
-            Extracted text string.
-        """
-        try:
-            import pypdf  # type: ignore[import-untyped]
-
-            reader = pypdf.PdfReader(io.BytesIO(content))
-            pages: list[str] = []
-            for page in reader.pages[:20]:  # Max 20 pages
-                text = page.extract_text()
-                if text:
-                    pages.append(text)
-            return "\n".join(pages)
-        except ImportError:
-            logger.warning("pypdf not installed — PDF text extraction unavailable")
-            return "[PDF content — text extraction requires pypdf package]"
-        except Exception:  # noqa: BLE001
-            logger.exception("PDF extraction failed")
-            return ""
-
-    async def _process_image(
-        self,
-        content: bytes,
-        content_type: str,
-        llm_client,
-    ) -> tuple[str, dict | None]:
-        """Describe an image and optionally extract nutrition data.
+        Checks all compiled patterns in ``_COMPILED_PATTERNS`` and
+        returns a deduplicated list of human-readable fact strings for
+        each match found.
 
         Args:
-            content: Image bytes.
-            content_type: MIME type (jpeg/png/heic).
-            llm_client: LLM client with vision capability.
+            text: Decoded text content to scan.
 
         Returns:
-            Tuple of (description_text, food_data_dict_or_None).
+            A list of fact strings, e.g. ``["calories: 450"]``.
+            Empty list if no health keywords are detected.
         """
-        description = ""
-        food_data: dict | None = None
+        facts: list[str] = []
+        seen: set[str] = set()
 
-        try:
-            if llm_client is None:
-                return "", None
-
-            # Describe the image via LLM vision.
-            if hasattr(llm_client, "describe_image"):
-                description = await llm_client.describe_image(content, content_type)
-            else:
-                logger.debug("llm_client has no describe_image method — skipping vision")
-                return "", None
-
-            if description and self._is_food_image(description):
-                # Ask LLM to estimate nutrition.
-                if hasattr(llm_client, "estimate_nutrition"):
-                    food_data = await llm_client.estimate_nutrition(content, description)
+        for pattern, label in _COMPILED_PATTERNS:
+            for match in pattern.finditer(text):
+                # Use the first capture group as the value when present
+                if match.lastindex and match.lastindex >= 1:
+                    value = match.group(1).strip()
                 else:
-                    food_data = {"detected": True, "note": "Nutrition estimation not available"}
+                    value = match.group(0).strip()
 
-        except Exception:  # noqa: BLE001
-            logger.exception("Image processing failed")
+                fact = f"{label}: {value}"
+                if fact not in seen:
+                    seen.add(fact)
+                    facts.append(fact)
 
-        return description, food_data
+        return facts
 
     @staticmethod
-    async def _summarise_health_facts(text: str, llm_client) -> str:
-        """Use the LLM to extract health-relevant facts from document text.
+    def _build_context_message(
+        filename: str,
+        content_type: str,
+        file_type: str,
+        size_bytes: int,
+        extracted_text: str | None,
+        is_food_image: bool,
+        health_facts: list[str],
+    ) -> str:
+        """Build a plain-English context message for LLM injection.
+
+        Summarises the attachment so the language model understands what
+        was shared without requiring access to the raw bytes.
 
         Args:
-            text: Plain text content from the document.
-            llm_client: LLM client for summarisation.
+            filename: Original upload filename.
+            content_type: File MIME type.
+            file_type: ``"image"`` or ``"document"``.
+            size_bytes: File size in bytes.
+            extracted_text: Decoded text content, or ``None``.
+            is_food_image: Whether the image was identified as food.
+            health_facts: List of extracted health fact strings.
 
         Returns:
-            Summary string with extracted health facts.
+            A formatted context message string.
         """
-        if llm_client is None:
-            return text[:2000]  # Truncate for storage without LLM
+        size_kb = size_bytes / 1024
+        size_label = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
 
-        try:
-            if hasattr(llm_client, "extract_health_facts"):
-                return await llm_client.extract_health_facts(text[:8000])
-            # Fallback: return truncated text
-            return text[:2000]
-        except Exception:  # noqa: BLE001
-            logger.exception("Health fact summarisation failed")
-            return text[:2000]
+        # Sanitise filename before embedding in LLM prompt to prevent prompt injection.
+        # Strip newlines, control characters, and truncate to 255 chars.
+        safe_filename = re.sub(r'[\r\n\x00-\x1f"\'`]', "", filename)[:255]
+
+        lines: list[str] = [
+            f"[Attachment] The user has shared a {file_type}: '{safe_filename}' "
+            f"({content_type}, {size_label}).",
+        ]
+
+        if file_type == "image":
+            if is_food_image:
+                lines.append(
+                    "The image appears to depict a meal or food item. "
+                    "Consider providing nutritional context or asking about the meal."
+                )
+            else:
+                lines.append(
+                    "The image has been received. "
+                    "Describe or reference it as needed in your response."
+                )
+
+        if extracted_text:
+            # Truncate very long texts for the context summary
+            preview = extracted_text[:2000]
+            if len(extracted_text) > 2000:
+                preview += f"\n... [truncated — {len(extracted_text)} chars total]"
+            lines.append(f"Extracted content:\n{preview}")
+
+        if health_facts:
+            facts_formatted = "\n".join(f"  - {f}" for f in health_facts)
+            lines.append(
+                f"Health-relevant information detected in the document:\n{facts_formatted}"
+            )
+
+        return "\n\n".join(lines)

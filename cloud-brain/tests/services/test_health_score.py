@@ -1,375 +1,332 @@
-"""
-Zuralog Cloud Brain — Tests for HealthScoreCalculator.
+"""Tests for HealthScoreCalculator.
 
-Validates the scoring logic, weight redistribution, commentary bands,
-edge cases, and the no-data early-exit.  All database I/O is replaced
-with AsyncMock objects so the tests are fully in-process.
+Covers the six required scenarios using unittest.mock to avoid a real
+database.  Each test builds a fixture AsyncSession whose ``execute``
+side-effect returns pre-built ORM-like objects.
 """
 
-import math
-import uuid
-from datetime import datetime, timezone
+from __future__ import annotations
+
+import statistics
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.services.health_score import (
     HealthScoreCalculator,
-    _clamp,
-    _get_commentary,
-    _redistribute_weights,
-    _score_activity_vs_baseline,
-    _score_hrv,
-    _score_resting_hr,
-    _score_sleep,
-    _score_sleep_consistency,
-    _score_sleep_duration,
-    _score_steps_vs_goal,
-    HealthSubScore,
+    HealthScoreResult,
+    _METRIC_LABELS,
 )
 
+
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers / fixtures
 # ---------------------------------------------------------------------------
 
-_USER_ID = "test-hs-user-001"
-
-
-def _make_dhm(
-    date: str,
-    steps: int | None = None,
-    hrv_ms: float | None = None,
-    resting_heart_rate: float | None = None,
+def _make_daily(
+    date_str: str,
+    steps: int | None = 8000,
+    active_calories: int | None = 400,
+    resting_heart_rate: float | None = 58.0,
+    hrv_ms: float | None = 55.0,
 ) -> SimpleNamespace:
-    """Build a DailyHealthMetrics-shaped namespace without hitting the DB.
-
-    Uses SimpleNamespace to avoid SQLAlchemy ORM instrumentation issues
-    when constructing objects outside of a session context.
-
-    Args:
-        date: ISO date string (YYYY-MM-DD).
-        steps: Step count for the day.
-        hrv_ms: HRV in milliseconds.
-        resting_heart_rate: Resting heart rate in bpm.
-
-    Returns:
-        A SimpleNamespace with all DailyHealthMetrics fields populated.
-    """
+    """Build a mock DailyHealthMetrics row."""
     return SimpleNamespace(
-        id=str(uuid.uuid4()),
-        user_id=_USER_ID,
-        source="apple_health",
-        date=date,
+        date=date_str,
         steps=steps,
-        hrv_ms=hrv_ms,
+        active_calories=active_calories,
         resting_heart_rate=resting_heart_rate,
-        active_calories=None,
-        vo2_max=None,
-        distance_meters=None,
-        flights_climbed=None,
-        body_fat_percentage=None,
-        respiratory_rate=None,
-        oxygen_saturation=None,
-        heart_rate_avg=None,
+        hrv_ms=hrv_ms,
     )
 
 
-def _make_sleep(date: str, hours: float, quality: int | None = None) -> SimpleNamespace:
-    """Build a SleepRecord-shaped namespace without hitting the DB.
+def _make_sleep(date_str: str, hours: float = 7.5, quality_score: int | None = 80) -> SimpleNamespace:
+    """Build a mock SleepRecord row."""
+    return SimpleNamespace(date=date_str, hours=hours, quality_score=quality_score)
 
-    Uses SimpleNamespace to avoid SQLAlchemy ORM instrumentation issues.
 
-    Args:
-        date: ISO date string (YYYY-MM-DD).
-        hours: Total sleep hours.
-        quality: Optional 0-100 quality score.
+def _today() -> str:
+    return datetime.now(tz=timezone.utc).date().isoformat()
 
-    Returns:
-        A SimpleNamespace with all SleepRecord fields populated.
-    """
+
+def _date_before(days: int) -> str:
+    d = datetime.now(tz=timezone.utc).date() - timedelta(days=days)
+    return d.isoformat()
+
+
+def _make_activity(date_str: str, calories: int = 300, duration_seconds: int = 1800) -> SimpleNamespace:
+    """Build a mock UnifiedActivity row."""
+    d = date.fromisoformat(date_str)
     return SimpleNamespace(
-        id=str(uuid.uuid4()),
-        user_id=_USER_ID,
-        source="apple_health",
-        date=date,
-        hours=hours,
-        quality_score=quality,
+        start_time=datetime(d.year, d.month, d.day, 10, 0, 0, tzinfo=timezone.utc),
+        calories=calories,
+        duration_seconds=duration_seconds,
     )
 
 
-def _make_db_mock(
-    dhm_rows: list[DailyHealthMetrics],
-    sleep_rows: list[SleepRecord],
+# ---------------------------------------------------------------------------
+# DB session mock factory
+# ---------------------------------------------------------------------------
+
+def _build_db(
+    daily_rows: list,
+    sleep_rows: list,
+    activity_rows: list | None = None,
 ) -> AsyncMock:
-    """Build an AsyncMock database session that returns fixed query results.
+    """Create an AsyncMock database session.
 
-    Calls to ``db.execute`` alternate: first call returns dhm_rows,
-    second call returns sleep_rows, matching the order in the calculator.
+    ``execute`` is called once per query type (daily metrics, sleep, activity,
+    and up to 31 sleep-consistency windows).  We detect which query was issued
+    by inspecting the model class embedded in the WHERE clause via the
+    statement's first WHERE column name.  Because SQLAlchemy compiled queries
+    are complex objects, we count calls and return data in a predictable order:
 
-    Args:
-        dhm_rows: DailyHealthMetrics rows to return from the first query.
-        sleep_rows: SleepRecord rows to return from the second query.
+    Call order inside ``HealthScoreCalculator.calculate``:
+        1. DailyHealthMetrics (30-day window)
+        2. SleepRecord (30-day window)
+        3. UnifiedActivity (30-day window)
+        4. SleepRecord for today's 7-day consistency window
+        5. SleepRecord × 30 for historical consistency stddev list
 
-    Returns:
-        An AsyncMock mimicking AsyncSession.
+    We use a simple counter to distinguish call groups.
     """
+    if activity_rows is None:
+        activity_rows = []
 
-    def _scalars_result(rows):
+    db = AsyncMock()
+    call_counter = {"n": 0}
+
+    async def _execute(stmt, *args, **kwargs):
+        n = call_counter["n"]
+        call_counter["n"] += 1
+
         mock_result = MagicMock()
         mock_scalars = MagicMock()
-        mock_scalars.all.return_value = rows
+
+        if n == 0:
+            # First call: DailyHealthMetrics history
+            mock_scalars.all.return_value = daily_rows
+        elif n == 1:
+            # Second call: SleepRecord history (30-day)
+            mock_scalars.all.return_value = sleep_rows
+        elif n == 2:
+            # Third call: UnifiedActivity history
+            mock_scalars.all.return_value = activity_rows
+        else:
+            # All subsequent: SleepRecord for consistency windows
+            # Return the same sleep_rows so consistency windows get data
+            mock_scalars.all.return_value = sleep_rows
+
         mock_result.scalars.return_value = mock_scalars
         return mock_result
 
-    dhm_result = _scalars_result(dhm_rows)
-    sleep_result = _scalars_result(sleep_rows)
-
-    db = AsyncMock()
-    db.execute = AsyncMock(side_effect=[dhm_result, sleep_result])
+    db.execute.side_effect = _execute
     return db
 
 
 # ---------------------------------------------------------------------------
-# Unit tests — pure functions
+# Tests
 # ---------------------------------------------------------------------------
 
 
-def test_clamp_within_range():
-    """_clamp should return the value unchanged when within bounds."""
-    assert _clamp(50.0) == 50.0
+class TestHealthScoreFullData:
+    """test_full_data_returns_score — all 6 metrics present."""
+
+    @pytest.mark.asyncio
+    async def test_full_data_returns_score(self):
+        today = _today()
+        daily_rows = [_make_daily(_date_before(i)) for i in range(30)] + [_make_daily(today)]
+        sleep_rows = [_make_sleep(_date_before(i)) for i in range(30)] + [_make_sleep(today)]
+
+        db = _build_db(daily_rows, sleep_rows)
+        calc = HealthScoreCalculator()
+        result = await calc.calculate("user-1", db)
+
+        assert result is not None
+        assert isinstance(result, HealthScoreResult)
+        assert 0 <= result.score <= 100
+        assert len(result.contributing_metrics) > 0
+        assert result.data_days > 0
+        assert isinstance(result.commentary, str)
+        assert len(result.commentary) > 0
 
 
-def test_clamp_below_zero():
-    """_clamp should return 0 for negative values."""
-    assert _clamp(-10.0) == 0.0
+class TestHealthScorePartialData:
+    """test_partial_data_redistributes_weights — only sleep + steps."""
+
+    @pytest.mark.asyncio
+    async def test_partial_data_redistributes_weights(self):
+        today = _today()
+        # Only steps and sleep — no HRV, no resting HR, no active calories
+        daily_rows = [
+            _make_daily(_date_before(i), hrv_ms=None, resting_heart_rate=None, active_calories=None)
+            for i in range(20)
+        ] + [_make_daily(today, hrv_ms=None, resting_heart_rate=None, active_calories=None)]
+        sleep_rows = [_make_sleep(_date_before(i)) for i in range(20)] + [_make_sleep(today)]
+
+        db = _build_db(daily_rows, sleep_rows)
+        calc = HealthScoreCalculator()
+        result = await calc.calculate("user-2", db)
+
+        assert result is not None
+        assert 0 <= result.score <= 100
+        # Only sleep + steps (+ possibly sleep_consistency) should contribute
+        for metric in result.contributing_metrics:
+            assert metric in {"sleep", "steps", "sleep_consistency"}
+        # Missing metrics must NOT appear in sub_scores
+        assert "hrv" not in result.sub_scores
+        assert "resting_hr" not in result.sub_scores
+        assert "activity" not in result.sub_scores
 
 
-def test_clamp_above_hundred():
-    """_clamp should return 100 for values above 100."""
-    assert _clamp(120.0) == 100.0
+class TestHealthScoreNoSleepNoActivity:
+    """test_no_sleep_and_no_activity_returns_none — minimum requirement not met."""
+
+    @pytest.mark.asyncio
+    async def test_no_sleep_and_no_activity_returns_none(self):
+        today = _today()
+        # Daily rows exist (steps, HRV) but no sleep rows and no activity
+        daily_rows = [
+            _make_daily(_date_before(i), active_calories=None)
+            for i in range(15)
+        ] + [_make_daily(today, active_calories=None)]
+        sleep_rows: list = []
+
+        db = _build_db(daily_rows, sleep_rows, activity_rows=[])
+        calc = HealthScoreCalculator()
+        result = await calc.calculate("user-3", db)
+
+        assert result is None
 
 
-def test_sleep_duration_zero():
-    """Zero hours of sleep should score 0."""
-    assert _score_sleep_duration(0.0) == 0.0
+class TestHealthScoreValidRange:
+    """test_score_in_valid_range — score is always 0-100."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("score_band", ["low", "mid", "high"])
+    async def test_score_in_valid_range(self, score_band: str):
+        today = _today()
+
+        if score_band == "low":
+            # Very poor metrics — today is the worst day by far
+            today_daily = _make_daily(today, steps=100, active_calories=10, resting_heart_rate=100.0, hrv_ms=5.0)
+            history = [_make_daily(_date_before(i), steps=10000, active_calories=600, resting_heart_rate=55.0, hrv_ms=70.0) for i in range(1, 30)]
+            today_sleep = _make_sleep(today, hours=3.0, quality_score=20)
+            sleep_history = [_make_sleep(_date_before(i), hours=8.0, quality_score=90) for i in range(1, 30)]
+        elif score_band == "high":
+            # Excellent metrics — today is the best day
+            today_daily = _make_daily(today, steps=20000, active_calories=900, resting_heart_rate=45.0, hrv_ms=120.0)
+            history = [_make_daily(_date_before(i), steps=5000, active_calories=200, resting_heart_rate=75.0, hrv_ms=30.0) for i in range(1, 30)]
+            today_sleep = _make_sleep(today, hours=9.0, quality_score=98)
+            sleep_history = [_make_sleep(_date_before(i), hours=5.0, quality_score=40) for i in range(1, 30)]
+        else:
+            # Average metrics
+            today_daily = _make_daily(today)
+            history = [_make_daily(_date_before(i)) for i in range(1, 30)]
+            today_sleep = _make_sleep(today)
+            sleep_history = [_make_sleep(_date_before(i)) for i in range(1, 30)]
+
+        daily_rows = history + [today_daily]
+        sleep_rows = sleep_history + [today_sleep]
+
+        db = _build_db(daily_rows, sleep_rows)
+        calc = HealthScoreCalculator()
+        result = await calc.calculate("user-4", db)
+
+        assert result is not None
+        assert 0 <= result.score <= 100
 
 
-def test_sleep_duration_ideal():
-    """Eight hours (within ideal band) should score 100."""
-    assert _score_sleep_duration(8.0) == 100.0
+class TestHealthScoreCommentary:
+    """test_commentary_generation — correct commentary for each score band."""
+
+    @pytest.mark.parametrize(
+        "score,expected_fragment",
+        [
+            (85, "excellent"),
+            (65, "solid day"),
+            (45, "pulling your score down"),
+            (25, "recovery"),
+        ],
+    )
+    def test_commentary_generation(self, score: int, expected_fragment: str):
+        sub_scores = {"sleep": score - 5, "steps": score + 5, "hrv": score}
+        calc = HealthScoreCalculator()
+        commentary = calc._generate_commentary(score, sub_scores)
+        assert expected_fragment.lower() in commentary.lower()
+
+    def test_commentary_no_sub_scores(self):
+        calc = HealthScoreCalculator()
+        commentary = calc._generate_commentary(50, {})
+        assert isinstance(commentary, str)
+        assert len(commentary) > 0
 
 
-def test_sleep_duration_short():
-    """Three and a half hours should score less than 60 (half of 7h target)."""
-    score = _score_sleep_duration(3.5)
-    assert score < 60.0
-    assert score > 0.0
+class TestHealthScore7DayHistory:
+    """test_7_day_history — returns list of 7 entries."""
 
+    @pytest.mark.asyncio
+    async def test_7_day_history_returns_seven_entries(self):
+        today = date.today()
+        # Build history for each of the 7 days
+        daily_rows = []
+        sleep_rows = []
+        for i in range(7):
+            d = (today - timedelta(days=i)).isoformat()
+            daily_rows.extend([_make_daily(d)] * 5)
+            sleep_rows.extend([_make_sleep(d)] * 5)
 
-def test_sleep_duration_oversleep():
-    """Twelve or more hours (max) should score lower than 100 due to penalty."""
-    score = _score_sleep_duration(12.0)
-    assert score < 100.0
-    assert score >= 80.0
+        # Also add 30-day history so percentile ranking has data
+        for i in range(7, 37):
+            d = (today - timedelta(days=i)).isoformat()
+            daily_rows.append(_make_daily(d))
+            sleep_rows.append(_make_sleep(d))
 
+        # For get_7_day_history, each call to calculate() makes multiple DB
+        # queries.  We supply a generous pool of rows each time.
+        db = AsyncMock()
 
-def test_score_steps_vs_goal_zero():
-    """Zero steps must return a score of 0."""
-    assert _score_steps_vs_goal(0) == 0.0
+        async def _execute(stmt, *args, **kwargs):
+            mock_result = MagicMock()
+            mock_scalars = MagicMock()
+            mock_scalars.all.return_value = daily_rows + sleep_rows
+            mock_result.scalars.return_value = mock_scalars
+            return mock_result
 
+        db.execute.side_effect = _execute
 
-def test_score_steps_vs_goal_at_target():
-    """Exactly 10,000 steps must score 100."""
-    assert _score_steps_vs_goal(10_000) == 100.0
-
-
-def test_score_steps_vs_goal_half():
-    """5,000 steps (half goal) must score approximately 50."""
-    score = _score_steps_vs_goal(5_000)
-    assert abs(score - 50.0) < 1.0
-
-
-def test_score_steps_vs_goal_above_target():
-    """Steps above the goal should not exceed 100."""
-    assert _score_steps_vs_goal(15_000) == 100.0
-
-
-def test_get_commentary_bands():
-    """Commentary should match expected band strings for boundary values."""
-    assert "Critical" in _get_commentary(0)
-    assert "Critical" in _get_commentary(39)
-    assert "Fair" in _get_commentary(40)
-    assert "Fair" in _get_commentary(59)
-    assert "Good" in _get_commentary(60)
-    assert "Great" in _get_commentary(75)
-    assert "Excellent" in _get_commentary(90)
-    assert "Excellent" in _get_commentary(100)
-
-
-# ---------------------------------------------------------------------------
-# Unit tests — weight redistribution
-# ---------------------------------------------------------------------------
-
-
-def test_redistribute_weights_excluded_metric():
-    """Excluding one metric should redistribute its weight to the others.
-
-    The available sub-scores must sum to 1.0 after redistribution.
-    """
-    sub_scores = {
-        "a": HealthSubScore(name="A", score=80.0, weight=0.50, available=True),
-        "b": HealthSubScore(name="B", score=60.0, weight=0.30, available=True),
-        "c": HealthSubScore(name="C", score=50.0, weight=0.20, available=False),
-    }
-    result = _redistribute_weights(sub_scores)
-
-    total = sum(ss.weight for ss in result.values())
-    assert abs(total - 1.0) < 1e-9, f"Weights should sum to 1.0, got {total}"
-
-    assert result["c"].weight == 0.0
-    assert result["a"].weight > 0.50
-    assert result["b"].weight > 0.30
-
-
-def test_redistribute_weights_all_available():
-    """If all sub-scores are available the weights must not change."""
-    sub_scores = {
-        "a": HealthSubScore(name="A", score=80.0, weight=0.60, available=True),
-        "b": HealthSubScore(name="B", score=70.0, weight=0.40, available=True),
-    }
-    result = _redistribute_weights(sub_scores)
-    assert result["a"].weight == 0.60
-    assert result["b"].weight == 0.40
-
-
-# ---------------------------------------------------------------------------
-# Integration tests — HealthScoreCalculator
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_full_data_composite_in_range():
-    """Full data (all metrics present) must return a composite in 0-100.
-
-    Creates 10 days of overlapping sleep and DHM data with realistic values.
-    The calculator should return a HealthScoreResult with a valid composite.
-    """
-    dhm_rows = [
-        _make_dhm(
-            date=f"2026-02-{i:02d}",
-            steps=8000 + i * 100,
-            hrv_ms=40.0 + i,
-            resting_heart_rate=62.0 - i * 0.5,
+        # Patch calculate to avoid complex DB call counting inside the loop
+        calc = HealthScoreCalculator()
+        fake_result = HealthScoreResult(
+            score=72,
+            sub_scores={"sleep": 80, "steps": 65},
+            commentary="A solid day overall, with room to improve step count.",
+            contributing_metrics=["sleep", "steps"],
+            data_days=25,
         )
-        for i in range(1, 11)
-    ]
-    sleep_rows = [_make_sleep(date=f"2026-02-{i:02d}", hours=7.0 + i * 0.1, quality=70 + i) for i in range(1, 11)]
-    db = _make_db_mock(dhm_rows, sleep_rows)
 
-    calculator = HealthScoreCalculator()
-    result = await calculator.calculate(user_id=_USER_ID, db=db)
+        with patch.object(calc, "calculate", AsyncMock(return_value=fake_result)):
+            history = await calc.get_7_day_history("user-5", db)
 
-    assert result is not None
-    assert 0 <= result.composite_score <= 100
-    assert result.ai_commentary != ""
-    assert result.data_days > 0
-    assert len(result.sub_scores) == 6
+        assert len(history) == 7
+        for entry in history:
+            assert "date" in entry
+            assert "score" in entry
+            assert "sub_scores" in entry
 
+    @pytest.mark.asyncio
+    async def test_7_day_history_includes_none_for_missing_days(self):
+        """Days with no data produce ``score: None`` entries (not omitted)."""
+        calc = HealthScoreCalculator()
 
-@pytest.mark.asyncio
-async def test_partial_data_only_sleep():
-    """With only sleep data the score must still be computed.
+        with patch.object(calc, "calculate", AsyncMock(return_value=None)):
+            db = AsyncMock()
+            history = await calc.get_7_day_history("user-6", db)
 
-    DHM rows have no non-None values; only sleep_rows are populated.
-    The calculator must not return None and must redistribute weights.
-    """
-    dhm_rows: list[DailyHealthMetrics] = []
-    sleep_rows = [_make_sleep(date=f"2026-02-{i:02d}", hours=7.5) for i in range(1, 11)]
-    db = _make_db_mock(dhm_rows, sleep_rows)
-
-    calculator = HealthScoreCalculator()
-    result = await calculator.calculate(user_id=_USER_ID, db=db)
-
-    assert result is not None
-    assert 0 <= result.composite_score <= 100
-    # HRV, resting HR, activity, and steps sub-scores must all be unavailable.
-    for key in ("hrv", "resting_hr", "activity_baseline", "steps_goal"):
-        assert not result.sub_scores[key].available
-    # Sleep must be available.
-    assert result.sub_scores["sleep"].available
-
-
-@pytest.mark.asyncio
-async def test_no_data_returns_none():
-    """With no data at all the calculator must return None."""
-    db = _make_db_mock(dhm_rows=[], sleep_rows=[])
-
-    calculator = HealthScoreCalculator()
-    result = await calculator.calculate(user_id=_USER_ID, db=db)
-
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_score_band_commentary_matches_composite():
-    """The ai_commentary must match the computed composite_score band."""
-    dhm_rows = [
-        _make_dhm(
-            date=f"2026-02-{i:02d}",
-            steps=2000,  # low steps → lower score
-            hrv_ms=20.0,
-            resting_heart_rate=80.0,
-        )
-        for i in range(1, 11)
-    ]
-    sleep_rows = [_make_sleep(date=f"2026-02-{i:02d}", hours=4.0, quality=30) for i in range(1, 11)]
-    db = _make_db_mock(dhm_rows, sleep_rows)
-
-    calculator = HealthScoreCalculator()
-    result = await calculator.calculate(user_id=_USER_ID, db=db)
-
-    assert result is not None
-    # Verify the commentary is consistent with the composite score.
-    expected = _get_commentary(result.composite_score)
-    assert result.ai_commentary == expected
-
-
-@pytest.mark.asyncio
-async def test_zero_steps_activity_subscores_zero():
-    """Zero step counts must produce an activity sub-score of 0.
-
-    ``steps_goal`` normalises against 10,000; 0 steps → 0 score.
-    ``activity_baseline`` should be 0 as well when today's steps are 0
-    and all previous days were also 0.
-    """
-    # All rows have 0 steps.
-    dhm_rows = [_make_dhm(date=f"2026-02-{i:02d}", steps=0) for i in range(1, 11)]
-    sleep_rows = [_make_sleep(date=f"2026-02-{i:02d}", hours=8.0) for i in range(1, 11)]
-    db = _make_db_mock(dhm_rows, sleep_rows)
-
-    calculator = HealthScoreCalculator()
-    result = await calculator.calculate(user_id=_USER_ID, db=db)
-
-    assert result is not None
-    assert result.sub_scores["steps_goal"].score == 0.0
-
-
-@pytest.mark.asyncio
-async def test_weight_redistribution_in_full_result():
-    """Available sub-score weights must sum to ~1.0 after redistribution.
-
-    Uses a dataset that only populates sleep — all other dimensions
-    will be unavailable and their weights redistributed.
-    """
-    dhm_rows: list[DailyHealthMetrics] = []
-    sleep_rows = [_make_sleep(date=f"2026-02-{i:02d}", hours=7.0) for i in range(1, 11)]
-    db = _make_db_mock(dhm_rows, sleep_rows)
-
-    calculator = HealthScoreCalculator()
-    result = await calculator.calculate(user_id=_USER_ID, db=db)
-
-    assert result is not None
-    total_weight = sum(ss.weight for ss in result.sub_scores.values())
-    # Unavailable sub-scores have weight 0; total must still be ≈ 1.0.
-    assert abs(total_weight - 1.0) < 1e-6, f"Weights should sum to 1.0 after redistribution, got {total_weight}"
+        assert len(history) == 7
+        for entry in history:
+            assert entry["score"] is None
+            assert entry["sub_scores"] == {}

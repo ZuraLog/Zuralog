@@ -1,20 +1,17 @@
 """
-Zuralog Cloud Brain — Insight Feed API Router.
+Zuralog Cloud Brain — Insight API.
 
-Provides REST endpoints for the user-facing insight card feed:
+Endpoints:
+  GET  /api/v1/insights          — Paginated list of non-dismissed insight cards.
+  PATCH /api/v1/insights/{id}    — Mark an insight as read or dismissed.
 
-- GET  /insights           — paginated, filterable list ordered by priority
-- GET  /insights/unread-count — badge count of unread insights
-- PATCH /insights/{id}     — mark an insight as read or dismissed
-
-All endpoints require a valid Supabase JWT. Ownership is enforced at the
-query level: every query filters by the authenticated user_id so no user
-can read or mutate another user's insights.
+All endpoints are auth-guarded via ``get_authenticated_user_id``.
+Dismissed insights are permanently excluded from GET responses.
 """
 
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,309 +21,241 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.deps import get_authenticated_user_id
 from app.database import get_db
-from app.models.insight import Insight, InsightType
+from app.models.insight import Insight
 
 logger = logging.getLogger(__name__)
 
+router = APIRouter(prefix="/insights", tags=["insights"])
 
 # ---------------------------------------------------------------------------
-# Response schemas
+# Pydantic schemas
 # ---------------------------------------------------------------------------
 
 
 class InsightResponse(BaseModel):
-    """Serialised representation of a single insight card.
+    """Serialised insight card returned to the client.
+
+    All datetime fields are returned as ISO-8601 strings so Flutter can
+    parse them with ``DateTime.parse``. The ``data`` dict is passed
+    through as-is for the card renderer to consume.
 
     Attributes:
-        id: Unique insight UUID.
-        user_id: Owner's user ID.
-        type: Insight category string (``InsightType`` value).
-        title: Short headline.
-        body: Full insight copy.
-        data: Optional structured payload (charts, numbers).
-        priority: 1 = highest, 10 = lowest.
-        created_at: ISO-8601 UTC creation timestamp.
-        read_at: ISO-8601 UTC read timestamp, or ``None``.
-        dismissed_at: ISO-8601 UTC dismissal timestamp, or ``None``.
-        is_read: Derived convenience flag.
-        is_dismissed: Derived convenience flag.
+        id: UUID primary key.
+        user_id: Owner user ID.
+        type: Insight category (e.g. ``sleep_analysis``, ``goal_nudge``).
+        title: Short headline for the card.
+        body: Full card body text.
+        data: Arbitrary JSON payload for rich rendering.
+        reasoning: Optional AI explanation, or ``None`` for rule-based cards.
+        priority: 1 (highest) – 10 (lowest).
+        created_at: ISO-8601 creation timestamp string.
+        read_at: ISO-8601 read timestamp, or ``None`` if unread.
+        dismissed_at: ISO-8601 dismiss timestamp, or ``None`` if not dismissed.
     """
-
-    model_config = ConfigDict(from_attributes=True)
 
     id: str
     user_id: str
     type: str
     title: str
     body: str
-    data: dict | None = None
+    data: dict
+    reasoning: str | None
     priority: int
-    created_at: datetime
-    read_at: datetime | None = None
-    dismissed_at: datetime | None = None
-    is_read: bool
-    is_dismissed: bool
+    created_at: str
+    read_at: str | None
+    dismissed_at: str | None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InsightListResponse(BaseModel):
-    """Paginated list of insight cards.
+    """Paginated envelope for the GET /insights response.
 
     Attributes:
-        total: Total number of insights matching the filter (for pagination UI).
-        limit: Requested page size.
-        offset: Requested page offset.
-        items: Insights for this page.
+        insights: The page of insight cards.
+        total: Total number of non-dismissed insights matching the filter.
+        has_more: True if there are additional pages beyond this one.
     """
 
+    insights: list[InsightResponse]
     total: int
-    limit: int
-    offset: int
-    items: list[InsightResponse]
+    has_more: bool
 
 
-class InsightPatchRequest(BaseModel):
-    """Request body for marking an insight read or dismissed.
-
-    At least one field must be ``True``; both can be ``True`` simultaneously.
+class InsightActionRequest(BaseModel):
+    """Request body for PATCH /insights/{insight_id}.
 
     Attributes:
-        mark_read: Set ``read_at = now()`` when ``True``.
-        mark_dismissed: Set ``dismissed_at = now()`` when ``True``.
+        action: ``"read"`` sets ``read_at``; ``"dismiss"`` sets
+            ``dismissed_at``. Both are idempotent.
     """
 
-    mark_read: bool = False
-    mark_dismissed: bool = False
-
-
-class UnreadCountResponse(BaseModel):
-    """Unread insight badge count.
-
-    Attributes:
-        unread_count: Number of insights with ``read_at IS NULL``.
-    """
-
-    unread_count: int
+    action: Literal["read", "dismiss"]
 
 
 # ---------------------------------------------------------------------------
-# Router
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-async def _set_sentry_module() -> None:
-    sentry_sdk.set_tag("api.module", "insights")
+def _insight_to_response(insight: Insight) -> InsightResponse:
+    """Convert an ORM Insight instance to an InsightResponse.
 
-
-router = APIRouter(
-    prefix="/insights",
-    tags=["insights"],
-    dependencies=[Depends(_set_sentry_module)],
-)
-
-
-# ------------------------------------------------------------------
-# Helper: build InsightResponse from ORM row
-# ------------------------------------------------------------------
-
-
-def _to_response(insight: Insight) -> InsightResponse:
-    """Convert an ORM Insight row to a response schema.
+    Datetime columns are stored as Python ``datetime`` objects by
+    SQLAlchemy but the Pydantic schema expects strings. We convert here
+    so the schema stays simple (no custom validators needed on the client).
 
     Args:
-        insight: SQLAlchemy Insight model instance.
+        insight: The ORM row to serialise.
 
     Returns:
-        InsightResponse populated from the model.
+        An ``InsightResponse`` ready to be JSON-encoded.
     """
+
+    def _dt_str(value: Any) -> str | None:
+        """Return ISO-8601 string or None."""
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return str(value)
+
     return InsightResponse(
         id=insight.id,
         user_id=insight.user_id,
         type=insight.type,
         title=insight.title,
         body=insight.body,
-        data=insight.data,
+        data=insight.data or {},
+        reasoning=insight.reasoning,
         priority=insight.priority,
-        created_at=insight.created_at,
-        read_at=insight.read_at,
-        dismissed_at=insight.dismissed_at,
-        is_read=insight.is_read,
-        is_dismissed=insight.is_dismissed,
+        created_at=_dt_str(insight.created_at) or "",
+        read_at=_dt_str(insight.read_at),
+        dismissed_at=_dt_str(insight.dismissed_at),
     )
 
 
 # ---------------------------------------------------------------------------
-# GET /insights/unread-count — MUST be declared BEFORE /{insight_id} to
-# avoid FastAPI routing the literal path "unread-count" to the param route.
+# Endpoints
 # ---------------------------------------------------------------------------
 
 
-@router.get(
-    "/unread-count",
-    response_model=UnreadCountResponse,
-    summary="Unread insight badge count",
-)
-async def get_unread_count(
-    user_id: str = Depends(get_authenticated_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> UnreadCountResponse:
-    """Return the number of unread insights for the authenticated user.
-
-    Intended for the mobile badge indicator. Only counts non-dismissed,
-    unread insights.
-
-    Args:
-        user_id: Injected authenticated user ID.
-        db: Injected async database session.
-
-    Returns:
-        UnreadCountResponse with the count of unread insights.
-    """
-    stmt = (
-        select(func.count())
-        .select_from(Insight)
-        .where(
-            and_(
-                Insight.user_id == user_id,
-                Insight.read_at.is_(None),
-                Insight.dismissed_at.is_(None),
-            )
-        )
-    )
-    result = await db.execute(stmt)
-    count: int = result.scalar_one()
-    return UnreadCountResponse(unread_count=count)
-
-
-# ---------------------------------------------------------------------------
-# GET /insights
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "",
-    response_model=InsightListResponse,
-    summary="List insight cards",
-)
+@router.get("", summary="List insight cards", response_model=InsightListResponse)
 async def list_insights(
-    limit: int = Query(default=20, ge=1, le=100, description="Page size"),
-    offset: int = Query(default=0, ge=0, description="Page offset"),
-    type: InsightType | None = Query(default=None, description="Filter by insight type"),
-    from_date: datetime | None = Query(
-        default=None,
-        description="Filter insights created at or after this UTC datetime",
-    ),
-    to_date: datetime | None = Query(
-        default=None,
-        description="Filter insights created before or at this UTC datetime",
-    ),
-    include_dismissed: bool = Query(
-        default=False,
-        description="Include dismissed insights (excluded by default)",
-    ),
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
-) -> InsightListResponse:
-    """Return a paginated, filterable list of insight cards.
+    type: str | None = Query(None, description="Filter by insight type (e.g. sleep_analysis)"),
+    date_from: str | None = Query(None, description="ISO date lower bound (YYYY-MM-DD, inclusive)"),
+    date_to: str | None = Query(None, description="ISO date upper bound (YYYY-MM-DD, inclusive)"),
+    limit: int = Query(20, ge=1, le=100, description="Page size"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+) -> dict[str, Any]:
+    """Return a paginated list of non-dismissed insight cards for the authenticated user.
 
-    Results are ordered by priority (ascending, 1 = most important) then
-    ``created_at`` descending so the freshest high-priority cards appear
-    first.
+    Cards are ordered by **priority ASC** (most urgent first), then
+    **created_at DESC** (newest within each priority tier first).
 
     Args:
-        limit: Maximum number of insights to return (1–100).
-        offset: Number of insights to skip for pagination.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
         type: Optional insight type filter.
-        from_date: Optional lower bound on ``created_at``.
-        to_date: Optional upper bound on ``created_at``.
-        include_dismissed: When False (default), dismissed insights are hidden.
-        user_id: Injected authenticated user ID.
-        db: Injected async database session.
+        date_from: Optional ISO date (YYYY-MM-DD) lower bound on ``created_at``.
+        date_to: Optional ISO date (YYYY-MM-DD) upper bound on ``created_at``.
+        limit: Page size (1–100, default 20).
+        offset: Pagination offset (default 0).
 
     Returns:
-        InsightListResponse with total count, pagination meta, and items.
+        ``{ insights, total, has_more }`` envelope.
     """
-    filters: list[Any] = [Insight.user_id == user_id]
+    sentry_sdk.set_user({"id": user_id})
+
+    # Base filter: user's non-dismissed insights
+    filters = [
+        Insight.user_id == user_id,
+        Insight.dismissed_at.is_(None),
+    ]
 
     if type is not None:
-        filters.append(Insight.type == type.value)
+        filters.append(Insight.type == type)
 
-    if from_date is not None:
-        filters.append(Insight.created_at >= from_date)
+    if date_from is not None:
+        filters.append(Insight.created_at >= date_from)
 
-    if to_date is not None:
-        filters.append(Insight.created_at <= to_date)
-
-    if not include_dismissed:
-        filters.append(Insight.dismissed_at.is_(None))
+    if date_to is not None:
+        # Treat date_to as end-of-day by appending a time component
+        filters.append(Insight.created_at <= f"{date_to}T23:59:59")
 
     where_clause = and_(*filters)
 
-    # Total count for pagination header
+    # Count total matching rows (before pagination)
     count_stmt = select(func.count()).select_from(Insight).where(where_clause)
-    total: int = (await db.execute(count_stmt)).scalar_one()
+    count_result = await db.execute(count_stmt)
+    total: int = count_result.scalar_one()
 
-    # Paginated data
-    data_stmt = (
+    # Fetch page
+    stmt = (
         select(Insight)
         .where(where_clause)
         .order_by(Insight.priority.asc(), Insight.created_at.desc())
-        .offset(offset)
         .limit(limit)
+        .offset(offset)
     )
-    rows = (await db.execute(data_stmt)).scalars().all()
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
 
-    return InsightListResponse(
-        total=total,
-        limit=limit,
-        offset=offset,
-        items=[_to_response(r) for r in rows],
+    insights = [_insight_to_response(row) for row in rows]
+    has_more = (offset + len(insights)) < total
+
+    logger.debug(
+        "list_insights: user=%s total=%d offset=%d limit=%d returned=%d",
+        user_id,
+        total,
+        offset,
+        limit,
+        len(insights),
     )
 
+    return {
+        "insights": [i.model_dump() for i in insights],
+        "total": total,
+        "has_more": has_more,
+    }
 
-# ---------------------------------------------------------------------------
-# PATCH /insights/{insight_id}
-# ---------------------------------------------------------------------------
 
-
-@router.patch(
-    "/{insight_id}",
-    response_model=InsightResponse,
-    summary="Mark an insight read or dismissed",
-)
-async def patch_insight(
+@router.patch("/{insight_id}", summary="Mark insight as read or dismissed")
+async def update_insight(
     insight_id: str,
-    body: InsightPatchRequest,
+    body: InsightActionRequest,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
-) -> InsightResponse:
-    """Mark an insight as read and/or dismissed.
+) -> dict[str, Any]:
+    """Mark an insight as read or dismissed.
 
-    Both ``mark_read`` and ``mark_dismissed`` can be set in a single call.
-    Already-set timestamps are NOT overwritten (idempotent).
+    Both actions are idempotent — repeated calls for an already-read or
+    already-dismissed insight succeed with 200 and the existing timestamp.
 
     Args:
         insight_id: UUID of the insight to update.
-        body: Patch request indicating which flags to set.
-        user_id: Injected authenticated user ID.
-        db: Injected async database session.
+        body: ``{ "action": "read" | "dismiss" }``.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
 
     Returns:
-        The updated InsightResponse.
+        Updated ``InsightResponse`` dict.
 
     Raises:
-        HTTPException 404: Insight not found.
-        HTTPException 403: Insight belongs to another user.
-        HTTPException 400: No action requested.
+        HTTPException: 404 if the insight does not exist or belongs to
+            a different user.
     """
-    if not body.mark_read and not body.mark_dismissed:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="At least one of mark_read or mark_dismissed must be true.",
-        )
+    sentry_sdk.set_user({"id": user_id})
 
-    stmt = select(Insight).where(Insight.id == insight_id)
-    result = await db.execute(stmt)
-    insight: Insight | None = result.scalar_one_or_none()
+    result = await db.execute(
+        select(Insight).where(
+            Insight.id == insight_id,
+            Insight.user_id == user_id,
+        )
+    )
+    insight = result.scalar_one_or_none()
 
     if insight is None:
         raise HTTPException(
@@ -334,21 +263,18 @@ async def patch_insight(
             detail="Insight not found.",
         )
 
-    if insight.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied.",
-        )
+    now = datetime.now(timezone.utc)
 
-    now = datetime.now(tz=timezone.utc)
-
-    if body.mark_read and insight.read_at is None:
-        insight.read_at = now
-
-    if body.mark_dismissed and insight.dismissed_at is None:
-        insight.dismissed_at = now
+    if body.action == "read":
+        if insight.read_at is None:
+            insight.read_at = now  # type: ignore[assignment]
+            logger.info("insight marked read: id=%s user=%s", insight_id, user_id)
+    elif body.action == "dismiss":
+        if insight.dismissed_at is None:
+            insight.dismissed_at = now  # type: ignore[assignment]
+            logger.info("insight dismissed: id=%s user=%s", insight_id, user_id)
 
     await db.commit()
     await db.refresh(insight)
 
-    return _to_response(insight)
+    return _insight_to_response(insight).model_dump()

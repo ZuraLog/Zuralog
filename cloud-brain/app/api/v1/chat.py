@@ -2,12 +2,14 @@
 Zuralog Cloud Brain — Chat API Router.
 
 WebSocket endpoint for real-time AI chat streaming and REST endpoints
-for chat history retrieval. Handles authentication, message routing
-through the Orchestrator, and message persistence.
+for chat history retrieval and conversation management. Handles
+authentication, message routing through the Orchestrator, and message
+persistence.
 """
 
 import logging
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 import sentry_sdk
 from fastapi import (
@@ -16,12 +18,14 @@ from fastapi import (
     HTTPException,
     Query,
     Request,
+    Response,
     WebSocket,
     WebSocketDisconnect,
+    status,
 )
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from openai import AsyncOpenAI
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.context_manager.memory_store import MemoryStore
@@ -137,7 +141,8 @@ async def _process_attachments(
             audio_bytes = await storage_service.download_file(bucket, obj_path)
             if audio_bytes:
                 transcription = await _transcribe_audio(
-                    audio_bytes, att.get("filename", "voice_note"),
+                    audio_bytes,
+                    att.get("filename", "voice_note"),
                 )
                 parts.append(f"[Voice note transcription]: {transcription}")
             else:
@@ -268,9 +273,27 @@ async def websocket_chat(
                     usage_tracker=usage_tracker,
                 )
 
+                # Load user persona/proactivity preferences for system prompt
+                persona = "balanced"
+                proactivity = "medium"
+                try:
+                    from app.models.user_preferences import UserPreferences  # noqa: PLC0415
+                    from sqlalchemy import select as _select  # noqa: PLC0415
+
+                    _pref_stmt = _select(UserPreferences).where(UserPreferences.user_id == user_id)
+                    _pref_result = await db.execute(_pref_stmt)
+                    _prefs = _pref_result.scalar_one_or_none()
+                    if _prefs:
+                        persona = _prefs.coach_persona or "balanced"
+                        proactivity = _prefs.proactivity_level or "medium"
+                except Exception:  # noqa: BLE001
+                    pass  # Fall back to defaults if preferences unavailable
+
                 # Process through the Orchestrator
                 try:
-                    agent_response = await orchestrator.process_message(user_id, augmented_text, db=db)
+                    agent_response = await orchestrator.process_message(
+                        user_id, augmented_text, persona=persona, proactivity=proactivity, db=db
+                    )
                     if analytics:
                         analytics.capture(
                             distinct_id=user_id,
@@ -355,7 +378,8 @@ async def get_chat_history(
             }
             if msg.attachments:
                 msg_dict["attachments"] = await _refresh_attachment_urls(
-                    msg.attachments, storage_service,
+                    msg.attachments,
+                    storage_service,
                 )
             msg_dicts.append(msg_dict)
 
@@ -369,3 +393,201 @@ async def get_chat_history(
         )
 
     return history
+
+
+# ---------------------------------------------------------------------------
+# Conversation Management
+# ---------------------------------------------------------------------------
+
+
+class ConversationUpdateRequest(BaseModel):
+    """Request body for renaming or archiving a conversation.
+
+    Attributes:
+        title: Optional new title for the conversation.
+        archived: Optional flag to archive the conversation.
+    """
+
+    title: Optional[str] = None
+    archived: Optional[bool] = None
+
+
+@router.get("/conversations")
+async def list_conversations(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """List all conversations for the authenticated user.
+
+    Returns conversations ordered newest first. Each entry includes a
+    message count and a preview snippet (the last message, truncated to
+    100 characters).
+
+    Args:
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for token validation.
+        db: Injected async database session.
+
+    Returns:
+        A list of conversation summary dicts.
+
+    Raises:
+        HTTPException: 401 if the token is invalid.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    user_id = user.get("id", "unknown")
+
+    result = await db.execute(
+        select(Conversation).where(Conversation.user_id == user_id).order_by(Conversation.created_at.desc())
+    )
+    conversations = result.scalars().all()
+
+    output = []
+    for conv in conversations:
+        msg_result = await db.execute(
+            select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at.desc())
+        )
+        messages = msg_result.scalars().all()
+
+        message_count = len(messages)
+        preview_snippet: str | None = None
+        if messages:
+            last_body = messages[0].content or ""
+            preview_snippet = last_body[:100]
+
+        output.append(
+            {
+                "id": conv.id,
+                "title": conv.title,
+                "created_at": conv.created_at.isoformat() if conv.created_at else None,
+                "message_count": message_count,
+                "preview_snippet": preview_snippet,
+            }
+        )
+
+    return output
+
+
+@router.patch("/conversations/{conversation_id}")
+async def update_conversation(
+    conversation_id: str,
+    body: ConversationUpdateRequest,
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Rename or archive a conversation.
+
+    Only the owner of the conversation may modify it.
+
+    Args:
+        conversation_id: The UUID of the conversation to update.
+        body: Fields to update — ``title`` and/or ``archived``.
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for token validation.
+        db: Injected async database session.
+
+    Returns:
+        The updated conversation dict.
+
+    Raises:
+        HTTPException: 401 if the token is invalid.
+        HTTPException: 404 if the conversation does not exist or belongs
+            to a different user.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    user_id = user.get("id", "unknown")
+
+    result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
+    conv = result.scalar_one_or_none()
+
+    if conv is None or conv.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found",
+        )
+
+    if body.title is not None:
+        conv.title = body.title
+
+    if body.archived is not None:
+        try:
+            conv.archived = body.archived
+        except AttributeError:
+            logger.warning(
+                "Conversation model does not have an 'archived' column; skipping archive update for conversation '%s'",
+                conversation_id,
+            )
+
+    await db.commit()
+    await db.refresh(conv)
+
+    return {
+        "id": conv.id,
+        "title": conv.title,
+        "created_at": conv.created_at.isoformat() if conv.created_at else None,
+        "archived": getattr(conv, "archived", None),
+    }
+
+
+@router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_conversation(
+    conversation_id: str,
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Soft-delete a conversation.
+
+    Sets ``deleted_at`` if the column exists on the model; otherwise
+    falls back to setting ``archived=True``. Only the owner may delete.
+
+    Args:
+        conversation_id: The UUID of the conversation to delete.
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for token validation.
+        db: Injected async database session.
+
+    Returns:
+        204 No Content on success.
+
+    Raises:
+        HTTPException: 401 if the token is invalid.
+        HTTPException: 404 if the conversation does not exist or belongs
+            to a different user.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    user_id = user.get("id", "unknown")
+
+    result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
+    conv = result.scalar_one_or_none()
+
+    if conv is None or conv.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found",
+        )
+
+    # Prefer soft-delete via deleted_at; fall back to archived flag
+    try:
+        conv.deleted_at = datetime.now(timezone.utc)
+    except AttributeError:
+        logger.warning(
+            "Conversation model does not have a 'deleted_at' column; "
+            "falling back to archived=True for conversation '%s'",
+            conversation_id,
+        )
+        try:
+            conv.archived = True
+        except AttributeError:
+            logger.warning(
+                "Conversation model also lacks 'archived'; soft-delete is a no-op for conversation '%s'",
+                conversation_id,
+            )
+
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

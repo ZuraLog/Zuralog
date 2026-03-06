@@ -1,259 +1,275 @@
 """
-Zuralog Cloud Brain — Correlation Suggester.
+Zuralog Cloud Brain — Correlation Suggester Service.
 
-Generates integration suggestions based on the gap between a user's
-health goals and the data sources they currently have connected.
+Suggests which data categories a user should start tracking based on their
+stated goals and the integrations they have currently connected.
 
-Goal → required data mappings:
-  lose_weight       → nutrition + activity
-  better_sleep      → sleep + stress (check-in)
-  reduce_stress     → HRV + check-in + activity
-  build_fitness     → activity + heart_rate + VO2max
-  improve_nutrition → nutrition tracking
-  increase_energy   → sleep + check-in + activity
-
-Dismissed suggestions are stored in Redis with a 30-day TTL.
+The service maps each goal type to the data categories that correlate most
+strongly with progress, then checks which of those categories are missing
+or sparsely covered by the user's connected integrations.
 """
-
-from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime
+from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.integration import Integration
-from app.models.user_preferences import UserPreferences
 
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
-# Goal → data requirements mapping
-# ---------------------------------------------------------------------------
-
-_GOAL_REQUIREMENTS: dict[str, list[str]] = {
-    "lose_weight": ["nutrition", "activity"],
-    "better_sleep": ["sleep", "checkin"],
-    "reduce_stress": ["hrv", "checkin", "activity"],
-    "build_fitness": ["activity", "heart_rate", "vo2max"],
-    "improve_nutrition": ["nutrition"],
-    "increase_energy": ["sleep", "checkin", "activity"],
-}
-
-# Map data requirements to the integrations that satisfy them.
-_DATA_TO_INTEGRATION: dict[str, list[str]] = {
-    "nutrition": ["fitbit", "apple_health", "health_connect"],
-    "activity": ["strava", "fitbit", "apple_health", "health_connect", "polar"],
-    "sleep": ["oura", "fitbit", "apple_health", "health_connect", "withings"],
-    "checkin": ["checkin"],  # Built-in Zuralog check-in feature
-    "hrv": ["oura", "fitbit", "apple_health", "polar"],
-    "heart_rate": ["fitbit", "polar", "oura", "apple_health", "health_connect"],
-    "vo2max": ["fitbit", "polar", "apple_health"],
-}
-
-# Human-readable display names for integrations.
-_INTEGRATION_DISPLAY: dict[str, str] = {
-    "fitbit": "Fitbit",
-    "oura": "Oura Ring",
-    "strava": "Strava",
-    "apple_health": "Apple Health",
-    "health_connect": "Health Connect",
-    "polar": "Polar",
-    "withings": "Withings",
-    "checkin": "Daily Wellness Check-In",
-}
-
-_GOAL_DISPLAY: dict[str, str] = {
-    "lose_weight": "losing weight",
-    "better_sleep": "improving sleep",
-    "reduce_stress": "reducing stress",
-    "build_fitness": "building fitness",
-    "improve_nutrition": "improving nutrition",
-    "increase_energy": "increasing energy",
-}
-
-_REDIS_DISMISS_TTL = 30 * 86400  # 30 days
-
-
-# ---------------------------------------------------------------------------
-# Dataclasses
+# Goal → data-category correlation map
 # ---------------------------------------------------------------------------
 
+GOAL_TO_GAP_MAP: dict[str, list[str]] = {
+    "weight_loss": ["nutrition", "activity", "sleep"],
+    "improve_sleep": ["sleep", "stress", "activity"],
+    "build_muscle": ["activity", "nutrition", "body"],
+    "reduce_stress": ["stress", "sleep", "hrv"],
+    "improve_endurance": ["activity", "heart_rate", "sleep"],
+    "increase_energy": ["sleep", "nutrition", "activity"],
+}
 
-@dataclass
-class CorrelationSuggestion:
-    """A suggestion for the user to connect a missing integration.
+# Integration provider → data categories it can supply
+_PROVIDER_CATEGORIES: dict[str, list[str]] = {
+    "apple_health": ["activity", "sleep", "heart_rate", "hrv", "body", "nutrition"],
+    "health_connect": ["activity", "sleep", "heart_rate", "body"],
+    "strava": ["activity"],
+    "fitbit": ["activity", "sleep", "heart_rate", "hrv"],
+    "oura": ["sleep", "heart_rate", "hrv", "stress"],
+    "withings": ["body", "sleep", "heart_rate"],
+    "polar": ["activity", "heart_rate", "hrv"],
+    "myfitnesspal": ["nutrition"],
+    "cronometer": ["nutrition"],
+}
 
-    Attributes:
-        id: UUID string for client-side dismissal reference.
-        title: Short suggestion headline.
-        description: Why this integration helps the user's goal.
-        missing_integration: Integration slug (e.g. ``"fitbit"``).
-        goal_context: Human-readable goal name.
-        dismissed_until: When this suggestion becomes visible again.
-            None if not dismissed.
+# Category → human-readable suggestion text + recommended action
+_CATEGORY_SUGGESTIONS: dict[str, dict[str, str]] = {
+    "nutrition": {
+        "suggestion": "Track your nutrition to optimise your diet for your goal.",
+        "action": "Connect MyFitnessPal or log meals manually.",
+    },
+    "sleep": {
+        "suggestion": "Sleep data is crucial for this goal but isn't being tracked.",
+        "action": "Connect Oura Ring, Fitbit, or Apple Health for sleep tracking.",
+    },
+    "activity": {
+        "suggestion": "Activity tracking will help measure your progress toward this goal.",
+        "action": "Connect Strava, Apple Health, or a fitness tracker.",
+    },
+    "heart_rate": {
+        "suggestion": "Heart rate data can help gauge exertion and recovery.",
+        "action": "Connect a heart rate monitor via Polar, Fitbit, or Apple Health.",
+    },
+    "hrv": {
+        "suggestion": "HRV (heart rate variability) is a key recovery and stress indicator.",
+        "action": "Connect Oura Ring or a Polar device for HRV tracking.",
+    },
+    "stress": {
+        "suggestion": "Stress tracking provides crucial context for recovery and wellness.",
+        "action": "Connect Oura Ring for stress and readiness scoring.",
+    },
+    "body": {
+        "suggestion": "Body composition metrics (weight, body fat) help track progress.",
+        "action": "Connect Withings smart scale or log manually.",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# In-memory dismissal cache
+# Key: "{user_id}:{suggestion_id}"
+# Value: True (dismissed)
+# This is intentionally ephemeral for the MVP — a DB-backed table will
+# replace this in a later phase.
+# ---------------------------------------------------------------------------
+_dismissal_cache: dict[str, bool] = {}
+_DISMISSAL_CACHE_MAX_SIZE: int = 10_000  # prevent unbounded growth
+
+
+def _dismissal_cache_set(key: str, value: bool) -> None:
+    """Set a key in the dismissal cache with a max-size guard.
+
+    Evicts the oldest 20% of entries when the cache reaches
+    ``_DISMISSAL_CACHE_MAX_SIZE`` to keep memory bounded.
+
+    Args:
+        key: Cache key to set.
+        value: Cache value.
     """
-
-    id: str
-    title: str
-    description: str
-    missing_integration: str
-    goal_context: str
-    dismissed_until: datetime | None = field(default=None)
-
-
-# ---------------------------------------------------------------------------
-# CorrelationSuggester
-# ---------------------------------------------------------------------------
+    if len(_dismissal_cache) >= _DISMISSAL_CACHE_MAX_SIZE:
+        evict_count = max(1, _DISMISSAL_CACHE_MAX_SIZE // 5)
+        keys_to_evict = list(_dismissal_cache.keys())[:evict_count]
+        for k in keys_to_evict:
+            _dismissal_cache.pop(k, None)
+    _dismissal_cache[key] = value
 
 
 class CorrelationSuggester:
-    """Generate and manage integration suggestions based on goal gaps.
+    """Suggests data tracking categories based on user goals and connected integrations.
 
-    Methods:
-        get_suggestions: Generate ranked suggestions for a user.
-        dismiss_suggestion: Mark a suggestion as dismissed for 30 days.
+    Uses the GOAL_TO_GAP_MAP to identify which data categories are required
+    for each goal, then checks the user's connected integrations to determine
+    which categories are not yet being captured. Missing categories become
+    actionable tracking suggestions.
+
+    Dismissals are stored in an in-memory cache (ephemeral for MVP).
     """
 
     async def get_suggestions(
         self,
         user_id: str,
-        session: AsyncSession,
-        dismissed_cache: dict,
-    ) -> list[CorrelationSuggestion]:
-        """Generate suggestions based on the user's goals vs connected integrations.
+        db: AsyncSession,
+    ) -> list[dict[str, Any]]:
+        """Generate tracking gap suggestions for the user.
 
-        Steps:
-        1. Load user preferences to get current goals.
-        2. Load connected integrations.
-        3. For each goal, identify which required data types are missing.
-        4. Map missing data → integration suggestions.
-        5. Filter out dismissed suggestions and already-connected integrations.
-        6. Deduplicate (one suggestion per missing integration).
+        Loads the user's goals and connected integrations, then returns
+        suggestions for data categories that are missing but relevant
+        to at least one active goal.
 
         Args:
-            user_id: Zuralog user ID.
-            session: Open async DB session.
-            dismissed_cache: Dict of ``{suggestion_id: True}`` for dismissed
-                suggestions. The caller populates this from Redis.
+            user_id: Zuralog user ID to generate suggestions for.
+            db: Async database session.
 
         Returns:
-            List of CorrelationSuggestion objects, ordered by relevance.
+            List of suggestion dicts, each with keys:
+            ``id``, ``goal``, ``suggestion``, ``missing_category``, ``action``.
+            Returns an empty list if preferences or integrations cannot be loaded.
         """
-        prefs = await self._get_preferences(user_id, session)
-        if prefs is None or not prefs.goals:
+        # -------------------------------------------------------------------------
+        # 1. Load user goals from preferences (soft import)
+        # -------------------------------------------------------------------------
+        user_goals: list[str] = []
+        try:
+            from sqlalchemy import select
+            from app.models.user_preferences import UserPreferences
+
+            result = await db.execute(
+                select(UserPreferences).where(UserPreferences.user_id == user_id)
+            )
+            prefs = result.scalar_one_or_none()
+            if prefs and prefs.goals:
+                user_goals = list(prefs.goals)
+        except Exception:
+            logger.warning(
+                "correlation_suggester: could not load user preferences for user=%s",
+                user_id,
+                exc_info=True,
+            )
             return []
 
-        connected = await self._get_connected_integrations(user_id, session)
+        if not user_goals:
+            logger.debug(
+                "correlation_suggester: no goals set for user=%s, skipping suggestions",
+                user_id,
+            )
+            return []
 
-        suggestions: list[CorrelationSuggestion] = []
-        seen_integrations: set[str] = set()
+        # -------------------------------------------------------------------------
+        # 2. Load connected integrations (soft import)
+        # -------------------------------------------------------------------------
+        connected_providers: list[str] = []
+        try:
+            from sqlalchemy import select
+            from app.models.integration import Integration
 
-        for goal in prefs.goals:
-            goal_metric = goal.get("metric", "")
-            if goal_metric not in _GOAL_REQUIREMENTS:
-                continue
+            result = await db.execute(
+                select(Integration.provider).where(
+                    Integration.user_id == user_id,
+                    Integration.is_active == True,  # noqa: E712
+                )
+            )
+            connected_providers = [row[0] for row in result.fetchall()]
+        except Exception:
+            logger.warning(
+                "correlation_suggester: could not load integrations for user=%s",
+                user_id,
+                exc_info=True,
+            )
+            # Proceed with no connected providers — all categories will appear as gaps
 
-            goal_display = _GOAL_DISPLAY.get(goal_metric, goal_metric)
-            required_data = _GOAL_REQUIREMENTS[goal_metric]
+        # -------------------------------------------------------------------------
+        # 3. Determine covered categories from connected integrations
+        # -------------------------------------------------------------------------
+        covered_categories: set[str] = set()
+        for provider in connected_providers:
+            covered_categories.update(_PROVIDER_CATEGORIES.get(provider, []))
 
-            for data_type in required_data:
-                integrations_for_type = _DATA_TO_INTEGRATION.get(data_type, [])
-                # Check if any integration satisfying this data type is connected.
-                covered = any(intg in connected for intg in integrations_for_type)
-                if covered:
-                    continue
+        # -------------------------------------------------------------------------
+        # 4. Generate suggestions for missing categories per goal
+        # -------------------------------------------------------------------------
+        suggestions: list[dict[str, Any]] = []
+        seen_categories: set[str] = set()  # avoid duplicate category suggestions
 
-                # Find the best missing integration to suggest.
-                candidate = integrations_for_type[0] if integrations_for_type else None
-                if candidate is None or candidate in seen_integrations:
-                    continue
+        for goal in user_goals:
+            required_categories = GOAL_TO_GAP_MAP.get(goal, [])
+            for category in required_categories:
+                if category in covered_categories:
+                    continue  # already being tracked
+                if category in seen_categories:
+                    continue  # already suggested for another goal
 
-                suggestion_id = str(
-                    uuid.uuid5(
-                        uuid.NAMESPACE_URL,
-                        f"{user_id}:{goal_metric}:{candidate}",
-                    )
+                seen_categories.add(category)
+
+                category_info = _CATEGORY_SUGGESTIONS.get(
+                    category,
+                    {
+                        "suggestion": f"Tracking {category} data will help with your goals.",
+                        "action": f"Find an integration that captures {category} data.",
+                    },
                 )
 
-                # Skip dismissed suggestions.
-                if suggestion_id in dismissed_cache:
+                suggestion_id = str(uuid.uuid5(
+                    uuid.NAMESPACE_URL,
+                    f"{user_id}:{goal}:{category}",
+                ))
+
+                # -------------------------------------------------------------------------
+                # 5. Filter dismissed suggestions
+                # -------------------------------------------------------------------------
+                cache_key = f"{user_id}:{suggestion_id}"
+                if _dismissal_cache.get(cache_key):
+                    logger.debug(
+                        "correlation_suggester: skipping dismissed suggestion=%s for user=%s",
+                        suggestion_id,
+                        user_id,
+                    )
                     continue
 
-                display_name = _INTEGRATION_DISPLAY.get(candidate, candidate.title())
+                suggestions.append({
+                    "id": suggestion_id,
+                    "goal": goal,
+                    "suggestion": category_info["suggestion"],
+                    "missing_category": category,
+                    "action": category_info["action"],
+                })
 
-                suggestions.append(
-                    CorrelationSuggestion(
-                        id=suggestion_id,
-                        title=f"Connect {display_name} to unlock {goal_display} insights",
-                        description=(
-                            f"Your goal of {goal_display} requires {data_type.replace('_', ' ')} data. "
-                            f"Connecting {display_name} will give your AI coach the full picture."
-                        ),
-                        missing_integration=candidate,
-                        goal_context=goal_display,
-                    )
-                )
-                seen_integrations.add(candidate)
-
+        logger.info(
+            "correlation_suggester: generated %d suggestions for user=%s goals=%s",
+            len(suggestions),
+            user_id,
+            user_goals,
+        )
         return suggestions
 
     async def dismiss_suggestion(
         self,
-        user_id: str,
         suggestion_id: str,
-        redis_client,
+        user_id: str,
     ) -> None:
-        """Mark a suggestion as dismissed for 30 days via Redis.
+        """Mark a suggestion as dismissed so it is excluded from future results.
+
+        Stores the dismissal in the in-memory cache. This is intentionally
+        ephemeral for the MVP — a persistent ``dismissed_suggestions`` DB table
+        will replace this in a later phase.
 
         Args:
-            user_id: Zuralog user ID.
-            suggestion_id: UUID of the suggestion to dismiss.
-            redis_client: Async Redis client (aioredis or compatible).
+            suggestion_id: The suggestion UUID to dismiss.
+            user_id: The user performing the dismissal.
         """
-        key = f"dismissed_suggestion:{user_id}:{suggestion_id}"
-        try:
-            await redis_client.set(key, "1", ex=_REDIS_DISMISS_TTL)
-            logger.debug(
-                "Suggestion %s dismissed for user %s for 30 days",
-                suggestion_id,
-                user_id,
-            )
-        except Exception:  # noqa: BLE001
-            logger.exception(
-                "Failed to dismiss suggestion %s for user %s",
-                suggestion_id,
-                user_id,
-            )
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    async def _get_preferences(user_id: str, session: AsyncSession) -> UserPreferences | None:
-        stmt = select(UserPreferences).where(UserPreferences.user_id == user_id)
-        result = await session.execute(stmt)
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def _get_connected_integrations(user_id: str, session: AsyncSession) -> set[str]:
-        """Return the set of active integration provider slugs for the user.
-
-        Args:
-            user_id: Zuralog user ID.
-            session: Open async DB session.
-
-        Returns:
-            Set of provider strings (e.g. ``{"strava", "fitbit"}``).
-        """
-        stmt = select(Integration.provider).where(
-            Integration.user_id == user_id,
-            Integration.is_active.is_(True),
+        cache_key = f"{user_id}:{suggestion_id}"
+        _dismissal_cache_set(cache_key, True)
+        logger.info(
+            "correlation_suggester: user=%s dismissed suggestion=%s",
+            user_id,
+            suggestion_id,
         )
-        result = await session.execute(stmt)
-        return {row[0] for row in result.all()}

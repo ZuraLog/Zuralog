@@ -1,16 +1,19 @@
 """
-Zuralog Cloud Brain — UserPreferences Model.
+Zuralog Cloud Brain — User Preferences Model.
 
-Stores all per-user application preferences: AI coach persona,
-notification settings, dashboard layout, theme, and health goals.
-One row per user, with cascade-delete tied to the parent users row.
+One row per user, auto-created with sensible defaults on first GET
+(upsert behaviour). The primary key is ``user_id`` itself so there
+is no separate surrogate key — lookups and upserts are single-column.
+
+Fields cover coaching persona, proactivity, dashboard layout,
+notification toggles, appearance, onboarding state, scheduling times,
+and the user's high-level goal selection.
 """
 
 import enum
 import uuid
-from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Time, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -18,13 +21,7 @@ from app.database import Base
 
 
 class CoachPersona(str, enum.Enum):
-    """AI coach personality styles.
-
-    Attributes:
-        TOUGH_LOVE: Direct, challenging coaching style.
-        BALANCED: Balanced encouragement and accountability.
-        GENTLE: Supportive, low-pressure coaching style.
-    """
+    """AI coach personality style."""
 
     TOUGH_LOVE = "tough_love"
     BALANCED = "balanced"
@@ -32,118 +29,96 @@ class CoachPersona(str, enum.Enum):
 
 
 class ProactivityLevel(str, enum.Enum):
-    """How proactively the AI coach surfaces insights.
-
-    Attributes:
-        LOW: Only surface critical alerts.
-        MEDIUM: Balanced — daily summaries and notable trends.
-        HIGH: Frequent nudges and pattern commentary.
-    """
+    """How proactively the AI coach surfaces suggestions."""
 
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
-class Theme(str, enum.Enum):
-    """Application colour theme preference.
-
-    Attributes:
-        DARK: Always use dark mode (default).
-        LIGHT: Always use light mode.
-        SYSTEM: Follow the device system setting.
-    """
+class AppTheme(str, enum.Enum):
+    """App colour-theme preference."""
 
     DARK = "dark"
     LIGHT = "light"
     SYSTEM = "system"
 
 
-class UnitsSystem(str, enum.Enum):
-    """Measurement units system preference.
-
-    Attributes:
-        METRIC: SI units (kg, km, °C).
-        IMPERIAL: Imperial units (lbs, miles, °F).
-    """
-
-    METRIC = "metric"
-    IMPERIAL = "imperial"
-
-
 class UserPreferences(Base):
-    """Per-user application preferences.
+    """Per-user configurable preferences for the Zuralog app.
 
-    One row per user. Created lazily on first GET request with
-    all-default values. Updated via PUT (full replace) or PATCH
-    (partial update).
+    One row per user (user_id is the primary key).
+    Populated with sensible defaults on first GET via the upsert helper.
 
     Attributes:
-        id: UUID primary key (auto-generated).
-        user_id: FK → users.id (unique, cascade delete, indexed).
-        coach_persona: AI coaching style. Default ``balanced``.
-        proactivity_level: Coach proactivity. Default ``medium``.
-        dashboard_layout: JSON blob — card order and visibility config.
-        notification_settings: JSON blob — all notification toggles.
-        theme: App colour theme. Default ``dark``.
-        haptic_enabled: Enable haptic feedback. Default ``True``.
-        tooltips_enabled: Show onboarding tooltips. Default ``True``.
-        onboarding_complete: User has finished onboarding flow. Default ``False``.
-        morning_briefing_enabled: Daily morning summary push. Default ``False``.
-        morning_briefing_time: Local time for morning briefing (nullable).
-        checkin_reminder_enabled: Daily check-in reminder push. Default ``False``.
-        checkin_reminder_time: Local time for check-in reminder (nullable).
-        quiet_hours_enabled: Suppress all pushes during quiet hours. Default ``False``.
-        quiet_hours_start: Start of quiet window (nullable).
-        quiet_hours_end: End of quiet window (nullable).
-        goals: JSON array of goal objects (nullable).
-        units_system: Measurement system preference. Default ``metric``.
-        created_at: Row creation timestamp (server-side default).
-        updated_at: Last-update timestamp (client-side onupdate trigger).
+        user_id: Supabase UID — primary key, one row per user.
+        coach_persona: AI coaching style. One of: 'tough_love', 'balanced', 'gentle'.
+        proactivity_level: How proactively the AI surfaces suggestions.
+            One of: 'low', 'medium', 'high'.
+        dashboard_layout: JSON dict of card order and visibility settings.
+        notification_settings: JSON dict with all notification toggles.
+        theme: App colour scheme. One of: 'dark', 'light', 'system'.
+        haptic_enabled: Whether haptic feedback is active.
+        tooltips_enabled: Whether onboarding tooltip bubbles are shown.
+        onboarding_complete: True once the user has finished the welcome flow.
+        morning_briefing_time: HH:MM string for the daily briefing push.
+        checkin_reminder_time: HH:MM string for the wellness check-in reminder.
+        quiet_hours_start: HH:MM string for start of the quiet-hours window.
+        quiet_hours_end: HH:MM string for end of the quiet-hours window.
+        goals: JSON array of goal-type strings.
+        updated_at: Timestamp of last modification (server-managed).
     """
 
     __tablename__ = "user_preferences"
-    __table_args__ = (UniqueConstraint("user_id", name="uq_user_preferences_user_id"),)
 
-    id: Mapped[str] = mapped_column(
+    user_id: Mapped[str] = mapped_column(
         String,
         primary_key=True,
         default=lambda: str(uuid.uuid4()),
+        comment="Supabase UID — one row per user",
     )
-    user_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("users.id", ondelete="CASCADE"),
-        unique=True,
-        index=True,
-        nullable=False,
-    )
+
+    # Coach settings
     coach_persona: Mapped[str] = mapped_column(
         String,
-        default=CoachPersona.BALANCED.value,
+        default="balanced",
+        server_default="balanced",
         nullable=False,
-        comment="AI coaching style: tough_love | balanced | gentle",
+        comment="tough_love | balanced | gentle",
     )
     proactivity_level: Mapped[str] = mapped_column(
         String,
-        default=ProactivityLevel.MEDIUM.value,
+        default="medium",
+        server_default="medium",
         nullable=False,
-        comment="Coach proactivity: low | medium | high",
+        comment="low | medium | high",
     )
-    dashboard_layout: Mapped[dict | None] = mapped_column(
+
+    # Dashboard layout (JSON — card order + visibility + colour overrides)
+    dashboard_layout: Mapped[dict] = mapped_column(
         JSON,
-        nullable=True,
-        comment="Card order and visibility config for the dashboard",
+        default=dict,
+        server_default="{}",
+        nullable=False,
+        comment="Card order and visibility settings",
     )
-    notification_settings: Mapped[dict | None] = mapped_column(
+
+    # Notification settings (JSON — all toggles)
+    notification_settings: Mapped[dict] = mapped_column(
         JSON,
-        nullable=True,
-        comment="Per-notification-type toggle map",
+        default=dict,
+        server_default="{}",
+        nullable=False,
+        comment="All notification toggle keys",
     )
+
+    # Appearance
     theme: Mapped[str] = mapped_column(
         String,
-        default=Theme.DARK.value,
+        default="system",
+        server_default="system",
         nullable=False,
-        comment="Colour theme: dark | light | system",
+        comment="dark | light | system",
     )
     haptic_enabled: Mapped[bool] = mapped_column(
         Boolean,
@@ -163,113 +138,41 @@ class UserPreferences(Base):
         server_default="false",
         nullable=False,
     )
-    morning_briefing_enabled: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        server_default="false",
-        nullable=False,
-    )
-    morning_briefing_time: Mapped[datetime | None] = mapped_column(
-        Time,
-        nullable=True,
-        comment="Local time for morning briefing push notification",
-    )
-    checkin_reminder_enabled: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        server_default="false",
-        nullable=False,
-    )
-    checkin_reminder_time: Mapped[datetime | None] = mapped_column(
-        Time,
-        nullable=True,
-        comment="Local time for daily check-in reminder",
-    )
-    quiet_hours_enabled: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        server_default="false",
-        nullable=False,
-    )
-    quiet_hours_start: Mapped[datetime | None] = mapped_column(
-        Time,
-        nullable=True,
-        comment="Start of quiet hours window (no pushes sent)",
-    )
-    quiet_hours_end: Mapped[datetime | None] = mapped_column(
-        Time,
-        nullable=True,
-        comment="End of quiet hours window",
-    )
-    goals: Mapped[list | None] = mapped_column(
-        JSON,
-        nullable=True,
-        comment="Array of user goal objects {metric, target, period}",
-    )
-    units_system: Mapped[str] = mapped_column(
+
+    # Notification scheduling — stored as HH:MM strings
+    morning_briefing_time: Mapped[str | None] = mapped_column(
         String,
-        default=UnitsSystem.METRIC.value,
-        nullable=False,
-        comment="Measurement system: metric | imperial",
+        nullable=True,
+        comment="HH:MM — local clock time for the morning briefing push",
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
+    checkin_reminder_time: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="HH:MM — local clock time for the wellness check-in reminder",
     )
-    updated_at: Mapped[datetime | None] = mapped_column(
+    quiet_hours_start: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="HH:MM — start of quiet hours (no push notifications)",
+    )
+    quiet_hours_end: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True,
+        comment="HH:MM — end of quiet hours",
+    )
+
+    # High-level goal types
+    goals: Mapped[list] = mapped_column(
+        JSON,
+        default=list,
+        server_default="[]",
+        nullable=False,
+        comment="Goal type strings: weight_loss, sleep, fitness, stress, nutrition, longevity",
+    )
+
+    # Timestamps
+    updated_at: Mapped[str | None] = mapped_column(
         DateTime(timezone=True),
         onupdate=func.now(),
         nullable=True,
     )
-
-    def to_dict(self) -> dict:
-        """Return a safe dict representation for API responses.
-
-        Time fields are serialised to ``HH:MM:SS`` strings.
-        Datetime fields are serialised to ISO-8601 strings.
-
-        Returns:
-            A JSON-safe dictionary of all preference fields.
-        """
-
-        def _fmt_time(t) -> str | None:
-            """Format a time value to HH:MM:SS string, or None."""
-            if t is None:
-                return None
-            # Handles both datetime.time and datetime.datetime objects.
-            if hasattr(t, "strftime"):
-                return t.strftime("%H:%M:%S")
-            return str(t)
-
-        def _fmt_dt(dt) -> str | None:
-            """Format a datetime to ISO-8601 string, or None."""
-            if dt is None:
-                return None
-            if hasattr(dt, "isoformat"):
-                return dt.isoformat()
-            return str(dt)
-
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "coach_persona": self.coach_persona,
-            "proactivity_level": self.proactivity_level,
-            "dashboard_layout": self.dashboard_layout,
-            "notification_settings": self.notification_settings,
-            "theme": self.theme,
-            "haptic_enabled": self.haptic_enabled,
-            "tooltips_enabled": self.tooltips_enabled,
-            "onboarding_complete": self.onboarding_complete,
-            "morning_briefing_enabled": self.morning_briefing_enabled,
-            "morning_briefing_time": _fmt_time(self.morning_briefing_time),
-            "checkin_reminder_enabled": self.checkin_reminder_enabled,
-            "checkin_reminder_time": _fmt_time(self.checkin_reminder_time),
-            "quiet_hours_enabled": self.quiet_hours_enabled,
-            "quiet_hours_start": _fmt_time(self.quiet_hours_start),
-            "quiet_hours_end": _fmt_time(self.quiet_hours_end),
-            "goals": self.goals,
-            "units_system": self.units_system,
-            "created_at": _fmt_dt(self.created_at),
-            "updated_at": _fmt_dt(self.updated_at),
-        }

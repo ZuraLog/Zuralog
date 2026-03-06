@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-05 (fix/mobile-sprint-1 — Mobile bug fix sprint 1 complete; Android name fix, brand icons, OnboardingTooltip overflow fix, mock data layer, STT wired, file attachment picker)
+**Last Updated:** 2026-03-06 (feat/auth-onboarding-redesign — Design system v3.2, auth & onboarding full redesign merged)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -41,7 +41,7 @@
 | P0 | MCP client + server registry | ✅ Done | |
 | P0 | Chat SSE streaming endpoint | ✅ Done | |
 | P0 | Conversation persistence | ✅ Done | |
-| P1 | System prompt tuning (Tough Love Coach persona) | 🔜 Planned | |
+| P1 | System prompt tuning (Tough Love Coach persona) | ✅ Done | 3 personas (tough_love/balanced/gentle) + 3 proactivity levels; persona selected per user preferences |
 
 ### Phase 1.4 — Apple Health Integration
 
@@ -110,7 +110,7 @@
 | P1 | Firebase FCM integration | ✅ Done | |
 | P1 | Device token registration (`/api/v1/devices/`) | ✅ Done | |
 | P1 | Push notification service | ✅ Done | |
-| P1 | Background insight alerts | 🔜 Planned | Trigger on health data events |
+| P1 | Background insight alerts | ✅ Done | Triggers: anomaly detected, goal reached, streak milestone, integration stale |
 
 ### Phase 1.10 — Subscriptions
 
@@ -126,7 +126,7 @@
 |----------|------|--------|-------|
 | P1 | Correlation analysis engine | ✅ Done | |
 | P1 | Analytics API endpoints | ✅ Done | |
-| P2 | Pinecone vector store for long-term context | 🔜 Planned | Env var exists; code not yet written |
+| P2 | Pinecone vector store for long-term context | ✅ Done | PineconeMemoryStore with per-user namespace; graceful InMemoryStore fallback when unconfigured |
 
 ---
 
@@ -289,15 +289,15 @@
 | Feature | Priority | Status | Notes |
 |---------|----------|--------|-------|
 | Voice input (on-device STT) | P1 | ✅ Done | `speech_to_text` Flutter package — on-device, free, no API key; hold-to-talk fills input field for user review before sending; wired to Coach mic button |
-| File attachments in chat | P2 | ✅ Done | `attachment_picker_sheet.dart` + `attachment_preview_bar.dart`; image/file picker with inline preview strip; remove action per attachment |
+| File attachments in chat | P2 | ✅ Done | `attachment_picker_sheet.dart` + `attachment_preview_bar.dart`; backend pipeline: upload, validate, extract health facts, inject into LLM context; food photo detection |
 | Apple Sign In | P1 | 🔜 Planned | Pending Apple Developer subscription |
 | Profile photo upload | P2 | 📋 Future | |
 | Data export | P2 | 📋 Future | |
-| Pinecone vector store (AI memory) | P2 | 🔜 Planned | Config env var exists; code not written |
+| Pinecone vector store (AI memory) | P2 | ✅ Done | PineconeMemoryStore implemented; per-user namespace; graceful fallback to InMemoryStore |
 | Dynamic tool injection | P1 | ✅ Done | Only inject MCP tools for integrations the user has connected; prevents context bloat as integration catalog grows; prerequisite for semantic retrieval |
 | Semantic tool retrieval | P2 | 🔜 Planned | Embed user message + tool descriptions at request time; inject top-K relevant tools only; scales to unlimited integrations without MCP bloat; requires Pinecone |
-| AI-powered morning briefing | P2 | 📋 Future | Daily summary push |
-| Smart reminders | P2 | 📋 Future | "You haven't run in 5 days" |
+| AI-powered morning briefing | P2 | ✅ Done | Celery Beat task (15-min schedule); per-user time window; data-driven briefing; FCM + Insight card |
+| Smart reminders | P2 | ✅ Done | Pattern/gap/goal/celebration reminder types; dedup 48h; quiet hours; frequency cap; hourly Beat task |
 | Bi-directional triggers | P3 | 📋 Future | "If sleep < 30%, reschedule workout" |
 | Notion / YNAB / Todoist integration | P3 | 📋 Future | Life OS phase |
 

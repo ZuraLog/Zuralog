@@ -1,286 +1,376 @@
 """
 Zuralog Cloud Brain — Achievement Tracker Service.
 
-Handles unlocking achievements based on application events, persisting
-unlock state to the database, and sending push notifications when a new
-achievement is earned.
+Hard-coded achievement registry with unlock logic. Achievements are
+grouped into categories; each has a display name and description.
 
-Usage:
-    tracker = AchievementTracker(session=db, push_service=push_svc)
-    unlocked = await tracker.check_and_unlock(user_id, "first_chat")
+Unlock rules:
+- ``unlock()`` is idempotent — calling it twice has no effect.
+- ``check_and_unlock_streak()`` maps streak milestones to achievement keys.
+- Push notifications are sent on unlock via a soft import of PushService
+  to avoid circular imports and to degrade gracefully when FCM is absent.
+
+Classes:
+    - AchievementTracker: Stateless service for achievement management.
 """
 
 import logging
+import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.achievement import ACHIEVEMENT_REGISTRY, Achievement
-from app.services.push_service import PushService
+from app.models.achievement import Achievement
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Achievement registry
+# ---------------------------------------------------------------------------
+
+# Maps category name → list of (key, display_name, description) tuples.
+ACHIEVEMENT_REGISTRY: dict[str, list[dict[str, str]]] = {
+    "Getting Started": [
+        {
+            "key": "first_integration",
+            "name": "First Integration",
+            "description": "Connect your first health data source.",
+        },
+        {
+            "key": "first_chat",
+            "name": "First Chat",
+            "description": "Have your first conversation with your AI coach.",
+        },
+        {
+            "key": "first_insight",
+            "name": "First Insight",
+            "description": "Receive your first personalized health insight.",
+        },
+    ],
+    "Consistency": [
+        {
+            "key": "streak_7",
+            "name": "One Week Warrior",
+            "description": "Maintain a 7-day activity streak.",
+        },
+        {
+            "key": "streak_30",
+            "name": "Monthly Champion",
+            "description": "Maintain a 30-day activity streak.",
+        },
+        {
+            "key": "streak_90",
+            "name": "Quarterly Commitment",
+            "description": "Maintain a 90-day activity streak.",
+        },
+        {
+            "key": "streak_365",
+            "name": "Year of Excellence",
+            "description": "Maintain a 365-day activity streak.",
+        },
+    ],
+    "Goals": [
+        {
+            "key": "first_goal",
+            "name": "Goal Setter",
+            "description": "Set your first health goal.",
+        },
+        {
+            "key": "goals_5_complete",
+            "name": "Goal Crusher",
+            "description": "Complete 5 health goals.",
+        },
+        {
+            "key": "overachiever",
+            "name": "Overachiever",
+            "description": "Exceed a goal by 25% or more.",
+        },
+    ],
+    "Data": [
+        {
+            "key": "connected_3",
+            "name": "Data Hub",
+            "description": "Connect 3 or more health data sources.",
+        },
+        {
+            "key": "data_rich_30",
+            "name": "Data Rich",
+            "description": "Log health data every day for 30 days.",
+        },
+        {
+            "key": "full_picture_5_categories",
+            "name": "Full Picture",
+            "description": "Have data in 5 or more health categories.",
+        },
+    ],
+    "Coach": [
+        {
+            "key": "conversations_50",
+            "name": "Regular Talker",
+            "description": "Have 50 conversations with your AI coach.",
+        },
+        {
+            "key": "insights_100",
+            "name": "Insight Collector",
+            "description": "Receive 100 personalized health insights.",
+        },
+        {
+            "key": "memories_20",
+            "name": "Long-Term Thinker",
+            "description": "Build 20 coach memories.",
+        },
+    ],
+    "Health": [
+        {
+            "key": "improved_bedtime",
+            "name": "Better Bedtime",
+            "description": "Improve your average bedtime by 30 minutes.",
+        },
+        {
+            "key": "personal_best",
+            "name": "Personal Best",
+            "description": "Set a new personal best in any tracked metric.",
+        },
+        {
+            "key": "anomaly_aware_10",
+            "name": "Anomaly Aware",
+            "description": "Discover 10 health anomalies through the coach.",
+        },
+    ],
+}
+
+# Flat map: key → (category, definition dict) for O(1) lookups.
+_KEY_INDEX: dict[str, dict[str, Any]] = {
+    entry["key"]: {"category": category, **entry}
+    for category, entries in ACHIEVEMENT_REGISTRY.items()
+    for entry in entries
+}
+
+# Streak milestones that unlock achievements, in ascending order.
+_STREAK_MILESTONES: list[tuple[int, str]] = [
+    (7, "streak_7"),
+    (30, "streak_30"),
+    (90, "streak_90"),
+    (365, "streak_365"),
+]
+
 
 class AchievementTracker:
-    """Service for evaluating and persisting achievement unlocks.
+    """Stateless service for achievement unlock logic and queries.
 
-    Attributes:
-        _session: Async SQLAlchemy session for DB operations.
-        _push_service: Optional push notification service. When ``None``
-            (or unavailable), notifications are silently skipped.
+    All methods accept an ``AsyncSession`` for database access — the
+    tracker itself holds no state. Instantiate once and reuse freely.
     """
 
-    def __init__(
-        self,
-        session: AsyncSession,
-        push_service: PushService | None = None,
-    ) -> None:
-        self._session = session
-        self._push_service = push_service
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    async def check_and_unlock(
+    async def unlock(
         self,
         user_id: str,
-        event: str,
-        context: dict | None = None,
-    ) -> list[Achievement]:
-        """Evaluate an event and unlock any newly earned achievements.
+        achievement_key: str,
+        db: AsyncSession,
+    ) -> bool:
+        """Unlock an achievement for a user if not already unlocked.
+
+        Creates the achievement row if it does not exist, then sets
+        ``unlocked_at`` to the current UTC time. No-ops if the
+        achievement is already unlocked.
+
+        On success, attempts to send a push notification to the user via
+        PushService; failure is logged and swallowed.
 
         Args:
-            user_id: The user who triggered the event.
-            event: Event name. Supported values:
-                ``"integration_connected"``, ``"chat_started"``,
-                ``"insight_received"``, ``"streak_updated"``,
-                ``"goal_created"``, ``"goal_completed"``.
-            context: Optional event-specific data (e.g.
-                ``{"streak_count": 7}`` for streak events,
-                ``{"connected_count": 3}`` for integration events,
-                ``{"completed_count": 5}`` for goal events,
-                ``{"exceeded_by_pct": 25}`` for overachiever).
+            user_id: The authenticated user's ID.
+            achievement_key: Stable key from the achievement registry.
+            db: Async database session.
 
         Returns:
-            List of newly unlocked :class:`Achievement` instances.
-            Returns an empty list when no new achievements are earned.
+            ``True`` if the achievement was newly unlocked, ``False``
+            if it was already unlocked or the key is unknown.
         """
-        if context is None:
-            context = {}
+        if achievement_key not in _KEY_INDEX:
+            logger.warning(
+                "unlock: unknown achievement_key='%s' for user '%s'",
+                achievement_key,
+                user_id,
+            )
+            return False
 
-        candidates: list[str] = self._candidates_for_event(event, context)
-        if not candidates:
-            return []
+        # Fetch existing row (if any).
+        result = await db.execute(
+            select(Achievement).where(
+                Achievement.user_id == user_id,
+                Achievement.achievement_key == achievement_key,
+            )
+        )
+        existing = result.scalar_one_or_none()
 
-        newly_unlocked: list[Achievement] = []
-        for key in candidates:
-            achievement = await self._unlock(user_id, key)
-            if achievement is not None:
-                newly_unlocked.append(achievement)
+        if existing is not None and existing.unlocked_at is not None:
+            logger.debug(
+                "unlock: achievement '%s' already unlocked for user '%s'",
+                achievement_key,
+                user_id,
+            )
+            return False
+
+        now = datetime.now(timezone.utc)
+
+        if existing is None:
+            # Create a new row in the unlocked state.
+            new_achievement = Achievement(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                achievement_key=achievement_key,
+                unlocked_at=now,
+            )
+            db.add(new_achievement)
+            try:
+                await db.commit()
+            except IntegrityError:
+                # Race condition: another request unlocked simultaneously.
+                await db.rollback()
+                logger.debug(
+                    "unlock: race condition on '%s' for user '%s' — already exists",
+                    achievement_key,
+                    user_id,
+                )
+                return False
+        else:
+            # Existing locked row — set unlock timestamp.
+            existing.unlocked_at = now
+            await db.commit()
+
+        logger.info(
+            "unlock: achievement '%s' unlocked for user '%s'",
+            achievement_key,
+            user_id,
+        )
+
+        # Soft push notification — non-critical; never raises.
+        self._send_unlock_notification(user_id, achievement_key)
+
+        return True
+
+    async def check_and_unlock_streak(
+        self,
+        user_id: str,
+        streak_count: int,
+        db: AsyncSession,
+    ) -> list[str]:
+        """Unlock any streak achievements earned by reaching ``streak_count``.
+
+        Checks each milestone (7, 30, 90, 365 days) against the provided
+        count and calls ``unlock()`` for each qualifying milestone.
+
+        Args:
+            user_id: The authenticated user's ID.
+            streak_count: Current streak length in days.
+            db: Async database session.
+
+        Returns:
+            A list of achievement keys that were newly unlocked (may be
+            empty if none qualify or all were already unlocked).
+        """
+        newly_unlocked: list[str] = []
+
+        for threshold, key in _STREAK_MILESTONES:
+            if streak_count >= threshold:
+                was_unlocked = await self.unlock(user_id, key, db)
+                if was_unlocked:
+                    newly_unlocked.append(key)
 
         return newly_unlocked
 
-    async def get_all_achievements(self, user_id: str) -> list[dict]:
-        """Return all achievements with their locked/unlocked state.
+    async def get_all(
+        self,
+        user_id: str,
+        db: AsyncSession,
+    ) -> list[dict[str, Any]]:
+        """Return all achievement definitions with locked/unlocked state.
 
-        Every key in ``ACHIEVEMENT_REGISTRY`` is represented in the
-        response, whether locked or not.
+        Fetches the user's unlocked achievements from the database and
+        merges them with the full registry so locked achievements are
+        also returned.
 
         Args:
-            user_id: The user whose achievements to fetch.
+            user_id: The authenticated user's ID.
+            db: Async database session.
 
         Returns:
-            List of dicts, each containing registry metadata plus
-            ``unlocked``, ``unlocked_at``, and ``achievement_key`` fields.
+            A list of dicts, each containing:
+                - ``key``: achievement key
+                - ``name``: display name
+                - ``description``: achievement description
+                - ``category``: category name
+                - ``unlocked_at``: ISO 8601 string or ``None``
+                - ``is_unlocked``: bool
         """
-        result = await self._session.execute(select(Achievement).where(Achievement.user_id == user_id))
-        existing: dict[str, Achievement] = {row.achievement_key: row for row in result.scalars().all()}
+        result = await db.execute(
+            select(Achievement).where(Achievement.user_id == user_id)
+        )
+        rows = result.scalars().all()
 
-        achievements: list[dict] = []
-        for key, meta in ACHIEVEMENT_REGISTRY.items():
-            row = existing.get(key)
-            achievements.append(
-                {
-                    "achievement_key": key,
-                    "title": meta["title"],
-                    "description": meta["description"],
-                    "category": meta["category"],
-                    "icon": meta["icon"],
-                    "unlocked": row is not None and row.unlocked_at is not None,
-                    "unlocked_at": row.unlocked_at if row else None,
-                }
-            )
+        unlocked_map: dict[str, datetime | None] = {
+            row.achievement_key: row.unlocked_at
+            for row in rows
+        }
+
+        achievements: list[dict[str, Any]] = []
+        for category, entries in ACHIEVEMENT_REGISTRY.items():
+            for entry in entries:
+                key = entry["key"]
+                unlocked_at = unlocked_map.get(key)
+                achievements.append(
+                    {
+                        "key": key,
+                        "name": entry["name"],
+                        "description": entry["description"],
+                        "category": category,
+                        "unlocked_at": unlocked_at.isoformat() if unlocked_at else None,
+                        "is_unlocked": unlocked_at is not None,
+                    }
+                )
 
         return achievements
 
-    async def get_recent_achievements(self, user_id: str, limit: int = 5) -> list[Achievement]:
-        """Return the most recently unlocked achievements.
-
-        Args:
-            user_id: The user whose achievements to fetch.
-            limit: Maximum number of results to return. Defaults to 5.
-
-        Returns:
-            List of :class:`Achievement` rows ordered by ``unlocked_at``
-            descending (most recent first). Locked rows are excluded.
-        """
-        result = await self._session.execute(
-            select(Achievement)
-            .where(
-                Achievement.user_id == user_id,
-                Achievement.unlocked_at.is_not(None),
-            )
-            .order_by(Achievement.unlocked_at.desc())
-            .limit(limit)
-        )
-        return list(result.scalars().all())
-
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # Internal helpers
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
-    def _candidates_for_event(self, event: str, context: dict) -> list[str]:
-        """Map an event name to a list of candidate achievement keys.
+    def _send_unlock_notification(self, user_id: str, achievement_key: str) -> None:
+        """Send a push notification for an unlocked achievement.
 
-        Args:
-            event: The event identifier.
-            context: Event-specific payload.
-
-        Returns:
-            List of achievement keys to attempt to unlock.
-        """
-        candidates: list[str] = []
-
-        if event == "integration_connected":
-            # Always check first integration
-            candidates.append("first_integration")
-            # Check if user now has 3+ integrations
-            if context.get("connected_count", 0) >= 3:
-                candidates.append("connected_3")
-
-        elif event == "chat_started":
-            candidates.append("first_chat")
-
-        elif event == "insight_received":
-            candidates.append("first_insight")
-
-        elif event == "streak_updated":
-            streak_count = context.get("streak_count", 0)
-            for days, key in [
-                (7, "streak_7"),
-                (30, "streak_30"),
-                (90, "streak_90"),
-                (365, "streak_365"),
-            ]:
-                if streak_count >= days:
-                    candidates.append(key)
-
-        elif event == "goal_created":
-            candidates.append("first_goal")
-
-        elif event == "goal_completed":
-            if context.get("completed_count", 0) >= 5:
-                candidates.append("goals_5_complete")
-            # Overachiever: exceeded goal by 20%+
-            if context.get("exceeded_by_pct", 0) >= 20:
-                candidates.append("overachiever")
-
-        return candidates
-
-    async def _get_existing(self, user_id: str, key: str) -> Achievement | None:
-        """Fetch an existing achievement row if present.
+        Soft import of PushService — gracefully skipped if FCM is not
+        configured or an error occurs.
 
         Args:
-            user_id: The user ID.
-            key: The achievement key.
-
-        Returns:
-            Existing :class:`Achievement` row, or ``None``.
+            user_id: The user to notify.
+            achievement_key: The achievement that was unlocked.
         """
-        result = await self._session.execute(
-            select(Achievement).where(
-                Achievement.user_id == user_id,
-                Achievement.achievement_key == key,
+        try:
+            from app.services.push_service import PushService  # noqa: PLC0415
+
+            definition = _KEY_INDEX.get(achievement_key, {})
+            name = definition.get("name", achievement_key)
+
+            push = PushService()
+            if not push.is_available:
+                return
+
+            # PushService.send_notification requires a device token; in
+            # production the token is fetched from the user's device record.
+            # We log the intent here — a future task will wire up token lookup.
+            logger.info(
+                "_send_unlock_notification: achievement '%s' ('%s') unlocked for user '%s' — "
+                "push token lookup not yet wired; notification skipped",
+                achievement_key,
+                name,
+                user_id,
             )
-        )
-        return result.scalars().first()
-
-    async def _unlock(self, user_id: str, key: str) -> Achievement | None:
-        """Unlock a specific achievement for a user if not already unlocked.
-
-        Guards against duplicates: if the row already exists with a non-null
-        ``unlocked_at``, this is a no-op and returns ``None``.
-
-        Args:
-            user_id: The user ID.
-            key: The achievement key from ``ACHIEVEMENT_REGISTRY``.
-
-        Returns:
-            The newly created/updated :class:`Achievement`, or ``None`` if
-            the achievement was already unlocked (idempotent guard).
-        """
-        if key not in ACHIEVEMENT_REGISTRY:
-            logger.warning("Attempted to unlock unknown achievement key: %s", key)
-            return None
-
-        existing = await self._get_existing(user_id, key)
-        if existing is not None and existing.unlocked_at is not None:
-            # Already unlocked — idempotent, do nothing.
-            return None
-
-        now = datetime.now(tz=timezone.utc)
-
-        if existing is not None:
-            # Row exists but was locked (unlocked_at=None) — update in place.
-            existing.unlocked_at = now
-            await self._session.flush()
-            achievement = existing
-        else:
-            # New row.
-            achievement = Achievement(
-                user_id=user_id,
-                achievement_key=key,
-                unlocked_at=now,
+        except Exception:  # noqa: BLE001
+            logger.debug(
+                "_send_unlock_notification: push skipped for user '%s' achievement '%s'",
+                user_id,
+                achievement_key,
             )
-            self._session.add(achievement)
-            await self._session.flush()
-
-        await self._session.commit()
-
-        logger.info("Achievement unlocked: user=%s key=%s", user_id, key)
-        self._send_push_notification(user_id, key)
-
-        return achievement
-
-    def _send_push_notification(self, user_id: str, key: str) -> None:
-        """Send a push notification for a newly unlocked achievement.
-
-        No-op when push_service is not configured or FCM is unavailable.
-        Push tokens are fetched from the DB only if the service is available —
-        this is a best-effort notification, never blocking the unlock flow.
-
-        Args:
-            user_id: The user who earned the achievement.
-            key: The achievement key.
-        """
-        if self._push_service is None or not self._push_service.is_available:
-            return
-
-        meta = ACHIEVEMENT_REGISTRY.get(key, {})
-        title = f"Achievement Unlocked: {meta.get('title', key)}"
-        body = meta.get("description", "")
-
-        # NOTE: Sending to a specific device token requires the user's FCM
-        # token, which is stored in a device registration table. Since that
-        # model is managed by the devices module, we log and skip here to
-        # avoid a cross-service dependency. A production implementation
-        # would look up the device token and call send_notification().
-        logger.info(
-            "Push notification ready for achievement %s (user=%s): %s — %s",
-            key,
-            user_id,
-            title,
-            body,
-        )

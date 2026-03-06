@@ -38,6 +38,27 @@ from app.models.health_data import (
 )
 from app.services.auth_service import AuthService
 
+# Celery task imports (soft — failures are caught per-task so ingest never breaks)
+try:
+    from app.tasks.health_score_tasks import recalculate_health_score
+except ImportError:
+    recalculate_health_score = None  # type: ignore[assignment]
+
+try:
+    from app.tasks.anomaly_tasks import check_anomalies_for_user
+except ImportError:
+    check_anomalies_for_user = None  # type: ignore[assignment]
+
+try:
+    from app.tasks.insight_tasks import generate_insights_for_user
+except ImportError:
+    generate_insights_for_user = None  # type: ignore[assignment]
+
+try:
+    from app.tasks.background_alerts import check_user_events
+except ImportError:
+    check_user_events = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 
@@ -330,6 +351,48 @@ async def ingest_health_data(
         for key in keys_to_delete:
             await cache_service.delete(key)
         logger.info("Invalidated analytics cache for user %s after ingest", user_id)
+
+    # ---------------------------------------------------------------------- #
+    # Post-ingest Celery task triggers                                        #
+    # Each task is enqueued independently so a Celery failure in one task    #
+    # never prevents the others from being scheduled, and never breaks the   #
+    # ingest response delivered to the client.                               #
+    # ---------------------------------------------------------------------- #
+    if recalculate_health_score is not None:
+        try:
+            recalculate_health_score.delay(user_id)
+            logger.debug("Enqueued recalculate_health_score for user=%s", user_id)
+        except Exception:
+            logger.warning(
+                "Failed to enqueue recalculate_health_score for user=%s", user_id, exc_info=True
+            )
+
+    if check_anomalies_for_user is not None:
+        try:
+            check_anomalies_for_user.delay(user_id)
+            logger.debug("Enqueued check_anomalies_for_user for user=%s", user_id)
+        except Exception:
+            logger.warning(
+                "Failed to enqueue check_anomalies_for_user for user=%s", user_id, exc_info=True
+            )
+
+    if generate_insights_for_user is not None:
+        try:
+            generate_insights_for_user.delay(user_id)
+            logger.debug("Enqueued generate_insights_for_user for user=%s", user_id)
+        except Exception:
+            logger.warning(
+                "Failed to enqueue generate_insights_for_user for user=%s", user_id, exc_info=True
+            )
+
+    if check_user_events is not None:
+        try:
+            check_user_events.delay(user_id)
+            logger.debug("Enqueued check_user_events for user=%s", user_id)
+        except Exception:
+            logger.warning(
+                "Failed to enqueue check_user_events for user=%s", user_id, exc_info=True
+            )
 
     return HealthIngestResponse(
         success=True,

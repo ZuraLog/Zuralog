@@ -24,15 +24,19 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.agent.context_manager.memory_store import InMemoryStore
+from app.services.pinecone_memory_store import PineconeMemoryStore
 from app.middleware.posthog_analytics import PostHogAnalyticsMiddleware
 from app.middleware.sentry_context import SentryUserContextMiddleware
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import router as auth_router
-from app.api.v1.health_score_routes import router as health_score_router
-from app.api.v1.preferences_routes import router as preferences_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.health_score_routes import router as health_score_router
+from app.api.v1.memory_routes import router as memory_router
+from app.api.v1.notification_routes import router as notification_router
+from app.api.v1.preferences_routes import router as preferences_router
+from app.api.v1.report_routes import router as report_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.fitbit_routes import router as fitbit_router
@@ -43,6 +47,16 @@ from app.api.v1.polar_routes import router as polar_router
 from app.api.v1.polar_webhooks import webhook_router as polar_webhook_router
 from app.api.v1.withings_routes import router as withings_router
 from app.api.v1.withings_webhooks import webhook_router as withings_webhook_router
+from app.api.v1.achievement_routes import router as achievement_router
+from app.api.v1.emergency_card_routes import router as emergency_card_router
+from app.api.v1.health_score_routes import router as health_score_router
+from app.api.v1.insight_routes import router as insight_router
+from app.api.v1.journal_routes import router as journal_router
+from app.api.v1.prompt_suggestions import router as prompt_suggestions_router
+from app.api.v1.quick_actions import router as quick_actions_router
+from app.api.v1.quick_log_routes import router as quick_log_router
+from app.api.v1.streak_routes import router as streak_router
+from app.api.v1.attachments import attachments_router
 from app.api.v1.health_ingest import router as health_ingest_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
@@ -242,7 +256,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Dynamic tool injection: resolve tools per user at chat time
     tool_resolver = UserToolResolver(registry=registry)
     app.state.mcp_client = MCPClient(registry=registry, tool_resolver=tool_resolver)
-    app.state.memory_store = InMemoryStore()
+    # Use Pinecone for long-term memory when configured, fall back to in-memory
+    _pinecone_store = PineconeMemoryStore()
+    app.state.memory_store = _pinecone_store if _pinecone_store.is_available else InMemoryStore()
     app.state.llm_client = LLMClient()
     app.state.rate_limiter = RateLimiter()
     app.state.cache_service = CacheService()
@@ -295,6 +311,7 @@ app.include_router(chat_router, prefix="/api/v1")  # Phase 1.9
 app.include_router(integrations_router, prefix="/api/v1")  # Phase 1.6
 app.include_router(transcribe_router, prefix="/api/v1")  # Phase 1.8.5
 app.include_router(users_router, prefix="/api/v1")  # Phase 1.8.6
+app.include_router(preferences_router, prefix="/api/v1")  # Phase 2.1
 app.include_router(devices_router, prefix="/api/v1")  # Phase 1.10
 app.include_router(dev_router, prefix="/api/v1")  # Phase 1.10 (dev-only)
 app.include_router(analytics_router, prefix="/api/v1")  # Phase 1.11
@@ -309,18 +326,20 @@ app.include_router(polar_router, prefix="/api/v1")  # Polar integration
 app.include_router(polar_webhook_router, prefix="/api/v1")  # Polar webhooks
 app.include_router(withings_router, prefix="/api/v1")  # Withings integration
 app.include_router(withings_webhook_router, prefix="/api/v1")  # Withings webhooks
-app.include_router(preferences_router, prefix="/api/v1")  # Phase 2 — user preferences
-app.include_router(health_score_router, prefix="/api/v1")  # Phase 2 — health score
-app.include_router(achievement_router, prefix="/api/v1")  # Phase 2 — achievements
-app.include_router(streak_router, prefix="/api/v1")  # Phase 2 — streaks
-app.include_router(journal_router, prefix="/api/v1")  # Phase 2 — journal entries
-app.include_router(quick_log_router, prefix="/api/v1")  # Phase 2 — quick logs
-app.include_router(emergency_card_router, prefix="/api/v1")  # Phase 2 — emergency card
-app.include_router(notification_router, prefix="/api/v1")  # Phase 2 — notification centre
-app.include_router(report_router, prefix="/api/v1")  # Phase 2 — weekly/monthly reports
-app.include_router(attachments_router, prefix="/api/v1")  # Phase 2 — chat attachments
-app.include_router(insight_router, prefix="/api/v1")  # Phase 2 — AI insights
-app.include_router(quick_actions_router, prefix="/api/v1")  # Phase 2 — quick actions
+app.include_router(preferences_router, prefix="/api/v1")  # Phase 2.1 — user preferences
+app.include_router(health_score_router, prefix="/api/v1")  # Phase 2.2 — health score
+app.include_router(memory_router, prefix="/api/v1")  # Phase 2.4 — memory management
+app.include_router(insight_router, prefix="/api/v1")  # Phase 2.6 — insight cards
+app.include_router(prompt_suggestions_router, prefix="/api/v1")  # Phase 2.8 — prompt suggestions
+app.include_router(quick_actions_router, prefix="/api/v1")  # Phase 2.9 — quick actions
+app.include_router(achievement_router, prefix="/api/v1")  # Phase 2.10 — achievements
+app.include_router(streak_router, prefix="/api/v1")  # Phase 2.11 — streaks
+app.include_router(journal_router, prefix="/api/v1")  # Phase 2.12 — journal
+app.include_router(quick_log_router, prefix="/api/v1")  # Phase 2.13 — quick log
+app.include_router(emergency_card_router, prefix="/api/v1")  # Phase 2.14 — emergency card
+app.include_router(notification_router, prefix="/api/v1")  # Phase 2.15 — notification centre
+app.include_router(report_router, prefix="/api/v1")  # Phase 2.18 — health reports
+app.include_router(attachments_router, prefix="/api/v1")  # Phase 2.22 — chat file attachments
 app.include_router(progress_router, prefix="/api/v1")  # Phase 3 — progress home
 app.include_router(trends_router, prefix="/api/v1")  # Phase 3 — trends home
 

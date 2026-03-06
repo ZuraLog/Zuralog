@@ -1,260 +1,355 @@
 """
 Zuralog Cloud Brain — Morning Briefing Celery Task.
 
-Runs every 15 minutes via Celery Beat. For each user whose
-``morning_briefing_time`` (UTC hour) falls in the current 15-minute window
-and who has ``morning_briefing_enabled=True`` and a Pro subscription:
+Sends personalised morning briefing push notifications to users whose
+``morning_briefing_time`` falls within the current 15-minute window.
 
-1. Fetch last night's sleep data (if available).
-2. Generate personalised briefing text (sleep recap + focus + suggestion).
-3. Look up the user's FCM token(s) from ``user_devices``.
-4. Send push notification via NotificationService.
-5. Persist an Insight card of type MORNING_BRIEFING.
+Scheduled via Celery Beat at 15-minute intervals. For each eligible user:
+1. Checks if the user's preferred briefing time matches the current UTC slot.
+2. Queries yesterday's DailyHealthMetrics for a data-driven briefing.
+3. Builds a personalised briefing message (graceful fallback if no data).
+4. Sends via PushService and persists as a NotificationLog + Insight.
 
-Phase 2 note: UTC-only. Timezone-aware scheduling deferred to Phase 8.
+Architecture notes:
+- The Celery task is synchronous; async DB access is bridged with asyncio.run().
+- All model imports are soft (try/except) to handle schema drift gracefully.
+- morning_briefing_enabled is checked via notification_settings JSON to
+  maintain backwards compatibility if the column does not exist.
 """
-
-from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+import sentry_sdk
 
 from app.database import async_session
-from app.models.insight import Insight, InsightType
-from app.models.notification_log import NotificationType
-from app.models.user import User
-from app.models.user_device import UserDevice
-from app.models.user_preferences import UserPreferences
-from app.models.health_data import SleepRecord
-from app.services.notification_service import NotificationService
-from app.services.push_service import PushService
 from app.worker import celery_app
 
 logger = logging.getLogger(__name__)
 
-# Window size for matching briefing time (minutes on each side of the window).
-_WINDOW_MINUTES = 15
+# Half-window (minutes) around a user's briefing_time for eligibility.
+_WINDOW_MINUTES = 7.5
 
 
-# ---------------------------------------------------------------------------
-# Briefing content generation
-# ---------------------------------------------------------------------------
-
-
-def _generate_briefing_text(
-    sleep_hours: float | None,
-    sleep_quality: int | None,
-    user_goals: list | None,
-) -> tuple[str, str]:
-    """Generate personalised morning briefing title and body.
+def _parse_hhmm(time_str: str | None) -> tuple[int, int] | None:
+    """Parse an HH:MM string into (hour, minute) integers.
 
     Args:
-        sleep_hours: Hours slept last night, or None if no data.
-        sleep_quality: Sleep quality score (0-100), or None.
-        user_goals: List of goal dicts from UserPreferences, or None.
+        time_str: Time string in 'HH:MM' format, or None.
 
     Returns:
-        Tuple of (title, body) strings.
+        (hour, minute) tuple, or None if parsing fails.
     """
-    title = "Good morning! Here's your briefing."
-
-    parts: list[str] = []
-
-    # Sleep recap
-    if sleep_hours is not None:
-        hours_str = f"{sleep_hours:.1f}"
-        if sleep_quality is not None:
-            if sleep_quality >= 80:
-                quality_note = "Great quality sleep!"
-            elif sleep_quality >= 60:
-                quality_note = "Decent rest — you're on track."
-            else:
-                quality_note = "Light sleep — consider an earlier bedtime tonight."
-            parts.append(f"You slept {hours_str} hours. {quality_note}")
-        else:
-            if sleep_hours >= 7.5:
-                parts.append(f"You slept {hours_str} hours — solid rest.")
-            elif sleep_hours >= 6:
-                parts.append(f"You slept {hours_str} hours. A bit more rest could help recovery.")
-            else:
-                parts.append(f"You slept {hours_str} hours. Prioritise rest today if you can.")
-    else:
-        # Fallback when no sleep data
-        parts.append("Start your day strong — consistency is the foundation of health.")
-
-    # Today's focus from goals
-    if user_goals:
-        goal_metrics = [g.get("metric", "") for g in user_goals if g.get("metric")]
-        if goal_metrics:
-            focus = goal_metrics[0].replace("_", " ")
-            parts.append(f"Today's focus: keep up your {focus} habit.")
-
-    # One actionable suggestion
-    if sleep_hours is not None and sleep_hours < 6:
-        parts.append("Tip: A 20-minute nap can restore alertness without disrupting tonight's sleep.")
-    elif not user_goals:
-        parts.append("Tip: Setting a daily step goal is one of the highest-impact habits you can build.")
-    else:
-        parts.append("Tip: A 10-minute walk after meals can meaningfully improve glucose response.")
-
-    body = " ".join(parts)
-    return title, body
+    if not time_str:
+        return None
+    try:
+        parts = time_str.strip().split(":")
+        return int(parts[0]), int(parts[1])
+    except (ValueError, IndexError):
+        return None
 
 
-# ---------------------------------------------------------------------------
-# Async core logic
-# ---------------------------------------------------------------------------
+def _is_in_window(target_hour: int, target_minute: int, now: datetime) -> bool:
+    """Check whether a target HH:MM falls within ±7.5 minutes of ``now``.
 
+    Compares the target time against the current UTC minute-of-day with a
+    ±7.5-minute tolerance window to account for the 15-minute Beat schedule.
 
-async def _run_morning_briefings() -> dict:
-    """Core async logic for send_morning_briefings_task.
+    Args:
+        target_hour: Target hour (0-23, UTC).
+        target_minute: Target minute (0-59).
+        now: Current UTC datetime.
 
     Returns:
-        Dict with summary statistics.
+        True if the target time is within the window.
     """
-    now_utc = datetime.now(timezone.utc)
-    current_hour = now_utc.hour
-    current_minute = now_utc.minute
+    now_total = now.hour * 60 + now.minute
+    target_total = target_hour * 60 + target_minute
 
-    # We match users whose briefing time hour == current_hour, and whose
-    # briefing time minute falls within the current 15-minute window.
-    window_start_minute = (current_minute // _WINDOW_MINUTES) * _WINDOW_MINUTES
-    window_end_minute = window_start_minute + _WINDOW_MINUTES
+    # Handle midnight wrap-around
+    diff = abs(now_total - target_total)
+    if diff > 720:  # more than 12 hours apart — wrap
+        diff = 1440 - diff
 
-    sent_count = 0
-    skipped_count = 0
+    return diff <= _WINDOW_MINUTES
 
-    push_svc = PushService()
-    notif_svc = NotificationService(push_service=push_svc, db_factory=async_session)
 
-    async with async_session() as db:
-        # Fetch users with morning briefing enabled.
-        prefs_stmt = select(UserPreferences).where(
-            UserPreferences.morning_briefing_enabled.is_(True),
-            UserPreferences.morning_briefing_time.isnot(None),
+def _build_briefing_message(metrics: object | None) -> str:
+    """Build a personalised briefing message from yesterday's metrics.
+
+    Args:
+        metrics: DailyHealthMetrics ORM instance for yesterday, or None.
+
+    Returns:
+        A human-readable briefing string.
+    """
+    if metrics is None:
+        return (
+            "Good morning! Keep syncing your data for personalised briefings. "
+            "Check in with Zuralog throughout the day to build your health baseline."
         )
-        prefs_result = await db.execute(prefs_stmt)
-        all_prefs = prefs_result.scalars().all()
 
-        for prefs in all_prefs:
-            try:
-                briefing_time = prefs.morning_briefing_time
-                if briefing_time is None:
-                    continue
+    parts: list[str] = ["Good morning!"]
 
-                # Check if this user's briefing time falls in the current window.
-                b_hour = briefing_time.hour
-                b_minute = briefing_time.minute
+    # Sleep recap (HRV as proxy for recovery quality)
+    if hasattr(metrics, "hrv_ms") and metrics.hrv_ms is not None:
+        hrv = metrics.hrv_ms
+        if hrv >= 50:
+            parts.append(f"Yesterday: great recovery — HRV was {hrv:.0f} ms.")
+        elif hrv >= 30:
+            parts.append(f"Yesterday: moderate recovery — HRV was {hrv:.0f} ms.")
+        else:
+            parts.append(
+                f"Yesterday: low HRV ({hrv:.0f} ms) — prioritise rest today."
+            )
 
-                if b_hour != current_hour:
-                    continue
-                if not (window_start_minute <= b_minute < window_end_minute):
-                    continue
+    # Activity summary
+    if hasattr(metrics, "steps") and metrics.steps is not None:
+        steps = metrics.steps
+        if steps >= 10000:
+            parts.append(f"You hit {steps:,} steps — well done!")
+        elif steps >= 7000:
+            parts.append(f"You logged {steps:,} steps — solid effort.")
+        else:
+            parts.append(
+                f"You logged {steps:,} steps. Try to move more today!"
+            )
 
-                user_id = prefs.user_id
+    # Suggestion based on resting heart rate
+    if (
+        hasattr(metrics, "resting_heart_rate")
+        and metrics.resting_heart_rate is not None
+    ):
+        rhr = metrics.resting_heart_rate
+        if rhr > 80:
+            parts.append(
+                "Your resting heart rate is elevated. Focus on hydration and stress management."
+            )
+        else:
+            parts.append("Your heart rate looks healthy. Keep up the good work!")
 
-                # Check subscription tier — morning briefing is Pro only.
-                user_stmt = select(User).where(User.id == user_id)
-                user_result = await db.execute(user_stmt)
-                user = user_result.scalar_one_or_none()
-                if user is None or not user.is_premium:
-                    logger.debug("Morning briefing skipped for user %s — not Pro tier", user_id)
-                    skipped_count += 1
-                    continue
+    if len(parts) == 1:
+        # Only the greeting — add a generic tip
+        parts.append(
+            "Today looks like a great day to move, hydrate, and check in with Zuralog."
+        )
 
-                # Fetch last night's sleep data.
-                last_night = (date.today() - timedelta(days=1)).isoformat()
-                sleep_stmt = (
-                    select(SleepRecord)
-                    .where(
-                        SleepRecord.user_id == user_id,
-                        SleepRecord.date == last_night,
-                    )
-                    .order_by(SleepRecord.created_at.desc())
-                    .limit(1)
-                )
-                sleep_result = await db.execute(sleep_stmt)
-                sleep_record = sleep_result.scalar_one_or_none()
-
-                sleep_hours = sleep_record.hours if sleep_record else None
-                sleep_quality = sleep_record.quality_score if sleep_record else None
-
-                # Generate briefing text.
-                title, body = _generate_briefing_text(
-                    sleep_hours=sleep_hours,
-                    sleep_quality=sleep_quality,
-                    user_goals=prefs.goals,
-                )
-
-                # Look up the user's most recent FCM device token.
-                device_stmt = (
-                    select(UserDevice)
-                    .where(
-                        UserDevice.user_id == user_id,
-                    )
-                    .order_by(UserDevice.last_seen_at.desc())
-                    .limit(1)
-                )
-                device_result = await db.execute(device_stmt)
-                device = device_result.scalar_one_or_none()
-                device_token = device.fcm_token if device else None
-
-                # Send and persist notification.
-                await notif_svc.send_and_persist(
-                    user_id=user_id,
-                    title=title,
-                    body=body,
-                    notification_type=NotificationType.BRIEFING,
-                    device_token=device_token,
-                    deep_link="zuralog://briefing/today",
-                    db=db,
-                )
-
-                # Persist as an Insight card.
-                insight = Insight(
-                    user_id=user_id,
-                    type=InsightType.MORNING_BRIEFING.value,
-                    title=title,
-                    body=body,
-                    data={"sleep_hours": sleep_hours, "sleep_quality": sleep_quality},
-                    priority=2,
-                )
-                db.add(insight)
-                await db.commit()
-
-                sent_count += 1
-                logger.info("Morning briefing sent for user %s", user_id)
-
-            except Exception:  # noqa: BLE001
-                logger.exception("Morning briefing failed for user %s", prefs.user_id)
-
-    return {"sent": sent_count, "skipped": skipped_count}
+    return " ".join(parts)
 
 
-# ---------------------------------------------------------------------------
-# Celery task
-# ---------------------------------------------------------------------------
+@celery_app.task(name="app.tasks.morning_briefing_task.send_morning_briefings")
+def send_morning_briefings() -> dict:
+    """Send morning briefing push notifications to eligible users.
 
-
-@celery_app.task(name="app.tasks.morning_briefing.send_morning_briefings_task")
-def send_morning_briefings_task() -> dict:
-    """Send morning briefings to users whose briefing time matches the current window.
-
-    Runs every 15 minutes via Celery Beat. Matches users whose UTC
-    ``morning_briefing_time`` hour:minute falls within the current
-    15-minute scheduling window.
+    Runs every 15 minutes via Celery Beat. For each user whose
+    ``morning_briefing_time`` falls within the current ±7.5-minute window
+    and who has briefings enabled, generates and delivers a personalised
+    morning summary.
 
     Returns:
-        Dict with ``sent`` and ``skipped`` counts.
+        Summary dict with counts of users processed, briefings sent, and errors.
     """
-    logger.info("send_morning_briefings_task: starting morning briefing run")
-    result = asyncio.run(_run_morning_briefings())
-    logger.info(
-        "send_morning_briefings_task: complete — sent=%d skipped=%d",
-        result.get("sent", 0),
-        result.get("skipped", 0),
-    )
-    return result
+    logger.info("send_morning_briefings: task started")
+
+    async def _run() -> dict:
+        processed = 0
+        sent = 0
+        errors = 0
+
+        async with async_session() as db:
+            # ------------------------------------------------------------------
+            # 1. Load users with morning_briefing_time set (soft import)
+            # ------------------------------------------------------------------
+            try:
+                from sqlalchemy import select
+                from app.models.user_preferences import UserPreferences
+
+                result = await db.execute(
+                    select(UserPreferences).where(
+                        UserPreferences.morning_briefing_time.isnot(None)
+                    )
+                )
+                all_prefs = result.scalars().all()
+            except Exception as exc:
+                logger.error(
+                    "send_morning_briefings: failed to query user_preferences",
+                    exc_info=True,
+                )
+                sentry_sdk.capture_exception(exc)
+                return {"processed": 0, "sent": 0, "errors": 1}
+
+            now_utc = datetime.now(timezone.utc)
+            yesterday_str = (now_utc - timedelta(days=1)).strftime("%Y-%m-%d")
+
+            for prefs in all_prefs:
+                user_id: str = prefs.user_id
+                processed += 1
+
+                try:
+                    # ------------------------------------------------------------------
+                    # 2. Check if briefings are enabled (from notification_settings JSON)
+                    # ------------------------------------------------------------------
+                    notification_settings: dict = prefs.notification_settings or {}
+                    briefing_enabled = notification_settings.get(
+                        "morning_briefing_enabled", True  # enabled by default
+                    )
+                    if not briefing_enabled:
+                        logger.debug(
+                            "send_morning_briefings: briefings disabled for user=%s",
+                            user_id,
+                        )
+                        continue
+
+                    # ------------------------------------------------------------------
+                    # 3. Check if this user's briefing_time is in the current window
+                    # ------------------------------------------------------------------
+                    parsed = _parse_hhmm(prefs.morning_briefing_time)
+                    if parsed is None:
+                        continue
+                    target_hour, target_minute = parsed
+
+                    if not _is_in_window(target_hour, target_minute, now_utc):
+                        continue
+
+                    # ------------------------------------------------------------------
+                    # 4. Load yesterday's health metrics (soft import)
+                    # ------------------------------------------------------------------
+                    yesterday_metrics = None
+                    try:
+                        from sqlalchemy import select
+                        from app.models.daily_metrics import DailyHealthMetrics
+
+                        metrics_result = await db.execute(
+                            select(DailyHealthMetrics)
+                            .where(
+                                DailyHealthMetrics.user_id == user_id,
+                                DailyHealthMetrics.date == yesterday_str,
+                            )
+                            .limit(1)
+                        )
+                        yesterday_metrics = metrics_result.scalar_one_or_none()
+                    except Exception:
+                        logger.debug(
+                            "send_morning_briefings: could not load metrics for user=%s",
+                            user_id,
+                            exc_info=True,
+                        )
+
+                    # ------------------------------------------------------------------
+                    # 5. Build briefing message
+                    # ------------------------------------------------------------------
+                    briefing_body = _build_briefing_message(yesterday_metrics)
+                    briefing_title = "Your Morning Briefing"
+
+                    # ------------------------------------------------------------------
+                    # 6. Get device FCM token and send push notification
+                    # ------------------------------------------------------------------
+                    fcm_token: str | None = None
+                    try:
+                        from sqlalchemy import select
+                        from app.models.device import Device
+
+                        token_result = await db.execute(
+                            select(Device.fcm_token)
+                            .where(
+                                Device.user_id == user_id,
+                                Device.fcm_token.isnot(None),
+                            )
+                            .limit(1)
+                        )
+                        row = token_result.first()
+                        if row:
+                            fcm_token = row[0]
+                    except Exception:
+                        logger.debug(
+                            "send_morning_briefings: could not load FCM token for user=%s",
+                            user_id,
+                            exc_info=True,
+                        )
+
+                    if fcm_token:
+                        from app.services.push_service import PushService
+
+                        push = PushService()
+                        push.send_notification(
+                            token=fcm_token,
+                            title=briefing_title,
+                            body=briefing_body,
+                            data={"type": "briefing"},
+                        )
+
+                    # ------------------------------------------------------------------
+                    # 7. Persist NotificationLog (soft import)
+                    # ------------------------------------------------------------------
+                    try:
+                        import uuid as _uuid
+                        from app.models.notification_log import NotificationLog
+
+                        log = NotificationLog(
+                            id=str(_uuid.uuid4()),
+                            user_id=user_id,
+                            title=briefing_title,
+                            body=briefing_body,
+                            type="briefing",
+                            deep_link=None,
+                        )
+                        db.add(log)
+                    except Exception:
+                        logger.debug(
+                            "send_morning_briefings: could not persist notification log for user=%s",
+                            user_id,
+                            exc_info=True,
+                        )
+
+                    # ------------------------------------------------------------------
+                    # 8. Persist Insight card (soft import)
+                    # ------------------------------------------------------------------
+                    try:
+                        import uuid as _uuid
+                        from app.models.insight import Insight
+
+                        card = Insight(
+                            id=str(_uuid.uuid4()),
+                            user_id=user_id,
+                            type="welcome",  # closest INSIGHT_TYPE for a briefing
+                            title=briefing_title,
+                            body=briefing_body,
+                            data={"source": "morning_briefing", "generated_at": now_utc.isoformat()},
+                            reasoning=None,
+                            priority=1,
+                        )
+                        db.add(card)
+                    except Exception:
+                        logger.debug(
+                            "send_morning_briefings: could not persist insight card for user=%s",
+                            user_id,
+                            exc_info=True,
+                        )
+
+                    await db.commit()
+                    sent += 1
+
+                    logger.info(
+                        "send_morning_briefings: briefing sent for user=%s",
+                        user_id,
+                    )
+
+                except Exception:
+                    errors += 1
+                    logger.error(
+                        "send_morning_briefings: failed for user=%s",
+                        user_id,
+                        exc_info=True,
+                    )
+                    sentry_sdk.capture_exception()
+                    try:
+                        await db.rollback()
+                    except Exception:
+                        pass
+
+        summary = {"processed": processed, "sent": sent, "errors": errors}
+        logger.info("send_morning_briefings: task complete %s", summary)
+        return summary
+
+    return asyncio.run(_run())

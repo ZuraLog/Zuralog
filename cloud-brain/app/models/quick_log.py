@@ -1,66 +1,40 @@
 """
 Zuralog Cloud Brain — Quick Log Model.
 
-Supports rapid, low-friction data entry for individual health metrics.
-Unlike journal entries (one per day), quick logs are time-stamped events
-and may have multiple entries per day for the same metric.
-
-Models:
-    - MetricType: Enum of supported quick-log metric categories.
-    - QuickLog: A single logged data point.
+Lightweight, timestamped metric snapshots for rapid logging from the
+mobile app. Supports both numeric values (water intake, mood, energy) and
+free-text entries (notes). Multiple logs per day are allowed — this table
+is an append-only time series.
 """
 
-import enum
 import uuid
-from datetime import datetime
 
-from sqlalchemy import DateTime, Float, String
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import DateTime, Float, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from app.database import Base
 
-
-class MetricType(str, enum.Enum):
-    """Supported metric categories for quick logs.
-
-    Members:
-        WATER: Water intake (value in ml or cups).
-        MOOD: Momentary mood score.
-        ENERGY: Momentary energy score.
-        STRESS: Momentary stress score.
-        SLEEP_QUALITY: Retrospective sleep quality.
-        PAIN: Pain level.
-        NOTES: Unstructured text note.
-        SYMPTOMS: Symptom chip selection (stored in tags).
-    """
-
-    WATER = "water"
-    MOOD = "mood"
-    ENERGY = "energy"
-    STRESS = "stress"
-    SLEEP_QUALITY = "sleep_quality"
-    PAIN = "pain"
-    NOTES = "notes"
-    SYMPTOMS = "symptoms"
+# Valid metric_type values
+VALID_METRIC_TYPES = frozenset(
+    {"water", "mood", "energy", "stress", "sleep_quality", "pain", "notes"}
+)
 
 
 class QuickLog(Base):
-    """A single time-stamped health metric data point.
+    """A single rapid-log entry for a numeric or textual health metric.
 
-    Multiple logs per user per day per metric type are allowed.
+    Multiple logs per day are permitted (no unique constraint). Indexed on
+    ``user_id`` and ``logged_at`` for efficient time-range queries.
 
     Attributes:
-        id: UUID primary key (auto-generated).
-        user_id: Owner's user ID (indexed for fast per-user queries).
-        metric_type: The metric category (``MetricType`` value).
-        value: Numeric value (optional, used for scored metrics).
-        text_value: Text value (optional, used for notes/symptoms).
-        tags: JSON list of symptom chip strings (optional).
-        logged_at: When the metric was logged (server-side default,
-            indexed for time-range queries).
-        created_at: Row insertion timestamp (server-side default).
+        id: UUID primary key.
+        user_id: Supabase UID of the owning user. Indexed.
+        metric_type: One of: water, mood, energy, stress, sleep_quality, pain, notes.
+        value: Numeric measurement. Nullable for text-only metrics.
+        text_value: Free-text content. Nullable for numeric-only metrics.
+        tags: JSON array of tag strings.
+        logged_at: When the metric was recorded. Defaults to server time.
     """
 
     __tablename__ = "quick_logs"
@@ -72,36 +46,36 @@ class QuickLog(Base):
     )
     user_id: Mapped[str] = mapped_column(
         String,
-        index=True,
         nullable=False,
+        index=True,
+        comment="Supabase UID of the owning user",
     )
     metric_type: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        comment="MetricType enum value",
+        comment="water | mood | energy | stress | sleep_quality | pain | notes",
     )
     value: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
-        comment="Numeric value for scored metrics (mood, energy, etc.)",
+        comment="Numeric measurement value",
     )
     text_value: Mapped[str | None] = mapped_column(
-        String,
+        Text,
         nullable=True,
-        comment="Text content for notes/symptoms metric types",
+        comment="Free-text content for notes or descriptive metrics",
     )
-    tags: Mapped[list | None] = mapped_column(
+    tags: Mapped[list] = mapped_column(
         JSON,
-        nullable=True,
-        comment="Symptom chip list, e.g. ['nausea', 'fatigue']",
-    )
-    logged_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        index=True,
+        default=list,
+        server_default="[]",
         nullable=False,
+        comment="Array of tag strings",
     )
-    created_at: Mapped[datetime] = mapped_column(
+    logged_at: Mapped[str] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
+        nullable=False,
+        index=True,
+        comment="When the metric was recorded",
     )

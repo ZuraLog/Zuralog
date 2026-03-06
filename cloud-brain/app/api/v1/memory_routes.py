@@ -1,68 +1,76 @@
 """
 Zuralog Cloud Brain — Memory Management API.
 
-RESTful endpoints that allow authenticated users to inspect and manage
-their long-term AI memory — the context the AI Agent uses to personalise
-coaching responses.  These routes back the "Privacy & Data" settings
-screen in the mobile app.
+Endpoints for inspecting and managing the AI agent's long-term user memory.
+These routes operate on whichever memory store is mounted at
+``app.state.memory_store`` — either ``InMemoryStore`` (dev) or
+``PineconeMemoryStore`` (production).
 
-Endpoints:
-    GET  /api/v1/memories          — list all memories for the authenticated user
-    DELETE /api/v1/memories/{id}   — delete a single memory by ID
-    DELETE /api/v1/memories        — clear ALL memories (requires confirmation header)
+Routes:
+  GET    /api/v1/memories               — List all memories for the user.
+  DELETE /api/v1/memories/{memory_id}   — Delete a single memory by ID.
+  DELETE /api/v1/memories               — Clear ALL memories (requires confirm=true).
 
-Security:
-    - All endpoints require a valid JWT via ``get_authenticated_user_id``.
-    - Bulk deletion requires the ``X-Confirm-Clear: true`` header to
-      prevent accidental data loss from mis-fired DELETE requests.
-    - The memory store is accessed via ``request.app.state.memory_store``
-      so the production Pinecone store can be swapped with the in-memory
-      stub during tests without touching route code.
+Notes:
+  - ``InMemoryStore`` does not expose individual IDs, so the list endpoint
+    returns an empty list when that implementation is in use.
+  - All endpoints require a valid Supabase JWT.
 """
 
 from __future__ import annotations
 
 import logging
+from typing import Any
 
-import sentry_sdk
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 from app.api.v1.deps import get_authenticated_user_id
 
 logger = logging.getLogger(__name__)
 
+router = APIRouter(prefix="/memories", tags=["memories"])
+
 
 # ---------------------------------------------------------------------------
-# Response schemas
+# Pydantic response schemas
 # ---------------------------------------------------------------------------
 
 
-class MemoryEntryResponse(BaseModel):
-    """Serialised representation of a single memory entry.
+class MemoryItem(BaseModel):
+    """A single stored memory entry.
 
     Attributes:
-        id: Unique memory identifier.
-        text: The stored memory text.
-        metadata: Arbitrary key-value pairs attached to the memory.
-        score: Similarity score if the entry was returned by a query
-            (None when fetched via ``list_memories``).
+        id: Unique identifier for the memory vector.
+        text: The natural-language content of the memory.
+        metadata: Arbitrary key-value pairs attached at save time.
     """
 
     id: str
     text: str
-    metadata: dict
-    score: float | None = None
+    metadata: dict[str, Any] = {}
 
-    model_config = {"from_attributes": True}
+
+class MemoryListResponse(BaseModel):
+    """Response envelope for the memory list endpoint.
+
+    Attributes:
+        memories: Ordered list of stored memory entries.
+        count: Total number of entries returned.
+        store_type: Class name of the backing memory store.
+    """
+
+    memories: list[MemoryItem]
+    count: int
+    store_type: str
 
 
 class DeleteMemoryResponse(BaseModel):
-    """Response returned after a single memory deletion.
+    """Response for a single-memory delete operation.
 
     Attributes:
-        deleted: Whether the deletion was executed.
-        memory_id: The ID of the memory that was targeted.
+        deleted: ``True`` if the delete was acknowledged by the store.
+        memory_id: The ID that was requested for deletion.
     """
 
     deleted: bool
@@ -70,223 +78,204 @@ class DeleteMemoryResponse(BaseModel):
 
 
 class ClearMemoriesResponse(BaseModel):
-    """Response returned after clearing all user memories.
+    """Response for the clear-all-memories operation.
 
     Attributes:
-        cleared: Whether the operation was executed successfully.
-        count: Number of memories deleted.
+        cleared: ``True`` if the clear was acknowledged by the store.
+        message: Human-readable confirmation string.
     """
 
     cleared: bool
-    count: int
+    message: str
 
 
 # ---------------------------------------------------------------------------
-# Router
+# Helper
 # ---------------------------------------------------------------------------
 
 
-async def _set_sentry_module() -> None:
-    sentry_sdk.set_tag("api.module", "memory")
+def _store_type_name(memory_store: Any) -> str:
+    """Return the class name of the active memory store.
+
+    Args:
+        memory_store: The memory store object from app state.
+
+    Returns:
+        Class name string (e.g. ``"InMemoryStore"`` or ``"PineconeMemoryStore"``).
+    """
+    return type(memory_store).__name__
 
 
-router = APIRouter(
-    prefix="/memories",
-    tags=["memories"],
-    dependencies=[Depends(_set_sentry_module)],
+def _is_pinecone_store(memory_store: Any) -> bool:
+    """Check if the store has the extended Pinecone interface.
+
+    We duck-type rather than importing PineconeMemoryStore to avoid a hard
+    dependency on optional packages.
+
+    Args:
+        memory_store: The memory store object from app state.
+
+    Returns:
+        ``True`` if the store supports ``list_memories``, ``delete_memory``,
+        and ``clear_memories``.
+    """
+    return (
+        hasattr(memory_store, "list_memories")
+        and hasattr(memory_store, "delete_memory")
+        and hasattr(memory_store, "clear_memories")
+    )
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "",
+    response_model=MemoryListResponse,
+    summary="List all stored memories for the authenticated user",
 )
-
-
-# ---------------------------------------------------------------------------
-# GET /memories — list all memories
-# ---------------------------------------------------------------------------
-
-
-@router.get("", response_model=list[MemoryEntryResponse])
 async def list_memories(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
-) -> list[MemoryEntryResponse]:
-    """List all AI memories stored for the authenticated user.
+) -> MemoryListResponse:
+    """Return all long-term memories stored for the authenticated user.
 
-    Retrieves every memory entry from the user's personal namespace in
-    the backing vector store (Pinecone in production, in-memory in dev).
-    Results are not semantically ranked — use the AI chat endpoint for
-    context-aware retrieval.
+    When the active memory store is ``InMemoryStore`` (dev mode), the list
+    will always be empty because that implementation does not expose individual
+    IDs suitable for management.
 
     Args:
-        request: The incoming FastAPI request; used to access
-            ``app.state.memory_store``.
+        request: FastAPI request (used to access ``app.state.memory_store``).
         user_id: Authenticated user ID injected by the JWT dependency.
 
     Returns:
-        A list of :class:`MemoryEntryResponse` objects.  Returns an
-        empty list if the user has no stored memories or the store is
-        disabled.
-
-    Raises:
-        HTTPException: 503 if the memory store is not configured on
-            ``app.state``.
+        A ``MemoryListResponse`` containing the list of memories and metadata.
     """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
+    memory_store = request.app.state.memory_store
+    store_name = _store_type_name(memory_store)
 
-    memory_store = getattr(request.app.state, "memory_store", None)
-    if memory_store is None:
-        logger.error("list_memories: app.state.memory_store is not configured")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Memory service is not available",
+    if not _is_pinecone_store(memory_store):
+        logger.debug(
+            "list_memories: store is %s — returning empty list.", store_name
         )
+        return MemoryListResponse(memories=[], count=0, store_type=store_name)
 
-    # Support both PineconeMemoryStore (list_memories) and InMemoryStore (query)
-    if hasattr(memory_store, "list_memories"):
-        entries = await memory_store.list_memories(user_id)
-        return [
-            MemoryEntryResponse(
-                id=e.id,
-                text=e.text,
-                metadata=e.metadata,
-                score=e.score,
-            )
-            for e in entries
-        ]
-
-    # Fallback for InMemoryStore: query with empty string to return recent entries
-    raw_entries = await memory_store.query(user_id, query_text="", limit=1000)
-    return [
-        MemoryEntryResponse(
-            id=str(idx),
-            text=entry.get("text", ""),
-            metadata=entry.get("metadata", {}),
-            score=None,
+    raw_memories = await memory_store.list_memories(user_id)
+    memories = [
+        MemoryItem(
+            id=m.get("id", ""),
+            text=m.get("text", ""),
+            metadata=m.get("metadata", {}),
         )
-        for idx, entry in enumerate(raw_entries)
+        for m in raw_memories
     ]
+    logger.info(
+        "list_memories: returned %d memories for user '%s'.", len(memories), user_id
+    )
+    return MemoryListResponse(
+        memories=memories,
+        count=len(memories),
+        store_type=store_name,
+    )
 
 
-# ---------------------------------------------------------------------------
-# DELETE /memories/{memory_id} — delete a single memory
-# ---------------------------------------------------------------------------
-
-
-@router.delete("/{memory_id}", response_model=DeleteMemoryResponse)
+@router.delete(
+    "/{memory_id}",
+    response_model=DeleteMemoryResponse,
+    summary="Delete a single memory by ID",
+)
 async def delete_memory(
     memory_id: str,
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
 ) -> DeleteMemoryResponse:
-    """Delete a single AI memory by its ID.
-
-    Removes the specified memory from the user's personal namespace.
-    Only memories belonging to the authenticated user can be deleted —
-    the user-scoped namespace prevents cross-user access.
+    """Delete a specific memory vector by its ID.
 
     Args:
-        memory_id: The UUID string of the memory to delete.
-        request: The incoming FastAPI request.
+        memory_id: The UUID of the memory to delete.
+        request: FastAPI request (used to access ``app.state.memory_store``).
         user_id: Authenticated user ID injected by the JWT dependency.
 
     Returns:
-        :class:`DeleteMemoryResponse` with ``deleted=True`` on success.
+        A ``DeleteMemoryResponse`` indicating success or failure.
 
     Raises:
-        HTTPException: 503 if the memory store is not configured.
-        HTTPException: 404 if the memory store reports the ID was not found.
+        HTTPException: 501 if the active store does not support deletion.
     """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
+    memory_store = request.app.state.memory_store
 
-    memory_store = getattr(request.app.state, "memory_store", None)
-    if memory_store is None:
-        logger.error("delete_memory: app.state.memory_store is not configured")
+    if not _is_pinecone_store(memory_store):
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Memory service is not available",
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail=(
+                f"The active memory store ({_store_type_name(memory_store)}) "
+                "does not support individual memory deletion."
+            ),
         )
 
-    if not hasattr(memory_store, "delete_memory"):
-        # InMemoryStore stub does not support deletion
-        logger.warning(
-            "delete_memory: store does not support delete_memory — no-op for user '%s'",
-            user_id,
-        )
-        return DeleteMemoryResponse(deleted=False, memory_id=memory_id)
-
-    success = await memory_store.delete_memory(user_id, memory_id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Memory '{memory_id}' not found or could not be deleted",
-        )
-
-    logger.info("delete_memory: user '%s' deleted memory '%s'", user_id, memory_id)
-    return DeleteMemoryResponse(deleted=True, memory_id=memory_id)
+    deleted = await memory_store.delete_memory(user_id, memory_id)
+    logger.info(
+        "delete_memory: user='%s', id='%s', success=%s.", user_id, memory_id, deleted
+    )
+    return DeleteMemoryResponse(deleted=deleted, memory_id=memory_id)
 
 
-# ---------------------------------------------------------------------------
-# DELETE /memories — clear all memories
-# ---------------------------------------------------------------------------
-
-
-@router.delete("", response_model=ClearMemoriesResponse)
+@router.delete(
+    "",
+    response_model=ClearMemoriesResponse,
+    summary="Clear all memories for the authenticated user",
+)
 async def clear_memories(
     request: Request,
-    user_id: str = Depends(get_authenticated_user_id),
-    x_confirm_clear: str | None = Header(
-        default=None,
-        alias="X-Confirm-Clear",
-        description="Must be 'true' to authorise bulk deletion",
+    confirm: bool = Query(
+        False,
+        description="Must be true to confirm destructive clear operation.",
     ),
+    user_id: str = Depends(get_authenticated_user_id),
 ) -> ClearMemoriesResponse:
-    """Clear ALL AI memories for the authenticated user.
+    """Delete ALL stored memories for the authenticated user.
 
-    This is a destructive, irreversible operation.  The caller must
-    include the ``X-Confirm-Clear: true`` header to confirm intent.
-    Without this header the endpoint returns ``400 Bad Request``.
+    This is a destructive operation and cannot be undone. The caller must
+    pass ``?confirm=true`` in the query string to proceed.
 
     Args:
-        request: The incoming FastAPI request.
+        request: FastAPI request (used to access ``app.state.memory_store``).
+        confirm: Query parameter guard. Must be ``true`` to execute.
         user_id: Authenticated user ID injected by the JWT dependency.
-        x_confirm_clear: Must be the string ``"true"`` (case-insensitive)
-            to authorise the bulk deletion.
 
     Returns:
-        :class:`ClearMemoriesResponse` with the number of memories deleted.
+        A ``ClearMemoriesResponse`` with the outcome.
 
     Raises:
-        HTTPException: 400 if the confirmation header is absent or not
-            equal to ``"true"``.
-        HTTPException: 503 if the memory store is not configured.
+        HTTPException: 400 if ``confirm`` is not ``true``.
+        HTTPException: 501 if the active store does not support bulk deletion.
     """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
-
-    if not x_confirm_clear or x_confirm_clear.lower() != "true":
+    if not confirm:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=("Bulk deletion requires the 'X-Confirm-Clear: true' header. This action is irreversible."),
+            detail="Pass ?confirm=true to confirm clearing all memories. This cannot be undone.",
         )
 
-    memory_store = getattr(request.app.state, "memory_store", None)
-    if memory_store is None:
-        logger.error("clear_memories: app.state.memory_store is not configured")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Memory service is not available",
+    memory_store = request.app.state.memory_store
+    store_name = _store_type_name(memory_store)
+
+    if not _is_pinecone_store(memory_store):
+        # InMemoryStore: treat as a silent no-op
+        logger.debug(
+            "clear_memories: store is %s — no-op for non-Pinecone store.", store_name
+        )
+        return ClearMemoriesResponse(
+            cleared=True,
+            message=f"No persistent memories to clear ({store_name} is ephemeral).",
         )
 
-    if not hasattr(memory_store, "clear_memories"):
-        logger.warning(
-            "clear_memories: store does not support clear_memories — no-op for user '%s'",
-            user_id,
-        )
-        return ClearMemoriesResponse(cleared=False, count=0)
-
-    count = await memory_store.clear_memories(user_id)
+    cleared = await memory_store.clear_memories(user_id)
     logger.info(
-        "clear_memories: user '%s' cleared %d memories",
-        user_id,
-        count,
+        "clear_memories: user='%s', success=%s.", user_id, cleared
     )
-    return ClearMemoriesResponse(cleared=True, count=count)
+    return ClearMemoriesResponse(
+        cleared=cleared,
+        message="All memories cleared." if cleared else "Clear operation failed.",
+    )

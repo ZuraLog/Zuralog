@@ -1,35 +1,38 @@
 """
-Tests for the Insight Task Pipeline.
+Tests for the Insight API routes (GET /api/v1/insights, PATCH /api/v1/insights/{id}).
 
-Covers the end-to-end flow from health data → Celery task → DB row,
-distinct from ``tests/test_insight_generator.py`` which tests the
-analytics.InsightGenerator logic in isolation.
+Validates pagination, type filtering, read/dismiss actions, and auth
+enforcement. All database access is mocked — no real DB is required.
 
-Test matrix:
-    - Insight is saved to DB after successful generation.
-    - Morning time slot generates a MORNING_BRIEFING insight.
-    - Evening time slot does NOT generate a morning insight.
-    - Anomaly insight is created when an anomaly is detected.
-    - Complex insights are skipped when data is < 7 days old.
-    - Duplicate prevention: same type + same day is not inserted twice.
+Coverage:
+    test_insight_list_pagination        — Returns correct page slice.
+    test_insight_filter_by_type         — Type query-param filter works.
+    test_mark_read_sets_timestamp       — PATCH action=read sets read_at.
+    test_mark_dismissed_hides_from_list — Dismissed insights excluded from GET.
+    test_auth_required                  — 401/403 without a Bearer token.
 """
 
-from __future__ import annotations
-
-import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi.testclient import TestClient
 
-from app.models.insight import Insight, InsightType
-from app.tasks.insight_tasks import (
-    _DATA_MATURITY_DAYS,
-    _detect_anomalies,
-    _generate_for_user,
-    _insight_exists_today,
-    _save_insight,
-)
+from app.api.v1.auth import _get_auth_service
+from app.database import get_db
+from app.main import app
+from app.models.insight import Insight
+from app.services.auth_service import AuthService
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+USER_ID = "test-insight-user-001"
+AUTH_HEADERS = {"Authorization": "Bearer test-insight-token"}
+
+# A fixed "now" used when checking timestamps
+_NOW = datetime(2026, 3, 4, 12, 0, 0, tzinfo=timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -38,447 +41,271 @@ from app.tasks.insight_tasks import (
 
 
 def _make_insight(
-    user_id: str = "user-abc",
-    insight_type: InsightType = InsightType.ACTIVITY_PROGRESS,
-    today: date | None = None,
-) -> Insight:
-    """Build a minimal in-memory Insight row (not DB-backed)."""
-    today = today or date.today()
-    return Insight(
-        id=str(uuid.uuid4()),
-        user_id=user_id,
-        type=insight_type.value,
-        title="Test title",
-        body="Test body",
-        priority=5,
-        created_at=datetime(today.year, today.month, today.day, 9, 0, tzinfo=timezone.utc),
-    )
+    insight_id: str = "insight-001",
+    insight_type: str = "sleep_analysis",
+    priority: int = 3,
+    dismissed: bool = False,
+    read: bool = False,
+) -> MagicMock:
+    """Return a MagicMock shaped like an Insight ORM row.
 
+    Args:
+        insight_id: UUID string for the insight.
+        insight_type: Insight type string (e.g. ``sleep_analysis``).
+        priority: Integer priority (1–10).
+        dismissed: Whether ``dismissed_at`` is set.
+        read: Whether ``read_at`` is set.
 
-def _mock_db_returning(rows: list) -> AsyncMock:
-    """Create an AsyncMock session that returns rows from execute()."""
-    db = AsyncMock()
-    scalar_result = MagicMock()
-    scalar_result.scalars.return_value.all.return_value = rows
-    scalar_result.scalar_one.return_value = len(rows)
-    scalar_result.scalar_one_or_none.return_value = rows[0] if rows else None
-    db.execute.return_value = scalar_result
-    db.add = MagicMock()
-    db.commit = AsyncMock()
-    db.refresh = AsyncMock()
-    return db
-
-
-# ---------------------------------------------------------------------------
-# Test: insight saved to DB after generation
-# ---------------------------------------------------------------------------
-
-
-class TestInsightSavedToDb:
-    """_save_insight should persist an Insight row and return it."""
-
-    @pytest.mark.asyncio
-    async def test_save_insight_calls_db_add_and_commit(self):
-        """A new insight should be added and committed once."""
-        saved_insight = _make_insight()
-
-        async def _fake_exists(user_id, insight_type, today):
-            return False  # no duplicate
-
-        with (
-            patch(
-                "app.tasks.insight_tasks._insight_exists_today",
-                side_effect=_fake_exists,
-            ),
-            patch("app.tasks.insight_tasks.async_session") as mock_session_ctx,
-        ):
-            mock_db = AsyncMock()
-            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
-            mock_db.__aexit__ = AsyncMock(return_value=False)
-            mock_db.add = MagicMock()
-            mock_db.commit = AsyncMock()
-            mock_db.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", saved_insight.id))
-            mock_session_ctx.return_value = mock_db
-
-            result = await _save_insight(
-                user_id="user-1",
-                insight_type=InsightType.ACTIVITY_PROGRESS,
-                title="Steps update",
-                body="You walked 8 000 steps today.",
-                priority=5,
-            )
-
-        mock_db.add.assert_called_once()
-        mock_db.commit.assert_awaited_once()
-        assert isinstance(result, Insight)
-
-    @pytest.mark.asyncio
-    async def test_save_insight_skips_duplicate(self):
-        """If an insight already exists today, _save_insight should skip DB write."""
-
-        async def _fake_exists(user_id, insight_type, today):
-            return True  # already exists
-
-        with patch(
-            "app.tasks.insight_tasks._insight_exists_today",
-            side_effect=_fake_exists,
-        ):
-            result = await _save_insight(
-                user_id="user-1",
-                insight_type=InsightType.ACTIVITY_PROGRESS,
-                title="Steps update",
-                body="You walked 8 000 steps today.",
-            )
-
-        # Returns a stub with sentinel id
-        assert result.id == "duplicate-skipped"
+    Returns:
+        MagicMock with all Insight column attributes populated.
+    """
+    row = MagicMock(spec=Insight)
+    row.id = insight_id
+    row.user_id = USER_ID
+    row.type = insight_type
+    row.title = f"Test {insight_type} card"
+    row.body = "Mocked body text for testing."
+    row.data = {"source": "mock"}
+    row.reasoning = None
+    row.priority = priority
+    row.created_at = _NOW
+    row.read_at = _NOW if read else None
+    row.dismissed_at = _NOW if dismissed else None
+    return row
 
 
 # ---------------------------------------------------------------------------
-# Test: time-of-day awareness
+# Shared fixture — TestClient with mocked auth and DB
 # ---------------------------------------------------------------------------
 
 
-class TestTimeOfDayAwareness:
-    """Morning slot should produce MORNING_BRIEFING; other slots should not."""
+@pytest.fixture()
+def mock_auth() -> AsyncMock:
+    """Mock AuthService that always authenticates as USER_ID."""
+    svc = AsyncMock(spec=AuthService)
+    svc.get_user.return_value = {"id": USER_ID}
+    return svc
 
-    @pytest.mark.asyncio
-    async def test_morning_generates_morning_briefing(self):
-        """hour=7 → time_slot='morning' → MORNING_BRIEFING insight written."""
-        morning_dt = datetime(2026, 1, 15, 7, 0, tzinfo=timezone.utc)
 
-        calls: list[InsightType] = []
+@pytest.fixture()
+def mock_db() -> AsyncMock:
+    """Bare AsyncMock for the SQLAlchemy session."""
+    return AsyncMock()
 
-        async def _spy_save(user_id, insight_type, **kwargs):
-            calls.append(insight_type)
-            stub = Insight(
-                id="stub",
-                user_id=user_id,
-                type=insight_type.value,
-                title="",
-                body="",
-            )
-            return stub
 
-        with (
-            patch(
-                "app.tasks.insight_tasks._count_user_data_days",
-                AsyncMock(return_value=10),
-            ),
-            patch(
-                "app.tasks.insight_tasks._insight_exists_today",
-                AsyncMock(return_value=False),
-            ),
-            patch(
-                "app.tasks.insight_tasks._fetch_goal_status_and_trends",
-                AsyncMock(return_value=([], {})),
-            ),
-            patch(
-                "app.tasks.insight_tasks._detect_anomalies",
-                AsyncMock(return_value=[]),
-            ),
-            patch(
-                "app.tasks.insight_tasks._save_insight",
-                side_effect=_spy_save,
-            ),
-            patch("app.tasks.insight_tasks.datetime") as mock_dt,
-        ):
-            mock_dt.now.return_value = morning_dt
-            mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+@pytest.fixture()
+def client(mock_auth, mock_db):
+    """TestClient with overridden auth and DB dependencies.
 
-            await _generate_for_user("user-morning")
+    Yields:
+        tuple: (TestClient, mock_auth, mock_db)
+    """
+    app.dependency_overrides[_get_auth_service] = lambda: mock_auth
+    app.dependency_overrides[get_db] = lambda: mock_db
 
-        assert InsightType.MORNING_BRIEFING in calls
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c, mock_auth, mock_db
 
-    @pytest.mark.asyncio
-    async def test_evening_does_not_generate_morning_briefing(self):
-        """hour=19 → time_slot='evening' → no MORNING_BRIEFING card."""
-        evening_dt = datetime(2026, 1, 15, 19, 0, tzinfo=timezone.utc)
-
-        calls: list[InsightType] = []
-
-        async def _spy_save(user_id, insight_type, **kwargs):
-            calls.append(insight_type)
-            stub = Insight(
-                id="stub",
-                user_id=user_id,
-                type=insight_type.value,
-                title="",
-                body="",
-            )
-            return stub
-
-        with (
-            patch(
-                "app.tasks.insight_tasks._count_user_data_days",
-                AsyncMock(return_value=10),
-            ),
-            patch(
-                "app.tasks.insight_tasks._insight_exists_today",
-                AsyncMock(return_value=False),
-            ),
-            patch(
-                "app.tasks.insight_tasks._fetch_goal_status_and_trends",
-                AsyncMock(return_value=([], {})),
-            ),
-            patch(
-                "app.tasks.insight_tasks._detect_anomalies",
-                AsyncMock(return_value=[]),
-            ),
-            patch(
-                "app.tasks.insight_tasks._save_insight",
-                side_effect=_spy_save,
-            ),
-            patch("app.tasks.insight_tasks.datetime") as mock_dt,
-        ):
-            mock_dt.now.return_value = evening_dt
-            mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-
-            await _generate_for_user("user-evening")
-
-        assert InsightType.MORNING_BRIEFING not in calls
+    app.dependency_overrides.clear()
 
 
 # ---------------------------------------------------------------------------
-# Test: anomaly insight created when anomaly detected
+# Helpers for wiring DB mock responses
 # ---------------------------------------------------------------------------
 
 
-class TestAnomalyInsightCreated:
-    """An ANOMALY_ALERT card should be saved when _detect_anomalies returns hits."""
+def _mock_db_list(mock_db: AsyncMock, rows: list, total: int) -> None:
+    """Wire mock_db.execute to return total (count) then rows (scalars).
 
-    @pytest.mark.asyncio
-    async def test_anomaly_insight_saved_when_anomaly_detected(self):
-        """If _detect_anomalies returns an anomaly, an ANOMALY_ALERT is saved."""
-        calls: list[InsightType] = []
+    The GET endpoint issues two queries: a COUNT then a SELECT. We chain
+    two side-effect values to cover both calls in order.
 
-        async def _spy_save(user_id, insight_type, **kwargs):
-            calls.append(insight_type)
-            return Insight(
-                id="stub",
-                user_id=user_id,
-                type=insight_type.value,
-                title="",
-                body="",
-            )
+    Args:
+        mock_db: The mock AsyncSession.
+        rows: ORM row mocks that scalars().all() should return.
+        total: Integer to return from the COUNT query scalar_one().
+    """
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = total
 
-        fake_anomaly = {
-            "metric": "resting_heart_rate",
-            "value": 95.0,
-            "mean": 62.0,
-            "z_score": 3.1,
-            "message": "Your resting heart rate today (95) is unusually high.",
-        }
+    rows_result = MagicMock()
+    rows_result.scalars.return_value.all.return_value = rows
 
-        with (
-            patch(
-                "app.tasks.insight_tasks._count_user_data_days",
-                AsyncMock(return_value=15),
-            ),
-            patch(
-                "app.tasks.insight_tasks._insight_exists_today",
-                AsyncMock(return_value=False),
-            ),
-            patch(
-                "app.tasks.insight_tasks._fetch_goal_status_and_trends",
-                AsyncMock(return_value=([], {})),
-            ),
-            patch(
-                "app.tasks.insight_tasks._detect_anomalies",
-                AsyncMock(return_value=[fake_anomaly]),
-            ),
-            patch(
-                "app.tasks.insight_tasks._save_insight",
-                side_effect=_spy_save,
-            ),
-            patch("app.tasks.insight_tasks.datetime") as mock_dt,
-        ):
-            mock_dt.now.return_value = datetime(2026, 1, 15, 14, 0, tzinfo=timezone.utc)
-            mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+    mock_db.execute = AsyncMock(side_effect=[count_result, rows_result])
 
-            await _generate_for_user("user-anomaly")
 
-        assert InsightType.ANOMALY_ALERT in calls
+def _mock_db_get(mock_db: AsyncMock, row) -> None:
+    """Wire mock_db.execute to return a single row for scalar_one_or_none.
+
+    Args:
+        mock_db: The mock AsyncSession.
+        row: The ORM row mock (or None) to return.
+    """
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = row
+    mock_db.execute = AsyncMock(return_value=result)
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
 
 
 # ---------------------------------------------------------------------------
-# Test: skip complex insights when data < 7 days
+# test_insight_list_pagination
 # ---------------------------------------------------------------------------
 
 
-class TestDataMaturityGating:
-    """Complex analytical insights should not be generated with < 7 days data."""
+def test_insight_list_pagination(client):
+    """GET /insights returns the requested page slice and correct has_more flag.
 
-    @pytest.mark.asyncio
-    async def test_complex_insights_skipped_with_insufficient_data(self):
-        """data_days=3 → only MORNING_BRIEFING may be written; no goals/trends."""
-        calls: list[InsightType] = []
+    Scenario:
+        - 5 total insights for the user.
+        - Requesting limit=2, offset=0 → first 2 returned, has_more=True.
+        - Requesting limit=2, offset=4 → last 1 returned, has_more=False.
+    """
+    test_client, _, mock_db = client
 
-        async def _spy_save(user_id, insight_type, **kwargs):
-            calls.append(insight_type)
-            return Insight(
-                id="stub",
-                user_id=user_id,
-                type=insight_type.value,
-                title="",
-                body="",
-            )
+    page1 = [_make_insight(f"ins-{i}") for i in range(2)]
+    _mock_db_list(mock_db, page1, total=5)
 
-        with (
-            patch(
-                "app.tasks.insight_tasks._count_user_data_days",
-                AsyncMock(return_value=3),  # < _DATA_MATURITY_DAYS
-            ),
-            patch(
-                "app.tasks.insight_tasks._insight_exists_today",
-                AsyncMock(return_value=False),
-            ),
-            patch(
-                "app.tasks.insight_tasks._fetch_goal_status_and_trends",
-                AsyncMock(return_value=([], {})),
-            ) as mock_fetch,
-            patch(
-                "app.tasks.insight_tasks._detect_anomalies",
-                AsyncMock(return_value=[]),
-            ) as mock_anomaly,
-            patch(
-                "app.tasks.insight_tasks._save_insight",
-                side_effect=_spy_save,
-            ),
-            patch("app.tasks.insight_tasks.datetime") as mock_dt,
-        ):
-            mock_dt.now.return_value = datetime(2026, 1, 15, 7, 0, tzinfo=timezone.utc)
-            mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+    resp = test_client.get("/api/v1/insights?limit=2&offset=0", headers=AUTH_HEADERS)
 
-            await _generate_for_user("user-new")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 5
+    assert len(body["insights"]) == 2
+    assert body["has_more"] is True
 
-        # Trend/goal fetching should NOT be called
-        mock_fetch.assert_not_awaited()
-        mock_anomaly.assert_not_awaited()
+    # Page 3 (last page)
+    page3 = [_make_insight("ins-4")]
+    _mock_db_list(mock_db, page3, total=5)
 
-        # Must not have GOAL_NUDGE or ACTIVITY_PROGRESS
-        assert InsightType.GOAL_NUDGE not in calls
-        assert InsightType.ACTIVITY_PROGRESS not in calls
+    resp2 = test_client.get("/api/v1/insights?limit=2&offset=4", headers=AUTH_HEADERS)
 
-    @pytest.mark.asyncio
-    async def test_boundary_exactly_7_days_enables_complex_insights(self):
-        """data_days=7 (boundary) → complex insights SHOULD be generated."""
-        calls: list[InsightType] = []
-
-        async def _spy_save(user_id, insight_type, **kwargs):
-            calls.append(insight_type)
-            return Insight(
-                id="stub",
-                user_id=user_id,
-                type=insight_type.value,
-                title="",
-                body="",
-            )
-
-        assert _DATA_MATURITY_DAYS == 7
-
-        with (
-            patch(
-                "app.tasks.insight_tasks._count_user_data_days",
-                AsyncMock(return_value=7),
-            ),
-            patch(
-                "app.tasks.insight_tasks._insight_exists_today",
-                AsyncMock(return_value=False),
-            ),
-            patch(
-                "app.tasks.insight_tasks._fetch_goal_status_and_trends",
-                AsyncMock(return_value=([], {})),
-            ) as mock_fetch,
-            patch(
-                "app.tasks.insight_tasks._detect_anomalies",
-                AsyncMock(return_value=[]),
-            ),
-            patch(
-                "app.tasks.insight_tasks._save_insight",
-                side_effect=_spy_save,
-            ),
-            patch("app.tasks.insight_tasks.datetime") as mock_dt,
-        ):
-            mock_dt.now.return_value = datetime(2026, 1, 15, 14, 0, tzinfo=timezone.utc)
-            mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-
-            await _generate_for_user("user-mature")
-
-        mock_fetch.assert_awaited_once()
+    assert resp2.status_code == 200
+    body2 = resp2.json()
+    assert len(body2["insights"]) == 1
+    assert body2["has_more"] is False
 
 
 # ---------------------------------------------------------------------------
-# Test: duplicate prevention
+# test_insight_filter_by_type
 # ---------------------------------------------------------------------------
 
 
-class TestDuplicatePrevention:
-    """The same type + same day should never produce two DB rows."""
+def test_insight_filter_by_type(client):
+    """GET /insights?type=sleep_analysis returns only sleep_analysis cards.
 
-    @pytest.mark.asyncio
-    async def test_duplicate_skipped_same_type_same_day(self):
-        """_save_insight returns stub without DB write when duplicate exists."""
+    The route passes the type parameter directly to the WHERE clause.  We
+    verify the response payload contains only the expected type values and
+    that total reflects the filtered count.
+    """
+    test_client, _, mock_db = client
 
-        async def _exists(user_id, insight_type, today):
-            return True
+    sleep_rows = [
+        _make_insight("s-1", insight_type="sleep_analysis"),
+        _make_insight("s-2", insight_type="sleep_analysis"),
+    ]
+    _mock_db_list(mock_db, sleep_rows, total=2)
 
-        with patch(
-            "app.tasks.insight_tasks._insight_exists_today",
-            side_effect=_exists,
-        ):
-            result = await _save_insight(
-                user_id="user-dup",
-                insight_type=InsightType.MORNING_BRIEFING,
-                title="Morning",
-                body="Good morning!",
-            )
+    resp = test_client.get("/api/v1/insights?type=sleep_analysis", headers=AUTH_HEADERS)
 
-        assert result.id == "duplicate-skipped"
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert all(i["type"] == "sleep_analysis" for i in body["insights"])
 
-    @pytest.mark.asyncio
-    async def test_different_type_same_day_is_not_skipped(self):
-        """Different type on the same day should still be written."""
-        existing_types: set[InsightType] = {InsightType.MORNING_BRIEFING}
 
-        async def _exists(user_id, insight_type, today):
-            return insight_type in existing_types
+# ---------------------------------------------------------------------------
+# test_mark_read_sets_timestamp
+# ---------------------------------------------------------------------------
 
-        saved: list[Insight] = []
 
-        async def _fake_session_save(user_id, insight_type, **kwargs):
-            row = Insight(
-                id=str(uuid.uuid4()),
-                user_id=user_id,
-                type=insight_type.value,
-                title=kwargs.get("title", ""),
-                body=kwargs.get("body", ""),
-            )
-            saved.append(row)
-            return row
+def test_mark_read_sets_timestamp(client):
+    """PATCH action=read sets read_at on the insight row.
 
-        # Patch both duplicate check and the actual save
-        with (
-            patch(
-                "app.tasks.insight_tasks._insight_exists_today",
-                side_effect=_exists,
-            ),
-            patch("app.tasks.insight_tasks.async_session") as mock_session_ctx,
-        ):
-            mock_db = AsyncMock()
-            mock_db.__aenter__ = AsyncMock(return_value=mock_db)
-            mock_db.__aexit__ = AsyncMock(return_value=False)
-            mock_db.add = MagicMock(side_effect=lambda obj: saved.append(obj))
-            mock_db.commit = AsyncMock()
-            mock_db.refresh = AsyncMock()
-            mock_session_ctx.return_value = mock_db
+    We verify that ``read_at`` in the response is non-null after the action
+    and that the response HTTP status is 200.
+    """
+    test_client, _, mock_db = client
 
-            result = await _save_insight(
-                user_id="user-dup",
-                insight_type=InsightType.ACTIVITY_PROGRESS,  # different type
-                title="Activity",
-                body="8000 steps today!",
-            )
+    insight = _make_insight("ins-read-001", read=False)
+    _mock_db_get(mock_db, insight)
 
-        # Should NOT be the duplicate-skipped stub
-        assert result.id != "duplicate-skipped"
+    # Patch datetime.now inside the route so the timestamp is predictable.
+    with patch(
+        "app.api.v1.insight_routes.datetime",
+        wraps=datetime,
+    ) as mock_dt:
+        mock_dt.now.return_value = _NOW
+        resp = test_client.patch(
+            "/api/v1/insights/ins-read-001",
+            json={"action": "read"},
+            headers=AUTH_HEADERS,
+        )
+
+    assert resp.status_code == 200
+    # The mock insight's read_at was set by the route handler
+    assert insight.read_at == _NOW
+
+
+# ---------------------------------------------------------------------------
+# test_mark_dismissed_hides_from_list
+# ---------------------------------------------------------------------------
+
+
+def test_mark_dismissed_hides_from_list(client):
+    """PATCH action=dismiss sets dismissed_at; dismissed cards excluded from GET.
+
+    Step 1: Dismiss an insight via PATCH.
+    Step 2: GET /insights returns 0 items (mock simulates DB filtering).
+    """
+    test_client, _, mock_db = client
+
+    # Step 1: Dismiss
+    insight = _make_insight("ins-dismiss-001", dismissed=False)
+    _mock_db_get(mock_db, insight)
+
+    with patch(
+        "app.api.v1.insight_routes.datetime",
+        wraps=datetime,
+    ) as mock_dt:
+        mock_dt.now.return_value = _NOW
+        dismiss_resp = test_client.patch(
+            "/api/v1/insights/ins-dismiss-001",
+            json={"action": "dismiss"},
+            headers=AUTH_HEADERS,
+        )
+
+    assert dismiss_resp.status_code == 200
+    assert insight.dismissed_at == _NOW
+
+    # Step 2: GET should exclude dismissed (DB returns 0 rows because the
+    # WHERE dismissed_at IS NULL filter is applied — we mock that here).
+    _mock_db_list(mock_db, [], total=0)
+
+    list_resp = test_client.get("/api/v1/insights", headers=AUTH_HEADERS)
+
+    assert list_resp.status_code == 200
+    body = list_resp.json()
+    assert body["total"] == 0
+    assert body["insights"] == []
+    assert body["has_more"] is False
+
+
+# ---------------------------------------------------------------------------
+# test_auth_required
+# ---------------------------------------------------------------------------
+
+
+def test_auth_required():
+    """GET /api/v1/insights without a Bearer token returns 403.
+
+    FastAPI's HTTPBearer scheme returns 403 (not 401) when the
+    Authorization header is entirely absent.
+    """
+    # Use a standalone client with no dependency overrides so the real
+    # auth guard fires.
+    with TestClient(app, raise_server_exceptions=False) as c:
+        resp = c.get("/api/v1/insights")
+
+    # HTTPBearer returns 403 when no credentials are provided.
+    assert resp.status_code == 403

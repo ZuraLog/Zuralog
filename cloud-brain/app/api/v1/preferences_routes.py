@@ -1,500 +1,311 @@
 """
-Zuralog Cloud Brain — User Preferences API Router.
+Zuralog Cloud Brain — User Preferences API.
 
-Provides GET / PUT / PATCH endpoints for reading and updating the
-``user_preferences`` row for the authenticated user.
+Endpoints:
+  GET   /api/v1/preferences  — Return current user's preferences, auto-creating
+                               with defaults on first call (upsert behaviour).
+  PUT   /api/v1/preferences  — Full replacement of all preference fields.
+  PATCH /api/v1/preferences  — Partial update (only provided fields are changed).
 
-On first GET the row is created with all default values (lazy init).
-PUT performs a full replace; PATCH performs a partial update — only
-fields that are explicitly provided in the request body are written.
+All endpoints are auth-guarded via ``get_current_user``; users can only access
+their own preferences row.
 """
 
 import logging
-import uuid
+import re
+from typing import Any
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_current_user
 from app.database import get_db
-from app.models.user_preferences import (
-    CoachPersona,
-    ProactivityLevel,
-    Theme,
-    UnitsSystem,
-    UserPreferences,
-)
-
-
-def _make_default_prefs(user_id: str) -> UserPreferences:
-    """Construct a UserPreferences instance with all Python-side defaults.
-
-    SQLAlchemy does not apply ``column(default=...)`` values at constructor
-    time — they are only applied at INSERT.  This helper passes all defaults
-    explicitly so the in-memory object is valid before the DB round-trip.
-
-    Args:
-        user_id: The owning user's ID.
-
-    Returns:
-        A fully initialised UserPreferences instance (not yet persisted).
-    """
-    return UserPreferences(
-        id=str(uuid.uuid4()),
-        user_id=user_id,
-        coach_persona=CoachPersona.BALANCED.value,
-        proactivity_level=ProactivityLevel.MEDIUM.value,
-        theme=Theme.DARK.value,
-        haptic_enabled=True,
-        tooltips_enabled=True,
-        onboarding_complete=False,
-        morning_briefing_enabled=False,
-        checkin_reminder_enabled=False,
-        quiet_hours_enabled=False,
-        units_system=UnitsSystem.METRIC.value,
-    )
-
-
-from app.services.cache_service import CacheService, cached
+from app.models.user import User
+from app.models.user_preferences import UserPreferences
 
 logger = logging.getLogger(__name__)
 
+router = APIRouter(prefix="/preferences", tags=["preferences"])
 
-async def _set_sentry_module() -> None:
-    """Tag the current Sentry scope with the preferences module name."""
-    sentry_sdk.set_tag("api.module", "preferences")
+# ---------------------------------------------------------------------------
+# Valid enum values — enforced at the route layer (not by the DB)
+# ---------------------------------------------------------------------------
 
+_VALID_PERSONAS: frozenset[str] = frozenset({"tough_love", "balanced", "gentle"})
+_VALID_PROACTIVITY: frozenset[str] = frozenset({"low", "medium", "high"})
+_VALID_THEMES: frozenset[str] = frozenset({"dark", "light", "system"})
 
-router = APIRouter(
-    prefix="/preferences",
-    tags=["preferences"],
-    dependencies=[Depends(_set_sentry_module)],
-)
+# HH:MM in 24-hour format
+_TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
 
-_VALID_PERSONAS = {p.value for p in CoachPersona}
-_VALID_PROACTIVITY = {p.value for p in ProactivityLevel}
-_VALID_THEMES = {t.value for t in Theme}
-_VALID_UNITS = {u.value for u in UnitsSystem}
-
-
-class PreferencesUpdate(BaseModel):
-    """Request body for PUT and PATCH preference endpoints.
-
-    All fields are Optional — PATCH applies only those that are not None,
-    PUT writes all fields (defaulting omitted ones to their initial defaults).
-
-    Attributes:
-        coach_persona: AI coaching style.
-        proactivity_level: How often the coach proactively surfaces insights.
-        dashboard_layout: Card order and visibility config (arbitrary JSON).
-        notification_settings: Per-notification toggle map (arbitrary JSON).
-        theme: Colour theme preference.
-        haptic_enabled: Enable haptic feedback.
-        tooltips_enabled: Show onboarding tooltips.
-        onboarding_complete: Mark onboarding flow as done.
-        morning_briefing_enabled: Enable daily morning briefing push.
-        morning_briefing_time: Local time string for briefing (HH:MM or HH:MM:SS).
-        checkin_reminder_enabled: Enable daily check-in reminder push.
-        checkin_reminder_time: Local time string for reminder (HH:MM or HH:MM:SS).
-        quiet_hours_enabled: Suppress pushes during quiet hours.
-        quiet_hours_start: Start of quiet window (HH:MM or HH:MM:SS).
-        quiet_hours_end: End of quiet window (HH:MM or HH:MM:SS).
-        goals: Array of goal objects.
-        units_system: Measurement system preference.
-    """
-
-    coach_persona: str | None = Field(
-        default=None,
-        description="AI coaching style: tough_love | balanced | gentle",
-    )
-    proactivity_level: str | None = Field(
-        default=None,
-        description="Coach proactivity: low | medium | high",
-    )
-    dashboard_layout: dict | None = Field(
-        default=None,
-        description="Card order and visibility config for the dashboard",
-    )
-    notification_settings: dict | None = Field(
-        default=None,
-        description="Per-notification-type toggle map",
-    )
-    theme: str | None = Field(
-        default=None,
-        description="Colour theme: dark | light | system",
-    )
-    haptic_enabled: bool | None = Field(default=None)
-    tooltips_enabled: bool | None = Field(default=None)
-    onboarding_complete: bool | None = Field(default=None)
-    morning_briefing_enabled: bool | None = Field(default=None)
-    morning_briefing_time: str | None = Field(
-        default=None,
-        description="Local time for morning briefing (HH:MM or HH:MM:SS)",
-    )
-    checkin_reminder_enabled: bool | None = Field(default=None)
-    checkin_reminder_time: str | None = Field(
-        default=None,
-        description="Local time for check-in reminder (HH:MM or HH:MM:SS)",
-    )
-    quiet_hours_enabled: bool | None = Field(default=None)
-    quiet_hours_start: str | None = Field(
-        default=None,
-        description="Start of quiet hours window (HH:MM or HH:MM:SS)",
-    )
-    quiet_hours_end: str | None = Field(
-        default=None,
-        description="End of quiet hours window (HH:MM or HH:MM:SS)",
-    )
-    goals: list | None = Field(
-        default=None,
-        description="Array of goal objects {metric, target, period}",
-    )
-    units_system: str | None = Field(
-        default=None,
-        description="Measurement system: metric | imperial",
-    )
-
-    @field_validator("coach_persona")
-    @classmethod
-    def validate_coach_persona(cls, v: str | None) -> str | None:
-        """Validate coach_persona is a recognised enum value.
-
-        Args:
-            v: The incoming value.
-
-        Returns:
-            The validated string or None.
-
-        Raises:
-            ValueError: If the value is not a valid CoachPersona.
-        """
-        if v is not None and v not in _VALID_PERSONAS:
-            raise ValueError(f"coach_persona must be one of: {', '.join(sorted(_VALID_PERSONAS))}")
-        return v
-
-    @field_validator("proactivity_level")
-    @classmethod
-    def validate_proactivity_level(cls, v: str | None) -> str | None:
-        """Validate proactivity_level is a recognised enum value.
-
-        Args:
-            v: The incoming value.
-
-        Returns:
-            The validated string or None.
-
-        Raises:
-            ValueError: If the value is not a valid ProactivityLevel.
-        """
-        if v is not None and v not in _VALID_PROACTIVITY:
-            raise ValueError(f"proactivity_level must be one of: {', '.join(sorted(_VALID_PROACTIVITY))}")
-        return v
-
-    @field_validator("theme")
-    @classmethod
-    def validate_theme(cls, v: str | None) -> str | None:
-        """Validate theme is a recognised enum value.
-
-        Args:
-            v: The incoming value.
-
-        Returns:
-            The validated string or None.
-
-        Raises:
-            ValueError: If the value is not a valid Theme.
-        """
-        if v is not None and v not in _VALID_THEMES:
-            raise ValueError(f"theme must be one of: {', '.join(sorted(_VALID_THEMES))}")
-        return v
-
-    @field_validator("units_system")
-    @classmethod
-    def validate_units_system(cls, v: str | None) -> str | None:
-        """Validate units_system is a recognised enum value.
-
-        Args:
-            v: The incoming value.
-
-        Returns:
-            The validated string or None.
-
-        Raises:
-            ValueError: If the value is not a valid UnitsSystem.
-        """
-        if v is not None and v not in _VALID_UNITS:
-            raise ValueError(f"units_system must be one of: {', '.join(sorted(_VALID_UNITS))}")
-        return v
-
 
 class PreferencesResponse(BaseModel):
-    """API response schema for user preferences.
+    """Full preferences payload returned to the client."""
 
-    Mirrors all UserPreferences columns with JSON-serializable types.
-    Time fields are returned as ``HH:MM:SS`` strings; datetime fields
-    as ISO-8601 strings.
-
-    Attributes:
-        id: Preferences row UUID.
-        user_id: Owning user UUID.
-        coach_persona: AI coaching style.
-        proactivity_level: Coach proactivity level.
-        dashboard_layout: Card order and visibility config.
-        notification_settings: Per-notification toggle map.
-        theme: Colour theme preference.
-        haptic_enabled: Haptic feedback setting.
-        tooltips_enabled: Tooltip visibility setting.
-        onboarding_complete: Whether onboarding is done.
-        morning_briefing_enabled: Morning briefing push toggle.
-        morning_briefing_time: Time for morning briefing.
-        checkin_reminder_enabled: Check-in reminder push toggle.
-        checkin_reminder_time: Time for check-in reminder.
-        quiet_hours_enabled: Quiet hours suppression toggle.
-        quiet_hours_start: Start of quiet window.
-        quiet_hours_end: End of quiet window.
-        goals: Array of goal objects.
-        units_system: Measurement system.
-        created_at: Row creation ISO-8601 timestamp.
-        updated_at: Last-update ISO-8601 timestamp.
-    """
-
-    model_config = {"from_attributes": True}
-
-    id: str
     user_id: str
     coach_persona: str
     proactivity_level: str
-    dashboard_layout: dict | None = None
-    notification_settings: dict | None = None
+    dashboard_layout: dict
+    notification_settings: dict
     theme: str
     haptic_enabled: bool
     tooltips_enabled: bool
     onboarding_complete: bool
-    morning_briefing_enabled: bool
     morning_briefing_time: str | None = None
-    checkin_reminder_enabled: bool
     checkin_reminder_time: str | None = None
-    quiet_hours_enabled: bool
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
+    goals: list
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PreferencesUpdate(BaseModel):
+    """Body for PATCH — all fields optional; only provided fields are changed."""
+
+    coach_persona: str | None = Field(None, description="tough_love | balanced | gentle")
+    proactivity_level: str | None = Field(None, description="low | medium | high")
+    dashboard_layout: dict | None = None
+    notification_settings: dict | None = None
+    theme: str | None = Field(None, description="dark | light | system")
+    haptic_enabled: bool | None = None
+    tooltips_enabled: bool | None = None
+    onboarding_complete: bool | None = None
+    morning_briefing_time: str | None = Field(None, description="HH:MM (24-hour)")
+    checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
     goals: list | None = None
-    units_system: str
-    created_at: str | None = None
-    updated_at: str | None = None
+
+
+class PreferencesCreate(BaseModel):
+    """Body for PUT (full replacement) — all fields optional; unset fields use defaults."""
+
+    coach_persona: str | None = Field(None, description="tough_love | balanced | gentle")
+    proactivity_level: str | None = Field(None, description="low | medium | high")
+    dashboard_layout: dict | None = None
+    notification_settings: dict | None = None
+    theme: str | None = Field(None, description="dark | light | system")
+    haptic_enabled: bool | None = None
+    tooltips_enabled: bool | None = None
+    onboarding_complete: bool | None = None
+    morning_briefing_time: str | None = Field(None, description="HH:MM (24-hour)")
+    checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
+    goals: list | None = None
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Validation helpers
 # ---------------------------------------------------------------------------
 
 
-_TIME_FIELDS = {
-    "morning_briefing_time",
-    "checkin_reminder_time",
-    "quiet_hours_start",
-    "quiet_hours_end",
-}
-
-
-def _parse_time(value: str | None) -> "datetime.time | None":
-    """Parse a HH:MM or HH:MM:SS string into a ``datetime.time``.
-
-    Returns ``None`` if the input is ``None``.
-    """
-    if value is None:
-        return None
-    import datetime
-
-    parts = value.split(":")
-    return datetime.time(int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0)
-
-
-def _apply_update(prefs: UserPreferences, data: dict) -> None:
-    """Apply a mapping of field→value onto a UserPreferences instance.
-
-    Skips the ``id`` and ``user_id`` keys to prevent accidental overwrites.
-    Converts time-string fields to ``datetime.time`` objects.
+def _validate_time_fields(data: dict[str, Any]) -> None:
+    """Validate HH:MM format for all time string fields.
 
     Args:
-        prefs: The ORM instance to mutate.
-        data: Mapping of field name → new value.
+        data: Dict of field names to values (non-None only).
+
+    Raises:
+        HTTPException: 422 if any time string does not match HH:MM.
     """
-    protected = {"id", "user_id"}
-    for field, value in data.items():
-        if field not in protected:
-            if field in _TIME_FIELDS and isinstance(value, str):
-                value = _parse_time(value)
-            setattr(prefs, field, value)
+    time_fields = (
+        "morning_briefing_time",
+        "checkin_reminder_time",
+        "quiet_hours_start",
+        "quiet_hours_end",
+    )
+    for field in time_fields:
+        value = data.get(field)
+        if value is not None and not _TIME_RE.match(value):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid time format for '{field}': '{value}'. Expected HH:MM.",
+            )
 
 
-def _prefs_to_response(prefs: UserPreferences) -> PreferencesResponse:
-    """Convert a UserPreferences ORM instance to a PreferencesResponse.
-
-    Delegates serialisation of time and datetime fields to
-    ``UserPreferences.to_dict()`` and then constructs the Pydantic model.
+def _validate_enums(data: dict[str, Any]) -> None:
+    """Validate enum-valued fields.
 
     Args:
-        prefs: The ORM instance to convert.
+        data: Dict of field names to values (non-None only).
+
+    Raises:
+        HTTPException: 400 if any enum field contains an invalid value.
+    """
+    if "coach_persona" in data and data["coach_persona"] not in _VALID_PERSONAS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"coach_persona must be one of: {sorted(_VALID_PERSONAS)}",
+        )
+    if "proactivity_level" in data and data["proactivity_level"] not in _VALID_PROACTIVITY:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"proactivity_level must be one of: {sorted(_VALID_PROACTIVITY)}",
+        )
+    if "theme" in data and data["theme"] not in _VALID_THEMES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"theme must be one of: {sorted(_VALID_THEMES)}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+async def _get_or_create_prefs(user_id: str, db: AsyncSession) -> UserPreferences:
+    """Fetch or auto-create the user's preferences row with defaults.
+
+    This implements the upsert-on-first-access pattern: if no row exists for
+    the user, a new one is created with all default values before returning.
+
+    Args:
+        user_id: Authenticated user's ID.
+        db: Async database session.
 
     Returns:
-        A ``PreferencesResponse`` ready for JSON serialisation.
+        The existing or newly-created :class:`UserPreferences` instance.
     """
-    return PreferencesResponse(**prefs.to_dict())
-
-
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
-
-
-@router.get("", response_model=PreferencesResponse)
-@cached(prefix="preferences.get", ttl=900, key_params=["user_id"])
-async def get_preferences(
-    request: Request,
-    user_id: str = Depends(get_authenticated_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> PreferencesResponse:
-    """Return the authenticated user's preferences.
-
-    If no preferences row exists yet (first access), one is created with
-    all defaults and immediately returned. This makes the endpoint
-    idempotent and removes the need for a separate initialisation call.
-
-    Args:
-        request: Incoming FastAPI request (used for cache access).
-        user_id: Authenticated user ID extracted from the JWT.
-        db: Injected async database session.
-
-    Returns:
-        PreferencesResponse with all current preference values.
-    """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
-
-    result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
-    prefs: UserPreferences | None = result.scalar_one_or_none()
+    result = await db.execute(
+        select(UserPreferences).where(UserPreferences.user_id == user_id)
+    )
+    prefs = result.scalar_one_or_none()
 
     if prefs is None:
-        prefs = _make_default_prefs(user_id)
+        prefs = UserPreferences(user_id=user_id)
         db.add(prefs)
         await db.commit()
         await db.refresh(prefs)
-        logger.info("Created default preferences for user_id=%s", user_id)
+        logger.info("Created default preferences for user %s", user_id)
 
-    return _prefs_to_response(prefs)
+    return prefs
 
 
-@router.put("", response_model=PreferencesResponse)
-async def replace_preferences(
-    request: Request,
-    body: PreferencesUpdate,
-    user_id: str = Depends(get_authenticated_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> PreferencesResponse:
-    """Full-replace the authenticated user's preferences.
-
-    All fields in ``PreferencesUpdate`` are written; omitted fields reset
-    to their defaults. Creates the row if it does not exist yet.
+def _apply_update(prefs: UserPreferences, data: dict[str, Any]) -> None:
+    """Apply a dict of field values onto the ORM instance.
 
     Args:
-        request: Incoming FastAPI request (used for cache invalidation).
-        body: Full preferences payload.
-        user_id: Authenticated user ID extracted from the JWT.
-        db: Injected async database session.
-
-    Returns:
-        PreferencesResponse reflecting the saved state.
+        prefs: The :class:`UserPreferences` ORM instance to mutate.
+        data: Field-name-to-value mapping (already filtered to non-None).
     """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
-
-    result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
-    prefs: UserPreferences | None = result.scalar_one_or_none()
-
-    if prefs is None:
-        prefs = _make_default_prefs(user_id)
-        db.add(prefs)
-
-    # For PUT, only apply fields that the caller explicitly included.
-    # Pydantic model_dump() returns None for omitted Optional fields, which
-    # would overwrite non-nullable DB columns.  Using model_fields_set ensures
-    # we only touch what was actually sent.
-    update_data = {k: v for k, v in body.model_dump().items() if k in body.model_fields_set}
-    _apply_update(prefs, update_data)
-
-    await db.commit()
-    await db.refresh(prefs)
-
-    await _invalidate_cache(request, user_id)
-    return _prefs_to_response(prefs)
+    for field, value in data.items():
+        setattr(prefs, field, value)
 
 
-@router.patch("", response_model=PreferencesResponse)
-async def partial_update_preferences(
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("", summary="Get user preferences", response_model=PreferencesResponse)
+async def get_preferences(
     request: Request,
-    body: PreferencesUpdate,
-    user_id: str = Depends(get_authenticated_user_id),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PreferencesResponse:
-    """Partial-update the authenticated user's preferences.
+    """Return the current user's preferences, creating defaults on first call.
 
-    Only fields that are explicitly provided (non-None) in the request
-    body are written. All other fields remain unchanged.
+    If no preferences row exists for the authenticated user it is created
+    automatically with all default values (upsert on first access).
 
     Args:
-        request: Incoming FastAPI request (used for cache invalidation).
-        body: Partial preferences payload.
-        user_id: Authenticated user ID extracted from the JWT.
-        db: Injected async database session.
+        request: Incoming FastAPI request.
+        current_user: Authenticated :class:`User` ORM instance.
+        db: Async database session.
 
     Returns:
-        PreferencesResponse reflecting the merged state.
+        The user's full :class:`PreferencesResponse`.
+    """
+    sentry_sdk.set_user({"id": current_user.id})
+
+    prefs = await _get_or_create_prefs(current_user.id, db)
+    return PreferencesResponse.model_validate(prefs)
+
+
+@router.put("", summary="Replace user preferences (full update)", response_model=PreferencesResponse)
+async def put_preferences(
+    request: Request,
+    body: PreferencesCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PreferencesResponse:
+    """Full replacement of the user's preferences.
+
+    Any field omitted from the request body is left at its current value
+    (or default if the row does not yet exist). Equivalent to PATCH for
+    convenience — both endpoints apply only provided fields.
+
+    Args:
+        request: Incoming FastAPI request.
+        body: Preference fields to update.
+        current_user: Authenticated :class:`User` ORM instance.
+        db: Async database session.
+
+    Returns:
+        Updated :class:`PreferencesResponse`.
 
     Raises:
-        HTTPException: 400 if no fields are provided.
+        HTTPException: 400 for invalid enum values.
+        HTTPException: 422 for malformed time strings.
     """
-    request.state.user_id = user_id
-    sentry_sdk.set_user({"id": user_id})
+    sentry_sdk.set_user({"id": current_user.id})
 
-    # Only include fields that the caller explicitly set.
-    update_data = body.model_dump(exclude_none=True)
-    if not update_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields provided to update.",
-        )
+    data = body.model_dump(exclude_none=True)
+    _validate_enums(data)
+    _validate_time_fields(data)
 
-    result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
-    prefs: UserPreferences | None = result.scalar_one_or_none()
-
-    if prefs is None:
-        # Lazy creation — apply patch on top of defaults.
-        prefs = _make_default_prefs(user_id)
-        db.add(prefs)
-
-    _apply_update(prefs, update_data)
-
+    prefs = await _get_or_create_prefs(current_user.id, db)
+    _apply_update(prefs, data)
     await db.commit()
     await db.refresh(prefs)
 
-    await _invalidate_cache(request, user_id)
-    return _prefs_to_response(prefs)
+    return PreferencesResponse.model_validate(prefs)
 
 
-async def _invalidate_cache(request: Request, user_id: str) -> None:
-    """Delete the cached preferences entry for a user.
+@router.patch("", summary="Partially update user preferences", response_model=PreferencesResponse)
+async def patch_preferences(
+    request: Request,
+    body: PreferencesUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PreferencesResponse:
+    """Partially update the user's preferences.
+
+    Only fields present (non-None) in the body are changed. This is the
+    primary endpoint for incremental Flutter settings updates.
 
     Args:
-        request: FastAPI request carrying ``app.state.cache_service``.
-        user_id: The user whose cache entry should be evicted.
+        request: Incoming FastAPI request.
+        body: Partial preference update payload.
+        current_user: Authenticated :class:`User` ORM instance.
+        db: Async database session.
+
+    Returns:
+        Full updated :class:`PreferencesResponse`.
+
+    Raises:
+        HTTPException: 400 for invalid enum values.
+        HTTPException: 422 for malformed time strings.
     """
-    cache: CacheService | None = getattr(request.app.state, "cache_service", None)
-    if cache:
-        await cache.delete(CacheService.make_key("preferences.get", user_id))
+    sentry_sdk.set_user({"id": current_user.id})
+
+    data = body.model_dump(exclude_none=True)
+    _validate_enums(data)
+    _validate_time_fields(data)
+
+    prefs = await _get_or_create_prefs(current_user.id, db)
+    _apply_update(prefs, data)
+    await db.commit()
+    await db.refresh(prefs)
+
+    return PreferencesResponse.model_validate(prefs)
