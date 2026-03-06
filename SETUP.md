@@ -758,6 +758,40 @@ make build-prod-ios
 
 ## Quick Reference
 
+### Daily Start-Up Cheatsheet
+
+Copy-paste these in order whenever you sit down to work. Run each block in its own terminal tab.
+
+**Terminal 1 — Backend** (run from `cloud-brain/`)
+```bash
+# 1. Start Docker (Postgres + Redis) — safe to run even if already up
+docker compose up -d
+
+# 2. Start the backend dev server
+make dev
+# — or without make:
+# uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+```
+
+**Terminal 2 — Flutter app** (run from project root)
+```bash
+make run              # Android emulator  (debug, local backend)
+make run-ios          # iOS Simulator     (debug, local backend)
+make run-device       # Physical device   (set DEVICE_IP in cloud-brain/.env first)
+make run-prod         # Android emulator  (release, api.zuralog.com)
+```
+
+**Terminal 3 — Website** (run from `website/`, only if working on the marketing site)
+```bash
+npm run dev
+# → http://localhost:3000
+```
+
+> **Backend health check:** `curl http://localhost:8001/health` — should return `{"status":"healthy"}`.
+> **Demo accounts:** `demo-full@zuralog.dev` / `ZuraDemo2026!` (populated) · `demo-empty@zuralog.dev` / `ZuraDemo2026!` (empty)
+
+---
+
 ### Cloud Brain (`cloud-brain/`)
 
 | Action | Command |
