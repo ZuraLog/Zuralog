@@ -1,9 +1,9 @@
 """
 Zuralog Cloud Brain — User Preferences Model.
 
-One row per user, auto-created with sensible defaults on first GET
-(upsert behaviour). The primary key is ``user_id`` itself so there
-is no separate surrogate key — lookups and upserts are single-column.
+One row per user, keyed by ``id`` (surrogate PK) with ``user_id`` as a
+unique foreign reference to auth.users.  Auto-created with sensible defaults
+on first GET (upsert behaviour).
 
 Fields cover coaching persona, proactivity, dashboard layout,
 notification toggles, appearance, onboarding state, scheduling times,
@@ -47,11 +47,12 @@ class AppTheme(str, enum.Enum):
 class UserPreferences(Base):
     """Per-user configurable preferences for the Zuralog app.
 
-    One row per user (user_id is the primary key).
+    One row per user (id is the surrogate PK; user_id is a unique FK).
     Populated with sensible defaults on first GET via the upsert helper.
 
     Attributes:
-        user_id: Supabase UID — primary key, one row per user.
+        id: Surrogate primary key (varchar).
+        user_id: Supabase UID — unique, one row per user.
         coach_persona: AI coaching style. One of: 'tough_love', 'balanced', 'gentle'.
         proactivity_level: How proactively the AI surfaces suggestions.
             One of: 'low', 'medium', 'high'.
@@ -61,22 +62,35 @@ class UserPreferences(Base):
         haptic_enabled: Whether haptic feedback is active.
         tooltips_enabled: Whether onboarding tooltip bubbles are shown.
         onboarding_complete: True once the user has finished the welcome flow.
+        morning_briefing_enabled: Whether the daily morning briefing is active.
         morning_briefing_time: HH:MM string for the daily briefing push.
+        checkin_reminder_enabled: Whether the wellness check-in reminder is active.
         checkin_reminder_time: HH:MM string for the wellness check-in reminder.
+        quiet_hours_enabled: Whether quiet hours are active.
         quiet_hours_start: HH:MM string for start of the quiet-hours window.
         quiet_hours_end: HH:MM string for end of the quiet-hours window.
-        fitness_level: Self-assessed fitness level from onboarding Step 5.
-            One of: 'beginner', 'active', 'athletic'. Nullable.
         goals: JSON array of goal-type strings.
+        units_system: 'metric' or 'imperial'.
+        fitness_level: Self-assessed fitness level from onboarding.
+            One of: 'beginner', 'active', 'athletic'. Nullable.
+        created_at: Row creation timestamp (server-managed).
         updated_at: Timestamp of last modification (server-managed).
     """
 
     __tablename__ = "user_preferences"
 
-    user_id: Mapped[str] = mapped_column(
+    # Surrogate PK (matches the DB's id column)
+    id: Mapped[str] = mapped_column(
         String,
         primary_key=True,
         default=lambda: str(uuid.uuid4()),
+        comment="Surrogate primary key",
+    )
+
+    user_id: Mapped[str] = mapped_column(
+        String,
+        unique=True,
+        nullable=False,
         comment="Supabase UID — one row per user",
     )
 
@@ -97,20 +111,16 @@ class UserPreferences(Base):
     )
 
     # Dashboard layout (JSON — card order + visibility + colour overrides)
-    dashboard_layout: Mapped[dict] = mapped_column(
+    dashboard_layout: Mapped[dict | None] = mapped_column(
         JSON,
-        default=dict,
-        server_default="{}",
-        nullable=False,
+        nullable=True,
         comment="Card order and visibility settings",
     )
 
     # Notification settings (JSON — all toggles)
-    notification_settings: Mapped[dict] = mapped_column(
+    notification_settings: Mapped[dict | None] = mapped_column(
         JSON,
-        default=dict,
-        server_default="{}",
-        nullable=False,
+        nullable=True,
         comment="All notification toggle keys",
     )
 
@@ -141,16 +151,40 @@ class UserPreferences(Base):
         nullable=False,
     )
 
-    # Notification scheduling — stored as HH:MM strings
+    # Morning briefing
+    morning_briefing_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
+    )
+
+    # Notification scheduling — stored as HH:MM strings (DB type: time)
     morning_briefing_time: Mapped[str | None] = mapped_column(
         String,
         nullable=True,
         comment="HH:MM — local clock time for the morning briefing push",
     )
+
+    # Wellness check-in
+    checkin_reminder_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+    )
     checkin_reminder_time: Mapped[str | None] = mapped_column(
         String,
         nullable=True,
         comment="HH:MM — local clock time for the wellness check-in reminder",
+    )
+
+    # Quiet hours
+    quiet_hours_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
     )
     quiet_hours_start: Mapped[str | None] = mapped_column(
         String,
@@ -163,23 +197,35 @@ class UserPreferences(Base):
         comment="HH:MM — end of quiet hours",
     )
 
-    # Self-assessed fitness level (set during onboarding Step 5)
+    # High-level goal types
+    goals: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Goal type strings: weight_loss, sleep, fitness, stress, nutrition, longevity",
+    )
+
+    # Units
+    units_system: Mapped[str] = mapped_column(
+        String,
+        default="metric",
+        server_default="metric",
+        nullable=False,
+        comment="metric | imperial",
+    )
+
+    # Self-assessed fitness level (set during onboarding)
     fitness_level: Mapped[str | None] = mapped_column(
         String,
         nullable=True,
         comment="beginner | active | athletic — set during onboarding",
     )
 
-    # High-level goal types
-    goals: Mapped[list] = mapped_column(
-        JSON,
-        default=list,
-        server_default="[]",
-        nullable=False,
-        comment="Goal type strings: weight_loss, sleep, fitness, stress, nutrition, longevity",
-    )
-
     # Timestamps
+    created_at: Mapped[str | None] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=True,
+    )
     updated_at: Mapped[str | None] = mapped_column(
         DateTime(timezone=True),
         onupdate=func.now(),

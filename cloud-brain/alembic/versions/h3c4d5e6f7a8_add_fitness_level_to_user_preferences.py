@@ -22,14 +22,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "user_preferences",
-        sa.Column(
-            "fitness_level",
-            sa.String(),
-            nullable=True,
-            comment="beginner | active | athletic — set during onboarding",
-        ),
+    # Use raw SQL with IF NOT EXISTS to be idempotent — the column may have
+    # been added manually to the database before this migration ran.
+    op.execute(
+        "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS "
+        "fitness_level VARCHAR NULL"
     )
 
 

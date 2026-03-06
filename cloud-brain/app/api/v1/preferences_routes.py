@@ -53,8 +53,8 @@ class PreferencesResponse(BaseModel):
     user_id: str
     coach_persona: str
     proactivity_level: str
-    dashboard_layout: dict
-    notification_settings: dict
+    dashboard_layout: dict | None = None
+    notification_settings: dict | None = None
     theme: str
     haptic_enabled: bool
     tooltips_enabled: bool
@@ -63,9 +63,11 @@ class PreferencesResponse(BaseModel):
     morning_briefing_time: str | None = None
     checkin_reminder_enabled: bool = False
     checkin_reminder_time: str | None = None
+    quiet_hours_enabled: bool = False
     quiet_hours_start: str | None = None
     quiet_hours_end: str | None = None
-    goals: list
+    goals: list | None = None
+    units_system: str = "metric"
     fitness_level: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -86,9 +88,11 @@ class PreferencesUpdate(BaseModel):
     morning_briefing_time: str | None = Field(None, description="HH:MM (24-hour)")
     checkin_reminder_enabled: bool | None = None
     checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_enabled: bool | None = None
     quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
     goals: list | None = None
+    units_system: str | None = Field(None, description="metric | imperial")
     fitness_level: str | None = Field(None, description="beginner | active | athletic")
 
 
@@ -107,9 +111,11 @@ class PreferencesCreate(BaseModel):
     morning_briefing_time: str | None = Field(None, description="HH:MM (24-hour)")
     checkin_reminder_enabled: bool | None = None
     checkin_reminder_time: str | None = Field(None, description="HH:MM (24-hour)")
+    quiet_hours_enabled: bool | None = None
     quiet_hours_start: str | None = Field(None, description="HH:MM (24-hour)")
     quiet_hours_end: str | None = Field(None, description="HH:MM (24-hour)")
     goals: list | None = None
+    units_system: str | None = Field(None, description="metric | imperial")
     fitness_level: str | None = Field(None, description="beginner | active | athletic")
 
 
