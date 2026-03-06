@@ -1,21 +1,13 @@
-/// Zuralog Edge Agent — Welcome / Auth Home Screen.
+/// Zuralog Edge Agent — Welcome / Auth Home Screen (v3.2 redesign).
 ///
-/// The primary entry point for all users (new and returning). Presents the
-/// full account-access menu in a single "Clean Gate" design:
-///   - Brand logo in a Sage Green rounded-square card
-///   - App name + tagline
-///   - Continue with Apple (stubbed — requires Apple Developer Program)
-///   - Continue with Google (fully wired)
-///   - "or" divider
-///   - Log in with Email (navigates to LoginScreen)
-///   - Legal footer (Terms of Service / Privacy Policy)
+/// The auth gate screen the user lands on after the slideshow (or on every
+/// subsequent launch). Full-screen OLED black with a subtle Sage Green radial
+/// bloom at top-center, brand logo card, and three spring-animated auth buttons.
 ///
-/// Social auth buttons are connected to the [SocialAuthService] via
-/// [AuthStateNotifier.socialLogin]. A loading overlay is shown during
-/// the sign-in flow. Errors are surfaced as [SnackBar]s.
-///
-/// On first launch the [OnboardingPageView] is shown before this screen,
-/// controlled by the [hasSeenOnboardingProvider] flag.
+/// **Backend wiring is unchanged:**
+/// - [_handleGoogleSignIn] → [SocialAuthService.signInWithGoogle] → [authStateProvider.socialLogin]
+/// - [_handleAppleSignIn] → stubbed dialog (preserved exactly)
+/// - [_showError] → SnackBar helper (preserved exactly)
 library;
 
 import 'package:flutter/gestures.dart';
@@ -30,29 +22,23 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/data/social_auth_service.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// The auth home screen — entry point for unauthenticated users.
 ///
-/// A [ConsumerStatefulWidget] so it can hold the [_isLoading] flag for
-/// the social-auth loading overlay, without rebuilding the entire tree.
+/// A [ConsumerStatefulWidget] to hold the [_isLoading] flag for the social-auth
+/// loading overlay, without rebuilding the entire widget tree.
 class WelcomeScreen extends ConsumerStatefulWidget {
   /// Creates a [WelcomeScreen].
   const WelcomeScreen({super.key});
 
-  // ── Asset Paths ─────────────────────────────────────────────────────────────
   static const String _logoAsset = 'assets/images/zuralog_logo.svg';
-
-  // ── Layout Constants ─────────────────────────────────────────────────────────
-  static const double _logoCardSize = 120;
-  static const double _logoCardRadius = 28;
-  static const double _logoPadding = 22;
 
   @override
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
-  /// Whether a social sign-in flow is currently in progress.
   bool _isLoading = false;
 
   // ── Google Sign In ─────────────────────────────────────────────────────────
@@ -61,10 +47,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   ///
   /// Shows a loading overlay, calls [SocialAuthService.signInWithGoogle],
   /// then delegates to [AuthStateNotifier.socialLogin]. Navigates to the
-  /// dashboard on success, or shows an error [SnackBar] on failure.
-  ///
-  /// Silently swallows [SocialAuthCancelledException] — the user changed
-  /// their mind and we should not show an error.
+  /// dashboard on success (handled by GoRouter), or shows a SnackBar on failure.
   Future<void> _handleGoogleSignIn() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
@@ -81,7 +64,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       if (!mounted) return;
       switch (result) {
         case AuthSuccess():
-          // Navigation is handled by GoRouter's auth guard — no push needed.
+          // Navigation handled by GoRouter's auth guard — no push needed.
           break;
         case AuthFailure(:final message):
           _showError(message);
@@ -102,12 +85,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   /// Initiates the Apple Sign In native flow.
   ///
   /// Currently shows a "coming soon" dialog because Apple Sign In
-  /// requires an Apple Developer Program membership. Once configured,
-  /// this method uses the same pattern as [_handleGoogleSignIn].
+  /// requires an Apple Developer Program membership. Preserved exactly.
   Future<void> _handleAppleSignIn() async {
     if (_isLoading) return;
-    // Apple Sign In is stubbed until Apple Developer credentials are
-    // configured. Show an informative dialog instead of an error.
     await showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
@@ -129,7 +109,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  /// Shows a floating error [SnackBar] with the given [message].
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -142,119 +121,45 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      // No AppBar — full-screen immersive auth experience.
+      backgroundColor: AppColors.backgroundDark,
       body: Stack(
         children: [
+          // ── Radial bloom background — Sage Green at top-center ────────
+          const Positioned.fill(child: _RadialBloom()),
+
+          // ── Main content ──────────────────────────────────────────────
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceLg),
               child: Column(
                 children: [
-                  // ── Brand area — centred in the upper portion ──────────────
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Logo card — sage green rounded square.
-                        _LogoCard(
-                          size: WelcomeScreen._logoCardSize,
-                          radius: WelcomeScreen._logoCardRadius,
-                          padding: WelcomeScreen._logoPadding,
-                          logoAsset: WelcomeScreen._logoAsset,
-                        ),
+                  // ── Brand area ─────────────────────────────────────────
+                  const Expanded(child: _BrandArea()),
 
-                        const SizedBox(height: AppDimens.spaceLg),
-
-                        // App name
-                        Text(
-                          'Zuralog',
-                          style: AppTextStyles.h1.copyWith(
-                            color: colorScheme.onSurface,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-
-                        const SizedBox(height: AppDimens.spaceSm),
-
-                        // Tagline
-                        Text(
-                          'Your journey to better health starts here.',
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                  // ── Auth action buttons ────────────────────────────────
+                  _AuthActions(
+                    isLoading: _isLoading,
+                    onApple: _handleAppleSignIn,
+                    onGoogle: _handleGoogleSignIn,
+                    onEmail: () => context.push(RouteNames.loginPath),
+                    colorScheme: colorScheme,
                   ),
 
-                  // ── Auth actions — pinned to the bottom ──────────────────
-                  Column(
-                    children: [
-                      // Continue with Apple
-                      _AppleButton(
-                        onPressed: _isLoading ? null : _handleAppleSignIn,
-                      ),
-
-                      const SizedBox(height: AppDimens.spaceSm),
-
-                      // Continue with Google
-                      _GoogleButton(
-                        onPressed: _isLoading ? null : _handleGoogleSignIn,
-                      ),
-
-                      const SizedBox(height: AppDimens.spaceMd),
-
-                      // ── "or" divider ───────────────────────────────────
-                      const _OrDivider(),
-
-                      const SizedBox(height: AppDimens.spaceMd),
-
-                      // Log in with Email
-                      SizedBox(
-                        width: double.infinity,
-                        height: AppDimens.touchTargetMin,
-                        child: TextButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () => context.push(RouteNames.loginPath),
-                          style: TextButton.styleFrom(
-                            foregroundColor: colorScheme.onSurface,
-                            textStyle: AppTextStyles.h3,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppDimens.radiusButton,
-                              ),
-                            ),
-                          ),
-                          child: const Text('Log in with Email'),
-                        ),
-                      ),
-
-                      const SizedBox(height: AppDimens.spaceMd),
-
-                      // Legal footer
-                      _LegalFooter(textTheme: textTheme),
-
-                      const SizedBox(height: AppDimens.spaceLg),
-                    ],
-                  ),
+                  SizedBox(height: AppDimens.spaceLg + safeBottom),
                 ],
               ),
             ),
           ),
 
-          // ── Loading overlay — blocks input during social auth ──────────
+          // ── Loading overlay ────────────────────────────────────────────
           if (_isLoading)
             const ColoredBox(
-              color: Colors.black38,
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
+              color: Colors.black54,
+              child: Center(child: CircularProgressIndicator()),
             ),
         ],
       ),
@@ -264,52 +169,85 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
 // ── Private Widgets ────────────────────────────────────────────────────────────
 
-/// The brand logo rendered inside a Sage Green rounded-square card.
-///
-/// Displays the SVG logo asset centered inside a pill-rounded container
-/// with the brand's primary sage green background — matching the reference design.
-class _LogoCard extends StatelessWidget {
-  /// Creates a [_LogoCard].
-  const _LogoCard({
-    required this.size,
-    required this.radius,
-    required this.padding,
-    required this.logoAsset,
-  });
-
-  /// The width and height of the square card.
-  final double size;
-
-  /// The corner radius of the card.
-  final double radius;
-
-  /// Internal padding between card edge and the logo.
-  final double padding;
-
-  /// Asset path for the SVG logo.
-  final String logoAsset;
+/// Full-screen subtle sage green radial gradient bloom at top-center.
+/// Creates depth and anchors the content to the dark background.
+class _RadialBloom extends StatelessWidget {
+  const _RadialBloom();
 
   @override
   Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, -1.2),
+          radius: 0.8,
+          colors: [
+            Color(0x12CFE1B9), // AppColors.primary at ~7% opacity
+            Colors.transparent,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Brand area: logo card + app name + tagline.
+class _BrandArea extends StatelessWidget {
+  const _BrandArea();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Logo card — 96×96px, shapeLg, primary fill with glow shadow
+        _LogoCard(),
+
+        const SizedBox(height: AppDimens.spaceLg),
+
+        // App name
+        Text(
+          'Zuralog',
+          style: AppTextStyles.h1.copyWith(color: Colors.white),
+        ),
+
+        const SizedBox(height: AppDimens.spaceSm),
+
+        // Tagline — two short editorial lines
+        Text(
+          'Better health,\ntogether.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+/// 96×96px logo card with Sage Green fill and brand glow shadow.
+class _LogoCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: 96,
+      height: 96,
       decoration: BoxDecoration(
         color: AppColors.primary,
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.45),
+            color: AppColors.primary.withValues(alpha: 0.40),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      padding: EdgeInsets.all(padding),
+      padding: const EdgeInsets.all(20),
       child: SvgPicture.asset(
-        logoAsset,
+        WelcomeScreen._logoAsset,
         fit: BoxFit.contain,
-        // Render the logo in dark grey for contrast on the sage green background.
         colorFilter: const ColorFilter.mode(
           AppColors.primaryButtonText,
           BlendMode.srcIn,
@@ -319,105 +257,140 @@ class _LogoCard extends StatelessWidget {
   }
 }
 
-/// Full-width black pill button styled for Apple Sign In.
-///
-/// Uses a forced black background and white foreground per Apple's
-/// Human Interface Guidelines for Sign in with Apple.
-class _AppleButton extends StatelessWidget {
-  /// Creates an [_AppleButton].
-  const _AppleButton({required this.onPressed});
+/// Auth action buttons: Apple, Google, "or" divider, Email, legal footer.
+class _AuthActions extends StatelessWidget {
+  const _AuthActions({
+    required this.isLoading,
+    required this.onApple,
+    required this.onGoogle,
+    required this.onEmail,
+    required this.colorScheme,
+  });
 
-  /// Callback invoked when the button is tapped.
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: AppDimens.touchTargetMin + 8,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.black,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.apple, size: AppDimens.iconMd),
-            const SizedBox(width: AppDimens.spaceSm),
-            Text(
-              'Continue with Apple',
-              style: AppTextStyles.h3.copyWith(color: Colors.white),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Full-width outlined pill button styled for Google Sign In.
-///
-/// Uses a light border with a stylized "G" text placeholder until
-/// a proper Google SVG icon is available.
-class _GoogleButton extends StatelessWidget {
-  /// Creates a [_GoogleButton].
-  const _GoogleButton({required this.onPressed});
-
-  /// Callback invoked when the button is tapped.
-  final VoidCallback? onPressed;
+  final bool isLoading;
+  final VoidCallback onApple;
+  final VoidCallback onGoogle;
+  final VoidCallback onEmail;
+  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
-      width: double.infinity,
-      height: AppDimens.touchTargetMin + 8,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
-          side: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            width: 1.5,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Google "G" placeholder — replace with SVG in future phase.
-            Text(
-              'G',
-              style: AppTextStyles.h3.copyWith(
-                color: AppColors.googleBlue,
-                fontWeight: FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Apple button
+        ZuralogSpringButton(
+          onTap: isLoading ? null : onApple,
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: FilledButton(
+              onPressed: isLoading ? null : onApple,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.black,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimens.shapePill),
+                ),
+                textStyle: AppTextStyles.h3,
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.apple, size: 20, color: Colors.white),
+                  SizedBox(width: AppDimens.spaceSm),
+                  Text('Continue with Apple'),
+                ],
               ),
             ),
-            const SizedBox(width: AppDimens.spaceSm),
-            Text(
-              'Continue with Google',
-              style: AppTextStyles.h3.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+
+        const SizedBox(height: AppDimens.spaceSm),
+
+        // Google button
+        ZuralogSpringButton(
+          onTap: isLoading ? null : onGoogle,
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: OutlinedButton(
+              onPressed: isLoading ? null : onGoogle,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colorScheme.onSurface,
+                side: const BorderSide(
+                  color: AppColors.borderDark,
+                  width: 1.5,
+                ),
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimens.shapePill),
+                ),
+                textStyle: AppTextStyles.h3,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'G',
+                    style: AppTextStyles.h3.copyWith(
+                      color: AppColors.googleBlue,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Text(
+                    'Continue with Google',
+                    style: AppTextStyles.h3.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // "or" divider
+        const _OrDivider(),
+
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // Email button
+        ZuralogSpringButton(
+          onTap: isLoading ? null : onEmail,
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: TextButton(
+              onPressed: isLoading ? null : onEmail,
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.onSurfaceVariant,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimens.shapePill),
+                ),
+                textStyle: AppTextStyles.h3,
+              ),
+              child: const Text('Log in with Email'),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: AppDimens.spaceMd),
+
+        // Legal footer
+        const _LegalFooter(),
+      ],
     );
   }
 }
 
 /// Horizontal "─── or ───" divider row.
 class _OrDivider extends StatelessWidget {
-  /// Creates an [_OrDivider].
   const _OrDivider();
 
   @override
@@ -442,11 +415,7 @@ class _OrDivider extends StatelessWidget {
 
 /// Legal footer with tappable Terms of Service and Privacy Policy links.
 class _LegalFooter extends StatelessWidget {
-  /// Creates a [_LegalFooter].
-  const _LegalFooter({required this.textTheme});
-
-  /// The current [TextTheme] for style inheritance.
-  final TextTheme textTheme;
+  const _LegalFooter();
 
   @override
   Widget build(BuildContext context) {
@@ -463,9 +432,10 @@ class _LegalFooter extends StatelessWidget {
               decoration: TextDecoration.underline,
               decorationColor: AppColors.primary,
             ),
-            recognizer: TapGestureRecognizer()..onTap = () {
-              // TODO(dev): Open Terms of Service URL via url_launcher.
-            },
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                // TODO(dev): Open Terms of Service URL via url_launcher.
+              },
           ),
           const TextSpan(text: '\nand '),
           TextSpan(
@@ -475,9 +445,10 @@ class _LegalFooter extends StatelessWidget {
               decoration: TextDecoration.underline,
               decorationColor: AppColors.primary,
             ),
-            recognizer: TapGestureRecognizer()..onTap = () {
-              // TODO(dev): Open Privacy Policy URL via url_launcher.
-            },
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                // TODO(dev): Open Privacy Policy URL via url_launcher.
+              },
           ),
           const TextSpan(text: '.'),
         ],

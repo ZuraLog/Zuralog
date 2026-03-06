@@ -98,7 +98,7 @@ class NotificationsStep extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceXl),
 
           // ── Morning Briefing ────────────────────────────────────────────
-          _NotificationCard(
+          _NotificationRow(
             icon: Icons.wb_sunny_rounded,
             iconColor: AppColors.categoryMobility,
             title: 'Morning briefing',
@@ -116,7 +116,7 @@ class NotificationsStep extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.12),
                         borderRadius:
-                            BorderRadius.circular(AppDimens.radiusChip),
+                            BorderRadius.circular(AppDimens.shapePill),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -144,7 +144,7 @@ class NotificationsStep extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceMd),
 
           // ── Smart Reminders ─────────────────────────────────────────────
-          _NotificationCard(
+          _NotificationRow(
             icon: Icons.notifications_active_rounded,
             iconColor: AppColors.categoryActivity,
             title: 'Smart reminders',
@@ -156,7 +156,7 @@ class NotificationsStep extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceMd),
 
           // ── Wellness Check-in ───────────────────────────────────────────
-          _NotificationCard(
+          _NotificationRow(
             icon: Icons.sentiment_satisfied_alt_rounded,
             iconColor: AppColors.categoryWellness,
             title: 'Wellness check-in',
@@ -172,10 +172,12 @@ class NotificationsStep extends StatelessWidget {
   }
 }
 
-// ── Notification Card ─────────────────────────────────────────────────────────
+// ── Notification Row ──────────────────────────────────────────────────────────
 
-class _NotificationCard extends StatelessWidget {
-  const _NotificationCard({
+/// A clean ListTile-style notification preference row with an animated
+/// enabled/disabled state. Uses border-left accent color tint when active.
+class _NotificationRow extends StatelessWidget {
+  const _NotificationRow({
     required this.icon,
     required this.iconColor,
     required this.title,
@@ -203,57 +205,84 @@ class _NotificationCard extends StatelessWidget {
         color: isEnabled
             ? iconColor.withValues(alpha: 0.06)
             : colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
         border: Border.all(
-          color: isEnabled ? iconColor.withValues(alpha: 0.3) : AppColors.borderDark,
+          color: isEnabled
+              ? iconColor.withValues(alpha: 0.30)
+              : AppColors.borderDark,
         ),
       ),
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon.
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: AppDimens.spaceMd),
-          // Text content.
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.h3
-                      .copyWith(color: colorScheme.onSurface),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 4px left accent bar — matching category color when active.
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 4,
+                color: isEnabled
+                    ? iconColor
+                    : iconColor.withValues(alpha: 0.20),
+              ),
+
+              // Content.
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDimens.spaceMd),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Icon.
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: iconColor.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: iconColor, size: 20),
+                      ),
+                      const SizedBox(width: AppDimens.spaceMd),
+                      // Text content.
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: AppTextStyles.h3
+                                  .copyWith(color: colorScheme.onSurface),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              description,
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.textSecondary),
+                            ),
+                            if (trailing != null) ...[
+                              const SizedBox(height: AppDimens.spaceSm),
+                              trailing!,
+                            ],
+                          ],
+                        ),
+                      ),
+                      // Toggle switch.
+                      Switch(
+                        value: isEnabled,
+                        onChanged: onChanged,
+                        activeThumbColor: AppColors.primary,
+                        activeTrackColor:
+                            AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-                if (trailing != null) ...[
-                  const SizedBox(height: AppDimens.spaceSm),
-                  trailing!,
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
-          // Toggle switch.
-          Switch(
-            value: isEnabled,
-            onChanged: onChanged,
-            activeThumbColor: AppColors.primary,
-            activeTrackColor: AppColors.primary.withValues(alpha: 0.3),
-          ),
-        ],
+        ),
       ),
     );
   }

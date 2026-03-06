@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-05 (fix/mobile-sprint-1 — Mobile bug fix sprint 1 complete)  
+**Last Updated:** 2026-03-06 (design/v3.2-auth-onboarding — Design system v3.2 document update)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 
@@ -720,3 +720,49 @@ Post-implementation code review pass:
 - 2 `warning` — `dead_code` + `dead_null_aware_expression` in `analytics_service.dart` (pre-existing)
 - 2 `warning` — `experimental_member_use` in `main.dart` (Sentry experimental APIs; pre-existing)
 - 19 `info` — `use_null_aware_elements` across `sentry_breadcrumbs.dart` + `progress_repository.dart` (pre-existing); `dangling_library_doc_comments` + `unintended_html_in_doc_comment` in analytics files (pre-existing)
+
+---
+
+## Design System v3.2 — Auth & Onboarding Redesign Specification
+
+**Branch:** `design/v3.2-auth-onboarding`  
+**Date:** 2026-03-06  
+**Phase:** Document-only (Phase 1 of 2)
+
+### What was documented
+
+`docs/design.md` updated from v3.1 → v3.2. The following new material was added:
+
+**AppMotion — Spring Token System**  
+Replaced the old bezier-based "Flutter Duration Constants" table with a spring-physics vocabulary aligned with M3 Expressive's `MotionScheme`. Six named spring presets (`fastSpatial`, `defaultSpatial`, `slowSpatial`, `fastEffects`, `defaultEffects`, `slowEffects`) defined by damping ratio + stiffness. To be implemented as `AppMotion` class in `lib/core/theme/app_motion.dart`.
+
+**AppShapes — Shape Scale**  
+Formalized the scattered radius constants (`radiusCard`, `radiusButton`, etc.) into a semantic 6-level shape scale (`shapeXs` through `shapePill`) aligned with M3's shape system. New tokens are additive — existing tokens remain for compatibility.
+
+**Updated Component Conventions**  
+- Buttons: full 3-level hierarchy documented (FilledButton / OutlinedButton / TextButton). Spring press animation spec (0.97× scale, `fastSpatial`). `ElevatedButton` formally deprecated as primary action.
+- Cards: expressive interactive state added (0.98× press scale, state layer at 8% opacity).
+
+**New Section: Auth & Onboarding Design Language (v3.2)**  
+Complete visual spec for three screens/flows:
+- `OnboardingPageView`: 3 slides, full-bleed image + text layout, image placeholder specs for AI generation (3D rendered, abstract illustration, lifestyle photography), spring slide transitions, pill dot indicators
+- `WelcomeScreen`: radial bloom background, logo card glow, 3-button hierarchy (Apple/Google/Email), spring press animations
+- `AuthScreen`: new combined Login/Register screen spec (tab toggle, custom top bar, spring-animated tab switch)
+- `OnboardingFlowScreen`: expanded from 6 to 8 steps. New steps: Name/Nickname (Step 2) with live preview card, Fitness Level (Step 5). Every step from 2 onward is skippable. Shell redesign: Back → OutlinedButton, Next → FilledButton.
+- All 8 steps individually specced with layout diagrams, color/shape/motion details, and backend field mappings.
+
+### Decisions made
+
+- **M3 Expressive adopted as motion/shape philosophy** — not as a widget library swap. Zuralog's brand (OLED black, Sage Green, category colors) is preserved; M3 Expressive contributes spring physics and expressive shape language.
+- **Onboarding expanded to 8 steps.** Added: Name (Step 2), Fitness Level (Step 5). Cut: Health Focus Areas, Primary Motivation, Daily Routine (too much friction, available in Settings).
+- **Slideshow hero images:** Mixed styles (3D rendered, abstract illustration, lifestyle photography) justified per slide. Primary direction: eye-catching and modern, not gradient-for-gradient's-sake.
+- **Apple Sign In** remains stubbed — not yet wired. Existing dialog behavior preserved in spec.
+- **`fitness_level`** is a new backend field — flagged for backend addition during Phase 2 implementation.
+
+### What is NOT yet done (Phase 2)
+
+- No Flutter code changed
+- `AppMotion` class not yet created
+- `AppDimens` shape tokens not yet added
+- No screen files touched
+- Auth & onboarding screens not yet rebuilt

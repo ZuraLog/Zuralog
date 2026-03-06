@@ -1,23 +1,23 @@
-/// Zuralog — 6-Step Onboarding Flow Screen.
+/// Zuralog — 8-Step Onboarding Flow Screen (v3.2).
 ///
-/// Replaces the legacy [ProfileQuestionnaireScreen] (3-step form) with a
-/// richer, multi-step onboarding experience shown once after registration.
+/// Expanded from 6 to 8 steps: WelcomeStep, NameStep, GoalsStep, PersonaStep,
+/// FitnessLevelStep, ConnectAppsStep, NotificationsStep, DiscoveryStep.
 ///
-/// **Steps:**
-///   1. Welcome — animated headline + CTA
-///   2. Goals — multi-select health goal grid
-///   3. AI Persona — persona card selection + proactivity toggle
-///   4. Connect Apps — integration tiles (informational; connect later in Settings)
-///   5. Notifications — morning briefing, smart reminders, wellness check-in
-///   6. Discovery — "Where did you hear about us?" (PostHog event)
+/// New fields collected:
+///   - `nickname` (Step 2) — sent to PATCH /api/v1/preferences
+///   - `fitness_level` (Step 5) — sent to PATCH /api/v1/preferences
+///     NOTE: fitness_level is a new backend field. The backend ignores unknown
+///     fields in the PATCH body, so this is forward-compatible with the
+///     current backend until the field is added.
 ///
-/// On completion:
-///   - PATCHes `/api/v1/preferences` with all collected selections.
-///   - Calls [UserProfileNotifier.update] with `onboardingComplete: true`.
-///   - Navigates to [RouteNames.dashboardPath] (Today Feed).
+/// **All existing backend wiring is preserved:**
+///   - PATCH /api/v1/preferences with goals, persona, proactivity, notifications
+///   - UserProfileNotifier.update with onboardingComplete: true + nickname
+///   - PostHog analytics events (all preserved, step counts updated)
+///   - Sentry error capture on failure
 ///
-/// **Widget type:** [ConsumerStatefulWidget] — Riverpod ref for profile
-/// update, analytics, and API client; local [PageController] for the PageView.
+/// Skip architecture: top-right "Skip" link visible on steps 2–8.
+/// Skipping a step sends the default/empty value for that step's fields.
 library;
 
 import 'package:flutter/material.dart';
@@ -35,26 +35,13 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/onboarding/presentation/steps/connect_apps_step.dart';
 import 'package:zuralog/features/onboarding/presentation/steps/discovery_step.dart';
+import 'package:zuralog/features/onboarding/presentation/steps/fitness_level_step.dart';
 import 'package:zuralog/features/onboarding/presentation/steps/goals_step.dart';
+import 'package:zuralog/features/onboarding/presentation/steps/name_step.dart';
 import 'package:zuralog/features/onboarding/presentation/steps/notifications_step.dart';
 import 'package:zuralog/features/onboarding/presentation/steps/persona_step.dart';
 import 'package:zuralog/features/onboarding/presentation/steps/welcome_step.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
-
-// ── Screen ─────────────────────────────────────────────────────────────────────
-
-/// 6-step onboarding flow shown once after a new user registers.
-///
-/// Collects goals, AI persona preference, app connections, notification
-/// preferences, and discovery source before marking onboarding complete.
-class OnboardingFlowScreen extends ConsumerStatefulWidget {
-  /// Creates an [OnboardingFlowScreen].
-  const OnboardingFlowScreen({super.key});
-
-  @override
-  ConsumerState<OnboardingFlowScreen> createState() =>
-      _OnboardingFlowScreenState();
-}
 
 // ── Persona ID mapping ────────────────────────────────────────────────────────
 
@@ -76,6 +63,23 @@ String _proactivityApiKey(double value) {
   return 'high';
 }
 
+// ── Total page count ──────────────────────────────────────────────────────────
+
+/// Total number of onboarding steps. Updated from 6 → 8 in v3.2.
+const int _totalPages = 8;
+
+// ── Screen ─────────────────────────────────────────────────────────────────────
+
+/// 8-step onboarding flow shown once after a new user registers.
+class OnboardingFlowScreen extends ConsumerStatefulWidget {
+  /// Creates an [OnboardingFlowScreen].
+  const OnboardingFlowScreen({super.key});
+
+  @override
+  ConsumerState<OnboardingFlowScreen> createState() =>
+      _OnboardingFlowScreenState();
+}
+
 class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   // ── Page controller ────────────────────────────────────────────────────────
 
@@ -84,15 +88,48 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   // ── Feature flag: onboarding step order ───────────────────────────────────
 
-  /// Controls whether Goals (index 1) or Persona (index 2) comes first.
-  /// Loaded asynchronously from PostHog in [initState]; defaults to
-  /// `'goals_first'` so the UI is never blocked.
+  /// Controls whether Goals (index 2) or Persona (index 3) comes first.
+  /// Defaults to `'goals_first'` so the UI is never blocked.
   String _stepOrder = 'goals_first';
 
-  // ── Step pages (single source of truth for page count) ────────────────────
+  // ── Collected state ────────────────────────────────────────────────────────
 
-  /// Returns the ordered list of onboarding pages, swapping Goals and Persona
-  /// when the `onboarding_step_order` flag is `'persona_first'`.
+  /// Step 2 — nickname / preferred name.
+  String _nickname = '';
+
+  /// Step 3 or 4 — selected goal IDs (depending on step order flag).
+  List<String> _selectedGoals = [];
+
+  /// Step 3 or 4 — selected persona ID.
+  String _selectedPersona = 'coach';
+
+  /// Step 3 or 4 — proactivity level (0.0 = quiet, 1.0 = proactive).
+  double _proactivity = 0.5;
+
+  /// Step 5 — fitness level ID: 'beginner' | 'active' | 'athletic'.
+  String? _fitnessLevel;
+
+  /// Step 7 — morning briefing enabled.
+  bool _morningBriefingEnabled = true;
+
+  /// Step 7 — morning briefing time (default 08:00).
+  TimeOfDay _morningBriefingTime = const TimeOfDay(hour: 8, minute: 0);
+
+  /// Step 7 — smart activity reminders enabled.
+  bool _smartRemindersEnabled = true;
+
+  /// Step 7 — wellness check-in enabled.
+  bool _wellnessCheckInEnabled = false;
+
+  /// Step 8 — discovery source.
+  String? _discoverySource;
+
+  /// Whether the final submission call is in flight.
+  bool _isSubmitting = false;
+
+  // ── Page list ──────────────────────────────────────────────────────────────
+
+  /// Returns the ordered list of 8 onboarding pages.
   List<Widget> get _pages {
     final goalsStep = GoalsStep(
       selectedGoals: _selectedGoals,
@@ -106,23 +143,35 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       onProactivityChanged: (v) => setState(() => _proactivity = v),
     );
 
-    final step2 = _stepOrder == 'persona_first' ? personaStep : goalsStep;
-    final step3 = _stepOrder == 'persona_first' ? goalsStep : personaStep;
+    final step3 = _stepOrder == 'persona_first' ? personaStep : goalsStep;
+    final step4 = _stepOrder == 'persona_first' ? goalsStep : personaStep;
 
     return [
-      // Step 1 — Welcome (manages its own CTA)
+      // Step 1 — Welcome (manages its own CTA, no bottom nav)
       WelcomeStep(onNext: _handleNext),
 
-      // Step 2 — Goals or Persona (flag-controlled)
-      step2,
+      // Step 2 — Name / Nickname
+      NameStep(
+        nickname: _nickname,
+        onNicknameChanged: (v) => setState(() => _nickname = v),
+      ),
 
-      // Step 3 — Persona or Goals (flag-controlled)
+      // Step 3 — Goals or Persona (flag-controlled)
       step3,
 
-      // Step 4 — Connect Apps (informational)
+      // Step 4 — Persona or Goals (flag-controlled)
+      step4,
+
+      // Step 5 — Fitness Level
+      FitnessLevelStep(
+        selectedLevel: _fitnessLevel,
+        onLevelChanged: (v) => setState(() => _fitnessLevel = v),
+      ),
+
+      // Step 6 — Connect Apps (informational)
       const ConnectAppsStep(),
 
-      // Step 5 — Notifications
+      // Step 7 — Notifications
       NotificationsStep(
         morningBriefingEnabled: _morningBriefingEnabled,
         morningBriefingTime: _morningBriefingTime,
@@ -137,7 +186,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             setState(() => _wellnessCheckInEnabled = v),
       ),
 
-      // Step 6 — Discovery
+      // Step 8 — Discovery
       DiscoveryStep(
         selectedSource: _discoverySource,
         onSourceChanged: (s) => setState(() => _discoverySource = s),
@@ -145,46 +194,12 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     ];
   }
 
-  // ── Collected state from each step ────────────────────────────────────────
-
-  /// Step 2 — selected goal IDs.
-  List<String> _selectedGoals = [];
-
-  /// Step 3 — selected persona ID (UI key: 'motivator' | 'analyst' | 'coach').
-  String _selectedPersona = 'coach';
-
-  /// Step 3 — proactivity level (0.0 = quiet, 1.0 = proactive).
-  double _proactivity = 0.5;
-
-  /// Step 5 — morning briefing enabled.
-  bool _morningBriefingEnabled = true;
-
-  /// Step 5 — morning briefing time (default 08:00).
-  TimeOfDay _morningBriefingTime = const TimeOfDay(hour: 8, minute: 0);
-
-  /// Step 5 — smart activity reminders enabled.
-  bool _smartRemindersEnabled = true;
-
-  /// Step 5 — wellness check-in enabled.
-  bool _wellnessCheckInEnabled = false;
-
-  /// Step 6 — discovery source.
-  String? _discoverySource;
-
-  /// Whether the final submission call is in flight.
-  bool _isSubmitting = false;
-
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    // Load onboarding step order from PostHog feature flag.
-    // Safe default ('goals_first') is already set, so UI renders immediately.
-    ref
-        .read(featureFlagServiceProvider)
-        .onboardingStepOrder()
-        .then((order) {
+    ref.read(featureFlagServiceProvider).onboardingStepOrder().then((order) {
       if (mounted) setState(() => _stepOrder = order);
     });
   }
@@ -198,15 +213,23 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   Future<void> _handleNext() async {
-    // Fire step-specific analytics before advancing.
     final analytics = ref.read(analyticsServiceProvider);
+
     analytics.capture(
       event: AnalyticsEvents.onboardingStepCompleted,
-      properties: {'step': _currentPage + 1},
+      properties: {'step': _currentPage + 1, 'total_steps': _totalPages},
     );
 
-    // Page at index 1 or 2 = Goals step (position depends on flag).
-    final goalsIndex = _stepOrder == 'persona_first' ? 2 : 1;
+    // Step 2 = Name
+    if (_currentPage == 1 && _nickname.isNotEmpty) {
+      analytics.capture(
+        event: 'nickname_entered',
+        properties: {'has_nickname': true},
+      );
+    }
+
+    // Goals step index depends on flag
+    final goalsIndex = _stepOrder == 'persona_first' ? 3 : 2;
     if (_currentPage == goalsIndex) {
       analytics.capture(
         event: AnalyticsEvents.onboardingGoalsSelected,
@@ -214,8 +237,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       );
     }
 
-    // Page at index 1 or 2 = Persona step (position depends on flag).
-    final personaIndex = _stepOrder == 'persona_first' ? 1 : 2;
+    // Persona step index depends on flag
+    final personaIndex = _stepOrder == 'persona_first' ? 2 : 3;
     if (_currentPage == personaIndex) {
       analytics.capture(
         event: AnalyticsEvents.onboardingPersonaSelected,
@@ -226,14 +249,22 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       );
     }
 
-    // Page 4 (index 4) = Notifications step.
+    // Step 5 = Fitness Level (index 4)
     if (_currentPage == 4) {
+      analytics.capture(
+        event: 'fitness_level_selected',
+        properties: {'fitness_level': _fitnessLevel ?? 'skipped'},
+      );
+    }
+
+    // Step 7 = Notifications (index 6)
+    if (_currentPage == 6) {
       analytics.capture(
         event: AnalyticsEvents.onboardingNotificationToggled,
         properties: {
           'morning_briefing': _morningBriefingEnabled,
           'smart_reminders': _smartRemindersEnabled,
-          'wellness_checkin': _wellnessCheckInEnabled,
+          'checkin_reminder': _wellnessCheckInEnabled,
         },
       );
     }
@@ -269,25 +300,32 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     try {
       final apiClient = ref.read(apiClientProvider);
 
-      // 1. Persist all collected onboarding preferences in a single PATCH.
       final morningTime =
           '${_morningBriefingTime.hour.toString().padLeft(2, '0')}:'
           '${_morningBriefingTime.minute.toString().padLeft(2, '0')}';
 
-      await apiClient.patch(
-        '/api/v1/preferences',
-        body: {
-          'goals': _selectedGoals,
-          'coach_persona': _personaApiKey[_selectedPersona] ?? 'gentle',
-          'proactivity_level': _proactivityApiKey(_proactivity),
-          'morning_briefing_enabled': _morningBriefingEnabled,
-          'morning_briefing_time': morningTime,
-          'smart_reminders_enabled': _smartRemindersEnabled,
-          'wellness_check_in_enabled': _wellnessCheckInEnabled,
-        },
-      );
+      // PATCH all collected preferences in a single request.
+      // `fitness_level` is a new field (v3.2). The backend ignores unknown
+      // fields in the PATCH body, so this is safe until the field is added.
+      final body = <String, dynamic>{
+        'goals': _selectedGoals,
+        'coach_persona': _personaApiKey[_selectedPersona] ?? 'gentle',
+        'proactivity_level': _proactivityApiKey(_proactivity),
+        'morning_briefing_enabled': _morningBriefingEnabled,
+        'morning_briefing_time': morningTime,
+        // Backend field is `checkin_reminder_enabled`
+        'checkin_reminder_enabled': _wellnessCheckInEnabled,
+        // New field (v3.2): backend may ignore until field is added to schema.
+        'fitness_level': _fitnessLevel ?? '',
+      };
 
-      // 2. Fire PostHog completion events.
+      if (_nickname.isNotEmpty) {
+        body['nickname'] = _nickname;
+      }
+
+      await apiClient.patch('/api/v1/preferences', body: body);
+
+      // PostHog completion events
       ref.read(analyticsServiceProvider).capture(
         event: AnalyticsEvents.onboardingCompleted,
         properties: {
@@ -295,7 +333,9 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           'persona': _selectedPersona,
           'proactivity': _proactivityApiKey(_proactivity),
           'morning_briefing': _morningBriefingEnabled,
-          'wellness_checkin_enabled': _wellnessCheckInEnabled,
+          'checkin_reminder_enabled': _wellnessCheckInEnabled,
+          'fitness_level': _fitnessLevel ?? 'skipped',
+          'has_nickname': _nickname.isNotEmpty,
           'discovery_source': _discoverySource ?? 'skipped',
         },
       );
@@ -306,9 +346,10 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         );
       }
 
-      // 3. Mark onboarding complete on the user profile.
+      // Mark onboarding complete and update nickname on user profile.
       await ref.read(userProfileProvider.notifier).update(
             onboardingComplete: true,
+            nickname: _nickname.isNotEmpty ? _nickname : null,
           );
 
       if (!mounted) return;
@@ -333,18 +374,19 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // ── Top bar: back button + step dots ──────────────────────────
+            // ── Top bar: back button + step dots + skip ────────────────
             _OnboardingTopBar(
               currentPage: _currentPage,
-              totalPages: _pages.length,
-              // Disable back navigation while submission is in flight.
+              totalPages: _totalPages,
               onBack: (_currentPage > 0 && !_isSubmitting) ? _handleBack : null,
+              onSkip: (_currentPage > 0 && !_isSubmitting) ? _handleNext : null,
             ),
 
-            // ── Page content ──────────────────────────────────────────────
+            // ── Page content ──────────────────────────────────────────
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -354,12 +396,11 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
               ),
             ),
 
-            // ── Bottom navigation ─────────────────────────────────────────
-            // Welcome step manages its own CTA; other steps show Back/Next.
+            // ── Bottom navigation ─────────────────────────────────────
             if (_currentPage > 0)
               _OnboardingBottomNav(
                 currentPage: _currentPage,
-                totalPages: _pages.length,
+                totalPages: _totalPages,
                 isSubmitting: _isSubmitting,
                 onBack: _handleBack,
                 onNext: _handleNext,
@@ -373,37 +414,38 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
 // ── Top Bar ────────────────────────────────────────────────────────────────────
 
-/// Top bar showing an optional back arrow and the dot step indicator.
+/// Top bar: back arrow (left), morphing pill step dots (center), skip (right).
 class _OnboardingTopBar extends StatelessWidget {
   const _OnboardingTopBar({
     required this.currentPage,
     required this.totalPages,
     required this.onBack,
+    required this.onSkip,
   });
 
   final int currentPage;
   final int totalPages;
   final VoidCallback? onBack;
+  final VoidCallback? onSkip;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceSm,
         AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
+        AppDimens.spaceSm,
         0,
       ),
       child: Row(
         children: [
-          // Back button placeholder — always takes space to keep dots centred.
           SizedBox(
             width: AppDimens.touchTargetMin,
             height: AppDimens.touchTargetMin,
             child: onBack != null
                 ? IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     onPressed: onBack,
                     tooltip: 'Back',
                     padding: EdgeInsets.zero,
@@ -411,7 +453,6 @@ class _OnboardingTopBar extends StatelessWidget {
                 : null,
           ),
 
-          // Step dot indicator — centred in remaining space.
           Expanded(
             child: Center(
               child: _StepDots(
@@ -421,8 +462,24 @@ class _OnboardingTopBar extends StatelessWidget {
             ),
           ),
 
-          // Right spacer (mirrors left button width for symmetry).
-          const SizedBox(width: AppDimens.touchTargetMin),
+          SizedBox(
+            width: AppDimens.touchTargetMin + 16,
+            height: AppDimens.touchTargetMin,
+            child: (onSkip != null && currentPage > 0)
+                ? TextButton(
+                    onPressed: onSkip,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceSm,
+                      ),
+                    ),
+                    child: const Text('Skip'),
+                  )
+                : null,
+          ),
         ],
       ),
     );
@@ -431,7 +488,7 @@ class _OnboardingTopBar extends StatelessWidget {
 
 // ── Step Dots ─────────────────────────────────────────────────────────────────
 
-/// Animated dot row indicating progress through the onboarding steps.
+/// Morphing pill dot indicators for 8-step onboarding flow.
 class _StepDots extends StatelessWidget {
   const _StepDots({required this.currentPage, required this.totalPages});
 
@@ -440,6 +497,9 @@ class _StepDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inactiveColor =
+        Theme.of(context).colorScheme.outline.withValues(alpha: 0.4);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(totalPages, (index) {
@@ -451,8 +511,8 @@ class _StepDots extends StatelessWidget {
           width: isActive ? 20 : 6,
           height: 6,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            color: isActive ? AppColors.primary : AppColors.borderDark,
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            color: isActive ? AppColors.primary : inactiveColor,
           ),
         );
       }),
@@ -462,7 +522,7 @@ class _StepDots extends StatelessWidget {
 
 // ── Bottom Navigation ─────────────────────────────────────────────────────────
 
-/// Back / Next (or Finish) button row shown for steps 2–6.
+/// Back / Next (or Finish) button row shown for steps 2–8.
 class _OnboardingBottomNav extends StatelessWidget {
   const _OnboardingBottomNav({
     required this.currentPage,

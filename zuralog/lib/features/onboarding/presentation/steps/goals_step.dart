@@ -2,7 +2,7 @@
 ///
 /// Multi-select grid of 8 predefined health goals. The user can select one
 /// or more goals (or none — selection is optional). Selected goals are
-/// visually highlighted with the brand Sage Green.
+/// visually highlighted with their dedicated health category color.
 library;
 
 import 'package:flutter/material.dart';
@@ -10,28 +10,77 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 
 // ── Goal Model ─────────────────────────────────────────────────────────────────
 
 /// A predefined health goal item shown in the goals grid.
 class _Goal {
-  const _Goal({required this.id, required this.label, required this.emoji});
+  const _Goal({
+    required this.id,
+    required this.label,
+    required this.emoji,
+    required this.color,
+  });
 
   final String id;
   final String label;
   final String emoji;
+
+  /// Health category color for the selected state.
+  final Color color;
 }
 
-/// The 8 predefined health goals.
+/// The 8 predefined health goals, each mapped to a health category color.
 const List<_Goal> _goals = [
-  _Goal(id: 'lose_weight', label: 'Lose weight', emoji: '⚖️'),
-  _Goal(id: 'build_muscle', label: 'Build muscle', emoji: '💪'),
-  _Goal(id: 'sleep_better', label: 'Sleep better', emoji: '😴'),
-  _Goal(id: 'improve_fitness', label: 'Improve fitness', emoji: '🏃'),
-  _Goal(id: 'reduce_stress', label: 'Reduce stress', emoji: '🧘'),
-  _Goal(id: 'track_nutrition', label: 'Track nutrition', emoji: '🥗'),
-  _Goal(id: 'heart_health', label: 'Heart health', emoji: '❤️'),
-  _Goal(id: 'general_wellness', label: 'General wellness', emoji: '✨'),
+  _Goal(
+    id: 'lose_weight',
+    label: 'Lose weight',
+    emoji: '⚖️',
+    color: AppColors.categoryBody,
+  ),
+  _Goal(
+    id: 'build_muscle',
+    label: 'Build muscle',
+    emoji: '💪',
+    color: AppColors.categoryActivity,
+  ),
+  _Goal(
+    id: 'sleep_better',
+    label: 'Sleep better',
+    emoji: '😴',
+    color: AppColors.categorySleep,
+  ),
+  _Goal(
+    id: 'improve_fitness',
+    label: 'Improve fitness',
+    emoji: '🏃',
+    color: AppColors.categoryActivity,
+  ),
+  _Goal(
+    id: 'reduce_stress',
+    label: 'Reduce stress',
+    emoji: '🧘',
+    color: AppColors.categoryWellness,
+  ),
+  _Goal(
+    id: 'track_nutrition',
+    label: 'Track nutrition',
+    emoji: '🥗',
+    color: AppColors.categoryNutrition,
+  ),
+  _Goal(
+    id: 'heart_health',
+    label: 'Heart health',
+    emoji: '❤️',
+    color: AppColors.categoryHeart,
+  ),
+  _Goal(
+    id: 'general_wellness',
+    label: 'General wellness',
+    emoji: '✨',
+    color: AppColors.primary,
+  ),
 ];
 
 // ── Step Widget ────────────────────────────────────────────────────────────────
@@ -123,6 +172,7 @@ class GoalsStep extends StatelessWidget {
               style: AppTextStyles.caption
                   .copyWith(color: AppColors.textSecondary),
             ),
+          const SizedBox(height: AppDimens.spaceLg),
         ],
       ),
     );
@@ -146,19 +196,21 @@ class _GoalTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final accentColor = isSelected ? goal.color : AppColors.borderDark;
 
-    return GestureDetector(
+    return ZuralogSpringButton(
       onTap: onTap,
+      scaleTarget: 0.96,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.12)
+              ? goal.color.withValues(alpha: 0.10)
               : colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderDark,
+            color: accentColor,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -171,9 +223,7 @@ class _GoalTile extends StatelessWidget {
             Text(
               goal.label,
               style: AppTextStyles.caption.copyWith(
-                color: isSelected
-                    ? AppColors.primary
-                    : colorScheme.onSurface,
+                color: isSelected ? goal.color : colorScheme.onSurface,
                 fontWeight:
                     isSelected ? FontWeight.w600 : FontWeight.w500,
               ),

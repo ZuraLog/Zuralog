@@ -46,8 +46,7 @@ import 'package:zuralog/core/monitoring/sentry_router_observer.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
-import 'package:zuralog/features/auth/presentation/auth/login_screen.dart';
-import 'package:zuralog/features/auth/presentation/auth/register_screen.dart';
+import 'package:zuralog/features/auth/presentation/auth/auth_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_view.dart';
 import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
@@ -196,7 +195,7 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.login,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.login',
-        child: LoginScreen(),
+        child: AuthScreen(initialTab: 0),
       ),
     ),
     GoRoute(
@@ -204,7 +203,7 @@ List<RouteBase> _buildRoutes() {
       name: RouteNames.register,
       builder: (context, state) => const SentryErrorBoundary(
         module: 'auth.register',
-        child: RegisterScreen(),
+        child: AuthScreen(initialTab: 1),
       ),
     ),
     GoRoute(
