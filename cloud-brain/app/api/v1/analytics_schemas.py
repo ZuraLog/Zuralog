@@ -180,3 +180,97 @@ class UserGoalRequest(BaseModel):
         pattern="^(daily|weekly|long_term)$",
         description="Goal period",
     )
+
+
+# ── Data Tab schemas ──────────────────────────────────────────────────────────
+
+class CategorySummaryItem(BaseModel):
+    """Summary for a single health category card on the dashboard.
+
+    Attributes:
+        category: Category slug (e.g. 'activity', 'sleep').
+        primary_value: Formatted display string (e.g. '8,432', '7h 22m').
+        unit: Optional unit label (e.g. 'steps', 'bpm').
+        delta_percent: Week-over-week percentage change. None if insufficient data.
+        trend: 7-day ordered list of raw values (oldest first). None if < 2 days.
+        last_updated: ISO-8601 date string of most recent data point.
+        has_data: True when real data exists for this category.
+    """
+    category: str
+    primary_value: str = "—"
+    unit: str | None = None
+    delta_percent: float | None = None
+    trend: list[float] | None = None
+    last_updated: str | None = None
+    has_data: bool = False
+
+
+class DashboardSummaryResponse(BaseModel):
+    """Aggregated dashboard summary for the Health Dashboard screen.
+
+    Attributes:
+        categories: List of all category summaries (up to 10).
+        visible_order: Ordered list of category slugs with real data.
+    """
+    categories: list[CategorySummaryItem] = []
+    visible_order: list[str] = []
+
+
+class MetricDataPointItem(BaseModel):
+    """A single time-series data point.
+
+    Attributes:
+        timestamp: ISO-8601 date string (YYYY-MM-DD).
+        value: Numeric metric value.
+    """
+    timestamp: str
+    value: float
+
+
+class MetricSeriesItem(BaseModel):
+    """A named time series for a single metric.
+
+    Attributes:
+        metric_id: Metric slug identifier (e.g. 'steps').
+        display_name: Human-readable metric name.
+        unit: Unit label.
+        data_points: Ordered list of data points (oldest first).
+        source_integration: Source slug (e.g. 'apple_health').
+        current_value: Latest value as formatted string.
+        delta_percent: Week-over-week percentage change.
+        average: Mean over the selected time range.
+    """
+    metric_id: str
+    display_name: str
+    unit: str = ""
+    data_points: list[MetricDataPointItem] = []
+    source_integration: str | None = None
+    current_value: str | None = None
+    delta_percent: float | None = None
+    average: float | None = None
+
+
+class CategoryDetailResponse(BaseModel):
+    """Full detail for a single health category.
+
+    Attributes:
+        category: Category slug.
+        metrics: All metrics within this category with time-series data.
+        time_range: The selected time range key (e.g. '7D').
+    """
+    category: str
+    metrics: list[MetricSeriesItem] = []
+    time_range: str = "7D"
+
+
+class MetricDetailResponse(BaseModel):
+    """Deep-dive data for a single metric.
+
+    Attributes:
+        series: The metric's complete time-series data.
+        category: Parent category slug.
+        ai_insight: Optional AI commentary for this metric.
+    """
+    series: MetricSeriesItem
+    category: str
+    ai_insight: str | None = None

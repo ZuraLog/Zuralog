@@ -52,6 +52,7 @@ class CategoryCard extends StatelessWidget {
     this.isEditMode = false,
     this.onTap,
     this.onVisibilityToggle,
+    this.onColorPick,
   });
 
   /// Category display name (e.g. "Sleep", "Activity").
@@ -83,6 +84,9 @@ class CategoryCard extends StatelessWidget {
 
   /// Visibility toggle callback — shown only in edit mode.
   final VoidCallback? onVisibilityToggle;
+
+  /// Color picker callback — shown in edit mode when non-null.
+  final VoidCallback? onColorPick;
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +171,7 @@ class CategoryCard extends StatelessWidget {
                       isVisible: isVisible,
                       categoryColor: categoryColor,
                       onVisibilityToggle: onVisibilityToggle,
+                      onColorPick: onColorPick,
                     )
                   else if (trend != null && trend!.length >= 2)
                     _MiniSparkline(
@@ -237,17 +242,32 @@ class _EditModeControls extends StatelessWidget {
     required this.isVisible,
     required this.categoryColor,
     this.onVisibilityToggle,
+    this.onColorPick,
   });
 
   final bool isVisible;
   final Color categoryColor;
   final VoidCallback? onVisibilityToggle;
+  final VoidCallback? onColorPick;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (onColorPick != null)
+          GestureDetector(
+            onTap: onColorPick,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.palette_outlined,
+                size: AppDimens.iconSm,
+                color: categoryColor,
+              ),
+            ),
+          ),
         GestureDetector(
           onTap: onVisibilityToggle,
           behavior: HitTestBehavior.opaque,

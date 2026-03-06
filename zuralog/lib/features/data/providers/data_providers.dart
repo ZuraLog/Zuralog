@@ -12,7 +12,7 @@
 /// - [dashboardLayoutProvider]      — mutable dashboard card order/visibility
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
@@ -130,10 +130,27 @@ final metricDetailProvider =
 
 // ── Dashboard Layout ──────────────────────────────────────────────────────────
 
-/// Mutable dashboard layout (card order + visibility).
+/// Mutable dashboard layout (card order + visibility + color overrides).
 ///
 /// Initialized to [DashboardLayout.defaultLayout]. Updated by the drag-and-drop
 /// reorder in [HealthDashboardScreen]. Persisted via
 /// [DataRepository.saveDashboardLayout] after each mutation.
 final dashboardLayoutProvider =
     StateProvider<DashboardLayout>((ref) => DashboardLayout.defaultLayout);
+
+// ── Dashboard Layout Loader ───────────────────────────────────────────────────
+
+/// Async loader that fetches the persisted [DashboardLayout] from the
+/// preferences API once on cold-start, then initializes [dashboardLayoutProvider].
+///
+/// Screens should `ref.listen` this provider or use `addPostFrameCallback` to
+/// seed [dashboardLayoutProvider] when data arrives.
+final dashboardLayoutLoaderProvider = FutureProvider<DashboardLayout?>((ref) async {
+  final repo = ref.read(dataRepositoryProvider);
+  try {
+    return await repo.getPersistedLayout();
+  } catch (e) {
+    debugPrint('[DashboardLayout] Could not restore layout: $e');
+    return null;
+  }
+});

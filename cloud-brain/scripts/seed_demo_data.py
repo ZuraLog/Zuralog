@@ -729,8 +729,8 @@ def main():
 
     print("\nZuralog demo data seeder")
     print("========================")
-    print(f"  demo-full  → {FULL_ID}  ({FULL_EMAIL})")
-    print(f"  demo-empty → {EMPTY_ID} ({EMPTY_EMAIL})")
+    print(f"  demo-full  -> {FULL_ID}  ({FULL_EMAIL})")
+    print(f"  demo-empty -> {EMPTY_ID} ({EMPTY_EMAIL})")
     print()
 
     conn = get_connection()

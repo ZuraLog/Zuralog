@@ -85,6 +85,12 @@ final class MockDataRepository implements DataRepositoryInterface {
   }
 
   @override
+  Future<DashboardLayout?> getPersistedLayout() async {
+    // No-op in mock — always returns null to use the default layout.
+    return null;
+  }
+
+  @override
   void invalidateAll() {
     // No-op: mock has no cache to invalidate.
   }
@@ -216,6 +222,7 @@ final class MockDataRepository implements DataRepositoryInterface {
             displayName: 'Resting Heart Rate',
             unit: 'bpm',
             dataPoints: _mockDataPoints('heart_rate_resting'),
+            sourceIntegration: 'apple_health',
             currentValue: '62',
             deltaPercent: -3.1,
           ),
@@ -224,19 +231,140 @@ final class MockDataRepository implements DataRepositoryInterface {
             displayName: 'Heart Rate Variability',
             unit: 'ms',
             dataPoints: _mockDataPoints('hrv'),
+            sourceIntegration: 'apple_health',
             currentValue: '54',
             deltaPercent: 5.9,
           ),
         ];
-      default:
+      case HealthCategory.nutrition:
         return [
           MetricSeries(
-            metricId: '${category.name}_primary',
-            displayName: category.displayName,
+            metricId: 'calories',
+            displayName: 'Calories',
+            unit: 'kcal',
+            dataPoints: _mockDataPoints('calories'),
+            sourceIntegration: 'apple_health',
+            currentValue: '1,840',
+            deltaPercent: -1.5,
+            average: 1870,
+          ),
+          MetricSeries(
+            metricId: 'protein',
+            displayName: 'Protein',
+            unit: 'g',
+            dataPoints: _mockDataPoints('protein'),
+            sourceIntegration: 'apple_health',
+            currentValue: '132',
+            deltaPercent: 3.2,
+            average: 128,
+          ),
+        ];
+      case HealthCategory.body:
+        return [
+          MetricSeries(
+            metricId: 'weight',
+            displayName: 'Weight',
+            unit: 'kg',
+            dataPoints: _mockDataPoints('weight'),
+            sourceIntegration: 'apple_health',
+            currentValue: '78.2',
+            deltaPercent: -0.5,
+            average: 78.5,
+          ),
+          MetricSeries(
+            metricId: 'body_fat',
+            displayName: 'Body Fat',
+            unit: '%',
+            dataPoints: _mockDataPoints('body_fat'),
+            sourceIntegration: 'apple_health',
+            currentValue: '19.2',
+            deltaPercent: -2.1,
+            average: 19.6,
+          ),
+        ];
+      case HealthCategory.vitals:
+        return [
+          MetricSeries(
+            metricId: 'spo2',
+            displayName: 'Blood Oxygen',
+            unit: '%',
+            dataPoints: _mockDataPoints('spo2'),
+            sourceIntegration: 'apple_health',
+            currentValue: '98',
+            deltaPercent: 0.0,
+            average: 97.8,
+          ),
+          MetricSeries(
+            metricId: 'respiratory_rate',
+            displayName: 'Respiratory Rate',
+            unit: 'brpm',
+            dataPoints: _mockDataPoints('respiratory_rate'),
+            sourceIntegration: 'apple_health',
+            currentValue: '14.2',
+            deltaPercent: -1.4,
+            average: 14.5,
+          ),
+        ];
+      case HealthCategory.wellness:
+        return [
+          MetricSeries(
+            metricId: 'hrv',
+            displayName: 'HRV',
+            unit: 'ms',
+            dataPoints: _mockDataPoints('hrv'),
+            sourceIntegration: 'apple_health',
+            currentValue: '54',
+            deltaPercent: 5.9,
+            average: 51,
+          ),
+          MetricSeries(
+            metricId: 'stress',
+            displayName: 'Stress Level',
             unit: '',
-            dataPoints: _mockDataPoints('${category.name}_primary'),
-            currentValue: '—',
+            dataPoints: _mockDataPoints('stress'),
+            sourceIntegration: 'apple_health',
+            currentValue: '32',
+            deltaPercent: -8.0,
+            average: 38,
+          ),
+        ];
+      case HealthCategory.mobility:
+        return [
+          MetricSeries(
+            metricId: 'flights_climbed',
+            displayName: 'Flights Climbed',
+            unit: 'flights',
+            dataPoints: _mockDataPoints('flights_climbed'),
+            sourceIntegration: 'apple_health',
+            currentValue: '8',
+            deltaPercent: 14.3,
+            average: 7,
+          ),
+        ];
+      case HealthCategory.cycle:
+        return [
+          MetricSeries(
+            metricId: 'cycle_phase',
+            displayName: 'Cycle Phase',
+            unit: '',
+            dataPoints: _mockDataPoints('cycle_phase'),
+            sourceIntegration: 'apple_health',
+            currentValue: 'Follicular',
             deltaPercent: null,
+            average: null,
+          ),
+        ];
+      case HealthCategory.environment:
+        return [
+          MetricSeries(
+            metricId: 'noise_exposure',
+            displayName: 'Noise Exposure',
+            unit: 'dB',
+            dataPoints: _mockDataPoints('noise_exposure'),
+            sourceIntegration: 'apple_health',
+            currentValue: '72',
+            deltaPercent: 2.8,
+            average: 70,
           ),
         ];
     }
@@ -269,6 +397,26 @@ final class MockDataRepository implements DataRepositoryInterface {
         return 62.0;
       case 'hrv':
         return 54.0;
+      case 'calories':
+        return 1840.0;
+      case 'protein':
+        return 132.0;
+      case 'weight':
+        return 78.2;
+      case 'body_fat':
+        return 19.2;
+      case 'spo2':
+        return 98.0;
+      case 'respiratory_rate':
+        return 14.2;
+      case 'stress':
+        return 32.0;
+      case 'flights_climbed':
+        return 8.0;
+      case 'cycle_phase':
+        return 14.0;
+      case 'noise_exposure':
+        return 72.0;
       default:
         return 100.0;
     }
@@ -288,6 +436,26 @@ final class MockDataRepository implements DataRepositoryInterface {
         return 'Resting Heart Rate';
       case 'hrv':
         return 'HRV';
+      case 'calories':
+        return 'Calories';
+      case 'protein':
+        return 'Protein';
+      case 'weight':
+        return 'Weight';
+      case 'body_fat':
+        return 'Body Fat';
+      case 'spo2':
+        return 'Blood Oxygen';
+      case 'respiratory_rate':
+        return 'Respiratory Rate';
+      case 'stress':
+        return 'Stress Level';
+      case 'flights_climbed':
+        return 'Flights Climbed';
+      case 'cycle_phase':
+        return 'Cycle Phase';
+      case 'noise_exposure':
+        return 'Noise Exposure';
       default:
         return metricId
             .split('_')
@@ -310,6 +478,26 @@ final class MockDataRepository implements DataRepositoryInterface {
         return 'bpm';
       case 'hrv':
         return 'ms';
+      case 'calories':
+        return 'kcal';
+      case 'protein':
+        return 'g';
+      case 'weight':
+        return 'kg';
+      case 'body_fat':
+        return '%';
+      case 'spo2':
+        return '%';
+      case 'respiratory_rate':
+        return 'brpm';
+      case 'stress':
+        return '';
+      case 'flights_climbed':
+        return 'flights';
+      case 'cycle_phase':
+        return '';
+      case 'noise_exposure':
+        return 'dB';
       default:
         return '';
     }
@@ -329,6 +517,26 @@ final class MockDataRepository implements DataRepositoryInterface {
         return '62';
       case 'hrv':
         return '54';
+      case 'calories':
+        return '1,840';
+      case 'protein':
+        return '132';
+      case 'weight':
+        return '78.2';
+      case 'body_fat':
+        return '19.2';
+      case 'spo2':
+        return '98';
+      case 'respiratory_rate':
+        return '14.2';
+      case 'stress':
+        return '32';
+      case 'flights_climbed':
+        return '8';
+      case 'cycle_phase':
+        return 'Follicular';
+      case 'noise_exposure':
+        return '72';
       default:
         return '—';
     }

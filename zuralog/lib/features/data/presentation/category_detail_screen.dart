@@ -38,6 +38,7 @@ class CategoryDetailScreen extends ConsumerStatefulWidget {
 
 class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
   TimeRange _selectedRange = TimeRange.days7;
+  DateTimeRange? _customRange;
 
   HealthCategory get _category =>
       HealthCategory.fromString(widget.categoryId);
@@ -46,9 +47,14 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
   Widget build(BuildContext context) {
     final cat = _category;
     final color = categoryColor(cat);
+    // When custom is selected with a picked range, encode dates into the
+    // time range key so the cache treats it as a distinct entry.
+    final timeRangeKey = _selectedRange == TimeRange.custom && _customRange != null
+        ? 'custom:${_customRange!.start.toIso8601String()}|${_customRange!.end.toIso8601String()}'
+        : _selectedRange.label;
     final params = CategoryDetailParams(
       categoryId: widget.categoryId,
-      timeRange: _selectedRange.label,
+      timeRange: timeRangeKey,
     );
     final detailAsync = ref.watch(categoryDetailProvider(params));
 
@@ -84,6 +90,11 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
               value: _selectedRange,
               onChanged: (range) =>
                   setState(() => _selectedRange = range),
+              customDateRange: _customRange,
+              onCustomRangePicked: (range) => setState(() {
+                _customRange = range;
+                _selectedRange = TimeRange.custom;
+              }),
             ),
           ),
 

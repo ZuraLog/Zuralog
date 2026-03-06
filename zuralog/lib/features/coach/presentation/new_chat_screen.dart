@@ -115,6 +115,16 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for metric deep-link prefill text set by the Data tab.
+    ref.listen<String?>(coachPrefillProvider, (_, prefill) {
+      if (prefill != null && prefill.isNotEmpty) {
+        _inputCtrl.text = prefill;
+        _inputFocus.requestFocus();
+        // Clear the provider so it is not re-applied on subsequent rebuilds.
+        ref.read(coachPrefillProvider.notifier).state = null;
+      }
+    });
+
     final suggestionsAsync = ref.watch(coachPromptSuggestionsProvider);
 
     return Scaffold(

@@ -309,12 +309,13 @@ class MetricDetailData {
 
 // ── DashboardLayout ───────────────────────────────────────────────────────────
 
-/// Persisted user dashboard layout — card order and visibility.
+/// Persisted user dashboard layout — card order, visibility, and color overrides.
 class DashboardLayout {
   /// Creates a [DashboardLayout].
   const DashboardLayout({
     required this.orderedCategories,
     required this.hiddenCategories,
+    this.categoryColorOverrides = const {},
   });
 
   /// Category names in display order (all categories, including hidden).
@@ -323,19 +324,27 @@ class DashboardLayout {
   /// Set of category names the user has hidden.
   final Set<String> hiddenCategories;
 
+  /// User-selected color overrides per category name.
+  /// Key: category.name (e.g. 'activity'), Value: ARGB int (Color.value).
+  final Map<String, int> categoryColorOverrides;
+
   /// Default layout: all 10 categories visible in canonical order.
   static DashboardLayout get defaultLayout => DashboardLayout(
         orderedCategories: HealthCategory.values.map((c) => c.name).toList(),
         hiddenCategories: const {},
+        categoryColorOverrides: const {},
       );
 
   /// Deserializes from the user preferences JSON.
   factory DashboardLayout.fromJson(Map<String, dynamic> json) {
     final rawOrder = json['ordered_categories'] as List<dynamic>? ?? [];
     final rawHidden = json['hidden_categories'] as List<dynamic>? ?? [];
+    final rawColors =
+        json['category_color_overrides'] as Map<String, dynamic>? ?? {};
     return DashboardLayout(
       orderedCategories: rawOrder.map((e) => e as String).toList(),
       hiddenCategories: rawHidden.map((e) => e as String).toSet(),
+      categoryColorOverrides: rawColors.map((k, v) => MapEntry(k, v as int)),
     );
   }
 
@@ -343,5 +352,6 @@ class DashboardLayout {
   Map<String, dynamic> toJson() => {
         'ordered_categories': orderedCategories,
         'hidden_categories': hiddenCategories.toList(),
+        'category_color_overrides': categoryColorOverrides,
       };
 }

@@ -55,11 +55,16 @@ class TimeRangeSelector extends StatelessWidget {
   /// [value] — currently selected range.
   /// [onChanged] — called with the new [TimeRange] when the user taps a segment.
   /// [options] — subset of ranges to show. Defaults to all four.
+  /// [customDateRange] — the active custom range, shown when [value] is custom.
+  /// [onCustomRangePicked] — called with the picked [DateTimeRange] when the
+  ///   user confirms a date range in the date picker.
   const TimeRangeSelector({
     super.key,
     required this.value,
     required this.onChanged,
     this.options = TimeRange.values,
+    this.customDateRange,
+    this.onCustomRangePicked,
   });
 
   /// Currently selected time range.
@@ -70,6 +75,13 @@ class TimeRangeSelector extends StatelessWidget {
 
   /// Ordered list of ranges to display. Defaults to all four.
   final List<TimeRange> options;
+
+  /// The currently active custom date range. Used to pre-populate the picker.
+  final DateTimeRange? customDateRange;
+
+  /// Called when the user picks a custom date range. If null, the Custom
+  /// segment simply fires [onChanged] without opening a picker.
+  final ValueChanged<DateTimeRange>? onCustomRangePicked;
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +102,28 @@ class TimeRangeSelector extends StatelessWidget {
             _Segment(
               range: range,
               isSelected: range == value,
-              onTap: () => onChanged(range),
+              onTap: range == TimeRange.custom
+                  ? () async {
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        initialDateRange: customDateRange,
+                        builder: (ctx, child) => Theme(
+                          data: Theme.of(ctx).copyWith(
+                            colorScheme: Theme.of(ctx).colorScheme.copyWith(
+                              primary: AppColors.primary,
+                            ),
+                          ),
+                          child: child!,
+                        ),
+                      );
+                      if (picked != null) {
+                        onChanged(TimeRange.custom);
+                        onCustomRangePicked?.call(picked);
+                      }
+                    }
+                  : () => onChanged(range),
               isFirst: range == options.first,
               isLast: range == options.last,
             ),
