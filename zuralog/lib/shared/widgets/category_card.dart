@@ -96,93 +96,95 @@ class CategoryCard extends StatelessWidget {
     final textSecondary =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    Widget card = Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Category color accent stripe
-          Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: categoryColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
+    Widget card = IntrinsicHeight(
+      child: Container(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Category color accent stripe
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: categoryColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                ),
               ),
             ),
-          ),
-          // Content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd,
-                vertical: AppDimens.spaceSm + 2,
-              ),
-              child: Row(
-                children: [
-                  // Text info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          style: AppTextStyles.caption.copyWith(
-                            color: textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        if (primaryValue != null)
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: primaryValue!,
-                                  style: AppTextStyles.h3.copyWith(
-                                    color: textPrimary,
-                                  ),
-                                ),
-                                if (unit != null)
-                                  TextSpan(
-                                    text: ' $unit',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: textSecondary,
-                                    ),
-                                  ),
-                              ],
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                  vertical: AppDimens.spaceSm + 2,
+                ),
+                child: Row(
+                  children: [
+                    // Text info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            title,
+                            style: AppTextStyles.caption.copyWith(
+                              color: textSecondary,
                             ),
                           ),
-                        if (deltaPercent != null) ...[
                           const SizedBox(height: 2),
-                          _DeltaIndicator(deltaPercent: deltaPercent!),
+                          if (primaryValue != null)
+                            RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: primaryValue!,
+                                    style: AppTextStyles.h3.copyWith(
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                  if (unit != null)
+                                    TextSpan(
+                                      text: ' $unit',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: textSecondary,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          if (deltaPercent != null) ...[
+                            const SizedBox(height: 2),
+                            _DeltaIndicator(deltaPercent: deltaPercent!),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
 
-                  // Edit mode controls OR sparkline
-                  if (isEditMode)
-                    _EditModeControls(
-                      isVisible: isVisible,
-                      categoryColor: categoryColor,
-                      onVisibilityToggle: onVisibilityToggle,
-                      onColorPick: onColorPick,
-                    )
-                  else if (trend != null && trend!.length >= 2)
-                    _MiniSparkline(
-                      values: trend!,
-                      color: categoryColor,
-                    ),
-                ],
+                    // Edit mode controls OR sparkline
+                    if (isEditMode)
+                      _EditModeControls(
+                        isVisible: isVisible,
+                        categoryColor: categoryColor,
+                        onVisibilityToggle: onVisibilityToggle,
+                        onColorPick: onColorPick,
+                      )
+                    else if (trend != null && trend!.length >= 2)
+                      _MiniSparkline(
+                        values: trend!,
+                        color: categoryColor,
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
 

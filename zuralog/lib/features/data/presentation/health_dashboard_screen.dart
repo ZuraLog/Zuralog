@@ -42,17 +42,39 @@ class HealthDashboardScreen extends ConsumerStatefulWidget {
       _HealthDashboardScreenState();
 }
 
-class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
+class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
+    with AutomaticKeepAliveClientMixin {
   bool _isEditMode = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
     // Restore persisted layout on cold-start after first frame.
+    // If no layout is persisted, fall back to seeding from the dashboard API
+    // response (if already loaded) or leave orderedCategories empty so the
+    // HealthCategory.values fallback at build-time renders all cards.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dashboardLayoutLoaderProvider.future).then((persistedLayout) {
+        if (!mounted) return;
         if (persistedLayout != null) {
           ref.read(dashboardLayoutProvider.notifier).state = persistedLayout;
+        } else {
+          // No persisted layout — seed from the dashboard data if it has
+          // already resolved so the user sees the API-ordered categories
+          // rather than the canonical enum order.
+          final dashData = ref.read(dashboardProvider).valueOrNull;
+          if (dashData != null && dashData.visibleOrder.isNotEmpty) {
+            ref.read(dashboardLayoutProvider.notifier).state = DashboardLayout(
+              orderedCategories: dashData.visibleOrder,
+              hiddenCategories: const {},
+            );
+          }
+          // If dashboardProvider hasn't resolved yet, orderedCategories
+          // remains [] and the HealthCategory.values fallback in build()
+          // shows all categories in canonical order — no cards are hidden.
         }
       });
     });
@@ -113,6 +135,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required by AutomaticKeepAliveClientMixin.
     final scoreAsync = ref.watch(healthScoreProvider);
     final dashAsync = ref.watch(dashboardProvider);
     final layout = ref.watch(dashboardLayoutProvider);
@@ -267,25 +290,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                 ),
               ),
               data: (dashboard) {
-                // MED-03: Only seed layout from API if the preferences loader
-                // has resolved to null (i.e. no persisted layout exists) AND
-                // the layout is still at default. This prevents overwriting a
-                // layout that was already restored by dashboardLayoutLoaderProvider.
-                final loaderState = ref.read(dashboardLayoutLoaderProvider);
-                final hasPersistedLayout = loaderState.valueOrNull != null;
-                final currentLayout = ref.read(dashboardLayoutProvider);
-                if (!hasPersistedLayout &&
-                    dashboard.visibleOrder.isNotEmpty &&
-                    currentLayout.orderedCategories.isEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    ref.read(dashboardLayoutProvider.notifier).state =
-                        DashboardLayout(
-                      orderedCategories: dashboard.visibleOrder,
-                      hiddenCategories: currentLayout.hiddenCategories,
-                    );
-                  });
-                }
-
                 // Build ordered visible list from layout.
                 final allSummaries = {
                   for (final s in dashboard.categories)
