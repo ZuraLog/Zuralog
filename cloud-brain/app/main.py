@@ -29,52 +29,41 @@ from app.middleware.posthog_analytics import PostHogAnalyticsMiddleware
 from app.middleware.sentry_context import SentryUserContextMiddleware
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
+from app.api.v1.achievement_routes import router as achievement_router
 from app.api.v1.analytics import router as analytics_router
+from app.api.v1.attachments import attachments_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
-from app.api.v1.health_score_routes import router as health_score_router
-from app.api.v1.memory_routes import router as memory_router
-from app.api.v1.notification_routes import router as notification_router
-from app.api.v1.preferences_routes import router as preferences_router
-from app.api.v1.report_routes import router as report_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
+from app.api.v1.emergency_card_routes import router as emergency_card_router
 from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
+from app.api.v1.health_ingest import router as health_ingest_router
+from app.api.v1.health_score_routes import router as health_score_router
+from app.api.v1.insight_routes import router as insight_router
+from app.api.v1.integrations import router as integrations_router
+from app.api.v1.journal_routes import router as journal_router
+from app.api.v1.memory_routes import router as memory_router
+from app.api.v1.notification_routes import router as notification_router
 from app.api.v1.oura_routes import router as oura_router
 from app.api.v1.oura_webhooks import webhook_router as oura_webhook_router
 from app.api.v1.polar_routes import router as polar_router
 from app.api.v1.polar_webhooks import webhook_router as polar_webhook_router
-from app.api.v1.withings_routes import router as withings_router
-from app.api.v1.withings_webhooks import webhook_router as withings_webhook_router
-from app.api.v1.achievement_routes import router as achievement_router
-from app.api.v1.emergency_card_routes import router as emergency_card_router
-from app.api.v1.health_score_routes import router as health_score_router
-from app.api.v1.insight_routes import router as insight_router
-from app.api.v1.journal_routes import router as journal_router
+from app.api.v1.preferences_routes import router as preferences_router
+from app.api.v1.progress_routes import router as progress_router
 from app.api.v1.prompt_suggestions import router as prompt_suggestions_router
 from app.api.v1.quick_actions import router as quick_actions_router
 from app.api.v1.quick_log_routes import router as quick_log_router
-from app.api.v1.streak_routes import router as streak_router
-from app.api.v1.attachments import attachments_router
-from app.api.v1.health_ingest import router as health_ingest_router
-from app.api.v1.integrations import router as integrations_router
+from app.api.v1.report_routes import router as report_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
+from app.api.v1.streak_routes import router as streak_router
 from app.api.v1.transcribe import router as transcribe_router
+from app.api.v1.trends_routes import router as trends_router
 from app.api.v1.users import router as users_router
 from app.api.v1.webhooks import router as webhooks_router
-from app.api.v1.achievement_routes import router as achievement_router
-from app.api.v1.streak_routes import router as streak_router
-from app.api.v1.journal_routes import router as journal_router
-from app.api.v1.quick_log_routes import router as quick_log_router
-from app.api.v1.emergency_card_routes import router as emergency_card_router
-from app.api.v1.notification_routes import router as notification_router
-from app.api.v1.report_routes import router as report_router
-from app.api.v1.attachments import router as attachments_router
-from app.api.v1.insight_routes import router as insight_router
-from app.api.v1.progress_routes import router as progress_router
-from app.api.v1.quick_actions import router as quick_actions_router
-from app.api.v1.trends_routes import router as trends_router
+from app.api.v1.withings_routes import router as withings_router
+from app.api.v1.withings_webhooks import webhook_router as withings_webhook_router
 from app.config import settings
 from app.database import async_session
 from app.limiter import limiter

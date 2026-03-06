@@ -14,7 +14,7 @@ Usage:
         user_id="user-123",
         title="Your streak!",
         body="You hit 7 days in a row.",
-        notification_type=NotificationType.STREAK,
+        notification_type="streak",
         device_token="fcm-token-abc",
         deep_link="zuralog://streak/7",
     )
@@ -28,7 +28,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.notification_log import NotificationLog, NotificationType
+from app.models.notification_log import NOTIFICATION_TYPES, NotificationLog
 from app.services.push_service import PushService
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class NotificationService:
         user_id: str,
         title: str,
         body: str,
-        notification_type: NotificationType,
+        notification_type: str,
         device_token: str | None = None,
         deep_link: str | None = None,
         db: AsyncSession | None = None,
@@ -77,7 +77,7 @@ class NotificationService:
             user_id: Zuralog user ID (Supabase Auth UID).
             title: Notification title text.
             body: Notification body text.
-            notification_type: Semantic category for the notification.
+            notification_type: Semantic category string — one of ``NOTIFICATION_TYPES``.
             device_token: FCM device registration token. If None, no push
                 is sent but the log record is still created.
             deep_link: Optional URI for client-side tap navigation,
@@ -96,7 +96,7 @@ class NotificationService:
             user_id=user_id,
             title=title,
             body=body,
-            type=notification_type.value,
+            type=notification_type,
             deep_link=deep_link,
             sent_at=datetime.now(timezone.utc),
         )

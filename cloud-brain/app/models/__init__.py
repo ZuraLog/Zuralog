@@ -8,41 +8,37 @@ Alembic's env.py imports from here to discover all models.
 from app.database import Base
 from app.models.achievement import Achievement  # noqa: F401
 from app.models.blood_pressure import BloodPressureRecord  # noqa: F401
-from app.models.conversation import Conversation, Message
+from app.models.conversation import Conversation, Message  # noqa: F401
 from app.models.daily_metrics import DailyHealthMetrics  # noqa: F401
 from app.models.emergency_card import EmergencyCard  # noqa: F401
-from app.models.health_data import (
+from app.models.health_data import (  # noqa: F401
     ActivityType,
     NutritionEntry,
     SleepRecord,
     UnifiedActivity,
     WeightMeasurement,
 )
-from app.models.insight import Insight  # noqa: F401
-from app.models.integration import Integration
+from app.models.insight import Insight, INSIGHT_TYPES  # noqa: F401
+from app.models.integration import Integration  # noqa: F401
 from app.models.journal_entry import JournalEntry  # noqa: F401
-from app.models.notification_log import NotificationLog  # noqa: F401
-from app.models.quick_log import QuickLog  # noqa: F401
-from app.models.user import SubscriptionTier, User
-from app.models.user_device import UserDevice
-from app.models.user_goal import GoalPeriod, UserGoal
+from app.models.notification_log import NotificationLog, NOTIFICATION_TYPES  # noqa: F401
+from app.models.quick_log import QuickLog, VALID_METRIC_TYPES  # noqa: F401
+from app.models.report import Report, ReportType  # noqa: F401
+from app.models.user import SubscriptionTier, User  # noqa: F401
+from app.models.user_device import UserDevice  # noqa: F401
+from app.models.user_goal import GoalPeriod, UserGoal  # noqa: F401
 from app.models.user_preferences import (  # noqa: F401
     AppTheme,
     CoachPersona,
     ProactivityLevel,
     UserPreferences,
 )
-from app.models.achievement import ACHIEVEMENT_REGISTRY, Achievement  # noqa: F401
-from app.models.user_streak import StreakType, UserStreak  # noqa: F401
-from app.models.journal_entry import JournalEntry  # noqa: F401
-from app.models.quick_log import MetricType, QuickLog  # noqa: F401
-from app.models.emergency_card import EmergencyCard, EmergencyHealthCard  # noqa: F401
-from app.models.insight import Insight, InsightType  # noqa: F401
-from app.models.notification_log import NotificationLog, NotificationType  # noqa: F401
-from app.models.report import Report, ReportType  # noqa: F401
+from app.models.user_streak import UserStreak  # noqa: F401
 
 __all__ = [
-    "ACHIEVEMENT_REGISTRY",
+    "INSIGHT_TYPES",
+    "NOTIFICATION_TYPES",
+    "VALID_METRIC_TYPES",
     "Achievement",
     "ActivityType",
     "AppTheme",
@@ -52,23 +48,18 @@ __all__ = [
     "Conversation",
     "DailyHealthMetrics",
     "EmergencyCard",
-    "EmergencyHealthCard",
     "GoalPeriod",
     "Insight",
-    "InsightType",
     "Integration",
     "JournalEntry",
     "Message",
-    "MetricType",
     "NotificationLog",
-    "NotificationType",
     "NutritionEntry",
     "ProactivityLevel",
     "QuickLog",
     "Report",
     "ReportType",
     "SleepRecord",
-    "StreakType",
     "SubscriptionTier",
     "UnifiedActivity",
     "User",

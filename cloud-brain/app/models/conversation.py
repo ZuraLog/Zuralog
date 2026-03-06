@@ -8,7 +8,7 @@ an ordered sequence of messages with roles (user, assistant, system).
 
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -23,6 +23,8 @@ class Conversation(Base):
         id: Unique identifier (UUID).
         user_id: Foreign key to the users table.
         title: Optional conversation title (auto-generated or user-set).
+        archived: Whether the conversation is archived (hidden from default list).
+        deleted_at: Soft-delete timestamp. Non-null means the conversation is deleted.
         created_at: Timestamp of conversation creation.
         updated_at: Timestamp of last message addition.
         messages: Ordered list of messages in this conversation.
@@ -43,6 +45,18 @@ class Conversation(Base):
     title: Mapped[str | None] = mapped_column(
         String,
         nullable=True,
+    )
+    archived: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+        comment="True when the user has archived this conversation",
+    )
+    deleted_at: Mapped[str | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Soft-delete timestamp; non-null means deleted",
     )
     created_at: Mapped[str] = mapped_column(
         DateTime(timezone=True),
