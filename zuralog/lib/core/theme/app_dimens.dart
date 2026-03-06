@@ -51,6 +51,29 @@ abstract final class AppDimens {
   /// Small element radius (e.g., status dots, avatars).
   static const double radiusSm = 8;
 
+  // ── AppShapes — Shape Scale (v3.2) ────────────────────────────────────────
+  // All shape tokens map to BorderRadius.circular(value).
+  // New code should use these shape-scale constants; the legacy radius*
+  // constants above are kept as aliases for backwards compatibility.
+
+  /// 8px — chips, tags, small badges, tooltip arrows.
+  static const double shapeXs = 8;
+
+  /// 12px — input fields, tooltips, snackbars.
+  static const double shapeSm = 12;
+
+  /// 20px — standard cards, category cards (aliases radiusCard).
+  static const double shapeMd = 20;
+
+  /// 28px — bottom sheets (top corners), modals, logo card, onboarding hero containers.
+  static const double shapeLg = 28;
+
+  /// 40px — onboarding slide image frames, large feature containers.
+  static const double shapeXl = 40;
+
+  /// 100px — all buttons: primary, secondary, ghost (aliases radiusButton).
+  static const double shapePill = 100;
+
   // ── Shadows (Light mode only) ─────────────────────────────────────────────
   //
   // Dark mode uses no shadows — only 1px borders on cards.

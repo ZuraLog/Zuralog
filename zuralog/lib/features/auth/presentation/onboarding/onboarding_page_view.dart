@@ -1,15 +1,10 @@
-/// Zuralog Edge Agent — Onboarding Page View.
+/// Zuralog Edge Agent — Onboarding Page View (v3.2 redesign).
 ///
-/// A 2-page horizontal page view that tells the product story using editorial
-/// illustration cards and value-prop copy. Users can swipe or tap the Next /
-/// Get Started button to advance. The "Skip" link bypasses to the auth home.
+/// 3-slide full-bleed layout with hero image, parallax scroll, editorial
+/// typography, morphing dot indicators, and spring CTA button.
 ///
-/// Shown only on the **first launch** of the app. After the user completes or
-/// skips onboarding, [markOnboardingComplete] is called to persist the flag so
-/// subsequent launches go directly to [WelcomeScreen] (the auth home).
-///
-/// **Design direction:** "Editorial Storytelling" — full-screen scaffold,
-/// large illustration containers, clean page-dot indicator row.
+/// Shown only on first launch. After completion or skip, marks onboarding done
+/// and navigates to [WelcomeScreen].
 library;
 
 import 'package:flutter/material.dart';
@@ -21,56 +16,60 @@ import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-// ── Data ──────────────────────────────────────────────────────────────────────
+// ── Slide Data ────────────────────────────────────────────────────────────────
 
-/// Immutable data descriptor for a single onboarding value-prop page.
-class _PageData {
-  /// Creates a [_PageData].
-  const _PageData({
-    required this.icon,
+/// Immutable descriptor for a single onboarding slide.
+class _SlideData {
+  const _SlideData({
+    required this.imagePath,
+    required this.imagePlaceholderColor,
     required this.headline,
-    required this.description,
+    required this.body,
     required this.accentColor,
+    required this.placeholderIcon,
   });
 
-  /// Material icon representing this value proposition.
-  final IconData icon;
-
-  /// Short, punchy headline (max ~4 words).
+  final String imagePath;
+  final Color imagePlaceholderColor;
   final String headline;
-
-  /// Explanatory body copy (1–2 sentences).
-  final String description;
-
-  /// Tint color used for the illustration container and icon.
+  final String body;
   final Color accentColor;
+  final IconData placeholderIcon;
 }
 
-/// The ordered list of onboarding pages shown in [OnboardingPageView].
-const List<_PageData> _pages = [
-  _PageData(
-    icon: Icons.hub_rounded,
-    headline: 'Connect Everything',
-    description:
-        'Sync Strava, Apple Health, and more. Zuralog pulls all your health data into one intelligent place.',
+const List<_SlideData> _slides = [
+  _SlideData(
+    imagePath: 'assets/images/onboarding/slide_1_health_constellation.png',
+    imagePlaceholderColor: AppColors.primary,
+    headline: 'Your health,\ncomplete.',
+    body: 'Connect every app.\nSee the full picture.',
     accentColor: AppColors.primary,
+    placeholderIcon: Icons.hub_rounded,
   ),
-  _PageData(
-    icon: Icons.psychology_rounded,
-    headline: 'Intelligence, Not Data',
-    description:
-        'Your AI coach analyzes everything and gives you personalized guidance — no spreadsheets required.',
-    accentColor: AppColors.secondaryLight,
+  _SlideData(
+    imagePath: 'assets/images/onboarding/slide_2_ai_understanding.png',
+    imagePlaceholderColor: AppColors.categoryWellness,
+    headline: 'AI that\ngets you.',
+    body: 'Personalized insights from\neverything you track.',
+    accentColor: AppColors.categoryWellness,
+    placeholderIcon: Icons.psychology_rounded,
+  ),
+  _SlideData(
+    imagePath: 'assets/images/onboarding/slide_3_built_to_last.png',
+    imagePlaceholderColor: AppColors.categoryActivity,
+    headline: 'Built\nto last.',
+    body: 'Privacy-first.\nYour data, always yours.',
+    accentColor: AppColors.categoryActivity,
+    placeholderIcon: Icons.shield_rounded,
   ),
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-/// Multi-page onboarding flow that presents Zuralog's core value propositions.
+/// Full-bleed 3-slide onboarding slideshow shown on first app launch.
 ///
-/// Manages a [PageController] to drive a horizontal [PageView].
-/// Provides page-dot indicators and an adaptive Next / Create Account button.
-/// A "Skip" link is available in the top-right corner throughout.
+/// Manages a [PageController] for hero parallax, animated dot indicators,
+/// and skip/next navigation. Marks onboarding complete on finish.
 class OnboardingPageView extends ConsumerStatefulWidget {
   /// Creates an [OnboardingPageView].
   const OnboardingPageView({super.key});
@@ -79,242 +78,333 @@ class OnboardingPageView extends ConsumerStatefulWidget {
   ConsumerState<OnboardingPageView> createState() => _OnboardingPageViewState();
 }
 
-/// State for [OnboardingPageView].
-///
-/// Tracks [_currentPage] and drives the [PageController].
 class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
-  /// Controls animated page transitions.
   final PageController _pageController = PageController();
-
-  /// Zero-based index of the currently visible page.
   int _currentPage = 0;
+  double _pageOffset = 0;
 
-  /// Duration for animated page transitions.
-  static const Duration _animationDuration = Duration(milliseconds: 350);
+  static const Duration _transitionDuration = Duration(milliseconds: 380);
+  static const Curve _transitionCurve = Curves.easeOutCubic;
 
-  /// Curve for animated page transitions.
-  static const Curve _animationCurve = Curves.easeInOut;
-
-  /// Width of the CTA button in the bottom row.
-  static const double _buttonWidth = 140;
-
-  /// Diameter of an active page-dot indicator.
-  static const double _activeDotSize = 10;
-
-  /// Diameter of an inactive page-dot indicator.
-  static const double _inactiveDotSize = 8;
+  @override
+  void initState() {
+    super.initState();
+    _pageController.addListener(_onPageScroll);
+  }
 
   @override
   void dispose() {
+    _pageController.removeListener(_onPageScroll);
     _pageController.dispose();
     super.dispose();
   }
 
-  /// Returns `true` when the user is on the final page.
-  bool get _isLastPage => _currentPage == _pages.length - 1;
+  void _onPageScroll() {
+    if (_pageController.hasClients && mounted) {
+      setState(() {
+        _pageOffset = _pageController.page ?? 0;
+      });
+    }
+  }
 
-  /// Advances to the next page, or completes onboarding and navigates to the
-  /// auth home ([WelcomeScreen]) when on the last page.
+  bool get _isLastPage => _currentPage == _slides.length - 1;
+
   Future<void> _handleNextOrFinish() async {
     if (_isLastPage) {
       await markOnboardingComplete();
       if (!mounted) return;
-      // Invalidate so GoRouter's refreshListenable re-reads the updated flag.
       ref.invalidate(hasSeenOnboardingProvider);
-      // go() replaces the onboarding stack — the user cannot go "back" to
-      // onboarding after completing it.
       context.go(RouteNames.welcomePath);
     } else {
       _pageController.nextPage(
-        duration: _animationDuration,
-        curve: _animationCurve,
+        duration: _transitionDuration,
+        curve: _transitionCurve,
       );
     }
   }
 
-  /// Skips onboarding and navigates immediately to the auth home.
   Future<void> _handleSkip() async {
     await markOnboardingComplete();
     if (!mounted) return;
-    // Invalidate so GoRouter's refreshListenable re-reads the updated flag.
     ref.invalidate(hasSeenOnboardingProvider);
     context.go(RouteNames.welcomePath);
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final imageHeight = screenHeight * 0.58;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Skip link (top-right) ────────────────────────────────────
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  top: AppDimens.spaceSm,
-                  right: AppDimens.spaceMd,
-                ),
-                child: TextButton(
-                  onPressed: _handleSkip,
-                  child: Text(
-                    'Skip',
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+      backgroundColor: AppColors.backgroundDark,
+      body: Column(
+        children: [
+          // ── Hero image area — top 58% ──────────────────────────────────
+          SizedBox(
+            height: imageHeight,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: _slides.length,
+              onPageChanged: (index) => setState(() => _currentPage = index),
+              itemBuilder: (context, index) {
+                final slide = _slides[index];
+                // Parallax offset: translate image at 30% of page scroll delta.
+                final offset = (index - _pageOffset) * MediaQuery.sizeOf(context).width * 0.3;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceLg,
+                    AppDimens.spaceXxl,
+                    AppDimens.spaceLg,
+                    0,
                   ),
-                ),
-              ),
+                  child: _HeroImageCard(
+                    slide: slide,
+                    parallaxOffset: offset,
+                  ),
+                );
+              },
             ),
+          ),
 
-            // ── Page content ─────────────────────────────────────────────
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _pages.length,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
-                },
-                itemBuilder: (context, index) {
-                  final page = _pages[index];
-                  return _ValuePropPage(
-                    icon: page.icon,
-                    headline: page.headline,
-                    description: page.description,
-                    accentColor: page.accentColor,
-                  );
-                },
-              ),
+          // ── Bottom content panel ────────────────────────────────────────
+          Expanded(
+            child: _BottomPanel(
+              slides: _slides,
+              currentPage: _currentPage,
+              pageOffset: _pageOffset,
+              isLastPage: _isLastPage,
+              onNext: _handleNextOrFinish,
+              onSkip: _handleSkip,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-            // ── Bottom row: dots + CTA button ─────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceLg,
-                vertical: AppDimens.spaceLg,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Page-dot indicators.
-                  Row(
-                    children: List.generate(_pages.length, (i) {
-                      final isActive = i == _currentPage;
-                      return AnimatedContainer(
-                        duration: _animationDuration,
-                        curve: _animationCurve,
-                        margin: const EdgeInsets.only(right: AppDimens.spaceSm),
-                        width: isActive ? _activeDotSize : _inactiveDotSize,
-                        height: isActive ? _activeDotSize : _inactiveDotSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isActive
-                              ? AppColors.primary
-                              : AppColors.borderLight,
-                        ),
-                      );
-                    }),
-                  ),
+// ── Hero Image Card ───────────────────────────────────────────────────────────
 
-                  // Next / Create Account CTA.
-                  SizedBox(
-                    width: _buttonWidth,
-                    child: PrimaryButton(
-                      label: _isLastPage ? 'Get Started' : 'Next',
-                      onPressed: _handleNextOrFinish,
-                    ),
-                  ),
-                ],
-              ),
+/// Full-bleed hero image with shapeLg rounded corners and parallax transform.
+class _HeroImageCard extends StatelessWidget {
+  const _HeroImageCard({
+    required this.slide,
+    required this.parallaxOffset,
+  });
+
+  final _SlideData slide;
+  final double parallaxOffset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: Offset(parallaxOffset, 0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+          boxShadow: [
+            BoxShadow(
+              color: slide.accentColor.withValues(alpha: 0.30),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+          child: Image.asset(
+            slide.imagePath,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, e, st) => _ImagePlaceholder(slide: slide),
+          ),
         ),
       ),
     );
   }
 }
 
-// ── Private Widgets ────────────────────────────────────────────────────────────
+/// Fallback shown when the slide image asset doesn't exist yet.
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder({required this.slide});
 
-/// A single value-proposition page rendered inside [OnboardingPageView].
-///
-/// Displays a large illustration container with a tinted background, an icon,
-/// a bold headline, and descriptive body copy.
-class _ValuePropPage extends StatelessWidget {
-  /// Creates a [_ValuePropPage].
-  const _ValuePropPage({
-    required this.icon,
-    required this.headline,
-    required this.description,
-    required this.accentColor,
-  });
-
-  /// Material icon displayed at full size inside the illustration area.
-  final IconData icon;
-
-  /// Short headline for this value proposition.
-  final String headline;
-
-  /// 1-2 sentence description explaining the value proposition.
-  final String description;
-
-  /// Tint color used for the illustration background and icon.
-  final Color accentColor;
-
-  /// Dimension of the square illustration container.
-  static const double _illustrationSize = 200;
-
-  /// Size of the icon rendered inside the illustration container.
-  static const double _iconSize = 80;
-
-  /// Maximum number of lines for the description text.
-  static const int _descriptionMaxLines = 4;
+  final _SlideData slide;
 
   @override
   Widget build(BuildContext context) {
+    return ColoredBox(
+      color: slide.accentColor.withValues(alpha: 0.15),
+      child: Center(
+        child: Icon(
+          slide.placeholderIcon,
+          size: 80,
+          color: slide.accentColor,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bottom Panel ──────────────────────────────────────────────────────────────
+
+class _BottomPanel extends StatelessWidget {
+  const _BottomPanel({
+    required this.slides,
+    required this.currentPage,
+    required this.pageOffset,
+    required this.isLastPage,
+    required this.onNext,
+    required this.onSkip,
+  });
+
+  final List<_SlideData> slides;
+  final int currentPage;
+  final double pageOffset;
+  final bool isLastPage;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentSlide = slides[currentPage];
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceXl),
+      padding: EdgeInsets.fromLTRB(
+        AppDimens.spaceLg,
+        AppDimens.spaceLg,
+        AppDimens.spaceLg,
+        AppDimens.spaceLg + safeBottom,
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Illustration container ───────────────────────────────────
-          Container(
-            width: _illustrationSize,
-            height: _illustrationSize,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              color: accentColor.withValues(alpha: 0.1),
-            ),
-            child: Icon(
-              icon,
-              size: _iconSize,
-              color: accentColor,
+          // Skip link — hidden on last slide
+          if (!isLastPage)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onSkip,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceSm,
+                    vertical: AppDimens.spaceXs,
+                  ),
+                ),
+                child: Text(
+                  'Skip',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: 32), // Mirror skip button height
+
+          const Spacer(),
+
+          // Headline
+          Text(
+            currentSlide.headline,
+            style: AppTextStyles.h1.copyWith(color: Colors.white),
+          ),
+
+          const SizedBox(height: AppDimens.spaceSm),
+
+          // Body
+          Text(
+            currentSlide.body,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
 
           const SizedBox(height: AppDimens.spaceLg),
 
-          // ── Headline ────────────────────────────────────────────────
-          Text(
-            headline,
-            style: AppTextStyles.h2,
-            textAlign: TextAlign.center,
-          ),
+          // Bottom row: dots (left) + CTA button (right)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Morphing dots
+              _SlideDots(
+                slides: slides,
+                currentPage: currentPage,
+                pageOffset: pageOffset,
+              ),
 
-          const SizedBox(height: AppDimens.spaceMd),
+              const Spacer(),
 
-          // ── Description ─────────────────────────────────────────────
-          Text(
-            description,
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: _descriptionMaxLines,
+              // CTA Button — 140px fixed width
+              SizedBox(
+                width: 140,
+                child: ZuralogSpringButton(
+                  onTap: onNext,
+                  child: FilledButton(
+                    onPressed: onNext,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: currentSlide.accentColor,
+                      foregroundColor: AppColors.primaryButtonText,
+                      minimumSize: const Size(140, 56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+                      ),
+                      textStyle: AppTextStyles.h3,
+                    ),
+                    child: Text(isLastPage ? 'Get Started' : 'Next'),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Slide Dots ────────────────────────────────────────────────────────────────
+
+/// Animated pill dot indicators for the onboarding slideshow.
+///
+/// Active dot: 20×6px pill in slide accent color.
+/// Inactive dot: 6×6px circle in [AppColors.borderDark].
+/// Width morphs using [AnimatedContainer] with [Curves.easeOutCubic].
+class _SlideDots extends StatelessWidget {
+  const _SlideDots({
+    required this.slides,
+    required this.currentPage,
+    required this.pageOffset,
+  });
+
+  final List<_SlideData> slides;
+  final int currentPage;
+  final double pageOffset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(slides.length, (index) {
+        final isActive = index == currentPage;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.only(right: AppDimens.spaceSm),
+          width: isActive ? 20 : 6,
+          height: 6,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            color: isActive
+                ? slides[currentPage].accentColor
+                : AppColors.borderDark,
+          ),
+        );
+      }),
     );
   }
 }

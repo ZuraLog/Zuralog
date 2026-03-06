@@ -1,7 +1,7 @@
 # Zuralog — Design System & Brand Guidelines
 
-**Version:** 3.1  
-**Last Updated:** 2026-03-03  
+**Version:** 3.2  
+**Last Updated:** 2026-03-06  
 **Status:** Living Document
 
 ---
@@ -11,6 +11,7 @@
 Zuralog's design targets **award-winning premium quality**. The visual language is inspired by Apple Fitness+ — editorial typography, bold color-coded health domains, borderless cards on pure black, and charts that feel alive. The goal is an app people screenshot and share because it *looks* that good.
 
 **Design direction:** Editorial / Typographic — Apple Fitness+ caliber  
+**Motion direction:** M3 Expressive principles — spring physics, shape morphing, purposeful choreography  
 **North star apps:** Apple Fitness+, Linear, Opal  
 **Design ambition:** Awwwards-level mobile design — not functional-but-forgettable
 
@@ -157,22 +158,29 @@ Flutter font files declared in `pubspec.yaml` and loaded from `zuralog/assets/fo
 | `xl` | 32px | Screen-level horizontal padding |
 | `xxl` | 48px | Major section breaks, top safe area offsets |
 
-### Border Radius
+### AppShapes — Shape Scale
 
-| Context | Radius |
-|---------|--------|
-| Cards | 20px |
-| Buttons | 14px |
-| Chips / Tags | 8px |
-| Bottom sheets | 28px (top corners only) |
-| Progress rings | 50% (circular) |
-| Avatars / Icons | 50% (circular) |
-| Input fields | 12px |
+Shape is a first-class design token in Zuralog, following M3 Expressive's shape-as-expression philosophy. Rounder shapes feel more approachable and expressive; sharper shapes feel more precise and informational. Use shapes intentionally — a button being a stadium pill is a design statement, not a coincidence.
 
-**Key differences from v2.0:**
-- Card radius increased from 16px to 20px — rounder, softer, more modern
-- Button radius increased from 12px to 14px to match card proportion
-- Bottom sheet radius increased from 24px to 28px for more dramatic reveal
+All shape tokens map to `BorderRadius.circular(value)` and are implemented as constants on `AppDimens`.
+
+| Token | Radius | M3 equivalent | Usage |
+|-------|--------|----------------|-------|
+| `shapeXs` | 8px | Extra Small | Chips, tags, small badges, tooltip arrows |
+| `shapeSm` | 12px | Small | Input fields, tooltips, snackbars |
+| `shapeMd` | 20px | Medium–Large | Cards, category cards, confirmation cards |
+| `shapeLg` | 28px | Extra Large | Bottom sheets (top corners), modals, logo card, onboarding hero containers |
+| `shapeXl` | 40px | — | Onboarding slide image frames, large feature containers |
+| `shapePill` | 100px | Full / Stadium | All buttons — primary, secondary, ghost |
+
+**Shape rules:**
+- **Buttons are always `shapePill`** (stadium). No exceptions. A button with a small radius looks dated.
+- **Cards are always `shapeMd`** (20px). Elevated cards (modals, sheets) use `shapeLg` (28px).
+- **Inputs are always `shapeSm`** (12px) — slightly sharp to feel precise and form-like.
+- **Do not mix shape scales on adjacent elements.** A `shapeXl` container next to a `shapeXs` chip creates visual chaos.
+- **Interactive state does not change shape.** Shape is static; motion and color communicate interaction.
+
+**v3.2 note:** The previous `radiusCard`, `radiusButton`, `radiusButtonMd`, `radiusInput`, `radiusChip`, `radiusSm` constants in `AppDimens` are superseded by this shape scale. They will be aliased during implementation for backwards compatibility but new code should use `AppDimens.shapeMd` etc.
 
 ---
 
@@ -182,22 +190,56 @@ Flutter font files declared in `pubspec.yaml` and loaded from `zuralog/assets/fo
 
 Cards are the primary content container across the app. They are defined by **background color contrast only** — no borders, no shadows, no elevation.
 
-- Background: `surface-800` (`#121212`) on `surface-900` (`#000000`) background
-- **No border.** The color difference between `#000000` and `#121212` provides sufficient definition on OLED screens.
-- **No shadow.** Flat design; depth is communicated through color layering, not drop shadows.
-- Radius: 20px
+- Background: `cardBackgroundDark` (`#121212`) on `backgroundDark` (`#000000`)
+- **No border** in dark mode. The color difference between `#000000` and `#121212` provides sufficient definition on OLED screens.
+- **No shadow** in dark mode. Light mode uses `cardShadowLight` (`0px 4px 20px rgba(0,0,0,0.05)`).
+- Shape: `shapeMd` (20px radius)
 - Padding: 16px (`md`) internal, 24px (`lg`) gap between cards
-- Category cards may use their category color at 8–12% opacity as a subtle background tint to reinforce color coding
+- Category cards may use their category color at 8–12% opacity as a subtle background tint
 
-**Elevated cards** (bottom sheets, drawers, modals) use `surface-700` (`#1C1C1E`) to create a second level of depth above standard cards.
+**Elevated cards** (bottom sheets, drawers, modals) use `elevatedSurfaceDark` (`#1C1C1E`) — one step above standard cards.
+
+#### Interactive State (tappable cards only)
+
+Cards that are tappable use the `ZuralogCard(onTap: ...)` constructor. This enables:
+
+- **Press scale:** `0.98x` on press-down, `fastSpatial` spring bounce-back on release
+- **State layer:** `colorScheme.onSurface` at 8% opacity overlay on press (rendered via `InkWell` with custom splash color)
+- Static (non-tappable) cards do **not** animate. The absence of animation signals non-interactivity.
+
+**Do not** add `GestureDetector` directly to card children to handle taps — always pass `onTap` to `ZuralogCard` so the press animation is guaranteed.
 
 ### Buttons
 
-- **Primary action:** Filled sage-green (`#CFE1B9`) background, black text (`#000000`). Rounded 14px. Scale-down animation on press (0.96x, 100ms).
-- **Secondary action:** Transparent background, sage-green text, no border. Hover/press state uses sage-green at 10% opacity as background fill.
-- **Destructive action:** Transparent background, `error` red text. Press state uses red at 10% opacity.
-- **Ghost:** Transparent background, `text-secondary` color. Lowest emphasis.
-- **Category action:** Filled with category color, black text. Used for category-specific CTAs (e.g., "View Sleep Details" uses `category-sleep` fill).
+Buttons follow a strict three-level hierarchy. The hierarchy is enforced by Flutter widget type — not style overrides. Using the wrong widget for the wrong emphasis level is a design bug.
+
+#### Button Hierarchy
+
+| Level | Flutter Widget | Background | Text | Shape | Height | When to use |
+|-------|---------------|------------|------|-------|--------|-------------|
+| **Primary** | `FilledButton` | `AppColors.primary` (Sage Green) | `AppColors.primaryButtonText` (dark) | `shapePill` (100px) | 56px | The single most important action on a screen. One per screen. |
+| **Secondary** | `OutlinedButton` | Transparent | `colorScheme.onSurface` | `shapePill` (100px) | 56px | Supporting action alongside a primary. Max two per screen. |
+| **Ghost / Link** | `TextButton` | Transparent | `AppColors.primary` or `colorScheme.onSurfaceVariant` | `shapePill` (100px) | 48px | Lowest emphasis — navigation links, skip actions, inline text actions. |
+| **Destructive** | `TextButton` | Transparent | `AppColors.statusError` | `shapePill` (100px) | 48px | Delete, disconnect, irreversible actions. Never a `FilledButton`. |
+| **Category action** | `FilledButton` | Category color | Black | `shapePill` (100px) | 56px | Category-specific CTA (e.g., "Log Sleep" uses `categorySleep` fill). |
+
+#### Interactive State — Spring Press Animation
+
+All tappable buttons animate on press using `GestureDetector` (or `InkWell` with custom splash) + `AnimatedScale`:
+
+- **Press down:** scale to `0.97x`, `fastSpatial` spring
+- **Release:** scale back to `1.0x`, `fastSpatial` spring with natural overshoot
+- **State layer:** `colorScheme.onPrimary` at 8% opacity overlaid on press (M3 state layer)
+
+This is implemented in a `ZuralogButton` wrapper widget that all three hierarchy levels use internally. Do **not** use raw `FilledButton` / `TextButton` / `OutlinedButton` directly in screen code — always go through the shared button components.
+
+#### Button Sizing
+
+- Full-width: use `SizedBox(width: double.infinity)` wrapping the button — never `minimumSize: Size(double.infinity, ...)` in style overrides
+- Icon + label: icon is 20px, 8px gap before label text
+- Loading state: replace label with an 18px `CircularProgressIndicator` in `colorScheme.onPrimary`. Button stays at full size (no layout shift).
+
+> **v3.2 change:** `ElevatedButton` is no longer used for primary actions. It is replaced by `FilledButton` everywhere. The `elevatedButtonTheme` in `AppTheme` is preserved for legacy compatibility only.
 
 ### Metric Value Display
 
@@ -313,33 +355,62 @@ Zuralog is **dark-first** — dark mode is the primary theme and the default exp
 ### Principles
 
 1. **Purposeful:** Every animation communicates a state change — loading, completion, transition, feedback. Nothing moves for decoration.
-2. **Fast:** 200–400ms for most animations. Users should never wait for an animation to finish before they can act.
-3. **Physical:** Spring curves and ease-out curves that feel like real objects with mass. No linear animations.
-4. **Choreographed:** When multiple elements animate simultaneously (e.g., cards loading in), they should be staggered, not synchronized. Sequential entry (50ms delay per item) creates rhythm.
+2. **Physical:** Spring physics, not bezier curves. Objects have mass and settle naturally. No linear animations. No easing curves for spatial movement.
+3. **Fast:** Most interactions settle in under 400ms. Users should never wait for an animation to finish before they can act.
+4. **Choreographed:** When multiple elements animate simultaneously (e.g., cards loading in), stagger them — never synchronize. 50ms delay per item creates rhythm without feeling slow.
 
-### Flutter Duration Constants
+### AppMotion — Spring Token System
 
-| Context | Duration | Curve |
-|---------|----------|-------|
-| Button press (scale) | 100ms | `easeInOut` |
-| Tab switch (cross-fade) | 200ms | `easeOut` |
-| Card press feedback | 150ms | `easeOut` |
-| Screen transition | 300ms | `easeOutCubic` |
-| Chart draw-in | 400ms | `easeOutCubic` |
-| Progress ring fill | 800ms | `easeOutCubic` |
-| Skeleton shimmer | 1200ms (loop) | `easeInOut` |
-| Bottom sheet reveal | 350ms | `easeOutCubic` |
-| Drawer slide | 280ms | `easeOutCubic` |
-| Stagger delay per item | 50ms | — |
+Motion is defined by **spring physics** (damping ratio + stiffness), not fixed durations. This is the M3 Expressive motion approach: animations feel physical because they are governed by simulated physics, not arbitrary millisecond counts. Springs overshoot and settle — that's intentional and desirable for spatial movement.
+
+All spring values are implemented in `lib/core/theme/app_motion.dart` as `SpringDescription` constants on the `AppMotion` class.
+
+#### Spatial Springs (for things that move: position, scale, size)
+
+Spatial springs have a moderate bounce (`dampingRatio < 1.0`) — they slightly overshoot before settling, which makes movement feel alive.
+
+| Token | Damping Ratio | Stiffness | Typical use |
+|-------|--------------|-----------|-------------|
+| `fastSpatial` | 0.6 | 1400 | Button press scale, chip selection, icon morphs |
+| `defaultSpatial` | 0.7 | 700 | Card entry, screen transitions, panel slides, hero entrances |
+| `slowSpatial` | 0.8 | 300 | Progress ring fill, large hero scale-in, backdrop reveals |
+
+#### Effects Springs (for appearance changes: opacity, color, blur)
+
+Effects springs have no bounce (`dampingRatio = 1.0` / critically damped) — color and opacity changes should not oscillate, they should arrive cleanly.
+
+| Token | Damping Ratio | Stiffness | Typical use |
+|-------|--------------|-----------|-------------|
+| `fastEffects` | 1.0 | 3800 | Tap feedback, icon color change, state layer |
+| `defaultEffects` | 1.0 | 1600 | Text fade, badge reveal, shimmer end |
+| `slowEffects` | 1.0 | 800 | Skeleton → content crossfade, background tint |
+
+#### Stagger
+
+When a list of elements enters the screen simultaneously, delay each by **50ms** per item. Use `defaultSpatial` for each item's scale/fade-in.
+
+#### Bezier fallbacks (use only where `SpringSimulation` is unavailable)
+
+A small number of Flutter widgets (e.g., `PageView` with `nextPage()`) require a `Curve` rather than a `SpringSimulation`. In these cases use:
+
+| Context | Curve | Duration |
+|---------|-------|----------|
+| PageView slide | `Curves.easeOutCubic` | 380ms |
+| Tab cross-fade | `Curves.easeOut` | 200ms |
+| Skeleton shimmer (loop) | `Curves.easeInOut` | 1200ms |
 
 ### Specific Animation Behaviors
 
-- **Charts:** Animate on first load only (not on tab switch back). Lines draw left-to-right, bars grow bottom-up, rings fill clockwise.
-- **Cards:** Subtle scale feedback on press (0.96x scale, 150ms). No bounce — just a clean scale-down and release.
-- **Screen transitions:** Slide-up for pushed screens, cross-fade for tab switches. No horizontal slide (feels dated).
-- **Pull-to-refresh:** Custom refresh indicator using sage-green circular progress indicator, not the default Material pull indicator.
-- **Achievement unlock:** Scale-up from 0 to 1 with a slight overshoot (spring curve), followed by a brief glow pulse in the achievement's color.
-- **Drag-and-drop (Data tab):** Lifted card gains a subtle scale-up (1.03x) and shadow to indicate it's "picked up." Other cards smoothly reorder around it with 200ms transition.
+- **Button press:** Scale to `0.97x` on press-down, spring back with `fastSpatial`. Background state layer fades in with `fastEffects`. The combination reads as physical without being distracting.
+- **Card press:** Scale to `0.98x` on press-down, spring back with `fastSpatial`. Tappable cards only — static cards do not animate.
+- **Screen push (slide-up):** Pushed screens slide up from 40px below, fade from 0 opacity — `defaultSpatial`. Cross-fade for tab switches.
+- **Charts:** Animate on first load only. Lines draw left-to-right, bars grow bottom-up, rings fill clockwise. Use `slowSpatial` for ring fill.
+- **Progress ring fill:** `slowSpatial` spring from 0 to current value. The slight overshoot at completion reads as satisfying.
+- **Achievement unlock:** Scale from 0.6 → 1.0 with `defaultSpatial` (notable overshoot). Follow with a 600ms glow pulse in the achievement's category color.
+- **Drag-and-drop (Data tab):** Lifted card scales to `1.03x` (`fastSpatial`). Other cards reorder with `defaultSpatial` (200ms equivalent settle time).
+- **Bottom sheet reveal:** Slides up from 100% off-screen, `defaultSpatial`. Backdrop fades in with `defaultEffects`.
+- **Onboarding step dots:** Active dot morphs width from 6px → 20px with `fastSpatial`. The pill-to-circle transition is the primary visual progress signal.
+- **Hero entrances (onboarding):** Scale from 0.75 → 1.0, opacity 0 → 1, `defaultSpatial`. Stagger text elements 80ms behind the hero image.
 
 ### Website
 
@@ -382,6 +453,421 @@ All brand assets live in `assets/brand/`. See [architecture.md — ADR 004](./ar
 | Brand fonts | `assets/brand/fonts/` |
 | Flutter copy | `zuralog/assets/` (synced via `scripts/sync-assets.sh`) |
 | Website copy | `website/public/` (synced via `scripts/sync-assets.sh`) |
+
+---
+
+## v3.2 — Auth & Onboarding Design Language
+
+Added: 2026-03-06. This section defines the full visual language, component specs, and image direction for the three auth/onboarding experiences: the first-launch value prop slideshow, the auth gate, and the post-registration setup flow.
+
+---
+
+### Image Placeholder Format
+
+All image placeholders in this document follow this format. When generating images through an AI image tool, use the full spec below each placeholder tag.
+
+```
+[IMAGE PLACEHOLDER — <Screen> — <Slot name>]
+Style: <art direction style>
+Content: <what the image should depict>
+Mood: <emotional tone>
+Colors: <dominant palette>
+Dimensions: <aspect ratio or pixel size>
+Notes: <any additional guidance>
+```
+
+Images should be exported to `zuralog/assets/images/onboarding/` and `zuralog/assets/images/auth/`.
+
+---
+
+### Value Prop Slideshow (`OnboardingPageView`)
+
+The first thing a new user ever sees. Three full-bleed slides that establish Zuralog's identity before the user even creates an account. The goal is to create a sense of anticipation and premium quality — not to explain every feature.
+
+#### Layout Structure (per slide)
+
+```
+┌─────────────────────────────┐  ← Full screen, OLED black scaffold
+│                             │
+│    [Hero Image / Visual]    │  ← Top 58% of screen height
+│                             │     shapeLg (28px) corner radius
+│                             │     image fills container, object-fit cover
+├─────────────────────────────┤
+│                        Skip │  ← Ghost TextButton, top-right of bottom panel
+│                             │
+│  Headline                   │  ← h1 (34pt Bold), left-aligned, white
+│  Body copy                  │  ← bodyMedium (14pt), left-aligned, textSecondary
+│                             │
+│  ● ○ ○   [  Next  ]        │  ← Pill dot indicators + FilledButton CTA
+└─────────────────────────────┘
+```
+
+**Hero image container:** `shapeLg` radius (28px), fills `0.58 * screenHeight`, clips the image. No border. A very subtle Sage Green glow at 6% opacity is applied as a `BoxDecoration` shadow behind the container — this is justified (not vibecoded) because it anchors the floating image to the dark background and creates depth, not decoration.
+
+**Dot indicator:** Pill shape. Active dot: 20px wide × 6px tall, `AppColors.primary`. Inactive: 6px × 6px circle, `AppColors.borderDark`. Width morph uses `fastSpatial` spring. Positioned bottom-left of the action row.
+
+**CTA button:** `FilledButton`, stadium pill, 56px height, 140px width (not full-width — the dots and button share a row). Label changes: "Next" → "Next" → "Get Started". Spring press scale applies.
+
+**Skip:** `TextButton` ghost, `textSecondary` color, positioned right-aligned in the same row as the dots + CTA. On final slide, "Skip" is hidden — replaced with nothing (the "Get Started" CTA is the only exit).
+
+**Slide transitions:** `PageView` driven. On swipe: `Curves.easeOutCubic` 380ms (bezier fallback — `PageView` does not accept `SpringSimulation`). On button tap: same. Hero image parallax: the image container translates at 30% of the page scroll offset, creating a subtle depth effect.
+
+---
+
+#### Slide 1 — "Your health, complete."
+
+[IMAGE PLACEHOLDER — Onboarding Slide 1 — Hero]
+Style: 3D rendered, dark background, premium tech aesthetic
+Content: A glowing constellation of health-related 3D icons floating in a circular orbital arrangement on deep black — a stylized heart, running figure silhouette, sleep wave/moon, brain/mind icon, and fork+leaf (nutrition). Each icon emits a soft glow matching its category color (heart = red, sleep = purple, activity = green, etc.). The center of the orbit is empty negative space.
+Mood: Awe, completeness, the feeling of everything coming together
+Colors: Deep black (#000000) background; each icon in its category color at high saturation; subtle star-field or particle effect in the extreme background
+Dimensions: 3:2 aspect ratio (e.g., 1200×800px)
+Notes: Icons should feel 3D and premium — not flat illustration. Think Apple product imagery meets sci-fi UI. The orbital arrangement subconsciously communicates "everything in one place."
+
+**Headline:** "Your health, complete."
+**Body:** "Connect every app. See the full picture."
+**Accent color:** `AppColors.primary` (Sage Green) — used for the dot indicator active state and CTA button
+
+---
+
+#### Slide 2 — "AI that gets you."
+
+[IMAGE PLACEHOLDER — Onboarding Slide 2 — Hero]
+Style: Abstract digital illustration, slightly expressive
+Content: Flowing streams of data (thin luminous lines, like fiber optic strands) converging from the edges of the frame into a warm glowing central point. The center resolves into a softly abstract humanoid silhouette made of light — not photorealistic, more like an energy field taking human shape. The data streams carry subtle iconography (heartbeat waves, step counts, sleep arcs) dissolved into the flow.
+Mood: Intelligence, personalization, the feeling of being understood
+Colors: Deep black background; data streams in Sage Green (#CFE1B9) and wellness purple (#BF5AF2); the central glow warm white/gold
+Dimensions: 3:2 aspect ratio
+Notes: Should feel modern and intelligent — not clinical or cold. The humanoid center must be abstract enough to not depict any specific person (inclusive). Gradient use is justified here: the converging streams require gradient-to-center to sell the "flowing toward you" metaphor.
+
+**Headline:** "AI that gets you."
+**Body:** "Personalized insights from everything you track."
+**Accent color:** `AppColors.categoryWellness` (`#BF5AF2`) — dot indicator active state
+
+---
+
+#### Slide 3 — "Built to last."
+
+[IMAGE PLACEHOLDER — Onboarding Slide 3 — Hero]
+Style: Dark lifestyle photography, cinematic
+Content: A person (athlete/active lifestyle, gender-neutral framing — show from side or back to avoid identity specificity) glancing at a phone in a gym or outdoor training environment. The scene is lit with blue-green rim lighting (cinematic, editorial feel). The phone screen shows a faint glow — not a UI mockup, just light. The environment is dark — black or very dark concrete/industrial setting.
+Mood: Premium, aspirational, real — grounding the abstract slides with a human moment
+Colors: Deep blacks and dark greys dominate; rim lighting in activity green (#30D158) and a secondary blue tone; very minimal warm tones
+Dimensions: 3:2 aspect ratio
+Notes: Photography is used here specifically on the final slide to ground the previous two abstract slides with a real human moment. This is the moment the user decides to sign up — it should feel like joining something worth joining. No stock photo vibe — should look editorial or campaign-quality.
+
+**Headline:** "Built to last."
+**Body:** "Privacy-first. Your data, always yours."
+**Accent color:** `AppColors.categoryActivity` (`#30D158`) — dot indicator active state
+
+---
+
+### Auth Gate (`WelcomeScreen`)
+
+The screen the user lands on after the slideshow (or directly, on every subsequent app launch). This is the highest-traffic screen in the entire app — it must convert.
+
+#### Layout Structure
+
+```
+┌─────────────────────────────┐  ← Full screen, OLED black scaffold
+│                             │
+│    [Sage Green radial bloom] │  ← Very subtle: 200px radial gradient at top-center
+│                             │     AppColors.primary at 7% opacity, radial spread
+│                             │     Justified: depth anchor, not decoration
+│         [Logo Card]         │  ← 96×96px, shapeLg (28px), AppColors.primary fill
+│          Zuralog            │  ← h1 (34pt Bold), white
+│   Better health, together.  │  ← bodyMedium, textSecondary
+│                             │
+│  [  Continue with Apple  ]  │  ← FilledButton, black bg, white text, 56px, pill
+│  [  Continue with Google ]  │  ← OutlinedButton, border, 56px, pill
+│          ─── or ───         │  ← Divider row with "or" label
+│      Log in with Email      │  ← TextButton ghost, textSecondary color, 48px
+│                             │
+│   Terms · Privacy Policy    │  ← Caption, textTertiary, centered
+└─────────────────────────────┘
+```
+
+**Logo card:** 96×96px container, `shapeLg` (28px radius), `AppColors.primary` fill. Contains the Zuralog SVG logo in `AppColors.primaryButtonText`. Box shadow: `AppColors.primary` at 40% opacity, 24px blur, 8px Y offset — creates the brand glow characteristic of the app.
+
+**Radial bloom:** `RadialGradient` centered at `Alignment(0, -1.2)` (top-center, above visible area). Colors: `[AppColors.primary.withOpacity(0.07), Colors.transparent]`. Radius: `0.8`. This is rendered as a full-screen `Container` behind the content — pixels off at the edges on OLED.
+
+**Button specs:**
+- Apple: `FilledButton`, `AppColors.black` background, white text + `Icons.apple` icon (20px). 56px height, full-width, `shapePill`.
+- Google: `OutlinedButton`, transparent bg, `colorScheme.onSurface` text + "G" in `AppColors.googleBlue` (bold). Border: `AppColors.borderDark` 1.5px. 56px height, full-width, `shapePill`.
+- Email: `TextButton`, `colorScheme.onSurface` text. 48px height, full-width. No border.
+
+All three buttons use the spring press animation (`fastSpatial`, `0.97x` scale).
+
+---
+
+### Combined Auth Screen (`AuthScreen`)
+
+Replaces the separate `LoginScreen` and `RegisterScreen`. A single screen with a tab toggle to switch between the two modes. Reduces navigation pushes and creates a more cohesive auth experience.
+
+**Route:** `/auth` — both `/auth/login` and `/auth/register` redirect here (with a query parameter `?tab=login` or `?tab=register` to set the initial tab).
+
+#### Layout Structure
+
+```
+┌─────────────────────────────┐  ← Full screen, OLED black scaffold
+│ ←  Zuralog                  │  ← Back chevron + "Zuralog" wordmark (AppColors.primary)
+│                             │
+│ ╔═══════════╦═══════════╗   │  ← TabBar: "Log in" | "Create account"
+│ ║  Log in   ║  Sign up  ║   │     Sage Green underline indicator (not pill)
+│ ╚═══════════╩═══════════╝   │     Spring slide animation on switch
+│                             │
+│ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ │  ← TabBarView (NeverScrollableScrollPhysics)
+│                             │
+│  Welcome back.              │  ← h1 (34pt Bold) — or "Create account."
+│  Sign in to continue.       │  ← bodyMedium, textSecondary
+│                             │
+│  [     Email address     ]  │  ← AppTextField, shapeSm (12px)
+│  [       Password        ]  │  ← AppTextField with eye toggle
+│                (Forgot?)    │  ← TextButton ghost, right-aligned (login only)
+│                             │
+│  [       Log In          ]  │  ← FilledButton, full-width, 56px, shapePill
+│                             │
+│  Don't have an account?     │  ← Caption + TextButton inline — switches tab
+└─────────────────────────────┘
+```
+
+**Top bar:** Not an `AppBar`. A custom `Row` with:
+- Back chevron `IconButton` (left)
+- "Zuralog" `Text` in `AppTextStyles.h3` with `AppColors.primary` color (center, or left-aligned after back icon)
+- 48px spacer (right, mirrors icon width for balance)
+
+**Tab indicator:** `TabBar` with `TabController`. Indicator style: underline, `AppColors.primary`, 2px thick, rounded ends. Tab label text: `AppTextStyles.h3`. No background fill on the tabs. Spring-animated content transition when switching tabs: `AnimatedSwitcher` with `defaultSpatial` spring (opacity + slight vertical translate: 8px up on enter).
+
+**Form fields:** `AppTextField` using `shapeSm` (12px). On focus, field container scales to `1.005x` with `fastSpatial` — barely perceptible but adds tactility.
+
+**"Forgot password?"** TextButton: right-aligned below the password field. Login tab only — hidden on register tab.
+
+**Switch link** ("Don't have an account? Sign up"): caption text + inline `TextButton` in `AppColors.primary`. Tapping calls `_tabController.animateTo(1)` — switches the tab without navigating away.
+
+#### Register tab differences
+- Heading: "Create account."
+- Subheading: "Start your health journey."
+- No "Forgot password?" link
+- Switch link: "Already have an account? Log in"
+
+---
+
+### Post-Registration Onboarding Flow (`OnboardingFlowScreen`)
+
+Shown once after registration. The shell (`OnboardingFlowScreen`) manages navigation, progress, and backend submission. Individual steps are self-contained widgets.
+
+**Route:** `/auth/profile-questionnaire` (unchanged)
+
+#### Shell Layout
+
+```
+┌─────────────────────────────┐
+│ ←        ● ● ○ ○ ○ ○ ○ ○   │  ← Back arrow (left) + pill step dots (center)
+│                   [Skip]    │  ← Ghost TextButton (top-right, steps 2–8 only)
+├─────────────────────────────┤
+│                             │
+│      [Step Content]         │  ← PageView, NeverScrollableScrollPhysics
+│                             │
+│                             │
+├─────────────────────────────┤
+│  [  Back  ]  [    Next   ]  │  ← Back: OutlinedButton | Next: FilledButton
+└─────────────────────────────┘  ← Step 1 manages its own CTA (no bottom nav)
+```
+
+**Step dots:** Pill-morphing dots (same component as `OnboardingPageView`). 8 dots total (8 steps). Active: 20px × 6px pill, `AppColors.primary`. Inactive: 6px circle, `AppColors.borderDark`. `fastSpatial` spring on width morph.
+
+**Skip link:** `TextButton` ghost, `textSecondary` color, top-right. Visible on steps 2–8. Tapping advances to the next step without saving the current step's data (empty/default values are sent for that field). Step 1 (Welcome) has no skip — the only action is "Let's go".
+
+**Bottom nav:** Back button is `OutlinedButton` (secondary hierarchy — less visual weight than the current gray-filled `SecondaryButton`). Next/Finish is `FilledButton`. They share equal width in a `Row`.
+
+---
+
+#### Step 1 — Welcome
+
+**Purpose:** Brand moment. Animated entrance. Single CTA.
+
+**Layout:**
+```
+┌─────────────────────────────┐
+│                             │
+│         [Logo Card]         │  ← 80×80px, shapeLg, AppColors.primary
+│                             │     Spring scale-in: 0.6 → 1.0, defaultSpatial
+│   Hi, welcome to Zuralog.   │  ← h1, staggered 80ms after logo
+│   Let's set up your AI      │  ← bodyMedium, textSecondary
+│   health coach.             │     Staggered 160ms after logo
+│                             │
+│    [  Let's go  →  ]        │  ← FilledButton, full-width, 56px
+└─────────────────────────────┘
+```
+
+No top bar (no back arrow, no dots). Full screen feel. The logo card entrance is the primary motion moment: scale from `0.6 → 1.0` with `defaultSpatial` spring (visible overshoot to `1.04x` before settling). Text elements fade in + translate up 12px, staggered 80ms per element.
+
+---
+
+#### Step 2 — Name / Nickname
+
+**Purpose:** Personalize the AI greeting from the very first message.
+
+**Layout:**
+```
+┌─────────────────────────────┐
+│   What should we call you?  │  ← h1
+│   Your AI coach will use    │  ← bodyMedium, textSecondary
+│   this name.                │
+│                             │
+│   [    Your name or         │  ← AppTextField, large — fontSize 20pt
+│         nickname...    ]    │     Auto-focus on appear
+│                             │
+│   "Hi Alex, here's your     │  ← Live preview card (ZuralogCard)
+│    morning briefing..."     │     Updates as user types
+│                             │
+└─────────────────────────────┘
+```
+
+**Live preview card:** A `ZuralogCard` below the field that shows a preview AI greeting with the current input. Updates on every keystroke with no animation (debounced 200ms). If empty, shows "Hi there, here's your morning briefing...". This makes the benefit of entering a name immediately tangible.
+
+**Validation:** No hard validation. If skipped or left blank, the AI defaults to "Hey" / no name greeting. Backend field: `nickname` in `PATCH /api/v1/preferences`.
+
+---
+
+#### Step 3 — Goals
+
+**Purpose:** Multi-select health goals. Informs AI priority and dashboard defaults.
+
+**Layout:** 2×4 grid of goal chips. Each chip is a `FilterChip`-style card (not a standard Flutter `FilterChip` — custom widget for expressiveness):
+
+```
+┌─────────────┐  ┌─────────────┐
+│  🏃 Lose    │  │  💪 Build   │
+│    Weight   │  │   Muscle    │
+└─────────────┘  └─────────────┘
+```
+
+**Chip spec:**
+- Unselected: `cardBackgroundDark` (`#121212`) fill, `borderDark` border 1px, `shapeMd` (20px radius)
+- Selected: Category-relevant color at 15% opacity fill + category color border 1.5px + category color checkmark icon top-right
+- Spring press: scale `1.04x` on select, `fastSpatial` spring bounce-back
+- The scale overshoot on select makes the chip feel "snappy" and satisfying
+
+**Goal → Category color mapping:**
+| Goal | Category | Color |
+|------|----------|-------|
+| Lose Weight | Body | `categoryBody` |
+| Build Muscle | Activity | `categoryActivity` |
+| Improve Sleep | Sleep | `categorySleep` |
+| Boost Energy | Wellness | `categoryWellness` |
+| Reduce Stress | Wellness | `categoryWellness` |
+| Train for Event | Activity | `categoryActivity` |
+| Track Nutrition | Nutrition | `categoryNutrition` |
+| Improve Mobility | Mobility | `categoryMobility` |
+
+Minimum 1 goal required to advance (soft validation — show inline hint, not a dialog).
+
+---
+
+#### Step 4 — AI Persona
+
+**Purpose:** Choose the AI coach's communication style.
+
+**Layout:** 3 full-width persona cards stacked vertically + proactivity slider below.
+
+**Persona card spec:**
+- Full-width `ZuralogCard`, `shapeMd` (20px)
+- Left accent bar: 4px wide, full height, persona color, `shapePill` left corners
+- Title: `h3`, white. Description: `bodyMedium`, `textSecondary`
+- Selected state: Sage Green border 1.5px + `AppColors.primary` at 6% opacity background tint + checkmark icon
+- Spring scale on select: `1.01x`, `fastSpatial`
+
+**Persona color mapping:**
+| Persona | UI Label | Color |
+|---------|----------|-------|
+| Tough Love | "Direct" | `categoryHeart` |
+| Balanced | "Balanced" | `categoryActivity` |
+| Gentle | "Supportive" | `categoryWellness` |
+
+**Proactivity slider:** `Slider` widget, 3 labeled stops (Low / Medium / High). Track in `borderDark`, active track in `AppColors.primary`, thumb in `AppColors.primary`.
+
+---
+
+#### Step 5 — Fitness Level
+
+**Purpose:** Self-assessment for AI language calibration. Fast and skippable.
+
+**Layout:** 3 large selection tiles (full-width, stacked):
+
+```
+┌─────────────────────────────┐
+│ 🚶 Beginner                 │  ← h3 + bodyMedium description
+│ Just getting started        │
+└─────────────────────────────┘
+┌─────────────────────────────┐
+│ 🏃 Active                   │
+│ Regular exercise routine    │
+└─────────────────────────────┘
+┌─────────────────────────────┐
+│ 🏋 Athletic                  │
+│ Serious training & goals    │
+└─────────────────────────────┘
+```
+
+Each tile: `ZuralogCard` with `onTap`. Selected state: `AppColors.primary` at 8% tint + `AppColors.primary` border 1.5px. Spring scale on select: `1.01x`, `fastSpatial`. Single-select — selecting one deselects the others. Backend field: `fitness_level` in `PATCH /api/v1/preferences` (new field — needs backend addition).
+
+---
+
+#### Step 6 — Connect Apps
+
+**Purpose:** Informational. Sets expectations before Settings → Integrations.
+
+**Layout:** Grid of 6 integration tiles (2 columns):
+
+[IMAGE PLACEHOLDER — Onboarding Step 6 — Integration Logos]
+Style: Flat brand logos on dark card backgrounds
+Content: Logo tiles for Strava, Fitbit, Apple Health, Health Connect (Android), Oura, CalAI — each in its brand color on a `#121212` card background
+Mood: Trustworthy, "compatible with your existing tools"
+Colors: Each logo in its brand color; card bg `#121212`; "Later" badge in `surfaceDark`
+Dimensions: Each tile 160×80px
+Notes: These are informational only — no connect button on this step. A "Later" badge appears on each tile to signal non-urgency. Use actual brand logos (SVG) from `simple_icons` and `font_awesome_flutter` packages.
+
+No CTA change beyond "Next" — no connectivity happens here.
+
+---
+
+#### Step 7 — Notifications
+
+**Purpose:** Set up morning briefing and reminders.
+
+**Layout:** List of `ListTile`-style toggle rows with `Switch` widgets (Sage Green themed):
+
+- Morning Briefing toggle + time picker (visible when on)
+- Smart Reminders toggle
+- Wellness Check-in toggle + time picker (visible when on)
+
+No visual redesign needed beyond the global switch theme. The layout is clean and functional.
+
+---
+
+#### Step 8 — Discovery
+
+**Purpose:** Analytics — "Where did you hear about Zuralog?"
+
+**Layout:** Single-select list of `RadioListTile`-style options:
+- App Store
+- Friend or Family
+- Social Media
+- Search Engine
+- Other
+
+Clean, minimal. Fast. No visual novelty needed here — the user is nearly done.
+
+---
+
+### Design Principles Summary for Auth & Onboarding
+
+1. **Every screen earns its existence.** The slideshow earns its 3 slides by building genuine anticipation. Steps 2–8 each earn their position by collecting something that makes the product immediately better.
+2. **Skippability is respect.** Every step from 2 onward is skippable. The skip link is always visible. Forcing data collection creates friction and resentment.
+3. **Show, don't just tell.** The live preview name card in Step 2, the persona descriptions in Step 4, and the integration logos in Step 6 all make the product feel real and already built. Not a questionnaire — a configuration experience.
+4. **Spring physics signal quality.** The chip selection bounce, the logo entrance overshoot, the dot morphing — none of these are decoration. They signal that this is a product that was built with care.
+5. **Visual density increases over time.** Step 1 is nearly empty (brand moment). Each subsequent step adds more UI. By Step 6 the screen is full of integration tiles. This gradual density increase matches the user's growing comfort with the app.
 
 ---
 

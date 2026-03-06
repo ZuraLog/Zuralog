@@ -149,6 +149,22 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.primaryButtonText,
+          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+          disabledForegroundColor:
+              AppColors.primaryButtonText.withValues(alpha: 0.5),
+          minimumSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+          ),
+          textStyle: AppTextStyles.h3,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+        ),
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         // minimumSize is intentionally NOT set to double.infinity here.
         // Full-width outlined buttons (e.g. login form) should set their own

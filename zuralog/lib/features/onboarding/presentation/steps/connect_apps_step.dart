@@ -1,9 +1,9 @@
 /// Zuralog — Onboarding Step 4: Connect Apps.
 ///
-/// Shows a curated list of 6 featured integration tiles with a "Connect" CTA.
-/// Connecting from onboarding is optional — users can also connect later via
-/// Settings → Integrations. The step is read-only during onboarding; tapping
-/// "Connect" navigates into the full Integrations Hub.
+/// Shows a curated 2-column grid of 6 featured integration tiles.
+/// Each tile has a brand-color icon, app name, description, and a "Later"
+/// pill badge. Connecting from onboarding is optional — users can connect
+/// later via Settings → Integrations.
 ///
 /// For the MVP onboarding this step is informational — showing users which
 /// apps they can connect — without blocking flow on completion.
@@ -72,7 +72,7 @@ const List<_FeaturedApp> _featuredApps = [
 
 // ── Step Widget ────────────────────────────────────────────────────────────────
 
-/// Step 4 — featured integration tiles.
+/// Step 4 — featured integration tiles in a 2-column grid.
 ///
 /// Informational — shows which apps can be connected. Users can connect
 /// later in Settings → Integrations.
@@ -110,18 +110,20 @@ class ConnectAppsStep extends StatelessWidget {
 
           const SizedBox(height: AppDimens.spaceXl),
 
-          // ── Integration tiles ──────────────────────────────────────────
-          ...List.generate(_featuredApps.length, (index) {
-            final app = _featuredApps[index];
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: index < _featuredApps.length - 1
-                    ? AppDimens.spaceSm
-                    : 0,
-              ),
-              child: _IntegrationTile(app: app),
-            );
-          }),
+          // ── 2-column integration grid ──────────────────────────────────
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: AppDimens.spaceMd,
+              crossAxisSpacing: AppDimens.spaceMd,
+              childAspectRatio: 1.1,
+            ),
+            itemCount: _featuredApps.length,
+            itemBuilder: (context, index) =>
+                _IntegrationTile(app: _featuredApps[index]),
+          ),
 
           const SizedBox(height: AppDimens.spaceLg),
 
@@ -130,7 +132,7 @@ class ConnectAppsStep extends StatelessWidget {
             padding: const EdgeInsets.all(AppDimens.spaceMd),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+              borderRadius: BorderRadius.circular(AppDimens.shapeSm),
             ),
             child: Row(
               children: [
@@ -169,62 +171,67 @@ class _IntegrationTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: AppDimens.spaceMd,
-      ),
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
         border: Border.all(color: AppColors.borderDark),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // App icon in colored circle.
+          // App icon in rounded colored container.
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
               color: app.color.withValues(alpha: 0.15),
-              borderRadius:
-                  BorderRadius.circular(AppDimens.radiusSm),
+              borderRadius: BorderRadius.circular(AppDimens.shapeSm),
             ),
             child: Icon(app.icon, color: app.color, size: 22),
           ),
-          const SizedBox(width: AppDimens.spaceMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  app.name,
-                  style: AppTextStyles.h3
-                      .copyWith(color: colorScheme.onSurface),
-                ),
-                Text(
-                  app.description,
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
+
+          // Name + description.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                app.name,
+                style: AppTextStyles.h3
+                    .copyWith(color: colorScheme.onSurface),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                app.description,
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.textSecondary),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-          const SizedBox(width: AppDimens.spaceSm),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceMd,
-              vertical: 6,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius:
-                  BorderRadius.circular(AppDimens.radiusChip),
-            ),
-            child: Text(
-              'Later',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
+
+          // "Later" pill badge.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceSm,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppDimens.shapePill),
+              ),
+              child: Text(
+                'Later',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

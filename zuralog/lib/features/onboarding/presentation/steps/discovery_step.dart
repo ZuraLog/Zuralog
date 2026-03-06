@@ -1,7 +1,7 @@
 /// Zuralog — Onboarding Step 6: Discovery.
 ///
-/// Asks the user "Where did you hear about Zuralog?" via a tile selector.
-/// The selected value is reported to the parent via [onSourceChanged].
+/// Asks the user "Where did you hear about Zuralog?" via a custom Radio-style
+/// ZuralogCard tile selector. Selected value is reported via [onSourceChanged].
 /// The parent ([OnboardingFlowScreen]) fires the PostHog `onboarding_discovery`
 /// event on successful completion so it fires at most once.
 /// Selection is optional — the user can proceed without answering.
@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 
 // ── Discovery Sources ─────────────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ class DiscoveryStep extends StatelessWidget {
 
 // ── Source Tile ───────────────────────────────────────────────────────────────
 
+/// A custom Radio-style ZuralogCard row for the discovery source selection.
 class _SourceTile extends StatelessWidget {
   const _SourceTile({
     required this.label,
@@ -126,8 +128,9 @@ class _SourceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return GestureDetector(
+    return ZuralogSpringButton(
       onTap: onTap,
+      scaleTarget: 0.98,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeInOut,
@@ -139,7 +142,7 @@ class _SourceTile extends StatelessWidget {
           color: isSelected
               ? AppColors.primary.withValues(alpha: 0.08)
               : colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppDimens.radiusInput),
+          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.borderDark,
             width: isSelected ? 1.5 : 1,
@@ -147,6 +150,28 @@ class _SourceTile extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Custom radio indicator.
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.borderDark,
+                  width: isSelected ? 0 : 1.5,
+                ),
+                color: isSelected ? AppColors.primary : Colors.transparent,
+              ),
+              child: isSelected
+                  ? const Icon(
+                      Icons.check_rounded,
+                      color: AppColors.primaryButtonText,
+                      size: 14,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
             Expanded(
               child: Text(
                 label,
@@ -157,15 +182,6 @@ class _SourceTile extends StatelessWidget {
                   fontWeight:
                       isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
-              ),
-            ),
-            AnimatedOpacity(
-              opacity: isSelected ? 1 : 0,
-              duration: const Duration(milliseconds: 150),
-              child: const Icon(
-                Icons.check_circle_rounded,
-                color: AppColors.primary,
-                size: AppDimens.iconMd,
               ),
             ),
           ],
