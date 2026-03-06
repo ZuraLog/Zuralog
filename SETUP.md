@@ -851,7 +851,13 @@ gh run list
 ## Troubleshooting
 
 ### `flutter` not found after install
-Add `C:\flutter\bin` (or wherever you extracted Flutter) to your system PATH, then restart your terminal.
+
+Add the Flutter `bin` directory to your system PATH, then restart your terminal:
+
+- **Windows:** Add `C:\flutter\bin` (or wherever you extracted Flutter) via Start → "Edit the system environment variables" → Environment Variables → User variables → `Path` → New
+- **macOS / Linux:** Add `export PATH="$HOME/flutter/bin:$PATH"` (adjust the path to match where you extracted Flutter) to your `~/.zshrc`, `~/.bashrc`, or equivalent shell profile, then run `source ~/.zshrc`
+
+Verify with `flutter --version` in a new terminal.
 
 ### `make` not found
 
@@ -906,16 +912,40 @@ cd zuralog && flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=<your_client_id>
 ```
 
 ### `gradlew` fails with "JAVA_HOME is not set"
-You do not need to install Java separately — Android Studio bundles a JDK (JBR) and `zuralog/android/gradle.properties` is already configured to point Gradle at it via `org.gradle.java.home`. If you installed Android Studio to a non-default location, update that property to match:
-```
-# zuralog/android/gradle.properties
-org.gradle.java.home=C:\\Program Files\\Android\\Android Studio\\jbr
-```
-If you need to run `gradlew` directly from the shell without the property file, you can also pass it manually:
+
+You do not need to install Java separately — Android Studio bundles a JDK (JBR). Set `JAVA_HOME` in your shell to point at it, then re-run the failing command.
+
+The JBR location depends on your OS and where Android Studio is installed:
+
+| Platform | Default JBR path |
+|---|---|
+| **Windows** | `C:\Program Files\Android\Android Studio\jbr` |
+| **macOS** | `/Applications/Android Studio.app/Contents/jbr/Contents/Home` |
+| **Linux** | `~/android-studio/jbr` (or wherever you extracted Android Studio) |
+
+**Option 1 — Set JAVA_HOME for a single command (any platform):**
+
 ```bash
-# From zuralog/android/
+# Windows (Git Bash)
 JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" PATH="$JAVA_HOME/bin:$PATH" ./gradlew <task>
+
+# macOS
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew <task>
+
+# Linux
+JAVA_HOME="$HOME/android-studio/jbr" ./gradlew <task>
 ```
+
+**Option 2 — Set `org.gradle.java.home` in a local (gitignored) override file:**
+
+Create `zuralog/android/local.properties` (already gitignored by Android) and add:
+
+```properties
+# local.properties — gitignored, machine-specific
+org.gradle.java.home=/path/to/your/jbr
+```
+
+The `gradle.properties` in this repo intentionally does **not** set `org.gradle.java.home` because the path differs by OS and install location.
 
 ### Docker Compose fails with "unable to get image"
 Make sure Docker Desktop is running before executing `docker compose up -d`.
@@ -1029,13 +1059,18 @@ The Android OAuth client in Google Cloud Console is registered with the **debug 
 **Before releasing to the Play Store, you must:**
 
 1. Generate your release keystore (or locate it if it already exists).
-2. Get its SHA-1 fingerprint:
+2. Get its SHA-1 fingerprint (run from `zuralog/android/`):
    ```bash
-   # Windows (from zuralog/android/)
+   # If JAVA_HOME is set (any platform):
+   ./gradlew signingReport
+
+   # Windows — if JAVA_HOME is not set:
    JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" PATH="$JAVA_HOME/bin:$PATH" ./gradlew signingReport
-   # Look for the "release" Variant SHA1 line (will be different from the debug one above)
+
+   # macOS — if JAVA_HOME is not set:
+   JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew signingReport
    ```
-   Or directly from the keystore file:
+   Look for the **"release" Variant SHA1** line. Or get it directly from the keystore:
    ```bash
    keytool -list -v -keystore your-release-key.jks -alias your-key-alias
    ```
