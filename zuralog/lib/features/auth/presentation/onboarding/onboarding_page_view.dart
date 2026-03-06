@@ -217,7 +217,7 @@ class _HeroImageCard extends StatelessWidget {
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            errorBuilder: (_, _e, _st) => _ImagePlaceholder(slide: slide),
+            errorBuilder: (_, e, st) => _ImagePlaceholder(slide: slide),
           ),
         ),
       ),
