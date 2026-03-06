@@ -25,6 +25,8 @@ import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/category_card.dart';
+import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
+import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
@@ -43,9 +45,70 @@ class HealthDashboardScreen extends ConsumerStatefulWidget {
 class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
   bool _isEditMode = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Restore persisted layout on cold-start after first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(dashboardLayoutLoaderProvider.future).then((persistedLayout) {
+        if (persistedLayout != null) {
+          ref.read(dashboardLayoutProvider.notifier).state = persistedLayout;
+        }
+      });
+    });
+  }
+
   void _toggleEditMode() {
     ref.read(hapticServiceProvider).medium();
     setState(() => _isEditMode = !_isEditMode);
+  }
+
+  void _onColorPick(
+    BuildContext context,
+    WidgetRef ref,
+    DashboardLayout layout,
+    HealthCategory cat,
+  ) {
+    ref.read(hapticServiceProvider).light();
+    final defaultColor = categoryColor(cat);
+    final currentColorValue = layout.categoryColorOverrides[cat.name];
+    final currentColor =
+        currentColorValue != null ? Color(currentColorValue) : defaultColor;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _ColorPickerSheet(
+        categoryName: cat.displayName,
+        currentColor: currentColor,
+        defaultColor: defaultColor,
+        onColorSelected: (picked) {
+          final overrides =
+              Map<String, int>.from(layout.categoryColorOverrides);
+          if (picked == null) {
+            overrides.remove(cat.name);
+          } else {
+            overrides[cat.name] = picked.toARGB32();
+          }
+          final updated = DashboardLayout(
+            orderedCategories: layout.orderedCategories,
+            hiddenCategories: layout.hiddenCategories,
+            categoryColorOverrides: overrides,
+          );
+          ref.read(dashboardLayoutProvider.notifier).state = updated;
+          unawaited(Future(() async {
+            try {
+              await ref
+                  .read(dataRepositoryProvider)
+                  .saveDashboardLayout(updated);
+            } catch (e) {
+              debugPrint('[Dashboard] saveDashboardLayout error (color): $e');
+            }
+          }));
+        },
+      ),
+    );
   }
 
   @override
@@ -106,12 +169,44 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                   AppDimens.spaceSm,
                 ),
                 child: scoreAsync.when(
-                  loading: () => _HealthScoreHeroSkeleton(),
+                  loading: () => const _HealthScoreHeroSkeleton(),
                   error: (err, stack) => const SizedBox.shrink(),
-                  data: (score) => _HealthScoreHero(score: score),
+                  data: (score) => _ScoreHeroCard(score: score),
                 ),
               ),
             ),
+
+            // ── Data Maturity Banner ─────────────────────────────────────────
+            if (!layout.bannerDismissed)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    0,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
+                  ),
+                  child: DataMaturityBanner(
+                    // MED-06: count categories with real data from the dashboard
+                    daysWithData: dashAsync.valueOrNull?.visibleOrder.length ?? 0,
+                    targetDays: 7,
+                    onDismiss: () {
+                      // MED-06: persist dismissal in layout so it survives restarts
+                      final updated = layout.copyWith(bannerDismissed: true);
+                      ref.read(dashboardLayoutProvider.notifier).state = updated;
+                      unawaited(Future(() async {
+                        try {
+                          await ref
+                              .read(dataRepositoryProvider)
+                              .saveDashboardLayout(updated);
+                        } catch (e) {
+                          debugPrint('[Dashboard] saveDashboardLayout error (banner): $e');
+                        }
+                      }));
+                    },
+                  ),
+                ),
+              ),
 
             // ── Section title ────────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -142,7 +237,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                       horizontal: AppDimens.spaceMd,
                       vertical: AppDimens.spaceXs,
                     ),
-                    child: _CardSkeleton(),
+                    child: const _CardSkeleton(),
                   ),
                   childCount: 6,
                 ),
@@ -172,11 +267,16 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                 ),
               ),
               data: (dashboard) {
-                // Seed layout from API on first load if still at default.
+                // MED-03: Only seed layout from API if the preferences loader
+                // has resolved to null (i.e. no persisted layout exists) AND
+                // the layout is still at default. This prevents overwriting a
+                // layout that was already restored by dashboardLayoutLoaderProvider.
+                final loaderState = ref.read(dashboardLayoutLoaderProvider);
+                final hasPersistedLayout = loaderState.valueOrNull != null;
                 final currentLayout = ref.read(dashboardLayoutProvider);
-                if (dashboard.visibleOrder.isNotEmpty &&
-                    currentLayout.orderedCategories ==
-                        DashboardLayout.defaultLayout.orderedCategories) {
+                if (!hasPersistedLayout &&
+                    dashboard.visibleOrder.isNotEmpty &&
+                    currentLayout.orderedCategories.isEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     ref.read(dashboardLayoutProvider.notifier).state =
                         DashboardLayout(
@@ -239,6 +339,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                       layout,
                       catName,
                     ),
+                    onColorPick: (cat) =>
+                        _onColorPick(context, ref, layout, cat),
                   );
                 }
 
@@ -253,6 +355,11 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                     (context, i) {
                       final summary = visibleItems[i];
                       final cat = summary.category;
+                      final overrideValue =
+                          layout.categoryColorOverrides[cat.name];
+                      final cardColor = overrideValue != null
+                          ? Color(overrideValue)
+                          : categoryColor(cat);
                       return Padding(
                         padding: EdgeInsets.fromLTRB(
                           AppDimens.spaceMd,
@@ -264,7 +371,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
                         ),
                         child: CategoryCard(
                           title: cat.displayName,
-                          categoryColor: categoryColor(cat),
+                          categoryColor: cardColor,
                           primaryValue: summary.primaryValue,
                           unit: summary.unit,
                           deltaPercent: summary.deltaPercent,
@@ -300,6 +407,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
     final updated = DashboardLayout(
       orderedCategories: names,
       hiddenCategories: layout.hiddenCategories,
+      categoryColorOverrides: layout.categoryColorOverrides,
     );
     ref.read(dashboardLayoutProvider.notifier).state = updated;
     // Persist to API (fire-and-forget).
@@ -327,6 +435,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
     final updated = DashboardLayout(
       orderedCategories: layout.orderedCategories,
       hiddenCategories: hidden,
+      categoryColorOverrides: layout.categoryColorOverrides,
     );
     ref.read(dashboardLayoutProvider.notifier).state = updated;
     unawaited(Future(() async {
@@ -339,6 +448,37 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen> {
   }
 }
 
+// ── _ScoreHeroCard ────────────────────────────────────────────────────────────
+
+/// Wraps [HealthScoreWidget.hero] in the dashboard card container.
+class _ScoreHeroCard extends StatelessWidget {
+  const _ScoreHeroCard({required this.score});
+  final HealthScoreData score;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg =
+        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Center(
+        child: HealthScoreWidget.hero(
+          score: score.score,
+          trend: score.trend,
+          commentary: score.commentary,
+        ),
+      ),
+    );
+  }
+}
+
 // ── _EditableList ─────────────────────────────────────────────────────────────
 
 class _EditableList extends StatelessWidget {
@@ -347,12 +487,14 @@ class _EditableList extends StatelessWidget {
     required this.layout,
     required this.onReorder,
     required this.onVisibilityToggle,
+    required this.onColorPick,
   });
 
   final List<CategorySummary> items;
   final DashboardLayout layout;
   final void Function(int oldIdx, int newIdx) onReorder;
   final void Function(String catName) onVisibilityToggle;
+  final void Function(HealthCategory cat) onColorPick;
 
   @override
   Widget build(BuildContext context) {
@@ -381,6 +523,10 @@ class _EditableList extends StatelessWidget {
           final cat = summary.category;
           final isVisible =
               !layout.hiddenCategories.contains(cat.name);
+          final overrideValue = layout.categoryColorOverrides[cat.name];
+          final cardColor = overrideValue != null
+              ? Color(overrideValue)
+              : categoryColor(cat);
           return ReorderableDelayedDragStartListener(
             key: ValueKey(cat.name),
             index: i,
@@ -390,13 +536,14 @@ class _EditableList extends StatelessWidget {
               ),
               child: CategoryCard(
                 title: cat.displayName,
-                categoryColor: categoryColor(cat),
+                categoryColor: cardColor,
                 primaryValue: summary.primaryValue,
                 unit: summary.unit,
                 isVisible: isVisible,
                 isEditMode: true,
                 onVisibilityToggle: () =>
                     onVisibilityToggle(cat.name),
+                onColorPick: () => onColorPick(cat),
               ),
             ),
           );
@@ -406,108 +553,147 @@ class _EditableList extends StatelessWidget {
   }
 }
 
-// ── _HealthScoreHero ──────────────────────────────────────────────────────────
+// ── _ColorPickerSheet ─────────────────────────────────────────────────────────
 
-class _HealthScoreHero extends StatelessWidget {
-  const _HealthScoreHero({required this.score});
-  final HealthScoreData score;
+/// Bottom sheet for picking a category accent color override.
+class _ColorPickerSheet extends StatelessWidget {
+  const _ColorPickerSheet({
+    required this.categoryName,
+    required this.currentColor,
+    required this.defaultColor,
+    required this.onColorSelected,
+  });
 
-  Color get _scoreColor {
-    if (score.score >= 70) return AppColors.healthScoreGreen;
-    if (score.score >= 40) return AppColors.healthScoreAmber;
-    return AppColors.healthScoreRed;
-  }
+  final String categoryName;
+  final Color currentColor;
+  final Color defaultColor;
+
+  /// Called with the selected [Color], or `null` to reset to the default.
+  final ValueChanged<Color?> onColorSelected;
+
+  static const List<Color> _palette = [
+    Color(0xFFCFE1B9), // Sage Green (brand)
+    Color(0xFF30D158), // Green
+    Color(0xFF34C759), // Light Green
+    Color(0xFF007AFF), // Blue
+    Color(0xFF0A84FF), // Bright Blue
+    Color(0xFF5AC8FA), // Sky Blue
+    Color(0xFF5E5CE6), // Indigo
+    Color(0xFFBF5AF2), // Purple
+    Color(0xFFFF2D55), // Red
+    Color(0xFFFF6B6B), // Coral
+    Color(0xFFFF9F0A), // Amber
+    Color(0xFFFFD60A), // Yellow
+    Color(0xFFFF6F00), // Orange
+    Color(0xFF636366), // Grey
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
-
     return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceMd,
+        AppDimens.spaceSm,
+        AppDimens.spaceMd,
+        AppDimens.spaceLg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Score ring
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: score.score / 100,
-                  strokeWidth: 6,
-                  backgroundColor:
-                      _scoreColor.withValues(alpha: 0.18),
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(_scoreColor),
-                  strokeCap: StrokeCap.round,
-                ),
-                Text(
-                  '${score.score}',
-                  style: AppTextStyles.h2.copyWith(
-                    color: _scoreColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+          // Handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          const SizedBox(width: AppDimens.spaceMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Health Score',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _scoreLabel(score.score),
-                  style: AppTextStyles.h3.copyWith(
-                    color: _scoreColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (score.commentary != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    score.commentary!,
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+          const SizedBox(height: AppDimens.spaceMd),
+          Text('Accent Color', style: AppTextStyles.h3),
+          const SizedBox(height: AppDimens.spaceMd),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              // Reset to default chip
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onColorSelected(null);
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: defaultColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: currentColor == defaultColor
+                          ? Colors.white
+                          : Colors.transparent,
+                      width: 2.5,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ],
-            ),
+                  child: currentColor == defaultColor
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        )
+                      : null,
+                ),
+              ),
+              ..._palette.map(
+                (c) => GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onColorSelected(c);
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: c,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: currentColor.toARGB32() == c.toARGB32()
+                            ? Colors.white
+                            : Colors.transparent,
+                        width: 2.5,
+                      ),
+                    ),
+                    child: currentColor.toARGB32() == c.toARGB32()
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: AppDimens.spaceMd),
         ],
       ),
     );
-  }
-
-  String _scoreLabel(int s) {
-    if (s >= 85) return 'Excellent';
-    if (s >= 70) return 'Good';
-    if (s >= 55) return 'Fair';
-    if (s >= 40) return 'Needs Attention';
-    return 'Critical';
   }
 }
 
 // ── Skeleton widgets ──────────────────────────────────────────────────────────
 
 class _HealthScoreHeroSkeleton extends StatelessWidget {
+  const _HealthScoreHeroSkeleton();
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -524,6 +710,8 @@ class _HealthScoreHeroSkeleton extends StatelessWidget {
 }
 
 class _CardSkeleton extends StatelessWidget {
+  const _CardSkeleton();
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

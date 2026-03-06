@@ -16,6 +16,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
@@ -25,7 +26,9 @@ import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 String _sourceLabel(String? source) {
   if (source == null || source.isEmpty) return 'Unknown source';
-  switch (source.toLowerCase()) {
+  // LOW-02: clamp to prevent abnormally long source strings
+  final s = source.length > 50 ? source.substring(0, 50) : source;
+  switch (s.toLowerCase()) {
     case 'apple_health':
     case 'apple health':
       return 'from Apple Health';
@@ -39,7 +42,7 @@ String _sourceLabel(String? source) {
     case 'google fit':
       return 'from Google Fit';
     default:
-      return 'from ${source[0].toUpperCase()}${source.substring(1)}';
+      return 'from ${s[0].toUpperCase()}${s.substring(1)}';
   }
 }
 
@@ -60,13 +63,18 @@ class MetricDetailScreen extends ConsumerStatefulWidget {
 
 class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
   TimeRange _selectedRange = TimeRange.days7;
+  DateTimeRange? _customRange;
   bool _showRawTable = false;
 
   @override
   Widget build(BuildContext context) {
+    final timeRangeKey =
+        _selectedRange == TimeRange.custom && _customRange != null
+            ? 'custom:${_customRange!.start.toIso8601String()}|${_customRange!.end.toIso8601String()}'
+            : _selectedRange.label;
     final params = MetricDetailParams(
       metricId: widget.metricId,
-      timeRange: _selectedRange.label,
+      timeRange: timeRangeKey,
     );
     final detailAsync = ref.watch(metricDetailProvider(params));
 
@@ -100,9 +108,14 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
         data: (detail) => _MetricDetailBody(
           detail: detail,
           selectedRange: _selectedRange,
+          customRange: _customRange,
           showRawTable: _showRawTable,
           onRangeChanged: (r) =>
               setState(() => _selectedRange = r),
+          onCustomRangePicked: (range) => setState(() {
+            _customRange = range;
+            _selectedRange = TimeRange.custom;
+          }),
           onToggleRawTable: () =>
               setState(() => _showRawTable = !_showRawTable),
           metricId: widget.metricId,
@@ -122,12 +135,16 @@ class _MetricDetailBody extends StatefulWidget {
     required this.onRangeChanged,
     required this.onToggleRawTable,
     required this.metricId,
+    this.customRange,
+    this.onCustomRangePicked,
   });
 
   final MetricDetailData detail;
   final TimeRange selectedRange;
+  final DateTimeRange? customRange;
   final bool showRawTable;
   final ValueChanged<TimeRange> onRangeChanged;
+  final ValueChanged<DateTimeRange>? onCustomRangePicked;
   final VoidCallback onToggleRawTable;
   final String metricId;
 
@@ -157,7 +174,9 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
   @override
   void didUpdateWidget(_MetricDetailBody old) {
     super.didUpdateWidget(old);
-    if (old.selectedRange != widget.selectedRange) {
+    // LOW-04: also replay animation when custom date range changes
+    if (old.selectedRange != widget.selectedRange ||
+        old.customRange != widget.customRange) {
       _controller
         ..reset()
         ..forward();
@@ -193,6 +212,8 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
         TimeRangeSelector(
           value: widget.selectedRange,
           onChanged: widget.onRangeChanged,
+          customDateRange: widget.customRange,
+          onCustomRangePicked: widget.onCustomRangePicked,
         ),
 
         const SizedBox(height: AppDimens.spaceMd),
@@ -260,6 +281,8 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
         _AskCoachButton(
           metricName: series.displayName,
           metricId: widget.metricId,
+          currentValue: series.currentValue,
+          unit: series.unit,
         ),
       ],
     );
@@ -520,10 +543,13 @@ class _SourceAttribution extends StatelessWidget {
           color: AppColors.textTertiary,
         ),
         const SizedBox(width: AppDimens.spaceXs),
-        Text(
-          _sourceLabel(source),
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textTertiary,
+        Flexible(
+          child: Text(
+            _sourceLabel(source),
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textTertiary,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -714,17 +740,21 @@ class _RawTableToggle extends StatelessWidget {
 
 // ── _AskCoachButton ───────────────────────────────────────────────────────────
 
-class _AskCoachButton extends StatelessWidget {
+class _AskCoachButton extends ConsumerWidget {
   const _AskCoachButton({
     required this.metricName,
     required this.metricId,
+    this.currentValue,
+    this.unit = '',
   });
 
   final String metricName;
   final String metricId;
+  final String? currentValue;
+  final String unit;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return FilledButton.icon(
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.primary,
@@ -735,8 +765,12 @@ class _AskCoachButton extends StatelessWidget {
         ),
       ),
       onPressed: () {
-        // Navigate to coach tab. Phase 4 will add deep-linking with
-        // pre-filled metric context once the Coach screen is built.
+        final currentVal = currentValue ?? '';
+        var prefill = 'Tell me about my $metricName'
+            '${currentVal.isNotEmpty ? ': $currentVal${unit.isNotEmpty ? ' $unit' : ''}' : ''}';
+        // HIGH-05: prevent abnormally large strings from reaching the coach input
+        if (prefill.length > 500) prefill = prefill.substring(0, 500);
+        ref.read(coachPrefillProvider.notifier).state = prefill;
         context.go(RouteNames.coachPath);
       },
       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),

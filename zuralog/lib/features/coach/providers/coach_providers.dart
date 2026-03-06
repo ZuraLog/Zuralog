@@ -50,3 +50,10 @@ final coachQuickActionsProvider =
     FutureProvider<List<QuickAction>>((ref) async {
   return ref.read(coachRepositoryProvider).fetchQuickActions();
 });
+
+// ── Coach Prefill ─────────────────────────────────────────────────────────────
+
+/// Transient prefill text that the Data tab can set before navigating to the
+/// Coach tab. [NewChatScreen] reads this once and clears it after injecting
+/// the text into the input field, so it is never reused across navigations.
+final coachPrefillProvider = StateProvider<String?>((ref) => null);
