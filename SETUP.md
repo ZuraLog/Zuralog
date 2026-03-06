@@ -5,83 +5,6 @@
 
 ---
 
-## Development Environment Quick-Start (Mock Data — Recommended for Testing)
-
-> **Use this path when you want to test UI/UX with realistic data and no backend required.**
-> Mock data is fully wired for Today, Trends, Data, and Progress tabs. Auth, Integrations, and Coach require the backend only if you need to test those flows end-to-end.
-
-### Prerequisites (mock-only path)
-
-You only need Flutter and an Android or iOS emulator — no Docker, no Python, no API keys beyond an optional `GOOGLE_WEB_CLIENT_ID` (only needed if you want to test Google Sign-In).
-
-| Tool | Version | Install |
-|---|---|---|
-| **Flutter SDK** | 3.32+ (Dart 3.11+) | [docs.flutter.dev/install/manual](https://docs.flutter.dev/install/manual) |
-| **Android Studio** | Latest | [developer.android.com/studio](https://developer.android.com/studio) (Android SDK + Emulator) |
-| **GNU Make** | 4.4+ | `scoop install make` (Windows) — see [`make` not found](#make-not-found) |
-
-### Step 1 — Install Flutter dependencies
-
-```bash
-cd zuralog
-flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-```
-
-### Step 2 — Create a minimal `.env` file
-
-Create `cloud-brain/.env` with just the required stub values so `make` can read them (real keys are only needed for backend-connected flows):
-
-```bash
-# cloud-brain/.env — minimal mock-data setup
-GOOGLE_WEB_CLIENT_ID=   # leave blank or paste real value for Google Sign-In testing
-SENTRY_DSN=             # leave blank to disable Sentry locally
-POSTHOG_API_KEY=        # leave blank to disable analytics locally
-```
-
-> All other backend variables (`DATABASE_URL`, `SUPABASE_*`, etc.) are **not read** by the Flutter app or `make` targets — you can leave them unset for mock-only development.
-
-### Step 3 — Start the emulator
-
-```bash
-# List available AVDs
-flutter emulators
-
-# Windows (Git Bash) — launch directly (API 28+ required)
-"$LOCALAPPDATA/Android/Sdk/emulator/emulator.exe" -avd <AVD_NAME> -no-snapshot-load &
-
-# macOS
-~/Library/Android/sdk/emulator/emulator -avd <AVD_NAME> -no-snapshot-load &
-```
-
-Wait ~60 seconds, then verify: `adb devices` should show `emulator-5554  device`.
-
-### Step 4 — Run with mock data
-
-```bash
-# From the project root (Life-Logger/)
-make run-mock
-```
-
-This launches a `--debug` build with `USE_MOCK_DATA=true`. No backend, no Docker, no API keys required.
-
-### What mock data covers
-
-| Tab / Feature | Mock data? | Repository |
-|---|---|---|
-| Today | Yes | `MockTodayRepository` |
-| Trends | Yes | `MockTrendsRepository` |
-| Data (Health Dashboard) | Yes | `MockDataRepository` |
-| Progress | Yes | `MockProgressRepository` |
-| Dashboard (Activity rings) | Partial — real provider, static fallback | — |
-| Coach / Chat | No — requires backend WebSocket | Real only |
-| Integrations | No — OAuth flows require backend | Real only |
-| Auth (login / register) | No — requires Supabase | Real only |
-
-> **Note:** All debug builds (`--debug`) automatically activate `MockRepository` in the four covered tabs via `kDebugMode`. You do not need to pass any extra flag beyond `make run-mock` (or `make run` for the same mock behaviour with a local backend also running).
-
----
-
 ## Agent Quick-Start
 
 **If you are an AI agent reading this file**, do not assume anything. Ask the developer these questions before suggesting any command:
@@ -92,9 +15,6 @@ This launches a `--debug` build with `USE_MOCK_DATA=true`. No backend, no Docker
 4. *(Flutter only)* **Development or production?**
    - **Development** (`--debug`, connects to your local backend at `http://10.0.2.2:8001` / `localhost:8001`) → `make run` / `make run-ios`
    - **Production** (`--release`, connects to `https://api.zuralog.com`) → `make run-prod` / `make run-ios-prod`
-5. *(Flutter dev only)* **Do you want mock data?**
-   - **Yes** (no backend required, instant UI iteration) → `make run-mock`
-   - **No** (real API calls to local backend, Docker must be running) → `make run`
 
 Use the answers to select exactly one command from the [run target table](#run-target-decision-table) below. Never run a command that requires a backend the developer hasn't confirmed is running.
 
@@ -125,8 +45,8 @@ After installing Flutter, run `flutter doctor` to verify your setup and accept a
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/hyowonbernabe/Life-Logger.git
-cd Life-Logger
+git clone https://github.com/ZuraLog/Zuralog.git
+cd Zuralog
 ```
 
 ---
@@ -134,7 +54,7 @@ cd Life-Logger
 ## 2. Cloud Brain (Backend)
 
 > **Terminal to use:**
-> - **Windows** — Git Bash (not PowerShell). In AntiGravity, click the **`+`** dropdown next to your terminal tabs → select **"Git Bash"**. `make` must be installed separately first — see [`make` not found](#make-not-found) below.
+> - **Windows** — Git Bash (not PowerShell). In your editor, click the **`+`** dropdown next to your terminal tabs → select **"Git Bash"**. `make` must be installed separately first — see [`make` not found](#make-not-found) below.
 > - **macOS** — Terminal or iTerm2. `make` is pre-installed.
 > - **Linux** — Any shell (bash/zsh). `make` is pre-installed on most distros; if not, run `sudo apt install make` (Debian/Ubuntu) or `sudo dnf install make` (Fedora).
 
@@ -188,20 +108,17 @@ Open `.env` and fill in credentials for each service below.
 
 #### Required: Supabase (Auth)
 
+The project uses **Supabase** (`enccjffwpnwkxfkhargr`, region `us-east-1`) for authentication. All developers share the same Supabase project. Get the credentials from Bitwarden (search **"Supabase - Zuralog"**).
+
 | Variable | Where to find it | Description |
 |---|---|---|
 | `DATABASE_URL` | **Keep default** | Points to your local Docker Postgres |
 | `REDIS_URL` | **Keep default** | Points to your local Docker Redis |
-| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL | e.g., `https://xxxxx.supabase.co` |
-| `SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` `public` | JWT token starting with `eyJ...` |
-| `SUPABASE_SERVICE_KEY` | Supabase → Project Settings → API → `service_role` `secret` | Starts with `sb_secret_...` |
+| `SUPABASE_URL` | Bitwarden → "Supabase - Zuralog" → URL | `https://enccjffwpnwkxfkhargr.supabase.co` |
+| `SUPABASE_ANON_KEY` | Bitwarden → "Supabase - Zuralog" → Anon Key | JWT token starting with `eyJ...` |
+| `SUPABASE_SERVICE_KEY` | Bitwarden → "Supabase - Zuralog" → Service Role Key | Starts with `sb_secret_...` |
 
 > **⚠️ Warning:** The `SUPABASE_SERVICE_KEY` has **full admin access** to your Supabase project. Never commit it to Git, share it in chat, or expose it client-side. The `.gitignore` already excludes `.env` files.
-
-**Team strategy:** The project uses a hybrid database approach — local Docker Postgres for application data, Supabase for auth (GoTrue) only. For team development you have two options:
-
-1. **Shared dev project** (simpler): All developers use the same Supabase project URL and anon key. Distribute keys securely via **Bitwarden**.
-2. **Individual free-tier projects** (isolated): Each developer creates their own free Supabase project. Free tier is more than enough for development.
 
 #### Required: Google OAuth (Social Sign-In)
 
@@ -209,13 +126,10 @@ Google Sign-In uses a **Web Application** OAuth 2.0 client from Google Cloud Con
 
 | Variable | Where to find it | Description |
 |---|---|---|
-| `GOOGLE_WEB_CLIENT_ID` | [console.cloud.google.com](https://console.cloud.google.com) → project `zuralog-8311a` → APIs & Services → Credentials → Web Application client | Ends in `.apps.googleusercontent.com` |
-| `GOOGLE_WEB_CLIENT_SECRET` | Same credentials page → Client Secret | Starts with `GOCSPX-` |
+| `GOOGLE_WEB_CLIENT_ID` | Bitwarden → "Google OAuth - Zuralog" → Client ID | Ends in `.apps.googleusercontent.com` |
+| `GOOGLE_WEB_CLIENT_SECRET` | Bitwarden → "Google OAuth - Zuralog" → Client Secret | Starts with `GOCSPX-` |
 
 > **⚠️ Note:** The client secret lives only in `cloud-brain/.env` (gitignored). Never commit it.
-
-**Supabase setup (one-time, already done):**
-- Supabase Dashboard → Authentication → Providers → Google → Enable → paste Web Client ID + Secret.
 
 **Flutter setup:**
 - The Flutter app reads `GOOGLE_WEB_CLIENT_ID` at build time via `--dart-define`. Use `make run` (see Section 3e) — it injects this automatically from `cloud-brain/.env`. Do **not** use bare `flutter run` if you need Google Sign-In to work.
@@ -226,7 +140,7 @@ The AI agent uses [OpenRouter](https://openrouter.ai/) to call `moonshotai/kimi-
 
 | Variable | Where to find it |
 |---|---|
-| `OPENROUTER_API_KEY` | [openrouter.ai/keys](https://openrouter.ai/keys) — create a free account and generate a key |
+| `OPENROUTER_API_KEY` | Bitwarden → "OpenRouter - Zuralog" → API Key |
 
 The other `OPENROUTER_*` variables (`REFERER`, `TITLE`, `MODEL`) have sensible defaults and do not need to be changed.
 
@@ -328,20 +242,15 @@ Strava OAuth is implemented. Registration of the Strava API application is not r
 | `STRAVA_CLIENT_SECRET` | Your Strava API application's Client Secret |
 | `STRAVA_REDIRECT_URI` | Keep default: `zuralog://oauth/strava` |
 
-Firebase is required for the Flutter app to build. `google-services.json` and `GoogleService-Info.plist` are already committed to the repo — you get them automatically from `git clone`. The service account JSON (backend push notifications) is a private key and must be shared securely between developers.
+#### Firebase (Push Notifications)
 
-**One-time project setup (already done — for reference only):**
+Firebase is required for the Flutter app to build. `google-services.json` is **gitignored** (a past API key was leaked and revoked). You must place the file manually before building.
 
-1. Create a project at [console.firebase.google.com](https://console.firebase.google.com/) using a `@zuralog.com` Google account
-2. Add an **Android** app (package: `com.zuralog.zuralog`) → download `google-services.json` → place at `zuralog/android/app/google-services.json`
-3. Add an **iOS** app (bundle ID: `com.zuralog.zuralog`) → download `GoogleService-Info.plist` → place at `zuralog/ios/Runner/GoogleService-Info.plist`
-4. Project Settings → **Service accounts** tab → **Generate new private key** → rename to `firebase-service-account.json` → place at `cloud-brain/firebase-service-account.json`
-5. Set `FCM_CREDENTIALS_PATH` in `.env` (see below)
+**What each developer needs:**
 
-**What each developer needs to do:**
-
-- `google-services.json` and `GoogleService-Info.plist` — already in Git, no action needed
-- `firebase-service-account.json` — share securely via **Bitwarden**. Place at `cloud-brain/firebase-service-account.json`. This file is gitignored and must never be committed.
+- `google-services.json` (Android) — get from Firebase Console → project `zuralog-8311a` → Project Settings → Your apps → Android app → Download `google-services.json` → place at `zuralog/android/app/google-services.json`. Or ask the project owner for the file via Bitwarden.
+- `GoogleService-Info.plist` (iOS) — same Firebase project → iOS app → Download → place at `zuralog/ios/Runner/GoogleService-Info.plist`.
+- `firebase-service-account.json` (backend push) — Firebase Console → Project Settings → Service accounts → Generate new private key → rename to `firebase-service-account.json` → place at `cloud-brain/firebase-service-account.json`. This file is gitignored and must never be committed.
 - Set in `cloud-brain/.env`:
 
 ```
@@ -349,6 +258,14 @@ FCM_CREDENTIALS_PATH=firebase-service-account.json
 ```
 
 > **⚠️ Note:** `firebase-service-account.json` is a private key with admin access to Firebase. Never commit it to Git or share it publicly. The `.gitignore` already excludes it.
+
+**One-time project setup (already done — for reference only):**
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com/) using a `@zuralog.com` Google account
+2. Add an **Android** app (package: `com.zuralog.zuralog`) → download `google-services.json` → place at `zuralog/android/app/google-services.json`
+3. Add an **iOS** app (bundle ID: `com.zuralog.zuralog`) → download `GoogleService-Info.plist` → place at `zuralog/ios/Runner/GoogleService-Info.plist`
+4. Project Settings → **Service accounts** tab → **Generate new private key** → rename to `firebase-service-account.json` → place at `cloud-brain/firebase-service-account.json`
+5. Set `FCM_CREDENTIALS_PATH` in `.env` (see above)
 
 #### Deferred: Pinecone (Vector Memory)
 
@@ -449,9 +366,9 @@ make format   # auto-fix formatting with ruff
 
 > **Terminal to use:** Same as Section 2 — Windows: Git Bash; macOS: Terminal/iTerm2; Linux: any shell.
 
-All commands in this section are run from the **project root** (`Life-Logger/`) unless noted.
+All commands in this section are run from the **project root** (`Zuralog/`) unless noted.
 
-> `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are already committed to the repo — you get them from `git clone`. No action needed.
+> `google-services.json` (Android) is **gitignored** — place the file at `zuralog/android/app/google-services.json` before building. See the [Firebase section](#firebase-push-notifications) above.
 
 ### 3a. Install Flutter Dependencies
 
@@ -499,28 +416,26 @@ flutter devices
 
 #### Run Target Decision Table
 
-| Target | Flutter mode | Backend | Mock data? | Use when… |
-|---|---|---|---|---|
-| `make run-mock` | `--debug` | **none required** | YES (forced) | **Testing UI with mock data — recommended start** |
-| `make run` | `--debug` | local (`10.0.2.2:8001`) | YES (auto) | Full dev — backend + mock data for covered tabs |
-| `make run-prod` | `--release` | `api.zuralog.com` | NO | Verify prod behaviour on emulator |
-| `make run-ios` | `--debug` | local (`localhost:8001`) | YES (auto) | iOS Simulator, backend running locally |
-| `make run-ios-prod` | `--release` | `api.zuralog.com` | NO | Verify prod behaviour on iOS Simulator |
-| `make run-device` | `--debug` | local (`DEVICE_IP:8001`) | YES (auto) | Physical device, backend running locally |
-| `make run-device-prod` | `--release` | `api.zuralog.com` | NO | Physical device against prod API |
+| Target | Flutter mode | Backend | Use when… |
+|---|---|---|---|
+| `make run` | `--debug` | local (`10.0.2.2:8001`) | **Standard dev — Android emulator, local backend** |
+| `make run-prod` | `--release` | `api.zuralog.com` | Verify prod behaviour on Android emulator |
+| `make run-ios` | `--debug` | local (`localhost:8001`) | iOS Simulator, backend running locally |
+| `make run-ios-prod` | `--release` | `api.zuralog.com` | Verify prod behaviour on iOS Simulator |
+| `make run-device` | `--debug` | local (`DEVICE_IP:8001`) | Physical device, backend running locally |
+| `make run-device-prod` | `--release` | `api.zuralog.com` | Physical device against prod API |
 
-**Mock data** is controlled by Flutter's `kDebugMode`. Debug builds (`--debug`) automatically activate `MockRepository` in the four covered tabs (Today, Trends, Data, Progress). Release builds (`--release`) always call the real API — there is no way to use mock data in a release build.
+> **`make run` is the standard dev command.** It requires Docker running (for Postgres + Redis) and the Cloud Brain backend started (`make dev` in `cloud-brain/`). Auth, AI chat, integrations, and all real data flows work end-to-end.
 
-> **For testing:** Use `make run-mock` as your default command. It requires no credentials, no backend, and no Docker — just Flutter and a running emulator.
+> **Release builds** (`run-prod`, `run-ios-prod`, `run-device-prod`) compile with `--release` and always connect to the production API at `api.zuralog.com`.
 
 **Physical device (`run-device`):** Set `DEVICE_IP=192.168.x.x` in `cloud-brain/.env` to your machine's LAN IP. `run-device` will fail with a clear error if `DEVICE_IP` is not set.
 
 ```bash
-# From Life-Logger/ (project root)
-make run              # Android emulator — dev, local backend, mock data
-make run-mock         # Android emulator — dev, no backend required
+# From Zuralog/ (project root)
+make run              # Android emulator — dev, local backend
 make run-prod         # Android emulator — release, api.zuralog.com
-make run-ios          # iOS Simulator — dev, local backend, mock data
+make run-ios          # iOS Simulator — dev, local backend
 make run-ios-prod     # iOS Simulator — release, api.zuralog.com
 make run-device       # Physical device — dev (set DEVICE_IP in .env first)
 make run-device-prod  # Physical device — release, api.zuralog.com
@@ -562,13 +477,29 @@ adb devices              # should show "emulator-5554  device"
 
 > **`flutter emulators --launch <id>` vs direct launch:** `flutter emulators --launch` is a convenience wrapper that exits immediately after spawning the emulator process. On some setups this can race with the AVD lock file — if the emulator exits silently with code 1, use the direct `emulator.exe`/`emulator` command above instead, which keeps the process alive in the foreground (or append `&` to background it).
 
+### 3f. Demo Test Accounts
+
+Two pre-seeded test accounts exist in the shared Supabase project. Use these to log in immediately without needing to register:
+
+| Account | Email | Password | Purpose |
+|---|---|---|---|
+| **demo-full** | `demo-full@zuralog.dev` | `ZuraDemo2026!` | 30 days of realistic health data — exercises all populated UI states |
+| **demo-empty** | `demo-empty@zuralog.dev` | `ZuraDemo2026!` | Brand new account with no data — exercises all empty states |
+
+> **Re-seeding demo data:** If the demo-full account data is stale or missing, run the seed script from `cloud-brain/`:
+> ```bash
+> uv run python scripts/seed_demo_data.py          # add data (idempotent)
+> uv run python scripts/seed_demo_data.py --reset  # wipe and re-seed from scratch
+> ```
+> To recreate the auth users themselves (if deleted from Supabase), apply `cloud-brain/scripts/create_demo_auth_users.sql` via the Supabase SQL Editor.
+
 You should see the **Zuralog Welcome screen** — the animated entry screen with the Zuralog logo.
 
 > **PostHog analytics in debug builds:** Analytics is disabled by default in `kDebugMode` to prevent test events polluting production data. To enable it locally (e.g., when verifying event instrumentation), add `--dart-define=ENABLE_ANALYTICS=true` to your `flutter run` command or `make` target.
 
 From there you can proceed through onboarding and log in. The auth guard will redirect authenticated users directly to the Dashboard on subsequent launches.
 
-**Screen map (post Phase 3):**
+**Screen map:**
 
 | Screen | Route | Notes |
 |---|---|---|
@@ -582,52 +513,7 @@ From there you can proceed through onboarding and log in. The auth guard will re
 | Integrations | `/integrations` | Apps tab — connect Strava, Apple Health, etc. |
 | Settings | `/settings` | Pushed over shell — theme, subscription, logout |
 
-### 3e-i. Running with Mock Data
-
-Use `make run-mock` to run against in-process mock repositories with no live backend required. This is the fastest way to iterate on UI or test features — no Docker, no Cloud Brain, no API credentials needed beyond an optional `GOOGLE_WEB_CLIENT_ID`.
-
-```bash
-make run-mock          # Android emulator, debug, mock data, no backend required
-make run-ios-mock      # iOS Simulator equivalent (same flags, different BASE_URL)
-```
-
-> There is no `run-ios-mock` target in the Makefile — use `make run-ios` instead; iOS debug builds also activate `kDebugMode` and use mock repositories automatically.
-
-**How mock data works:**
-
-Mock data is active whenever `kDebugMode` is `true` (i.e., any `--debug` build). Each feature provider checks `kDebugMode` at runtime and returns a `MockRepository` instead of the real API-backed one:
-
-| Provider file | Mock repository activated |
-|---|---|
-| `features/today/providers/today_providers.dart` | `MockTodayRepository` |
-| `features/trends/providers/trends_providers.dart` | `MockTrendsRepository` |
-| `features/data/providers/data_providers.dart` | `MockDataRepository` |
-| `features/progress/providers/progress_providers.dart` | `MockProgressRepository` |
-
-All `make run` / `make run-ios` / `make run-device` targets are `--debug` builds, so they also use mock data automatically. `make run-mock` additionally passes `USE_MOCK_DATA=true` for explicit opt-in clarity.
-
-**What you can test with mock data (no backend):**
-
-- Today tab — health score card, AI insights feed, quick action buttons, notifications panel
-- Trends tab — trend charts, correlation matrix, report list, data source list
-- Data tab — health dashboard overview, category detail, metric detail screens
-- Progress tab — progress overview, streak tracker, goal cards, achievement screens
-- Navigation, animations, bottom nav shell, dark/light theme, design system
-
-**What requires the backend (Docker + Cloud Brain):**
-
-- Login / Register / Google Sign-In (Supabase auth)
-- Coach Chat (WebSocket at `ws://10.0.2.2:8001/api/v1/chat/ws`)
-- Integrations OAuth flows (Fitbit, Strava, Withings, Polar)
-- Real health data sync from HealthKit / Health Connect
-
-**Mock data content:**
-
-All four mock repositories return static, realistic data seeded for a fictitious user. The data is intentionally varied to exercise all UI states — populated lists, empty states, error states, and loading indicators. You do not need a Supabase account or any credentials to browse these screens.
-
-> **Release builds never use mock data.** `make run-prod`, `make run-ios-prod`, and `make run-device-prod` compile with `--release`, which sets `kDebugMode=false` and routes all feature providers to the real API. There is no way to force mock data in a release build.
-
-### 3f. Configuring the API URL
+### 3g. Configuring the API URL
 
 The app connects to `http://10.0.2.2:8001` by default — `10.0.2.2` is the Android emulator's alias for the host machine's `localhost`. The WebSocket URL is derived automatically (`ws://10.0.2.2:8001`).
 
@@ -641,11 +527,11 @@ make run-prod         # Production — uses https://api.zuralog.com
 
 > Make sure the backend server is bound to `0.0.0.0:8001` (not `127.0.0.1`) so it is reachable from the emulator.
 
-### 3g. VS Code / AntiGravity Launch Configs
+### 3h. VS Code / Editor Launch Configs
 
-A `.vscode/launch.json` is automatically available if you open the project in AntiGravity (or VS Code). It is **gitignored** — each developer has their own local copy with their own credentials.
+A `.vscode/launch.json` is available if you open the project in VS Code or a compatible editor. It is **gitignored** — each developer has their own local copy.
 
-The file is pre-populated at `.vscode/launch.json` with three configurations:
+The file is pre-populated with three configurations:
 
 | Configuration | Use case |
 |---|---|
@@ -690,9 +576,9 @@ The website uses the **same Supabase project** as the backend (`enccjffwpnwkxfkh
 
 | Variable | Where to find it | Description |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | e.g., `https://enccjffwpnwkxfkhargr.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon public` | JWT starting with `eyJ...` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` | Starts with `sb_secret_...` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Bitwarden → "Supabase - Zuralog" → URL | `https://enccjffwpnwkxfkhargr.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Bitwarden → "Supabase - Zuralog" → Anon Key | JWT starting with `eyJ...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bitwarden → "Supabase - Zuralog" → Service Role Key | Starts with `sb_secret_...` |
 
 > **⚠️ Warning:** `SUPABASE_SERVICE_ROLE_KEY` has full admin access. Never expose it client-side or commit it to Git. It is used only in server-side API routes.
 
@@ -829,7 +715,7 @@ The Cloud Brain backend deploys to Railway at `api.zuralog.com`. All deployment 
 
 ### One-time deploy
 
-1. Connect the `life-logger` GitHub repo to Railway
+1. Connect the `ZuraLog/Zuralog` GitHub repo to Railway
 2. Set the service **Root Directory** to `cloud-brain`
 3. Railway auto-detects `railway.toml` which configures:
    - Builder: Dockerfile
@@ -887,6 +773,8 @@ make build-prod-ios
 | Format backend | `uv run ruff format app/ tests/` — or `make format` |
 | Health check | `curl http://localhost:8001/health` |
 | API docs (browser) | [http://localhost:8001/docs](http://localhost:8001/docs) |
+| Seed demo data | `uv run python scripts/seed_demo_data.py` |
+| Reset demo data | `uv run python scripts/seed_demo_data.py --reset` |
 
 ### Edge Agent (`zuralog/`) — run from project root
 
@@ -897,13 +785,12 @@ make build-prod-ios
 | Flutter static analysis | `cd zuralog && flutter analyze` — or `make analyze` |
 | Flutter tests | `cd zuralog && flutter test` — or `make test` |
 | List connected devices | `flutter devices` |
-| **Android emulator — dev (local backend, mock data)** | `make run` |
-| **Android emulator — dev (no backend, mock data only)** | `make run-mock` |
-| **Android emulator — prod (api.zuralog.com, real data)** | `make run-prod` |
-| **iOS Simulator — dev (local backend, mock data)** | `make run-ios` |
-| **iOS Simulator — prod (api.zuralog.com, real data)** | `make run-ios-prod` |
+| **Android emulator — dev (local backend)** | `make run` |
+| **Android emulator — prod (api.zuralog.com)** | `make run-prod` |
+| **iOS Simulator — dev (local backend)** | `make run-ios` |
+| **iOS Simulator — prod (api.zuralog.com)** | `make run-ios-prod` |
 | **Physical device — dev (set DEVICE_IP in .env first)** | `make run-device` |
-| **Physical device — prod (api.zuralog.com, real data)** | `make run-device-prod` |
+| **Physical device — prod (api.zuralog.com)** | `make run-device-prod` |
 | Build debug APK | `make build-apk` |
 | Build release App Bundle (prod) | `make build-appbundle` |
 | Build release IPA (prod) | `make build-prod-ios` |
@@ -997,7 +884,7 @@ After installing you must do **all three** of these steps or it won't work:
 2. **Fully close your editor/terminal app** (not just a new tab — the entire process must restart to inherit the new PATH)
 3. Verify with `make --version` in a fresh Git Bash terminal
 
-> **Why so many steps?** `winget` installs the binary but does not update PATH. And changing PATH in Windows registry does not affect already-running processes — every terminal tab you open inherits the PATH from the parent app at launch time. If you add `GnuWin32\bin` to PATH but don't fully restart AntiGravity (or VS Code, or whatever IDE), Git Bash will still report `command not found`.
+> **Why so many steps?** `winget` installs the binary but does not update PATH. And changing PATH in Windows registry does not affect already-running processes — every terminal tab you open inherits the PATH from the parent app at launch time. If you add `GnuWin32\bin` to PATH but don't fully restart your editor (or VS Code, or whatever IDE), Git Bash will still report `command not found`.
 
 > **GnuWin32 caveat:** `winget install GnuWin32.Make` installs `make` 3.81 from 2006. If you encounter issues with Makefile recipes, use the Scoop method instead (installs `make` 4.4+, which this project's Makefile is tested against).
 
@@ -1063,8 +950,8 @@ flutter run --dart-define=GOOGLE_WEB_CLIENT_ID=<your-google-web-client-id>
 - Ensure `OPENROUTER_API_KEY` is set in `cloud-brain/.env`.
 - The correct model ID is `moonshotai/kimi-k2.5` (already set as the default in `.env.example`).
 
-### Flutter app fails to build with Google Services error
-`google-services.json` should already be in the repo at `zuralog/android/app/google-services.json`. If it's missing, run `git pull` — or ask the project owner for the file and place it there manually. Do not regenerate it — use the existing file from the shared Zuralog Firebase project.
+### Flutter app fails to build — missing `google-services.json`
+`google-services.json` is gitignored (a past API key was revoked). Place the file at `zuralog/android/app/google-services.json`. Download it from Firebase Console → project `zuralog-8311a` → Project Settings → Your apps → Android app → Download config file. Alternatively, ask the project owner for it via Bitwarden.
 
 ### Push notifications not working
 - Ensure `FCM_CREDENTIALS_PATH` points to a valid Firebase service account JSON in `cloud-brain/.env`.
