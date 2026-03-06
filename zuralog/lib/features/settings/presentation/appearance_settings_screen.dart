@@ -13,12 +13,10 @@ import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme_provider.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
-
-/// Selected theme mode. Values: `'dark'`, `'light'`, `'system'`.
-final _themeModeProvider = StateProvider<String>((_) => 'dark');
 
 /// Haptic feedback enabled flag.
 final _hapticFeedbackProvider = StateProvider<bool>((_) => true);
@@ -68,18 +66,20 @@ class AppearanceSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = ref.watch(_themeModeProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final haptic = ref.watch(_hapticFeedbackProvider);
     final tooltipsDisabled = ref.watch(_tooltipsDisabledProvider);
     final categoryColors = ref.watch(_categoryColorsProvider);
+    final cs = Theme.of(context).colorScheme;
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+      backgroundColor: scaffoldBg,
       body: CustomScrollView(
         slivers: [
           // ── Large-title app bar ───────────────────────────────────────────
           SliverAppBar(
-            backgroundColor: AppColors.backgroundDark,
+            backgroundColor: scaffoldBg,
             expandedHeight: 100,
             pinned: true,
             elevation: 0,
@@ -92,8 +92,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               collapseMode: CollapseMode.parallax,
               title: Text(
                 'Appearance',
-                style:
-                    AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+                style: AppTextStyles.h2.copyWith(color: cs.onSurface),
               ),
             ),
           ),
@@ -103,12 +102,12 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               // ── THEME section ─────────────────────────────────────────────
               const SettingsSectionLabel('THEME'),
               _ThemeSelector(
-                selected: theme,
+                selected: themeMode,
                 onSelected: (v) {
-                  ref.read(_themeModeProvider.notifier).state = v;
+                  ref.read(themeModeProvider.notifier).state = v;
                   ref.read(analyticsServiceProvider).capture(
                     event: AnalyticsEvents.themeChanged,
-                    properties: {'theme': v},
+                    properties: {'theme': v.name},
                   );
                 },
               ),
@@ -147,7 +146,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     onChanged: (v) =>
                         ref.read(_tooltipsDisabledProvider.notifier).state = v,
                   ),
-                  _Divider(),
+                  const _Divider(),
                   _TapRow(
                     icon: Icons.refresh_rounded,
                     iconColor: AppColors.categoryWellness,
@@ -204,7 +203,7 @@ class _SettingsGroup extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -224,7 +223,7 @@ class _Divider extends StatelessWidget {
       padding: const EdgeInsets.only(left: 68),
       child: Container(
         height: 1,
-        color: AppColors.borderDark.withValues(alpha: 0.5),
+        color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
       ),
     );
   }
@@ -251,6 +250,7 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -274,8 +274,7 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style:
-                      AppTextStyles.body.copyWith(color: AppColors.textPrimaryDark),
+                  style: AppTextStyles.body.copyWith(color: cs.onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -289,9 +288,6 @@ class _ToggleRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.primary,
-            inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: AppColors.borderDark,
           ),
         ],
       ),
@@ -325,6 +321,7 @@ class _TapRowState extends State<_TapRow> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -335,7 +332,7 @@ class _TapRowState extends State<_TapRow> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         color: _pressed
-            ? AppColors.borderDark.withValues(alpha: 0.3)
+            ? cs.onSurface.withValues(alpha: 0.08)
             : Colors.transparent,
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -359,8 +356,7 @@ class _TapRowState extends State<_TapRow> {
                 children: [
                   Text(
                     widget.title,
-                    style: AppTextStyles.body
-                        .copyWith(color: AppColors.textPrimaryDark),
+                    style: AppTextStyles.body.copyWith(color: cs.onSurface),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -391,8 +387,8 @@ class _ThemeSelector extends StatelessWidget {
     required this.onSelected,
   });
 
-  final String selected;
-  final ValueChanged<String> onSelected;
+  final ThemeMode selected;
+  final ValueChanged<ThemeMode> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -401,27 +397,27 @@ class _ThemeSelector extends StatelessWidget {
       child: Row(
         children: [
           _ThemeOptionCard(
-            value: 'dark',
+            value: ThemeMode.dark,
             label: 'Dark',
             icon: Icons.dark_mode_rounded,
-            selected: selected == 'dark',
-            onTap: () => onSelected('dark'),
+            selected: selected == ThemeMode.dark,
+            onTap: () => onSelected(ThemeMode.dark),
           ),
           const SizedBox(width: AppDimens.spaceSm),
           _ThemeOptionCard(
-            value: 'light',
+            value: ThemeMode.light,
             label: 'Light',
             icon: Icons.light_mode_rounded,
-            selected: selected == 'light',
-            onTap: () => onSelected('light'),
+            selected: selected == ThemeMode.light,
+            onTap: () => onSelected(ThemeMode.light),
           ),
           const SizedBox(width: AppDimens.spaceSm),
           _ThemeOptionCard(
-            value: 'system',
+            value: ThemeMode.system,
             label: 'System',
             icon: Icons.contrast_rounded,
-            selected: selected == 'system',
-            onTap: () => onSelected('system'),
+            selected: selected == ThemeMode.system,
+            onTap: () => onSelected(ThemeMode.system),
           ),
         ],
       ),
@@ -438,7 +434,7 @@ class _ThemeOptionCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final String value;
+  final ThemeMode value;
   final String label;
   final IconData icon;
   final bool selected;
@@ -446,6 +442,7 @@ class _ThemeOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -457,12 +454,12 @@ class _ThemeOptionCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.primary.withValues(alpha: 0.12)
-                : AppColors.cardBackgroundDark,
+                ? cs.primary.withValues(alpha: 0.12)
+                : cs.surface,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             border: Border.all(
               color: selected
-                  ? AppColors.primary.withValues(alpha: 0.55)
+                  ? cs.primary.withValues(alpha: 0.55)
                   : Colors.transparent,
               width: 1.5,
             ),
@@ -476,15 +473,14 @@ class _ThemeOptionCard extends StatelessWidget {
                   icon,
                   key: ValueKey<bool>(selected),
                   size: 26,
-                  color: selected ? AppColors.primary : AppColors.textTertiary,
+                  color: selected ? cs.primary : AppColors.textTertiary,
                 ),
               ),
               const SizedBox(height: AppDimens.spaceXs),
               Text(
                 label,
                 style: AppTextStyles.caption.copyWith(
-                  color:
-                      selected ? AppColors.primary : AppColors.textSecondary,
+                  color: selected ? cs.primary : AppColors.textSecondary,
                   fontWeight:
                       selected ? FontWeight.w600 : FontWeight.w400,
                 ),
@@ -514,7 +510,7 @@ class _CategoryColorGrid extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(
@@ -533,7 +529,7 @@ class _CategoryColorGrid extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 68),
                   child: Container(
                     height: 1,
-                    color: AppColors.borderDark.withValues(alpha: 0.5),
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                   ),
                 ),
             ],
@@ -559,6 +555,7 @@ class _CategoryColorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -580,8 +577,7 @@ class _CategoryColorRow extends StatelessWidget {
             width: 72,
             child: Text(
               category,
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textPrimaryDark),
+              style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurface),
             ),
           ),
           const SizedBox(width: AppDimens.spaceXs),
@@ -621,6 +617,7 @@ class _ColorSwatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -631,9 +628,7 @@ class _ColorSwatch extends StatelessWidget {
           color: color,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected
-                ? AppColors.textPrimaryDark
-                : Colors.transparent,
+            color: isSelected ? onSurface : Colors.transparent,
             width: 2,
           ),
           boxShadow: isSelected
@@ -667,15 +662,14 @@ class _ColorSwatch extends StatelessWidget {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 void _showResetTooltipsSnackBar(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
         'All onboarding tooltips have been reset.',
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textPrimaryDark,
-        ),
+        style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurface),
       ),
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: cs.surface,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),

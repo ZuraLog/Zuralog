@@ -39,8 +39,10 @@ abstract final class AppTheme {
 
     final colorScheme = isLight
         ? ColorScheme.light(
-            primary: AppColors.primary,
-            onPrimary: AppColors.primaryButtonText,
+            // Forest Green in light mode — passes WCAG AA (4.8:1 on white).
+            // Sage Green (#CFE1B9) is too pale to be readable on white surfaces.
+            primary: AppColors.primaryOnLight,
+            onPrimary: Colors.white,
             secondary: AppColors.secondaryLight,
             onSecondary: Colors.white,
             tertiary: AppColors.accentLight,
@@ -110,11 +112,15 @@ abstract final class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.primaryButtonText,
-          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
-          disabledForegroundColor:
-              AppColors.primaryButtonText.withValues(alpha: 0.5),
+          backgroundColor:
+              isLight ? AppColors.primaryOnLight : AppColors.primary,
+          foregroundColor: isLight ? Colors.white : AppColors.primaryButtonText,
+          disabledBackgroundColor: isLight
+              ? AppColors.primaryOnLight.withValues(alpha: 0.5)
+              : AppColors.primary.withValues(alpha: 0.5),
+          disabledForegroundColor: isLight
+              ? Colors.white.withValues(alpha: 0.5)
+              : AppColors.primaryButtonText.withValues(alpha: 0.5),
           elevation: 0,
           shadowColor: Colors.transparent,
           minimumSize:
@@ -134,7 +140,8 @@ abstract final class AppTheme {
         // Full-width filled "secondary button" style is applied explicitly by
         // the SecondaryButton widget — NOT here — to avoid collapsing Rows.
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor:
+              isLight ? AppColors.primaryOnLight : AppColors.primary,
           minimumSize: Size.zero,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           padding: const EdgeInsets.symmetric(
@@ -151,11 +158,15 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.primaryButtonText,
-          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
-          disabledForegroundColor:
-              AppColors.primaryButtonText.withValues(alpha: 0.5),
+          backgroundColor:
+              isLight ? AppColors.primaryOnLight : AppColors.primary,
+          foregroundColor: isLight ? Colors.white : AppColors.primaryButtonText,
+          disabledBackgroundColor: isLight
+              ? AppColors.primaryOnLight.withValues(alpha: 0.5)
+              : AppColors.primary.withValues(alpha: 0.5),
+          disabledForegroundColor: isLight
+              ? Colors.white.withValues(alpha: 0.5)
+              : AppColors.primaryButtonText.withValues(alpha: 0.5),
           minimumSize: const Size(double.infinity, 56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
@@ -205,7 +216,10 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(
+            color: isLight ? AppColors.primaryOnLight : AppColors.primary,
+            width: 2,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
@@ -238,7 +252,8 @@ abstract final class AppTheme {
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor:
             isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
-        selectedItemColor: AppColors.primary,
+        selectedItemColor:
+            isLight ? AppColors.primaryOnLight : AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
@@ -248,17 +263,21 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor:
             isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.2),
+        indicatorColor: (isLight ? AppColors.primaryOnLight : AppColors.primary)
+            .withValues(alpha: 0.2),
         iconTheme: WidgetStateProperty.resolveWith((states) {
+          final activeColor =
+              isLight ? AppColors.primaryOnLight : AppColors.primary;
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.primary);
+            return IconThemeData(color: activeColor);
           }
           return const IconThemeData(color: AppColors.textSecondary);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final activeColor =
+              isLight ? AppColors.primaryOnLight : AppColors.primary;
           if (states.contains(WidgetState.selected)) {
-            return AppTextStyles.caption
-                .copyWith(color: AppColors.primary);
+            return AppTextStyles.caption.copyWith(color: activeColor);
           }
           return AppTextStyles.caption
               .copyWith(color: AppColors.textSecondary);
@@ -273,7 +292,7 @@ abstract final class AppTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.primary;
+            return isLight ? AppColors.primaryOnLight : AppColors.primary;
           }
           return isLight ? AppColors.borderLight : AppColors.borderDark;
         }),
