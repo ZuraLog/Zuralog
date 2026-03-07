@@ -13,9 +13,10 @@
 /// /today                          → TodayFeedScreen (tab 0)
 ///   /today/insight/:id            → InsightDetailScreen
 ///   /today/notifications          → NotificationHistoryScreen
-/// /data                           → HealthDashboardScreen (tab 1)
-///   /data/category/:id            → CategoryDetailScreen
-///   /data/metric/:id              → MetricDetailScreen
+ /// /data                           → HealthDashboardScreen (tab 1)
+ ///   /data/category/:id            → CategoryDetailScreen
+ ///   /data/metric/:id              → MetricDetailScreen
+ ///   /data/score-breakdown         → ScoreBreakdownScreen
 /// /coach                          → NewChatScreen (tab 2)
 ///   /coach/thread/:id             → ChatThreadScreen
 /// /progress                       → ProgressHomeScreen (tab 3)
@@ -119,6 +120,12 @@ abstract final class RouteNames {
 
   /// Path for the Metric Detail screen. Parameter: `:id`
   static const String metricDetailPath = '/data/metric/:id';
+
+  /// Name for the Score Breakdown screen.
+  static const String dataScoreBreakdown = 'data-score-breakdown';
+
+  /// Path for the Score Breakdown screen.
+  static const String dataScoreBreakdownPath = '/data/score-breakdown';
 
   // ── Tab 2: Coach ──────────────────────────────────────────────────────────
 

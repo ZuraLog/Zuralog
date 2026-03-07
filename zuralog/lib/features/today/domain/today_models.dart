@@ -4,6 +4,7 @@
 /// responses. All models are immutable and serialize from JSON.
 ///
 /// Model overview:
+/// - [HealthScoreInput]  — single weighted input to the composite score
 /// - [HealthScoreData]   — composite health score + 7-day trend
 /// - [InsightCard]       — summary card shown in the Today feed
 /// - [InsightDetail]     — full detail view with charts + AI reasoning
@@ -16,6 +17,44 @@
 /// - [NotificationPage]  — paginated notification history
 library;
 
+// ── HealthScoreInput ──────────────────────────────────────────────────────────
+
+/// A single input contribution to the composite health score.
+class HealthScoreInput {
+  const HealthScoreInput({
+    required this.label,
+    required this.subScore,
+    required this.weight,
+    required this.hasData,
+    this.description,
+  });
+
+  /// Human-readable input name (e.g. "Sleep Duration", "HRV").
+  final String label;
+
+  /// Sub-score 0–100 for this input. Null when [hasData] is false.
+  final int? subScore;
+
+  /// Weight as a fraction 0.0–1.0 (e.g. 0.30 for 30%).
+  final double weight;
+
+  /// Whether this input has data from a connected source.
+  final bool hasData;
+
+  /// Optional one-line explanation from the AI (e.g. "2h shorter than usual").
+  final String? description;
+
+  factory HealthScoreInput.fromJson(Map<String, dynamic> json) {
+    return HealthScoreInput(
+      label: json['label'] as String? ?? 'Unknown',
+      subScore: (json['sub_score'] as num?)?.toInt(),
+      weight: (json['weight'] as num?)?.toDouble() ?? 0.0,
+      hasData: json['has_data'] as bool? ?? false,
+      description: json['description'] as String?,
+    );
+  }
+}
+
 // ── HealthScoreData ───────────────────────────────────────────────────────────
 
 /// Composite health score returned by `GET /api/v1/health-score`.
@@ -26,6 +65,7 @@ class HealthScoreData {
     required this.trend,
     this.commentary,
     this.dataDays = 0,
+    this.inputs = const [],
   });
 
   /// Current health score (0–100).
@@ -40,6 +80,10 @@ class HealthScoreData {
   /// Total number of calendar days with recorded health data.
   /// Derived from the backend's `data_days` field.
   final int dataDays;
+
+  /// Weighted input breakdown for the composite score.
+  /// Empty when the backend does not yet return input data.
+  final List<HealthScoreInput> inputs;
 
   /// Deserializes from a JSON map.
   factory HealthScoreData.fromJson(Map<String, dynamic> json) {
@@ -60,11 +104,15 @@ class HealthScoreData {
     } else {
       trend = [];
     }
+    final rawInputs = json['inputs'] as List<dynamic>? ?? [];
     return HealthScoreData(
       score: (json['score'] as num).toInt(),
       trend: trend,
       commentary: json['commentary'] as String?,
       dataDays: (json['data_days'] as num?)?.toInt() ?? 0,
+      inputs: rawInputs
+          .map((e) => HealthScoreInput.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
