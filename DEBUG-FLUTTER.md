@@ -41,15 +41,26 @@ Blocking commands (always run in a separate terminal or with `&`):
 
 ---
 
-## Screenshots — Storage and Cleanup
+## Screenshots — Storage, Resizing, and Cleanup
 
-For **inline viewing** (most common): use `mobile_take_screenshot` — renders directly in context, no file needed.
+### Inline viewing (most common)
+`mobile_take_screenshot` renders directly in context — no file, no resizing needed.
 
-For **persistent evidence** (bug logs, before/after comparisons): use `mobile_save_screenshot` with path `.agent/screenshots/<label>.png` (gitignored).
+### Persistent evidence (bug logs, before/after)
+Save to file **then resize before reading**. Anthropic's API rejects images where any dimension exceeds 2000px in multi-image requests. Emulator screens are typically 1080×2400 — height alone exceeds the limit.
 
+```bash
+# Save
+mobile_save_screenshot(device, ".agent/screenshots/<label>.png")
+
+# Resize to max 1600px on longest side (keeps aspect ratio)
+magick .agent/screenshots/<label>.png -resize 1600x1600\> .agent/screenshots/<label>.png
+
+# If ImageMagick is not available, use ffmpeg:
+ffmpeg -i .agent/screenshots/<label>.png -vf scale="'if(gt(iw,ih),1600,-1)':'if(gt(iw,ih),-1,1600)'" .agent/screenshots/<label>.png -y
 ```
-mobile_save_screenshot(device, ".agent/screenshots/screen1.png")
-```
+
+**Always resize before using the Read tool on a saved screenshot.** Skipping this causes the `image dimensions exceed max allowed size` API error.
 
 Before merging: `rm -f .agent/screenshots/*.png && git status`
 
@@ -288,8 +299,9 @@ mobile_click_on_screen_at_coordinates(device, x, y)
 # 5. Screenshot after interaction
 mobile_take_screenshot(device)
 
-# 6. Save evidence for bugs
+# 6. Save evidence for bugs — always resize before reading
 mobile_save_screenshot(device, ".agent/screenshots/<label>.png")
+magick .agent/screenshots/<label>.png -resize 1600x1600\> .agent/screenshots/<label>.png
 
 # 7. Dark mode
 "$ADB" -s $D shell "cmd uimode night yes"
@@ -317,6 +329,7 @@ rm -f .agent/screenshots/*.png
 | Google Sign-In null token | Used bare `flutter run` — use `make run` |
 | Auth/AI errors | Backend not running — `make dev` in `cloud-brain/` |
 | Screenshot committed to git | Wasn't in `.agent/screenshots/` — move and clean up |
+| `image dimensions exceed max allowed size` | Saved screenshot not resized — run `magick <file> -resize 1600x1600\> <file>` before Read tool |
 
 ---
 
@@ -338,6 +351,7 @@ git status                           # verify clean
 mobile_list_available_devices()
 mobile_take_screenshot(device)
 mobile_save_screenshot(device, ".agent/screenshots/<label>.png")
+magick .agent/screenshots/<label>.png -resize 1600x1600\> .agent/screenshots/<label>.png   # resize before Read tool
 mobile_list_elements_on_screen(device)
 mobile_click_on_screen_at_coordinates(device, x, y)
 mobile_swipe_on_screen(device, direction="up")
