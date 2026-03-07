@@ -446,13 +446,22 @@ The Health Dashboard on the Data tab is the user's personal canvas. Three levels
 
 All brand assets live in `assets/brand/`. See [architecture.md — ADR 004](./architecture.md#adr-004-asset-strategy-multi-platform-monorepo) for the full asset strategy.
 
-| Asset | Location |
-|-------|----------|
-| Logo (SVG) | `assets/brand/logo/zuralog-logo.svg` |
-| App icon | `assets/brand/icons/` |
-| Brand fonts | `assets/brand/fonts/` |
-| Flutter copy | `zuralog/assets/` (synced via `scripts/sync-assets.sh`) |
-| Website copy | `website/public/` (synced via `scripts/sync-assets.sh`) |
+| Asset | File | Usage |
+|-------|------|-------|
+| Logo SVG — with background | `assets/brand/logo/Zuralog.svg` | Standalone icon contexts (documents, share sheets) |
+| Logo SVG — transparent (Sage mark) | `assets/brand/logo/ZuraLog-Sage.svg` | In-app rendering on dark surfaces; accepts `ColorFilter` recoloring |
+| Logo PNG — with background | `assets/brand/logo/ZuraLog-Logo-Main.png` | App icons, favicons, OG image, any self-contained icon |
+| Logo PNG — transparent (Sage mark) | `assets/brand/logo/ZuraLog-Logo-Sage.png` | Inline image on dark surfaces where the surface provides background |
+| App icon | `assets/brand/icons/` | Platform icon sources (currently empty — icons generated from logo PNGs) |
+| Brand fonts | `assets/brand/fonts/` | Inter Regular / Medium / SemiBold / Bold |
+| Flutter copy | `zuralog/assets/images/` | Manually synced from `assets/brand/logo/`. Use `AppAssets` constants in Dart — never hardcode paths. |
+| Website copy | `website/public/logo/` | Manually synced from `assets/brand/logo/`. |
+
+**Flutter asset path constants:** `zuralog/lib/core/theme/app_assets.dart` (`AppAssets.logoSvg`, `AppAssets.logoMainPng`, etc.)
+
+**Logo variant rule:**
+- **With background** (`Main`) → use when icon is self-contained: app icons, favicons, platform launchers, light-coloured surfaces.
+- **Transparent** (`Sage`) → use on dark surfaces where the surrounding UI provides the background context.
 
 ---
 

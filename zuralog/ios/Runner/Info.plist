@@ -1,124 +1,125 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
-	<string>Zuralog</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>zuralog</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(FLUTTER_BUILD_NAME)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>UIApplicationSceneManifest</key>
 	<dict>
-		<key>UIApplicationSupportsMultipleScenes</key>
-		<false/>
-		<key>UISceneConfigurations</key>
+		<key>CADisableMinimumFrameDurationOnPhone</key>
+		<true/>
+		<key>CFBundleDevelopmentRegion</key>
+		<string>$(DEVELOPMENT_LANGUAGE)</string>
+		<key>CFBundleDisplayName</key>
+		<string>Zuralog</string>
+		<key>CFBundleExecutable</key>
+		<string>$(EXECUTABLE_NAME)</string>
+		<key>CFBundleIdentifier</key>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<key>CFBundleInfoDictionaryVersion</key>
+		<string>6.0</string>
+		<key>CFBundleName</key>
+		<string>zuralog</string>
+		<key>CFBundlePackageType</key>
+		<string>APPL</string>
+		<key>CFBundleShortVersionString</key>
+		<string>$(FLUTTER_BUILD_NAME)</string>
+		<key>CFBundleSignature</key>
+		<string>????</string>
+		<key>CFBundleVersion</key>
+		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<key>LSRequiresIPhoneOS</key>
+		<true/>
+		<key>UIApplicationSceneManifest</key>
 		<dict>
-			<key>UIWindowSceneSessionRoleApplication</key>
-			<array>
-				<dict>
-					<key>UISceneClassName</key>
-					<string>UIWindowScene</string>
-					<key>UISceneConfigurationName</key>
-					<string>flutter</string>
-					<key>UISceneDelegateClassName</key>
-					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-					<key>UISceneStoryboardFile</key>
-					<string>Main</string>
-				</dict>
-			</array>
+			<key>UIApplicationSupportsMultipleScenes</key>
+			<false/>
+			<key>UISceneConfigurations</key>
+			<dict>
+				<key>UIWindowSceneSessionRoleApplication</key>
+				<array>
+					<dict>
+						<key>UISceneClassName</key>
+						<string>UIWindowScene</string>
+						<key>UISceneConfigurationName</key>
+						<string>flutter</string>
+						<key>UISceneDelegateClassName</key>
+						<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+						<key>UISceneStoryboardFile</key>
+						<string>Main</string>
+					</dict>
+				</array>
+			</dict>
 		</dict>
-	</dict>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreen</string>
-	<key>UIMainStoryboardFile</key>
-	<string>Main</string>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<!-- Custom URL schemes for OAuth deep-link callbacks -->
-	<!-- 1. App deep links (Phase 1.6): e.g. zuralog://oauth/strava?code=XXX -->
-	<!-- 2. Google Sign In reversed client ID (social-oauth phase):
+		<key>UIApplicationSupportsIndirectInputEvents</key>
+		<true/>
+		<key>UILaunchStoryboardName</key>
+		<string>LaunchScreen</string>
+		<key>UIMainStoryboardFile</key>
+		<string>Main</string>
+		<key>UISupportedInterfaceOrientations</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<key>UISupportedInterfaceOrientations~ipad</key>
+		<array>
+			<string>UIInterfaceOrientationPortrait</string>
+			<string>UIInterfaceOrientationPortraitUpsideDown</string>
+			<string>UIInterfaceOrientationLandscapeLeft</string>
+			<string>UIInterfaceOrientationLandscapeRight</string>
+		</array>
+		<!-- Custom URL schemes for OAuth deep-link callbacks -->
+		<!-- 1. App deep links (Phase 1.6): e.g. zuralog://oauth/strava?code=XXX -->
+		<!-- 2. Google Sign In reversed client ID (social-oauth phase):
 	        Replace REPLACE_WITH_REVERSED_GOOGLE_CLIENT_ID with the value from
 	        your GoogleService-Info.plist REVERSED_CLIENT_ID key once you add
 	        an iOS OAuth 2.0 client ID in Google Cloud Console.
 	        Format: com.googleusercontent.apps.<YOUR_CLIENT_ID_REVERSED>
 	        See: docs/plans/2026-02-23-social-oauth-design.md -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.zuralog</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>zuralog</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.zuralog.google-signin</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<!-- TODO(dev): Replace with REVERSED_CLIENT_ID from GoogleService-Info.plist
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>com.zuralog</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>zuralog</string>
+				</array>
+			</dict>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>com.zuralog.google-signin</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<!-- TODO(dev): Replace with REVERSED_CLIENT_ID from GoogleService-Info.plist
 				     after adding an iOS OAuth 2.0 client in Google Cloud Console. -->
-				<string>com.googleusercontent.apps.616346397607-virjdumer2q771env27qjajjhmqtsia2</string>
-			</array>
-		</dict>
-	</array>
-	<!-- Phase 1.12: Allow canLaunchUrl() to query third-party app schemes -->
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>strava</string>
-		<string>calai</string>
-	</array>
-	<key>NSHealthShareUsageDescription</key>
-	<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep, heart rate, HRV, VO2 max, and other vitals) to provide personalized AI coaching and track your fitness goals.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Zuralog needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Zuralog uses speech recognition to convert your voice messages into text for the AI coach chat.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Zuralog needs microphone access to hear your voice messages for the AI coach chat.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-		<string>processing</string>
-		<string>remote-notification</string>
-	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>ZuraLog uses the camera to capture food photos for AI nutrition analysis.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ZuraLog accesses your photo library to attach images to coach messages.</string>
-
-</dict>
+					<string>com.googleusercontent.apps.616346397607-virjdumer2q771env27qjajjhmqtsia2</string>
+				</array>
+			</dict>
+		</array>
+		<!-- Phase 1.12: Allow canLaunchUrl() to query third-party app schemes -->
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>strava</string>
+			<string>calai</string>
+		</array>
+		<key>NSHealthShareUsageDescription</key>
+		<string>Zuralog needs access to your health data (steps, workouts, nutrition, sleep, heart rate, HRV, VO2 max, and other vitals) to provide personalized AI coaching and track your fitness goals.</string>
+		<key>NSHealthUpdateUsageDescription</key>
+		<string>Zuralog needs to write health data (like workouts and nutrition entries) to Apple Health based on your requests.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Zuralog uses speech recognition to convert your voice messages into text for the AI coach chat.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Zuralog needs microphone access to hear your voice messages for the AI coach chat.</string>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>fetch</string>
+			<string>processing</string>
+			<string>remote-notification</string>
+		</array>
+		<key>NSCameraUsageDescription</key>
+		<string>ZuraLog uses the camera to capture food photos for AI nutrition analysis.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>ZuraLog accesses your photo library to attach images to coach messages.</string>
+		<key>UIStatusBarHidden</key>
+		<false/>
+	</dict>
 </plist>

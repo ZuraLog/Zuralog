@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:zuralog/core/theme/app_assets.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -152,7 +153,7 @@ class _WelcomeStepState extends State<WelcomeStep>
                 ),
                 padding: const EdgeInsets.all(18),
                 child: SvgPicture.asset(
-                  'assets/images/zuralog_logo.svg',
+                  AppAssets.logoSvg,
                   colorFilter: const ColorFilter.mode(
                     AppColors.primaryButtonText,
                     BlendMode.srcIn,

@@ -166,7 +166,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ),
         // Zuralog SVG logo centered in the AppBar for brand continuity.
         title: SvgPicture.asset(
-          'assets/images/zuralog_logo.svg',
+          AppAssets.logoSvg,
           height: 28,
           colorFilter: ColorFilter.mode(
             colorScheme.onSurface,

@@ -32,7 +32,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
   /// Creates a [WelcomeScreen].
   const WelcomeScreen({super.key});
 
-  static const String _logoAsset = 'assets/images/zuralog_logo.svg';
+  static const String _logoAsset = AppAssets.logoSvg;
 
   @override
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();

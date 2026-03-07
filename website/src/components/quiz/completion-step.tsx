@@ -78,7 +78,7 @@ export function CompletionStep({ data }: CompletionStepProps) {
           {/* Logo + branding */}
           <div className="relative mb-6 flex items-center justify-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo/Zuralog.png" alt="ZuraLog" className="h-6 w-6 rounded-lg" />
+            <img src="/logo/ZuraLog-Logo-Main.png" alt="ZuraLog" className="h-6 w-6 rounded-lg" />
             <span className="text-sm font-semibold tracking-tight text-black/40">ZuraLog</span>
           </div>
 

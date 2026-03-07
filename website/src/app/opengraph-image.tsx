@@ -2,7 +2,8 @@
  * opengraph-image.tsx — dynamically generated Open Graph image.
  *
  * Uses Next.js ImageResponse to render a 1200x630 OG image.
- * Cream/peach palette matching the marketing site design.
+ * Brand-accurate dark palette: OLED black background, Sage Green (#CFE1B9)
+ * accents, and the new Zuralog logo mark rendered as inline SVG.
  * Automatically served at /opengraph-image by Next.js metadata routing.
  */
 import { ImageResponse } from "next/og";
@@ -12,123 +13,176 @@ export const alt = "ZuraLog — Unified Health. Made Smart.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+/** Brand tokens (must be static for edge runtime — no imports). */
+const SAGE = "#CFE1B9";
+const SAGE_DIM = "rgba(207,225,185,0.45)";
+const DARK_GREEN = "#344E41";
+const SURFACE = "#0F0F0F";
+const BG = "#000000";
+
 export default async function Image() {
   return new ImageResponse(
     (
       <div
         style={{
-          background: "#FAFAF5",
+          background: BG,
           width: "100%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "sans-serif",
+          fontFamily: "system-ui, -apple-system, sans-serif",
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* Background peach glow */}
+        {/* Subtle sage radial bloom — top-center, like the app */}
         <div
           style={{
             position: "absolute",
-            width: 700,
-            height: 700,
+            width: 900,
+            height: 900,
             borderRadius: "50%",
-            background:
-              "radial-gradient(circle, rgba(255,171,118,0.15) 0%, transparent 65%)",
-            top: "50%",
+            background: `radial-gradient(circle, rgba(52,78,65,0.55) 0%, transparent 60%)`,
+            top: -250,
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            transform: "translateX(-50%)",
           }}
         />
 
-        {/* Top bar — integration badges */}
+        {/* Top bar — integration source pills */}
         <div
           style={{
             position: "absolute",
-            top: 40,
+            top: 44,
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: 10,
           }}
         >
-          {["Strava", "Apple Health", "Oura", "Garmin", "Health Connect"].map(
-            (name) => (
+          {[
+            { name: "Strava",          dot: "#FC4C02" },
+            { name: "Apple Health",    dot: "#FF3B30" },
+            { name: "Oura",            dot: "#9B8EFF" },
+            { name: "Garmin",          dot: "#007CC3" },
+            { name: "Health Connect",  dot: "#4285F4" },
+          ].map(({ name, dot }) => (
+            <div
+              key={name}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                background: "rgba(207,225,185,0.07)",
+                border: "1px solid rgba(207,225,185,0.14)",
+                borderRadius: 9999,
+                padding: "7px 16px",
+                fontSize: 13,
+                fontWeight: 500,
+                color: SAGE_DIM,
+                letterSpacing: "0.01em",
+              }}
+            >
               <div
-                key={name}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  background: "rgba(45,45,45,0.06)",
-                  border: "1px solid rgba(45,45,45,0.10)",
-                  borderRadius: 9999,
-                  padding: "6px 14px",
-                  fontSize: 13,
-                  color: "rgba(45,45,45,0.5)",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: dot,
+                  opacity: 0.8,
                 }}
-              >
-                <div
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background:
-                      name === "Strava"
-                        ? "#FC4C02"
-                        : name === "Apple Health"
-                          ? "#FF3B30"
-                          : name === "Oura"
-                            ? "#9B8EFF"
-                            : name === "Garmin"
-                              ? "#007CC3"
-                              : "#4285F4",
-                  }}
-                />
-                {name}
-              </div>
-            )
-          )}
+              />
+              {name}
+            </div>
+          ))}
         </div>
 
-        {/* Main content */}
+        {/* Main content — logo mark + wordmark + tagline */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 20,
+            gap: 0,
           }}
         >
-          {/* Logo wordmark */}
+          {/* Logo mark in a dark-green container card */}
           <div
             style={{
-              fontSize: 88,
+              width: 96,
+              height: 96,
+              borderRadius: 24,
+              background: DARK_GREEN,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 28,
+              boxShadow: `0 0 60px rgba(207,225,185,0.18), 0 0 120px rgba(52,78,65,0.5)`,
+            }}
+          >
+            {/*
+              Inline SVG of the Sage logo mark (transparent variant).
+              Path data from ZuraLog-Sage.svg — the blocky interlocking mark.
+              Scaled to fit the 96×96 card with 18px padding on each side.
+            */}
+            <svg
+              viewBox="0 0 2048 2048"
+              width="60"
+              height="60"
+              style={{ display: "block" }}
+            >
+              <path
+                fill={SAGE}
+                d="m1377.8 420.9v189.9h670.2v473.8h-1377.8v230.8h707.6v501.3h-707.6v-379.8h-670.2v-473.8h1377.8v-230.8h-707.6v-501.3h707.6z"
+              />
+            </svg>
+          </div>
+
+          {/* Wordmark */}
+          <div
+            style={{
+              fontSize: 80,
               fontWeight: 800,
               letterSpacing: "-3px",
               display: "flex",
               alignItems: "baseline",
+              lineHeight: 1,
+              marginBottom: 20,
             }}
           >
-            <span style={{ color: "#2D2D2D" }}>Zura</span>
-            <span style={{ color: "#FFAB76" }}>Log</span>
+            <span style={{ color: "#ffffff" }}>Zura</span>
+            <span style={{ color: SAGE }}>Log</span>
           </div>
 
-          {/* Tagline */}
+          {/* Two-line tagline */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 4,
+              gap: 2,
+              marginBottom: 24,
             }}
           >
-            <div style={{ fontSize: 32, fontWeight: 700, color: "#2D2D2D" }}>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.90)",
+                letterSpacing: "-0.5px",
+              }}
+            >
               Unified Health.
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "#FFAB76" }}>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 700,
+                color: SAGE,
+                letterSpacing: "-0.5px",
+              }}
+            >
               Made Smart.
             </div>
           </div>
@@ -136,23 +190,23 @@ export default async function Image() {
           {/* Subtitle */}
           <div
             style={{
-              fontSize: 20,
-              color: "rgba(45,45,45,0.45)",
+              fontSize: 18,
+              color: "rgba(207,225,185,0.50)",
               textAlign: "center",
-              maxWidth: 550,
-              lineHeight: 1.5,
+              maxWidth: 520,
+              lineHeight: 1.6,
+              letterSpacing: "0.01em",
             }}
           >
-            The AI fitness hub that connects all your apps into one intelligent
-            action layer.
+            The AI that connects your fitness apps and actually thinks.
           </div>
         </div>
 
-        {/* CTA badge at bottom */}
+        {/* Bottom row — CTA pill + domain */}
         <div
           style={{
             position: "absolute",
-            bottom: 40,
+            bottom: 44,
             display: "flex",
             alignItems: "center",
             gap: 20,
@@ -160,39 +214,58 @@ export default async function Image() {
         >
           <div
             style={{
-              background: "#FFAB76",
+              background: SAGE,
               borderRadius: 9999,
-              padding: "12px 32px",
-              fontSize: 18,
+              padding: "11px 30px",
+              fontSize: 16,
               fontWeight: 700,
-              color: "#2D2D2D",
+              color: "#0D1F17",
+              letterSpacing: "0.01em",
             }}
           >
             Join the Waitlist
           </div>
-          <div style={{ fontSize: 16, color: "rgba(45,45,45,0.35)" }}>
+          <div
+            style={{
+              fontSize: 15,
+              color: SAGE_DIM,
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+            }}
+          >
             zuralog.com
           </div>
         </div>
 
-        {/* Subtle grid */}
+        {/* Subtle dot-grid texture */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage:
-              "linear-gradient(rgba(45,45,45,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(45,45,45,0.04) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
+            backgroundImage: `radial-gradient(rgba(207,225,185,0.07) 1px, transparent 1px)`,
+            backgroundSize: "28px 28px",
           }}
         />
 
-        {/* Border frame */}
+        {/* Inset border frame */}
         <div
           style={{
             position: "absolute",
             inset: 16,
-            border: "1px solid rgba(45,45,45,0.08)",
-            borderRadius: 24,
+            border: "1px solid rgba(207,225,185,0.08)",
+            borderRadius: 28,
+          }}
+        />
+
+        {/* Bottom vignette to ground the content */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 200,
+            background: `linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)`,
           }}
         />
       </div>

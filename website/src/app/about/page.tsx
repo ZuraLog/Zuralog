@@ -188,7 +188,7 @@ export default function AboutPage() {
               <div className="flex items-center justify-center lg:w-64">
                 <div className="flex flex-col items-center gap-5 rounded-3xl border border-black/[0.06] bg-white/60 p-10 shadow-sm">
                   <Image
-                    src="/logo/Zuralog.png"
+                    src="/logo/ZuraLog-Logo-Main.png"
                     alt="ZuraLog logo"
                     width={64}
                     height={64}

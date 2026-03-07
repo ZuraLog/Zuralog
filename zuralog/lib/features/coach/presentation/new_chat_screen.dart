@@ -19,6 +19,7 @@ import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/speech/speech_providers.dart';
 import 'package:zuralog/core/speech/speech_state.dart';
+import 'package:zuralog/core/theme/app_assets.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -228,7 +229,7 @@ class _CoachEmptyState extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: SvgPicture.asset(
-                  'assets/images/ZuraLog.svg',
+                  AppAssets.logoSvg,
                   colorFilter: const ColorFilter.mode(
                     AppColors.primary,
                     BlendMode.srcIn,

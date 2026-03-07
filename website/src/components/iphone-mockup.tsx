@@ -84,8 +84,8 @@ export function IPhoneMockup({ emailValue = '' }: IPhoneMockupProps) {
                   {/* App header */}
                   <div className="flex items-center gap-2 px-5 pb-3 pt-2">
                     <div className="relative h-8 w-8">
-                      <Image
-                        src="/logo/Zuralog.png"
+                        <Image
+                        src="/logo/ZuraLog-Logo-Main.png"
                         alt="Zuralog"
                         width={32}
                         height={32}

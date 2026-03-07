@@ -82,13 +82,13 @@ export function Navbar() {
                         className="flex items-center gap-2 transition-opacity hover:opacity-70"
                         aria-label="ZuraLog home"
                     >
-                        <Image
-                            src="/logo/Zuralog.png"
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src="/logo/ZuraLog-Sage.svg"
                             alt="ZuraLog"
                             width={22}
                             height={22}
                             className="object-contain"
-                            priority
                         />
                         <span
                             className="font-semibold tracking-tight"

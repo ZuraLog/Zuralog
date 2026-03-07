@@ -247,7 +247,7 @@ class _ProfileQuestionnaireScreenState
               )
             : null,
         title: SvgPicture.asset(
-          'assets/images/zuralog_logo.svg',
+          AppAssets.logoSvg,
           height: 28,
           colorFilter: ColorFilter.mode(colorScheme.onSurface, BlendMode.srcIn),
         ),

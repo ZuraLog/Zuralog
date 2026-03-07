@@ -94,6 +94,7 @@ dev_dependencies:
   url_launcher_platform_interface: any
   mockito: ^5.4.6
   flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.3
 
 flutter:
   uses-material-design: true
@@ -118,8 +119,22 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/icon_source.png"
+  image_path: "assets/images/ZuraLog-Logo-Main.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/images/icon_source.png"
+  adaptive_icon_background: "#344E41"
+  adaptive_icon_foreground: "assets/images/ZuraLog-Logo-Sage.png"
   remove_alpha_ios: true
+
+flutter_native_splash:
+  # OLED true-black background with the full logo (background included).
+  # The Main variant provides a self-contained dark-green framed mark that
+  # is legible on any device frame colour during the splash moment.
+  color: "#000000"
+  image: "assets/images/ZuraLog-Logo-Main.png"
+  color_dark: "#000000"
+  image_dark: "assets/images/ZuraLog-Logo-Main.png"
+  android_12:
+    color: "#000000"
+    image: "assets/images/ZuraLog-Logo-Main.png"
+    color_dark: "#000000"
+    image_dark: "assets/images/ZuraLog-Logo-Main.png"

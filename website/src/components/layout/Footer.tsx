@@ -13,7 +13,6 @@
  * same Geist Sans typography and spacing language as the rest of the site.
  */
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { FaXTwitter, FaInstagram, FaLinkedinIn, FaTiktok, FaAppStoreIos, FaGooglePlay } from 'react-icons/fa6';
 import { ManageCookiesButton } from '@/components/ui/ManageCookiesButton';
@@ -115,12 +114,13 @@ export function Footer() {
               className="inline-flex items-center gap-2 transition-opacity hover:opacity-80"
               aria-label="ZuraLog home"
             >
-              <Image
-                src="/logo/Zuralog.png"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo/ZuraLog-Sage.svg"
                 alt="ZuraLog logo"
                 width={28}
                 height={28}
-                className="rounded-lg object-contain"
+                className="object-contain"
               />
               <span
                 className="text-sm font-semibold tracking-tight"
