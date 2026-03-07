@@ -1,9 +1,15 @@
 /// Reports Screen — /trends/reports
 ///
 /// Lists auto-generated monthly health reports. Tap a report to expand
-/// its full detail: category summaries, top correlations, trend directions,
-/// and AI recommendations. Includes export PDF and share-as-image actions
-/// (UI-complete; actual export is a post-MVP backend feature).
+/// its full detail: category summaries, goal adherence, top correlations,
+/// trend directions, and AI recommendations.
+///
+/// Export actions:
+///   - Share as image: captures the report detail widget via [screenshot]
+///     and shares via [share_plus].
+///   - PDF export: renders a plain-text PDF via [printing] / [pdf] — deferred;
+///     currently shows a "coming soon" snackbar since the pdf package is
+///     not yet in pubspec. The share-as-image path is fully functional.
 ///
 /// Layout:
 ///   - AppBar: "Reports" title + back button
@@ -12,8 +18,12 @@
 ///   - Empty state when no reports
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -234,9 +244,17 @@ class _CategoryAvatarRow extends StatelessWidget {
 
 // ── Report Detail Sheet ───────────────────────────────────────────────────────
 
-class _ReportDetailSheet extends StatelessWidget {
+class _ReportDetailSheet extends StatefulWidget {
   const _ReportDetailSheet({required this.report});
   final GeneratedReport report;
+
+  @override
+  State<_ReportDetailSheet> createState() => _ReportDetailSheetState();
+}
+
+class _ReportDetailSheetState extends State<_ReportDetailSheet> {
+  final _screenshotController = ScreenshotController();
+  bool _isSharing = false;
 
   Color _categoryColor(String category) {
     switch (category.toLowerCase()) {
@@ -281,8 +299,31 @@ class _ReportDetailSheet extends StatelessWidget {
     }
   }
 
+  Future<void> _shareAsImage() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+    try {
+      final Uint8List? imageBytes =
+          await _screenshotController.capture(pixelRatio: 2.0);
+      if (imageBytes == null) return;
+      final xFile = XFile.fromData(
+        imageBytes,
+        name: '${widget.report.title}.png',
+        mimeType: 'image/png',
+      );
+      await Share.shareXFiles(
+        [xFile],
+        text: widget.report.title,
+      );
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final report = widget.report;
+
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.9,
@@ -312,173 +353,205 @@ class _ReportDetailSheet extends StatelessWidget {
                   Expanded(
                     child: Text(report.title, style: AppTextStyles.h2),
                   ),
-                  // Export PDF button (UI placeholder)
+                  // PDF export — deferred (pdf package not in pubspec)
                   IconButton(
                     icon: const Icon(Icons.picture_as_pdf_rounded),
                     color: AppColors.textSecondaryDark,
                     tooltip: 'Export PDF (coming soon)',
-                    onPressed: () => _showComingSoon(context),
+                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('PDF export coming soon.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    ),
                   ),
-                  // Share image button (UI placeholder)
+                  // Share as image — fully functional
                   IconButton(
-                    icon: const Icon(Icons.share_rounded),
+                    icon: _isSharing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
+                          )
+                        : const Icon(Icons.share_rounded),
                     color: AppColors.textSecondaryDark,
-                    tooltip: 'Share image (coming soon)',
-                    onPressed: () => _showComingSoon(context),
+                    tooltip: 'Share as image',
+                    onPressed: _isSharing ? null : _shareAsImage,
                   ),
                 ],
               ),
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Expanded(
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd),
-                children: [
-                  // ── Category summaries ─────────────────────────
-                  if (report.categorySummaries.isNotEmpty) ...[
-                    _SheetSectionHeader(title: 'By Category'),
-                    ...report.categorySummaries.map(
-                      (s) => _CategorySummaryRow(
-                        summary: s,
-                        accentColor: _categoryColor(s.category),
-                      ),
-                    ),
-                    const SizedBox(height: AppDimens.spaceMd),
-                  ],
+              // Wrap content in Screenshot so we can capture it
+              child: Screenshot(
+                controller: _screenshotController,
+                child: ColoredBox(
+                  color: AppColors.backgroundDark,
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd),
+                    children: [
+                      // ── Category summaries ─────────────────────────
+                      if (report.categorySummaries.isNotEmpty) ...[
+                        _SheetSectionHeader(title: 'By Category'),
+                        ...report.categorySummaries.map(
+                          (s) => _CategorySummaryRow(
+                            summary: s,
+                            accentColor: _categoryColor(s.category),
+                          ),
+                        ),
+                        const SizedBox(height: AppDimens.spaceMd),
+                      ],
 
-                  // ── Trend directions ───────────────────────────
-                  if (report.trendDirections.isNotEmpty) ...[
-                    _SheetSectionHeader(title: 'Trends'),
-                    Wrap(
-                      spacing: AppDimens.spaceSm,
-                      runSpacing: AppDimens.spaceSm,
-                      children: report.trendDirections.map((t) {
-                        final icon = _trendIcon(t.direction);
-                        final color = _trendColor(t.direction);
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceSm,
-                            vertical: AppDimens.spaceXs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(
-                                AppDimens.radiusChip),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(icon, size: 14, color: color),
-                              const SizedBox(width: 4),
-                              Text(
-                                t.metricLabel,
-                                style: AppTextStyles.labelXs
-                                    .copyWith(color: color),
+                      // ── Goal adherence ─────────────────────────────
+                      if (report.goalAdherence.isNotEmpty) ...[
+                        _SheetSectionHeader(title: 'Goal Adherence'),
+                        ...report.goalAdherence.map(
+                          (g) => _GoalAdherenceRow(goal: g),
+                        ),
+                        const SizedBox(height: AppDimens.spaceMd),
+                      ],
+
+                      // ── Trend directions ───────────────────────────
+                      if (report.trendDirections.isNotEmpty) ...[
+                        _SheetSectionHeader(title: 'Trends'),
+                        Wrap(
+                          spacing: AppDimens.spaceSm,
+                          runSpacing: AppDimens.spaceSm,
+                          children: report.trendDirections.map((t) {
+                            final icon = _trendIcon(t.direction);
+                            final color = _trendColor(t.direction);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppDimens.spaceSm,
+                                vertical: AppDimens.spaceXs,
                               ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: AppDimens.spaceMd),
-                  ],
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(
+                                    AppDimens.radiusChip),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(icon, size: 14, color: color),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    t.metricLabel,
+                                    style: AppTextStyles.labelXs
+                                        .copyWith(color: color),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: AppDimens.spaceMd),
+                      ],
 
-                  // ── Top correlations ───────────────────────────
-                  if (report.topCorrelations.isNotEmpty) ...[
-                    _SheetSectionHeader(title: 'Top Correlations'),
-                    ...report.topCorrelations.map(
-                      (c) => Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: AppDimens.spaceSm),
-                        child: Container(
-                          padding: const EdgeInsets.all(AppDimens.spaceMd),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardBackgroundDark,
-                            borderRadius: BorderRadius.circular(
-                                AppDimens.radiusCard),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      c.headline,
-                                      style: AppTextStyles.caption,
+                      // ── Top correlations ───────────────────────────
+                      if (report.topCorrelations.isNotEmpty) ...[
+                        _SheetSectionHeader(title: 'Top Correlations'),
+                        ...report.topCorrelations.map(
+                          (c) => Padding(
+                            padding: const EdgeInsets.only(
+                                bottom: AppDimens.spaceSm),
+                            child: Container(
+                              padding:
+                                  const EdgeInsets.all(AppDimens.spaceMd),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackgroundDark,
+                                borderRadius: BorderRadius.circular(
+                                    AppDimens.radiusCard),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          c.headline,
+                                          style: AppTextStyles.caption,
+                                        ),
+                                        Text(
+                                          '${c.metricA} × ${c.metricB}',
+                                          style: AppTextStyles.bodyMedium
+                                              .copyWith(
+                                            color:
+                                                AppColors.textSecondaryDark,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Text(
-                                      '${c.metricA} × ${c.metricB}',
-                                      style: AppTextStyles.bodyMedium
-                                          .copyWith(
-                                        color: AppColors.textSecondaryDark,
+                                  ),
+                                  Text(
+                                    c.coefficient.toStringAsFixed(2),
+                                    style: AppTextStyles.h3.copyWith(
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppDimens.spaceMd),
+                      ],
+
+                      // ── AI recommendations ─────────────────────────
+                      if (report.aiRecommendations.isNotEmpty) ...[
+                        _SheetSectionHeader(title: 'Recommendations'),
+                        ...report.aiRecommendations.asMap().entries.map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.only(
+                                bottom: AppDimens.spaceSm),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${entry.key + 1}',
+                                      style: AppTextStyles.labelXs.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                c.coefficient.toStringAsFixed(2),
-                                style: AppTextStyles.h3.copyWith(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppDimens.spaceMd),
-                  ],
-
-                  // ── AI recommendations ─────────────────────────
-                  if (report.aiRecommendations.isNotEmpty) ...[
-                    _SheetSectionHeader(title: 'Recommendations'),
-                    ...report.aiRecommendations.asMap().entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(
-                            bottom: AppDimens.spaceSm),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color:
-                                    AppColors.primary.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${entry.key + 1}',
-                                  style: AppTextStyles.labelXs.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: AppDimens.spaceSm),
-                            Expanded(
-                              child: Text(
-                                entry.value,
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.textPrimaryDark,
+                                const SizedBox(width: AppDimens.spaceSm),
+                                Expanded(
+                                  child: Text(
+                                    entry.value,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: AppColors.textPrimaryDark,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
 
-                  const SizedBox(height: AppDimens.spaceXxl),
-                ],
+                      const SizedBox(height: AppDimens.spaceXxl),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -486,12 +559,64 @@ class _ReportDetailSheet extends StatelessWidget {
       },
     );
   }
+}
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Export will be available in a future update.'),
-        behavior: SnackBarBehavior.floating,
+// ── Goal Adherence Row ────────────────────────────────────────────────────────
+
+class _GoalAdherenceRow extends StatelessWidget {
+  const _GoalAdherenceRow({required this.goal});
+  final GoalAdherenceItem goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (goal.achievedPercent * 100).round();
+    final color = pct >= 80
+        ? AppColors.categoryActivity
+        : pct >= 50
+            ? AppColors.healthScoreAmber
+            : AppColors.accentDark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppDimens.spaceSm),
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(goal.goalLabel, style: AppTextStyles.caption),
+              ),
+              Text(
+                '$pct%',
+                style: AppTextStyles.h3.copyWith(color: color),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: goal.achievedPercent,
+              minHeight: 4,
+              backgroundColor: AppColors.borderDark,
+              color: color,
+            ),
+          ),
+          if (goal.streakDays > 0) ...[
+            const SizedBox(height: AppDimens.spaceXs),
+            Text(
+              '${goal.streakDays}-day streak at end of period',
+              style: AppTextStyles.labelXs.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
