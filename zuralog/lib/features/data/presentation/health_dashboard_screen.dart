@@ -288,17 +288,17 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                       childCount: 6,
                     ),
                   ),
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: SizedBox(
-                      height: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+                      height: AppDimens.bottomClearance(context),
                     ),
                   ),
                 ],
               ),
               error: (e, st) => SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+                  padding: EdgeInsets.only(
+                    bottom: AppDimens.bottomClearance(context),
                   ),
                   child: Center(
                     child: Padding(
@@ -348,8 +348,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 if (items.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+                      padding: EdgeInsets.only(
+                        bottom: AppDimens.bottomClearance(context),
                       ),
                       child: Center(
                         child: Padding(
@@ -404,15 +404,15 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                       final cardColor = overrideValue != null
                           ? Color(overrideValue)
                           : categoryColor(cat);
-                      return Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          AppDimens.spaceMd,
-                          AppDimens.spaceXs,
-                          AppDimens.spaceMd,
-                          i == visibleItems.length - 1
-                              ? AppDimens.bottomNavHeight + AppDimens.spaceMd
-                              : AppDimens.spaceXs,
-                        ),
+                        return Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppDimens.spaceMd,
+                            AppDimens.spaceXs,
+                            AppDimens.spaceMd,
+                            i == visibleItems.length - 1
+                                ? AppDimens.bottomClearance(context)
+                                : AppDimens.spaceXs,
+                          ),
                         child: CategoryCard(
                           title: cat.displayName,
                           categoryColor: cardColor,
@@ -517,7 +517,7 @@ class _EditableList extends StatelessWidget {
         AppDimens.spaceMd,
         0,
         AppDimens.spaceMd,
-        AppDimens.bottomNavHeight + AppDimens.spaceMd,
+        AppDimens.bottomClearance(context),
       ),
       sliver: SliverReorderableList(
         itemCount: items.length,

@@ -127,8 +127,8 @@ class _TrendsHomeBody extends ConsumerWidget {
             child: _QuickNavRow(),
           ),
 
-          const SliverToBoxAdapter(
-            child: SizedBox(height: AppDimens.bottomNavHeight + AppDimens.spaceMd),
+          SliverToBoxAdapter(
+            child: SizedBox(height: AppDimens.bottomClearance(context)),
           ),
         ],
       ),
@@ -615,8 +615,8 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(
-        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      padding: EdgeInsets.only(
+        bottom: AppDimens.bottomClearance(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,8 +678,8 @@ class _TrendsErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      padding: EdgeInsets.only(
+        bottom: AppDimens.bottomClearance(context),
       ),
       child: Center(
         child: Padding(

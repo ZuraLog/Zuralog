@@ -425,7 +425,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
               AppDimens.spaceMd,
-              AppDimens.spaceMd + AppDimens.bottomNavHeight,
+              AppDimens.bottomClearance(context),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,

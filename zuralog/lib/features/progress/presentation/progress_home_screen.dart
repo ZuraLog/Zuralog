@@ -170,11 +170,11 @@ class _LoadingStateState extends State<_LoadingState>
           _shimmerAnim.value,
         )!;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             AppDimens.spaceMd,
             AppDimens.spaceMd,
             AppDimens.spaceMd,
-            AppDimens.bottomNavHeight + AppDimens.spaceMd,
+            AppDimens.bottomClearance(context),
           ),
           children: [
             // Hero ring skeleton
@@ -246,8 +246,8 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      padding: EdgeInsets.only(
+        bottom: AppDimens.bottomClearance(context),
       ),
       child: Center(
         child: Padding(
@@ -307,8 +307,8 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      padding: EdgeInsets.only(
+        bottom: AppDimens.bottomClearance(context),
       ),
       child: Center(
         child: Padding(
@@ -374,8 +374,8 @@ class _ContentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.only(
-        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      padding: EdgeInsets.only(
+        bottom: AppDimens.bottomClearance(context),
       ),
       children: [
         // Goals section
