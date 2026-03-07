@@ -57,4 +57,3 @@ test_compilation.sh
 # Git Worktrees
 .worktrees/.Claude/
 .worktrees/
-*.png

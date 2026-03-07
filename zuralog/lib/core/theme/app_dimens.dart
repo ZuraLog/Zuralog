@@ -144,5 +144,5 @@ abstract final class AppDimens {
   /// Use this instead of hardcoded `bottomNavHeight + spaceMd` constants
   /// wherever the last content element of a tab needs bottom breathing room.
   static double bottomClearance(BuildContext context) =>
-      bottomNavHeight + spaceMd;
+      MediaQuery.of(context).padding.bottom;
 }
