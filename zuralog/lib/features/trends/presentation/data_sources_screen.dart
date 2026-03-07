@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:simple_icons/simple_icons.dart';
 
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -166,21 +167,8 @@ class _DataSourceCard extends ConsumerWidget {
           // ── Header row ─────────────────────────────────────────
           Row(
             children: [
-              // Integration icon placeholder
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceDark,
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusSm),
-                ),
-                child: const Icon(
-                  Icons.hub_rounded,
-                  size: 20,
-                  color: AppColors.textSecondaryDark,
-                ),
-              ),
+              // Integration brand icon
+              _IntegrationIcon(integrationId: source.integrationId),
               const SizedBox(width: AppDimens.spaceMd),
               Expanded(
                 child: Column(
@@ -302,6 +290,56 @@ class _DataSourceCard extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Empty / Error States ──────────────────────────────────────────────────────
+
+// ── Integration Brand Icon ────────────────────────────────────────────────────
+
+/// Displays the brand icon for a known integration ID using [simple_icons].
+/// Falls back to a generic hub icon for unknown integrations.
+class _IntegrationIcon extends StatelessWidget {
+  const _IntegrationIcon({required this.integrationId});
+  final String integrationId;
+
+  /// Returns [iconData, iconColor] for known integration IDs.
+  /// Color is the brand's official color. Falls back to generic hub icon.
+  (IconData, Color) _brandIcon() {
+    switch (integrationId.toLowerCase()) {
+      case 'strava':
+        return (SimpleIcons.strava, const Color(0xFFFC4C02));
+      case 'fitbit':
+        return (SimpleIcons.fitbit, const Color(0xFF00B0B9));
+      case 'garmin':
+        return (SimpleIcons.garmin, const Color(0xFF007DC5));
+      case 'apple_health':
+      case 'apple health':
+        return (SimpleIcons.apple, const Color(0xFFE8E8E8));
+      case 'google_fit':
+      case 'google fit':
+        return (SimpleIcons.googlefit, const Color(0xFF4285F4));
+      default:
+        return (Icons.hub_rounded, AppColors.textSecondaryDark);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (iconData, iconColor) = _brandIcon();
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: iconColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+      ),
+      child: Icon(
+        iconData,
+        size: 20,
+        color: iconColor,
       ),
     );
   }
