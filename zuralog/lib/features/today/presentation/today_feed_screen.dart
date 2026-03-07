@@ -316,11 +316,11 @@ class TodayFeedScreen extends ConsumerWidget {
             // ── Wellness Check-in card ────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
+                padding: EdgeInsets.fromLTRB(
                   AppDimens.spaceMd,
                   AppDimens.spaceLg,
                   AppDimens.spaceMd,
-                  AppDimens.bottomNavHeight + AppDimens.spaceMd,
+                  AppDimens.bottomClearance(context),
                 ),
                 child: _FadeSlideIn(
                   delay: const Duration(milliseconds: 300),
@@ -763,12 +763,11 @@ class _QuickActionCardState extends State<_QuickActionCard> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
+      onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
       child: AnimatedScale(
         scale: _pressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 150),
@@ -1483,55 +1482,65 @@ void _showQuickLog(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => Consumer(
-      builder: (ctx, r, _) {
-        final isLoading = r.watch(quickLogLoadingProvider);
-        return QuickLogSheet(
-          isLoading: isLoading,
-          initialMetric: initialMetric,
-          onSubmit: (data) async {
-            r.read(quickLogLoadingProvider.notifier).state = true;
-            try {
-              await r.read(todayRepositoryProvider).submitQuickLog({
-                'mood': data.mood,
-                'energy': data.energy,
-                'stress': data.stress,
-                'water_glasses': data.waterGlasses,
-                'notes': data.notes,
-                'symptoms': data.symptoms,
-              });
-              r.read(hapticServiceProvider).success();
-              r.read(analyticsServiceProvider).capture(
-                event: AnalyticsEvents.quickLogSubmitted,
-                properties: {
-                  'has_mood': data.mood > 0,
-                  'has_energy': data.energy > 0,
-                  'has_stress': data.stress > 0,
+    builder: (_) => DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.25,
+      maxChildSize: 0.95,
+      expand: false,
+      snap: true,
+      snapSizes: const [0.75, 0.95],
+      shouldCloseOnMinExtent: true,
+      builder: (_, scrollController) => Consumer(
+        builder: (ctx, r, _) {
+          final isLoading = r.watch(quickLogLoadingProvider);
+          return QuickLogSheet(
+            isLoading: isLoading,
+            initialMetric: initialMetric,
+            scrollController: scrollController,
+            onSubmit: (data) async {
+              r.read(quickLogLoadingProvider.notifier).state = true;
+              try {
+                await r.read(todayRepositoryProvider).submitQuickLog({
+                  'mood': data.mood,
+                  'energy': data.energy,
+                  'stress': data.stress,
                   'water_glasses': data.waterGlasses,
-                  'has_notes': data.notes.isNotEmpty,
-                  'symptoms_count': data.symptoms.length,
-                },
-              );
-              // First-use guard.
-              SharedPreferences.getInstance().then((prefs) {
-                if (prefs.getBool('analytics_first_quick_log') != true) {
-                  prefs.setBool('analytics_first_quick_log', true);
-                  r.read(analyticsServiceProvider).capture(
-                    event: AnalyticsEvents.firstQuickLog,
-                  );
-                }
-              });
-              r.invalidate(todayFeedProvider);
-              r.invalidate(healthScoreProvider);
-              if (ctx.mounted) Navigator.of(ctx).pop();
-            } catch (_) {
-              r.read(hapticServiceProvider).warning();
-            } finally {
-              r.read(quickLogLoadingProvider.notifier).state = false;
-            }
-          },
-        );
-      },
+                  'notes': data.notes,
+                  'symptoms': data.symptoms,
+                });
+                r.read(hapticServiceProvider).success();
+                r.read(analyticsServiceProvider).capture(
+                  event: AnalyticsEvents.quickLogSubmitted,
+                  properties: {
+                    'has_mood': data.mood > 0,
+                    'has_energy': data.energy > 0,
+                    'has_stress': data.stress > 0,
+                    'water_glasses': data.waterGlasses,
+                    'has_notes': data.notes.isNotEmpty,
+                    'symptoms_count': data.symptoms.length,
+                  },
+                );
+                // First-use guard.
+                SharedPreferences.getInstance().then((prefs) {
+                  if (prefs.getBool('analytics_first_quick_log') != true) {
+                    prefs.setBool('analytics_first_quick_log', true);
+                    r.read(analyticsServiceProvider).capture(
+                      event: AnalyticsEvents.firstQuickLog,
+                    );
+                  }
+                });
+                r.invalidate(todayFeedProvider);
+                r.invalidate(healthScoreProvider);
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              } catch (_) {
+                r.read(hapticServiceProvider).warning();
+              } finally {
+                r.read(quickLogLoadingProvider.notifier).state = false;
+              }
+            },
+          );
+        },
+      ),
     ),
   );
 }

@@ -127,4 +127,25 @@ abstract final class AppDimens {
 
   /// Navigation bar frosted glass background opacity.
   static const double navBarFrostOpacity = 0.70;
+
+  // ── Layout Helpers ────────────────────────────────────────────────────────
+
+  /// Device-adaptive bottom clearance for content inside tabs.
+  ///
+  /// The app shell uses `extendBody: true` so tab content scrolls behind the
+  /// 80 px frosted navigation bar. Flutter's [NavigationBar] also internally
+  /// adds [MediaQuery.padding.bottom] (the system safe-area / home-indicator
+  /// inset, typically ~34 px on iPhones with a home indicator) to its own
+  /// rendered height. Both layers together form the full visual overlay:
+  ///
+  /// ```
+  ///   bottomNavHeight (80)  +  spaceMd (16)  +  systemSafeArea (~34)
+  ///   = ~130 px on iPhone 14/15/16
+  ///   =  96 px on iPhone SE / most Androids without gesture bar
+  /// ```
+  ///
+  /// Use this instead of the hardcoded `bottomNavHeight + spaceMd` constant
+  /// wherever the last content element of a tab needs bottom breathing room.
+  static double bottomClearance(BuildContext context) =>
+      bottomNavHeight + spaceMd + MediaQuery.of(context).padding.bottom;
 }

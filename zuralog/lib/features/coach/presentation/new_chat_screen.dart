@@ -126,6 +126,21 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
       }
     });
 
+    // Handle prefill value that was set before this build cycle ran
+    // (e.g., navigating from Data/Insight tab to Coach tab).
+    final pendingPrefill = ref.read(coachPrefillProvider);
+    if (pendingPrefill != null && pendingPrefill.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        // Only apply if the field is still empty (don't overwrite user input).
+        if (_inputCtrl.text.isEmpty) {
+          _inputCtrl.text = pendingPrefill;
+          _inputFocus.requestFocus();
+        }
+        ref.read(coachPrefillProvider.notifier).state = null;
+      });
+    }
+
     final suggestionsAsync = ref.watch(coachPromptSuggestionsProvider);
 
     return Scaffold(
@@ -410,7 +425,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
               AppDimens.spaceMd,
-              AppDimens.spaceMd + MediaQuery.of(context).padding.bottom,
+              AppDimens.bottomClearance(context),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,

@@ -75,6 +75,7 @@ class QuickLogSheet extends ConsumerStatefulWidget {
     required this.onSubmit,
     this.isLoading = false,
     this.initialMetric,
+    this.scrollController,
   });
 
   /// Called with the completed [QuickLogData] when the user taps Submit.
@@ -85,6 +86,10 @@ class QuickLogSheet extends ConsumerStatefulWidget {
 
   /// Optional metric to scroll to on open: 'mood' | 'energy' | 'stress' | 'water'.
   final String? initialMetric;
+
+  /// Optional external [ScrollController] provided by [DraggableScrollableSheet].
+  /// When supplied, it coordinates scroll position with the sheet's dismiss gesture.
+  final ScrollController? scrollController;
 
   @override
   ConsumerState<QuickLogSheet> createState() => _QuickLogSheetState();
@@ -192,7 +197,13 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
       child: SafeArea(
         top: false,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          // When driven by DraggableScrollableSheet (scrollController provided),
+          // the external sheet already constrains the height — use max so the
+          // Column fills it and Expanded can work. Standalone (min) keeps the
+          // original ConstrainedBox-based self-sizing behaviour.
+          mainAxisSize: widget.scrollController != null
+              ? MainAxisSize.max
+              : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Drag handle
@@ -223,19 +234,20 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
             ),
             const SizedBox(height: AppDimens.spaceMd),
 
-            // Content — scrollable so it works on small screens
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.65,
-              ),
-              child: SingleChildScrollView(
-                controller: _scrollCtrl,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+            // Content — scrollable so it works on small screens.
+            // When DraggableScrollableSheet owns the scroll (scrollController
+            // provided), wrap in Expanded so the scrollable fills remaining
+            // height without overflowing. Standalone keeps ConstrainedBox.
+            if (widget.scrollController != null)
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: widget.scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                     // ── Sliders ─────────────────────────────────────────────
                     _SliderRow(
                       key: _moodKey,
@@ -345,7 +357,134 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                   ],
                 ),
               ),
-            ),
+            )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.65,
+                ),
+                child: SingleChildScrollView(
+                  controller: _scrollCtrl,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Sliders ─────────────────────────────────────────────
+                      _SliderRow(
+                        key: _moodKey,
+                        label: 'Mood',
+                        value: _mood,
+                        color: AppColors.categoryWellness,
+                        textColor: textPrimary,
+                        secondaryColor: textSecondary,
+                        onChanged: (v) => setState(() => _mood = v),
+                      ),
+                      const SizedBox(height: AppDimens.spaceSm),
+                      _SliderRow(
+                        key: _energyKey,
+                        label: 'Energy',
+                        value: _energy,
+                        color: AppColors.categoryActivity,
+                        textColor: textPrimary,
+                        secondaryColor: textSecondary,
+                        onChanged: (v) => setState(() => _energy = v),
+                      ),
+                      const SizedBox(height: AppDimens.spaceSm),
+                      _SliderRow(
+                        key: _stressKey,
+                        label: 'Stress',
+                        value: _stress,
+                        color: AppColors.categoryHeart,
+                        textColor: textPrimary,
+                        secondaryColor: textSecondary,
+                        onChanged: (v) => setState(() => _stress = v),
+                      ),
+                      const SizedBox(height: AppDimens.spaceLg),
+
+                      // ── Water counter ───────────────────────────────────────
+                      _WaterCounter(
+                        key: _waterKey,
+                        count: _water,
+                        textColor: textPrimary,
+                        secondaryColor: textSecondary,
+                        onDecrement: () {
+                          if (_water > 0) {
+                            ref.read(hapticServiceProvider).light();
+                            setState(() => _water--);
+                          }
+                        },
+                        onIncrement: () {
+                          ref.read(hapticServiceProvider).light();
+                          setState(() => _water++);
+                        },
+                      ),
+                      const SizedBox(height: AppDimens.spaceLg),
+
+                      // ── Notes field ─────────────────────────────────────────
+                      TextField(
+                        controller: _notesCtrl,
+                        style: AppTextStyles.body.copyWith(color: textPrimary),
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: 'Notes (optional)',
+                          hintStyle: AppTextStyles.body
+                              .copyWith(color: textSecondary),
+                        ),
+                      ),
+                      const SizedBox(height: AppDimens.spaceMd),
+
+                      // ── Symptoms ────────────────────────────────────────────
+                      Text(
+                        'Symptoms',
+                        style: AppTextStyles.caption
+                            .copyWith(color: textSecondary),
+                      ),
+                      const SizedBox(height: AppDimens.spaceSm),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final symptom in _symptomOptions)
+                            FilterChip(
+                              label: Text(
+                                symptom,
+                                style: AppTextStyles.caption,
+                              ),
+                              selected: _selectedSymptoms.contains(symptom),
+                              onSelected: (selected) {
+                                ref
+                                    .read(hapticServiceProvider)
+                                    .selectionTick();
+                                setState(() {
+                                  if (selected) {
+                                    _selectedSymptoms.add(symptom);
+                                  } else {
+                                    _selectedSymptoms.remove(symptom);
+                                  }
+                                });
+                              },
+                              selectedColor:
+                                  AppColors.primary.withValues(alpha: 0.2),
+                              checkmarkColor: AppColors.primary,
+                              backgroundColor: isDark
+                                  ? const Color(0xFF2C2C2E)
+                                  : AppColors.surfaceLight,
+                              side: BorderSide(
+                                color: _selectedSymptoms.contains(symptom)
+                                    ? AppColors.primary
+                                    : AppColors.borderDark
+                                        .withValues(alpha: 0.3),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: AppDimens.spaceLg),
+                    ],
+                  ),
+                ),
+              ),
 
             // ── Submit bar ───────────────────────────────────────────────────
             Padding(
