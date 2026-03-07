@@ -2,6 +2,8 @@
 
 Read `DEBUG-FLUTTER.md` before starting. This document governs **when and how** to use those techniques.
 
+Apply this workflow to any scope — a single screen, a set of related features, or a full release pass. The scope is defined by the task, not by this document.
+
 ---
 
 ## Two Modes — Never Mix Them
@@ -11,29 +13,26 @@ Read `DEBUG-FLUTTER.md` before starting. This document governs **when and how** 
 | **Reconnaissance** | Observe, screenshot, log bugs | Fix anything |
 | **Execution** | Implement the plan | Open new bugs |
 
-Switching modes mid-session causes context rot. **Complete the full feature pass before touching code.**
+Switching modes mid-session causes context rot. **Complete your full defined scope before touching code.**
 
 ---
 
 ## Phase 1 — Reconnaissance
 
-### Step 1: Write the Feature List
+### Step 1: Define the Scope
 
-Before launching anything, list every feature to test. Sources: `docs/screens.md`, `docs/mvp-features.md`, task description.
+Before launching anything, write out what you will test. Derive the list from:
+- The task description or PR
+- `docs/screens.md` and `docs/mvp-features.md` (for broad passes)
+- A specific screen or flow (for targeted fixes)
+
+The scope can be one item or fifty. Size it to the task.
 
 ```
-FEATURES TO TEST
-[ ] Welcome — animation, logo
-[ ] Onboarding — transitions, copy
-[ ] Login — email/password, Google Sign-In
-[ ] Register — validation, errors
-[ ] Today tab — insights feed, health score, quick actions
-[ ] Dashboard — activity rings, metrics, populated + empty
-[ ] Coach Chat — WebSocket send/receive
-[ ] Integrations — connected, disconnected, OAuth flow
-[ ] Settings — theme toggle, logout
-[ ] Dark mode — all tabs
-[ ] Empty states — demo-empty account
+SCOPE
+[ ] <screen or feature>
+[ ] <screen or feature>
+[ ] ...
 ```
 
 The list is **fixed** before Reconnaissance begins. Do not add to it mid-session.
@@ -59,11 +58,11 @@ flutter devices                     # → emulator-5554   device
 
 ---
 
-### Step 3: Test Each Feature — Observe Only
+### Step 3: Test Each Item — Observe Only
 
-For each feature:
+For each item in scope:
 1. Navigate (ADB tap/swipe)
-2. Screenshot → `.agent/screenshots/<feature>.png`
+2. Screenshot → `.agent/screenshots/<label>.png`
 3. Read screenshot
 4. Check logcat: `"$ADB" -s $DEVICE logcat -d flutter:D *:S | tail -30`
 5. Mark **PASS** or **BUG**
@@ -77,36 +76,29 @@ For each feature:
 
 ```
 BUGS FOUND
-BUG-001  [Dashboard] Activity rings static on first load.
-  Steps:    demo-full → Dashboard tab
-  Expected: Rings animate 0 → value
-  Actual:   Rings appear at final value immediately
-  Evidence: .agent/screenshots/dashboard-rings.png
-
-BUG-002  [Coach Chat] WebSocket drops after ~10s inactivity.
-  Steps:    Chat tab → wait 15s → send message
-  Expected: Message sends
-  Actual:   "Connection lost" toast; message not sent
-  Logcat:   WS close frame code=1006
+BUG-001  [<Screen/Feature>] <One-line symptom>
+  Steps:    <Minimal reproduction steps>
+  Expected: <What should happen>
+  Actual:   <What actually happened>
+  Evidence: .agent/screenshots/<label>.png
+  Logcat:   <Relevant log line if any>
 ```
 
 Facts only — no cause theories at this stage.
 
 ---
 
-### Step 5: Complete the Full Pass
+### Step 5: Complete the Scope
 
-Every feature gets PASS or BUG before stopping. No exceptions.
+Every item in scope gets PASS or BUG before stopping. No exceptions.
 
 ```
 RECONNAISSANCE SUMMARY
-PASS  Welcome
-PASS  Onboarding
-BUG   Login — Google Sign-In (BUG-001)
-PASS  Register
-BUG   Dashboard — rings (BUG-002)
-BUG   Coach Chat — WS drop (BUG-003)
-PASS  Integrations
+PASS  <item>
+PASS  <item>
+BUG   <item> (BUG-001)
+PASS  <item>
+BUG   <item> (BUG-002)
 ...
 ```
 
@@ -119,11 +111,12 @@ Print in conversation before writing any code:
 ```
 === VISUAL QA REPORT ===
 Date:     <date>
-Accounts: demo-full / demo-empty
-Build:    make run / debug / local backend
+Scope:    <description of what was tested>
+Account:  <test account used>
+Build:    <make target / mode / backend>
 
 PASSED  (N): <list>
-BUGS    (N): BUG-001 ... BUG-002 ... BUG-003 ...
+BUGS    (N): BUG-001 ... BUG-002 ...
 Screenshots: .agent/screenshots/
 ```
 
@@ -136,41 +129,35 @@ Screenshots: .agent/screenshots/
 | Condition | Location |
 |-----------|----------|
 | ≤3 bugs, single-file fixes | Inline in conversation |
-| 4+ bugs, or any multi-file fix | `.agent/plans/<date>-qa-fixes.md` |
+| 4+ bugs, or any multi-file fix | `.agent/plans/<date>-<label>.md` |
 
 When in doubt, write to file — subagents won't have conversation history.
 
 ### Plan Format
 
 ```markdown
-# QA Fix Plan — <date>
+# Fix Plan — <date> — <scope label>
 
-### BUG-001: Google Sign-In silently fails
-Hypothesis: GOOGLE_WEB_CLIENT_ID not injected (bare flutter run used)
-Files:      Makefile
-Acceptance: Google Sign-In completes without null token
+### BUG-001: <title>
+Hypothesis: <root cause theory>
+Files:      <file paths>
+Acceptance: <how to verify it's fixed>
 
-### BUG-002: Dashboard rings not animating
-Hypothesis: AnimationController not re-initialized on tab reselect
-Files:      zuralog/lib/features/dashboard/presentation/dashboard_screen.dart
-Acceptance: Navigate away and back — rings animate from 0 each time
-
-### BUG-003: WebSocket drops after 10s
-Hypothesis: Missing client-side ping/keepalive
-Files:      zuralog/lib/features/chat/data/websocket_client.dart
-Acceptance: Connection stays alive after 30s inactivity
+### BUG-002: <title>
+Hypothesis: <root cause theory>
+Files:      <file paths>
+Acceptance: <how to verify it's fixed>
 
 ## Subagent Breakdown
-| Task     | Files                  | Parallel? |
-|----------|------------------------|-----------|
-| BUG-001  | Makefile               | yes       |
-| BUG-002  | dashboard_screen.dart  | yes       |
-| BUG-003  | websocket_client.dart  | yes       |
+| Task    | Files       | Parallel? |
+|---------|-------------|-----------|
+| BUG-001 | <files>     | yes/no    |
+| BUG-002 | <files>     | yes/no    |
 ```
 
 ### Subagent Rules
 - Each subagent gets: its plan entry + file paths + `DEBUG-FLUTTER.md`
-- Branch per bug: `fix/bug-001-google-signin`
+- Branch per bug: `fix/bug-001-<slug>`
 - `flutter analyze` must pass (zero warnings) before declaring done
 - No visual QA — that is Phase 4
 
@@ -179,9 +166,9 @@ Acceptance: Connection stays alive after 30s inactivity
 ## Phase 4 — Verify and Repeat
 
 1. Pull latest `main`
-2. Run full Phase 1 pass
+2. Re-run Reconnaissance over the same scope
 3. Confirm every BUG is now PASS
-4. Check for regressions in previously-passing features
+4. Check for regressions in previously-passing items
 5. New bugs found → new cycle from Phase 1
 
 ---
@@ -199,14 +186,14 @@ git status
 ## Checklists
 
 **Before Reconnaissance**
-- [ ] Feature list written
+- [ ] Scope list written
 - [ ] `curl http://localhost:8001/health` → healthy
 - [ ] `flutter devices` → emulator online
-- [ ] `make run` running in its own terminal
+- [ ] App running in its own terminal
 - [ ] `mkdir -p .agent/screenshots`
 
 **After Reconnaissance**
-- [ ] Every feature: PASS or BUG
+- [ ] Every scoped item: PASS or BUG
 - [ ] Every bug: screenshot in `.agent/screenshots/`
 - [ ] QA report printed in conversation
 
