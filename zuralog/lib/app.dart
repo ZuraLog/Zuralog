@@ -54,7 +54,10 @@ class _ZuralogAppState extends ConsumerState<ZuralogApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeModeProvider);
+    // valueOrNull falls back to ThemeMode.system while the async preference
+    // loads from SharedPreferences/API — no flash of wrong theme.
+    final themeMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
     final router = ref.watch(routerProvider);
 
     return AnalyticsInitializer(
@@ -64,8 +67,8 @@ class _ZuralogAppState extends ConsumerState<ZuralogApp> {
         // Light and dark themes from the design system.
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
-        // Defaults to ThemeMode.system — follows the device's OS setting.
-        // Overridable from the Settings screen via themeModeProvider.
+        // Persisted preference: dark/light/system. Falls back to system
+        // while the async provider loads on cold start.
         themeMode: themeMode,
         // GoRouter-backed declarative navigation.
         routerConfig: router,

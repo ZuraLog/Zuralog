@@ -3,7 +3,14 @@
 /// AI memory management, analytics opt-out, data export/deletion,
 /// wellness check-in toggle, legal links.
 ///
-/// Full implementation: Phase 8, Task 8.7.
+/// ## Fixes applied (settings-mapping remediation)
+/// Previously, the three privacy toggles (Wellness Check-in card visibility,
+/// Data Maturity Banner visibility, Analytics opt-out) were held in an
+/// in-memory [_PrivacyState] that reset on every cold start.
+///
+/// They now read from and write to [userPreferencesProvider] via the
+/// [wellnessCheckinCardVisibleProvider], [dataMaturityBannerDismissedProvider],
+/// and [analyticsOptOutProvider] derived providers.
 library;
 
 import 'package:flutter/material.dart';
@@ -17,6 +24,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
 
@@ -32,34 +40,6 @@ final _memoryItemsProvider = StateProvider<List<String>>(
   ],
 );
 
-@immutable
-class _PrivacyState {
-  const _PrivacyState({
-    this.wellnessCheckin = true,
-    this.dataMaturityBanner = true,
-    this.analytics = true,
-  });
-
-  final bool wellnessCheckin;
-  final bool dataMaturityBanner;
-  final bool analytics;
-
-  _PrivacyState copyWith({
-    bool? wellnessCheckin,
-    bool? dataMaturityBanner,
-    bool? analytics,
-  }) {
-    return _PrivacyState(
-      wellnessCheckin: wellnessCheckin ?? this.wellnessCheckin,
-      dataMaturityBanner: dataMaturityBanner ?? this.dataMaturityBanner,
-      analytics: analytics ?? this.analytics,
-    );
-  }
-}
-
-final _privacyStateProvider =
-    StateProvider<_PrivacyState>((_) => const _PrivacyState());
-
 // ── PrivacyDataScreen ──────────────────────────────────────────────────────────
 
 /// Privacy & Data screen — AI memory, privacy toggles, data management, legal.
@@ -69,8 +49,13 @@ class PrivacyDataScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final privacyState = ref.watch(_privacyStateProvider);
-    final privacyNotifier = ref.read(_privacyStateProvider.notifier);
+    // Global persisted privacy preferences.
+    final wellnessCheckin = ref.watch(wellnessCheckinCardVisibleProvider);
+    final dataMaturityBanner =
+        !ref.watch(dataMaturityBannerDismissedProvider);
+    final analyticsEnabled = !ref.watch(analyticsOptOutProvider);
+
+    final prefsNotifier = ref.read(userPreferencesProvider.notifier);
     final memoryItems = ref.watch(_memoryItemsProvider);
     final memoryNotifier = ref.read(_memoryItemsProvider.notifier);
 
@@ -195,10 +180,11 @@ class PrivacyDataScreen extends ConsumerWidget {
                     icon: Icons.self_improvement_rounded,
                     iconColor: AppColors.categoryWellness,
                     title: 'Wellness Check-in',
-                    subtitle: 'Receive daily check-in reminders',
-                    value: privacyState.wellnessCheckin,
-                    onChanged: (v) => privacyNotifier.state =
-                        privacyState.copyWith(wellnessCheckin: v),
+                    subtitle: 'Show check-in card on Today tab',
+                    value: wellnessCheckin,
+                    onChanged: (v) => prefsNotifier.mutate(
+                      (p) => p.copyWith(wellnessCheckinCardVisible: v),
+                    ),
                   ),
                   const _Divider(),
                   _ToggleRow(
@@ -206,9 +192,11 @@ class PrivacyDataScreen extends ConsumerWidget {
                     iconColor: AppColors.categoryBody,
                     title: 'Data Maturity Banner',
                     subtitle: 'Show data quality guidance banners',
-                    value: privacyState.dataMaturityBanner,
-                    onChanged: (v) => privacyNotifier.state =
-                        privacyState.copyWith(dataMaturityBanner: v),
+                    value: dataMaturityBanner,
+                    onChanged: (v) => prefsNotifier.mutate(
+                      // Banner toggle: "show" = not dismissed.
+                      (p) => p.copyWith(dataMaturityBannerDismissed: !v),
+                    ),
                   ),
                   const _Divider(),
                   _ToggleRow(
@@ -217,9 +205,11 @@ class PrivacyDataScreen extends ConsumerWidget {
                     title: 'Analytics',
                     subtitle: 'Helps us improve Zuralog',
                     subtitleExtra: 'Share anonymous usage data',
-                    value: privacyState.analytics,
-                    onChanged: (v) => privacyNotifier.state =
-                        privacyState.copyWith(analytics: v),
+                    value: analyticsEnabled,
+                    onChanged: (v) => prefsNotifier.mutate(
+                      // Analytics toggle: "enabled" = not opted out.
+                      (p) => p.copyWith(analyticsOptOut: !v),
+                    ),
                   ),
                 ],
               ),

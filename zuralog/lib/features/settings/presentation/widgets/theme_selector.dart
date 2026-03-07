@@ -38,7 +38,8 @@ class ThemeSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentMode = ref.watch(themeModeProvider);
+    final currentMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
@@ -58,7 +59,7 @@ class ThemeSelector extends ConsumerWidget {
             currentMode: currentMode,
             colorScheme: colorScheme,
             onTap: () {
-              ref.read(themeModeProvider.notifier).state = ThemeMode.system;
+              ref.read(themeModeProvider.notifier).setTheme(ThemeMode.system);
               ref.read(analyticsServiceProvider).capture(
                 event: AnalyticsEvents.themeChanged,
                 properties: {'theme': ThemeMode.system.name},
@@ -71,7 +72,7 @@ class ThemeSelector extends ConsumerWidget {
             currentMode: currentMode,
             colorScheme: colorScheme,
             onTap: () {
-              ref.read(themeModeProvider.notifier).state = ThemeMode.light;
+              ref.read(themeModeProvider.notifier).setTheme(ThemeMode.light);
               ref.read(analyticsServiceProvider).capture(
                 event: AnalyticsEvents.themeChanged,
                 properties: {'theme': ThemeMode.light.name},
@@ -84,7 +85,7 @@ class ThemeSelector extends ConsumerWidget {
             currentMode: currentMode,
             colorScheme: colorScheme,
             onTap: () {
-              ref.read(themeModeProvider.notifier).state = ThemeMode.dark;
+              ref.read(themeModeProvider.notifier).setTheme(ThemeMode.dark);
               ref.read(analyticsServiceProvider).capture(
                 event: AnalyticsEvents.themeChanged,
                 properties: {'theme': ThemeMode.dark.name},

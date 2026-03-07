@@ -2,9 +2,20 @@
 ///
 /// Morning briefing, smart reminders, quiet hours, per-category toggles,
 /// reminder frequency selector, streak/achievement/anomaly alerts.
-/// All values persisted via /api/v1/preferences.
 ///
-/// Full implementation: Phase 8, Task 8.3.
+/// ## Fixes applied (settings-mapping remediation)
+/// Previously, all 17 notification preferences lived in an in-memory
+/// [_NotificationState] that reset on every cold start. The screen's doc
+/// comment said "All values persisted via /api/v1/preferences" but the
+/// save call was never implemented.
+///
+/// Now:
+/// - [initState] seeds [_notificationStateProvider] from the loaded
+///   [userPreferencesProvider] so the screen opens with the user's actual
+///   saved preferences.
+/// - Every toggle/time-picker change calls
+///   [UserPreferencesNotifier.mutate] to immediately persist via the
+///   optimistic-write pattern (SharedPreferences + API PATCH).
 library;
 
 import 'package:flutter/material.dart';
@@ -16,6 +27,8 @@ import 'package:zuralog/core/analytics/feature_flag_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Local provider ─────────────────────────────────────────────────────────────
 
@@ -127,20 +140,82 @@ class _NotificationSettingsScreenState
   @override
   void initState() {
     super.initState();
-    // Seed reminder frequency from PostHog feature flag on first open.
-    // Only applies if the user hasn't changed the value in this session
-    // (state is still at the default of 2 / medium).
-    ref
-        .read(featureFlagServiceProvider)
-        .notificationFrequencyDefault()
-        .then((freq) {
+
+    // Seed local state from the global preferences (loaded from API/cache).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final currentState = ref.read(_notificationStateProvider);
-      if (currentState.reminderFrequency == 2) {
+      final prefs = ref.read(userPreferencesProvider).valueOrNull;
+      if (prefs != null) {
+        final notifSettings = prefs.notificationSettings;
         ref.read(_notificationStateProvider.notifier).state =
-            currentState.copyWith(reminderFrequency: freq);
+            _NotificationState(
+          morningBriefingEnabled: prefs.morningBriefingEnabled,
+          morningBriefingTime: prefs.morningBriefingTime ??
+              const TimeOfDay(hour: 7, minute: 0),
+          smartRemindersEnabled: notifSettings.smartRemindersEnabled,
+          patternReminders: notifSettings.patternReminders,
+          gapReminders: notifSettings.gapReminders,
+          goalReminders: notifSettings.goalReminders,
+          celebrationReminders: notifSettings.celebrationReminders,
+          reminderFrequency: notifSettings.reminderFrequency,
+          streakReminders: notifSettings.streakReminders,
+          achievementNotifications: notifSettings.achievementNotifications,
+          anomalyAlerts: notifSettings.anomalyAlerts,
+          integrationAlerts: notifSettings.integrationAlerts,
+          wellnessCheckinEnabled: prefs.checkinReminderEnabled,
+          wellnessCheckinTime: prefs.checkinReminderTime ??
+              const TimeOfDay(hour: 20, minute: 0),
+          quietHoursEnabled: prefs.quietHoursEnabled,
+          quietHoursStart: prefs.quietHoursStart ??
+              const TimeOfDay(hour: 22, minute: 0),
+          quietHoursEnd: prefs.quietHoursEnd ??
+              const TimeOfDay(hour: 7, minute: 0),
+        );
       }
+
+      // Seed reminder frequency from PostHog feature flag only if the
+      // user has never customised it (still at the default of 2).
+      ref
+          .read(featureFlagServiceProvider)
+          .notificationFrequencyDefault()
+          .then((freq) {
+        if (!mounted) return;
+        final currentState = ref.read(_notificationStateProvider);
+        if (currentState.reminderFrequency == 2) {
+          ref.read(_notificationStateProvider.notifier).state =
+              currentState.copyWith(reminderFrequency: freq);
+        }
+      });
     });
+  }
+
+  // ── Persist helper ─────────────────────────────────────────────────────────
+
+  /// Persists the current local [_NotificationState] to [userPreferencesProvider].
+  void _persist(_NotificationState s) {
+    ref.read(userPreferencesProvider.notifier).mutate(
+          (p) => p.copyWith(
+            morningBriefingEnabled: s.morningBriefingEnabled,
+            morningBriefingTime: s.morningBriefingTime,
+            checkinReminderEnabled: s.wellnessCheckinEnabled,
+            checkinReminderTime: s.wellnessCheckinTime,
+            quietHoursEnabled: s.quietHoursEnabled,
+            quietHoursStart: s.quietHoursStart,
+            quietHoursEnd: s.quietHoursEnd,
+            notificationSettings: NotificationSettings(
+              smartRemindersEnabled: s.smartRemindersEnabled,
+              patternReminders: s.patternReminders,
+              gapReminders: s.gapReminders,
+              goalReminders: s.goalReminders,
+              celebrationReminders: s.celebrationReminders,
+              reminderFrequency: s.reminderFrequency,
+              streakReminders: s.streakReminders,
+              achievementNotifications: s.achievementNotifications,
+              anomalyAlerts: s.anomalyAlerts,
+              integrationAlerts: s.integrationAlerts,
+            ),
+          ),
+        );
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -181,7 +256,9 @@ class _NotificationSettingsScreenState
                 subtitle: 'Daily AI-generated health summary',
                 value: state.morningBriefingEnabled,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(morningBriefingEnabled: v);
+                  final updated = state.copyWith(morningBriefingEnabled: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('morning_briefing', v);
                 },
               ),
@@ -192,8 +269,11 @@ class _NotificationSettingsScreenState
                   iconColor: AppColors.categoryNutrition,
                   title: 'Briefing Time',
                   time: state.morningBriefingTime,
-                  onChanged: (t) =>
-                      notifier.state = state.copyWith(morningBriefingTime: t),
+                  onChanged: (t) {
+                    final updated = state.copyWith(morningBriefingTime: t);
+                    notifier.state = updated;
+                    _persist(updated);
+                  },
                 ),
               ],
             ],
@@ -210,7 +290,9 @@ class _NotificationSettingsScreenState
                 subtitle: 'AI-personalized nudges based on your patterns',
                 value: state.smartRemindersEnabled,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(smartRemindersEnabled: v);
+                  final updated = state.copyWith(smartRemindersEnabled: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('smart_reminders', v);
                 },
               ),
@@ -219,47 +301,58 @@ class _NotificationSettingsScreenState
                 _SubToggleRow(
                   title: 'Pattern-based',
                   subtitle: 'Reminders based on your behavior history',
-                  value: state.patternReminders,
-                  onChanged: (v) {
-                    notifier.state = state.copyWith(patternReminders: v);
-                    trackToggle('pattern_reminders', v);
-                  },
+                    value: state.patternReminders,
+                    onChanged: (v) {
+                      final updated = state.copyWith(patternReminders: v);
+                      notifier.state = updated;
+                      _persist(updated);
+                      trackToggle('pattern_reminders', v);
+                    },
                 ),
                 _Divider(),
                 _SubToggleRow(
                   title: 'Data gaps',
                   subtitle: 'Remind when expected data is missing',
-                  value: state.gapReminders,
-                  onChanged: (v) {
-                    notifier.state = state.copyWith(gapReminders: v);
-                    trackToggle('gap_reminders', v);
-                  },
+                    value: state.gapReminders,
+                    onChanged: (v) {
+                      final updated = state.copyWith(gapReminders: v);
+                      notifier.state = updated;
+                      _persist(updated);
+                      trackToggle('gap_reminders', v);
+                    },
                 ),
                 _Divider(),
                 _SubToggleRow(
                   title: 'Goal progress',
                   subtitle: 'Nudges when you\'re close to your goals',
-                  value: state.goalReminders,
-                  onChanged: (v) {
-                    notifier.state = state.copyWith(goalReminders: v);
-                    trackToggle('goal_reminders', v);
-                  },
+                    value: state.goalReminders,
+                    onChanged: (v) {
+                      final updated = state.copyWith(goalReminders: v);
+                      notifier.state = updated;
+                      _persist(updated);
+                      trackToggle('goal_reminders', v);
+                    },
                 ),
                 _Divider(),
                 _SubToggleRow(
                   title: 'Celebrations',
                   subtitle: 'Positive milestones and personal bests',
-                  value: state.celebrationReminders,
-                  onChanged: (v) {
-                    notifier.state = state.copyWith(celebrationReminders: v);
-                    trackToggle('celebration_reminders', v);
-                  },
+                    value: state.celebrationReminders,
+                    onChanged: (v) {
+                      final updated =
+                          state.copyWith(celebrationReminders: v);
+                      notifier.state = updated;
+                      _persist(updated);
+                      trackToggle('celebration_reminders', v);
+                    },
                 ),
                 _Divider(),
                 _FrequencyRow(
                   value: state.reminderFrequency,
                   onChanged: (v) {
-                    notifier.state = state.copyWith(reminderFrequency: v);
+                    final updated = state.copyWith(reminderFrequency: v);
+                    notifier.state = updated;
+                    _persist(updated);
                     analytics.capture(
                       event: AnalyticsEvents.notificationFrequencyChanged,
                       properties: {
@@ -283,7 +376,9 @@ class _NotificationSettingsScreenState
                 subtitle: 'Keep your streaks alive',
                 value: state.streakReminders,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(streakReminders: v);
+                  final updated = state.copyWith(streakReminders: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('streak_reminders', v);
                 },
               ),
@@ -295,7 +390,10 @@ class _NotificationSettingsScreenState
                 subtitle: 'Celebrate new badges',
                 value: state.achievementNotifications,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(achievementNotifications: v);
+                  final updated =
+                      state.copyWith(achievementNotifications: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('achievement_notifications', v);
                 },
               ),
@@ -307,7 +405,9 @@ class _NotificationSettingsScreenState
                 subtitle: 'Critical health metric deviations',
                 value: state.anomalyAlerts,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(anomalyAlerts: v);
+                  final updated = state.copyWith(anomalyAlerts: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('anomaly_alerts', v);
                 },
               ),
@@ -319,7 +419,9 @@ class _NotificationSettingsScreenState
                 subtitle: 'When a connected app stops syncing',
                 value: state.integrationAlerts,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(integrationAlerts: v);
+                  final updated = state.copyWith(integrationAlerts: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('integration_alerts', v);
                 },
               ),
@@ -337,7 +439,9 @@ class _NotificationSettingsScreenState
                 subtitle: 'Log mood, energy, and water intake',
                 value: state.wellnessCheckinEnabled,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(wellnessCheckinEnabled: v);
+                  final updated = state.copyWith(wellnessCheckinEnabled: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('wellness_checkin', v);
                 },
               ),
@@ -348,8 +452,11 @@ class _NotificationSettingsScreenState
                   iconColor: AppColors.categoryWellness,
                   title: 'Check-in Time',
                   time: state.wellnessCheckinTime,
-                  onChanged: (t) =>
-                      notifier.state = state.copyWith(wellnessCheckinTime: t),
+                  onChanged: (t) {
+                    final updated = state.copyWith(wellnessCheckinTime: t);
+                    notifier.state = updated;
+                    _persist(updated);
+                  },
                 ),
               ],
             ],
@@ -366,7 +473,9 @@ class _NotificationSettingsScreenState
                 subtitle: 'Silence all notifications during set hours',
                 value: state.quietHoursEnabled,
                 onChanged: (v) {
-                  notifier.state = state.copyWith(quietHoursEnabled: v);
+                  final updated = state.copyWith(quietHoursEnabled: v);
+                  notifier.state = updated;
+                  _persist(updated);
                   trackToggle('quiet_hours', v);
                 },
               ),
@@ -377,8 +486,11 @@ class _NotificationSettingsScreenState
                   iconColor: AppColors.categorySleep,
                   title: 'Start',
                   time: state.quietHoursStart,
-                  onChanged: (t) =>
-                      notifier.state = state.copyWith(quietHoursStart: t),
+                  onChanged: (t) {
+                    final updated = state.copyWith(quietHoursStart: t);
+                    notifier.state = updated;
+                    _persist(updated);
+                  },
                 ),
                 _Divider(),
                 _TimePickerRow(
@@ -386,8 +498,11 @@ class _NotificationSettingsScreenState
                   iconColor: AppColors.categorySleep,
                   title: 'End',
                   time: state.quietHoursEnd,
-                  onChanged: (t) =>
-                      notifier.state = state.copyWith(quietHoursEnd: t),
+                  onChanged: (t) {
+                    final updated = state.copyWith(quietHoursEnd: t);
+                    notifier.state = updated;
+                    _persist(updated);
+                  },
                 ),
               ],
             ],
