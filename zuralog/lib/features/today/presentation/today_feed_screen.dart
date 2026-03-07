@@ -23,6 +23,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
@@ -46,7 +47,7 @@ class TodayFeedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
-    final bannerDismissed = ref.watch(dataMaturityBannerDismissed);
+    final bannerDismissed = ref.watch(dataMaturityBannerDismissedProvider);
 
     // Data maturity banner state computation.
     final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
@@ -58,9 +59,17 @@ class TodayFeedScreen extends ConsumerWidget {
     final bannerMode = accountMature
         ? DataMaturityMode.stillBuilding
         : DataMaturityMode.progress;
+    final wellnessCardVisible = ref.watch(wellnessCheckinCardVisibleProvider);
     final sessionDismissed = ref.watch(todayBannerSessionDismissed);
+    final prefsAsync = ref.watch(userPreferencesProvider);
     final showBanner = dataDays < 7 &&
-        (bannerMode == DataMaturityMode.progress ? !bannerDismissed : !sessionDismissed);
+        !bannerDismissed &&
+        !prefsAsync.isLoading && // Don't show banner while prefs loading — avoids silent dismiss drop
+        (bannerMode == DataMaturityMode.progress || !sessionDismissed);
+
+    void persistBannerDismissed() => ref
+        .read(userPreferencesProvider.notifier)
+        .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true));
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -124,10 +133,10 @@ class TodayFeedScreen extends ConsumerWidget {
                     targetDays: 7,
                     mode: bannerMode,
                     onDismiss: bannerMode == DataMaturityMode.progress
-                        ? () => ref.read(dataMaturityBannerDismissed.notifier).state = true
+                        ? persistBannerDismissed
                         : () => ref.read(todayBannerSessionDismissed.notifier).state = true,
                     onPermanentDismiss: bannerMode == DataMaturityMode.stillBuilding
-                        ? () => ref.read(dataMaturityBannerDismissed.notifier).state = true
+                        ? persistBannerDismissed
                         : null,
                   ),
                 ),
@@ -145,7 +154,7 @@ class TodayFeedScreen extends ConsumerWidget {
                 child: _FadeSlideIn(
                   delay: const Duration(milliseconds: 60),
                   child: _SectionHeader(
-                    title: _timeOfDayGreeting(),
+                    title: _timeOfDayGreeting(profile?.aiName),
                     trailing: feedAsync.whenOrNull(
                       data: (feed) => feed.streak != null
                           ? StreakBadge.inline(
@@ -314,20 +323,21 @@ class TodayFeedScreen extends ConsumerWidget {
             ],
 
             // ── Wellness Check-in card ────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.bottomClearance(context),
-                ),
-                child: _FadeSlideIn(
-                  delay: const Duration(milliseconds: 300),
-                  child: _WellnessCheckinCard(),
+            if (wellnessCardVisible)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    AppDimens.bottomClearance(context),
+                  ),
+                  child: _FadeSlideIn(
+                    delay: const Duration(milliseconds: 300),
+                    child: const _WellnessCheckinCard(),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -1383,13 +1393,24 @@ class _ShimmerState extends State<_Shimmer>
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Returns a time-of-day greeting string.
-String _timeOfDayGreeting() {
+/// Returns a time-of-day greeting string, optionally personalized with [name].
+///
+/// When [name] is provided and non-empty, returns e.g. "Good morning, Alex".
+/// Falls back to the bare greeting when [name] is null or empty.
+String _timeOfDayGreeting([String? name]) {
   final hour = DateTime.now().hour;
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  if (hour < 21) return 'Good evening';
-  return 'Good night';
+  String base;
+  if (hour < 12) {
+    base = 'Good morning';
+  } else if (hour < 17) {
+    base = 'Good afternoon';
+  } else if (hour < 21) {
+    base = 'Good evening';
+  } else {
+    base = 'Good night';
+  }
+  if (name != null && name.isNotEmpty) return '$base, $name';
+  return base;
 }
 
 /// Returns a formatted date string for the app bar (e.g. "Wednesday, Mar 4").

@@ -77,6 +77,14 @@ enum UnitsSystem {
           orElse: () => UnitsSystem.metric);
 }
 
+/// Maps each [UnitsSystem] to its human-readable water-volume unit label.
+extension UnitsSystemWaterLabel on UnitsSystem {
+  String get waterUnitLabel => switch (this) {
+    UnitsSystem.metric   => 'glasses (250 ml)',
+    UnitsSystem.imperial => 'glasses (8 oz)',
+  };
+}
+
 enum FitnessLevel {
   beginner('beginner'),
   active('active'),

@@ -1,9 +1,43 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-07 (Trends Gap Closure + Quality Review)  
+**Last Updated:** 2026-03-08 (Today Tab Settings Wiring)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Today Tab — Settings Wiring (feat/today-tab-settings-wiring, 2026-03-08)
+
+Completed 4 tasks from the Settings Mapping Audit plan, wiring persisted user preferences to the Today tab and Quick Log. Branch: `feat/today-tab-settings-wiring`.
+
+**Files changed:**
+- `zuralog/lib/features/today/presentation/today_feed_screen.dart` — greeting personalization, data maturity banner persistence, wellness check-in card gating
+- `zuralog/lib/features/today/providers/today_providers.dart` — removed dead session-scoped `dataMaturityBannerDismissed` StateProvider
+- `zuralog/lib/shared/widgets/quick_log_sheet.dart` — units-aware water label
+- `zuralog/lib/features/settings/domain/user_preferences_model.dart` — added `UnitsSystemWaterLabel` extension
+
+**What was implemented:**
+
+1. **Greeting personalization (Task 3.1)** — `_timeOfDayGreeting()` now reads `profile?.aiName` and displays "Good morning, Alex" (or "Good morning" fallback). Fixes the bug where the greeting was always generic.
+
+2. **Data Maturity Banner dismiss persistence (Task 3.2)** — Banner dismiss now writes to persisted `userPreferencesProvider` via `mutate()`. Progress mode `onDismiss` and stillBuilding `onPermanentDismiss` both persist to the backend. Session X-dismiss on stillBuilding remains session-only (intentional — users can re-dismiss daily). Removed dead session-scoped `dataMaturityBannerDismissed` StateProvider. Fixed race condition: `showBanner` logic now gates on both `!bannerDismissed` AND `!prefsAsync.isLoading` to prevent the banner from flickering when preferences are loading.
+
+3. **Wellness Check-in card gated on Privacy toggle (Task 3.3)** — `_WellnessCheckinCard` is now wrapped in `if (wellnessCardVisible)`. The visibility is controlled by `wellnessCheckinCardVisibleProvider`, which reads from persisted `userPreferencesProvider`. The Privacy & Data settings screen's "Wellness Check-in" toggle now controls whether the card appears on the Today tab.
+
+4. **Units-aware water label in Quick Log (Task 3.4)** — Added `UnitsSystemWaterLabel` extension to `user_preferences_model.dart` with a `waterUnitLabel` getter that returns `'glasses (250 ml)'` for metric units or `'glasses (8 oz)'` for imperial. `_WaterCounter` in `quick_log_sheet.dart` now accepts a `required String label` parameter and receives `unitsSystem.waterUnitLabel`. The backend `waterGlasses` payload remains unchanged.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Persist banner dismiss to backend | Users expect the banner to stay dismissed across sessions. Session-only dismissal would be frustrating. |
+| Session-only X-dismiss on stillBuilding | The X button on the stillBuilding state is a "hide for now" action, not a permanent dismiss. Users should see it again tomorrow if they open the app. |
+| Race condition fix: `!prefsAsync.isLoading` | Without this guard, the banner could flicker on/off as preferences load. The guard ensures the banner is only shown when we have definitive dismiss state. |
+| Wellness check-in gating | Privacy & Data is the natural home for this toggle since it controls data collection. Gating the card on this toggle ensures the UI reflects the user's privacy preference. |
+| Units-aware water label | Users in metric regions expect "ml" or "250 ml per glass"; imperial users expect "oz" or "8 oz per glass". The label is now context-aware. |
+
+**`flutter analyze`:** 24 issues (all pre-existing — zero in Today tab files). Zero errors.
 
 ---
 

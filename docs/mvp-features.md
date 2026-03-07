@@ -353,7 +353,7 @@ Interactive analytics that let users discover patterns in their own data:
 
 ### O. Quick Log / Manual Entry
 
-**Implementation status:** Not implemented. Not in current [screens.md](./screens.md).
+**Implementation status:** Partially implemented. Water counter with units-aware label wired in feat/today-tab-settings-wiring (2026-03-08). Full Quick Log bottom sheet (mood, energy, stress, pain, notes) not yet implemented.
 
 A dedicated quick-entry interface for data that does not come from integrations. This is the structured complement to natural language logging in chat — for users who prefer tapping over typing.
 
@@ -380,7 +380,7 @@ A dedicated quick-entry interface for data that does not come from integrations.
 
 ### P. Wearable-Free Wellness Check-in
 
-**Implementation status:** Not implemented. Not in current [screens.md](./screens.md). Related to the Journal/Daily Log screen planned in the Progress Tab.
+**Implementation status:** Partially implemented. Card visibility gated on Privacy & Data toggle (feat/today-tab-settings-wiring, 2026-03-08). Full check-in flow (subjective rating prompt, push notification trigger) not yet implemented.
 
 A daily prompted check-in for users who do not have wearables or who want to add subjective context alongside device data:
 
@@ -736,7 +736,7 @@ Voice input for the AI Coach conversation:
 
 ### AA. Data Maturity Indicator
 
-**Implementation status:** Not implemented. Not in current [screens.md](./screens.md).
+**Implementation status:** Partially implemented. Banner dismiss persistence wired in feat/today-tab-settings-wiring (2026-03-08). Full maturity level logic (building/ready/strong/excellent) and per-feature soft gating not yet implemented.
 
 A transparent system that communicates to users how much data the AI has and how insights will improve over time. This sets proper expectations and reduces frustration during the first week.
 
@@ -890,18 +890,19 @@ A consolidated map of all user-configurable settings introduced by MVP features.
 
 ### Settings > Privacy & Data
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| AI Memory | View/Manage | — | View stored memories, delete individual entries, clear all |
-| Wellness Check-in | Toggle | On | Enable/disable daily check-in prompt in Today Feed |
-| Data Maturity Banner | Toggle | On | Show/dismiss the data maturity progress indicator |
+| Setting | Type | Default | Description | Status |
+|---------|------|---------|-------------|--------|
+| AI Memory | View/Manage | — | View stored memories, delete individual entries, clear all | 📋 Future |
+| Wellness Check-in | Toggle | On | Enable/disable daily check-in prompt in Today Feed | ✅ Wired (feat/today-tab-settings-wiring) |
+| Data Maturity Banner | Toggle | On | Show/dismiss the data maturity progress indicator | ✅ Wired (feat/today-tab-settings-wiring) |
 
 ### Settings > Account
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| Goals | Multi-select | Set during onboarding | Edit health/fitness goals that drive AI behavior |
-| Emergency Health Card | Link | — | Navigate to Emergency Health Card edit screen |
+| Setting | Type | Default | Description | Status |
+|---------|------|---------|-------------|--------|
+| Goals | Multi-select | Set during onboarding | Edit health/fitness goals that drive AI behavior | ✅ Complete (feat/progress-tab-gaps) |
+| Units System | Segmented toggle | Metric | Metric (kg, cm, ml) or Imperial (lbs, in, oz) | ✅ Complete (feat/settings-providers) |
+| Emergency Health Card | Link | — | Navigate to Emergency Health Card edit screen | 📋 Future |
 
 ---
 

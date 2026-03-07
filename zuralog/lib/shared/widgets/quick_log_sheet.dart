@@ -41,6 +41,8 @@ import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 
 // ── QuickLogData ──────────────────────────────────────────────────────────────
@@ -186,6 +188,9 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
     final textSecondary =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
+    final unitsSystem = ref.watch(unitsSystemProvider);
+    final waterLabel = unitsSystem.waterUnitLabel;
+
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -284,6 +289,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                     _WaterCounter(
                       key: _waterKey,
                       count: _water,
+                      label: waterLabel,
                       textColor: textPrimary,
                       secondaryColor: textSecondary,
                       onDecrement: () {
@@ -407,6 +413,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                       _WaterCounter(
                         key: _waterKey,
                         count: _water,
+                        label: waterLabel,
                         textColor: textPrimary,
                         secondaryColor: textSecondary,
                         onDecrement: () {
@@ -600,6 +607,7 @@ class _WaterCounter extends StatelessWidget {
     required this.secondaryColor,
     required this.onDecrement,
     required this.onIncrement,
+    required this.label,
   });
 
   final int count;
@@ -607,6 +615,7 @@ class _WaterCounter extends StatelessWidget {
   final Color secondaryColor;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -636,7 +645,7 @@ class _WaterCounter extends StatelessWidget {
         ),
         const SizedBox(width: AppDimens.spaceSm),
         Text(
-          'glasses',
+          label,
           style: AppTextStyles.caption.copyWith(color: secondaryColor),
         ),
       ],

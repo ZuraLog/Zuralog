@@ -30,7 +30,7 @@ All project documentation lives in `docs/`. Read the relevant doc before startin
 
 ## Skills
 
-CRITICAL: This project has **local project skills** stored in `.agent/skills/`. These are NOT global skills — they exist only in this repository. Before every task, check whether a skill applies and load it using the `skill` tool.
+CRITICAL: This project has **local project skills** stored in `.agent/skills/`. These are NOT global skills — they exist only in this repository. Before every task, check whether a skill applies and load it by reading the file directly using the `Read` tool. Do NOT use the `skill` tool — it only resolves globally registered skills and will fail for local skills.
 
 | Skill | Path |
 |-------|------|
