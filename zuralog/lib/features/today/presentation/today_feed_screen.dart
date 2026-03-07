@@ -763,12 +763,11 @@ class _QuickActionCardState extends State<_QuickActionCard> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
+      onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
       child: AnimatedScale(
         scale: _pressed ? 0.96 : 1.0,
         duration: const Duration(milliseconds: 150),
