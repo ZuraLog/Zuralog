@@ -1,22 +1,22 @@
 """
-Zuralog Cloud Brain — Distributed Cache Service.
+In-memory TTL cache layer.
 
-HTTP REST-based cache layer using the Upstash Redis async SDK.
-Provides both direct get/set operations and a decorator for
-automatic response caching on FastAPI route handlers.
+Replaces the previous Upstash Redis REST implementation.
+Uses a simple dict-based store with expiry timestamps.
+Thread-safe via threading.Lock for use with async FastAPI.
 
-Runs alongside the existing redis.asyncio connection used by
-Celery and the RateLimiter — both share the same Upstash database
-but communicate via different protocols (REST vs TCP).
+The public interface is identical to the previous implementation —
+all consumers (analytics, integrations, users, health_ingest) work unchanged.
 """
 
+import fnmatch
 import json
 import logging
+import time
 from collections.abc import Callable
 from functools import wraps
+from threading import Lock
 from typing import Any
-
-from upstash_redis.asyncio import Redis
 
 from app.config import settings
 
@@ -24,30 +24,19 @@ logger = logging.getLogger(__name__)
 
 
 class CacheService:
-    """Upstash Redis REST cache with JSON serialization.
+    """In-memory TTL cache with the same interface as the previous Upstash implementation.
 
-    Attributes:
-        _redis: Upstash Redis REST client instance.
-        enabled: Whether caching is active (False when credentials missing).
+    Keys expire automatically on read (lazy eviction).
+    The store is process-local — cache is lost on restart/redeploy,
+    which is acceptable since caching is a performance optimisation, not a source of truth.
     """
 
     def __init__(self) -> None:
-        """Initialize the cache service.
-
-        If UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN is empty,
-        caching is disabled (all operations become no-ops). This allows
-        local development without Upstash credentials.
-        """
-        self.enabled = bool(settings.upstash_redis_rest_url and settings.upstash_redis_rest_token)
-        if self.enabled:
-            self._redis = Redis(
-                url=settings.upstash_redis_rest_url,
-                token=settings.upstash_redis_rest_token,
-            )
-            logger.info("CacheService initialized (Upstash REST)")
-        else:
-            self._redis = None
-            logger.info("CacheService disabled (no Upstash REST credentials)")
+        """Initialize the in-memory cache service."""
+        self._store: dict[str, tuple[Any, float]] = {}  # key -> (value, expires_at)
+        self._lock = Lock()
+        self.enabled = True
+        logger.info("CacheService initialized (in-memory TTL)")
 
     async def get(self, key: str) -> Any | None:
         """Retrieve a cached value by key.
@@ -56,18 +45,17 @@ class CacheService:
             key: The cache key.
 
         Returns:
-            The deserialized cached value, or None if not found / disabled.
+            The cached value (already deserialised), or None if missing/expired.
         """
-        if not self.enabled:
-            return None
-        try:
-            raw = await self._redis.get(key)
-            if raw is None:
+        with self._lock:
+            entry = self._store.get(key)
+            if entry is None:
                 return None
-            return json.loads(raw) if isinstance(raw, str) else raw
-        except Exception:
-            logger.warning("Cache GET failed for key=%s", key, exc_info=True)
-            return None
+            value, expires_at = entry
+            if time.monotonic() > expires_at:
+                del self._store[key]
+                return None
+            return value
 
     async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """Store a value in the cache.
@@ -75,18 +63,19 @@ class CacheService:
         Args:
             key: The cache key.
             value: The value to cache (must be JSON-serializable).
-            ttl: Time-to-live in seconds. None = no expiry.
+            ttl: Time-to-live in seconds. None = no expiry (stores indefinitely).
         """
-        if not self.enabled:
-            return
         try:
-            serialized = json.dumps(value, default=str)
-            if ttl:
-                await self._redis.setex(key, ttl, serialized)
-            else:
-                await self._redis.set(key, serialized)
-        except Exception:
-            logger.warning("Cache SET failed for key=%s", key, exc_info=True)
+            # Serialise to JSON string for consistency with previous implementation,
+            # then store the deserialised form so get() returns usable objects.
+            serialised = json.dumps(value, default=str)
+            parsed = json.loads(serialised)
+        except (TypeError, ValueError):
+            parsed = value
+
+        expires_at = time.monotonic() + ttl if ttl else float("inf")
+        with self._lock:
+            self._store[key] = (parsed, expires_at)
 
     async def delete(self, key: str) -> None:
         """Delete a single cache entry.
@@ -94,17 +83,11 @@ class CacheService:
         Args:
             key: The cache key to delete.
         """
-        if not self.enabled:
-            return
-        try:
-            await self._redis.delete(key)
-        except Exception:
-            logger.warning("Cache DELETE failed for key=%s", key, exc_info=True)
+        with self._lock:
+            self._store.pop(key, None)
 
     async def invalidate_pattern(self, pattern: str) -> int:
         """Delete all keys matching a glob pattern.
-
-        Uses SCAN + DELETE to avoid blocking the server with KEYS.
 
         Args:
             pattern: Glob pattern (e.g., 'cache:analytics:user123:*').
@@ -112,22 +95,14 @@ class CacheService:
         Returns:
             Number of keys deleted.
         """
-        if not self.enabled:
-            return 0
-        try:
-            deleted = 0
-            cursor = 0
-            while True:
-                cursor, keys = await self._redis.scan(cursor, match=pattern, count=100)
-                if keys:
-                    await self._redis.delete(*keys)
-                    deleted += len(keys)
-                if cursor == 0:
-                    break
-            return deleted
-        except Exception:
-            logger.warning("Cache INVALIDATE failed for pattern=%s", pattern, exc_info=True)
-            return 0
+        with self._lock:
+            keys_to_delete = [k for k in self._store if fnmatch.fnmatch(k, pattern)]
+            for k in keys_to_delete:
+                del self._store[k]
+        count = len(keys_to_delete)
+        if count:
+            logger.debug("Cache invalidated %d keys matching '%s'", count, pattern)
+        return count
 
     @staticmethod
     def make_key(*parts: str) -> str:

@@ -7,9 +7,7 @@
  *   - totalSupporters: count of all contribution rows
  *   - leaderboard: top 10 non-anonymous funders ordered by total contributed
  *
- * BMC API sync runs at most once every 5 minutes per server process (in-memory
- * TTL guard). Between syncs, stats are served from Supabase views which stay
- * accurate for manual entries written via the admin endpoint.
+ * BMC API sync runs on every request; stats are cached at the edge for 2 minutes.
  *
  * @route GET /api/support/stats
  * @returns JSON with totalFundsRaised, totalSupporters, leaderboard[]
@@ -18,8 +16,6 @@ import { NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { fetchAllBmcSupporters } from '@/lib/bmc';
-import { checkRateLimit } from "@/lib/rate-limit";
-import { getCached, setCached } from "@/lib/cache";
 import { captureServerEvent, hashDistinctId } from '@/lib/posthog-server';
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
@@ -38,28 +34,6 @@ export async function GET(request: Request) {
             { rank: 2, name: 'Sam T.', amount: 100.0 },
             { rank: 3, name: 'Jordan L.', amount: 75.0 },
           ],
-        });
-      }
-
-      // Rate limit
-      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-      const rl = await checkRateLimit(ip, "general");
-      if (!rl.success) {
-        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-      }
-
-      // Try Redis cache first
-      const cacheKey = "website:support:stats";
-      const cachedStats = await getCached<{ totalFundsRaised: number; totalSupporters: number; leaderboard: Array<{ rank: number; name: string; amount: number }> }>(cacheKey);
-      if (cachedStats) {
-        // Fire-and-forget: track cache-served page view.
-        // Hash IP to avoid storing PII; use captureImmediate for serverless safety.
-        const cachedIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-        captureServerEvent(hashDistinctId(`anon_${cachedIp}`), "support_stats_viewed", {
-          cached: true,
-        }).catch(() => {});
-        return NextResponse.json(cachedStats, {
-          headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
         });
       }
 
@@ -124,9 +98,8 @@ export async function GET(request: Request) {
         totalSupporters: Number(statsResult.data?.total_supporters ?? 0),
         leaderboard,
       };
-      await setCached(cacheKey, statsResponse, 300); // 5 minutes
 
-      // Fire-and-forget: track fresh (non-cached) page view.
+      // Fire-and-forget: track fresh page view.
       const freshIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
       captureServerEvent(hashDistinctId(`anon_${freshIp}`), "support_stats_viewed", {
         cached: false,
@@ -134,7 +107,7 @@ export async function GET(request: Request) {
 
       return NextResponse.json(statsResponse, {
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
         },
       });
     }

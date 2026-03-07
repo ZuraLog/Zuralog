@@ -5,19 +5,17 @@
  * Queries the referral_leaderboard view which computes referral_count
  * and handles display_name privacy.
  *
- * Cached for 1 minute.
+ * Cached for 1 minute at the edge.
  */
 import { NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from '@supabase/supabase-js';
-import { checkRateLimit } from "@/lib/rate-limit";
-import { getCached, setCached } from "@/lib/cache";
 
 export const revalidate = 60;
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
-export async function GET(request: Request) {
+export async function GET() {
   return Sentry.withServerActionInstrumentation(
     "waitlist/leaderboard",
     async () => {
@@ -28,21 +26,9 @@ export async function GET(request: Request) {
             { rank: 2, display_name: 'Jordan K.', referral_count: 8, queue_position: 7 },
             { rank: 3, display_name: 'Anonymous #4421', referral_count: 5, queue_position: 15 },
           ],
+        }, {
+          headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
         });
-      }
-
-      // Rate limit
-      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-      const rl = await checkRateLimit(ip, "general");
-      if (!rl.success) {
-        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-      }
-
-      // Try Redis cache first
-      const cacheKey = "website:waitlist:leaderboard";
-      const cachedLeaderboard = await getCached<Array<{ rank: number; display_name: string; referral_count: number; queue_position: number }>>(cacheKey);
-      if (cachedLeaderboard) {
-        return NextResponse.json({ leaderboard: cachedLeaderboard });
       }
 
       const supabase = createClient(
@@ -59,7 +45,9 @@ export async function GET(request: Request) {
       if (error) {
         console.error('[waitlist/leaderboard] query error:', error);
         // Return empty leaderboard rather than 500 — the UI handles an empty state gracefully
-        return NextResponse.json({ leaderboard: [] });
+        return NextResponse.json({ leaderboard: [] }, {
+          headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+        });
       }
 
       const leaderboard = (data ?? []).map((row, i) => ({
@@ -69,8 +57,9 @@ export async function GET(request: Request) {
         queue_position: row.queue_position,
       }));
 
-      await setCached(cacheKey, leaderboard, 60);
-      return NextResponse.json({ leaderboard });
+      return NextResponse.json({ leaderboard }, {
+        headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+      });
     }
   );
 }

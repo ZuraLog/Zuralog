@@ -12,7 +12,7 @@ Before starting, ensure you have:
 - [ ] Railway account — [railway.com](https://railway.com)
 - [ ] GitHub repository connected to Railway
 - [ ] Supabase project (already set up — shared with website)
-- [ ] Upstash Redis database created — [upstash.com](https://upstash.com)
+- [ ] Railway Redis service added to project
 - [ ] Firebase project with service account JSON downloaded
 - [ ] OpenRouter API key
 - [ ] Domain `api.zuralog.com` with DNS access (Cloudflare recommended)
@@ -231,5 +231,5 @@ FCM not configured — push notifications disabled
 
 ### Celery Workers Not Processing Tasks
 - Verify workers and web service have the same `REDIS_URL`
-- Check Upstash usage dashboard for connection limits
+- Check Railway Redis metrics in the Railway dashboard
 - Review worker logs for `ConnectionError`

@@ -203,5 +203,5 @@ See [architecture.md](./architecture.md) for full detail.
 - **Hybrid Hub:** Cloud Brain (Python/FastAPI on Railway) + Edge Agent (Flutter mobile app)
 - **MCP-First:** All integrations implemented as MCP servers for plug-and-play expansion
 - **Database:** Supabase (PostgreSQL) with Row Level Security
-- **Background sync:** Celery + Upstash Redis for task queuing
+- **Background sync:** Celery + Redis for task queuing
 - **Monitoring:** Sentry across all three platforms (cloud-brain, mobile, website)

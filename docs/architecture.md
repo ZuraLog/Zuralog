@@ -48,7 +48,7 @@ The two communicate via a REST API with JWT-based authentication. The Cloud Brai
 │  │  Services: Auth │ Cache │ Push │ Sync │ Rate Limiters    │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Supabase (Postgres + Auth)  │  Upstash Redis            │   │
+│  │  Supabase (Postgres + Auth)  │  Railway Redis            │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -108,7 +108,7 @@ cloud-brain/
 │   │
 │   ├── services/            # Business logic
 │   │   ├── auth_service.py          # JWT validation, user creation
-│   │   ├── cache_service.py         # Upstash Redis cache layer
+│   │   ├── cache_service.py         # In-memory TTL cache layer
 │   │   ├── push_service.py          # FCM push notifications
 │   │   ├── subscription_service.py  # RevenueCat webhook + entitlements
 │   │   ├── sync_scheduler.py        # Celery sync orchestration
@@ -289,7 +289,7 @@ The `DeepLinkHandler` intercepts incoming links and routes them to the correct f
 | Email | Resend (transactional) |
 | Analytics | Vercel Analytics |
 | Error Tracking | Sentry (Next.js) |
-| Rate Limiting | Upstash Ratelimit |
+| Rate Limiting | Google reCAPTCHA v2 (website) \| Redis rate limiter (API) |
 | Deployment | Vercel |
 
 ### 4.2 Pages & Routes

@@ -157,11 +157,11 @@ The Cloud Brain is a fully functional FastAPI backend deployed on Railway with t
 - Google Health Connect: same pattern as Apple Health
 
 **Infrastructure Services**
-- Celery + Redis (Upstash) for background task queuing
+- Celery + Redis (Railway) for background task queuing
 - Sync scheduler orchestrating all provider syncs
 - Firebase FCM push notification service + `send_and_persist()` method
 - RevenueCat webhook handler + subscription entitlement service
-- Upstash cache layer (short/medium/long TTL patterns)
+- In-memory TTL cache layer (short/medium/long TTL patterns)
 - SlowAPI rate limiter middleware
 - Sentry error tracking (FastAPI + Celery + SQLAlchemy + httpx)
 - Morning Briefing Celery Beat task (15-min schedule; per-user time window)
@@ -324,7 +324,7 @@ A full marketing and waitlist site built on Next.js 16:
 - Support leaderboard
 - Waitlist statistics bar
 - Confetti burst on signup
-- Upstash rate limiting on API endpoints
+- Google reCAPTCHA v2 on waitlist signup form
 
 **User Experience**
 - Multi-step onboarding quiz flow to personalize waitlist experience
@@ -456,7 +456,7 @@ All three Railway services (**Zuralog** web, **Celery_Worker**, **Celery_Beat**)
 
 2. **No Railway config for Celery services** — Worker and Beat had no `railway.*.toml` files, so Railway had no start command. Created `cloud-brain/railway.celery-worker.toml` and `cloud-brain/railway.celery-beat.toml` with Dockerfile builder, correct `celery` start commands, and no `healthcheckPath` (Celery is not an HTTP server).
 
-3. **Celery SSL config for Upstash `rediss://`** — Celery 5.x requires explicit `broker_use_ssl` / `redis_backend_use_ssl` with `ssl_cert_reqs` when using TLS. Added to `worker.py` using `ssl.CERT_REQUIRED` (Upstash uses CA-signed DigiCert certs).
+3. **Celery SSL config for TLS Redis `rediss://`** — Celery 5.x requires explicit `broker_use_ssl` / `redis_backend_use_ssl` with `ssl_cert_reqs` when using TLS. Added to `worker.py` using `ssl.CERT_REQUIRED` (TLS Redis uses CA-signed certs).
 
 **Security hardening applied:**
 

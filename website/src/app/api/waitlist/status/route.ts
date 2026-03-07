@@ -9,7 +9,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from '@supabase/supabase-js';
-import { checkRateLimit } from "@/lib/rate-limit";
 
 const IS_PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_MODE === 'true';
 
@@ -20,13 +19,6 @@ export async function GET(request: NextRequest) {
       const email = request.nextUrl.searchParams.get('email');
       if (!email) {
         return NextResponse.json({ error: 'email query param required.' }, { status: 400 });
-      }
-
-      // Rate limit
-      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-      const rl = await checkRateLimit(ip, "general");
-      if (!rl.success) {
-        return NextResponse.json({ error: "Too many requests" }, { status: 429 });
       }
 
       if (IS_PREVIEW) {
@@ -57,6 +49,8 @@ export async function GET(request: NextRequest) {
         position: data.queue_position,
         referralCode: data.referral_code,
         tier: data.tier,
+      }, {
+        headers: { "Cache-Control": "private, no-store" },
       });
     }
   );

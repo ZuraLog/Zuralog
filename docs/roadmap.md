@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-07 (Progress tab gap closure — all 7 missing features implemented on feat/progress-tab-gaps)
+**Last Updated:** 2026-03-07 (Upstash removed from Website + Cloud-Brain; Railway Redis replaces Upstash TCP; Google reCAPTCHA v2 added to waitlist form)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -260,6 +260,8 @@
 | P0 | Sentry integration (Next.js) | ✅ Done | |
 | P0 | Vercel Analytics | ✅ Done | |
 | P1 | Email confirmation (Resend) | ✅ Done | |
+| P1 | Upstash Redis removal (Website + Cloud-Brain) | ✅ Done | Replaced with HTTP Cache-Control headers + in-memory TTL cache; Railway Redis for Celery/rate limiters |
+| P1 | Google reCAPTCHA v2 on waitlist form | ✅ Done | `react-google-recaptcha`; server-side token verification in `POST /api/waitlist/join` |
 
 ---
 

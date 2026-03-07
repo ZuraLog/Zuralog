@@ -4,13 +4,12 @@
  * Adds a new user to the ZuraLog waitlist.
  *
  * Flow:
- * 1. Rate-limit by IP (5 req / 60s)
- * 2. Validate body with Zod
- * 3. Check for duplicate email
- * 4. Generate unique referral code
- * 5. Insert into waitlist_users
- * 6. Send welcome email via Resend (non-blocking)
- * 7. Return position + referral code
+ * 1. Validate body with Zod
+ * 2. Check for duplicate email
+ * 3. Generate unique referral code
+ * 4. Insert into waitlist_users
+ * 5. Send welcome email via Resend (non-blocking)
+ * 6. Return position + referral code
  *
  * Set NEXT_PUBLIC_PREVIEW_MODE=true in .env.local to bypass Supabase in dev.
  */
@@ -18,8 +17,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from '@supabase/supabase-js';
 import { joinWaitlistSchema } from '@/lib/validations';
-import { rateLimiter } from '@/lib/rate-limit';
-import { deleteCached } from "@/lib/cache";
 import { generateReferralCode } from '@/lib/referral';
 import { getResendClient, FROM_EMAIL } from '@/lib/resend';
 import { captureServerEvent, hashDistinctId } from '@/lib/posthog-server';
@@ -50,17 +47,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 1. Rate limiting
+      // Keep IP for future reCAPTCHA / abuse checks
       const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-      const { success: allowed } = await rateLimiter.limit(ip);
-      if (!allowed) {
-        return NextResponse.json(
-          { error: 'Too many requests. Please try again later.' },
-          { status: 429 },
-        );
-      }
 
-      // 2. Parse & validate body
+      // 1. Parse & validate body
       let body: unknown;
       try {
         body = await request.json();
@@ -76,9 +66,32 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // 3. Verify reCAPTCHA token
+      const { captchaToken } = parsed.data;
+      const captchaRes = await fetch(
+        'https://www.google.com/recaptcha/api/siteverify',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            secret: process.env.RECAPTCHA_SECRET_KEY!,
+            response: captchaToken,
+            remoteip: ip,
+          }),
+        },
+      );
+      const captchaData = await captchaRes.json() as { success: boolean; 'error-codes'?: string[] };
+      if (!captchaData.success) {
+        console.warn('[waitlist/join] reCAPTCHA failed:', captchaData['error-codes']);
+        return NextResponse.json(
+          { error: 'CAPTCHA verification failed. Please try again.' },
+          { status: 400 },
+        );
+      }
+
       const { email, referralCode: referrerCode, quizAnswers } = parsed.data;
 
-      // 3. Check for duplicate
+      // 4. Check for duplicate
       const { data: existing } = await supabase
         .from('waitlist_users')
         .select('id, referral_code, queue_position')
@@ -97,7 +110,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // 4. Resolve referrer
+      // 5. Resolve referrer
       let referredByCode: string | null = null;
       if (referrerCode) {
         const { data: referrer } = await supabase
@@ -110,7 +123,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 5. Insert new user
+      // 6. Insert new user
       const newCode = generateReferralCode();
       const { data: inserted, error: insertError } = await supabase
         .from('waitlist_users')
@@ -133,10 +146,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Invalidate waitlist stats and leaderboard caches
-      await deleteCached("website:waitlist:stats");
-      await deleteCached("website:waitlist:leaderboard");
-
       // Fire-and-forget — analytics must never add latency to the signup response.
       // Hash email to avoid storing PII as a PostHog person identifier.
       captureServerEvent(hashDistinctId(email), "waitlist_signup_server", {
@@ -145,7 +154,7 @@ export async function POST(request: NextRequest) {
         source: request.headers.get("referer") || "direct",
       }).catch(() => {});
 
-      // 6. Send welcome email (fire-and-forget)
+      // 7. Send welcome email (fire-and-forget)
       const resend = getResendClient();
       if (resend) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zuralog.com';

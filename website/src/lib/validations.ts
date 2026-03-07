@@ -19,6 +19,7 @@ export const joinWaitlistSchema = z.object({
     })
     .optional()
     .nullable(),
+  captchaToken: z.string().min(1, 'Please complete the CAPTCHA verification.'),
 });
 
 export type JoinWaitlistInput = z.infer<typeof joinWaitlistSchema>;
