@@ -80,6 +80,32 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
           categoryColorHex: '#FF6B6B',
         ),
       ],
+      suggestionCards: const [
+        CorrelationSuggestion(
+          id: 'mock-sug-1',
+          metricNeeded: 'Stress Level',
+          description:
+              'Track stress to unlock how it affects your sleep quality and HRV.',
+          ctaLabel: 'Start Logging',
+          ctaRoute: '/settings/integrations',
+        ),
+        CorrelationSuggestion(
+          id: 'mock-sug-2',
+          metricNeeded: 'Heart Rate Variability',
+          description:
+              'Connect a wearable to see how recovery correlates with training load.',
+          ctaLabel: 'Connect App',
+          ctaRoute: '/settings/integrations',
+        ),
+        CorrelationSuggestion(
+          id: 'mock-sug-3',
+          metricNeeded: 'Nutrition Calories',
+          description:
+              'Log meals to discover how caloric intake affects your energy and weight.',
+          ctaLabel: 'Start Logging',
+          ctaRoute: '/settings/integrations',
+        ),
+      ],
       timePeriods: [
         TimePeriodSummary(
           label: 'Feb 24 – Mar 1',
@@ -374,6 +400,29 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
             TrendDirection(
                 metricLabel: 'Resting HR', direction: 'flat', changePercent: 0.4),
           ],
+          goalAdherence: const [
+            GoalAdherenceItem(
+              goalLabel: '10,000 Steps Daily',
+              targetValue: '10000',
+              unit: 'steps',
+              achievedPercent: 0.75,
+              streakDays: 5,
+            ),
+            GoalAdherenceItem(
+              goalLabel: '8 Hours Sleep',
+              targetValue: '8',
+              unit: 'hrs',
+              achievedPercent: 0.54,
+              streakDays: 2,
+            ),
+            GoalAdherenceItem(
+              goalLabel: '3 Workouts/Week',
+              targetValue: '3',
+              unit: 'sessions',
+              achievedPercent: 0.87,
+              streakDays: 3,
+            ),
+          ],
         ),
         GeneratedReport(
           id: 'mock-report-jan-2026',
@@ -410,6 +459,22 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
                 metricLabel: 'Sleep Quality',
                 direction: 'up',
                 changePercent: 3.5),
+          ],
+          goalAdherence: const [
+            GoalAdherenceItem(
+              goalLabel: '10,000 Steps Daily',
+              targetValue: '10000',
+              unit: 'steps',
+              achievedPercent: 0.68,
+              streakDays: 3,
+            ),
+            GoalAdherenceItem(
+              goalLabel: '8 Hours Sleep',
+              targetValue: '8',
+              unit: 'hrs',
+              achievedPercent: 0.61,
+              streakDays: 4,
+            ),
           ],
         ),
       ],
