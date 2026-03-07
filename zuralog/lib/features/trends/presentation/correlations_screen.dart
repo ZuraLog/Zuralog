@@ -1,19 +1,23 @@
 /// Correlations Explorer Screen — /trends/correlations
 ///
 /// Lets the user select any two health metrics, pick a lag offset and
-/// time range, then view a scatter plot, overlaid time-series charts,
-/// Pearson coefficient, and AI annotation.
+/// time range, then view a scatter plot (with regression line), overlaid
+/// time-series charts, Pearson coefficient, and AI annotation.
 ///
 /// Layout:
 ///   - AppBar: "Explorer" title + back button
 ///   - Two metric pickers (Metric A / Metric B)
-///   - Time-range segmented button (7D / 30D / 90D)
+///   - Time-range segmented button (7D / 30D / 90D / Custom)
 ///   - Lag selector (0-day … 3-day)
-///   - Scatter plot (fl_chart ScatterChart) — when metrics selected
+///   - Chart tab selector (Scatter / Overlay) — when metrics selected
+///   - Scatter plot with trend line OR overlay time-series chart
 ///   - Correlation strength meter
 ///   - AI annotation card
+///   - Data maturity gate (< 7 days of data)
 ///   - Empty/loading/error states
 library;
+
+import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -58,16 +62,26 @@ class CorrelationsScreen extends ConsumerWidget {
 
 // ── Body ──────────────────────────────────────────────────────────────────────
 
-class _CorrelationsBody extends ConsumerWidget {
+class _CorrelationsBody extends ConsumerStatefulWidget {
   const _CorrelationsBody({required this.metrics});
   final List<AvailableMetric> metrics;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CorrelationsBody> createState() => _CorrelationsBodyState();
+}
+
+class _CorrelationsBodyState extends ConsumerState<_CorrelationsBody> {
+  /// 0 = Scatter view, 1 = Overlay view.
+  int _chartTab = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final metricAId = ref.watch(selectedMetricAProvider);
     final metricBId = ref.watch(selectedMetricBProvider);
     final lagDays = ref.watch(selectedLagDaysProvider);
     final timeRange = ref.watch(selectedTimeRangeProvider);
+    final customStart = ref.watch(customDateStartProvider);
+    final customEnd = ref.watch(customDateEndProvider);
 
     final hasSelection = metricAId != null && metricBId != null;
     final key = hasSelection
@@ -76,6 +90,8 @@ class _CorrelationsBody extends ConsumerWidget {
             metricBId: metricBId,
             lagDays: lagDays,
             timeRange: timeRange,
+            customStart: customStart,
+            customEnd: customEnd,
           )
         : null;
 
@@ -89,7 +105,7 @@ class _CorrelationsBody extends ConsumerWidget {
         children: [
           // ── Metric pickers ─────────────────────────────────────────
           _MetricPickerRow(
-            metrics: metrics,
+            metrics: widget.metrics,
             metricAId: metricAId,
             metricBId: metricBId,
           ),
@@ -115,7 +131,11 @@ class _CorrelationsBody extends ConsumerWidget {
                 onRetry: () =>
                     ref.invalidate(correlationAnalysisProvider(key!)),
               ),
-              data: (analysis) => _AnalysisResult(analysis: analysis),
+              data: (analysis) => _AnalysisResult(
+                analysis: analysis,
+                chartTab: _chartTab,
+                onChartTabChanged: (tab) => setState(() => _chartTab = tab),
+              ),
             ),
 
           const SizedBox(height: AppDimens.spaceXxl),
@@ -397,12 +417,50 @@ class _TimeRangeSelector extends ConsumerWidget {
               child: _RangeChip(
                 label: range.label,
                 isSelected: selected == range,
-                onTap: () {
-                  ref.read(selectedTimeRangeProvider.notifier).state = range;
-                  ref.read(analyticsServiceProvider).capture(
-                    event: AnalyticsEvents.timeRangeChanged,
-                    properties: {'range': range.label, 'context': 'correlations'},
-                  );
+                onTap: () async {
+                  if (range == CorrelationTimeRange.custom) {
+                    // Show Flutter's built-in date range picker
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate:
+                          DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now(),
+                      builder: (context, child) => Theme(
+                        data: ThemeData.dark().copyWith(
+                          colorScheme: const ColorScheme.dark(
+                            primary: AppColors.primary,
+                            onPrimary: Colors.black,
+                            surface: Color(0xFF1C1C1E),
+                          ),
+                        ),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) {
+                      ref.read(customDateStartProvider.notifier).state =
+                          picked.start;
+                      ref.read(customDateEndProvider.notifier).state =
+                          picked.end;
+                      ref.read(selectedTimeRangeProvider.notifier).state =
+                          CorrelationTimeRange.custom;
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.timeRangeChanged,
+                        properties: {
+                          'range': 'custom',
+                          'context': 'correlations',
+                        },
+                      );
+                    }
+                  } else {
+                    ref.read(selectedTimeRangeProvider.notifier).state = range;
+                    ref.read(analyticsServiceProvider).capture(
+                      event: AnalyticsEvents.timeRangeChanged,
+                      properties: {
+                        'range': range.label,
+                        'context': 'correlations',
+                      },
+                    );
+                  }
                 },
               ),
             ),
@@ -507,14 +565,91 @@ class _LagSelector extends ConsumerWidget {
   }
 }
 
-// ── Analysis Result ───────────────────────────────────────────────────────────
+// ── Chart Tab Selector ────────────────────────────────────────────────────────
 
-class _AnalysisResult extends StatelessWidget {
-  const _AnalysisResult({required this.analysis});
-  final CorrelationAnalysis analysis;
+class _ChartTabSelector extends StatelessWidget {
+  const _ChartTabSelector({
+    required this.selectedIndex,
+    required this.onChanged,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _ChartTabChip(
+          label: 'Scatter',
+          selected: selectedIndex == 0,
+          onTap: () => onChanged(0),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        _ChartTabChip(
+          label: 'Overlay',
+          selected: selectedIndex == 1,
+          onTap: () => onChanged(1),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChartTabChip extends StatelessWidget {
+  const _ChartTabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.cardBackgroundDark,
+          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: selected ? Colors.black : AppColors.textSecondaryDark,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Analysis Result ───────────────────────────────────────────────────────────
+
+class _AnalysisResult extends StatelessWidget {
+  const _AnalysisResult({
+    required this.analysis,
+    required this.chartTab,
+    required this.onChartTabChanged,
+  });
+
+  final CorrelationAnalysis analysis;
+  final int chartTab;
+  final ValueChanged<int> onChartTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    // Data maturity gate — no scatter points means not enough data
+    if (analysis.scatterPoints.isEmpty) {
+      return const _DataMaturityGate();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -522,13 +657,22 @@ class _AnalysisResult extends StatelessWidget {
         _CoefficientSummaryCard(analysis: analysis),
         const SizedBox(height: AppDimens.spaceMd),
 
-        // ── Scatter plot ──────────────────────────────────────────
-        if (analysis.scatterPoints.isNotEmpty) ...[
-          Text('Scatter Plot', style: AppTextStyles.h3),
-          const SizedBox(height: AppDimens.spaceSm),
-          _ScatterPlotCard(analysis: analysis),
-          const SizedBox(height: AppDimens.spaceMd),
-        ],
+        // ── Chart tab selector ────────────────────────────────────
+        Text('Visualisation', style: AppTextStyles.h3),
+        const SizedBox(height: AppDimens.spaceSm),
+        _ChartTabSelector(
+          selectedIndex: chartTab,
+          onChanged: onChartTabChanged,
+        ),
+        const SizedBox(height: AppDimens.spaceSm),
+
+        // ── Chart (scatter or overlay) ────────────────────────────
+        if (chartTab == 0)
+          _ScatterPlotCard(analysis: analysis)
+        else
+          _OverlayChartCard(analysis: analysis),
+
+        const SizedBox(height: AppDimens.spaceMd),
 
         // ── AI annotation ─────────────────────────────────────────
         _AiAnnotationCard(annotation: analysis.aiAnnotation),
@@ -536,6 +680,49 @@ class _AnalysisResult extends StatelessWidget {
     );
   }
 }
+
+// ── Data Maturity Gate ────────────────────────────────────────────────────────
+
+class _DataMaturityGate extends StatelessWidget {
+  const _DataMaturityGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: AppDimens.spaceLg),
+      padding: const EdgeInsets.all(AppDimens.spaceLg),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.hourglass_empty_rounded,
+            color: AppColors.textTertiary,
+            size: 36,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'Not enough data yet',
+            style: AppTextStyles.h3,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Correlations need at least 7 days of data. Keep logging and check back soon.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondaryDark,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Coefficient Summary Card ──────────────────────────────────────────────────
 
 class _CoefficientSummaryCard extends StatelessWidget {
   const _CoefficientSummaryCard({required this.analysis});
@@ -608,9 +795,29 @@ class _CoefficientSummaryCard extends StatelessWidget {
   }
 }
 
+// ── Scatter Plot Card (with regression line) ──────────────────────────────────
+
 class _ScatterPlotCard extends StatelessWidget {
   const _ScatterPlotCard({required this.analysis});
   final CorrelationAnalysis analysis;
+
+  /// Computes linear regression endpoints [x1, y1, x2, y2].
+  /// Returns null if fewer than 2 points or degenerate case.
+  List<double>? _regressionLine(List<ScatterPoint> pts) {
+    if (pts.length < 2) return null;
+    final n = pts.length.toDouble();
+    final sumX = pts.fold(0.0, (s, p) => s + p.x);
+    final sumY = pts.fold(0.0, (s, p) => s + p.y);
+    final sumXY = pts.fold(0.0, (s, p) => s + p.x * p.y);
+    final sumX2 = pts.fold(0.0, (s, p) => s + p.x * p.x);
+    final denom = n * sumX2 - sumX * sumX;
+    if (denom == 0) return null;
+    final slope = (n * sumXY - sumX * sumY) / denom;
+    final intercept = (sumY - slope * sumX) / n;
+    final minX = pts.map((p) => p.x).reduce(math.min);
+    final maxX = pts.map((p) => p.x).reduce(math.max);
+    return [minX, slope * minX + intercept, maxX, slope * maxX + intercept];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -619,16 +826,21 @@ class _ScatterPlotCard extends StatelessWidget {
 
     final xs = points.map((p) => p.x).toList();
     final ys = points.map((p) => p.y).toList();
-    final minX = xs.reduce((a, b) => a < b ? a : b);
-    final maxX = xs.reduce((a, b) => a > b ? a : b);
-    final minY = ys.reduce((a, b) => a < b ? a : b);
-    final maxY = ys.reduce((a, b) => a > b ? a : b);
+    final minX = xs.reduce(math.min);
+    final maxX = xs.reduce(math.max);
+    final minY = ys.reduce(math.min);
+    final maxY = ys.reduce(math.max);
 
-    // Add 10% padding to axes; guard against zero range (all values identical)
+    // Add 10% padding to axes; guard against zero range
     final xPad = (maxX - minX) * 0.1;
     final yPad = (maxY - minY) * 0.1;
     final xRange = xPad == 0 ? 1.0 : xPad;
     final yRange = yPad == 0 ? 1.0 : yPad;
+
+    final chartMinX = minX - xRange;
+    final chartMaxX = maxX + xRange;
+    final chartMinY = minY - yRange;
+    final chartMaxY = maxY + yRange;
 
     final scatterSpots = points
         .map(
@@ -644,6 +856,8 @@ class _ScatterPlotCard extends StatelessWidget {
         )
         .toList();
 
+    final regLine = _regressionLine(points);
+
     return Container(
       height: 260,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -651,64 +865,264 @@ class _ScatterPlotCard extends StatelessWidget {
         color: AppColors.cardBackgroundDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
-      child: ScatterChart(
-        ScatterChartData(
-          scatterSpots: scatterSpots,
-          minX: minX - xRange,
-          maxX: maxX + xRange,
-          minY: minY - yRange,
-          maxY: maxY + yRange,
-          borderData: FlBorderData(show: false),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: true,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: AppColors.borderDark,
-              strokeWidth: 0.5,
-            ),
-            getDrawingVerticalLine: (_) => FlLine(
-              color: AppColors.borderDark,
-              strokeWidth: 0.5,
+      child: Stack(
+        children: [
+          ScatterChart(
+            ScatterChartData(
+              scatterSpots: scatterSpots,
+              minX: chartMinX,
+              maxX: chartMaxX,
+              minY: chartMinY,
+              maxY: chartMaxY,
+              borderData: FlBorderData(show: false),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: true,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: AppColors.borderDark,
+                  strokeWidth: 0.5,
+                ),
+                getDrawingVerticalLine: (_) => FlLine(
+                  color: AppColors.borderDark,
+                  strokeWidth: 0.5,
+                ),
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toStringAsFixed(0),
+                      style: AppTextStyles.labelXs.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 24,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toStringAsFixed(0),
+                      style: AppTextStyles.labelXs.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              scatterTouchData: ScatterTouchData(enabled: false),
             ),
           ),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                getTitlesWidget: (value, meta) => Text(
-                  value.toStringAsFixed(0),
-                  style: AppTextStyles.labelXs.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
+          // Regression trend line overlay
+          if (regLine != null)
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _RegressionLinePainter(
+                  line: regLine,
+                  minX: chartMinX,
+                  maxX: chartMaxX,
+                  minY: chartMinY,
+                  maxY: chartMaxY,
+                  color: AppColors.primary.withValues(alpha: 0.55),
                 ),
               ),
             ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 24,
-                getTitlesWidget: (value, meta) => Text(
-                  value.toStringAsFixed(0),
-                  style: AppTextStyles.labelXs.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ),
-            ),
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-          ),
-          scatterTouchData: ScatterTouchData(enabled: false),
-        ),
+        ],
       ),
     );
   }
 }
+
+/// Paints a linear regression line over the scatter plot area.
+class _RegressionLinePainter extends CustomPainter {
+  const _RegressionLinePainter({
+    required this.line,
+    required this.minX,
+    required this.maxX,
+    required this.minY,
+    required this.maxY,
+    required this.color,
+  });
+
+  /// [x1, y1, x2, y2] endpoints of the regression line.
+  final List<double> line;
+  final double minX, maxX, minY, maxY;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final xRange = maxX - minX;
+    final yRange = maxY - minY;
+    if (xRange == 0 || yRange == 0) return;
+
+    // fl_chart reserves space for axis labels on left (~40px) and bottom (~24px).
+    // We approximate the chart draw area by subtracting those offsets.
+    const leftOffset = 40.0;
+    const bottomOffset = 24.0;
+    final drawWidth = size.width - leftOffset;
+    final drawHeight = size.height - bottomOffset;
+
+    double toScreenX(double x) =>
+        leftOffset + (x - minX) / xRange * drawWidth;
+    double toScreenY(double y) =>
+        drawHeight - (y - minY) / yRange * drawHeight;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawLine(
+      Offset(toScreenX(line[0]), toScreenY(line[1])),
+      Offset(toScreenX(line[2]), toScreenY(line[3])),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RegressionLinePainter old) =>
+      old.line != line || old.color != color;
+}
+
+// ── Overlay Time-Series Chart ─────────────────────────────────────────────────
+
+class _OverlayChartCard extends StatelessWidget {
+  const _OverlayChartCard({required this.analysis});
+  final CorrelationAnalysis analysis;
+
+  @override
+  Widget build(BuildContext context) {
+    final points = analysis.scatterPoints;
+    if (points.isEmpty) return const SizedBox.shrink();
+
+    // Normalise both metrics to 0–1 so they share a y-axis
+    final xs = points.map((p) => p.x).toList();
+    final ys = points.map((p) => p.y).toList();
+    final minX = xs.reduce(math.min);
+    final maxX = xs.reduce(math.max);
+    final minY = ys.reduce(math.min);
+    final maxY = ys.reduce(math.max);
+    final xRange = maxX - minX == 0 ? 1.0 : maxX - minX;
+    final yRange = maxY - minY == 0 ? 1.0 : maxY - minY;
+
+    final lineA = points
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), (e.value.x - minX) / xRange))
+        .toList();
+    final lineB = points
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), (e.value.y - minY) / yRange))
+        .toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Legend
+          Row(
+            children: [
+              _LegendDot(color: AppColors.primary),
+              const SizedBox(width: 4),
+              Text(
+                analysis.metricA.label,
+                style: AppTextStyles.labelXs.copyWith(
+                    color: AppColors.textSecondaryDark),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+              _LegendDot(color: AppColors.categoryHeart, dashed: true),
+              const SizedBox(width: 4),
+              Text(
+                analysis.metricB.label,
+                style: AppTextStyles.labelXs.copyWith(
+                    color: AppColors.textSecondaryDark),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppColors.borderDark,
+                    strokeWidth: 0.5,
+                  ),
+                ),
+                titlesData: const FlTitlesData(show: false),
+                borderData: FlBorderData(show: false),
+                minY: -0.05,
+                maxY: 1.05,
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: lineA,
+                    isCurved: true,
+                    color: AppColors.primary,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                  ),
+                  LineChartBarData(
+                    spots: lineB,
+                    isCurved: true,
+                    color: AppColors.categoryHeart,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    dashArray: [4, 4],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceXs),
+          Text(
+            'Both metrics normalised to 0–1 for comparison.',
+            style: AppTextStyles.labelXs.copyWith(
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, this.dashed = false});
+  final Color color;
+  final bool dashed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 16,
+      height: 2,
+      decoration: BoxDecoration(
+        color: dashed ? Colors.transparent : color,
+        border: dashed ? Border.all(color: color, width: 1) : null,
+      ),
+    );
+  }
+}
+
+// ── AI Annotation Card ────────────────────────────────────────────────────────
 
 class _AiAnnotationCard extends StatelessWidget {
   const _AiAnnotationCard({required this.annotation});

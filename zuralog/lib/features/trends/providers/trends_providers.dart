@@ -10,7 +10,9 @@
 /// - [selectedMetricAProvider]          — transient: selected metric A ID
 /// - [selectedMetricBProvider]          — transient: selected metric B ID
 /// - [selectedLagDaysProvider]          — transient: lag offset (0-3)
-/// - [selectedTimeRangeProvider]        — transient: time range (7D/30D/90D)
+/// - [selectedTimeRangeProvider]        — transient: time range (7D/30D/90D/custom)
+/// - [customDateStartProvider]          — transient: custom range start date
+/// - [customDateEndProvider]            — transient: custom range end date
 /// - [correlationAnalysisProvider]      — async correlation result (family)
 /// - [reportsProvider]                  — async reports list
 /// - [dataSourcesProvider]              — async data sources list
@@ -71,6 +73,12 @@ final selectedLagDaysProvider = StateProvider<int>((ref) => 0);
 final selectedTimeRangeProvider =
     StateProvider<CorrelationTimeRange>((ref) => CorrelationTimeRange.thirtyDays);
 
+/// Transient: start date when [selectedTimeRangeProvider] is [CorrelationTimeRange.custom].
+final customDateStartProvider = StateProvider<DateTime?>((ref) => null);
+
+/// Transient: end date when [selectedTimeRangeProvider] is [CorrelationTimeRange.custom].
+final customDateEndProvider = StateProvider<DateTime?>((ref) => null);
+
 // ── Correlation Analysis ──────────────────────────────────────────────────────
 
 /// Key for parameterising the correlation analysis provider.
@@ -80,6 +88,8 @@ class CorrelationKey {
     required this.metricBId,
     required this.lagDays,
     required this.timeRange,
+    this.customStart,
+    this.customEnd,
   });
 
   final String metricAId;
@@ -87,17 +97,25 @@ class CorrelationKey {
   final int lagDays;
   final CorrelationTimeRange timeRange;
 
+  /// Set when [timeRange] is [CorrelationTimeRange.custom].
+  final DateTime? customStart;
+
+  /// Set when [timeRange] is [CorrelationTimeRange.custom].
+  final DateTime? customEnd;
+
   @override
   bool operator ==(Object other) =>
       other is CorrelationKey &&
       other.metricAId == metricAId &&
       other.metricBId == metricBId &&
       other.lagDays == lagDays &&
-      other.timeRange == timeRange;
+      other.timeRange == timeRange &&
+      other.customStart == customStart &&
+      other.customEnd == customEnd;
 
   @override
   int get hashCode =>
-      Object.hash(metricAId, metricBId, lagDays, timeRange);
+      Object.hash(metricAId, metricBId, lagDays, timeRange, customStart, customEnd);
 }
 
 /// Family provider for a specific correlation analysis.
