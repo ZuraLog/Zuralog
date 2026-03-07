@@ -338,6 +338,57 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
   }
 
+  /// Builds a thin progress bar + label for locked achievements that have
+  /// partial progress data.
+  Widget _buildLockedProgress(Achievement achievement) {
+    final current = achievement.progressCurrent!;
+    final total = achievement.progressTotal!;
+    final label =
+        achievement.progressLabel ?? '$current of $total';
+    final fraction = (current / total).clamp(0.0, 1.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth;
+            return Stack(
+              children: [
+                // Track
+                Container(
+                  height: 3,
+                  width: maxWidth,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderDark,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Fill
+                Container(
+                  height: 3,
+                  width: maxWidth * fraction,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: AppDimens.spaceXs),
+        Text(
+          label,
+          style: AppTextStyles.labelXs.copyWith(
+            color: AppColors.textTertiary,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final achievement = widget.achievement;
@@ -446,7 +497,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
                 overflow: TextOverflow.ellipsis,
               ),
               const Spacer(),
-              // Status label
+              // Status label / progress indicator
               if (isUnlocked && achievement.unlockedAt != null)
                 Text(
                   'Earned ${_formatDate(achievement.unlockedAt!)}',
@@ -455,6 +506,11 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
                     fontWeight: FontWeight.w600,
                   ),
                 )
+              else if (!isUnlocked &&
+                  achievement.progressCurrent != null &&
+                  achievement.progressTotal != null &&
+                  achievement.progressTotal! > 0)
+                _buildLockedProgress(achievement)
               else
                 Text(
                   'Locked',

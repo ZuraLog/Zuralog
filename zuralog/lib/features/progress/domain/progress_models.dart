@@ -35,6 +35,7 @@ enum GoalType {
   dailyCalorieLimit,
   sleepDuration,
   stepCount,
+  waterIntake,
   custom;
 
   /// Human-readable display name.
@@ -50,6 +51,8 @@ enum GoalType {
         return 'Sleep Duration';
       case GoalType.stepCount:
         return 'Step Count';
+      case GoalType.waterIntake:
+        return 'Daily Water Intake';
       case GoalType.custom:
         return 'Custom';
     }
@@ -68,6 +71,8 @@ enum GoalType {
         return GoalType.sleepDuration;
       case 'step_count':
         return GoalType.stepCount;
+      case 'water_intake':
+        return GoalType.waterIntake;
       case 'custom':
         return GoalType.custom;
       default:
@@ -89,6 +94,8 @@ enum GoalType {
         return 'sleep_duration';
       case GoalType.stepCount:
         return 'step_count';
+      case GoalType.waterIntake:
+        return 'water_intake';
       case GoalType.custom:
         return 'custom';
     }
@@ -479,6 +486,9 @@ class Achievement {
     required this.category,
     required this.iconName,
     this.unlockedAt,
+    this.progressCurrent,
+    this.progressTotal,
+    this.progressLabel,
   });
 
   /// Unique numeric / UUID identifier.
@@ -502,6 +512,16 @@ class Achievement {
   /// When the achievement was unlocked. Null if still locked.
   final DateTime? unlockedAt;
 
+  /// Current progress toward unlocking (e.g. 3 out of 7 days).
+  final int? progressCurrent;
+
+  /// Total required to unlock (e.g. 7).
+  final int? progressTotal;
+
+  /// Human-readable progress label (e.g. "3 of 7 days complete").
+  /// If null, falls back to "$progressCurrent of $progressTotal".
+  final String? progressLabel;
+
   /// True when the achievement has been earned.
   bool get isUnlocked => unlockedAt != null;
 
@@ -517,6 +537,9 @@ class Achievement {
       unlockedAt: json['unlocked_at'] != null
           ? DateTime.tryParse(json['unlocked_at'] as String)
           : null,
+      progressCurrent: (json['progress_current'] as num?)?.toInt(),
+      progressTotal: (json['progress_total'] as num?)?.toInt(),
+      progressLabel: json['progress_label'] as String?,
     );
   }
 
@@ -529,6 +552,9 @@ class Achievement {
         'category': category.apiSlug,
         'icon_name': iconName,
         'unlocked_at': unlockedAt?.toIso8601String(),
+        'progress_current': progressCurrent,
+        'progress_total': progressTotal,
+        'progress_label': progressLabel,
       };
 }
 

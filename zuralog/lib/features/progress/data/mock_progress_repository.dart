@@ -351,6 +351,9 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         category: AchievementCategory.gettingStarted,
         iconName: 'sync',
         unlockedAt: null,
+        progressCurrent: 0,
+        progressTotal: 1,
+        progressLabel: 'Connect your first app',
       ),
       const Achievement(
         id: 'ach_4',
@@ -360,6 +363,9 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         category: AchievementCategory.health,
         iconName: 'run',
         unlockedAt: null,
+        progressCurrent: 3,
+        progressTotal: 7,
+        progressLabel: '3 of 7 days complete',
       ),
       const Achievement(
         id: 'ach_5',
@@ -369,6 +375,9 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         category: AchievementCategory.coach,
         iconName: 'chat',
         unlockedAt: null,
+        progressCurrent: 0,
+        progressTotal: 1,
+        progressLabel: 'Send your first message to Coach',
       ),
     ];
   }

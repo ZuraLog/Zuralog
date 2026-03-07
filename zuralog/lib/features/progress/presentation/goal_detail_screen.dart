@@ -236,6 +236,33 @@ class _GoalDetailView extends StatelessWidget {
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
   }
 
+  /// Returns a human-readable projected completion date based on recent
+  /// progress history, or null when a projection cannot be made.
+  String? _projectCompletionDate(Goal goal) {
+    final history = goal.progressHistory;
+    if (history.length < 2) return null;
+
+    // Use the last min(14, history.length) entries
+    final n = history.length < 14 ? history.length : 14;
+    final window = history.sublist(history.length - n);
+
+    // Average daily gain over the window
+    final avgGain = (window.last - window.first) / (n - 1);
+    if (avgGain <= 0) return null;
+
+    final remaining = goal.targetValue - goal.currentValue;
+    if (remaining <= 0) return 'Already achieved!';
+
+    final daysNeeded = (remaining / avgGain).ceil();
+    final projectedDate = DateTime.now().add(Duration(days: daysNeeded));
+
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[projectedDate.month - 1]} ${projectedDate.day}, ${projectedDate.year}';
+  }
+
   String _fmtValue(double v) {
     if (v == v.truncateToDouble()) return v.toInt().toString();
     return v.toStringAsFixed(1);
@@ -243,6 +270,10 @@ class _GoalDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final projected = _projectCompletionDate(goal);
+    final hasAiCommentary = goal.aiCommentary != null;
+    final showAiCard = hasAiCommentary || projected != null;
+
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       appBar: AppBar(
@@ -280,10 +311,10 @@ class _GoalDetailView extends StatelessWidget {
               _buildSparklineCard(),
               const SizedBox(height: AppDimens.spaceMd),
             ],
-            _buildDetailsCard(),
-            if (goal.aiCommentary != null) ...[
+            _buildDetailsCard(projected: projected),
+            if (showAiCard) ...[
               const SizedBox(height: AppDimens.spaceMd),
-              _buildAiCommentaryCard(),
+              _buildAiCommentaryCard(projected: projected),
             ],
             const SizedBox(height: AppDimens.spaceXl),
           ],
@@ -430,7 +461,7 @@ class _GoalDetailView extends StatelessWidget {
 
   // ── Details Card ─────────────────────────────────────────────────────────────
 
-  Widget _buildDetailsCard() {
+  Widget _buildDetailsCard({String? projected}) {
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
@@ -453,6 +484,8 @@ class _GoalDetailView extends StatelessWidget {
           _DetailRow(label: 'Started', value: _formatDate(goal.startDate)),
           if (goal.deadline != null)
             _DetailRow(label: 'Deadline', value: _formatDate(goal.deadline)),
+          if (projected != null)
+            _DetailRow(label: 'Projected', value: projected),
         ],
       ),
     );
@@ -460,7 +493,22 @@ class _GoalDetailView extends StatelessWidget {
 
   // ── AI Commentary Card ────────────────────────────────────────────────────────
 
-  Widget _buildAiCommentaryCard() {
+  Widget _buildAiCommentaryCard({String? projected}) {
+    // Build the display text: append projection sentence when available.
+    final String displayText;
+    if (goal.aiCommentary != null) {
+      if (projected != null && projected != 'Already achieved!') {
+        displayText =
+            '${goal.aiCommentary!} At your current pace, you\'ll hit your target by $projected.';
+      } else {
+        displayText = goal.aiCommentary!;
+      }
+    } else {
+      // No aiCommentary but there IS a projection — show only the projection.
+      displayText =
+          'At your current pace, you\'ll hit your target by $projected.';
+    }
+
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
@@ -478,7 +526,7 @@ class _GoalDetailView extends StatelessWidget {
           const SizedBox(width: AppDimens.spaceSm),
           Expanded(
             child: Text(
-              goal.aiCommentary!,
+              displayText,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textSecondary,
                 fontStyle: FontStyle.italic,

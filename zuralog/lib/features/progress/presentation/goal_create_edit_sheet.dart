@@ -293,7 +293,17 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                 selected: selected,
                 onSelected: _isEdit
                     ? null // type locked in edit mode
-                    : (_) => setState(() => _selectedType = type),
+                    : (_) {
+                        setState(() {
+                          _selectedType = type;
+                          // Auto-fill default unit for known types when the
+                          // unit field has not been customised yet.
+                          if (_unitCtrl.text.isEmpty ||
+                              _unitCtrl.text == _defaultUnitFor(_selectedType)) {
+                            _unitCtrl.text = _defaultUnitFor(type);
+                          }
+                        });
+                      },
                 selectedColor: AppColors.primary,
                 backgroundColor: AppColors.inputBackgroundDark,
                 disabledColor: AppColors.inputBackgroundDark,
@@ -580,6 +590,28 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  /// Returns a sensible default unit string for a given [GoalType].
+  ///
+  /// Used to pre-fill the unit field when the user changes the goal type.
+  String _defaultUnitFor(GoalType type) {
+    switch (type) {
+      case GoalType.weightTarget:
+        return 'kg';
+      case GoalType.weeklyRunCount:
+        return 'runs';
+      case GoalType.dailyCalorieLimit:
+        return 'kcal';
+      case GoalType.sleepDuration:
+        return 'hrs';
+      case GoalType.stepCount:
+        return 'steps';
+      case GoalType.waterIntake:
+        return 'glasses';
+      case GoalType.custom:
+        return '';
+    }
+  }
 
   InputDecoration _inputDecoration({
     required String label,
