@@ -138,7 +138,9 @@ class _DataSourceCard extends ConsumerWidget {
       final dt = DateTime.parse(source.lastSyncedAt!).toLocal();
       final now = DateTime.now();
       final diff = now.difference(dt);
-      if (diff.inMinutes < 60) {
+      if (diff.inSeconds < 60) {
+        return 'Just now';
+      } else if (diff.inMinutes < 60) {
         return '${diff.inMinutes}m ago';
       } else if (diff.inHours < 24) {
         return '${diff.inHours}h ago';

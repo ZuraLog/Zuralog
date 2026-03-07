@@ -403,54 +403,80 @@ class _MetricPickerSheet extends StatelessWidget {
 
 // ── Time Range Selector ───────────────────────────────────────────────────────
 
-class _TimeRangeSelector extends ConsumerWidget {
+class _TimeRangeSelector extends ConsumerStatefulWidget {
   const _TimeRangeSelector({required this.selected});
   final CorrelationTimeRange selected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TimeRangeSelector> createState() => _TimeRangeSelectorState();
+}
+
+class _TimeRangeSelectorState extends ConsumerState<_TimeRangeSelector> {
+  /// Reads the custom date providers and builds a display label such as
+  /// "Feb 1–28" when a custom range has been selected.
+  String _labelFor(CorrelationTimeRange range) {
+    if (range != CorrelationTimeRange.custom) return range.label;
+    final start = ref.read(customDateStartProvider);
+    final end = ref.read(customDateEndProvider);
+    if (start == null || end == null) return range.label;
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    if (start.month == end.month && start.year == end.year) {
+      return '${months[start.month - 1]} ${start.day}–${end.day}';
+    }
+    return '${months[start.month - 1]} ${start.day} – '
+        '${months[end.month - 1]} ${end.day}';
+  }
+
+  Future<void> _handleCustomRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now(),
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.primary,
+            onPrimary: Colors.black,
+            surface: Color(0xFF1C1C1E),
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    // Guard: widget may have been disposed while the picker was open.
+    if (!mounted) return;
+    if (picked != null) {
+      ref.read(customDateStartProvider.notifier).state = picked.start;
+      ref.read(customDateEndProvider.notifier).state = picked.end;
+      ref.read(selectedTimeRangeProvider.notifier).state =
+          CorrelationTimeRange.custom;
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.timeRangeChanged,
+        properties: {'range': 'custom', 'context': 'correlations'},
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch custom date providers so the chip label updates reactively.
+    ref.watch(customDateStartProvider);
+    ref.watch(customDateEndProvider);
+
     return Row(
       children: CorrelationTimeRange.values
           .map(
             (range) => Padding(
               padding: const EdgeInsets.only(right: AppDimens.spaceSm),
               child: _RangeChip(
-                label: range.label,
-                isSelected: selected == range,
+                label: _labelFor(range),
+                isSelected: widget.selected == range,
                 onTap: () async {
                   if (range == CorrelationTimeRange.custom) {
-                    // Show Flutter's built-in date range picker
-                    final picked = await showDateRangePicker(
-                      context: context,
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now(),
-                      builder: (context, child) => Theme(
-                        data: ThemeData.dark().copyWith(
-                          colorScheme: const ColorScheme.dark(
-                            primary: AppColors.primary,
-                            onPrimary: Colors.black,
-                            surface: Color(0xFF1C1C1E),
-                          ),
-                        ),
-                        child: child!,
-                      ),
-                    );
-                    if (picked != null) {
-                      ref.read(customDateStartProvider.notifier).state =
-                          picked.start;
-                      ref.read(customDateEndProvider.notifier).state =
-                          picked.end;
-                      ref.read(selectedTimeRangeProvider.notifier).state =
-                          CorrelationTimeRange.custom;
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.timeRangeChanged,
-                        properties: {
-                          'range': 'custom',
-                          'context': 'correlations',
-                        },
-                      );
-                    }
+                    await _handleCustomRange();
                   } else {
                     ref.read(selectedTimeRangeProvider.notifier).state = range;
                     ref.read(analyticsServiceProvider).capture(
@@ -479,7 +505,8 @@ class _RangeChip extends ConsumerWidget {
 
   final String label;
   final bool isSelected;
-  final VoidCallback onTap;
+  // Uses Future<void> Function() to safely support async callers (e.g. date picker).
+  final Future<void> Function() onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -548,7 +575,7 @@ class _LagSelector extends ConsumerWidget {
                 child: _RangeChip(
                   label: label,
                   isSelected: selectedDays == i,
-                  onTap: () {
+                  onTap: () async {
                     ref.read(selectedLagDaysProvider.notifier).state = i;
                     ref.read(analyticsServiceProvider).capture(
                       event: AnalyticsEvents.correlationLagChanged,
@@ -858,6 +885,10 @@ class _ScatterPlotCard extends StatelessWidget {
 
     final regLine = _regressionLine(points);
 
+    // fl_chart axis-label reserved sizes — must match SideTitles.reservedSize.
+    const double leftReserved = 40.0;
+    const double bottomReserved = 24.0;
+
     return Container(
       height: 260,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -891,7 +922,7 @@ class _ScatterPlotCard extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 40,
+                    reservedSize: leftReserved,
                     getTitlesWidget: (value, meta) => Text(
                       value.toStringAsFixed(0),
                       style: AppTextStyles.labelXs.copyWith(
@@ -903,7 +934,7 @@ class _ScatterPlotCard extends StatelessWidget {
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 24,
+                    reservedSize: bottomReserved,
                     getTitlesWidget: (value, meta) => Text(
                       value.toStringAsFixed(0),
                       style: AppTextStyles.labelXs.copyWith(
@@ -922,17 +953,24 @@ class _ScatterPlotCard extends StatelessWidget {
               scatterTouchData: ScatterTouchData(enabled: false),
             ),
           ),
-          // Regression trend line overlay
+          // Regression trend line — positioned over the data area only.
+          // Offset by axis-label gutters so it aligns with the scatter dots.
           if (regLine != null)
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _RegressionLinePainter(
-                  line: regLine,
-                  minX: chartMinX,
-                  maxX: chartMaxX,
-                  minY: chartMinY,
-                  maxY: chartMaxY,
-                  color: AppColors.primary.withValues(alpha: 0.55),
+            Positioned(
+              left: leftReserved,
+              top: 0,
+              right: 0,
+              bottom: bottomReserved,
+              child: ClipRect(
+                child: CustomPaint(
+                  painter: _RegressionLinePainter(
+                    line: regLine,
+                    minX: chartMinX,
+                    maxX: chartMaxX,
+                    minY: chartMinY,
+                    maxY: chartMaxY,
+                    color: AppColors.primary.withValues(alpha: 0.55),
+                  ),
                 ),
               ),
             ),
@@ -943,6 +981,11 @@ class _ScatterPlotCard extends StatelessWidget {
 }
 
 /// Paints a linear regression line over the scatter plot area.
+///
+/// This painter assumes it fills exactly the chart's data-draw area.
+/// The [Stack] that contains it must clip children so the line cannot
+/// bleed into the axis-label gutters. See [_ScatterPlotCard] for how
+/// [ClipRect] + [LayoutBuilder] are used to achieve this.
 class _RegressionLinePainter extends CustomPainter {
   const _RegressionLinePainter({
     required this.line,
@@ -953,7 +996,7 @@ class _RegressionLinePainter extends CustomPainter {
     required this.color,
   });
 
-  /// [x1, y1, x2, y2] endpoints of the regression line.
+  /// [x1, y1, x2, y2] endpoints of the regression line in data coordinates.
   final List<double> line;
   final double minX, maxX, minY, maxY;
   final Color color;
@@ -964,17 +1007,11 @@ class _RegressionLinePainter extends CustomPainter {
     final yRange = maxY - minY;
     if (xRange == 0 || yRange == 0) return;
 
-    // fl_chart reserves space for axis labels on left (~40px) and bottom (~24px).
-    // We approximate the chart draw area by subtracting those offsets.
-    const leftOffset = 40.0;
-    const bottomOffset = 24.0;
-    final drawWidth = size.width - leftOffset;
-    final drawHeight = size.height - bottomOffset;
-
-    double toScreenX(double x) =>
-        leftOffset + (x - minX) / xRange * drawWidth;
+    // Map data coordinates → pixel coordinates within this widget's size.
+    // No manual offset needed — the widget is already sized to the draw area.
+    double toScreenX(double x) => (x - minX) / xRange * size.width;
     double toScreenY(double y) =>
-        drawHeight - (y - minY) / yRange * drawHeight;
+        size.height - (y - minY) / yRange * size.height;
 
     final paint = Paint()
       ..color = color
@@ -1002,7 +1039,8 @@ class _OverlayChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final points = analysis.scatterPoints;
-    if (points.isEmpty) return const SizedBox.shrink();
+    // Need at least 2 points for a meaningful time-series overlay.
+    if (points.length < 2) return const _DataMaturityGate();
 
     // Normalise both metrics to 0–1 so they share a y-axis
     final xs = points.map((p) => p.x).toList();
@@ -1111,15 +1149,40 @@ class _LegendDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    if (!dashed) {
+      return Container(width: 16, height: 2, color: color);
+    }
+    return SizedBox(
       width: 16,
       height: 2,
-      decoration: BoxDecoration(
-        color: dashed ? Colors.transparent : color,
-        border: dashed ? Border.all(color: color, width: 1) : null,
-      ),
+      child: CustomPaint(painter: _DashLinePainter(color: color)),
     );
   }
+}
+
+/// Paints a short horizontal dashed line for overlay chart legends.
+class _DashLinePainter extends CustomPainter {
+  const _DashLinePainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.height
+      ..style = PaintingStyle.stroke;
+    const dashWidth = 3.0;
+    const gapWidth = 2.5;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(Offset(x, size.height / 2),
+          Offset((x + dashWidth).clamp(0, size.width), size.height / 2), paint);
+      x += dashWidth + gapWidth;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashLinePainter old) => old.color != color;
 }
 
 // ── AI Annotation Card ────────────────────────────────────────────────────────

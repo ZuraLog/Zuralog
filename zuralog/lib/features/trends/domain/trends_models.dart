@@ -283,9 +283,9 @@ class ScatterPoint {
 
   factory ScatterPoint.fromJson(Map<String, dynamic> json) {
     return ScatterPoint(
-      x: (json['x'] as num).toDouble(),
-      y: (json['y'] as num).toDouble(),
-      date: json['date'] as String,
+      x: (json['x'] as num? ?? 0).toDouble(),
+      y: (json['y'] as num? ?? 0).toDouble(),
+      date: json['date'] as String? ?? '',
     );
   }
 }
@@ -496,8 +496,8 @@ class ReportCategorySummary {
 
   factory ReportCategorySummary.fromJson(Map<String, dynamic> json) {
     return ReportCategorySummary(
-      category: json['category'] as String,
-      categoryLabel: json['category_label'] as String,
+      category: json['category'] as String? ?? '',
+      categoryLabel: json['category_label'] as String? ?? '',
       averageScore: json['average_score'] as int? ?? 0,
       deltaVsPrior: (json['delta_vs_prior'] as num? ?? 0).toDouble(),
       keyMetric: json['key_metric'] as String? ?? '',

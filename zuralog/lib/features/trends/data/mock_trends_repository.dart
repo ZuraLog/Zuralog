@@ -80,7 +80,7 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
           categoryColorHex: '#FF6B6B',
         ),
       ],
-      suggestionCards: const [
+      suggestionCards: [
         CorrelationSuggestion(
           id: 'mock-sug-1',
           metricNeeded: 'Stress Level',
@@ -233,6 +233,8 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
     required String metricBId,
     required int lagDays,
     required CorrelationTimeRange timeRange,
+    DateTime? customStart,
+    DateTime? customEnd,
   }) async {
     await _delay();
 
@@ -400,7 +402,7 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
             TrendDirection(
                 metricLabel: 'Resting HR', direction: 'flat', changePercent: 0.4),
           ],
-          goalAdherence: const [
+          goalAdherence: [
             GoalAdherenceItem(
               goalLabel: '10,000 Steps Daily',
               targetValue: '10000',
@@ -460,7 +462,7 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
                 direction: 'up',
                 changePercent: 3.5),
           ],
-          goalAdherence: const [
+          goalAdherence: [
             GoalAdherenceItem(
               goalLabel: '10,000 Steps Daily',
               targetValue: '10000',

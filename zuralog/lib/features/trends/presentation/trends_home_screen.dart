@@ -161,7 +161,14 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
                             'cta_label': s.ctaLabel,
                           },
                         );
-                        context.push(s.ctaRoute);
+                        // Security: validate route against allowlist before
+                        // navigating — ctaRoute is backend-supplied.
+                        const allowedRoutes = {
+                          RouteNames.settingsIntegrationsPath,
+                        };
+                        if (allowedRoutes.contains(s.ctaRoute)) {
+                          context.push(s.ctaRoute);
+                        }
                       },
                     ),
                   );

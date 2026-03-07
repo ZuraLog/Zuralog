@@ -228,7 +228,9 @@ class _CategoryAvatarRow extends StatelessWidget {
           ),
           child: Center(
             child: Text(
-              s.categoryLabel.substring(0, 1).toUpperCase(),
+              s.categoryLabel.isNotEmpty
+                  ? s.categoryLabel[0].toUpperCase()
+                  : '?',
               style: AppTextStyles.labelXs.copyWith(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
@@ -305,7 +307,17 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
     try {
       final Uint8List? imageBytes =
           await _screenshotController.capture(pixelRatio: 2.0);
-      if (imageBytes == null) return;
+      if (imageBytes == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not capture report. Try again.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
       final xFile = XFile.fromData(
         imageBytes,
         name: '${widget.report.title}.png',
@@ -386,16 +398,20 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Expanded(
-              // Wrap content in Screenshot so we can capture it
-              child: Screenshot(
-                controller: _screenshotController,
-                child: ColoredBox(
-                  color: AppColors.backgroundDark,
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd),
-                    children: [
+              child: SingleChildScrollView(
+                controller: scrollController,
+                // Screenshot wraps only the Column so capture() has a
+                // bounded widget to render — not an unbounded ListView.
+                child: Screenshot(
+                  controller: _screenshotController,
+                  child: ColoredBox(
+                    color: AppColors.backgroundDark,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                       // ── Category summaries ─────────────────────────
                       if (report.categorySummaries.isNotEmpty) ...[
                         _SheetSectionHeader(title: 'By Category'),
@@ -549,7 +565,9 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                       ],
 
                       const SizedBox(height: AppDimens.spaceXxl),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

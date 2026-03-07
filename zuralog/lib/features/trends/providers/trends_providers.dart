@@ -130,6 +130,8 @@ final correlationAnalysisProvider =
       metricBId: key.metricBId,
       lagDays: key.lagDays,
       timeRange: key.timeRange,
+      customStart: key.customStart,
+      customEnd: key.customEnd,
     );
   },
 );

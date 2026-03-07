@@ -29,6 +29,8 @@ abstract interface class TrendsRepositoryInterface {
     required String metricBId,
     required int lagDays,
     required CorrelationTimeRange timeRange,
+    DateTime? customStart,
+    DateTime? customEnd,
   });
   Future<ReportList> getReports({int page = 1});
   Future<DataSourceList> getDataSources();
@@ -115,15 +117,24 @@ class TrendsRepository implements TrendsRepositoryInterface {
     required String metricBId,
     required int lagDays,
     required CorrelationTimeRange timeRange,
+    DateTime? customStart,
+    DateTime? customEnd,
   }) async {
+    final params = <String, dynamic>{
+      'metric_a': metricAId,
+      'metric_b': metricBId,
+      'lag_days': lagDays,
+      'time_range': timeRange.apiSlug,
+    };
+    if (customStart != null) {
+      params['custom_start'] = customStart.toUtc().toIso8601String();
+    }
+    if (customEnd != null) {
+      params['custom_end'] = customEnd.toUtc().toIso8601String();
+    }
     final response = await _api.get(
       '/api/v1/trends/correlations',
-      queryParameters: {
-        'metric_a': metricAId,
-        'metric_b': metricBId,
-        'lag_days': lagDays,
-        'time_range': timeRange.apiSlug,
-      },
+      queryParameters: params,
     );
     return CorrelationAnalysis.fromJson(
         response.data as Map<String, dynamic>);
