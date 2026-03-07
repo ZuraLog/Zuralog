@@ -9,9 +9,10 @@
 /// /today                            → TodayFeedScreen (tab 0)
 ///   /today/insight/:id              → InsightDetailScreen
 ///   /today/notifications            → NotificationHistoryScreen
-/// /data                             → HealthDashboardScreen (tab 1)
-///   /data/category/:id              → CategoryDetailScreen
-///   /data/metric/:id                → MetricDetailScreen
+ /// /data                             → HealthDashboardScreen (tab 1)
+ ///   /data/category/:id              → CategoryDetailScreen
+ ///   /data/metric/:id                → MetricDetailScreen
+ ///   /data/score-breakdown           → ScoreBreakdownScreen
 /// /coach                            → NewChatScreen (tab 2)
 ///   /coach/thread/:id               → ChatThreadScreen
 /// /progress                         → ProgressHomeScreen (tab 3)
@@ -63,6 +64,7 @@ import 'package:zuralog/features/today/presentation/notification_history_screen.
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
 import 'package:zuralog/features/data/presentation/category_detail_screen.dart' as data_screens;
 import 'package:zuralog/features/data/presentation/metric_detail_screen.dart' as data_metric;
+import 'package:zuralog/features/data/presentation/score_breakdown_screen.dart' as data_score;
 
 // ── Tab 2: Coach ──────────────────────────────────────────────────────────────
 import 'package:zuralog/features/coach/presentation/new_chat_screen.dart';
@@ -431,6 +433,14 @@ List<RouteBase> _buildRoutes() {
                     child: data_metric.MetricDetailScreen(
                       metricId: state.pathParameters['id']!,
                     ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'score-breakdown',
+                  name: RouteNames.dataScoreBreakdown,
+                  builder: (context, state) => const SentryErrorBoundary(
+                    module: 'data.score_breakdown',
+                    child: data_score.ScoreBreakdownScreen(),
                   ),
                 ),
               ],

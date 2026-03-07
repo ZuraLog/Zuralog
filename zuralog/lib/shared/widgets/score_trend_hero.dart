@@ -13,7 +13,9 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -59,7 +61,10 @@ class ScoreTrendHero extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 error: (e, st) => const SizedBox(width: 48, height: 48),
-                data: (score) => HealthScoreWidget.compact(score: score.score),
+                data: (score) => HealthScoreWidget.compact(
+                  score: score.score,
+                  onTap: () => context.push(RouteNames.dataScoreBreakdownPath),
+                ),
               ),
               const SizedBox(width: AppDimens.spaceMd),
               // Title + subtitle
@@ -198,6 +203,21 @@ class ScoreTrendHero extends ConsumerWidget {
                 ),
               ],
             ),
+          ) ?? const SizedBox.shrink(),
+
+          // ── AI Commentary ──────────────────────────────────────────────
+          scoreAsync.whenOrNull(
+            data: (score) {
+              final commentary = score.commentary;
+              if (commentary == null || commentary.isEmpty) return null;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: AppDimens.spaceMd),
+                  _ScoreCommentaryCard(commentary: commentary),
+                ],
+              );
+            },
           ) ?? const SizedBox.shrink(),
         ],
       ),
@@ -347,6 +367,56 @@ class _ScoreSparkline extends StatelessWidget {
         ],
       ),
       duration: const Duration(milliseconds: 300),
+    );
+  }
+}
+
+// ── _ScoreCommentaryCard ──────────────────────────────────────────────────────
+
+class _ScoreCommentaryCard extends StatelessWidget {
+  const _ScoreCommentaryCard({required this.commentary});
+  final String commentary;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 3, color: AppColors.primary),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(AppDimens.spaceMd),
+                color: isDark
+                    ? AppColors.cardBackgroundDark
+                    : AppColors.cardBackgroundLight,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: AppDimens.spaceSm),
+                    Expanded(
+                      child: Text(
+                        commentary,
+                        style: AppTextStyles.caption.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

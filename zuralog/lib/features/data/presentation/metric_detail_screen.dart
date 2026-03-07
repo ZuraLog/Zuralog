@@ -224,13 +224,23 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
         const SizedBox(height: AppDimens.spaceMd),
 
         // ── Chart ────────────────────────────────────────────────────────────
-        if (spots.length >= 2)
+        if (spots.length >= 2) ...[
           _ChartCard(
             spots: spots,
             color: color,
             opacity: _chartOpacity,
             series: series,
           ),
+          const SizedBox(height: 6),
+          Center(
+            child: Text(
+              'Pinch to zoom · drag to pan',
+              style: AppTextStyles.labelXs.copyWith(
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ),
+        ],
 
         if (spots.length == 1) ...[
           const SizedBox(height: AppDimens.spaceLg),
@@ -432,94 +442,98 @@ class _ChartCard extends StatelessWidget {
       ),
       child: FadeTransition(
         opacity: opacity,
-        child: SizedBox(
-          height: 180,
-          child: LineChart(
-            LineChartData(
-              minY: minY - padding,
-              maxY: maxY + padding,
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: ((maxY - minY) / 4).clamp(0.1, 1e9),
-                getDrawingHorizontalLine: (value) => FlLine(
-                  color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                      .withValues(alpha: 0.4),
-                  strokeWidth: 0.5,
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 44,
-                    getTitlesWidget: (val, meta) => Text(
-                      val.toStringAsFixed(
-                          val.abs() >= 100 ? 0 : 1),
-                      style: AppTextStyles.labelXs.copyWith(
-                          color: AppColors.textTertiary),
-                    ),
+        child: InteractiveViewer(
+          boundaryMargin: const EdgeInsets.all(double.infinity),
+          minScale: 1.0,
+          maxScale: 4.0,
+          child: SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                minY: minY - padding,
+                maxY: maxY + padding,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: ((maxY - minY) / 4).clamp(0.1, 1e9),
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: (isDark ? AppColors.borderDark : AppColors.borderLight)
+                        .withValues(alpha: 0.4),
+                    strokeWidth: 0.5,
                   ),
                 ),
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                bottomTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-              ),
-              lineTouchData: LineTouchData(
-                touchTooltipData: LineTouchTooltipData(
-                  getTooltipColor: (_) => AppColors.surfaceDark,
-
-                  getTooltipItems: (touchedSpots) => touchedSpots
-                      .map((s) => LineTooltipItem(
-                            '${s.y.toStringAsFixed(1)} ${series.unit}',
-                            AppTextStyles.caption.copyWith(
-                              color: color,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ))
-                      .toList(),
-                ),
-              ),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: spots,
-                  isCurved: true,
-                  preventCurveOverShooting: true,
-                  color: color,
-                  barWidth: 2.5,
-                  dotData: FlDotData(
-                    show: spots.length <= 14,
-                    getDotPainter: (spot, xPercentage, bar, index) =>
-                        FlDotCirclePainter(
-                      radius: 3,
-                      color: color,
-                      strokeColor: AppColors.backgroundDark,
-                      strokeWidth: 1.5,
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 44,
+                      getTitlesWidget: (val, meta) => Text(
+                        val.toStringAsFixed(
+                            val.abs() >= 100 ? 0 : 1),
+                        style: AppTextStyles.labelXs.copyWith(
+                            color: AppColors.textTertiary),
+                      ),
                     ),
                   ),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        color.withValues(alpha: 0.15),
-                        color.withValues(alpha: 0.0),
-                      ],
-                    ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
                   ),
                 ),
-              ],
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => AppColors.surfaceDark,
+                    getTooltipItems: (touchedSpots) => touchedSpots
+                        .map((s) => LineTooltipItem(
+                              '${s.y.toStringAsFixed(1)} ${series.unit}',
+                              AppTextStyles.caption.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    preventCurveOverShooting: true,
+                    color: color,
+                    barWidth: 2.5,
+                    dotData: FlDotData(
+                      show: spots.length <= 14,
+                      getDotPainter: (spot, xPercentage, bar, index) =>
+                          FlDotCirclePainter(
+                        radius: 3,
+                        color: color,
+                        strokeColor: AppColors.backgroundDark,
+                        strokeWidth: 1.5,
+                      ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          color.withValues(alpha: 0.15),
+                          color.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutCubic,
             ),
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
           ),
         ),
       ),
