@@ -659,6 +659,7 @@ class ProgressHomeData {
     required this.streaks,
     required this.wow,
     required this.recentAchievements,
+    this.milestoneStreakCount,
   });
 
   /// Active user goals.
@@ -672,6 +673,10 @@ class ProgressHomeData {
 
   /// Achievements unlocked in the last 30 days, newest first.
   final List<Achievement> recentAchievements;
+
+  /// Non-null when the user just hit a major streak milestone (7, 14, 30, 60,
+  /// 90, 180, or 365 days). The value is the milestone day count.
+  final int? milestoneStreakCount;
 
   /// Deserializes from a JSON map.
   factory ProgressHomeData.fromJson(Map<String, dynamic> json) {
@@ -691,6 +696,7 @@ class ProgressHomeData {
       recentAchievements: rawAch
           .map((e) => Achievement.fromJson(e as Map<String, dynamic>))
           .toList(),
+      milestoneStreakCount: json['milestone_streak_count'] as int?,
     );
   }
 
@@ -700,6 +706,7 @@ class ProgressHomeData {
         'streaks': streaks.map((s) => s.toJson()).toList(),
         'wow': wow.toJson(),
         'recent_achievements': recentAchievements.map((a) => a.toJson()).toList(),
+        'milestone_streak_count': milestoneStreakCount,
       };
 }
 

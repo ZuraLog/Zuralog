@@ -33,6 +33,7 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
       streaks: _mockStreaks(),
       wow: _mockWow(),
       recentAchievements: _mockRecentAchievements(),
+      milestoneStreakCount: 7,
     );
   }
 
@@ -194,6 +195,12 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
   Future<void> deleteJournalEntry(String entryId) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     // No-op in mock.
+  }
+
+  @override
+  Future<void> applyStreakFreeze(StreakType type) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // No-op in mock: freeze is simulated but no state is mutated.
   }
 
   @override

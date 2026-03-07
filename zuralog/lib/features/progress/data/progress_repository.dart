@@ -84,6 +84,10 @@ abstract interface class ProgressRepositoryInterface {
   /// Deletes a journal entry by ID. Invalidates journal cache on success.
   Future<void> deleteJournalEntry(String entryId);
 
+  /// Applies a streak freeze to the given [type], protecting the streak if
+  /// the user misses a day.
+  Future<void> applyStreakFreeze(StreakType type);
+
   /// Invalidates all caches, forcing fresh fetches on next access.
   void invalidateAll();
 }
@@ -342,6 +346,18 @@ class ProgressRepository implements ProgressRepositoryInterface {
   Future<void> deleteJournalEntry(String entryId) async {
     await _api.delete('/api/v1/journal/$entryId');
     _journalCache = null;
+  }
+
+  // ── Streak Freeze ─────────────────────────────────────────────────────────
+
+  /// Applies a streak freeze for the given [type].
+  ///
+  /// POSTs to `/api/v1/streaks/{type}/freeze`. Invalidates the home cache
+  /// so the next read reflects the new frozen state.
+  @override
+  Future<void> applyStreakFreeze(StreakType type) async {
+    await _api.post('/api/v1/streaks/${type.apiSlug}/freeze');
+    _homeCache = null;
   }
 
   // ── Cache Invalidation ────────────────────────────────────────────────────
