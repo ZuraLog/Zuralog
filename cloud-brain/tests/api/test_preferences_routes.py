@@ -172,7 +172,7 @@ def test_get_creates_defaults_on_first_access(client_with_auth):
 
     mock_db.refresh = AsyncMock()  # no-op; the ORM object is already mutated by the handler
 
-    # Patch app.state.cache_service to avoid upstash calls.
+    # Patch app.state.cache_service to avoid cache calls during tests.
     with patch.object(app.state, "cache_service", None, create=True):
         resp = client.get(_PREFS_URL, headers=_AUTH_HEADER)
 

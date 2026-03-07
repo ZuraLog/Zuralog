@@ -6,7 +6,7 @@
 
 **Architecture:** Each phase groups backend work, Flutter screens, and design tokens that depend on each other. No phase starts work that requires an output from a later phase. Within each phase, tasks are ordered so that foundational services come before the UI that consumes them.
 
-**Tech Stack:** Python/FastAPI (Cloud Brain), Flutter/Dart + Riverpod (Mobile), Supabase Postgres, Redis/Upstash, Celery, Pinecone, PostHog, Sentry, fl_chart
+**Tech Stack:** Python/FastAPI (Cloud Brain), Flutter/Dart + Riverpod (Mobile), Supabase Postgres, Redis, Celery, Pinecone, PostHog, Sentry, fl_chart
 
 **Source Docs:** [roadmap.md](../roadmap.md) | [mvp-features.md](../mvp-features.md) | [screens.md](../screens.md) | [design.md](../design.md) | [implementation-status.md](../implementation-status.md)
 

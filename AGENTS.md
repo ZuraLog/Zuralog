@@ -58,7 +58,6 @@ Available MCP servers:
 | `resend` | Email sending |
 | `sentry` | Error tracking and monitoring |
 | `supabase` | Supabase PostgreSQL database operations |
-| `upstash` | Redis / serverless data (Upstash) |
 | `vercel` | Vercel deployments and project management |
 
 ### 2. Git Discipline

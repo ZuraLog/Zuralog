@@ -49,7 +49,7 @@ All services used in production, current tier, and purpose:
 |---------|------|-----------------|--------------|
 | **Railway** | Backend hosting (Cloud Brain) | $5 trial credit | ~$5–10/mo |
 | **Supabase** | PostgreSQL + Auth + Row Level Security | 500MB DB, 50K MAU | $0 |
-| **Upstash** | Serverless Redis — Celery queue + cache layer | 10K req/day | $0 |
+| **Railway Redis** | Redis — Celery queue + rate limiting | Flat compute cost | ~$1-3/mo |
 | **Pinecone** | Vector DB — AI long-term memory (planned, not active) | 1 index, 100K vectors | $0 |
 | **Firebase (FCM)** | Push notifications to mobile | Unlimited | $0 |
 | **Sentry** | Error tracking — Cloud Brain + Flutter + Website | 5K events/mo | $0 |
@@ -162,7 +162,7 @@ See `cloud-brain/RAILWAY_ENV_VARS.md` for the complete list of all env vars requ
 | Category | Variables |
 |----------|---------|
 | Database | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` |
-| Redis | `REDIS_URL`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
+| Redis | `REDIS_URL` |
 | LLM | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` (default: `moonshotai/kimi-k2.5`) |
 | Auth | `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_WEB_CLIENT_SECRET` |
 | Strava | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_WEBHOOK_VERIFY_TOKEN` |
@@ -185,7 +185,7 @@ graph TD
 
     subgraph "Production: Backend"
         D[Railway\nCloud Brain] --> E[Supabase\nPostgres + Auth]
-        D --> F[Upstash\nRedis]
+        D --> F[Railway\nRedis]
         D --> G[Pinecone\nVectors - planned]
         D --> H[OpenRouter\nKimi K2.5]
         D --> I[Firebase\nFCM]
@@ -202,6 +202,7 @@ graph TD
     subgraph "Production: Website"
         O[Vercel] --> P[Supabase\nWaitlist]
         O --> Q[Resend\nEmail]
+        O --> T[reCAPTCHA v2\nAbuse Protection]
         O --> R[Vercel Analytics]
         O --> S[Sentry]
     end

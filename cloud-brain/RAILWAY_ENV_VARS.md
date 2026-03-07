@@ -5,27 +5,12 @@
 
 ---
 
-## Upstash Redis REST (CacheService)
-
-Added during Upstash integration. These are **additional** to the existing `REDIS_URL` — do NOT replace or modify `REDIS_URL`.
-
-| Variable | Value | Notes |
-|----------|-------|-------|
-| `UPSTASH_REDIS_REST_URL` | *(from Bitwarden — search "Upstash ZuraLog Redis" → REST URL)* | HTTP REST endpoint for CacheService |
-| `UPSTASH_REDIS_REST_TOKEN` | *(from Bitwarden — search "Upstash ZuraLog Redis" → REST Token)* | REST auth token — **⚠️ SEAL THIS** |
-
-> **Why two Redis connections?** `REDIS_URL` is the TLS TCP connection used by Celery and the per-user rate limiter (`redis.asyncio`). `UPSTASH_REDIS_REST_*` is the HTTP REST connection used by `CacheService` for response caching. Both point at the same Upstash database — different protocols, different clients, fully independent.
-
-> **Add both to Shared Variables** so all three services (`web`, `celery-worker`, `celery-beat`) inherit them automatically.
-
----
-
 ## Required Variables — App Will Not Start Without These
 
 | Variable | Example Value | Where to Get It |
 |----------|---------------|-----------------|
 | `DATABASE_URL` | `postgresql+asyncpg://user:pass@db.supabase.co:5432/postgres` | Supabase → Settings → Database → URI. **Change scheme from `postgresql://` to `postgresql+asyncpg://`** |
-| `REDIS_URL` | `rediss://default:token@us1-xxx.upstash.io:6379` | Upstash Console → Your Redis DB → REST URL. **Use `rediss://` (double-s) for TLS** |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` | In Railway, set this to `${{Redis.REDIS_URL}}` to automatically reference the Railway Redis service. Used by Celery broker/backend and rate limiters. |
 | `SUPABASE_URL` | `https://xxxxxxxxxxxx.supabase.co` | Supabase → Settings → API → Project URL |
 | `SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIs...` | Supabase → Settings → API → `anon` / `public` key |
 | `SUPABASE_SERVICE_KEY` | `eyJhbGciOiJIUzI1NiIs...` | Supabase → Settings → API → `service_role` key — **⚠️ SEAL THIS** |
@@ -142,15 +127,15 @@ postgresql://postgres.xxxx:password@aws-1-us-east-1.pooler.supabase.com:5432/pos
 postgresql+asyncpg://postgres.xxxx:password@aws-1-us-east-1.pooler.supabase.com:5432/postgres
 ```
 
-### 4. REDIS_URL TLS
-Upstash Redis requires TLS. Use `rediss://` (double `s`), not `redis://`.
+### 4. REDIS_URL — Railway Redis
+Railway Redis uses plain `redis://` on the internal network (no TLS required). Set `REDIS_URL` to `${{Redis.REDIS_URL}}` in your service variables — Railway will automatically substitute the correct connection string from the Redis service.
 
 ```
-# Wrong:
-redis://default:token@us1-xxx.upstash.io:6379
+# Railway internal (recommended):
+redis://default:${{REDISPASSWORD}}@redis.railway.internal:6379
 
-# Correct:
-rediss://default:token@us1-xxx.upstash.io:6379
+# Or use the reference variable (simplest):
+${{Redis.REDIS_URL}}
 ```
 
 ### 5. Firebase JSON — Single Line

@@ -80,9 +80,9 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
 )
 
-# Upstash Redis requires ssl_cert_reqs to be set explicitly when using rediss://.
+# When using TLS Redis (rediss://), ssl_cert_reqs must be set explicitly for Celery.
 # CERT_REQUIRED enforces full certificate verification against the system CA bundle.
-# Upstash uses valid CA-signed certificates (DigiCert), so this is safe and correct.
+# Railway Redis uses plain redis:// internally. This block only activates if REDIS_URL starts with rediss://.
 if settings.redis_url.startswith("rediss://"):
     _ssl_opts = {"ssl_cert_reqs": ssl.CERT_REQUIRED}
     celery_app.conf.update(

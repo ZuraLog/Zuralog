@@ -648,15 +648,15 @@ The website sends client-side errors, server errors, and performance data to Sen
 
 > **Note:** `SENTRY_AUTH_TOKEN` is an org-level CI token. It is gitignored. Source map uploads only run during `npm run build` when `SENTRY_AUTH_TOKEN` is present.
 
-#### Required: Email & Rate Limiting (Waitlist)
+#### Required: Email & Abuse Protection (Waitlist)
 
-Used for the waitlist signup flow (Resend for transactional emails, Upstash Redis for rate limiting). Both are implemented and required for the waitlist to function locally.
+Used for the waitlist signup flow (Resend for transactional emails, Google reCAPTCHA v2 for abuse protection). Both are implemented and required for the waitlist to function locally.
 
 | Variable | Where to find it |
 |---|---|
 | `RESEND_API_KEY` | [resend.com](https://resend.com) → API Keys (free tier: 100 emails/day) |
-| `UPSTASH_REDIS_REST_URL` | [console.upstash.com](https://console.upstash.com) → Redis database → REST URL |
-| `UPSTASH_REDIS_REST_TOKEN` | Same page → REST Token |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Google reCAPTCHA admin console → Site Key |
+| `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA admin console → Secret Key |
 
 ### 4c. Start the Dev Server
 
@@ -721,8 +721,8 @@ All environment variables are set in the Vercel dashboard → Project Settings �
 | `SENTRY_PROJECT` | `website` |
 | `SENTRY_AUTH_TOKEN` | Source map upload token — gitignored, set only in Vercel |
 | `RESEND_API_KEY` | Transactional email for waitlist |
-| `UPSTASH_REDIS_REST_URL` | Rate limiting |
-| `UPSTASH_REDIS_REST_TOKEN` | Rate limiting |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | reCAPTCHA abuse protection |
+| `RECAPTCHA_SECRET_KEY` | reCAPTCHA server-side verification |
 
 ### 4h. Design System
 

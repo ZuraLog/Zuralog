@@ -4,13 +4,14 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { usePostHog } from 'posthog-js/react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { SuccessData } from '@/hooks/use-quiz';
@@ -29,6 +30,8 @@ interface WaitlistFormProps {
 export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormProps) {
   const [loading, setLoading] = useState(false);
   const [urlRef, setUrlRef] = useState('');
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const posthog = usePostHog();
 
   useEffect(() => {
@@ -58,6 +61,7 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           email: data.email,
           referralCode: data.referralCode || urlRef || null,
           quizAnswers: { apps: [], frustrations: [], goal: '' },
+          captchaToken,
         }),
       });
       const json = await res.json();
@@ -86,6 +90,8 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
     } catch {
       toast.error('Network error. Please try again.');
     } finally {
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
       setLoading(false);
     }
   }
@@ -132,9 +138,21 @@ export function WaitlistForm({ onSignupSuccess, onEmailChange }: WaitlistFormPro
           />
         </div>
 
+        <div className="flex justify-center">
+          <ReCAPTCHA
+            ref={recaptchaRef}
+            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+            onChange={(token) => setCaptchaToken(token)}
+            onExpired={() => setCaptchaToken(null)}
+            onErrored={() => setCaptchaToken(null)}
+            theme="light"
+            size="normal"
+          />
+        </div>
+
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || !captchaToken}
           className={`h-14 w-full rounded-full bg-peach text-base font-semibold text-white transition-all duration-300 hover:bg-peach-dim hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(207,225,185,0.55)] active:scale-[0.98] disabled:opacity-50 ${
             loading
               ? 'animate-pulse shadow-[0_0_30px_rgba(207,225,185,0.45)]'

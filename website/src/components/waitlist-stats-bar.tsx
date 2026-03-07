@@ -99,7 +99,7 @@ export function WaitlistStatsBar() {
       fetchStats().then((s) => {
         if (s) setStatsRef.current(s);
       });
-    }, 15_000);
+    }, 60_000);
 
     return () => {
       clearInterval(interval);
