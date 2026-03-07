@@ -168,6 +168,7 @@ class TrendsHomeData {
     required this.correlationHighlights,
     required this.timePeriods,
     required this.hasEnoughData,
+    this.suggestionCards = const [],
   });
 
   /// Top AI-surfaced correlation cards (up to 5).
@@ -178,6 +179,9 @@ class TrendsHomeData {
 
   /// Whether the user has enough data for correlations to be meaningful.
   final bool hasEnoughData;
+
+  /// AI-suggested data gaps that would unlock new correlations.
+  final List<CorrelationSuggestion> suggestionCards;
 
   factory TrendsHomeData.fromJson(Map<String, dynamic> json) {
     return TrendsHomeData(
@@ -190,6 +194,46 @@ class TrendsHomeData {
           .map((e) => TimePeriodSummary.fromJson(e as Map<String, dynamic>))
           .toList(),
       hasEnoughData: json['has_enough_data'] as bool? ?? false,
+      suggestionCards: (json['suggestion_cards'] as List<dynamic>? ?? [])
+          .map((e) => CorrelationSuggestion.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// A suggestion card shown when the AI detects a data gap that would unlock
+/// a new correlation (e.g., "Start tracking stress to see how it affects sleep").
+class CorrelationSuggestion {
+  const CorrelationSuggestion({
+    required this.id,
+    required this.metricNeeded,
+    required this.description,
+    required this.ctaLabel,
+    required this.ctaRoute,
+  });
+
+  /// Unique suggestion ID.
+  final String id;
+
+  /// Metric the user needs to start tracking.
+  final String metricNeeded;
+
+  /// One-sentence explanation of the value.
+  final String description;
+
+  /// Call-to-action label (e.g., "Connect App", "Start Logging").
+  final String ctaLabel;
+
+  /// Route to navigate to on CTA tap (e.g., settings integrations path).
+  final String ctaRoute;
+
+  factory CorrelationSuggestion.fromJson(Map<String, dynamic> json) {
+    return CorrelationSuggestion(
+      id: json['id'] as String,
+      metricNeeded: json['metric_needed'] as String,
+      description: json['description'] as String,
+      ctaLabel: json['cta_label'] as String? ?? 'Connect App',
+      ctaRoute: json['cta_route'] as String? ?? '/settings/integrations',
     );
   }
 }
@@ -303,7 +347,8 @@ class CorrelationAnalysis {
 enum CorrelationTimeRange {
   sevenDays,
   thirtyDays,
-  ninetyDays;
+  ninetyDays,
+  custom;
 
   static CorrelationTimeRange fromString(String value) {
     switch (value) {
@@ -311,6 +356,8 @@ enum CorrelationTimeRange {
         return CorrelationTimeRange.sevenDays;
       case '90d':
         return CorrelationTimeRange.ninetyDays;
+      case 'custom':
+        return CorrelationTimeRange.custom;
       default:
         return CorrelationTimeRange.thirtyDays;
     }
@@ -324,6 +371,8 @@ enum CorrelationTimeRange {
         return '30d';
       case CorrelationTimeRange.ninetyDays:
         return '90d';
+      case CorrelationTimeRange.custom:
+        return 'custom';
     }
   }
 
@@ -335,6 +384,8 @@ enum CorrelationTimeRange {
         return '30D';
       case CorrelationTimeRange.ninetyDays:
         return '90D';
+      case CorrelationTimeRange.custom:
+        return 'Custom';
     }
   }
 }
@@ -368,6 +419,7 @@ class GeneratedReport {
     required this.topCorrelations,
     required this.aiRecommendations,
     required this.trendDirections,
+    this.goalAdherence = const [],
   });
 
   final String id;
@@ -391,6 +443,9 @@ class GeneratedReport {
   /// Metric trend directions (up/down/flat).
   final List<TrendDirection> trendDirections;
 
+  /// Goal adherence breakdown for the period.
+  final List<GoalAdherenceItem> goalAdherence;
+
   factory GeneratedReport.fromJson(Map<String, dynamic> json) {
     return GeneratedReport(
       id: json['id'] as String,
@@ -413,6 +468,9 @@ class GeneratedReport {
               .toList(),
       trendDirections: (json['trend_directions'] as List<dynamic>? ?? [])
           .map((e) => TrendDirection.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      goalAdherence: (json['goal_adherence'] as List<dynamic>? ?? [])
+          .map((e) => GoalAdherenceItem.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -467,6 +525,42 @@ class TrendDirection {
       metricLabel: json['metric_label'] as String,
       direction: json['direction'] as String? ?? 'flat',
       changePercent: (json['change_percent'] as num? ?? 0).toDouble(),
+    );
+  }
+}
+
+/// Goal adherence entry within a monthly report.
+class GoalAdherenceItem {
+  const GoalAdherenceItem({
+    required this.goalLabel,
+    required this.targetValue,
+    required this.unit,
+    required this.achievedPercent,
+    required this.streakDays,
+  });
+
+  /// Display label for the goal (e.g., "10,000 Steps Daily").
+  final String goalLabel;
+
+  /// Target value as a string (e.g., "10000").
+  final String targetValue;
+
+  /// Unit string (e.g., "steps", "hrs").
+  final String unit;
+
+  /// How often the goal was hit, 0.0–1.0.
+  final double achievedPercent;
+
+  /// Consecutive days goal was met at end of period.
+  final int streakDays;
+
+  factory GoalAdherenceItem.fromJson(Map<String, dynamic> json) {
+    return GoalAdherenceItem(
+      goalLabel: json['goal_label'] as String,
+      targetValue: json['target_value'] as String? ?? '',
+      unit: json['unit'] as String? ?? '',
+      achievedPercent: (json['achieved_percent'] as num? ?? 0).toDouble(),
+      streakDays: json['streak_days'] as int? ?? 0,
     );
   }
 }
