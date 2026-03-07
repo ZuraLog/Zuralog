@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-07 (Upstash removed from Website + Cloud-Brain; Railway Redis replaces Upstash TCP; Google reCAPTCHA v2 added to waitlist form)
+**Last Updated:** 2026-03-07 (Trends tab gap closure: 8 features + 11 quality/security fixes; `flutter analyze` 0 issues)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 

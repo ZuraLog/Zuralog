@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-07  
+**Last Updated:** 2026-03-07 (Trends Gap Closure + Quality Review)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -688,6 +688,58 @@ Full Trends tab UI — 4 screens built with Riverpod state management, design sy
 | Scatter plot via `fl_chart` `ScatterChart` | Already a project dependency (used in Progress tab); avoids adding `syncfusion_flutter_charts` which requires a license key |
 | "Coming soon" snackbar for PDF export | PDF generation requires a native plugin (`pdf`, `printing`) not yet in pubspec; surface the intent without a broken flow |
 | `DataFreshness` color thresholds: green ≤1h, yellow ≤24h, red >24h | Matches Apple Health's own staleness UX; users expect sub-hour freshness for wearable data |
+
+---
+
+## Trends Tab — Gap Closure + Quality Review (feat/trends-gaps, 2026-03-07)
+
+Closed all 8 feature gaps in the Trends tab and applied a comprehensive quality & security review fixing 11 issues across 8 files. Branches: `feat/trends-gaps` (merged) + fixes committed directly to `main` (commit `85365de`).
+
+**Files changed:**
+- `zuralog/lib/features/trends/domain/trends_models.dart` — Added `CorrelationSuggestion`, `GoalAdherenceItem`, `CorrelationTimeRange.custom`; null-safe `ScatterPoint.fromJson`, `ReportCategorySummary.fromJson`
+- `zuralog/lib/features/trends/data/trends_repository.dart` — `getCorrelationAnalysis` interface + implementation extended with optional `customStart`/`customEnd` params forwarded as UTC ISO query strings
+- `zuralog/lib/features/trends/data/mock_trends_repository.dart` — Seeded 3 `CorrelationSuggestion` cards and 2×3 `GoalAdherenceItem` fixtures; updated `getCorrelationAnalysis` signature
+- `zuralog/lib/features/trends/providers/trends_providers.dart` — Added `customDateStartProvider`, `customDateEndProvider`; `CorrelationKey` extended with custom date fields; provider forwards `customStart`/`customEnd` to repository
+- `zuralog/lib/features/trends/presentation/trends_home_screen.dart` — `_CorrelationSuggestionCard` widget with dismiss + analytics; `ctaRoute` validated against route allowlist
+- `zuralog/lib/features/trends/presentation/correlations_screen.dart` — `_OverlayChartCard` (dual normalised `LineChart`); `_ChartTabSelector`; `_RegressionLinePainter` (OLS via `CustomPainter`); `_TimeRangeSelector` → `ConsumerStatefulWidget` with `mounted` guard + formatted Custom chip label; `_RangeChip.onTap` → `Future<void> Function()`; regression line positioned via `Positioned` + `ClipRect` over data area only; `_DataMaturityGate` for empty/< 2 points; `_LegendDot` dashed replaced with `_DashLinePainter`
+- `zuralog/lib/features/trends/presentation/reports_screen.dart` — `_GoalAdherenceRow` widget; `Screenshot` moved to wrap `Column` inside `SingleChildScrollView` (not unbounded `ListView`); null-capture snackbar; `categoryLabel` empty-string guard
+- `zuralog/lib/features/trends/presentation/data_sources_screen.dart` — `_IntegrationIcon` with `SimpleIcons` per integration ID; "Just now" for sub-minute sync timestamps
+
+**What was implemented (Gap Closure — Phase 1–6):**
+
+1. **Correlation suggestion cards** — `_CorrelationSuggestionCard` cards in "Track More, Learn More" section on Trends Home. Dismissible per session (local `Set<String>` state), analytics on CTA tap (`correlationSuggestionTapped`), populated from `TrendsHomeData.suggestionCards`.
+
+2. **Overlay time-series chart** — `_OverlayChartCard` with dual `LineChartBarData` lines (Metric A solid / Metric B dashed), both normalised to 0–1 for shared Y-axis, legend with `_LegendDot`. Toggled via `_ChartTabSelector` (Scatter / Overlay tab chips).
+
+3. **Regression trend line on scatter plot** — OLS computed client-side in `_regressionLine()` (sum of products formula). Rendered as `_RegressionLinePainter` (`CustomPainter`) inside a `Positioned` + `ClipRect` over the scatter chart data area only.
+
+4. **Custom date range** — `CorrelationTimeRange.custom` enum value. Tapping the Custom chip opens `showDateRangePicker` with sage-green dark theme. Dates stored in `customDateStartProvider`/`customDateEndProvider`. After picking, the chip label updates to show a formatted range (e.g. "Feb 1–28"). Forwarded through `CorrelationKey` → provider → repository → API query params (`custom_start`, `custom_end` as UTC ISO strings).
+
+5. **Share-as-image** — `ScreenshotController` wrapping the report detail `Column`. `Share.shareXFiles([xFile], text: title)` via `share_plus` v10 API. Error snackbar on null capture. `Screenshot` intentionally wraps `Column` (not `ListView`) to give `capture()` a bounded render tree.
+
+6. **Brand integration icons** — `_IntegrationIcon` widget mapping `integrationId` → `SimpleIcons.*` SVG (Strava, Fitbit, Garmin, Apple, Google Fit) with fallback to `Icons.hub_rounded` for integrations not yet in `simple_icons` v14.6.1.
+
+7. **Data maturity gate** — `_DataMaturityGate` widget shown when `scatterPoints.isEmpty` (scatter view) or `< 2` (overlay view). Hourglass icon, message, no crash on empty data.
+
+8. **Goal adherence section** — `GoalAdherenceItem` model (`goalLabel`, `achievedPercent`, `streakDays`). `_GoalAdherenceRow` shows label, colour-coded percentage badge, `LinearProgressIndicator`, and streak days. Rendered in `_ReportDetailSheet` between category summaries and trend directions.
+
+**What was fixed (Quality & Security Review):**
+
+| ID | Severity | Fix |
+|----|----------|-----|
+| C-1/C-2 | Critical | `_RangeChip.onTap` → `Future<void> Function()`; `_TimeRangeSelector` → `ConsumerStatefulWidget` with `mounted` guard after `showDateRangePicker`; Custom chip shows formatted date |
+| M-1 | Major | `Screenshot` wraps `Column` inside `SingleChildScrollView` — not unbounded `ListView` |
+| M-2 | Major | Null capture → `ScaffoldMessenger` snackbar instead of silent `return` |
+| M-3 | Major | Regression line `CustomPaint` positioned via `Positioned(left:40,bottom:24)` + `ClipRect`; painter simplified to fill its own bounds |
+| M-4 | Major | `ctaRoute` validated against `const allowedRoutes = {RouteNames.settingsIntegrationsPath}` before `context.push` |
+| M-5 | Major | `categoryLabel.substring(0,1)` → `isNotEmpty ? label[0] : '?'`; `fromJson` null-safe for `category`/`category_label` |
+| m-3 | Minor | `_OverlayChartCard` returns `_DataMaturityGate()` when `points.length < 2` |
+| m-9 | Minor | `ScatterPoint.fromJson` uses `num? ?? 0` / `String? ?? ''` casts |
+| m-11 | Minor | `_lastSyncLabel()` returns `'Just now'` for `diff.inSeconds < 60` |
+| I-3 | Info | `customStart`/`customEnd` forwarded through interface → repository → `correlationAnalysisProvider` |
+| I-4 | Info | `_LegendDot(dashed:true)` renders real dashed line via `_DashLinePainter` `CustomPainter` |
+
+**`flutter analyze lib/features/trends/`:** 0 issues.
 
 ---
 
