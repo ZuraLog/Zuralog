@@ -23,6 +23,7 @@ import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 // ── ChatThreadScreen ──────────────────────────────────────────────────────────
 
@@ -220,8 +221,96 @@ class _MessageBubble extends StatelessWidget {
     return '$h:$m';
   }
 
+  /// Returns true if the URL points to an image type we can render inline.
+  bool _isImageUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.webp');
+  }
+
+  /// Extracts a short filename from a URL for display on file cards.
+  String _filename(String url) {
+    final name = url.split('/').last.split('?').first;
+    return name.length > 18 ? '${name.substring(0, 15)}…' : name;
+  }
+
+  /// Builds a single attachment thumbnail widget for a given URL.
+  Widget _buildThumbnail(String url) {
+    if (_isImageUrl(url)) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          url,
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          loadingBuilder: (_, child, progress) => progress == null
+              ? child
+              : Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceDark,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+          errorBuilder: (context, error, stack) => Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceDark,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.broken_image_outlined,
+              color: AppColors.textTertiary,
+              size: 28,
+            ),
+          ),
+        ),
+      );
+    }
+    // Non-image file card (e.g. PDF).
+    return Container(
+      width: 80,
+      height: 52,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDark,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.picture_as_pdf_rounded,
+            color: AppColors.statusError,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              _filename(url),
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textTertiary,
+                fontSize: 12,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasAttachments = message.attachmentUrls.isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
       child: Row(
@@ -252,6 +341,19 @@ class _MessageBubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
+                // ── Gap 2: Attachment thumbnails above the bubble ────────────
+                if (hasAttachments) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: _isUser ? WrapAlignment.end : WrapAlignment.start,
+                    children: message.attachmentUrls
+                        .map(_buildThumbnail)
+                        .toList(),
+                  ),
+                  const SizedBox(height: AppDimens.spaceSm),
+                ],
+                // ── Bubble container ─────────────────────────────────────────
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppDimens.spaceMd,
@@ -272,17 +374,54 @@ class _MessageBubble extends StatelessWidget {
                           : const Radius.circular(AppDimens.radiusCard),
                     ),
                   ),
+                  // ── Gap 1 / content ─────────────────────────────────────
                   child: message.isStreaming
                       ? const _TypingIndicator()
-                      : Text(
-                          message.content,
-                          style: AppTextStyles.body.copyWith(
-                            color: _isUser
-                                ? AppColors.userBubbleText
-                                : AppColors.textPrimaryDark,
-                            height: 1.45,
-                          ),
-                        ),
+                      : _isUser
+                          ? Text(
+                              message.content,
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.userBubbleText,
+                                height: 1.45,
+                              ),
+                            )
+                          : MarkdownBody(
+                              data: message.content,
+                              styleSheet: MarkdownStyleSheet.fromTheme(
+                                Theme.of(context).copyWith(
+                                  textTheme:
+                                      Theme.of(context).textTheme.apply(
+                                            bodyColor:
+                                                AppColors.textPrimaryDark,
+                                            displayColor:
+                                                AppColors.textPrimaryDark,
+                                          ),
+                                ),
+                              ).copyWith(
+                                p: AppTextStyles.body.copyWith(
+                                  color: AppColors.textPrimaryDark,
+                                  height: 1.45,
+                                ),
+                                strong: AppTextStyles.body.copyWith(
+                                  color: AppColors.textPrimaryDark,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                em: AppTextStyles.body.copyWith(
+                                  color: AppColors.textPrimaryDark,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                listBullet: AppTextStyles.body.copyWith(
+                                  color: AppColors.textPrimaryDark,
+                                  height: 1.45,
+                                ),
+                                code: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textPrimaryDark,
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: 0.08),
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ),
                 ),
                 const SizedBox(height: 4),
                 Text(

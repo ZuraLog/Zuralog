@@ -178,10 +178,10 @@
 | P0 | Data — Health Dashboard (customizable) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Category Detail (x10) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Metric Detail | ✅ Done | Phase 5 — feat/data-tab |
-| P0 | Coach — New Chat (Gemini-style) | ✅ Done | Phase 10 — full rebuild: haptics, shimmer skeleton, conversation drawer, quick actions sheet, suggestion chips |
-| P0 | Coach — Conversation Drawer | ✅ Done | Phase 10 — DraggableScrollableSheet with conversation list |
-| P0 | Coach — Chat Thread | ✅ Done | Phase 10 — message bubbles, typing indicator, shimmer skeleton |
-| P0 | Coach — Quick Actions Sheet | ✅ Done | Phase 10 — 2-column grid, 6 quick actions |
+| P0 | Coach — New Chat (Gemini-style) | ✅ Done | feat/coach-tab-gaps — integration context banner, auto-send quick actions, Quick Log tile, delete/archive conversations |
+| P0 | Coach — Conversation Drawer | ✅ Done | feat/coach-tab-gaps — long-press delete + archive with confirmation dialogs |
+| P0 | Coach — Chat Thread | ✅ Done | feat/coach-tab-gaps — MarkdownBody rendering for AI messages, attachment thumbnail rendering in bubbles |
+| P0 | Coach — Quick Actions Sheet | ✅ Done | feat/coach-tab-gaps — 7th Quick Log tile opens QuickLogSheet; actions auto-send prompt |
 | P1 | Progress — Progress Home | ✅ Done | Phase 10 — OnboardingTooltip, shimmer skeleton loading, haptics |
 | P1 | Progress — Goals | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
 | P1 | Progress — Goal Detail | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
@@ -196,7 +196,7 @@
 | P1 | Settings — Account | ✅ Complete | Phase 8 |
 | P1 | Settings — Notifications | ✅ Complete | Phase 8 |
 | P1 | Settings — Appearance | ✅ Complete | Phase 8 |
-| P1 | Settings — Coach Settings | ✅ Complete | Phase 8 |
+| P1 | Settings — Coach Settings | ✅ Complete | feat/coach-tab-gaps — added response length, suggested prompts toggle, voice input toggle; Save now calls /api/v1/preferences |
 | P1 | Settings — Integrations | ✅ Complete | Phase 8 |
 | P1 | Settings — Privacy & Data | ✅ Complete | Phase 8 |
 | P1 | Settings — Subscription | ✅ Complete | Phase 8 |
@@ -217,12 +217,12 @@
 |----------|------|--------|-------|
 | P1 | Extract abstract interface for `TodayRepository` | ✅ Done | `TodayRepositoryInterface` in `today_repository.dart`; `kDebugMode` guard in provider |
 | P1 | Extract abstract interface for `DataRepository` | ✅ Done | `DataRepositoryInterface` in `data_repository.dart`; `kDebugMode` guard in provider |
-| P1 | Extract abstract interface for `CoachRepository` | 🔜 Planned | Prerequisite for Riverpod `overrideWith` swap |
+| P1 | Extract abstract interface for `CoachRepository` | ✅ Done | Abstract `CoachRepository` interface in `coach_repository.dart`; `kDebugMode` guard in `coachRepositoryProvider` |
 | P1 | Extract abstract interface for `ProgressRepository` | ✅ Done | `ProgressRepositoryInterface` in `progress_repository.dart`; `kDebugMode` guard in provider |
 | P1 | Extract abstract interface for `TrendsRepository` | ✅ Done | `TrendsRepositoryInterface` in `trends_repository.dart`; `kDebugMode` guard in provider |
 | P1 | `MockTodayRepository` — seed insights, quick actions, streak, notifications | ✅ Done | `mock_today_repository.dart`; covers Today Feed, Insight Detail, Notification History |
 | P1 | `MockDataRepository` — seed data (all 10 categories, sparklines, charts) | ✅ Done | `mock_data_repository.dart`; all 10 categories with realistic metrics (Activity, Sleep, Heart, Body, Vitals, Nutrition, Wellness, Mobility, Cycle, Environment) |
-| P1 | `MockCoachRepository` — seed conversations, quick action prompts | 🔜 Planned | Covers New Chat, Chat Thread, Conversation Drawer |
+| P1 | `MockCoachRepository` — seed conversations, quick action prompts | ✅ Done | `coach_repository.dart` — 4 conversations, 4-message thread, 6 suggestions, 6+1 quick actions |
 | P1 | `MockProgressRepository` — seed goals, achievements, journal, weekly report | ✅ Done | `mock_progress_repository.dart`; covers all Progress tab screens |
 | P1 | `MockTrendsRepository` — seed correlations, reports, data source list | ✅ Done | `mock_trends_repository.dart`; covers all Trends tab screens |
 | P1 | Wire all mocks via `kDebugMode` guard in providers | ✅ Done | `if (kDebugMode)` swap in Today/Data/Progress/Trends providers; zero overhead in production |

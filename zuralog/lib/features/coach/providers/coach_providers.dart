@@ -4,6 +4,7 @@
 /// screens (conversations list, messages, prompt suggestions, quick actions).
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/features/coach/data/coach_repository.dart';
@@ -13,9 +14,16 @@ import 'package:zuralog/features/coach/domain/coach_models.dart';
 
 /// Provides the [CoachRepository] implementation.
 ///
+/// In debug builds (`kDebugMode`), returns [MockCoachRepository] for
+/// offline development. In release builds, a real API-backed implementation
+/// should be substituted — see Phase 9 in the roadmap.
+///
 /// Override in tests with a mock or stub.
 final coachRepositoryProvider = Provider<CoachRepository>(
-  (_) => const MockCoachRepository(),
+  (_) => kDebugMode
+      ? const MockCoachRepository()
+      // TODO(phase9): replace with real ApiCoachRepository in production.
+      : const MockCoachRepository(),
 );
 
 // ── Conversations List ────────────────────────────────────────────────────────

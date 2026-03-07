@@ -7,6 +7,37 @@
 
 ---
 
+## Coach Tab — Gap Closure (feat/coach-tab-gaps, 2026-03-07)
+
+Closed all 7 previously identified gaps across the Coach tab in a single subagent-driven session. Branch: `feat/coach-tab-gaps`.
+
+**Files changed:**
+- `zuralog/lib/features/coach/presentation/chat_thread_screen.dart` — 718 → 857 lines
+- `zuralog/lib/features/coach/presentation/new_chat_screen.dart` — 1045 → 1354 lines
+- `zuralog/lib/features/coach/data/coach_repository.dart` — 206 → 224 lines
+- `zuralog/lib/features/coach/providers/coach_providers.dart` — `kDebugMode` guard added
+- `zuralog/lib/features/settings/presentation/coach_settings_screen.dart` — 557 → 736 lines
+
+**What was implemented:**
+
+1. **Markdown rendering (Gap 1)** — `chat_thread_screen.dart`'s `_MessageBubble` now renders AI messages via `MarkdownBody` (flutter_markdown_plus) with a matching `MarkdownStyleSheet` (bold, italic, code, list bullets). User messages still use plain `Text`. This matches the legacy `features/chat/` implementation.
+
+2. **Attachment thumbnails in bubbles (Gap 2)** — `_MessageBubble` now renders a `Wrap` of thumbnail cards above the bubble when `message.hasAttachments`. Images (jpg/jpeg/png/gif/webp) render as 80×80 `Image.network` with `ClipRRect(12)`; other files render as a 80×52 PDF card with icon + truncated filename.
+
+3. **Integration context banner (Gap 3)** — New `_IntegrationContextBanner` `ConsumerStatefulWidget` in `new_chat_screen.dart`. Watches `integrationsProvider`, lists connected integration names (up to 2, then "+N more"), dismissible per-session. Appears between the suggestion chips body and the input bar.
+
+4. **Delete & archive conversations (Gap 4)** — `_ConversationTile` upgraded to `ConsumerWidget`. Long-press opens an actions bottom sheet (Archive / Delete). Delete shows an `AlertDialog` confirmation before calling `coachRepositoryProvider.deleteConversation()` + `ref.invalidate(coachConversationsProvider)`. `CoachRepository` interface extended with `deleteConversation` and `archiveConversation`; `MockCoachRepository` provides no-op stubs.
+
+5. **Quick Actions auto-send + Quick Log tile (Gap 5)** — Quick Actions now auto-send non-empty prompts via `_sendMessage()` on tap (empty "Ask Anything" just focuses the input). Added `_QuickLogTile` as the 7th tile in the Quick Actions grid — tapping closes the sheet and opens `QuickLogSheet` in a `DraggableScrollableSheet`.
+
+6. **Coach Settings: missing fields + API persist (Gap 6)** — Added 3 new settings: Response Length (Concise / Detailed chip row), Suggested Prompts (toggle), Voice Input (toggle). The `_ProactivityChipRow` was generalized to accept an `options` parameter. Save button now calls `PATCH /api/v1/preferences` with all 5 preference fields; shows error snackbar on failure.
+
+7. **`kDebugMode` guard in `coachRepositoryProvider` (Gap 7)** — `coachRepositoryProvider` now explicitly guards `MockCoachRepository` behind `kDebugMode`, matching the pattern used by Today/Data/Progress/Trends providers. A `TODO(phase9)` comment marks where the real `ApiCoachRepository` will be substituted.
+
+**`flutter analyze`:** 24 issues (all pre-existing — none in Coach tab files). Zero errors.
+
+---
+
 ## Railway Deploy Fix (main, 2026-03-07)
 
 Fixed 9 consecutive Railway deployment failures that had been blocking all backend deploys since 2026-03-06 05:53.

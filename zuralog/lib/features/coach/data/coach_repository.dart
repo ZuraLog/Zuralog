@@ -21,6 +21,12 @@ abstract interface class CoachRepository {
 
   /// Returns quick-action tiles for the current user context.
   Future<List<QuickAction>> fetchQuickActions();
+
+  /// Permanently deletes the conversation with [conversationId].
+  Future<void> deleteConversation(String conversationId);
+
+  /// Archives the conversation with [conversationId].
+  Future<void> archiveConversation(String conversationId);
 }
 
 // ── Mock Implementation ────────────────────────────────────────────────────────
@@ -153,6 +159,18 @@ final class MockCoachRepository implements CoachRepository {
         category: 'activity',
       ),
     ];
+  }
+
+  @override
+  Future<void> deleteConversation(String conversationId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // Mock: no-op in mock implementation
+  }
+
+  @override
+  Future<void> archiveConversation(String conversationId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // Mock: no-op in mock implementation
   }
 
   @override

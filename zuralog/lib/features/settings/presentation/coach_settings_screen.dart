@@ -1,7 +1,5 @@
-/// Coach Settings Screen — AI persona and proactivity level.
-///
-/// Persona selector (Tough Love / Balanced / Gentle) and proactivity level
-/// (Low / Medium / High). Persisted via /api/v1/preferences.
+/// Coach Settings Screen — AI persona, proactivity level, response length,
+/// suggested prompts, and voice input.
 ///
 /// Full implementation: Phase 8, Task 8.5.
 library;
@@ -11,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/analytics/feature_flag_service.dart';
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -26,6 +25,17 @@ final _personaProvider = StateProvider<String>((ref) => 'balanced');
 ///
 /// Values: `'low'`, `'medium'`, `'high'`. Default: `'medium'`.
 final _proactivityProvider = StateProvider<String>((ref) => 'medium');
+
+/// Selected response length preference.
+///
+/// Values: `'concise'`, `'detailed'`. Default: `'concise'`.
+final _responseLengthProvider = StateProvider<String>((ref) => 'concise');
+
+/// Whether AI conversation starter chips are shown in the New Chat screen.
+final _suggestedPromptsProvider = StateProvider<bool>((ref) => true);
+
+/// Whether voice input (hold-to-talk mic) is enabled.
+final _voiceInputEnabledProvider = StateProvider<bool>((ref) => true);
 
 // ── Persona Data Model ────────────────────────────────────────────────────────
 
@@ -80,13 +90,13 @@ const List<_PersonaOption> _personas = [
   ),
 ];
 
-// ── Proactivity Data Model ────────────────────────────────────────────────────
+// ── Proactivity / Chip Data Model ─────────────────────────────────────────────
 
-/// Descriptor for a single proactivity level chip.
+/// Descriptor for a single segmented chip option (proactivity or response length).
 class _ProactivityOption {
   const _ProactivityOption({required this.key, required this.label});
 
-  /// Unique string key used by [_proactivityProvider].
+  /// Unique string key used by the relevant [StateProvider].
   final String key;
 
   /// Short display label shown in the chip.
@@ -100,9 +110,16 @@ const List<_ProactivityOption> _proactivityOptions = [
   _ProactivityOption(key: 'high', label: 'High'),
 ];
 
+/// The two available response length options in display order.
+const List<_ProactivityOption> _responseLengthOptions = [
+  _ProactivityOption(key: 'concise', label: 'Concise'),
+  _ProactivityOption(key: 'detailed', label: 'Detailed'),
+];
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-/// Coach Settings screen — AI persona and proactivity level configuration.
+/// Coach Settings screen — AI persona, proactivity level, response length,
+/// suggested prompts and voice input configuration.
 ///
 /// Uses a [CustomScrollView] with [SliverAppBar] large-title and
 /// [SliverList] content sections. Local UI state is managed via
@@ -136,12 +153,52 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
     });
   }
 
+  // ── API Persist ────────────────────────────────────────────────────────────
+
+  Future<void> _savePreferences() async {
+    try {
+      await ref.read(apiClientProvider).patch(
+        '/api/v1/preferences',
+        body: {
+          'ai_persona': ref.read(_personaProvider),
+          'proactivity_level': ref.read(_proactivityProvider),
+          'response_length': ref.read(_responseLengthProvider),
+          'suggested_prompts_enabled': ref.read(_suggestedPromptsProvider),
+          'voice_input_enabled': ref.read(_voiceInputEnabledProvider),
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Preferences saved'),
+          backgroundColor: AppColors.surfaceDark,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save — check your connection'),
+          backgroundColor: AppColors.statusError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final selectedPersona = ref.watch(_personaProvider);
     final selectedProactivity = ref.watch(_proactivityProvider);
+    final selectedResponseLength = ref.watch(_responseLengthProvider);
+    final selectedSuggestedPrompts = ref.watch(_suggestedPromptsProvider);
+    final selectedVoiceInput = ref.watch(_voiceInputEnabledProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -261,6 +318,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   const SizedBox(height: AppDimens.spaceMd),
                   // Chip row
                   _ProactivityChipRow(
+                    options: _proactivityOptions,
                     selectedKey: selectedProactivity,
                     onSelected: (key) {
                       ref.read(_proactivityProvider.notifier).state = key;
@@ -271,6 +329,135 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                     },
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          // ── RESPONSE LENGTH section ────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceXl,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Section label
+                  Text(
+                    'RESPONSE LENGTH',
+                    style: AppTextStyles.labelXs.copyWith(
+                      color: AppColors.textTertiary,
+                      letterSpacing: 0.8,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimens.spaceXs),
+                  // Section subtitle
+                  Text(
+                    'How detailed AI responses should be',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: AppDimens.spaceMd),
+                  // Chip row
+                  _ProactivityChipRow(
+                    options: _responseLengthOptions,
+                    selectedKey: selectedResponseLength,
+                    onSelected: (key) {
+                      ref.read(_responseLengthProvider.notifier).state = key;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── PREFERENCES section (toggles) ──────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceXl,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: Text(
+                'PREFERENCES',
+                style: AppTextStyles.labelXs.copyWith(
+                  color: AppColors.textTertiary,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+            sliver: SliverToBoxAdapter(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackgroundDark,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                ),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: Text(
+                        'Suggested Prompts',
+                        style: AppTextStyles.h3.copyWith(
+                          color: AppColors.textPrimaryDark,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Show prompt chips in new conversations',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondaryDark,
+                        ),
+                      ),
+                      value: selectedSuggestedPrompts,
+                      onChanged: (v) =>
+                          ref.read(_suggestedPromptsProvider.notifier).state = v,
+                      activeThumbColor: AppColors.primary,
+                      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceXs,
+                      ),
+                    ),
+                    Divider(
+                      height: 1,
+                      color: AppColors.borderDark,
+                      indent: AppDimens.spaceMd,
+                    ),
+                    SwitchListTile(
+                      title: Text(
+                        'Voice Input',
+                        style: AppTextStyles.h3.copyWith(
+                          color: AppColors.textPrimaryDark,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Enable hold-to-talk microphone button',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondaryDark,
+                        ),
+                      ),
+                      value: selectedVoiceInput,
+                      onChanged: (v) =>
+                          ref.read(_voiceInputEnabledProvider.notifier).state = v,
+                      activeThumbColor: AppColors.primary,
+                      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceXs,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -288,20 +475,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: _SaveButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Preferences saved'),
-                        backgroundColor: AppColors.surfaceDark,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppDimens.radiusButtonMd,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                  onPressed: () => _savePreferences(),
                 ),
               ),
             ),
@@ -426,20 +600,25 @@ class _PersonaCard extends StatelessWidget {
   }
 }
 
-// ── Proactivity Chip Row ──────────────────────────────────────────────────────
+// ── Proactivity / Response Length Chip Row ────────────────────────────────────
 
-/// A row of three segmented chips for selecting proactivity level.
+/// A row of segmented chips for selecting a value from a list of options.
 ///
+/// Used for both proactivity level (3 chips) and response length (2 chips).
 /// The selected chip uses `AppColors.primary` background with dark text.
 /// Unselected chips use `AppColors.surfaceDark` background.
 class _ProactivityChipRow extends StatelessWidget {
   /// Creates a [_ProactivityChipRow].
   const _ProactivityChipRow({
+    required this.options,
     required this.selectedKey,
     required this.onSelected,
   });
 
-  /// The currently selected proactivity key.
+  /// The ordered list of options to render as chips.
+  final List<_ProactivityOption> options;
+
+  /// The currently selected option key.
   final String selectedKey;
 
   /// Callback invoked with the new key when a chip is tapped.
@@ -449,15 +628,15 @@ class _ProactivityChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        for (int i = 0; i < _proactivityOptions.length; i++) ...[
+        for (int i = 0; i < options.length; i++) ...[
           Expanded(
             child: _ProactivityChip(
-              option: _proactivityOptions[i],
-              isSelected: _proactivityOptions[i].key == selectedKey,
-              onTap: () => onSelected(_proactivityOptions[i].key),
+              option: options[i],
+              isSelected: options[i].key == selectedKey,
+              onTap: () => onSelected(options[i].key),
             ),
           ),
-          if (i < _proactivityOptions.length - 1)
+          if (i < options.length - 1)
             const SizedBox(width: AppDimens.spaceSm),
         ],
       ],
@@ -467,7 +646,7 @@ class _ProactivityChipRow extends StatelessWidget {
 
 // ── Proactivity Chip ──────────────────────────────────────────────────────────
 
-/// A single selectable chip for one proactivity level.
+/// A single selectable chip for one option in a chip row.
 class _ProactivityChip extends StatelessWidget {
   /// Creates a [_ProactivityChip].
   const _ProactivityChip({
@@ -476,7 +655,7 @@ class _ProactivityChip extends StatelessWidget {
     required this.onTap,
   });
 
-  /// The proactivity option this chip represents.
+  /// The option this chip represents.
   final _ProactivityOption option;
 
   /// Whether this chip is currently selected.
