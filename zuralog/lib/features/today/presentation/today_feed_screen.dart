@@ -1484,11 +1484,12 @@ void _showQuickLog(
     backgroundColor: Colors.transparent,
     builder: (_) => DraggableScrollableSheet(
       initialChildSize: 0.75,
-      minChildSize: 0.3,
+      minChildSize: 0.25,
       maxChildSize: 0.95,
       expand: false,
       snap: true,
-      snapSizes: const [0.3, 0.75, 0.95],
+      snapSizes: const [0.75, 0.95],
+      shouldCloseOnMinExtent: true,
       builder: (_, scrollController) => Consumer(
         builder: (ctx, r, _) {
           final isLoading = r.watch(quickLogLoadingProvider);
