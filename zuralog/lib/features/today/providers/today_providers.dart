@@ -10,7 +10,6 @@
 /// - [todayFeedProvider]              — async aggregated feed data
 /// - [insightDetailProvider]          — family: detail for a single insight
 /// - [notificationsProvider]          — async first page of notifications
-/// - [dataMaturityBannerDismissed]    — whether the progress banner was dismissed
 /// - [todayBannerSessionDismissed]    — whether the "still building" banner was dismissed this session
 library;
 
@@ -79,12 +78,6 @@ final notificationsProvider = FutureProvider<NotificationPage>((ref) async {
 });
 
 // ── Data Maturity Banner ───────────────────────────────────────────────────────
-
-/// Whether the data maturity progress banner has been dismissed this session.
-///
-/// Session-scoped only. Permanent dismissal is stored via [DashboardLayout.bannerDismissed]
-/// (Data tab) and SharedPreferences (Today tab).
-final dataMaturityBannerDismissed = StateProvider<bool>((ref) => false);
 
 /// Whether the "still building" reminder banner has been dismissed this session.
 ///

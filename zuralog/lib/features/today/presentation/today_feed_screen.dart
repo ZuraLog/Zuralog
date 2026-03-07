@@ -63,6 +63,10 @@ class TodayFeedScreen extends ConsumerWidget {
     final showBanner = dataDays < 7 &&
         (bannerMode == DataMaturityMode.progress ? !bannerDismissed : !sessionDismissed);
 
+    void persistBannerDismissed() => ref
+        .read(userPreferencesProvider.notifier)
+        .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true));
+
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       appBar: _TodayAppBar(feedAsync: feedAsync),
@@ -125,14 +129,10 @@ class TodayFeedScreen extends ConsumerWidget {
                     targetDays: 7,
                     mode: bannerMode,
                     onDismiss: bannerMode == DataMaturityMode.progress
-                        ? () => ref
-                            .read(userPreferencesProvider.notifier)
-                            .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true))
+                        ? persistBannerDismissed
                         : () => ref.read(todayBannerSessionDismissed.notifier).state = true,
                     onPermanentDismiss: bannerMode == DataMaturityMode.stillBuilding
-                        ? () => ref
-                            .read(userPreferencesProvider.notifier)
-                            .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true))
+                        ? persistBannerDismissed
                         : null,
                   ),
                 ),
