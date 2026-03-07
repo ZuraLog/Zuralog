@@ -25,10 +25,13 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
+import 'package:zuralog/features/integrations/domain/integration_model.dart';
+import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
+import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
 
 // ── NewChatScreen ─────────────────────────────────────────────────────────────
 
@@ -77,6 +80,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           Navigator.of(sheetCtx).pop();
           if (prompt.isNotEmpty) {
             _inputCtrl.text = prompt;
+            _sendMessage();
+          } else {
+            // "Ask Anything" — just focus the input field
             _inputFocus.requestFocus();
           }
         },
@@ -183,6 +189,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
               ),
             ),
           ),
+          const _IntegrationContextBanner(),
           // ── Input Bar ──────────────────────────────────────────────────────
           _ChatInputBar(
             controller: _inputCtrl,
@@ -316,6 +323,88 @@ class _SuggestionChip extends ConsumerWidget {
             color: AppColors.textSecondaryDark,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── _IntegrationContextBanner ─────────────────────────────────────────────────
+
+/// Compact, dismissible banner shown above the input bar that surfaces which
+/// apps the AI has access to for the current session.
+///
+/// Returns [SizedBox.shrink] when no integrations are connected or after the
+/// user taps the dismiss button. Dismissal is ephemeral (session only).
+class _IntegrationContextBanner extends ConsumerStatefulWidget {
+  const _IntegrationContextBanner();
+
+  @override
+  ConsumerState<_IntegrationContextBanner> createState() =>
+      _IntegrationContextBannerState();
+}
+
+class _IntegrationContextBannerState
+    extends ConsumerState<_IntegrationContextBanner> {
+  bool _dismissed = false;
+
+  void _dismiss() => setState(() => _dismissed = true);
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final integrationsState = ref.watch(integrationsProvider);
+    final connected = integrationsState.integrations
+        .where((i) => i.status == IntegrationStatus.connected)
+        .toList();
+
+    if (connected.isEmpty) return const SizedBox.shrink();
+
+    // Build the label: list all names when ≤2, otherwise first two + "+N more".
+    final String namesLabel;
+    if (connected.length <= 2) {
+      namesLabel = connected.map((i) => i.name).join(', ');
+    } else {
+      final first2 = connected.take(2).map((i) => i.name).join(', ');
+      final remaining = connected.length - 2;
+      namesLabel = '$first2 +$remaining more';
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceSm,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceSm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDark,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.link_rounded, size: 16, color: AppColors.primary),
+          const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Text(
+              'AI has access to: $namesLabel',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondaryDark,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 16),
+            onPressed: _dismiss,
+            color: AppColors.textTertiary,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+        ],
       ),
     );
   }
@@ -691,7 +780,7 @@ class _ConversationDrawer extends ConsumerWidget {
   }
 }
 
-class _ConversationTile extends StatelessWidget {
+class _ConversationTile extends ConsumerWidget {
   const _ConversationTile({required this.conversation, required this.onTap});
 
   final Conversation conversation;
@@ -707,72 +796,196 @@ class _ConversationTile extends StatelessWidget {
     return '${dt.month}/${dt.day}';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceMd,
+  Future<void> _showActionsSheet(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.cardBackgroundDark,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderDark,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(
+                  Icons.archive_outlined,
+                  color: AppColors.primary,
+                ),
+                title: Text('Archive', style: AppTextStyles.body),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _archiveConversation(context, ref);
+                },
+              ),
+              const Divider(height: 1, color: AppColors.borderDark),
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.statusError,
+                ),
+                title: Text(
+                  'Delete',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.statusError,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showDeleteConfirmation(context, ref);
+                },
+              ),
+              SizedBox(
+                height: MediaQuery.of(context).padding.bottom,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _archiveConversation(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    await ref
+        .read(coachRepositoryProvider)
+        .archiveConversation(conversation.id);
+    ref.invalidate(coachConversationsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conversation archived')),
+      );
+    }
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        title: Text('Delete conversation?', style: AppTextStyles.h3),
+        content: Text(
+          'This cannot be undone.',
+          style: AppTextStyles.body.copyWith(
+            color: AppColors.textSecondaryDark,
+          ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 20,
-                color: AppColors.primary,
-              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _confirmDelete(context, ref);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.statusError),
             ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          conversation.title,
-                          style: AppTextStyles.h3.copyWith(
-                            fontWeight: FontWeight.w500,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    ref.read(hapticServiceProvider).medium();
+    await ref
+        .read(coachRepositoryProvider)
+        .deleteConversation(conversation.id);
+    ref.invalidate(coachConversationsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conversation deleted')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onLongPress: () => _showActionsSheet(context, ref),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceMd,
+            vertical: AppDimens.spaceMd,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            conversation.title,
+                            style: AppTextStyles.h3.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(width: AppDimens.spaceSm),
+                        const SizedBox(width: AppDimens.spaceSm),
+                        Text(
+                          _formatDate(conversation.updatedAt),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (conversation.preview != null) ...[
+                      const SizedBox(height: 2),
                       Text(
-                        _formatDate(conversation.updatedAt),
+                        conversation.preview!,
                         style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textTertiary,
+                          color: AppColors.textSecondary,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
-                  if (conversation.preview != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      conversation.preview!,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -845,31 +1058,39 @@ class _QuickActionsSheet extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  data: (actions) => GridView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(AppDimens.spaceMd),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: AppDimens.spaceSm,
-                          crossAxisSpacing: AppDimens.spaceSm,
-                          childAspectRatio: 1.6,
-                        ),
-                    itemCount: actions.length,
-                    itemBuilder: (_, i) => _QuickActionTile(
-                      action: actions[i],
-                      onTap: () {
-                        ref.read(hapticServiceProvider).medium();
-                        ref
-                            .read(analyticsServiceProvider)
-                            .capture(
-                              event: 'coach_quick_action_tapped',
-                              properties: {'title': actions[i].title},
-                            );
-                        onActionTap(actions[i].prompt);
+                  data: (actions) {
+                    final totalCount = actions.length + 1; // +1 for Quick Log tile
+                    return GridView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(AppDimens.spaceMd),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: AppDimens.spaceSm,
+                            crossAxisSpacing: AppDimens.spaceSm,
+                            childAspectRatio: 1.6,
+                          ),
+                      itemCount: totalCount,
+                      itemBuilder: (gridCtx, i) {
+                        if (i == actions.length) {
+                          return _QuickLogTile(outerContext: ctx);
+                        }
+                        return _QuickActionTile(
+                          action: actions[i],
+                          onTap: () {
+                            ref.read(hapticServiceProvider).medium();
+                            ref
+                                .read(analyticsServiceProvider)
+                                .capture(
+                                  event: 'coach_quick_action_tapped',
+                                  properties: {'title': actions[i].title},
+                                );
+                            onActionTap(actions[i].prompt);
+                          },
+                        );
                       },
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -918,6 +1139,94 @@ class _QuickActionTile extends StatelessWidget {
                 ),
                 Text(
                   action.subtitle,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textTertiary,
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickLogTile extends ConsumerWidget {
+  const _QuickLogTile({required this.outerContext});
+  final BuildContext outerContext;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () {
+        ref.read(hapticServiceProvider).light();
+        Navigator.of(outerContext).pop(); // close quick actions sheet
+        showModalBottomSheet<void>(
+          context: outerContext,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (_, scrollController) => QuickLogSheet(
+              scrollController: scrollController,
+              onSubmit: (QuickLogData data) {
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(outerContext).showSnackBar(
+                  SnackBar(
+                    content: const Text('Health data logged!'),
+                    backgroundColor: AppColors.surfaceDark,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppDimens.radiusButtonMd,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDark,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          border: Border.all(
+            color: AppColors.categoryActivity.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Icon(
+              Icons.edit_note_rounded,
+              size: 24,
+              color: AppColors.categoryActivity,
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Quick Log',
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'Log metrics manually',
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.textTertiary,
                     fontSize: 11,
