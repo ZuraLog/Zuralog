@@ -59,6 +59,7 @@ class TodayFeedScreen extends ConsumerWidget {
     final bannerMode = accountMature
         ? DataMaturityMode.stillBuilding
         : DataMaturityMode.progress;
+    final wellnessCardVisible = ref.watch(wellnessCheckinCardVisibleProvider);
     final sessionDismissed = ref.watch(todayBannerSessionDismissed);
     final showBanner = dataDays < 7 &&
         (bannerMode == DataMaturityMode.progress ? !bannerDismissed : !sessionDismissed);
@@ -319,20 +320,21 @@ class TodayFeedScreen extends ConsumerWidget {
             ],
 
             // ── Wellness Check-in card ────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.bottomClearance(context),
-                ),
-                child: _FadeSlideIn(
-                  delay: const Duration(milliseconds: 300),
-                  child: _WellnessCheckinCard(),
+            if (wellnessCardVisible)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    AppDimens.bottomClearance(context),
+                  ),
+                  child: _FadeSlideIn(
+                    delay: const Duration(milliseconds: 300),
+                    child: _WellnessCheckinCard(),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
