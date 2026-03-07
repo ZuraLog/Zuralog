@@ -75,6 +75,7 @@ class QuickLogSheet extends ConsumerStatefulWidget {
     required this.onSubmit,
     this.isLoading = false,
     this.initialMetric,
+    this.scrollController,
   });
 
   /// Called with the completed [QuickLogData] when the user taps Submit.
@@ -85,6 +86,10 @@ class QuickLogSheet extends ConsumerStatefulWidget {
 
   /// Optional metric to scroll to on open: 'mood' | 'energy' | 'stress' | 'water'.
   final String? initialMetric;
+
+  /// Optional external [ScrollController] provided by [DraggableScrollableSheet].
+  /// When supplied, it coordinates scroll position with the sheet's dismiss gesture.
+  final ScrollController? scrollController;
 
   @override
   ConsumerState<QuickLogSheet> createState() => _QuickLogSheetState();
@@ -229,7 +234,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                 maxHeight: MediaQuery.of(context).size.height * 0.65,
               ),
               child: SingleChildScrollView(
-                controller: _scrollCtrl,
+                controller: widget.scrollController ?? _scrollCtrl,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
                 ),
