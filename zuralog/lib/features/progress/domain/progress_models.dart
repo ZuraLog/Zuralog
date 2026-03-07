@@ -320,7 +320,18 @@ enum StreakType {
   }
 
   /// Serializes to the API string slug.
-  String get apiSlug => name;
+  String get apiSlug {
+    switch (this) {
+      case StreakType.engagement:
+        return 'engagement';
+      case StreakType.steps:
+        return 'steps';
+      case StreakType.workouts:
+        return 'workouts';
+      case StreakType.checkin:
+        return 'checkin';
+    }
+  }
 }
 
 // ── UserStreak ────────────────────────────────────────────────────────────────
@@ -722,7 +733,7 @@ class ProgressHomeData {
       recentAchievements: rawAch
           .map((e) => Achievement.fromJson(e as Map<String, dynamic>))
           .toList(),
-      milestoneStreakCount: json['milestone_streak_count'] as int?,
+      milestoneStreakCount: (json['milestone_streak_count'] as num?)?.toInt(),
     );
   }
 
@@ -939,9 +950,9 @@ class JournalEntry {
       stress: (json['stress'] as num?)?.toInt() ?? 5,
       sleepQuality: (json['sleep_quality'] as num?)?.toInt(),
       notes: json['notes'] as String? ?? '',
-      tags: rawTags.map((e) => e as String).toList(),
+      tags: rawTags.whereType<String>().toList(),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'] as String) ?? DateTime.now())
           : DateTime.now(),
     );
   }

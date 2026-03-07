@@ -37,27 +37,13 @@ class ProgressHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<ProgressHomeScreen> createState() => _ProgressHomeScreenState();
 }
 
-class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ringController;
-
-  @override
-  void initState() {
-    super.initState();
-    _ringController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-  }
-
-  @override
-  void dispose() {
-    _ringController.dispose();
-    super.dispose();
-  }
+class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
 
   Future<void> _onRefresh() async {
     ref.read(hapticServiceProvider).medium();
+    // Clear the in-memory repository cache so the invalidated provider
+    // fetches fresh data rather than returning the still-warm cached stub.
+    ref.read(progressRepositoryProvider).invalidateAll();
     ref.invalidate(progressHomeProvider);
     // Wait for the new value to settle (swallow errors — UI handles them).
     try {
@@ -101,11 +87,6 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
             onRetry: () => ref.invalidate(progressHomeProvider),
           ),
           data: (data) {
-            // Start ring animation once data arrives.
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _ringController.forward(from: 0);
-            });
-
             final isEmpty =
                 data.goals.isEmpty && data.streaks.isEmpty;
 
@@ -117,7 +98,6 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
 
             return _ContentView(
               data: data,
-              ringController: _ringController,
             );
           },
         ),
@@ -365,11 +345,9 @@ class _EmptyState extends StatelessWidget {
 class _ContentView extends StatelessWidget {
   const _ContentView({
     required this.data,
-    required this.ringController,
   });
 
   final ProgressHomeData data;
-  final AnimationController ringController;
 
   @override
   Widget build(BuildContext context) {
@@ -391,7 +369,7 @@ class _ContentView extends StatelessWidget {
             trailingLabel: 'See all',
             onTrailingTap: () => context.push(RouteNames.goalsPath),
           ),
-          _GoalsRow(goals: data.goals, ringController: ringController),
+          _GoalsRow(goals: data.goals),
           const SizedBox(height: AppDimens.spaceLg),
         ],
 
@@ -472,10 +450,9 @@ class _SectionHeader extends ConsumerWidget {
 // ── _GoalsRow ─────────────────────────────────────────────────────────────────
 
 class _GoalsRow extends StatelessWidget {
-  const _GoalsRow({required this.goals, required this.ringController});
+  const _GoalsRow({required this.goals});
 
   final List<Goal> goals;
-  final AnimationController ringController;
 
   @override
   Widget build(BuildContext context) {
@@ -487,10 +464,7 @@ class _GoalsRow extends StatelessWidget {
         itemCount: goals.length,
         separatorBuilder: (context, index) =>
             const SizedBox(width: AppDimens.spaceMd),
-        itemBuilder: (context, index) => _GoalCard(
-          goal: goals[index],
-          ringController: ringController,
-        ),
+        itemBuilder: (context, index) => _GoalCard(goal: goals[index]),
       ),
     );
   }
@@ -499,10 +473,9 @@ class _GoalsRow extends StatelessWidget {
 // ── _GoalCard ─────────────────────────────────────────────────────────────────
 
 class _GoalCard extends StatelessWidget {
-  const _GoalCard({required this.goal, required this.ringController});
+  const _GoalCard({required this.goal});
 
   final Goal goal;
-  final AnimationController ringController;
 
   @override
   Widget build(BuildContext context) {
@@ -765,7 +738,10 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
         event: AnalyticsEvents.streakFreezeUsed,
         properties: {
           'streak_type': streak.type.apiSlug,
-          'freeze_count_remaining': streak.freezeCount - 1,
+          // Remaining after this freeze: max 2 total, already used
+          // freezeCount, now using 1 more.
+          'freeze_count_remaining':
+              (2 - streak.freezeCount - 1).clamp(0, 2),
         },
       );
 
@@ -1303,8 +1279,17 @@ class _AchievementBadge extends StatelessWidget {
     }
   }
 
+  /// Returns true when the achievement was unlocked within the last 7 days.
+  bool get _isNew {
+    final unlockedAt = achievement.unlockedAt;
+    if (unlockedAt == null) return false;
+    return DateTime.now().difference(unlockedAt).inDays < 7;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showNewBadge = _isNew;
+
     return Container(
       width: 100,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -1322,24 +1307,26 @@ class _AchievementBadge extends StatelessWidget {
                 color: AppColors.primary,
                 size: AppDimens.iconMd,
               ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceXs,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppDimens.spaceXs),
-                ),
-                child: Text(
-                  'NEW',
-                  style: AppTextStyles.labelXs.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
+              if (showNewBadge) ...[
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceXs,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppDimens.spaceXs),
+                  ),
+                  child: Text(
+                    'NEW',
+                    style: AppTextStyles.labelXs.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const Spacer(),

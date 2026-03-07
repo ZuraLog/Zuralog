@@ -6,6 +6,7 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -155,10 +156,11 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
       ),
       data: (goalList) {
         Goal? goal;
-        try {
-          goal = goalList.goals.firstWhere((g) => g.id == widget.goalId);
-        } catch (_) {
-          goal = null;
+        for (final g in goalList.goals) {
+          if (g.id == widget.goalId) {
+            goal = g;
+            break;
+          }
         }
 
         if (goal == null) {
@@ -423,12 +425,7 @@ class _GoalDetailView extends StatelessWidget {
         : history;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-      ),
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
         color: AppColors.cardBackgroundDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -678,5 +675,5 @@ class _SparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SparklinePainter old) =>
-      old.values != values || old.color != color;
+      !listEquals(old.values, values) || old.color != color;
 }

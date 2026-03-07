@@ -91,7 +91,14 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     final title = _titleCtrl.text.trim();
     final target = double.parse(_targetCtrl.text.trim());
     final unit = _unitCtrl.text.trim();
-    final deadlineIso = _deadline?.toIso8601String().substring(0, 10);
+    // Build an explicit UTC-neutral date string to avoid timezone edge cases
+    // (e.g. local DateTime behind UTC could produce the previous day).
+    final d = _deadline;
+    final deadlineIso = d != null
+        ? '${d.year.toString().padLeft(4, '0')}'
+            '-${d.month.toString().padLeft(2, '0')}'
+            '-${d.day.toString().padLeft(2, '0')}'
+        : null;
 
     try {
       if (_isEdit) {
@@ -399,6 +406,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
         ),
         validator: (v) {
           if (v == null || v.trim().isEmpty) return 'Title is required';
+          if (v.trim().length > 200) return 'Title must be 200 characters or fewer';
           return null;
         },
       ),
@@ -453,6 +461,12 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           label: 'Unit',
           hint: 'e.g. steps, kg, hrs',
         ),
+        validator: (v) {
+          if (v != null && v.trim().length > 50) {
+            return 'Unit must be 50 characters or fewer';
+          }
+          return null;
+        },
       ),
     );
   }

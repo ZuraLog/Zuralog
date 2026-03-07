@@ -133,13 +133,9 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_homeCache != null) return _homeCache!.value;
-      // Return empty stub so screen can show onboarding state.
-      return const ProgressHomeData(
-        goals: [],
-        streaks: [],
-        wow: WoWSummary(weekLabel: '', metrics: []),
-        recentAchievements: [],
-      );
+      // No cached data available — rethrow so the FutureProvider enters its
+      // error state and the screen displays the error UI with a retry button.
+      rethrow;
     }
   }
 
@@ -158,7 +154,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_goalsCache != null) return _goalsCache!.value;
-      return const GoalList(goals: []);
+      rethrow;
     }
   }
 
@@ -236,7 +232,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_achievementsCache != null) return _achievementsCache!.value;
-      return const AchievementList(achievements: []);
+      rethrow;
     }
   }
 
@@ -257,12 +253,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_weeklyReportCache != null) return _weeklyReportCache!.value;
-      return WeeklyReport(
-        id: '',
-        periodStart: '',
-        periodEnd: '',
-        cards: [],
-      );
+      rethrow;
     }
   }
 
@@ -284,7 +275,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (page == 1 && _journalCache != null) return _journalCache!.value;
-      return const JournalPage(entries: [], hasMore: false);
+      rethrow;
     }
   }
 
