@@ -84,6 +84,10 @@ abstract interface class ProgressRepositoryInterface {
   /// Deletes a journal entry by ID. Invalidates journal cache on success.
   Future<void> deleteJournalEntry(String entryId);
 
+  /// Applies a streak freeze to the given [type], protecting the streak if
+  /// the user misses a day.
+  Future<void> applyStreakFreeze(StreakType type);
+
   /// Invalidates all caches, forcing fresh fetches on next access.
   void invalidateAll();
 }
@@ -129,13 +133,9 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_homeCache != null) return _homeCache!.value;
-      // Return empty stub so screen can show onboarding state.
-      return const ProgressHomeData(
-        goals: [],
-        streaks: [],
-        wow: WoWSummary(weekLabel: '', metrics: []),
-        recentAchievements: [],
-      );
+      // No cached data available — rethrow so the FutureProvider enters its
+      // error state and the screen displays the error UI with a retry button.
+      rethrow;
     }
   }
 
@@ -154,7 +154,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_goalsCache != null) return _goalsCache!.value;
-      return const GoalList(goals: []);
+      rethrow;
     }
   }
 
@@ -232,7 +232,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_achievementsCache != null) return _achievementsCache!.value;
-      return const AchievementList(achievements: []);
+      rethrow;
     }
   }
 
@@ -253,12 +253,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (_weeklyReportCache != null) return _weeklyReportCache!.value;
-      return WeeklyReport(
-        id: '',
-        periodStart: '',
-        periodEnd: '',
-        cards: [],
-      );
+      rethrow;
     }
   }
 
@@ -280,7 +275,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
       return data;
     } on DioException {
       if (page == 1 && _journalCache != null) return _journalCache!.value;
-      return const JournalPage(entries: [], hasMore: false);
+      rethrow;
     }
   }
 
@@ -342,6 +337,18 @@ class ProgressRepository implements ProgressRepositoryInterface {
   Future<void> deleteJournalEntry(String entryId) async {
     await _api.delete('/api/v1/journal/$entryId');
     _journalCache = null;
+  }
+
+  // ── Streak Freeze ─────────────────────────────────────────────────────────
+
+  /// Applies a streak freeze for the given [type].
+  ///
+  /// POSTs to `/api/v1/streaks/{type}/freeze`. Invalidates the home cache
+  /// so the next read reflects the new frozen state.
+  @override
+  Future<void> applyStreakFreeze(StreakType type) async {
+    await _api.post('/api/v1/streaks/${type.apiSlug}/freeze');
+    _homeCache = null;
   }
 
   // ── Cache Invalidation ────────────────────────────────────────────────────

@@ -74,6 +74,10 @@ dependencies:
   # App metadata (version, build number) — used by AnalyticsInitializer
   package_info_plus: any
 
+  # Share-as-image (Weekly Report)
+  screenshot: ^3.0.0
+  share_plus: ^10.1.4
+
   # SVG rendering (for the Zuralog brand logo asset)
   flutter_svg: ^2.0.17
 

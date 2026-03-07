@@ -23,6 +23,7 @@ import 'package:zuralog/features/auth/data/auth_repository.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/auth/domain/social_auth_credentials.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
+import 'package:zuralog/features/progress/providers/progress_providers.dart';
 
 // ── Onboarding Flag ───────────────────────────────────────────────────────────
 
@@ -255,7 +256,8 @@ class AuthStateNotifier extends Notifier<AuthState> {
   ///
   /// Always transitions to [AuthState.unauthenticated] and clears the
   /// stored email from [userEmailProvider]. Also clears the cached
-  /// [userProfileProvider] state.
+  /// [userProfileProvider] state and all Progress tab in-memory caches
+  /// to prevent sensitive health data from persisting after logout.
   Future<void> logout() async {
     // Analytics: reset identity before clearing auth state (fire-and-forget).
     ref.read(analyticsServiceProvider).reset();
@@ -264,6 +266,9 @@ class AuthStateNotifier extends Notifier<AuthState> {
     await _authRepository.logout();
     ref.read(userEmailProvider.notifier).state = '';
     ref.read(userProfileProvider.notifier).clear();
+    // Clear all Progress tab in-memory caches so sensitive health data does
+    // not persist for the next user session.
+    ref.read(progressRepositoryProvider).invalidateAll();
     state = AuthState.unauthenticated;
   }
 
@@ -272,13 +277,16 @@ class AuthStateNotifier extends Notifier<AuthState> {
   ///
   /// Called by [ApiClient.onUnauthenticated] when both the access token and
   /// refresh token are expired and cannot be recovered. Clears the local
-  /// profile and email state so the router redirects to the login screen.
+  /// profile, email state, and Progress tab caches so the router redirects
+  /// to the login screen without leaking stale health data.
   void forceLogout() {
     // Analytics: reset identity on force logout (fire-and-forget).
     ref.read(analyticsServiceProvider).reset();
     SentryBreadcrumbs.authEvent(event: 'force_logout');
     ref.read(userEmailProvider.notifier).state = '';
     ref.read(userProfileProvider.notifier).clear();
+    // Clear all Progress tab in-memory caches.
+    ref.read(progressRepositoryProvider).invalidateAll();
     state = AuthState.unauthenticated;
   }
 }

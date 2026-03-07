@@ -91,7 +91,14 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     final title = _titleCtrl.text.trim();
     final target = double.parse(_targetCtrl.text.trim());
     final unit = _unitCtrl.text.trim();
-    final deadlineIso = _deadline?.toIso8601String().substring(0, 10);
+    // Build an explicit UTC-neutral date string to avoid timezone edge cases
+    // (e.g. local DateTime behind UTC could produce the previous day).
+    final d = _deadline;
+    final deadlineIso = d != null
+        ? '${d.year.toString().padLeft(4, '0')}'
+            '-${d.month.toString().padLeft(2, '0')}'
+            '-${d.day.toString().padLeft(2, '0')}'
+        : null;
 
     try {
       if (_isEdit) {
@@ -293,7 +300,17 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                 selected: selected,
                 onSelected: _isEdit
                     ? null // type locked in edit mode
-                    : (_) => setState(() => _selectedType = type),
+                    : (_) {
+                        setState(() {
+                          _selectedType = type;
+                          // Auto-fill default unit for known types when the
+                          // unit field has not been customised yet.
+                          if (_unitCtrl.text.isEmpty ||
+                              _unitCtrl.text == _defaultUnitFor(_selectedType)) {
+                            _unitCtrl.text = _defaultUnitFor(type);
+                          }
+                        });
+                      },
                 selectedColor: AppColors.primary,
                 backgroundColor: AppColors.inputBackgroundDark,
                 disabledColor: AppColors.inputBackgroundDark,
@@ -389,6 +406,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
         ),
         validator: (v) {
           if (v == null || v.trim().isEmpty) return 'Title is required';
+          if (v.trim().length > 200) return 'Title must be 200 characters or fewer';
           return null;
         },
       ),
@@ -443,6 +461,12 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           label: 'Unit',
           hint: 'e.g. steps, kg, hrs',
         ),
+        validator: (v) {
+          if (v != null && v.trim().length > 50) {
+            return 'Unit must be 50 characters or fewer';
+          }
+          return null;
+        },
       ),
     );
   }
@@ -580,6 +604,28 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  /// Returns a sensible default unit string for a given [GoalType].
+  ///
+  /// Used to pre-fill the unit field when the user changes the goal type.
+  String _defaultUnitFor(GoalType type) {
+    switch (type) {
+      case GoalType.weightTarget:
+        return 'kg';
+      case GoalType.weeklyRunCount:
+        return 'runs';
+      case GoalType.dailyCalorieLimit:
+        return 'kcal';
+      case GoalType.sleepDuration:
+        return 'hrs';
+      case GoalType.stepCount:
+        return 'steps';
+      case GoalType.waterIntake:
+        return 'glasses';
+      case GoalType.custom:
+        return '';
+    }
+  }
 
   InputDecoration _inputDecoration({
     required String label,

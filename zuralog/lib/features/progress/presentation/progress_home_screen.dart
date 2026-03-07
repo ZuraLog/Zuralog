@@ -37,27 +37,13 @@ class ProgressHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<ProgressHomeScreen> createState() => _ProgressHomeScreenState();
 }
 
-class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ringController;
-
-  @override
-  void initState() {
-    super.initState();
-    _ringController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-  }
-
-  @override
-  void dispose() {
-    _ringController.dispose();
-    super.dispose();
-  }
+class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
 
   Future<void> _onRefresh() async {
     ref.read(hapticServiceProvider).medium();
+    // Clear the in-memory repository cache so the invalidated provider
+    // fetches fresh data rather than returning the still-warm cached stub.
+    ref.read(progressRepositoryProvider).invalidateAll();
     ref.invalidate(progressHomeProvider);
     // Wait for the new value to settle (swallow errors — UI handles them).
     try {
@@ -101,11 +87,6 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
             onRetry: () => ref.invalidate(progressHomeProvider),
           ),
           data: (data) {
-            // Start ring animation once data arrives.
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _ringController.forward(from: 0);
-            });
-
             final isEmpty =
                 data.goals.isEmpty && data.streaks.isEmpty;
 
@@ -117,7 +98,6 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen>
 
             return _ContentView(
               data: data,
-              ringController: _ringController,
             );
           },
         ),
@@ -365,11 +345,9 @@ class _EmptyState extends StatelessWidget {
 class _ContentView extends StatelessWidget {
   const _ContentView({
     required this.data,
-    required this.ringController,
   });
 
   final ProgressHomeData data;
-  final AnimationController ringController;
 
   @override
   Widget build(BuildContext context) {
@@ -378,6 +356,12 @@ class _ContentView extends StatelessWidget {
         bottom: AppDimens.bottomClearance(context),
       ),
       children: [
+        // Milestone celebration card — shown above everything when milestone hit.
+        if (data.milestoneStreakCount != null) ...[
+          const SizedBox(height: AppDimens.spaceMd),
+          _MilestoneCelebrationCard(days: data.milestoneStreakCount!),
+        ],
+
         // Goals section
         if (data.goals.isNotEmpty) ...[
           _SectionHeader(
@@ -385,7 +369,7 @@ class _ContentView extends StatelessWidget {
             trailingLabel: 'See all',
             onTrailingTap: () => context.push(RouteNames.goalsPath),
           ),
-          _GoalsRow(goals: data.goals, ringController: ringController),
+          _GoalsRow(goals: data.goals),
           const SizedBox(height: AppDimens.spaceLg),
         ],
 
@@ -466,10 +450,9 @@ class _SectionHeader extends ConsumerWidget {
 // ── _GoalsRow ─────────────────────────────────────────────────────────────────
 
 class _GoalsRow extends StatelessWidget {
-  const _GoalsRow({required this.goals, required this.ringController});
+  const _GoalsRow({required this.goals});
 
   final List<Goal> goals;
-  final AnimationController ringController;
 
   @override
   Widget build(BuildContext context) {
@@ -481,10 +464,7 @@ class _GoalsRow extends StatelessWidget {
         itemCount: goals.length,
         separatorBuilder: (context, index) =>
             const SizedBox(width: AppDimens.spaceMd),
-        itemBuilder: (context, index) => _GoalCard(
-          goal: goals[index],
-          ringController: ringController,
-        ),
+        itemBuilder: (context, index) => _GoalCard(goal: goals[index]),
       ),
     );
   }
@@ -493,10 +473,9 @@ class _GoalsRow extends StatelessWidget {
 // ── _GoalCard ─────────────────────────────────────────────────────────────────
 
 class _GoalCard extends StatelessWidget {
-  const _GoalCard({required this.goal, required this.ringController});
+  const _GoalCard({required this.goal});
 
   final Goal goal;
-  final AnimationController ringController;
 
   @override
   Widget build(BuildContext context) {
@@ -655,7 +634,7 @@ class _StreaksRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 128,
+      height: 152,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
@@ -671,15 +650,132 @@ class _StreaksRow extends StatelessWidget {
 
 // ── _StreakCard ───────────────────────────────────────────────────────────────
 
-class _StreakCard extends StatelessWidget {
+class _StreakCard extends ConsumerStatefulWidget {
   const _StreakCard({required this.streak});
 
   final UserStreak streak;
 
   @override
+  ConsumerState<_StreakCard> createState() => _StreakCardState();
+}
+
+class _StreakCardState extends ConsumerState<_StreakCard> {
+  bool _isLoading = false;
+
+  Future<void> _onShieldTap(BuildContext context) async {
+    final streak = widget.streak;
+
+    if (streak.freezeCount >= 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("You've used all your streak freezes."),
+        ),
+      );
+      return;
+    }
+
+    if (streak.isFrozen) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Streak is already frozen.'),
+        ),
+      );
+      return;
+    }
+
+    final remaining = 2 - streak.freezeCount - 1;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardBackgroundDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
+        title: Text('Use a Streak Freeze?', style: AppTextStyles.h3),
+        content: Text(
+          'This will protect your streak if you miss today. '
+          'You have $remaining freeze(s) remaining after this.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.primaryButtonText,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimens.radiusButton),
+              ),
+            ),
+            child: const Text('Use Freeze'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await ref
+          .read(progressRepositoryProvider)
+          .applyStreakFreeze(streak.type);
+
+      ref.read(hapticServiceProvider).medium();
+
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.streakFreezeUsed,
+        properties: {
+          'streak_type': streak.type.apiSlug,
+          // Remaining after this freeze: max 2 total, already used
+          // freezeCount, now using 1 more.
+          'freeze_count_remaining':
+              (2 - streak.freezeCount - 1).clamp(0, 2),
+        },
+      );
+
+      ref.invalidate(progressHomeProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Streak freeze applied! Your streak is protected.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final streak = widget.streak;
+    final canFreeze = streak.freezeCount < 2 && !streak.isFrozen;
+    // Full opacity when ≥1 freeze used and not already frozen (2nd freeze still
+    // available), or when frozen (showing active protection). 40% when no
+    // freezes have been used yet (subtle dormant indicator).
+    final shieldOpacity =
+        (streak.freezeCount > 0 && !streak.isFrozen) || streak.isFrozen
+            ? 1.0
+            : 0.4;
+    final freezesAvailable = (2 - streak.freezeCount).clamp(0, 2);
+
     return Container(
-      width: 120,
+      width: 128,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
         color: AppColors.cardBackgroundDark,
@@ -700,11 +796,33 @@ class _StreakCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (streak.isFrozen)
-                const Icon(
-                  Icons.shield_rounded,
-                  size: AppDimens.iconSm,
-                  color: AppColors.primary,
+              if (_isLoading)
+                const SizedBox(
+                  width: AppDimens.iconSm,
+                  height: AppDimens.iconSm,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                )
+              else
+                Tooltip(
+                  message: 'Tap to use a freeze',
+                  child: GestureDetector(
+                    onTap: canFreeze || streak.isFrozen
+                        ? () => _onShieldTap(context)
+                        : null,
+                    child: Opacity(
+                      opacity: shieldOpacity,
+                      child: Icon(
+                        Icons.shield_rounded,
+                        size: AppDimens.iconSm,
+                        color: streak.isFrozen
+                            ? AppColors.primary
+                            : AppColors.textTertiary,
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -723,7 +841,156 @@ class _StreakCard extends StatelessWidget {
               color: AppColors.textTertiary,
             ),
           ),
+          const SizedBox(height: AppDimens.spaceXs),
+          Text(
+            '$freezesAvailable freeze(s) available',
+            style: AppTextStyles.labelXs.copyWith(
+              color: AppColors.textTertiary,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+// ── _MilestoneCelebrationCard ─────────────────────────────────────────────────
+
+/// Full-width inline card shown when the user hits a major streak milestone.
+///
+/// Displays a scale-pulse animation and fires haptic + analytics exactly once
+/// on first display. Stays visible until the next data refresh clears the
+/// milestone flag from [ProgressHomeData.milestoneStreakCount].
+class _MilestoneCelebrationCard extends ConsumerStatefulWidget {
+  const _MilestoneCelebrationCard({required this.days});
+
+  final int days;
+
+  @override
+  ConsumerState<_MilestoneCelebrationCard> createState() =>
+      _MilestoneCelebrationCardState();
+}
+
+class _MilestoneCelebrationCardState
+    extends ConsumerState<_MilestoneCelebrationCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _scaleAnim;
+  bool _hapticFired = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.015).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // Fire haptic exactly once.
+      if (!_hapticFired) {
+        _hapticFired = true;
+        ref.read(hapticServiceProvider).success();
+      }
+
+      // Fire analytics event.
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.streakMilestoneViewed,
+        properties: {'days': widget.days},
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            color: AppColors.cardBackgroundDark,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            child: Stack(
+              children: [
+                // Gradient overlay — 8% opacity categoryActivity (green).
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.categoryActivity.withValues(alpha: 0.08),
+                          AppColors.categoryActivity.withValues(alpha: 0.02),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(AppDimens.spaceMd),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Icon row
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.local_fire_department_rounded,
+                            color: AppColors.categoryActivity,
+                            size: 28,
+                          ),
+                          const SizedBox(width: AppDimens.spaceXs),
+                          const Icon(
+                            Icons.emoji_events_rounded,
+                            color: AppColors.categoryActivity,
+                            size: 28,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppDimens.spaceSm),
+                      // Headline
+                      Text(
+                        '${widget.days}-Day Streak!',
+                        style: AppTextStyles.h2.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: AppDimens.spaceXs),
+                      // Subtext
+                      Text(
+                        'Amazing consistency! You\'ve logged every day '
+                        'for ${widget.days} days.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1012,8 +1279,17 @@ class _AchievementBadge extends StatelessWidget {
     }
   }
 
+  /// Returns true when the achievement was unlocked within the last 7 days.
+  bool get _isNew {
+    final unlockedAt = achievement.unlockedAt;
+    if (unlockedAt == null) return false;
+    return DateTime.now().difference(unlockedAt).inDays < 7;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showNewBadge = _isNew;
+
     return Container(
       width: 100,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -1031,24 +1307,26 @@ class _AchievementBadge extends StatelessWidget {
                 color: AppColors.primary,
                 size: AppDimens.iconMd,
               ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceXs,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppDimens.spaceXs),
-                ),
-                child: Text(
-                  'NEW',
-                  style: AppTextStyles.labelXs.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
+              if (showNewBadge) ...[
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceXs,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppDimens.spaceXs),
+                  ),
+                  child: Text(
+                    'NEW',
+                    style: AppTextStyles.labelXs.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const Spacer(),

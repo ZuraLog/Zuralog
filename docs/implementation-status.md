@@ -7,6 +7,41 @@
 
 ---
 
+## Progress Tab — Gap Closure (feat/progress-tab-gaps, 2026-03-07)
+
+Closed all 7 previously identified gaps across the Progress tab in a single parallel subagent session. Branch: `feat/progress-tab-gaps`.
+
+**Files changed:**
+- `zuralog/lib/features/progress/domain/progress_models.dart` — Added `milestoneStreakCount` to `ProgressHomeData`; added `progressCurrent`/`progressTotal`/`progressLabel` to `Achievement`; added `GoalType.waterIntake`
+- `zuralog/lib/features/progress/data/progress_repository.dart` — Added `applyStreakFreeze(StreakType)` to interface and `ProgressRepository`
+- `zuralog/lib/features/progress/data/mock_progress_repository.dart` — `applyStreakFreeze` stub; `milestoneStreakCount: 7` in home fixture; progress fields on locked achievements; 5-card canonical weekly report sequence
+- `zuralog/lib/features/progress/presentation/progress_home_screen.dart` — Streak freeze tap-to-activate with confirmation dialog + analytics; `_MilestoneCelebrationCard` widget with scale pulse animation and haptic
+- `zuralog/lib/features/progress/presentation/goal_detail_screen.dart` — `_projectCompletionDate()` linear trend extrapolation; projected date in details card + AI commentary
+- `zuralog/lib/features/progress/presentation/achievements_screen.dart` — `_buildLockedProgress()` mini progress bar for locked badges using `LayoutBuilder`
+- `zuralog/lib/features/progress/presentation/goal_create_edit_sheet.dart` — `_defaultUnitFor()` helper; `waterIntake` available in type picker
+- `zuralog/lib/features/progress/presentation/weekly_report_screen.dart` — `ScreenshotController` + `Screenshot` widget wrapping current page; `_shareCurrentCard()` captures PNG to temp dir and calls `Share.shareXFiles()`
+- `zuralog/pubspec.yaml` — Added `screenshot: ^3.0.0` and `share_plus: ^10.1.4`
+
+**What was implemented:**
+
+1. **Streak freeze tap-to-activate** — `_StreakCard` converted to `ConsumerStatefulWidget`. Tapping the shield icon shows a confirmation dialog ("Use a Streak Freeze?") with remaining freeze count. On confirm: POST to `/api/v1/streaks/{type}/freeze`, haptic medium, `streakFreezeUsed` analytics event, success snackbar. Guards: snackbar-only when already frozen or no freezes available. Shield opacity reflects availability.
+
+2. **Streak milestone celebration card** — `_MilestoneCelebrationCard` shown inline at top of `_ContentView` when `data.milestoneStreakCount != null`. Animated scale-pulse (1.0→1.015, 2000ms loop), activity-green tint, haptic success on first render, `streakMilestoneViewed` analytics event.
+
+3. **Projected completion date** — `_projectCompletionDate()` on `_GoalDetailView` uses last ≤14 history entries to compute average daily gain and extrapolate a target date. Shown in details card and appended to AI commentary.
+
+4. **Progress-toward-unlock on locked achievements** — `Achievement` model extended with optional progress fields. Locked badges in `achievements_screen.dart` render a 3px `LayoutBuilder`-sized progress bar when `progressCurrent`/`progressTotal` are set.
+
+5. **Water intake goal type** — `GoalType.waterIntake` added to enum, `fromString`, `apiSlug`, and `displayName`. Goal create/edit sheet auto-fills `'glasses'` as the default unit on selection.
+
+6. **Weekly Report 5-card story sequence** — Mock always returns 5 canonical cards: Week Summary → Top Insight → Goal Adherence → vs. Last Week → Your Streak. Data-driven card order confirmed by `cardIndex`.
+
+7. **Share-as-image** — Weekly report AppBar share button now captures the currently-visible card at 3× pixel density, writes to a temp PNG, and invokes `Share.shareXFiles()`. Error snackbar on failure.
+
+**`flutter analyze`:** 24 issues (all pre-existing — zero in Progress tab files). Zero errors.
+
+---
+
 ## Coach Tab — Gap Closure (feat/coach-tab-gaps, 2026-03-07)
 
 Closed all 7 previously identified gaps across the Coach tab in a single subagent-driven session. Branch: `feat/coach-tab-gaps`.

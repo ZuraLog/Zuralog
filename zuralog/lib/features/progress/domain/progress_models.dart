@@ -35,6 +35,7 @@ enum GoalType {
   dailyCalorieLimit,
   sleepDuration,
   stepCount,
+  waterIntake,
   custom;
 
   /// Human-readable display name.
@@ -50,6 +51,8 @@ enum GoalType {
         return 'Sleep Duration';
       case GoalType.stepCount:
         return 'Step Count';
+      case GoalType.waterIntake:
+        return 'Daily Water Intake';
       case GoalType.custom:
         return 'Custom';
     }
@@ -68,6 +71,8 @@ enum GoalType {
         return GoalType.sleepDuration;
       case 'step_count':
         return GoalType.stepCount;
+      case 'water_intake':
+        return GoalType.waterIntake;
       case 'custom':
         return GoalType.custom;
       default:
@@ -89,6 +94,8 @@ enum GoalType {
         return 'sleep_duration';
       case GoalType.stepCount:
         return 'step_count';
+      case GoalType.waterIntake:
+        return 'water_intake';
       case GoalType.custom:
         return 'custom';
     }
@@ -313,7 +320,18 @@ enum StreakType {
   }
 
   /// Serializes to the API string slug.
-  String get apiSlug => name;
+  String get apiSlug {
+    switch (this) {
+      case StreakType.engagement:
+        return 'engagement';
+      case StreakType.steps:
+        return 'steps';
+      case StreakType.workouts:
+        return 'workouts';
+      case StreakType.checkin:
+        return 'checkin';
+    }
+  }
 }
 
 // ── UserStreak ────────────────────────────────────────────────────────────────
@@ -479,6 +497,9 @@ class Achievement {
     required this.category,
     required this.iconName,
     this.unlockedAt,
+    this.progressCurrent,
+    this.progressTotal,
+    this.progressLabel,
   });
 
   /// Unique numeric / UUID identifier.
@@ -502,6 +523,16 @@ class Achievement {
   /// When the achievement was unlocked. Null if still locked.
   final DateTime? unlockedAt;
 
+  /// Current progress toward unlocking (e.g. 3 out of 7 days).
+  final int? progressCurrent;
+
+  /// Total required to unlock (e.g. 7).
+  final int? progressTotal;
+
+  /// Human-readable progress label (e.g. "3 of 7 days complete").
+  /// If null, falls back to "$progressCurrent of $progressTotal".
+  final String? progressLabel;
+
   /// True when the achievement has been earned.
   bool get isUnlocked => unlockedAt != null;
 
@@ -517,6 +548,9 @@ class Achievement {
       unlockedAt: json['unlocked_at'] != null
           ? DateTime.tryParse(json['unlocked_at'] as String)
           : null,
+      progressCurrent: (json['progress_current'] as num?)?.toInt(),
+      progressTotal: (json['progress_total'] as num?)?.toInt(),
+      progressLabel: json['progress_label'] as String?,
     );
   }
 
@@ -529,6 +563,9 @@ class Achievement {
         'category': category.apiSlug,
         'icon_name': iconName,
         'unlocked_at': unlockedAt?.toIso8601String(),
+        'progress_current': progressCurrent,
+        'progress_total': progressTotal,
+        'progress_label': progressLabel,
       };
 }
 
@@ -659,6 +696,7 @@ class ProgressHomeData {
     required this.streaks,
     required this.wow,
     required this.recentAchievements,
+    this.milestoneStreakCount,
   });
 
   /// Active user goals.
@@ -672,6 +710,10 @@ class ProgressHomeData {
 
   /// Achievements unlocked in the last 30 days, newest first.
   final List<Achievement> recentAchievements;
+
+  /// Non-null when the user just hit a major streak milestone (7, 14, 30, 60,
+  /// 90, 180, or 365 days). The value is the milestone day count.
+  final int? milestoneStreakCount;
 
   /// Deserializes from a JSON map.
   factory ProgressHomeData.fromJson(Map<String, dynamic> json) {
@@ -691,6 +733,7 @@ class ProgressHomeData {
       recentAchievements: rawAch
           .map((e) => Achievement.fromJson(e as Map<String, dynamic>))
           .toList(),
+      milestoneStreakCount: (json['milestone_streak_count'] as num?)?.toInt(),
     );
   }
 
@@ -700,6 +743,7 @@ class ProgressHomeData {
         'streaks': streaks.map((s) => s.toJson()).toList(),
         'wow': wow.toJson(),
         'recent_achievements': recentAchievements.map((a) => a.toJson()).toList(),
+        'milestone_streak_count': milestoneStreakCount,
       };
 }
 
@@ -906,9 +950,9 @@ class JournalEntry {
       stress: (json['stress'] as num?)?.toInt() ?? 5,
       sleepQuality: (json['sleep_quality'] as num?)?.toInt(),
       notes: json['notes'] as String? ?? '',
-      tags: rawTags.map((e) => e as String).toList(),
+      tags: rawTags.whereType<String>().toList(),
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'] as String) ?? DateTime.now())
           : DateTime.now(),
     );
   }
