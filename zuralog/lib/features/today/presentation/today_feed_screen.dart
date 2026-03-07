@@ -145,7 +145,7 @@ class TodayFeedScreen extends ConsumerWidget {
                 child: _FadeSlideIn(
                   delay: const Duration(milliseconds: 60),
                   child: _SectionHeader(
-                    title: _timeOfDayGreeting(),
+                    title: _timeOfDayGreeting(profile?.aiName),
                     trailing: feedAsync.whenOrNull(
                       data: (feed) => feed.streak != null
                           ? StreakBadge.inline(
@@ -1383,13 +1383,24 @@ class _ShimmerState extends State<_Shimmer>
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Returns a time-of-day greeting string.
-String _timeOfDayGreeting() {
+/// Returns a time-of-day greeting string, optionally personalized with [name].
+///
+/// When [name] is provided and non-empty, returns e.g. "Good morning, Alex".
+/// Falls back to the bare greeting when [name] is null or empty.
+String _timeOfDayGreeting([String? name]) {
   final hour = DateTime.now().hour;
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  if (hour < 21) return 'Good evening';
-  return 'Good night';
+  String base;
+  if (hour < 12) {
+    base = 'Good morning';
+  } else if (hour < 17) {
+    base = 'Good afternoon';
+  } else if (hour < 21) {
+    base = 'Good evening';
+  } else {
+    base = 'Good night';
+  }
+  if (name != null && name.isNotEmpty) return '$base, $name';
+  return base;
 }
 
 /// Returns a formatted date string for the app bar (e.g. "Wednesday, Mar 4").
