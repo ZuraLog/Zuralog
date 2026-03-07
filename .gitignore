@@ -51,8 +51,9 @@ nul
 .claudeplans/
 opencode.json
 
-# Agent screenshots (visual QA — never commit; clean up before merging)
+# Agent working directories (visual QA screenshots and session plans — never commit)
 .agent/screenshots/
+.agent/plans/
 
 # Dev / session artifacts
 test_compilation.sh
