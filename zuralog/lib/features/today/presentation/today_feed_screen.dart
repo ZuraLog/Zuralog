@@ -331,7 +331,7 @@ class TodayFeedScreen extends ConsumerWidget {
                   ),
                   child: _FadeSlideIn(
                     delay: const Duration(milliseconds: 300),
-                    child: _WellnessCheckinCard(),
+                    child: const _WellnessCheckinCard(),
                   ),
                 ),
               ),
