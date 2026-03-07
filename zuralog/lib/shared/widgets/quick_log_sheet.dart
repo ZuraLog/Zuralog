@@ -189,9 +189,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     final unitsSystem = ref.watch(unitsSystemProvider);
-    final waterLabel = unitsSystem == UnitsSystem.imperial
-        ? 'glasses (8 oz)'
-        : 'glasses (250 ml)';
+    final waterLabel = unitsSystem.waterUnitLabel;
 
     return Container(
       decoration: BoxDecoration(
@@ -609,7 +607,7 @@ class _WaterCounter extends StatelessWidget {
     required this.secondaryColor,
     required this.onDecrement,
     required this.onIncrement,
-    this.label = 'glasses',
+    required this.label,
   });
 
   final int count;
