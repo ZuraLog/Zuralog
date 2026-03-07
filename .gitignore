@@ -37,8 +37,10 @@ __pycache__/
 .pub/
 /build/
 
-# Node.js
+# Node.js (root-level only — local MCP tooling, not a real package)
 node_modules/
+package.json
+package-lock.json
 
 # nul
 nul
