@@ -67,12 +67,24 @@ class TrendsHomeScreen extends ConsumerWidget {
 
 // ── Body ──────────────────────────────────────────────────────────────────────
 
-class _TrendsHomeBody extends ConsumerWidget {
+class _TrendsHomeBody extends ConsumerStatefulWidget {
   const _TrendsHomeBody({required this.data});
   final TrendsHomeData data;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TrendsHomeBody> createState() => _TrendsHomeBodyState();
+}
+
+class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
+  final Set<String> _dismissedSuggestions = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
+    final visibleSuggestions = data.suggestionCards
+        .where((s) => !_dismissedSuggestions.contains(s.id))
+        .toList();
+
     return RefreshIndicator(
       onRefresh: () async {
         ref.read(hapticServiceProvider).light();
@@ -120,6 +132,44 @@ class _TrendsHomeBody extends ConsumerWidget {
                 childCount: data.correlationHighlights.length,
               ),
             ),
+
+          // ── Correlation suggestion cards ───────────────────────────────
+          if (visibleSuggestions.isNotEmpty) ...[
+            const SliverToBoxAdapter(
+              child: _SectionHeader(title: 'Track More, Learn More'),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final s = visibleSuggestions[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceSm / 2,
+                    ),
+                    child: _CorrelationSuggestionCard(
+                      suggestion: s,
+                      onDismiss: () =>
+                          setState(() => _dismissedSuggestions.add(s.id)),
+                      onCtaTap: () {
+                        ref.read(hapticServiceProvider).light();
+                        ref.read(analyticsServiceProvider).capture(
+                          event:
+                              AnalyticsEvents.correlationSuggestionTapped,
+                          properties: {
+                            'metric_needed': s.metricNeeded,
+                            'cta_label': s.ctaLabel,
+                          },
+                        );
+                        context.push(s.ctaRoute);
+                      },
+                    ),
+                  );
+                },
+                childCount: visibleSuggestions.length,
+              ),
+            ),
+          ],
 
           // ── Quick-nav row ──────────────────────────────────────────────
           const SliverToBoxAdapter(child: _SectionHeader(title: 'Explore')),
@@ -601,6 +651,109 @@ class _SectionHeader extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Correlation Suggestion Card ───────────────────────────────────────────────
+
+class _CorrelationSuggestionCard extends ConsumerWidget {
+  const _CorrelationSuggestionCard({
+    required this.suggestion,
+    required this.onDismiss,
+    required this.onCtaTap,
+  });
+
+  final CorrelationSuggestion suggestion;
+  final VoidCallback onDismiss;
+  final VoidCallback onCtaTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackgroundDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceMd,
+        AppDimens.spaceMd,
+        AppDimens.spaceXs,
+        AppDimens.spaceSm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Icon ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(top: 2, right: AppDimens.spaceSm),
+            child: Icon(
+              Icons.add_circle_outline_rounded,
+              size: AppDimens.iconMd,
+              color: AppColors.primary,
+            ),
+          ),
+
+          // ── Text content + CTA ───────────────────────────────────────
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  suggestion.metricNeeded,
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimaryDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  suggestion.description,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondaryDark,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppDimens.spaceXs),
+                TextButton(
+                  onPressed: onCtaTap,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    suggestion.ctaLabel,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Dismiss button ───────────────────────────────────────────
+          IconButton(
+            onPressed: onDismiss,
+            icon: Icon(
+              Icons.close_rounded,
+              size: AppDimens.iconSm,
+              color: AppColors.textTertiary,
+            ),
+            padding: const EdgeInsets.all(AppDimens.spaceXs),
+            constraints: const BoxConstraints(),
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
         ],
       ),
     );
