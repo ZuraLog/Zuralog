@@ -19,14 +19,14 @@ import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
-import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/category_card.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
-import 'package:zuralog/shared/widgets/health_score_widget.dart';
+import 'package:zuralog/shared/widgets/score_trend_hero.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
@@ -140,6 +140,17 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final dashAsync = ref.watch(dashboardProvider);
     final layout = ref.watch(dashboardLayoutProvider);
 
+    // Data maturity banner state.
+    final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
+    final userProfile = ref.watch(userProfileProvider);
+    final accountAge = userProfile?.createdAt != null
+        ? DateTime.now().difference(userProfile!.createdAt!).inDays
+        : 0;
+    final dataBannerMode = accountAge >= 7
+        ? DataMaturityMode.stillBuilding
+        : DataMaturityMode.progress;
+    final showDataBanner = dataDays < 7 && !layout.bannerDismissed;
+
     return Scaffold(
       appBar: AppBar(
         title: OnboardingTooltip(
@@ -182,7 +193,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            // ── Health Score Hero ────────────────────────────────────────────
+            // ── Score Trend Hero ─────────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -191,16 +202,12 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   AppDimens.spaceMd,
                   AppDimens.spaceSm,
                 ),
-                child: scoreAsync.when(
-                  loading: () => const _HealthScoreHeroSkeleton(),
-                  error: (err, stack) => const SizedBox.shrink(),
-                  data: (score) => _ScoreHeroCard(score: score),
-                ),
+                child: const ScoreTrendHero(),
               ),
             ),
 
             // ── Data Maturity Banner ─────────────────────────────────────────
-            if (!layout.bannerDismissed)
+            if (showDataBanner)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
@@ -210,11 +217,10 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                     AppDimens.spaceSm,
                   ),
                   child: DataMaturityBanner(
-                    // MED-06: count categories with real data from the dashboard
-                    daysWithData: dashAsync.valueOrNull?.visibleOrder.length ?? 0,
+                    daysWithData: dataDays,
                     targetDays: 7,
+                    mode: dataBannerMode,
                     onDismiss: () {
-                      // MED-06: persist dismissal in layout so it survives restarts
                       final updated = layout.copyWith(bannerDismissed: true);
                       ref.read(dashboardLayoutProvider.notifier).state = updated;
                       unawaited(Future(() async {
@@ -227,6 +233,21 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                         }
                       }));
                     },
+                    onPermanentDismiss: dataBannerMode == DataMaturityMode.stillBuilding
+                        ? () {
+                            final updated = layout.copyWith(bannerDismissed: true);
+                            ref.read(dashboardLayoutProvider.notifier).state = updated;
+                            unawaited(Future(() async {
+                              try {
+                                await ref
+                                    .read(dataRepositoryProvider)
+                                    .saveDashboardLayout(updated);
+                              } catch (e) {
+                                debugPrint('[Dashboard] saveDashboardLayout error (banner): $e');
+                              }
+                            }));
+                          }
+                        : null,
                   ),
                 ),
               ),
@@ -452,41 +473,11 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   }
 }
 
-// ── _ScoreHeroCard ────────────────────────────────────────────────────────────
-
-/// Wraps [HealthScoreWidget.hero] in the dashboard card container.
-class _ScoreHeroCard extends StatelessWidget {
-  const _ScoreHeroCard({required this.score});
-  final HealthScoreData score;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Center(
-        child: HealthScoreWidget.hero(
-          score: score.score,
-          trend: score.trend,
-          commentary: score.commentary,
-        ),
-      ),
-    );
-  }
-}
-
 // ── _EditableList ─────────────────────────────────────────────────────────────
 
 class _EditableList extends StatelessWidget {
   const _EditableList({
+    super.key,
     required this.items,
     required this.layout,
     required this.onReorder,
@@ -502,39 +493,42 @@ class _EditableList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        0,
-        AppDimens.spaceMd,
-        AppDimens.bottomNavHeight + AppDimens.spaceMd,
-      ),
-      sliver: SliverReorderableList(
-        itemCount: items.length,
-        onReorder: onReorder,
-        proxyDecorator: (child, index, animation) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, animChild) => Material(
-              elevation: 4 * animation.value,
-              borderRadius: BorderRadius.circular(20),
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          0,
+          AppDimens.spaceMd,
+          AppDimens.bottomNavHeight + AppDimens.spaceMd,
+        ),
+        child: ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          onReorder: onReorder,
+          proxyDecorator: (child, index, animation) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, animChild) => Material(
+                elevation: 4 * animation.value,
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.transparent,
+                child: animChild,
+              ),
               child: child,
-            ),
-          );
-        },
-        itemBuilder: (context, i) {
-          final summary = items[i];
-          final cat = summary.category;
-          final isVisible =
-              !layout.hiddenCategories.contains(cat.name);
-          final overrideValue = layout.categoryColorOverrides[cat.name];
-          final cardColor = overrideValue != null
-              ? Color(overrideValue)
-              : categoryColor(cat);
-          return ReorderableDelayedDragStartListener(
-            key: ValueKey(cat.name),
-            index: i,
-            child: Padding(
+            );
+          },
+          itemBuilder: (context, i) {
+            final summary = items[i];
+            final cat = summary.category;
+            final isVisible =
+                !layout.hiddenCategories.contains(cat.name);
+            final overrideValue = layout.categoryColorOverrides[cat.name];
+            final cardColor = overrideValue != null
+                ? Color(overrideValue)
+                : categoryColor(cat);
+            return Padding(
+              key: ValueKey(cat.name),
               padding: const EdgeInsets.symmetric(
                 vertical: AppDimens.spaceXs,
               ),
@@ -549,9 +543,9 @@ class _EditableList extends StatelessWidget {
                     onVisibilityToggle(cat.name),
                 onColorPick: () => onColorPick(cat),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -594,18 +588,20 @@ class _ColorPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceSm,
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-      ),
-      child: Column(
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          AppDimens.spaceSm,
+          AppDimens.spaceMd,
+          AppDimens.spaceMd,
+        ),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -689,29 +685,12 @@ class _ColorPickerSheet extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceMd),
         ],
       ),
+    ),
     );
   }
 }
 
 // ── Skeleton widgets ──────────────────────────────────────────────────────────
-
-class _HealthScoreHeroSkeleton extends StatelessWidget {
-  const _HealthScoreHeroSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shimmer =
-        isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
-    return Container(
-      height: 88,
-      decoration: BoxDecoration(
-        color: shimmer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-    );
-  }
-}
 
 class _CardSkeleton extends StatelessWidget {
   const _CardSkeleton();

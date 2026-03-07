@@ -22,6 +22,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
@@ -46,6 +47,20 @@ class TodayFeedScreen extends ConsumerWidget {
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
     final bannerDismissed = ref.watch(dataMaturityBannerDismissed);
+
+    // Data maturity banner state computation.
+    final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
+    final profile = ref.watch(userProfileProvider);
+    final accountAge = profile?.createdAt != null
+        ? DateTime.now().difference(profile!.createdAt!).inDays
+        : 0;
+    final accountMature = accountAge >= 7;
+    final bannerMode = accountMature
+        ? DataMaturityMode.stillBuilding
+        : DataMaturityMode.progress;
+    final sessionDismissed = ref.watch(todayBannerSessionDismissed);
+    final showBanner = dataDays < 7 &&
+        (bannerMode == DataMaturityMode.progress ? !bannerDismissed : !sessionDismissed);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -98,22 +113,22 @@ class TodayFeedScreen extends ConsumerWidget {
             ),
 
             // ── Data Maturity banner ──────────────────────────────────────
-            if (!bannerDismissed)
+            if (showBanner)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppDimens.spaceMd,
                   ),
-                  child: feedAsync.when(
-                    data: (_) => DataMaturityBanner(
-                      daysWithData: 3,
-                      targetDays: 7,
-                      onDismiss: () => ref
-                          .read(dataMaturityBannerDismissed.notifier)
-                          .state = true,
-                    ),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, st) => const SizedBox.shrink(),
+                  child: DataMaturityBanner(
+                    daysWithData: dataDays,
+                    targetDays: 7,
+                    mode: bannerMode,
+                    onDismiss: bannerMode == DataMaturityMode.progress
+                        ? () => ref.read(dataMaturityBannerDismissed.notifier).state = true
+                        : () => ref.read(todayBannerSessionDismissed.notifier).state = true,
+                    onPermanentDismiss: bannerMode == DataMaturityMode.stillBuilding
+                        ? () => ref.read(dataMaturityBannerDismissed.notifier).state = true
+                        : null,
                   ),
                 ),
               ),
@@ -241,10 +256,26 @@ class TodayFeedScreen extends ConsumerWidget {
                               event: AnalyticsEvents.quickActionTapped,
                               properties: {
                                 'title': actions[index].title,
+                                'action_type': actions[index].actionType,
                               },
                             );
-                            final route = actions[index].route;
-                            if (route != null) context.go(route);
+                            final action = actions[index];
+                            switch (action.actionType) {
+                              case 'log_water':
+                                _showQuickLog(context, ref, initialMetric: 'water');
+                              case 'log_mood':
+                                _showQuickLog(context, ref, initialMetric: 'mood');
+                              case 'log_meal':
+                              case 'log_nutrition':
+                                _showQuickLog(context, ref);
+                              case 'log_energy':
+                                _showQuickLog(context, ref, initialMetric: 'energy');
+                              case 'log_stress':
+                                _showQuickLog(context, ref, initialMetric: 'stress');
+                              default:
+                                final route = action.route;
+                                if (route != null) context.go(route);
+                            }
                           },
                         ),
                       ),
@@ -1443,7 +1474,11 @@ IconData _insightIcon(InsightType type) {
 }
 
 /// Shows the QuickLogSheet bottom sheet and handles submission.
-void _showQuickLog(BuildContext context, WidgetRef ref) {
+void _showQuickLog(
+  BuildContext context,
+  WidgetRef ref, {
+  String? initialMetric,
+}) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -1453,6 +1488,7 @@ void _showQuickLog(BuildContext context, WidgetRef ref) {
         final isLoading = r.watch(quickLogLoadingProvider);
         return QuickLogSheet(
           isLoading: isLoading,
+          initialMetric: initialMetric,
           onSubmit: (data) async {
             r.read(quickLogLoadingProvider.notifier).state = true;
             try {

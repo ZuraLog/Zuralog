@@ -25,24 +25,46 @@ class HealthScoreData {
     required this.score,
     required this.trend,
     this.commentary,
+    this.dataDays = 0,
   });
 
   /// Current health score (0–100).
   final int score;
 
-  /// 7-day trend values, oldest first (used for sparkline).
+  /// 7-day trend of scores, oldest first (used for sparkline).
   final List<double> trend;
 
   /// Optional AI-generated commentary string.
   final String? commentary;
 
+  /// Total number of calendar days with recorded health data.
+  /// Derived from the backend's `data_days` field.
+  final int dataDays;
+
   /// Deserializes from a JSON map.
   factory HealthScoreData.fromJson(Map<String, dynamic> json) {
-    final rawTrend = json['trend'] as List<dynamic>? ?? [];
+    // Backend returns history as [{"date": "...", "score": N}, ...]
+    // Fall back to a direct 'trend' list for mock/legacy compatibility.
+    final rawHistory = json['history'] as List<dynamic>?;
+    final rawTrend = json['trend'] as List<dynamic>?;
+    final List<double> trend;
+    if (rawHistory != null && rawHistory.isNotEmpty) {
+      trend = rawHistory
+          .map((e) {
+            final scoreVal = (e as Map<String, dynamic>)['score'];
+            return scoreVal != null ? (scoreVal as num).toDouble() : 0.0;
+          })
+          .toList();
+    } else if (rawTrend != null) {
+      trend = rawTrend.map((e) => (e as num).toDouble()).toList();
+    } else {
+      trend = [];
+    }
     return HealthScoreData(
       score: (json['score'] as num).toInt(),
-      trend: rawTrend.map((e) => (e as num).toDouble()).toList(),
+      trend: trend,
       commentary: json['commentary'] as String?,
+      dataDays: (json['data_days'] as num?)?.toInt() ?? 0,
     );
   }
 }

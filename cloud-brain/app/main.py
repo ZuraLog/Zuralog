@@ -40,6 +40,7 @@ from app.api.v1.emergency_card_routes import router as emergency_card_router
 from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
 from app.api.v1.health_ingest import router as health_ingest_router
+from app.api.v1.health_score_history_routes import router as health_score_history_router
 from app.api.v1.health_score_routes import router as health_score_router
 from app.api.v1.insight_routes import router as insight_router
 from app.api.v1.integrations import router as integrations_router
@@ -317,6 +318,7 @@ app.include_router(withings_router, prefix="/api/v1")  # Withings integration
 app.include_router(withings_webhook_router, prefix="/api/v1")  # Withings webhooks
 app.include_router(preferences_router, prefix="/api/v1")  # Phase 2.1 — user preferences
 app.include_router(health_score_router, prefix="/api/v1")  # Phase 2.2 — health score
+app.include_router(health_score_history_router, prefix="/api/v1")  # Phase 2.2 — health score history
 app.include_router(memory_router, prefix="/api/v1")  # Phase 2.4 — memory management
 app.include_router(insight_router, prefix="/api/v1")  # Phase 2.6 — insight cards
 app.include_router(prompt_suggestions_router, prefix="/api/v1")  # Phase 2.8 — prompt suggestions
