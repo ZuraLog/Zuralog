@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-07 (fix Railway deploys + idempotent migrations — Data tab category cards still pending Flutter-side fix)
+**Last Updated:** 2026-03-07 (Progress tab gap closure — all 7 missing features implemented on feat/progress-tab-gaps)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -182,11 +182,11 @@
 | P0 | Coach — Conversation Drawer | ✅ Done | feat/coach-tab-gaps — long-press delete + archive with confirmation dialogs |
 | P0 | Coach — Chat Thread | ✅ Done | feat/coach-tab-gaps — MarkdownBody rendering for AI messages, attachment thumbnail rendering in bubbles |
 | P0 | Coach — Quick Actions Sheet | ✅ Done | feat/coach-tab-gaps — 7th Quick Log tile opens QuickLogSheet; actions auto-send prompt |
-| P1 | Progress — Progress Home | ✅ Done | Phase 10 — OnboardingTooltip, shimmer skeleton loading, haptics |
-| P1 | Progress — Goals | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
-| P1 | Progress — Goal Detail | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
-| P1 | Progress — Achievements | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
-| P1 | Progress — Weekly Report | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
+| P1 | Progress — Progress Home | ✅ Done | feat/progress-tab-gaps — streak freeze tap-to-activate, milestone celebration card (7/14/30/60/90/180/365 days) |
+| P1 | Progress — Goals | ✅ Done | feat/progress-tab-gaps — water intake goal type added; auto-fills unit default on type selection |
+| P1 | Progress — Goal Detail | ✅ Done | feat/progress-tab-gaps — projected completion date from trend line; AI card extended with projection |
+| P1 | Progress — Achievements | ✅ Done | feat/progress-tab-gaps — progress-toward-unlock bars on locked badges |
+| P1 | Progress — Weekly Report | ✅ Done | feat/progress-tab-gaps — enforced 5-card story sequence; share-as-image via screenshot + share_plus |
 | P1 | Progress — Journal / Daily Log | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
  | P1 | Trends — Trends Home | ✅ Complete | Phase 7 |
  | P1 | Trends — Correlations | ✅ Complete | Phase 7 |
