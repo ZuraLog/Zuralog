@@ -383,35 +383,76 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
   }
 
   List<WeeklyReportCard> _mockReportCards() {
+    // Fixed 5-card narrative sequence — canonical story order per PRD.
     return const [
+      // Card 0 — Week Summary
       WeeklyReportCard(
         cardIndex: 0,
-        title: 'Activity',
+        title: 'Week Summary',
         gradientCategory: 'activity',
-        aiText: 'Strong week — you hit 84% of your step goal and burned 2,940 active calories.',
+        aiText:
+            'Strong week — you hit your step goal 5 out of 7 days and completed all 3 planned workouts.',
         metrics: [
           ReportMetric(label: 'Avg Steps', value: '8,432', unit: 'avg/day', delta: '+4.2%'),
-          ReportMetric(label: 'Active Calories', value: '2,940', unit: 'total', delta: '+2.8%'),
+          ReportMetric(
+            label: 'Active Calories',
+            value: '2,940',
+            unit: 'kcal total',
+            delta: '+2.8%',
+          ),
+          ReportMetric(label: 'Workouts Completed', value: '3', unit: 'this week'),
         ],
       ),
+      // Card 1 — Top Insight
       WeeklyReportCard(
         cardIndex: 1,
-        title: 'Sleep',
-        gradientCategory: 'sleep',
-        aiText: 'Sleep duration improved — deep sleep up 12% vs. last week.',
+        title: 'Top Insight',
+        gradientCategory: 'wellness',
+        aiText:
+            'Your HRV is trending up — a clear sign your recovery is improving. Keep it up.',
         metrics: [
-          ReportMetric(label: 'Avg Duration', value: '7h 22m', unit: 'avg/night', delta: '+2.1%'),
-          ReportMetric(label: 'Deep Sleep', value: '76', unit: 'min avg', delta: '+12%'),
+          ReportMetric(label: 'HRV', value: '54', unit: 'ms avg', delta: '+5.9%'),
+          ReportMetric(label: 'Resting HR', value: '62', unit: 'bpm', delta: '-3.1%'),
+          ReportMetric(label: 'Sleep Consistency', value: '87', unit: '%', delta: '+6.0%'),
         ],
       ),
+      // Card 2 — Goal Adherence
       WeeklyReportCard(
         cardIndex: 2,
-        title: 'Heart',
-        gradientCategory: 'heart',
-        aiText: 'Resting HR trending down — a strong cardiovascular fitness signal.',
+        title: 'Goal Adherence',
+        gradientCategory: 'body',
+        aiText:
+            'You hit 3 of 4 goals this week. Your step goal is your most consistent — 6 days in a row.',
         metrics: [
-          ReportMetric(label: 'Resting HR', value: '62', unit: 'bpm', delta: '-3.1%'),
-          ReportMetric(label: 'HRV', value: '54', unit: 'ms avg', delta: '+5.9%'),
+          ReportMetric(label: 'Goals Hit', value: '3', unit: 'of 4'),
+          ReportMetric(label: 'Goals Missed', value: '1', unit: 'this week'),
+          ReportMetric(label: 'Best Streak', value: '6', unit: 'days'),
+        ],
+      ),
+      // Card 3 — vs. Last Week
+      WeeklyReportCard(
+        cardIndex: 3,
+        title: 'vs. Last Week',
+        gradientCategory: 'heart',
+        aiText:
+            "You're up across the board vs. last week. Sleep improved the most (+14%).",
+        metrics: [
+          ReportMetric(label: 'Steps', value: '8,432', unit: 'avg/day', delta: '+4.2%'),
+          ReportMetric(label: 'Sleep', value: '7h 22m', unit: 'avg/night', delta: '+14%'),
+          ReportMetric(label: 'Active Calories', value: '2,940', unit: 'kcal total', delta: '+2.1%'),
+        ],
+      ),
+      // Card 4 — Your Streak
+      WeeklyReportCard(
+        cardIndex: 4,
+        title: 'Your Streak',
+        gradientCategory: 'sleep',
+        aiText:
+            "7-day streak — you're building a real habit. Keep the momentum going into next week.",
+        metrics: [
+          ReportMetric(label: 'Current Streak', value: '7', unit: 'days'),
+          ReportMetric(label: 'Longest Streak', value: '14', unit: 'days'),
+          ReportMetric(label: 'Freezes Available', value: '2', unit: 'remaining'),
         ],
       ),
     ];

@@ -5,8 +5,13 @@
 /// health category. Supports pull-to-refresh and share.
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -49,12 +54,35 @@ class WeeklyReportScreen extends ConsumerStatefulWidget {
 
 class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
   final PageController _pageController = PageController();
+  final ScreenshotController _screenshotController = ScreenshotController();
   int _currentPage = 0;
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _shareCurrentCard() async {
+    try {
+      final imageBytes = await _screenshotController.capture(pixelRatio: 3.0);
+      if (imageBytes == null) return;
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/zuralog_report_card.png');
+      await file.writeAsBytes(imageBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'image/png')],
+        subject: 'My Weekly Health Report — Zuralog',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not share. Please try again.')),
+        );
+      }
+    }
   }
 
   Future<void> _onRefresh() async {
@@ -106,11 +134,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
               Icons.share_rounded,
               color: AppColors.textPrimaryDark,
             ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sharing coming soon')),
-              );
-            },
+            onPressed: _shareCurrentCard,
           ),
         ],
       ),
@@ -238,12 +262,26 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                     itemCount: report.cards.length,
                     onPageChanged: (page) =>
                         setState(() => _currentPage = page),
-                    itemBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd,
-                      ),
-                      child: _WeeklyReportCard(card: report.cards[index]),
-                    ),
+                    itemBuilder: (context, index) {
+                      final card = _WeeklyReportCard(card: report.cards[index]);
+                      if (index == _currentPage) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimens.spaceMd,
+                          ),
+                          child: Screenshot(
+                            controller: _screenshotController,
+                            child: card,
+                          ),
+                        );
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                        ),
+                        child: card,
+                      );
+                    },
                   ),
                 ),
 
