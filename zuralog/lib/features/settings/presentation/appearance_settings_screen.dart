@@ -1,8 +1,19 @@
 /// Appearance Settings Screen.
 ///
-/// Theme selector, haptic feedback toggle, tooltip controls, and
-/// per-category dashboard color customization.
-/// Full implementation: Phase 8, Task 8.4.
+/// Theme selector, haptic feedback toggle, and tooltip controls.
+///
+/// ## Fixes applied (settings-mapping remediation)
+/// - Theme selector now reads/writes [themeModeProvider] (AsyncNotifier) —
+///   changes persist across cold starts via SharedPreferences + API.
+/// - Haptic toggle now reads [hapticEnabledProvider] and writes via
+///   [HapticEnabledNotifier.setEnabled] — previously used a disconnected
+///   local [StateProvider].
+/// - Tooltip toggle now reads [tooltipsEnabledProvider] and writes via
+///   [TooltipsEnabledNotifier.setEnabled] — previously the local
+///   `_tooltipsDisabledProvider` did nothing.
+/// - Dashboard color section removed — it used a disconnected local
+///   [StateProvider]. Category color overrides are managed canonically
+///   in the Data tab edit mode via [DashboardLayout].
 library;
 
 import 'package:flutter/material.dart';
@@ -10,66 +21,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/theme/theme_provider.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
-
-// ── Local providers ────────────────────────────────────────────────────────────
-
-/// Haptic feedback enabled flag.
-final _hapticFeedbackProvider = StateProvider<bool>((_) => true);
-
-/// Tooltips disabled flag.
-final _tooltipsDisabledProvider = StateProvider<bool>((_) => false);
-
-/// Per-category selected accent colors.
-final _categoryColorsProvider = StateProvider<Map<String, Color>>((_) => {
-      'Activity': AppColors.categoryActivity,
-      'Sleep': AppColors.categorySleep,
-      'Heart': AppColors.categoryHeart,
-      'Nutrition': AppColors.categoryNutrition,
-      'Wellness': AppColors.categoryWellness,
-    });
-
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-/// Available color palette for dashboard category accent customization.
-const _kColorPalette = <Color>[
-  AppColors.categoryActivity,
-  AppColors.categorySleep,
-  AppColors.categoryHeart,
-  AppColors.categoryNutrition,
-  AppColors.categoryWellness,
-  AppColors.categoryBody,
-  AppColors.categoryVitals,
-  AppColors.categoryMobility,
-  AppColors.primary,
-];
-
-/// The 5 health categories shown in the Dashboard Colors section.
-const _kCategories = <(String, IconData)>[
-  ('Activity', Icons.directions_run_rounded),
-  ('Sleep', Icons.bedtime_rounded),
-  ('Heart', Icons.favorite_rounded),
-  ('Nutrition', Icons.restaurant_rounded),
-  ('Wellness', Icons.self_improvement_rounded),
-];
+import 'package:zuralog/shared/widgets/onboarding_tooltip_provider.dart';
 
 // ── AppearanceSettingsScreen ───────────────────────────────────────────────────
 
-/// Appearance preferences: theme, haptics, tooltips, dashboard colors.
+/// Appearance preferences: theme, haptics, tooltips.
 class AppearanceSettingsScreen extends ConsumerWidget {
   /// Creates the [AppearanceSettingsScreen].
   const AppearanceSettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-    final haptic = ref.watch(_hapticFeedbackProvider);
-    final tooltipsDisabled = ref.watch(_tooltipsDisabledProvider);
-    final categoryColors = ref.watch(_categoryColorsProvider);
+    // Theme — async provider; fall back to system while loading.
+    final themeMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+
+    // Haptic — async provider; fall back to enabled while loading.
+    final hapticEnabled =
+        ref.watch(hapticEnabledProvider).valueOrNull ?? true;
+
+    // Tooltips — async provider; fall back to enabled while loading.
+    final tooltipsEnabled =
+        ref.watch(tooltipsEnabledProvider).valueOrNull ?? true;
+
     final cs = Theme.of(context).colorScheme;
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
 
@@ -104,7 +84,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               _ThemeSelector(
                 selected: themeMode,
                 onSelected: (v) {
-                  ref.read(themeModeProvider.notifier).state = v;
+                  ref.read(themeModeProvider.notifier).setTheme(v);
                   ref.read(analyticsServiceProvider).capture(
                     event: AnalyticsEvents.themeChanged,
                     properties: {'theme': v.name},
@@ -121,9 +101,9 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     iconColor: AppColors.categoryActivity,
                     title: 'Haptic Feedback',
                     subtitle: 'Vibration on interactions',
-                    value: haptic,
+                    value: hapticEnabled,
                     onChanged: (v) {
-                      ref.read(_hapticFeedbackProvider.notifier).state = v;
+                      ref.read(hapticEnabledProvider.notifier).setEnabled(v);
                       ref.read(analyticsServiceProvider).capture(
                         event: AnalyticsEvents.hapticToggled,
                         properties: {'enabled': v},
@@ -142,9 +122,12 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     iconColor: AppColors.categoryVitals,
                     title: 'Disable Tooltips',
                     subtitle: 'Hide contextual help overlays',
-                    value: tooltipsDisabled,
-                    onChanged: (v) =>
-                        ref.read(_tooltipsDisabledProvider.notifier).state = v,
+                    // The toggle shows "Disable Tooltips", so its value is
+                    // the inverse of tooltipsEnabled.
+                    value: !tooltipsEnabled,
+                    onChanged: (v) => ref
+                        .read(tooltipsEnabledProvider.notifier)
+                        .setEnabled(!v),
                   ),
                   const _Divider(),
                   _TapRow(
@@ -152,33 +135,12 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     iconColor: AppColors.categoryWellness,
                     title: 'Reset Onboarding Tooltips',
                     subtitle: 'Show all tooltips again from scratch',
-                    onTap: () => _showResetTooltipsSnackBar(context),
+                    onTap: () {
+                      ref.read(tooltipSeenProvider.notifier).reset();
+                      _showResetTooltipsSnackBar(context);
+                    },
                   ),
                 ],
-              ),
-
-              // ── DASHBOARD COLORS section ──────────────────────────────────
-              const SettingsSectionLabel('DASHBOARD COLORS'),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                ),
-                child: Text(
-                  'Customize accent colors for each health category',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppDimens.spaceMd),
-              _CategoryColorGrid(
-                categoryColors: categoryColors,
-                onColorSelected: (category, color) {
-                  ref.read(_categoryColorsProvider.notifier).state = {
-                    ...categoryColors,
-                    category: color,
-                  };
-                },
               ),
 
               const SizedBox(height: AppDimens.spaceXxl),
@@ -490,172 +452,6 @@ class _ThemeOptionCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// ── _CategoryColorGrid ─────────────────────────────────────────────────────────
-
-class _CategoryColorGrid extends StatelessWidget {
-  const _CategoryColorGrid({
-    required this.categoryColors,
-    required this.onColorSelected,
-  });
-
-  final Map<String, Color> categoryColors;
-  final void Function(String category, Color color) onColorSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          children: [
-            for (int i = 0; i < _kCategories.length; i++) ...[
-              _CategoryColorRow(
-                category: _kCategories[i].$1,
-                icon: _kCategories[i].$2,
-                selectedColor: categoryColors[_kCategories[i].$1] ??
-                    AppColors.primary,
-                onColorSelected: (color) =>
-                    onColorSelected(_kCategories[i].$1, color),
-              ),
-              if (i < _kCategories.length - 1)
-                Padding(
-                  padding: const EdgeInsets.only(left: 68),
-                  child: Container(
-                    height: 1,
-                    color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
-                  ),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryColorRow extends StatelessWidget {
-  const _CategoryColorRow({
-    required this.category,
-    required this.icon,
-    required this.selectedColor,
-    required this.onColorSelected,
-  });
-
-  final String category;
-  final IconData icon;
-  final Color selectedColor;
-  final ValueChanged<Color> onColorSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: AppDimens.spaceMd,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: selectedColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: Icon(icon, size: 20, color: selectedColor),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          SizedBox(
-            width: 72,
-            child: Text(
-              category,
-              style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurface),
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceXs),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final color in _kColorPalette) ...[
-                    _ColorSwatch(
-                      color: color,
-                      isSelected: selectedColor == color,
-                      onTap: () => onColorSelected(color),
-                    ),
-                    const SizedBox(width: AppDimens.spaceXs),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ColorSwatch extends StatelessWidget {
-  const _ColorSwatch({
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 26,
-        height: 26,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? onSurface : Colors.transparent,
-            width: 2,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.45),
-                    blurRadius: 6,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
-        ),
-        child: isSelected
-            ? Icon(
-                Icons.check_rounded,
-                size: 14,
-                color: _contrastColor(color),
-              )
-            : null,
-      ),
-    );
-  }
-
-  /// Returns black or white for the checkmark, depending on swatch luminance.
-  Color _contrastColor(Color c) {
-    final luminance = c.computeLuminance();
-    return luminance > 0.35 ? AppColors.backgroundDark : AppColors.textPrimaryDark;
   }
 }
 

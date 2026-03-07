@@ -27,7 +27,8 @@ class CatalogScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+    final themeMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
 
     return Scaffold(
       appBar: AppBar(
@@ -98,7 +99,7 @@ class _ThemeToggle extends ConsumerWidget {
       ],
       selected: {themeMode},
       onSelectionChanged: (Set<ThemeMode> selected) {
-        ref.read(themeModeProvider.notifier).state = selected.first;
+        ref.read(themeModeProvider.notifier).setTheme(selected.first);
       },
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: AppColors.primary,

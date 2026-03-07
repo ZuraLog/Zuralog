@@ -1,7 +1,14 @@
 /// Coach Settings Screen — AI persona, proactivity level, response length,
 /// suggested prompts, and voice input.
 ///
-/// Full implementation: Phase 8, Task 8.5.
+/// ## Fixes applied (settings-mapping remediation)
+/// All 5 settings previously used file-private [StateProvider]s that were
+/// saved to the API on tap but never loaded back — resetting to defaults on
+/// every cold start and being invisible to the Coach tab UI.
+///
+/// They now read from and write to [userPreferencesProvider], which is the
+/// global [AsyncNotifier] that loads from [GET /api/v1/preferences] on app
+/// start and persists changes via [PATCH /api/v1/preferences] + SharedPrefs.
 library;
 
 import 'package:flutter/material.dart';
@@ -9,33 +16,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/analytics/feature_flag_service.dart';
-import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-
-// ── Local State Providers ─────────────────────────────────────────────────────
-
-/// Selected AI persona key.
-///
-/// Values: `'toughLove'`, `'balanced'`, `'gentle'`. Default: `'balanced'`.
-final _personaProvider = StateProvider<String>((ref) => 'balanced');
-
-/// Selected proactivity level key.
-///
-/// Values: `'low'`, `'medium'`, `'high'`. Default: `'medium'`.
-final _proactivityProvider = StateProvider<String>((ref) => 'medium');
-
-/// Selected response length preference.
-///
-/// Values: `'concise'`, `'detailed'`. Default: `'concise'`.
-final _responseLengthProvider = StateProvider<String>((ref) => 'concise');
-
-/// Whether AI conversation starter chips are shown in the New Chat screen.
-final _suggestedPromptsProvider = StateProvider<bool>((ref) => true);
-
-/// Whether voice input (hold-to-talk mic) is enabled.
-final _voiceInputEnabledProvider = StateProvider<bool>((ref) => true);
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Persona Data Model ────────────────────────────────────────────────────────
 
@@ -139,66 +124,40 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    // Seed AI persona from PostHog feature flag on first open.
-    // Only applies if the user hasn't changed the value in this session
-    // (state is still at the hard-coded default of 'balanced').
+    // Seed AI persona from PostHog feature flag — only if the user has never
+    // saved a preference (i.e., preferences loaded and persona is still the
+    // server default 'balanced').
     ref
         .read(featureFlagServiceProvider)
         .aiPersonaDefault()
-        .then((persona) {
+        .then((flagPersona) {
       if (!mounted) return;
-      if (ref.read(_personaProvider) == 'balanced') {
-        ref.read(_personaProvider.notifier).state = persona;
+      final current = ref.read(userPreferencesProvider).valueOrNull;
+      if (current != null && current.coachPersona == CoachPersona.balanced) {
+        final seeded = CoachPersona.fromValue(flagPersona);
+        if (seeded != CoachPersona.balanced) {
+          ref.read(userPreferencesProvider.notifier).mutate(
+                (p) => p.copyWith(coachPersona: seeded),
+              );
+        }
       }
     });
-  }
-
-  // ── API Persist ────────────────────────────────────────────────────────────
-
-  Future<void> _savePreferences() async {
-    try {
-      await ref.read(apiClientProvider).patch(
-        '/api/v1/preferences',
-        body: {
-          'ai_persona': ref.read(_personaProvider),
-          'proactivity_level': ref.read(_proactivityProvider),
-          'response_length': ref.read(_responseLengthProvider),
-          'suggested_prompts_enabled': ref.read(_suggestedPromptsProvider),
-          'voice_input_enabled': ref.read(_voiceInputEnabledProvider),
-        },
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Preferences saved'),
-          backgroundColor: AppColors.surfaceDark,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-          ),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save — check your connection'),
-          backgroundColor: AppColors.statusError,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final selectedPersona = ref.watch(_personaProvider);
-    final selectedProactivity = ref.watch(_proactivityProvider);
-    final selectedResponseLength = ref.watch(_responseLengthProvider);
-    final selectedSuggestedPrompts = ref.watch(_suggestedPromptsProvider);
-    final selectedVoiceInput = ref.watch(_voiceInputEnabledProvider);
+    // Read from global preferences — fall back to safe defaults while loading.
+    final prefs = ref.watch(userPreferencesProvider).valueOrNull;
+    final selectedPersona =
+        prefs?.coachPersona.value ?? CoachPersona.balanced.value;
+    final selectedProactivity =
+        prefs?.proactivityLevel.value ?? ProactivityLevel.medium.value;
+    final selectedResponseLength =
+        prefs?.responseLength.value ?? ResponseLength.concise.value;
+    final selectedSuggestedPrompts = prefs?.suggestedPromptsEnabled ?? true;
+    final selectedVoiceInput = prefs?.voiceInputEnabled ?? true;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -275,7 +234,12 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   persona: persona,
                   isActive: isActive,
                   onTap: () {
-                    ref.read(_personaProvider.notifier).state = persona.key;
+                    ref.read(userPreferencesProvider.notifier).mutate(
+                          (p) => p.copyWith(
+                            coachPersona:
+                                CoachPersona.fromValue(persona.key),
+                          ),
+                        );
                     ref.read(analyticsServiceProvider).capture(
                       event: AnalyticsEvents.personaChanged,
                       properties: {'persona': persona.key},
@@ -321,7 +285,12 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                     options: _proactivityOptions,
                     selectedKey: selectedProactivity,
                     onSelected: (key) {
-                      ref.read(_proactivityProvider.notifier).state = key;
+                      ref.read(userPreferencesProvider.notifier).mutate(
+                            (p) => p.copyWith(
+                              proactivityLevel:
+                                  ProactivityLevel.fromValue(key),
+                            ),
+                          );
                       ref.read(analyticsServiceProvider).capture(
                         event: AnalyticsEvents.proactivityChanged,
                         properties: {'level': key},
@@ -368,7 +337,11 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                     options: _responseLengthOptions,
                     selectedKey: selectedResponseLength,
                     onSelected: (key) {
-                      ref.read(_responseLengthProvider.notifier).state = key;
+                      ref.read(userPreferencesProvider.notifier).mutate(
+                            (p) => p.copyWith(
+                              responseLength: ResponseLength.fromValue(key),
+                            ),
+                          );
                     },
                   ),
                 ],
@@ -420,7 +393,9 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                       ),
                       value: selectedSuggestedPrompts,
                       onChanged: (v) =>
-                          ref.read(_suggestedPromptsProvider.notifier).state = v,
+                          ref.read(userPreferencesProvider.notifier).mutate(
+                                (p) => p.copyWith(suggestedPromptsEnabled: v),
+                              ),
                       activeThumbColor: AppColors.primary,
                       activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
                       contentPadding: const EdgeInsets.symmetric(
@@ -448,7 +423,9 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                       ),
                       value: selectedVoiceInput,
                       onChanged: (v) =>
-                          ref.read(_voiceInputEnabledProvider.notifier).state = v,
+                          ref.read(userPreferencesProvider.notifier).mutate(
+                                (p) => p.copyWith(voiceInputEnabled: v),
+                              ),
                       activeThumbColor: AppColors.primary,
                       activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
                       contentPadding: const EdgeInsets.symmetric(
@@ -475,7 +452,21 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: _SaveButton(
-                  onPressed: () => _savePreferences(),
+                  onPressed: () {
+                    // Changes are already auto-saved via userPreferencesProvider.
+                    // This button provides explicit user confirmation.
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Preferences saved'),
+                        backgroundColor: AppColors.surfaceDark,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusButtonMd),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

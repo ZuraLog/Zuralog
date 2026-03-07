@@ -13,7 +13,9 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── AccountSettingsScreen ─────────────────────────────────────────────────────
 
@@ -106,6 +108,19 @@ class AccountSettingsScreen extends ConsumerWidget {
                 onTap: () => _showGoalsEditor(context),
               ),
             ],
+          ),
+
+          // ── Preferences ─────────────────────────────────────────────────
+          const SettingsSectionLabel('Preferences'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardBackgroundDark,
+                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              ),
+              child: const _UnitsTile(),
+            ),
           ),
 
           // ── Emergency Health Card ────────────────────────────────────────
@@ -355,6 +370,169 @@ class _AccountTileState extends State<_AccountTile> {
                 color: AppColors.textTertiary,
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _UnitsTile ────────────────────────────────────────────────────────────────
+
+/// Segmented toggle for metric / imperial — reads and writes [unitsSystemProvider].
+class _UnitsTile extends ConsumerWidget {
+  const _UnitsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(unitsSystemProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: 14,
+      ),
+      child: Row(
+        children: [
+          // Icon badge.
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.categoryActivity.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+            ),
+            child: const Icon(
+              Icons.straighten_rounded,
+              size: 20,
+              color: AppColors.categoryActivity,
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceMd),
+          // Label.
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Units',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.textPrimaryDark,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  current == UnitsSystem.metric
+                      ? 'Metric (km, kg, °C)'
+                      : 'Imperial (mi, lb, °F)',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          // Segmented control.
+          _UnitsSegmentedButton(current: current),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact two-option segmented button for metric / imperial.
+class _UnitsSegmentedButton extends ConsumerWidget {
+  const _UnitsSegmentedButton({required this.current});
+
+  final UnitsSystem current;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      height: 32,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _Segment(
+            label: 'Metric',
+            selected: current == UnitsSystem.metric,
+            isLeft: true,
+            onTap: () {
+              if (current != UnitsSystem.metric) {
+                ref.read(hapticServiceProvider).selectionTick();
+                ref
+                    .read(userPreferencesProvider.notifier)
+                    .mutate((p) => p.copyWith(unitsSystem: UnitsSystem.metric));
+              }
+            },
+          ),
+          _Segment(
+            label: 'Imperial',
+            selected: current == UnitsSystem.imperial,
+            isLeft: false,
+            onTap: () {
+              if (current != UnitsSystem.imperial) {
+                ref.read(hapticServiceProvider).selectionTick();
+                ref
+                    .read(userPreferencesProvider.notifier)
+                    .mutate(
+                      (p) => p.copyWith(unitsSystem: UnitsSystem.imperial),
+                    );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single tab within [_UnitsSegmentedButton].
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.label,
+    required this.selected,
+    required this.isLeft,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final bool isLeft;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.horizontal(
+      left: isLeft ? const Radius.circular(AppDimens.radiusSm) : Radius.zero,
+      right: isLeft ? Radius.zero : const Radius.circular(AppDimens.radiusSm),
+    );
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary.withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: radius,
+          border: selected
+              ? Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.55),
+                )
+              : null,
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.labelXs.copyWith(
+            color: selected ? AppColors.primary : AppColors.textSecondary,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          ),
         ),
       ),
     );
