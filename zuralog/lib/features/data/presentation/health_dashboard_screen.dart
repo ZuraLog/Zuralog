@@ -274,38 +274,52 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
 
             // ── Category cards ───────────────────────────────────────────────
             dashAsync.when(
-              loading: () => SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                  (context, i) => Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceMd,
-                      vertical: AppDimens.spaceXs,
+              loading: () => SliverMainAxisGroup(
+                slivers: [
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                          vertical: AppDimens.spaceXs,
+                        ),
+                        child: const _CardSkeleton(),
+                      ),
+                      childCount: 6,
                     ),
-                    child: const _CardSkeleton(),
                   ),
-                  childCount: 6,
-                ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+                    ),
+                  ),
+                ],
               ),
               error: (e, st) => SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppDimens.spaceLg),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.cloud_off_rounded,
-                          size: 40,
-                          color: AppColors.textTertiary,
-                        ),
-                        const SizedBox(height: AppDimens.spaceSm),
-                        Text(
-                          'Could not load data',
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.textSecondary,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppDimens.spaceLg),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.cloud_off_rounded,
+                            size: 40,
+                            color: AppColors.textTertiary,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: AppDimens.spaceSm),
+                          Text(
+                            'Could not load data',
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -333,14 +347,19 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
 
                 if (items.isEmpty) {
                   return SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppDimens.spaceLg),
-                        child: Text(
-                          'No health data yet.\nConnect an integration to get started.',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.textSecondary,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+                      ),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppDimens.spaceLg),
+                          child: Text(
+                            'No health data yet.\nConnect an integration to get started.',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
                       ),
@@ -493,42 +512,40 @@ class _EditableList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppDimens.spaceMd,
-          0,
-          AppDimens.spaceMd,
-          AppDimens.bottomNavHeight + AppDimens.spaceMd,
-        ),
-        child: ReorderableListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          onReorder: onReorder,
-          proxyDecorator: (child, index, animation) {
-            return AnimatedBuilder(
-              animation: animation,
-              builder: (context, animChild) => Material(
-                elevation: 4 * animation.value,
-                borderRadius: BorderRadius.circular(20),
-                color: Colors.transparent,
-                child: animChild,
-              ),
-              child: child,
-            );
-          },
-          itemBuilder: (context, i) {
-            final summary = items[i];
-            final cat = summary.category;
-            final isVisible =
-                !layout.hiddenCategories.contains(cat.name);
-            final overrideValue = layout.categoryColorOverrides[cat.name];
-            final cardColor = overrideValue != null
-                ? Color(overrideValue)
-                : categoryColor(cat);
-            return Padding(
-              key: ValueKey(cat.name),
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        AppDimens.spaceMd,
+        0,
+        AppDimens.spaceMd,
+        AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      sliver: SliverReorderableList(
+        itemCount: items.length,
+        onReorder: onReorder,
+        proxyDecorator: (child, index, animation) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, animChild) => Material(
+              elevation: 4 * animation.value,
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.transparent,
+              child: animChild,
+            ),
+            child: child,
+          );
+        },
+        itemBuilder: (context, i) {
+          final summary = items[i];
+          final cat = summary.category;
+          final isVisible = !layout.hiddenCategories.contains(cat.name);
+          final overrideValue = layout.categoryColorOverrides[cat.name];
+          final cardColor = overrideValue != null
+              ? Color(overrideValue)
+              : categoryColor(cat);
+          return ReorderableDragStartListener(
+            key: ValueKey(cat.name),
+            index: i,
+            child: Padding(
               padding: const EdgeInsets.symmetric(
                 vertical: AppDimens.spaceXs,
               ),
@@ -539,13 +556,12 @@ class _EditableList extends StatelessWidget {
                 unit: summary.unit,
                 isVisible: isVisible,
                 isEditMode: true,
-                onVisibilityToggle: () =>
-                    onVisibilityToggle(cat.name),
+                onVisibilityToggle: () => onVisibilityToggle(cat.name),
                 onColorPick: () => onColorPick(cat),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

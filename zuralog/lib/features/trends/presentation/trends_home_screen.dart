@@ -615,6 +615,9 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      padding: const EdgeInsets.only(
+        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -674,41 +677,46 @@ class _TrendsErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.wifi_off_rounded,
-              size: 40,
-              color: AppColors.textTertiary,
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text('Could not load trends', style: AppTextStyles.h3),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'Check your connection and try again.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondaryDark,
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.wifi_off_rounded,
+                size: 40,
+                color: AppColors.textTertiary,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceLg),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.primaryButtonText,
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusButtonMd),
+              const SizedBox(height: AppDimens.spaceMd),
+              Text('Could not load trends', style: AppTextStyles.h3),
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                'Check your connection and try again.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondaryDark,
                 ),
+                textAlign: TextAlign.center,
               ),
-              child: const Text('Retry'),
-            ),
-          ],
+              const SizedBox(height: AppDimens.spaceLg),
+              FilledButton(
+                onPressed: onRetry,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.primaryButtonText,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppDimens.radiusButtonMd),
+                  ),
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       ),
     );

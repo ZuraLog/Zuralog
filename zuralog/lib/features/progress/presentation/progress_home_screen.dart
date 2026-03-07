@@ -245,47 +245,52 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              size: 48,
-              color: AppColors.statusError,
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              'Could not load progress',
-              style: AppTextStyles.h3,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              message,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: AppColors.statusError,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: AppDimens.spaceLg),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.primaryButtonText,
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusButton),
+              const SizedBox(height: AppDimens.spaceMd),
+              Text(
+                'Could not load progress',
+                style: AppTextStyles.h3,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                message,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              child: const Text('Try Again'),
-            ),
-          ],
+              const SizedBox(height: AppDimens.spaceLg),
+              FilledButton(
+                onPressed: onRetry,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.primaryButtonText,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppDimens.radiusButton),
+                  ),
+                ),
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -301,49 +306,54 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceXl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.flag_rounded,
-              size: 64,
-              color: AppColors.primary.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text('Start your journey', style: AppTextStyles.h2),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'Set a goal and I\'ll track your streaks and progress.',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textSecondary,
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: AppDimens.bottomNavHeight + AppDimens.spaceMd,
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceXl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.flag_rounded,
+                size: 64,
+                color: AppColors.primary.withValues(alpha: 0.6),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceLg),
-            FilledButton(
-              onPressed: onSetGoal,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.primaryButtonText,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
+              const SizedBox(height: AppDimens.spaceMd),
+              Text('Start your journey', style: AppTextStyles.h2),
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                'Set a goal and I\'ll track your streaks and progress.',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.textSecondary,
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceLg,
-                  vertical: AppDimens.spaceMd,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppDimens.spaceLg),
+              FilledButton(
+                onPressed: onSetGoal,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.primaryButtonText,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceLg,
+                    vertical: AppDimens.spaceMd,
+                  ),
+                ),
+                child: Text(
+                  'Set First Goal',
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppColors.primaryButtonText,
+                  ),
                 ),
               ),
-              child: Text(
-                'Set First Goal',
-                style: AppTextStyles.h3.copyWith(
-                  color: AppColors.primaryButtonText,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
