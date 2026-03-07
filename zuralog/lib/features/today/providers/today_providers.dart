@@ -83,7 +83,7 @@ final notificationsProvider = FutureProvider<NotificationPage>((ref) async {
 ///
 /// Resets on cold start — the banner will re-appear next session if data is
 /// still insufficient. Permanent dismissal is handled separately via
-/// [todayBannerPermanentlyDismissed].
+/// [dataMaturityBannerDismissedProvider] in `settings_providers.dart`.
 final todayBannerSessionDismissed = StateProvider<bool>((ref) => false);
 
 // ── Quick Log Loading ─────────────────────────────────────────────────────────

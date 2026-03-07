@@ -61,8 +61,11 @@ class TodayFeedScreen extends ConsumerWidget {
         : DataMaturityMode.progress;
     final wellnessCardVisible = ref.watch(wellnessCheckinCardVisibleProvider);
     final sessionDismissed = ref.watch(todayBannerSessionDismissed);
+    final prefsAsync = ref.watch(userPreferencesProvider);
     final showBanner = dataDays < 7 &&
-        (bannerMode == DataMaturityMode.progress ? !bannerDismissed : !sessionDismissed);
+        !bannerDismissed &&
+        !prefsAsync.isLoading && // Don't show banner while prefs loading — avoids silent dismiss drop
+        (bannerMode == DataMaturityMode.progress || !sessionDismissed);
 
     void persistBannerDismissed() => ref
         .read(userPreferencesProvider.notifier)
