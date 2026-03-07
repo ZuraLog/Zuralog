@@ -1,6 +1,32 @@
 # Flutter Programmatic Debugging — AI Agent Reference
 
-ADB screencap → PNG → Read tool → agent sees UI. ADB input → agent drives UI.
+**Primary method: `mobile-mcp`** — use its tools for all device interaction.
+**Fallback: ADB** — only for logcat, system toggles, and anything mobile-mcp doesn't cover.
+
+---
+
+## CRITICAL: Check mobile-mcp First
+
+Before doing anything, verify the `mobile-mcp` MCP server is enabled:
+
+```
+mobile_list_available_devices()
+```
+
+If the tool is unavailable or errors, **stop and ask the user to enable the `mobile-mcp` MCP server** before proceeding. Do not fall back to raw ADB for device interaction — use ADB only for the specific gaps listed in §10.
+
+To enable (opencode config example):
+```json
+{
+  "mcp": {
+    "mobile-mcp": {
+      "type": "local",
+      "command": ["npx", "@mobilenext/mobile-mcp@latest"],
+      "enabled": true
+    }
+  }
+}
+```
 
 ---
 
@@ -13,20 +39,16 @@ Blocking commands (always run in a separate terminal or with `&`):
 - `make dev` / `uvicorn ...`
 - `docker compose up` (without `-d`)
 
-```bash
-# Background it, or ask the user to open a new terminal tab
-make run &
-```
-
 ---
 
 ## Screenshots — Storage and Cleanup
 
-All screenshots **must** go to `.agent/screenshots/` (gitignored).
+For **inline viewing** (most common): use `mobile_take_screenshot` — renders directly in context, no file needed.
 
-```bash
-mkdir -p .agent/screenshots
-"$ADB" -s emulator-5554 exec-out screencap -p > .agent/screenshots/screen1.png
+For **persistent evidence** (bug logs, before/after comparisons): use `mobile_save_screenshot` with path `.agent/screenshots/<label>.png` (gitignored).
+
+```
+mobile_save_screenshot(device, ".agent/screenshots/screen1.png")
 ```
 
 Before merging: `rm -f .agent/screenshots/*.png && git status`
@@ -36,12 +58,12 @@ Before merging: `rm -f .agent/screenshots/*.png && git status`
 ## 1. Prerequisites
 
 ```bash
-# Find ADB (not on PATH by default)
-# Windows: /c/Users/<user>/AppData/Local/Android/Sdk/platform-tools/adb.exe
-ADB="/c/Users/hyoar/AppData/Local/Android/Sdk/platform-tools/adb.exe"
+# Backend must be running — see §2
+# Emulator must be booted — see §3
+# App must be running — see §4
 
-flutter --version
-flutter devices
+# ADB path (only needed for logcat / system toggles)
+ADB="/c/Users/hyoar/AppData/Local/Android/Sdk/platform-tools/adb.exe"
 ```
 
 ---
@@ -55,7 +77,7 @@ docker compose up -d
 make dev   # blocks — expected
 ```
 
-Health check from agent terminal: `curl http://localhost:8001/health` → `{"status":"healthy"}`
+Health check: `curl http://localhost:8001/health` → `{"status":"healthy"}`
 
 > Use `make dev`, not bare `uvicorn` — it injects all env vars from `cloud-brain/.env`.
 
@@ -74,7 +96,12 @@ Health check from agent terminal: `curl http://localhost:8001/health` → `{"sta
 ~/Android/Sdk/emulator/emulator -avd <AVD_NAME> -no-snapshot-load &
 ```
 
-Boot time: **60–120s**. Poll with `flutter devices` until `emulator-5554` shows `device`.
+Boot time: **60–120s**. Then verify with mobile-mcp:
+
+```
+mobile_list_available_devices()
+# → emulator-5554 should appear with state "online"
+```
 
 > `flutter emulators --launch` can silently fail on Windows — use the direct binary above.
 
@@ -92,7 +119,11 @@ make run-prod   # Android — release, api.zuralog.com
 
 **Never use bare `flutter run`** — `make run` injects `GOOGLE_WEB_CLIENT_ID` and `SENTRY_DSN` from `cloud-brain/.env`. Without them, Google Sign-In silently fails.
 
-`sleep 60` after launching — cold build takes ~60s.
+Wait ~60s for cold build. Then confirm the app is on screen:
+
+```
+mobile_take_screenshot(device)
+```
 
 | Keystroke | Resets | Use when |
 |-----------|--------|----------|
@@ -112,29 +143,39 @@ make run-prod   # Android — release, api.zuralog.com
 
 ## 6. Take a Screenshot
 
-```bash
-ADB="/c/Users/hyoar/AppData/Local/Android/Sdk/platform-tools/adb.exe"
-"$ADB" -s emulator-5554 exec-out screencap -p > .agent/screenshots/screen1.png
-# Then: Read tool on .agent/screenshots/screen1.png
 ```
+# Inline — renders immediately in context (preferred)
+mobile_take_screenshot(device)
 
-> Do **not** use `adb shell screencap /sdcard/...` + `adb pull` — fails on API 36+.
+# Persistent — saves to file for bug evidence
+mobile_save_screenshot(device, ".agent/screenshots/<label>.png")
+```
 
 ---
 
-## 7. Coordinate Scaling — CRITICAL
+## 7. Find Elements and Coordinates
 
-Screenshot is downscaled. **Always convert before tapping.**
+**Prefer this over manual coordinate math.** Returns element labels, bounds, and tap coordinates directly:
 
-```bash
-"$ADB" -s emulator-5554 shell wm size   # e.g. Physical size: 1080x2400
+```
+mobile_list_elements_on_screen(device)
+```
+
+Use the returned coordinates directly with `mobile_click_on_screen_at_coordinates`. No scaling math needed.
+
+### Manual Coordinate Scaling (fallback only)
+
+If you must tap an unlabelled area without element data:
+
+```
+mobile_get_screen_size(device)   # returns actual pixel dimensions
 ```
 
 ```
 actual_x = (rendered_x / rendered_width)  * actual_width
 actual_y = (rendered_y / rendered_height) * actual_height
 
-# Example: rendered (360,890) on 720x1600 PNG, device 1080x2400
+# Example: rendered (360,890) on 720x1600 screenshot, device 1080x2400
 # actual_x = (360/720)*1080 = 540
 # actual_y = (890/1600)*2400 = 1335
 ```
@@ -143,52 +184,79 @@ actual_y = (rendered_y / rendered_height) * actual_height
 
 ## 8. Interact with the UI
 
-```bash
+All interaction goes through mobile-mcp tools — no ADB input commands needed.
+
+```
 # Tap
-"$ADB" -s emulator-5554 shell input tap <x> <y>
-sleep 1
+mobile_click_on_screen_at_coordinates(device, x, y)
 
-# Type (tap field first; spaces unreliable — use %s or split words)
-"$ADB" -s emulator-5554 shell input tap 540 349 && sleep 0.5
-"$ADB" -s emulator-5554 shell input text "hello"
+# Double tap
+mobile_double_tap_on_screen(device, x, y)
 
-# Swipe (scroll up / scroll down)
-"$ADB" -s emulator-5554 shell input swipe 540 1200 540 400 500
-"$ADB" -s emulator-5554 shell input swipe 540 400 540 1200 500
+# Long press
+mobile_long_press_on_screen_at_coordinates(device, x, y)
 
-# Key events
-"$ADB" -s emulator-5554 shell input keyevent KEYCODE_BACK
-"$ADB" -s emulator-5554 shell input keyevent KEYCODE_HOME
-"$ADB" -s emulator-5554 shell input keyevent KEYCODE_ENTER
+# Type text (tap the field first to focus it)
+mobile_type_keys(device, "hello world", submit=false)
+mobile_type_keys(device, "hello", submit=true)   # submits with Enter
+
+# Swipe / scroll
+mobile_swipe_on_screen(device, direction="up")    # scroll up
+mobile_swipe_on_screen(device, direction="down")  # scroll down
+mobile_swipe_on_screen(device, direction="left")
+mobile_swipe_on_screen(device, direction="right")
+
+# Device buttons
+mobile_press_button(device, "BACK")
+mobile_press_button(device, "HOME")
+mobile_press_button(device, "ENTER")
+mobile_press_button(device, "VOLUME_UP")
+mobile_press_button(device, "VOLUME_DOWN")
 ```
 
 ---
 
-## 9. System Toggles
+## 9. App Management
+
+```
+# List installed apps
+mobile_list_apps(device)
+
+# Launch by package name
+mobile_launch_app(device, "com.zuralog.zuralog")
+
+# Terminate
+mobile_terminate_app(device, "com.zuralog.zuralog")
+
+# Open a URL
+mobile_open_url(device, "https://example.com")
+```
+
+---
+
+## 10. ADB — Gaps Not Covered by mobile-mcp
+
+Use ADB **only** for these:
 
 ```bash
-# Dark mode
-"$ADB" -s emulator-5554 shell "cmd uimode night yes"
-"$ADB" -s emulator-5554 shell "cmd uimode night no"
+ADB="/c/Users/hyoar/AppData/Local/Android/Sdk/platform-tools/adb.exe"
+D="emulator-5554"
+
+# Flutter logs / crash detection (always check after navigation)
+"$ADB" -s $D logcat -d -s flutter | tail -50
+"$ADB" -s $D logcat -d flutter:D *:S | tail -50   # debugPrint output
+
+# Dark mode toggle
+"$ADB" -s $D shell "cmd uimode night yes"
+"$ADB" -s $D shell "cmd uimode night no"
 
 # Font scale
-"$ADB" -s emulator-5554 shell settings put system font_scale 1.5
+"$ADB" -s $D shell settings put system font_scale 1.5
 
-# Rotation (disable auto-rotate first)
-"$ADB" -s emulator-5554 shell settings put system accelerometer_rotation 0
-"$ADB" -s emulator-5554 shell settings put system user_rotation 1   # 1=landscape, 0=portrait
+# Screen rotation (prefer mobile_set_orientation when available)
+"$ADB" -s $D shell settings put system accelerometer_rotation 0
+"$ADB" -s $D shell settings put system user_rotation 1   # 1=landscape, 0=portrait
 ```
-
----
-
-## 10. Flutter Logs
-
-```bash
-"$ADB" -s emulator-5554 logcat -d -s flutter | tail -50
-"$ADB" -s emulator-5554 logcat -d flutter:D *:S | tail -50   # debugPrint output
-```
-
-> Check logcat after every navigation — blank screens are usually silent Dart exceptions.
 
 ---
 
@@ -203,27 +271,33 @@ flutter analyze   # must report zero warnings — project enforces zero-warning 
 
 ## 12. Session Skeleton
 
-```bash
-ADB="/c/Users/hyoar/AppData/Local/Android/Sdk/platform-tools/adb.exe"
-D="emulator-5554"
-SS=".agent/screenshots"
-mkdir -p "$SS"
+```
+# 1. Verify mobile-mcp is active
+mobile_list_available_devices()
 
-# Terminals A/B/C running: make dev | emulator | make run
-sleep 90   # wait for cold start
+# 2. Confirm app is on screen
+mobile_take_screenshot(device)
 
-"$ADB" -s $D exec-out screencap -p > "$SS/screen1.png"   # Read tool
+# 3. Check for silent errors
 "$ADB" -s $D logcat -d flutter:D *:S | tail -50
 
-"$ADB" -s $D shell input tap <x> <y> && sleep 2
-"$ADB" -s $D exec-out screencap -p > "$SS/screen2.png"   # Read tool
+# 4. Find elements and interact
+mobile_list_elements_on_screen(device)
+mobile_click_on_screen_at_coordinates(device, x, y)
 
-"$ADB" -s $D shell "cmd uimode night yes" && sleep 2
-"$ADB" -s $D exec-out screencap -p > "$SS/screen_dark.png"   # Read tool
+# 5. Screenshot after interaction
+mobile_take_screenshot(device)
+
+# 6. Save evidence for bugs
+mobile_save_screenshot(device, ".agent/screenshots/<label>.png")
+
+# 7. Dark mode
+"$ADB" -s $D shell "cmd uimode night yes"
+mobile_take_screenshot(device)
 "$ADB" -s $D shell "cmd uimode night no"
 
-# Cleanup
-rm -f "$SS"/*.png
+# 8. Cleanup
+rm -f .agent/screenshots/*.png
 ```
 
 ---
@@ -232,15 +306,14 @@ rm -f "$SS"/*.png
 
 | Symptom | Fix |
 |---------|-----|
+| `mobile-mcp` tools unavailable | Not enabled — ask user to enable `mobile-mcp` MCP server |
 | Agent terminal hangs | Blocking process in agent terminal — use new terminal or `&` |
-| `adb: not found` | Use full path to `adb.exe` |
-| `screencap: usage` error | Use `exec-out screencap -p >`, not `shell screencap` |
-| Tap does nothing | Recalculate with scaling formula (§7) |
-| ANR "System UI not responding" | Tap "Wait" at scaled coords (~y=1335 on 2400px device) |
-| Text appends to existing | `KEYCODE_CTRL_A` + `KEYCODE_DEL` to clear first |
-| App not visible | Still compiling — wait longer |
-| Black screenshot | Emulator still booting — add sleep |
-| Emulator offline | Wait 10–15s more |
+| Tap does nothing | Use `mobile_list_elements_on_screen` to get accurate coordinates |
+| Can't find element | Scroll with `mobile_swipe_on_screen`, re-check elements |
+| ANR "System UI not responding" | Tap "Wait" via `mobile_list_elements_on_screen` coordinates |
+| Text appends to existing | Terminate and relaunch app, or long-press field → select all → retype |
+| App not visible after `make run` | Still compiling — wait longer, retry `mobile_take_screenshot` |
+| Black screenshot | Emulator still booting — wait and retry |
 | Google Sign-In null token | Used bare `flutter run` — use `make run` |
 | Auth/AI errors | Backend not running — `make dev` in `cloud-brain/` |
 | Screenshot committed to git | Wasn't in `.agent/screenshots/` — move and clean up |
@@ -260,16 +333,25 @@ git status                           # verify clean
 
 ## Quick Reference
 
-```bash
-ADB="/c/Users/hyoar/AppData/Local/Android/Sdk/platform-tools/adb.exe"
-D="emulator-5554"
+```
+# mobile-mcp (primary)
+mobile_list_available_devices()
+mobile_take_screenshot(device)
+mobile_save_screenshot(device, ".agent/screenshots/<label>.png")
+mobile_list_elements_on_screen(device)
+mobile_click_on_screen_at_coordinates(device, x, y)
+mobile_swipe_on_screen(device, direction="up")
+mobile_type_keys(device, "text", submit=false)
+mobile_press_button(device, "BACK")
+mobile_get_screen_size(device)
+mobile_set_orientation(device, "landscape")
+mobile_launch_app(device, "com.zuralog.zuralog")
+mobile_terminate_app(device, "com.zuralog.zuralog")
 
-"$ADB" -s $D exec-out screencap -p > .agent/screenshots/screen.png   # screenshot
-"$ADB" -s $D shell wm size                                             # device dimensions
-"$ADB" -s $D shell input tap <x> <y>                                  # tap (scaled coords)
-"$ADB" -s $D shell input swipe 540 1200 540 400 500                   # scroll up
-"$ADB" -s $D shell input keyevent KEYCODE_BACK                        # back
-"$ADB" -s $D shell "cmd uimode night yes"                             # dark mode on
-"$ADB" -s $D logcat -d -s flutter | tail -50                          # logs
-rm -f .agent/screenshots/*.png                                         # cleanup
+# ADB (gaps only)
+ADB="/c/Users/hyoar/AppData/Local/Android/Sdk/platform-tools/adb.exe"
+"$ADB" -s emulator-5554 logcat -d -s flutter | tail -50
+"$ADB" -s emulator-5554 shell "cmd uimode night yes"
+"$ADB" -s emulator-5554 shell "cmd uimode night no"
+rm -f .agent/screenshots/*.png
 ```

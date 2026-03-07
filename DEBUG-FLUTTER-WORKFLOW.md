@@ -47,13 +47,15 @@ Follow `DEBUG-FLUTTER.md` §2–4. Each blocking process gets its own terminal:
 Terminal A → cd cloud-brain && docker compose up -d && make dev
 Terminal B → emulator launch
 Terminal C → make run   (from project root)
-Agent terminal → ADB only
+Agent terminal → mobile-mcp tools + ADB (logcat/toggles only)
 ```
 
 Proceed only when both pass:
 ```bash
 curl http://localhost:8001/health   # → {"status":"healthy"}
-flutter devices                     # → emulator-5554   device
+```
+```
+mobile_list_available_devices()     # → emulator-5554 state: online
 ```
 
 ---
@@ -61,8 +63,8 @@ flutter devices                     # → emulator-5554   device
 ### Step 3: Test Each Item — Observe Only
 
 For each item in scope:
-1. Navigate (ADB tap/swipe)
-2. Screenshot → `.agent/screenshots/<label>.png`
+1. Navigate: `mobile_click_on_screen_at_coordinates` / `mobile_swipe_on_screen`
+2. Screenshot: `mobile_take_screenshot` (inline) or `mobile_save_screenshot` (evidence)
 3. Read screenshot
 4. Check logcat: `"$ADB" -s $DEVICE logcat -d flutter:D *:S | tail -30`
 5. Mark **PASS** or **BUG**
@@ -119,6 +121,22 @@ PASSED  (N): <list>
 BUGS    (N): BUG-001 ... BUG-002 ...
 Screenshots: .agent/screenshots/
 ```
+
+---
+
+## STOP — Human Review Required
+
+**Do not proceed to Phase 3 until the human has reviewed the report and explicitly approved execution.**
+
+After printing the report, say:
+
+> "Reconnaissance complete. I found N bug(s). Please review the report above.
+> When you're ready to proceed, switch to a capable model (e.g. claude-sonnet or opus)
+> and tell me to continue. I will not write any code until you confirm."
+
+Wait for explicit approval. Do not plan, do not hypothesize fixes, do not touch files.
+
+**Why:** Bug fixes require a smarter model than QA observation. The human needs to review findings, reprioritize if needed, and confirm the right model is active before execution begins.
 
 ---
 
@@ -196,6 +214,8 @@ git status
 - [ ] Every scoped item: PASS or BUG
 - [ ] Every bug: screenshot in `.agent/screenshots/`
 - [ ] QA report printed in conversation
+- [ ] **Human has reviewed the report and explicitly approved proceeding**
+- [ ] **Capable model is active (e.g. claude-sonnet or opus) before writing any fix**
 
 **Before Merging**
 - [ ] `flutter analyze` → zero warnings
