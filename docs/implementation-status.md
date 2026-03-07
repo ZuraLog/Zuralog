@@ -930,3 +930,45 @@ Post-implementation code review pass:
 - 2 `warning` — `dead_code` + `dead_null_aware_expression` in `analytics_service.dart` (pre-existing)
 - 2 `warning` — `experimental_member_use` in `main.dart` (Sentry experimental APIs; pre-existing)
 - 19 `info` — `use_null_aware_elements` across `sentry_breadcrumbs.dart` + `progress_repository.dart` (pre-existing); `dangling_library_doc_comments` + `unintended_html_in_doc_comment` in analytics files (pre-existing)
+
+## Settings Mapping Audit — Phases 1 & 2 (2026-03-08)
+
+**Branch:** `feat/settings-providers` (merged to `main`)
+**Status:** Complete — 3 commits
+
+Systematic remediation of the Settings system: all user-configurable preferences are now persisted end-to-end (API + SharedPreferences offline fallback). Every settings screen reads from and writes to a single global `UserPreferencesNotifier`.
+
+### New files
+
+- `zuralog/lib/features/settings/domain/user_preferences_model.dart` — Immutable Dart model mirroring the backend `user_preferences` table. Includes all existing columns plus 6 new planned columns (`response_length`, `suggested_prompts_enabled`, `voice_input_enabled`, `wellness_checkin_card_visible`, `data_maturity_banner_dismissed`, `analytics_opt_out`). Enums with `fromValue` fallbacks; `fromJson`, `toJson`, `toPatchJson`, `copyWith`.
+- `zuralog/lib/features/settings/providers/settings_providers.dart` — `UserPreferencesNotifier` (`AsyncNotifier`: `GET /api/v1/preferences` on build, SharedPrefs fallback, optimistic PATCH writes via `save()`/`mutate()`). 10 derived `Provider`s: `coachPersonaProvider`, `proactivityLevelProvider`, `responseLengthProvider`, `suggestedPromptsEnabledProvider`, `voiceInputEnabledProvider`, `themeModePreferenceProvider`, `wellnessCheckinCardVisibleProvider`, `dataMaturityBannerDismissedProvider`, `analyticsOptOutProvider`, `unitsSystemProvider`.
+
+### Modified files
+
+- `theme_provider.dart` — Converted from `StateProvider<ThemeMode>` (no persistence) to `AsyncNotifierProvider<ThemeModeNotifier, ThemeMode>`. Reads SharedPrefs on build; writes to both SharedPrefs + API via `setTheme()`. Fixed a rebuild loop where `build()` `watch`-ed `userPreferencesProvider` and `setTheme()` wrote to it — changed to `ref.read` pattern.
+- `app.dart` — Updated `ref.watch(themeModeProvider)` to unwrap `AsyncValue` with `.valueOrNull ?? ThemeMode.system`.
+- `appearance_settings_screen.dart` — Removed 3 broken file-private providers; wired haptic to `hapticEnabledProvider`, tooltips to `tooltipsEnabledProvider`, theme to `themeModeProvider.notifier.setTheme()`. Removed broken Dashboard Colors section (Data tab edit mode is canonical).
+- `theme_selector.dart` — Updated to call `setTheme()` and unwrap `AsyncValue`.
+- `catalog_screen.dart` — Dev screen theme toggle updated to use `setTheme()`.
+- `coach_settings_screen.dart` — Removed 5 file-private `StateProvider`s + manual `_savePreferences()` PATCH; reads from `userPreferencesProvider.valueOrNull`, writes via `mutate()`.
+- `notification_settings_screen.dart` — Seeds local `_notificationStateProvider` from `userPreferencesProvider` in `initState` via `addPostFrameCallback`; every change calls `_persist()` → `mutate()`.
+- `privacy_data_screen.dart` — Removed `_PrivacyState` / `_privacyStateProvider`; reads from `wellnessCheckinCardVisibleProvider`, `dataMaturityBannerDismissedProvider`, `analyticsOptOutProvider`; writes via `prefsNotifier.mutate()`.
+- `account_settings_screen.dart` — Added **Preferences** section with a `_UnitsTile` widget: compact segmented Metric/Imperial toggle reads `unitsSystemProvider`, writes via `userPreferencesProvider.notifier.mutate()`.
+
+### Bugs fixed
+
+| Bug | Impact |
+|-----|--------|
+| `themeModeProvider` was a `StateProvider` — reset to `ThemeMode.system` on every cold start | Theme preference lost on every app restart |
+| All 5 Coach settings used file-private `StateProvider`s — saved to API but never loaded back | Coach persona/proactivity/etc. appeared to save but reverted on next launch |
+| Appearance "Disable Tooltips" toggle wrote to a local provider, never reached `TooltipsEnabledNotifier` | Toggle had zero effect |
+| Appearance "Haptic Feedback" toggle wrote to a local provider, disconnected from `hapticEnabledProvider` | Toggle had zero effect |
+| `_categoryColorsProvider` in Appearance was disconnected from the Data tab's dashboard layout | Removed entirely — Data tab edit mode is the canonical color picker |
+| All 17 notification preferences reset on cold start | All notification settings lost on every restart |
+| All 3 privacy toggles reset on cold start | Privacy settings lost on every restart |
+| `ThemeModeNotifier.build()` watch-looped through `userPreferencesProvider` | Potential infinite rebuild cycle on theme change |
+
+### Analyze status
+
+`dart analyze lib/features/settings/` — **No issues found.**
+Project-wide baseline: 24 pre-existing warnings/infos in unrelated files (unchanged).

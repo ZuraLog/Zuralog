@@ -194,11 +194,13 @@
  | P1 | Trends — Data Sources | ✅ Complete | Phase 7 |
 | P1 | Settings Hub | ✅ Complete | Phase 8 |
 | P1 | Settings — Account | ✅ Complete | Phase 8 |
-| P1 | Settings — Notifications | ✅ Complete | Phase 8 |
-| P1 | Settings — Appearance | ✅ Complete | Phase 8 |
-| P1 | Settings — Coach Settings | ✅ Complete | feat/coach-tab-gaps — added response length, suggested prompts toggle, voice input toggle; Save now calls /api/v1/preferences |
+| P1 | Settings — Notifications | ✅ Complete | Phase 8; re-wired to API + SharedPrefs persistence in feat/settings-providers |
+| P1 | Settings — Appearance | ✅ Complete | Phase 8; fixed tooltips/haptics/theme wiring in feat/settings-providers |
+| P1 | Settings — Coach Settings | ✅ Complete | feat/coach-tab-gaps + feat/settings-providers — private StateProviders replaced with global UserPreferencesNotifier |
 | P1 | Settings — Integrations | ✅ Complete | Phase 8 |
-| P1 | Settings — Privacy & Data | ✅ Complete | Phase 8 |
+| P1 | Settings — Privacy & Data | ✅ Complete | Phase 8; re-wired to global providers in feat/settings-providers |
+| P1 | Settings — Units (metric/imperial) | ✅ Complete | feat/settings-providers — segmented toggle in Account screen, persisted via UserPreferencesNotifier |
+| P1 | UserPreferencesNotifier (global settings layer) | ✅ Complete | feat/settings-providers — AsyncNotifier with API load, SharedPrefs fallback, optimistic PATCH writes |
 | P1 | Settings — Subscription | ✅ Complete | Phase 8 |
 | P1 | Settings — About | ✅ Complete | Phase 8 |
 | P2 | Profile (side panel or pushed) | ✅ Complete | Phase 8 |
