@@ -23,6 +23,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
@@ -46,7 +47,7 @@ class TodayFeedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
-    final bannerDismissed = ref.watch(dataMaturityBannerDismissed);
+    final bannerDismissed = ref.watch(dataMaturityBannerDismissedProvider);
 
     // Data maturity banner state computation.
     final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
@@ -124,10 +125,14 @@ class TodayFeedScreen extends ConsumerWidget {
                     targetDays: 7,
                     mode: bannerMode,
                     onDismiss: bannerMode == DataMaturityMode.progress
-                        ? () => ref.read(dataMaturityBannerDismissed.notifier).state = true
+                        ? () => ref
+                            .read(userPreferencesProvider.notifier)
+                            .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true))
                         : () => ref.read(todayBannerSessionDismissed.notifier).state = true,
                     onPermanentDismiss: bannerMode == DataMaturityMode.stillBuilding
-                        ? () => ref.read(dataMaturityBannerDismissed.notifier).state = true
+                        ? () => ref
+                            .read(userPreferencesProvider.notifier)
+                            .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true))
                         : null,
                   ),
                 ),
