@@ -1,9 +1,42 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-08 (Progress Tab Settings Wiring)  
+**Last Updated:** 2026-03-08 (Trends Tab — Persist Dismissed Correlation Suggestion IDs)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Trends Tab — Persist Dismissed Correlation Suggestion IDs (feat/trends-persist-dismissals, 2026-03-08)
+
+**Step:** 3.8 — Dismissal persistence for correlation suggestion cards.  
+**Branch:** `feat/trends-persist-dismissals`
+
+**File changed:**
+- `zuralog/lib/features/trends/presentation/trends_home_screen.dart`
+
+**What was built:**
+
+1. **`_loadDismissals()`** — Loads persisted dismissed suggestion IDs from SharedPreferences on `initState`. Since `initState` cannot be `async`, the method is fire-and-forget; the widget renders immediately with an empty set and a `setState` call triggers a rebuild once saved IDs are available. Intersects stored IDs against `widget.data.suggestionCards` to prune stale IDs from rotated suggestions — prevents unbounded set growth and ensures a reused suggestion ID always shows fresh. Guards with `mounted` check before calling `setState` to avoid post-dispose crashes.
+
+2. **`_persistDismissals()`** — Fire-and-forget write to SharedPreferences called (without `await`) at the moment a card is dismissed, so `setState` is never blocked by I/O.
+
+3. **Storage key:** `dismissed_correlation_suggestions` (plain string, JSON-encoded `List<String>`).
+
+4. **Multi-account safety:** Suggestion IDs are derived server-side as `uuid5(userId, goal, category)` — they are unique per user. If a different user logs in, their suggestion IDs will never match the previous user's dismissed IDs; the intersection produces an empty set and `prefs.remove` cleans up the stale key automatically. No SharedPreferences namespacing by user ID is required.
+
+5. **ID pruning:** Stale IDs from rotated suggestions are automatically removed on load — the intersection of stored IDs against current card IDs keeps storage bounded.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| No per-user SharedPreferences namespace | `uuid5(userId, goal, category)` IDs are globally unique per user — cross-user bleed is structurally impossible. Adding a namespace prefix would be redundant and complicate key management. |
+| Fire-and-forget `_persistDismissals()` | Dismiss gesture responsiveness must not be gated on I/O. Write failures are non-fatal; in-memory set remains correct for the session. |
+| Intersection prune on load | Prevents unbounded set growth as the server rotates suggestions. Also ensures a suggestion ID that reappears (e.g., after data refresh) is never silently hidden. |
+| `mounted` guard in `_loadDismissals` | The async gap between `SharedPreferences.getInstance()` and `setState` is enough for the widget to be disposed (e.g., user navigates away during cold-start). Guard prevents the "setState called after dispose" assertion. |
+
+**`flutter analyze`:** No new issues introduced.
 
 ---
 

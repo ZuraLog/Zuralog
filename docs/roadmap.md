@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-08 (Coach tab settings wiring: suggestedPromptsEnabled, voiceInputEnabled, sendMessage contract, backend user_preferences columns, chat message timestamps; Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation; Progress tab settings wiring: units_system to goal default unit pre-fill and all goal/WoW metric display labels)
+**Last Updated:** 2026-03-08 (Coach tab settings wiring: suggestedPromptsEnabled, voiceInputEnabled, sendMessage contract, backend user_preferences columns, chat message timestamps; Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation; Progress tab settings wiring: units_system to goal default unit pre-fill and all goal/WoW metric display labels; Trends tab: persist dismissed correlation suggestion IDs with stale-ID pruning and multi-account safety)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -192,6 +192,7 @@
  | P1 | Trends — Correlations | ✅ Complete | Phase 7 |
  | P1 | Trends — Reports | ✅ Complete | Phase 7 |
  | P1 | Trends — Data Sources | ✅ Complete | Phase 7 |
+| P1 | Trends — Persist dismissed correlation suggestion IDs (Step 3.8) | ✅ Done | feat/trends-persist-dismissals — SharedPreferences persistence with stale-ID pruning and multi-account safety |
 | P1 | Settings Hub | ✅ Complete | Phase 8 |
 | P1 | Settings — Account | ✅ Complete | Phase 8 |
 | P1 | Settings — Notifications | ✅ Complete | Phase 8; re-wired to API + SharedPrefs persistence in feat/settings-providers |

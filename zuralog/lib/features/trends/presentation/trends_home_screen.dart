@@ -11,9 +11,12 @@
 ///   - Quick-nav row → Correlations, Reports, Data Sources
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
@@ -76,7 +79,77 @@ class _TrendsHomeBody extends ConsumerStatefulWidget {
 }
 
 class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
+  static const _kDismissedKey = 'dismissed_correlation_suggestions';
+
   final Set<String> _dismissedSuggestions = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDismissals();
+  }
+
+  /// Loads persisted dismissed suggestion IDs from SharedPreferences.
+  ///
+  /// Called from [initState] (cannot be async directly). The widget renders
+  /// immediately with an empty set; a [setState] call triggers a rebuild once
+  /// the saved IDs are available.
+  ///
+  /// Intersects the stored IDs against [widget.data.suggestionCards] so that
+  /// stale IDs (from previous sessions where suggestions have rotated) are
+  /// pruned automatically. This prevents unbounded set growth and ensures a
+  /// reused suggestion ID is always shown fresh.
+  ///
+  /// **Multi-account safety:** Suggestion IDs are derived server-side as
+  /// `uuid5(userId, goal, category)` — they are unique per user. If a
+  /// different user logs in, their suggestion IDs will never match the
+  /// previous user's dismissed IDs, so the intersection will produce an
+  /// empty set and `prefs.remove` will clean up the stale key. No SharedPreferences
+  /// namespacing by user ID is required.
+  Future<void> _loadDismissals() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kDismissedKey);
+      if (raw != null && mounted) {
+        final stored = (jsonDecode(raw) as List<dynamic>)
+            .whereType<String>()
+            .toSet();
+        // Only keep IDs that are still present in the current suggestion list.
+        // This prunes stale IDs and prevents ID-reuse from hiding new cards.
+        final currentIds =
+            widget.data.suggestionCards.map((s) => s.id).toSet();
+        final validIds = stored.intersection(currentIds);
+        if (validIds.isNotEmpty) {
+          setState(() => _dismissedSuggestions.addAll(validIds));
+          // Re-persist the pruned set to keep storage clean.
+          await prefs.setString(
+            _kDismissedKey,
+            jsonEncode(validIds.toList()),
+          );
+        } else if (stored.isNotEmpty) {
+          // All stored IDs are stale — clear storage.
+          await prefs.remove(_kDismissedKey);
+        }
+      }
+    } catch (_) {
+      // Corrupt or missing data — start with empty set.
+    }
+  }
+
+  /// Persists the current [_dismissedSuggestions] set to SharedPreferences.
+  ///
+  /// Fire-and-forget: called without `await` so [setState] is not blocked.
+  Future<void> _persistDismissals() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _kDismissedKey,
+        jsonEncode(_dismissedSuggestions.toList()),
+      );
+    } catch (_) {
+      // Write failures are non-fatal — the in-memory set remains correct.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,8 +222,10 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
                     ),
                     child: _CorrelationSuggestionCard(
                       suggestion: s,
-                      onDismiss: () =>
-                          setState(() => _dismissedSuggestions.add(s.id)),
+                      onDismiss: () {
+                        setState(() => _dismissedSuggestions.add(s.id));
+                        _persistDismissals(); // fire-and-forget
+                      },
                       onCtaTap: () {
                         ref.read(hapticServiceProvider).light();
                         ref.read(analyticsServiceProvider).capture(
