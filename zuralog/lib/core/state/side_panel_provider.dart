@@ -20,8 +20,15 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Whether the profile side panel is currently visible.
+/// Whether the profile side panel is currently open (target state).
 ///
-/// `true` = panel is open (app shell slid left, panel visible on right).
-/// `false` = panel is closed (normal layout).
+/// `true` = panel is open (sliding in or fully open).
+/// `false` = panel is closed (sliding out or fully hidden).
 final sidePanelOpenProvider = StateProvider<bool>((ref) => false);
+
+/// Whether the panel node is present in the Stack.
+///
+/// Stays `true` for the duration of the close animation so the
+/// [AnimatedSlide] can finish playing before the node is removed.
+/// Stored in Riverpod (not widget state) so it survives GoRouter rebuilds.
+final sidePanelVisibleProvider = StateProvider<bool>((ref) => false);

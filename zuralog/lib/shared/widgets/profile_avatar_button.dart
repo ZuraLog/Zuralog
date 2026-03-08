@@ -49,7 +49,10 @@ class ProfileAvatarButton extends ConsumerWidget {
     final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
 
     return GestureDetector(
-      onTap: () => ref.read(sidePanelOpenProvider.notifier).state = true,
+      onTap: () {
+        ref.read(sidePanelVisibleProvider.notifier).state = true;
+        ref.read(sidePanelOpenProvider.notifier).state = true;
+      },
       // opaque so the full avatar hit-box registers taps even when the
       // CircleAvatar child has transparent pixels around its edges.
       behavior: HitTestBehavior.opaque,

@@ -17,16 +17,11 @@ import 'package:zuralog/shared/widgets/profile_side_panel.dart';
 const double _kPanelWidth = 320.0;
 const Duration _kPanelDuration = Duration(milliseconds: 300);
 
-class AppShell extends ConsumerStatefulWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
-  @override
-  ConsumerState<AppShell> createState() => _AppShellState();
-}
-
-class _AppShellState extends ConsumerState<AppShell> {
   static const List<NavigationDestination> _destinations = [
     NavigationDestination(
       icon: Icon(Icons.wb_sunny_outlined),
@@ -55,36 +50,21 @@ class _AppShellState extends ConsumerState<AppShell> {
     ),
   ];
 
-  // True while the panel is open OR animating closed.
-  // The Positioned panel is only in the Stack when this is true, so it can
-  // never interfere with hit-testing on the underlying AppBar buttons when the
-  // panel is fully closed and not animating.
-  bool _showPanel = false;
-
-  void _onDestinationSelected(int index) {
+  void _onDestinationSelected(WidgetRef ref, int index) {
     if (ref.read(sidePanelOpenProvider)) {
       ref.read(sidePanelOpenProvider.notifier).state = false;
     }
     ref.read(hapticServiceProvider).selectionTick();
-    widget.navigationShell.goBranch(
+    navigationShell.goBranch(
       index,
-      initialLocation: index == widget.navigationShell.currentIndex,
+      initialLocation: index == navigationShell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isPanelOpen = ref.watch(sidePanelOpenProvider);
-
-    // Sync _showPanel with isPanelOpen:
-    //   open  → show immediately
-    //   close → keep showing until AnimatedSlide.onEnd fires (300 ms later)
-    if (isPanelOpen && !_showPanel) {
-      // Schedule as post-frame to avoid setState during build.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _showPanel = true);
-      });
-    }
+    final isPanelVisible = ref.watch(sidePanelVisibleProvider);
 
     return Scaffold(
       extendBody: true,
@@ -92,7 +72,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         fit: StackFit.expand,
         children: [
           // Main content — always full size, no transforms.
-          widget.navigationShell,
+          navigationShell,
 
           // Backdrop — only present when panel is open.
           if (isPanelOpen)
@@ -107,15 +87,14 @@ class _AppShellState extends ConsumerState<AppShell> {
 
           // Side panel — slides in from the right.
           //
-          // Critically, the Positioned widget is ONLY in the Stack while
-          // _showPanel is true (i.e. the panel is open or mid-close-animation).
-          // When _showPanel is false the node is absent entirely, so it cannot
-          // interfere with AppBar hit-testing on any tab — which was the root
-          // cause of the Today/Coach AppBar button unresponsiveness.
+          // The Positioned node is ONLY in the Stack while sidePanelVisibleProvider
+          // is true (panel open or mid-close-animation). When false the node is
+          // absent, so it cannot interfere with AppBar hit-testing on any tab.
           //
-          // AnimatedSlide handles the visual slide; its onEnd callback clears
-          // _showPanel once the close animation completes, removing the node.
-          if (_showPanel)
+          // sidePanelVisibleProvider lives in Riverpod (not widget-local state)
+          // so it survives GoRouter rebuilds. AnimatedSlide.onEnd clears it once
+          // the close animation completes.
+          if (isPanelVisible)
             Positioned(
               top: 0,
               bottom: 0,
@@ -129,8 +108,8 @@ class _AppShellState extends ConsumerState<AppShell> {
                   onEnd: () {
                     // Animation finished. If the panel is now closed, remove
                     // the Positioned node from the Stack entirely.
-                    if (!isPanelOpen && mounted) {
-                      setState(() => _showPanel = false);
+                    if (!isPanelOpen) {
+                      ref.read(sidePanelVisibleProvider.notifier).state = false;
                     }
                   },
                   child: ProfileSidePanelWidget(
@@ -143,8 +122,8 @@ class _AppShellState extends ConsumerState<AppShell> {
         ],
       ),
       bottomNavigationBar: _FrostedNavigationBar(
-        currentIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: _onDestinationSelected,
+        currentIndex: navigationShell.currentIndex,
+        onDestinationSelected: (index) => _onDestinationSelected(ref, index),
       ),
     );
   }
@@ -219,7 +198,7 @@ class _FrostedNavigationBar extends StatelessWidget {
               onDestinationSelected: onDestinationSelected,
               // 200ms cross-fade for icon/label transitions.
               animationDuration: const Duration(milliseconds: 200),
-              destinations: _AppShellState._destinations,
+              destinations: AppShell._destinations,
             ),
           ),
         ),
