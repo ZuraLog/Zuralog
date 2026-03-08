@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-08 (Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label)
+**Last Updated:** 2026-03-08 (Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -244,6 +244,20 @@ Completed 4 tasks from the Settings Mapping Audit plan, wiring persisted user pr
 | P0 | Task 3.2: Data Maturity Banner dismiss persistence | ✅ Done | Banner dismiss writes to persisted `userPreferencesProvider` via `mutate()`; progress mode `onDismiss` and stillBuilding `onPermanentDismiss` both persist; session X-dismiss on stillBuilding remains session-only (intentional); dead session-scoped `dataMaturityBannerDismissed` StateProvider removed; `showBanner` logic gates on both `!bannerDismissed` AND `!prefsAsync.isLoading` (prevents race condition) |
 | P0 | Task 3.3: Wellness Check-in card gated on Privacy toggle | ✅ Done | `_WellnessCheckinCard` wrapped in `if (wellnessCardVisible)`; reads `wellnessCheckinCardVisibleProvider` (persisted via `userPreferencesProvider`); Privacy & Data screen's "Wellness Check-in" toggle now controls Today tab card visibility |
 | P0 | Task 3.4: Units-aware water label in Quick Log | ✅ Done | Added `UnitsSystemWaterLabel` extension to `user_preferences_model.dart` — `waterUnitLabel` getter returns `'glasses (250 ml)'` for metric, `'glasses (8 oz)'` for imperial; `_WaterCounter` now has `required String label`; receives `unitsSystem.waterUnitLabel`; backend `waterGlasses` payload unchanged |
+
+---
+
+## Phase 9.6 — Settings Mapping Audit: Data Tab Wiring (`feat/data-tab-settings-wiring`)
+
+> **Branch:** `feat/data-tab-settings-wiring` → merged to main (2026-03-08)
+
+Completed all 3 Data tab actions from the Settings Mapping Audit plan.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Task 4.1: Appearance Settings category color section | ✅ Done | Pre-existing — section was already removed. `appearance_settings_screen.dart` has no disconnected local provider; category colors are managed canonically via Data tab edit mode. |
+| P1 | Task 4.2: Wire `units_system` to Metric Detail value display | ✅ Done | Created `unit_converter.dart` shared domain utility; `metric_detail_screen.dart` now reads `unitsSystemProvider` and passes display unit to all value-rendering widgets; named constants for raw table row cap and coach prefill cap |
+| P2 | Task 4.3: Propagate category color overrides to Category Detail screen | ✅ Done | Both `category_detail_screen.dart` and `metric_detail_screen.dart` now read `dashboardLayoutProvider.categoryColorOverrides` via `.select()` and apply user-defined color overrides with `!= 0` guard; `_MetricChartCard` in category detail also receives display unit |
 
 ---
 

@@ -7,6 +7,40 @@
 
 ---
 
+## Data Tab — Settings Wiring (feat/data-tab-settings-wiring, 2026-03-08)
+
+Completed all 3 Data tab actions from the Settings Mapping Audit plan. Branch: `feat/data-tab-settings-wiring`.
+
+**Files changed:**
+- `zuralog/lib/features/data/domain/unit_converter.dart` — NEW: shared domain utility for unit label display
+- `zuralog/lib/features/data/presentation/metric_detail_screen.dart` — units system wiring, color override wiring, quality improvements
+- `zuralog/lib/features/data/presentation/category_detail_screen.dart` — units system wiring, color override wiring, chart quality improvements
+
+**What was implemented:**
+
+1. **Unit display converter (Task P1, shared utility)** — Created `unit_converter.dart` as a pure domain function with no Flutter imports. `displayUnit(String apiUnit, UnitsSystem system)` maps 10 known metric → imperial unit label overrides (kg→lbs, km→mi, cm→in, °C→°F, ml→fl oz, L→fl oz, g→oz, m→ft, m/s→mph, km/h→mph). Unmapped units pass through unchanged. kJ intentionally NOT mapped to kcal (would misrepresent the numeric value by a factor of 4.2× without numeric conversion).
+
+2. **Units system wired to Metric Detail (Task P1)** — `_MetricDetailBody` in `metric_detail_screen.dart` converted to `ConsumerStatefulWidget`/`ConsumerState`. Reads `unitsSystemProvider` and computes `unitLabel` per series, passing it to `_StatsRow` (current/average stats), `_ChartCard` (tooltip), `_RawTableToggle` (raw data table), and `_AskCoachButton` (coach prefill). Named constants `_kRawTableMaxRows = 30` and `_kCoachPrefillMaxLength = 500` replace magic numbers. Coach prefill truncation now appends `…` instead of hard-cutting mid-word. `_formatDate` made static with empty string guard.
+
+3. **Units system wired to Category Detail (Task P1 extension)** — `_CategoryDetailScreenState` reads `unitsSystemProvider`. `_MetricChartCard` gained a `required String displayUnit` parameter; `itemBuilder` computes it per series. Category-level metric cards now show correct imperial/metric unit labels in both the value display and chart tooltip.
+
+4. **Category color overrides propagated to detail screens (Task P2)** — Both `category_detail_screen.dart` and `metric_detail_screen.dart` now read `dashboardLayoutProvider.categoryColorOverrides[cat.name]` via `.select()` (targeting only the relevant category's override to avoid unnecessary rebuilds on unrelated layout mutations). `Color(overrideInt)` is applied when an override exists, with `overrideInt != 0` guard to prevent transparent-black artifacts. Fallback to `categoryColor(cat)` design-system token when no override is set.
+
+5. **Chart quality improvements (bonus)** — `category_detail_screen.dart` chart: `preventCurveOverShooting: true` added to prevent cubic spline overshooting; horizontal interval changed from `+ 1` to `.clamp(0.1, 1e9)` (more robust for fractional metrics like blood glucose in mmol/L).
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| kJ NOT mapped to kcal | Displaying kcal label on a kJ value would be a 4.2× misrepresentation (1 kJ ≈ 0.239 kcal). Unit label changes without numeric conversion are harmful for health data. |
+| `unit_converter.dart` as pure domain utility | No Flutter imports, no side effects. Trivially unit-testable. Shared between both detail screens without duplication. |
+| `.select()` for color override watch | Watching `dashboardLayoutProvider` fully would rebuild detail screens on every card reorder, hide/show, or banner dismiss — unrelated to color. `.select()` scopes the rebuild to only the specific category's override value. |
+| `overrideInt != 0` guard | `Color(0)` is fully transparent black. A zero value could result from a serialization bug or bad API response. The guard ensures the fallback design-system token is used in that edge case. |
+
+**`flutter analyze`:** No issues found
+
+---
+
 ## Today Tab — Settings Wiring (feat/today-tab-settings-wiring, 2026-03-08)
 
 Completed 4 tasks from the Settings Mapping Audit plan, wiring persisted user preferences to the Today tab and Quick Log. Branch: `feat/today-tab-settings-wiring`.
