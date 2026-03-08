@@ -94,47 +94,59 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
         final textColor = isDark
             ? AppColors.textPrimaryDark
             : AppColors.textPrimaryLight;
-        return CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          targetAnchor: widget.preferBelow
-              ? Alignment.bottomCenter
-              : Alignment.topCenter,
-          followerAnchor: widget.preferBelow
-              ? Alignment.topCenter
-              : Alignment.bottomCenter,
-          offset: Offset(
-            0,
-            widget.preferBelow ? _kArrowSize + 4 : -(_kArrowSize + 4),
-          ),
-          child: SizedBox(
-            width: _kMaxWidth,
-            child: Material(
-              color: Colors.transparent,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: widget.preferBelow
-                    ? [
-                        _ArrowPaint(color: bubbleBg, pointingDown: false),
-                        _BubbleContent(
-                          message: widget.message,
-                          bubbleBg: bubbleBg,
-                          textColor: textColor,
-                          onDismiss: _dismiss,
-                        ),
-                      ]
-                    : [
-                        _BubbleContent(
-                          message: widget.message,
-                          bubbleBg: bubbleBg,
-                          textColor: textColor,
-                          onDismiss: _dismiss,
-                        ),
-                        _ArrowPaint(color: bubbleBg, pointingDown: true),
-                      ],
+        // The OverlayEntry's render box fills the entire overlay, so a
+        // transparent Material inside it would absorb taps across the whole
+        // screen — including AppBar buttons rendered below the overlay layer.
+        // Fix: make the outer layer completely pass-through with
+        // IgnorePointer(ignoring: true), then re-enable hit-testing ONLY for
+        // the visible bubble content with a nested IgnorePointer(ignoring: false).
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: const SizedBox.expand(),
               ),
             ),
-          ),
+            CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              targetAnchor: widget.preferBelow
+                  ? Alignment.bottomCenter
+                  : Alignment.topCenter,
+              followerAnchor: widget.preferBelow
+                  ? Alignment.topCenter
+                  : Alignment.bottomCenter,
+              offset: Offset(
+                0,
+                widget.preferBelow ? _kArrowSize + 4 : -(_kArrowSize + 4),
+              ),
+              child: SizedBox(
+                width: _kMaxWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: widget.preferBelow
+                      ? [
+                          _ArrowPaint(color: bubbleBg, pointingDown: false),
+                          _BubbleContent(
+                            message: widget.message,
+                            bubbleBg: bubbleBg,
+                            textColor: textColor,
+                            onDismiss: _dismiss,
+                          ),
+                        ]
+                      : [
+                          _BubbleContent(
+                            message: widget.message,
+                            bubbleBg: bubbleBg,
+                            textColor: textColor,
+                            onDismiss: _dismiss,
+                          ),
+                          _ArrowPaint(color: bubbleBg, pointingDown: true),
+                        ],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );

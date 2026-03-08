@@ -1,13 +1,8 @@
 /// Today Feed — Tab 0 root screen.
 ///
 /// Curated daily briefing: Health Score hero, AI insight cards, wellness
-/// check-in, contextual quick actions, streak badge, and Quick Log FAB.
-///
-/// Full implementation: Phase 3, Task 3.1.
-/// Design elevation: Phase 3 elevation pass — editorial animations & micro-interactions.
+/// check-in, contextual quick actions, and streak badge.
 library;
-
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,7 +33,7 @@ import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 /// Today Feed screen — the curated daily briefing.
 ///
 /// Displays the Health Score hero, data maturity banner, AI insight cards,
-/// contextual quick actions, streak badge, and Quick Log FAB.
+/// contextual quick actions, streak badge, and wellness check-in card.
 class TodayFeedScreen extends ConsumerWidget {
   /// Creates the [TodayFeedScreen].
   const TodayFeedScreen({super.key});
@@ -111,259 +106,187 @@ class TodayFeedScreen extends ConsumerWidget {
                 ),
           ]);
         },
-        child: CustomScrollView(
+        child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // ── Health Score hero ─────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                ),
-                child: _FadeSlideIn(
-                  delay: Duration.zero,
-                  child: OnboardingTooltip(
-                    screenKey: 'today_feed',
-                    tooltipKey: 'health_score',
-                    message: 'This is your daily health score — a composite of '
-                        'all your health data from the last 24 hours.',
-                    child: _HealthScoreHero(scoreAsync: scoreAsync),
-                  ),
-                ),
+          padding: EdgeInsets.only(
+            bottom: AppDimens.bottomClearance(context),
+          ),
+          children: [
+            // ── Health Score hero ───────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                AppDimens.spaceMd,
+              ),
+              child: OnboardingTooltip(
+                screenKey: 'today_feed',
+                tooltipKey: 'health_score',
+                message: 'This is your daily health score — a composite of '
+                    'all your health data from the last 24 hours.',
+                child: _HealthScoreHero(scoreAsync: scoreAsync),
               ),
             ),
 
-            // ── Data Maturity banner ──────────────────────────────────────
+            // ── Data Maturity banner ────────────────────────────────────────
             if (showBanner)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                  ),
-                  child: DataMaturityBanner(
-                    daysWithData: dataDays,
-                    targetDays: 7,
-                    mode: bannerMode,
-                    onDismiss: bannerMode == DataMaturityMode.progress
-                        ? persistBannerDismissed
-                        : () => ref.read(todayBannerSessionDismissed.notifier).state = true,
-                    onPermanentDismiss: bannerMode == DataMaturityMode.stillBuilding
-                        ? persistBannerDismissed
-                        : null,
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                ),
+                child: DataMaturityBanner(
+                  daysWithData: dataDays,
+                  targetDays: 7,
+                  mode: bannerMode,
+                  onDismiss: bannerMode == DataMaturityMode.progress
+                      ? persistBannerDismissed
+                      : () =>
+                          ref.read(todayBannerSessionDismissed.notifier).state =
+                              true,
+                  onPermanentDismiss:
+                      bannerMode == DataMaturityMode.stillBuilding
+                          ? persistBannerDismissed
+                          : null,
                 ),
               ),
 
-            // ── Section: Time-of-day greeting + streak ────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: _FadeSlideIn(
-                  delay: const Duration(milliseconds: 60),
-                  child: _SectionHeader(
-                    title: _timeOfDayGreeting(profile?.aiName),
-                    trailing: feedAsync.whenOrNull(
-                      data: (feed) => feed.streak != null
-                          ? StreakBadge.inline(
-                              count: feed.streak!.currentStreak,
-                              isFrozen: feed.streak!.isFrozen,
-                            )
-                          : null,
-                    ),
-                  ),
+            // ── Section: Time-of-day greeting + streak ──────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: _SectionHeader(
+                title: _timeOfDayGreeting(profile?.aiName),
+                trailing: feedAsync.whenOrNull(
+                  data: (feed) => feed.streak != null
+                      ? StreakBadge.inline(
+                          count: feed.streak!.currentStreak,
+                          isFrozen: feed.streak!.isFrozen,
+                        )
+                      : null,
                 ),
               ),
             ),
 
-            // ── AI Insight cards ──────────────────────────────────────────
-            feedAsync.when(
+            // ── AI Insight cards ────────────────────────────────────────────
+            ...feedAsync.when(
               data: (feed) {
                 if (feed.insights.isEmpty) {
-                  return SliverToBoxAdapter(
-                    child: _FadeSlideIn(
-                      delay: const Duration(milliseconds: 80),
-                      child: _EmptyInsightsCard(),
-                    ),
-                  );
+                  return [const _EmptyInsightsCard()];
                 }
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                      child: _FadeSlideIn(
-                        delay: Duration(milliseconds: 80 + index * 50),
-                        child: _InsightCard(
-                          insight: feed.insights[index],
-                          onTap: () async {
-                            ref.read(hapticServiceProvider).light();
-                            context.pushNamed(
-                              RouteNames.insightDetail,
-                              pathParameters: {
-                                'id': feed.insights[index].id,
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    childCount: feed.insights.length,
-                  ),
-                );
-              },
-              loading: () => SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) => const Padding(
-                    padding: EdgeInsets.symmetric(
+                return feed.insights.map(
+                  (insight) => Padding(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.spaceMd,
                       vertical: AppDimens.spaceXs,
                     ),
-                    child: _InsightCardSkeleton(),
+                    child: _InsightCard(
+                      insight: insight,
+                      onTap: () {
+                        ref.read(hapticServiceProvider).light();
+                        context.pushNamed(
+                          RouteNames.insightDetail,
+                          pathParameters: {'id': insight.id},
+                        );
+                      },
+                    ),
                   ),
-                  childCount: 3,
+                ).toList();
+              },
+              loading: () => [
+                const SizedBox(
+                  height: 120,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
-              ),
-              error: (e, _) => SliverToBoxAdapter(
-                child: Padding(
+              ],
+              error: (e, _) => [
+                Padding(
                   padding: const EdgeInsets.all(AppDimens.spaceMd),
                   child: _ErrorCard(
                     message: 'Could not load insights.',
                     onRetry: () => ref.invalidate(todayFeedProvider),
                   ),
                 ),
-              ),
+              ],
             ),
 
-            // ── Section: Quick Actions (hidden on error) ─────────────────
+            // ── Section: Quick Actions ──────────────────────────────────────
             if (feedAsync.hasValue &&
                 feedAsync.value!.quickActions.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimens.spaceMd,
-                    AppDimens.spaceLg,
-                    AppDimens.spaceMd,
-                    AppDimens.spaceSm,
-                  ),
-                  child: _FadeSlideIn(
-                    delay: const Duration(milliseconds: 200),
-                    child: const _SectionHeader(title: 'Quick Actions'),
-                  ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceSm,
                 ),
+                child: _SectionHeader(title: 'Quick Actions'),
               ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final actions = feedAsync.value!.quickActions;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceMd,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                      child: _FadeSlideIn(
-                        delay: Duration(milliseconds: 220 + index * 50),
-                        child: _QuickActionCard(
-                          action: actions[index],
-                          onTap: () {
-                            ref.read(hapticServiceProvider).light();
-                            ref.read(analyticsServiceProvider).capture(
-                              event: AnalyticsEvents.quickActionTapped,
-                              properties: {
-                                'title': actions[index].title,
-                                'action_type': actions[index].actionType,
-                              },
-                            );
-                            final action = actions[index];
-                            switch (action.actionType) {
-                              case 'log_water':
-                                _showQuickLog(context, ref, initialMetric: 'water');
-                              case 'log_mood':
-                                _showQuickLog(context, ref, initialMetric: 'mood');
-                              case 'log_meal':
-                              case 'log_nutrition':
-                                _showQuickLog(context, ref);
-                              case 'log_energy':
-                                _showQuickLog(context, ref, initialMetric: 'energy');
-                              case 'log_stress':
-                                _showQuickLog(context, ref, initialMetric: 'stress');
-                              default:
-                                final route = action.route;
-                                if (route != null) context.go(route);
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: feedAsync.value!.quickActions.length,
-                ),
-              ),
-            ] else if (feedAsync.isLoading) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimens.spaceMd,
-                    AppDimens.spaceLg,
-                    AppDimens.spaceMd,
-                    AppDimens.spaceSm,
+              ...feedAsync.value!.quickActions.map((action) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceXs,
                   ),
-                  child: _FadeSlideIn(
-                    delay: const Duration(milliseconds: 200),
-                    child: const _SectionHeader(title: 'Quick Actions'),
+                  child: _QuickActionCard(
+                    action: action,
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.quickActionTapped,
+                        properties: {
+                          'title': action.title,
+                          'action_type': action.actionType,
+                        },
+                      );
+                      switch (action.actionType) {
+                        case 'log_water':
+                          _showQuickLog(context, ref,
+                              initialMetric: 'water');
+                        case 'log_mood':
+                          _showQuickLog(context, ref,
+                              initialMetric: 'mood');
+                        case 'log_meal':
+                        case 'log_nutrition':
+                          _showQuickLog(context, ref);
+                        case 'log_energy':
+                          _showQuickLog(context, ref,
+                              initialMetric: 'energy');
+                        case 'log_stress':
+                          _showQuickLog(context, ref,
+                              initialMetric: 'stress');
+                        default:
+                          final route = action.route;
+                          if (route != null) context.go(route);
+                      }
+                    },
                   ),
-                ),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) => const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceMd,
-                      vertical: AppDimens.spaceXs,
-                    ),
-                    child: _QuickActionSkeleton(),
-                  ),
-                  childCount: 2,
-                ),
-              ),
+                );
+              }),
             ],
 
-            // ── Wellness Check-in card ────────────────────────────────────
+            // ── Wellness Check-in card ──────────────────────────────────────
             if (wellnessCardVisible)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimens.spaceMd,
-                    AppDimens.spaceLg,
-                    AppDimens.spaceMd,
-                    AppDimens.spaceMd,
-                  ),
-                  child: _FadeSlideIn(
-                    delay: const Duration(milliseconds: 300),
-                    child: const _WellnessCheckinCard(),
-                  ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceMd,
                 ),
+                child: _WellnessCheckinCard(),
               ),
-
-            // ── Bottom clearance — always present ─────────────────────────
-            // Unconditional spacer so content always clears the frosted nav
-            // bar regardless of which conditional slivers are visible above.
-            SliverToBoxAdapter(
-              child: SizedBox(height: AppDimens.bottomClearance(context)),
-            ),
           ],
         ),
       ),
-      floatingActionButton: _QuickLogFAB(),
     );
   }
 }
@@ -427,7 +350,12 @@ class _HealthScoreHero extends ConsumerWidget {
                   ),
                 ],
               ),
-              loading: () => const _ScoreHeroSkeleton(),
+              loading: () => const SizedBox(
+                height: 120,
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              ),
               error: (_, st) => GestureDetector(
                 onTap: () => ref.invalidate(healthScoreProvider),
                 child: Padding(
@@ -444,7 +372,8 @@ class _HealthScoreHero extends ConsumerWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.textTertiary.withValues(alpha: 0.3),
+                            color:
+                                AppColors.textTertiary.withValues(alpha: 0.3),
                             width: 4,
                           ),
                         ),
@@ -612,117 +541,121 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                 ),
                 child: IntrinsicHeight(
                   child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left accent bar for unread — 3px category-colored stripe.
-                    if (isUnread)
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left accent bar for unread — 3px category-colored stripe.
+                      if (isUnread)
+                        Container(
+                          width: 3,
+                          height: double.infinity,
+                          constraints:
+                              const BoxConstraints(minHeight: 60),
+                          margin: const EdgeInsets.only(
+                              right: AppDimens.spaceSm),
+                          decoration: BoxDecoration(
+                            color: categoryColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      // Category color icon badge.
                       Container(
-                        width: 3,
-                        height: double.infinity,
-                        constraints: const BoxConstraints(minHeight: 60),
-                        margin: const EdgeInsets.only(right: AppDimens.spaceSm),
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
+                          color: categoryColor.withValues(alpha: 0.15),
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusSm),
+                        ),
+                        child: Icon(
+                          _insightIcon(widget.insight.type),
+                          size: AppDimens.iconMd,
                           color: categoryColor,
-                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                    // Category color icon badge.
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: categoryColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                      ),
-                      child: Icon(
-                        _insightIcon(widget.insight.type),
-                        size: AppDimens.iconMd,
-                        color: categoryColor,
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.spaceMd),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              if (isUnread) ...[
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: categoryColor,
-                                    shape: BoxShape.circle,
+                      const SizedBox(width: AppDimens.spaceMd),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                if (isUnread) ...[
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: categoryColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppDimens.spaceXs),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    widget.insight.title,
+                                    style: AppTextStyles.h3.copyWith(
+                                      color: AppColors.textPrimaryDark,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const SizedBox(width: AppDimens.spaceXs),
                               ],
-                              Expanded(
-                                child: Text(
-                                  widget.insight.title,
-                                  style: AppTextStyles.h3.copyWith(
-                                    color: AppColors.textPrimaryDark,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.insight.summary,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
                             ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: AppDimens.spaceSm),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: categoryColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(
-                                    AppDimens.radiusChip,
-                                  ),
-                                ),
-                                child: Text(
-                                  widget.insight.category,
-                                  style: AppTextStyles.labelXs.copyWith(
-                                    color: categoryColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.insight.summary,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
                               ),
-                              const Spacer(),
-                              if (widget.insight.createdAt != null)
-                                Text(
-                                  _relativeTime(widget.insight.createdAt!),
-                                  style: AppTextStyles.labelXs.copyWith(
-                                    color: AppColors.textTertiary,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: AppDimens.spaceSm),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: categoryColor
+                                        .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(
+                                      AppDimens.radiusChip,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    widget.insight.category,
+                                    style: AppTextStyles.labelXs.copyWith(
+                                      color: categoryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              const SizedBox(width: AppDimens.spaceXs),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                size: AppDimens.iconSm,
-                                color: AppColors.primary
-                                    .withValues(alpha: 0.5),
-                              ),
-                            ],
-                          ),
-                        ],
+                                const Spacer(),
+                                if (widget.insight.createdAt != null)
+                                  Text(
+                                    _relativeTime(widget.insight.createdAt!),
+                                    style: AppTextStyles.labelXs.copyWith(
+                                      color: AppColors.textTertiary,
+                                    ),
+                                  ),
+                                const SizedBox(width: AppDimens.spaceXs),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: AppDimens.iconSm,
+                                  color: AppColors.primary
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -882,8 +815,10 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.categoryWellness.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                        color:
+                            AppColors.categoryWellness.withValues(alpha: 0.15),
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.radiusSm),
                       ),
                       child: const Icon(
                         Icons.self_improvement_rounded,
@@ -912,7 +847,7 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
                         ],
                       ),
                     ),
-                    Icon(
+                    const Icon(
                       Icons.add_circle_outline_rounded,
                       size: AppDimens.iconMd,
                       color: AppColors.categoryWellness,
@@ -928,205 +863,7 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
   }
 }
 
-// ── _QuickLogFAB ──────────────────────────────────────────────────────────────
-
-class _QuickLogFAB extends ConsumerStatefulWidget {
-  const _QuickLogFAB();
-
-  @override
-  ConsumerState<_QuickLogFAB> createState() => _QuickLogFABState();
-}
-
-class _QuickLogFABState extends ConsumerState<_QuickLogFAB>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _scale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.88), weight: 40),
-      TweenSequenceItem(
-        tween: Tween(begin: 0.88, end: 1.08)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 40,
-      ),
-      TweenSequenceItem(tween: Tween(begin: 1.08, end: 1.0), weight: 20),
-    ]).animate(_ctrl);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _onPressed() async {
-    ref.read(hapticServiceProvider).medium();
-    ref.read(analyticsServiceProvider).capture(
-      event: AnalyticsEvents.quickLogOpened,
-      properties: {'source': 'fab'},
-    );
-    await _ctrl.forward(from: 0);
-    if (mounted) _showQuickLog(context, ref);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _scale,
-      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
-      child: FloatingActionButton(
-        onPressed: _onPressed,
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.primaryButtonText,
-        elevation: 0,
-        child: const Icon(Icons.add_rounded, size: 28),
-      ),
-    );
-  }
-}
-
-// ── Skeleton widgets ──────────────────────────────────────────────────────────
-
-class _ScoreHeroSkeleton extends StatelessWidget {
-  const _ScoreHeroSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _Shimmer(
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: const BoxDecoration(
-              color: AppColors.cardBackgroundDark,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppDimens.spaceSm),
-        _Shimmer(
-          child: Container(
-            width: 160,
-            height: 14,
-            decoration: BoxDecoration(
-              color: AppColors.cardBackgroundDark,
-              borderRadius: BorderRadius.circular(7),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _InsightCardSkeleton extends StatelessWidget {
-  const _InsightCardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: AppColors.borderDark),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Shimmer(
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Shimmer(
-                  child: Container(
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceDark,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _Shimmer(
-                  child: Container(
-                    height: 12,
-                    width: 200,
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceDark,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickActionSkeleton extends StatelessWidget {
-  const _QuickActionSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: AppColors.borderDark),
-      ),
-      child: Row(
-        children: [
-          _Shimmer(
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceMd),
-          Expanded(
-            child: _Shimmer(
-              child: Container(
-                height: 16,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceDark,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── _EmptyInsightsCard ────────────────────────────────────────────────────────
 
 class _EmptyInsightsCard extends StatelessWidget {
   const _EmptyInsightsCard();
@@ -1152,7 +889,8 @@ class _EmptyInsightsCard extends StatelessWidget {
               height: 52,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
+                borderRadius:
+                    BorderRadius.circular(AppDimens.radiusSm + 4),
               ),
               child: Icon(
                 Icons.lightbulb_outline_rounded,
@@ -1181,6 +919,8 @@ class _EmptyInsightsCard extends StatelessWidget {
     );
   }
 }
+
+// ── _ErrorCard ────────────────────────────────────────────────────────────────
 
 class _ErrorCard extends StatelessWidget {
   const _ErrorCard({required this.message, required this.onRetry});
@@ -1243,128 +983,6 @@ class _ErrorCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── _FadeSlideIn ──────────────────────────────────────────────────────────────
-
-/// Staggered fade + 6% slide-up entrance animation.
-///
-/// Animates once when the widget is first built. Pass a [delay] to create
-/// a cascade effect across a list of items.
-class _FadeSlideIn extends StatefulWidget {
-  const _FadeSlideIn({required this.child, this.delay = Duration.zero});
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  State<_FadeSlideIn> createState() => _FadeSlideInState();
-}
-
-class _FadeSlideInState extends State<_FadeSlideIn>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-  late final Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _opacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
-
-    if (widget.delay == Duration.zero) {
-      _ctrl.forward();
-    } else {
-      Future.delayed(widget.delay, () {
-        if (mounted) _ctrl.forward();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: SlideTransition(position: _slide, child: widget.child),
-    );
-  }
-}
-
-// ── _Shimmer ──────────────────────────────────────────────────────────────────
-
-/// Horizontal shimmer sweep via ShaderMask + LinearGradient (1200ms loop).
-class _Shimmer extends StatefulWidget {
-  const _Shimmer({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_Shimmer> createState() => _ShimmerState();
-}
-
-class _ShimmerState extends State<_Shimmer>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, child) {
-        // Sweep from -1 → +2 across the widget width.
-        final progress = _ctrl.value;
-        final shimmerStart = progress * 3.0 - 1.0;
-        return ShaderMask(
-          blendMode: BlendMode.srcATop,
-          shaderCallback: (bounds) => ui.Gradient.linear(
-            Offset(bounds.width * shimmerStart, 0),
-            Offset(bounds.width * (shimmerStart + 1.0), 0),
-            const [
-              AppColors.shimmerBase,
-              AppColors.shimmerHighlight,
-              AppColors.shimmerBase,
-            ],
-            const [0.0, 0.5, 1.0],
-          ),
-          child: child,
-        );
-      },
-      child: widget.child,
     );
   }
 }
