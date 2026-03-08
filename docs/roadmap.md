@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-08 (Coach tab settings wiring: suggestedPromptsEnabled, voiceInputEnabled, sendMessage contract, backend user_preferences columns, chat message timestamps; Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation)
+**Last Updated:** 2026-03-08 (Coach tab settings wiring: suggestedPromptsEnabled, voiceInputEnabled, sendMessage contract, backend user_preferences columns, chat message timestamps; Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation; Progress tab settings wiring: units_system to goal default unit pre-fill and all goal/WoW metric display labels)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -258,6 +258,19 @@ Completed all 3 Data tab actions from the Settings Mapping Audit plan.
 | P0 | Task 4.1: Appearance Settings category color section | ✅ Done | Pre-existing — section was already removed. `appearance_settings_screen.dart` has no disconnected local provider; category colors are managed canonically via Data tab edit mode. |
 | P1 | Task 4.2: Wire `units_system` to Metric Detail value display | ✅ Done | Created `unit_converter.dart` shared domain utility; `metric_detail_screen.dart` now reads `unitsSystemProvider` and passes display unit to all value-rendering widgets; named constants for raw table row cap and coach prefill cap |
 | P2 | Task 4.3: Propagate category color overrides to Category Detail screen | ✅ Done | Both `category_detail_screen.dart` and `metric_detail_screen.dart` now read `dashboardLayoutProvider.categoryColorOverrides` via `.select()` and apply user-defined color overrides with `!= 0` guard; `_MetricChartCard` in category detail also receives display unit |
+
+---
+
+## Phase 9.7 — Settings Mapping Audit: Progress Tab Wiring (`feat/progress-tab-units-wiring`)
+
+> **Branch:** `feat/progress-tab-units-wiring` → merged to main (2026-03-08)
+
+Completed both P1 Progress tab actions from the Settings Mapping Audit plan, wiring `units_system` to the Progress tab's goal display and goal creation form.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P1 | Wire `units_system` to goal default unit pre-fill | ✅ Done | `goal_create_edit_sheet.dart`: `_defaultUnitFor(GoalType.weightTarget)` returns `'lbs'` for imperial, `'kg'` for metric via `ref.read(unitsSystemProvider)`. All other goal types are unit-system-agnostic and unchanged. |
+| P1 | Wire `units_system` to goal display formatting | ✅ Done | `goals_screen.dart`, `goal_detail_screen.dart`, `progress_home_screen.dart`: all goal unit labels and WoW metric unit labels now go through `displayUnit(x.unit, unitsSystem)` from the shared `unit_converter.dart` utility. `_GoalCard` and `_WoWMetricRow` converted to `ConsumerWidget`. |
 
 ---
 

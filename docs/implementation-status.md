@@ -1,9 +1,41 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-08 (Today Tab Settings Wiring)  
+**Last Updated:** 2026-03-08 (Progress Tab Settings Wiring)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Progress Tab — Settings Wiring (feat/progress-tab-units-wiring, 2026-03-08)
+
+Completed both P1 Progress tab actions from the Settings Mapping Audit plan. Branch: `feat/progress-tab-units-wiring`.
+
+**Files changed:**
+- `zuralog/lib/features/progress/presentation/goal_create_edit_sheet.dart` — `_defaultUnitFor()` made units-system-aware for `weightTarget`
+- `zuralog/lib/features/progress/presentation/goals_screen.dart` — `_GoalCard` converted to `ConsumerWidget`; goal unit labels use `displayUnit()`
+- `zuralog/lib/features/progress/presentation/goal_detail_screen.dart` — `_GoalDetailView` gains `unitsSystem` parameter; hero section uses `displayUnit()`
+- `zuralog/lib/features/progress/presentation/progress_home_screen.dart` — `_GoalCard` and `_WoWMetricRow` converted to `ConsumerWidget`; all unit display sites use `displayUnit()`
+
+**What was implemented:**
+
+1. **Goal default unit pre-fill (Task P1)** — `_defaultUnitFor(GoalType type)` in `goal_create_edit_sheet.dart` now reads `ref.read(unitsSystemProvider)` for the `weightTarget` case: returns `'lbs'` for imperial users, `'kg'` for metric. All other goal types (`weeklyRunCount`, `dailyCalorieLimit`, `sleepDuration`, `stepCount`, `waterIntake`, `custom`) are system-agnostic and remain unchanged. Uses `ref.read` (not `ref.watch`) because the method is called from a `setState` callback, not from `build()`.
+
+2. **Goal display unit labels (Task P1)** — Every display site that renders a goal or metric unit string in the Progress tab now passes through `displayUnit(x.unit, unitsSystem)` from the shared `unit_converter.dart` domain utility. Three files updated:
+   - `goals_screen.dart`: `_GoalCard` converted from `StatelessWidget` to `ConsumerWidget`; reads `ref.watch(unitsSystemProvider)` in `build()`.
+   - `goal_detail_screen.dart`: `unitsSystem` parameter added to `_GoalDetailView`; read once in `GoalDetailScreen.build()` and passed down (prop-drilling preferred over making the private `StatelessWidget` a `ConsumerWidget`, keeping it easily testable in isolation).
+   - `progress_home_screen.dart`: Both `_GoalCard` and `_WoWMetricRow` converted to `ConsumerWidget`; each reads `ref.watch(unitsSystemProvider)` in their own `build()`.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| `ref.read` in `_defaultUnitFor` | Called from a `setState` callback (user tapping a type chip), not from `build()`. `ref.watch` in a non-build context would trigger a Riverpod assertion error. |
+| Prop-drilling for `_GoalDetailView` | `_GoalDetailView` is a private `StatelessWidget` in the same file as its parent `ConsumerStatefulWidget`. Passing `unitsSystem` as a constructor parameter keeps it pure and testable. Consistent with existing architecture in the file. |
+| No numeric value conversion | `displayUnit()` only maps unit label strings. Numeric values (e.g., kg → lbs) are a separate P2 task tracked in `unit_converter.dart` TODO comment. Label-only change prevents the `10 kg` goal from showing as `10 lbs` (which would be numerically wrong). |
+| `_WoWMetricRow` also converted | The Week-over-Week section shows `currentValue unit` alongside each metric. Missed in initial scoping but caught during review; fixed in the same branch. |
+
+**`flutter analyze`:** No issues found
 
 ---
 
