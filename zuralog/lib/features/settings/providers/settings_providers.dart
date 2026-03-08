@@ -8,9 +8,10 @@
 ///   SharedPreferences when offline. Writes are optimistic: state is updated
 ///   immediately, then persisted to both SharedPreferences and the API.
 ///
-/// - Derived `Provider`s — thin selectors that expose individual fields
-///   (e.g., [coachPersonaProvider], [voiceInputEnabledProvider]) so widgets
-///   only rebuild when the specific field they care about changes.
+/// - Derived `Provider`s — thin selectors that expose individual fields so
+///   widgets only rebuild when the specific field they care about changes.
+///   Coach-specific providers ([coachPersonaProvider], [voiceInputEnabledProvider],
+///   etc.) are pre-wired infrastructure ready for the Coach tab wiring phase.
 ///
 /// ## Why not file-private StateProviders?
 /// Previous settings screens used file-private `StateProvider`s that were

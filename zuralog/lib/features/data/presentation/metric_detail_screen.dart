@@ -128,7 +128,6 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
           }),
           onToggleRawTable: () =>
               setState(() => _showRawTable = !_showRawTable),
-          metricId: widget.metricId,
         ),
       ),
     );
@@ -151,7 +150,6 @@ class _MetricDetailBody extends ConsumerStatefulWidget {
     required this.showRawTable,
     required this.onRangeChanged,
     required this.onToggleRawTable,
-    required this.metricId,
     this.customRange,
     this.onCustomRangePicked,
   });
@@ -163,7 +161,6 @@ class _MetricDetailBody extends ConsumerStatefulWidget {
   final ValueChanged<TimeRange> onRangeChanged;
   final ValueChanged<DateTimeRange>? onCustomRangePicked;
   final VoidCallback onToggleRawTable;
-  final String metricId;
 
   @override
   ConsumerState<_MetricDetailBody> createState() => _MetricDetailBodyState();
@@ -318,7 +315,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
         // ── Ask Coach button ─────────────────────────────────────────────────
         _AskCoachButton(
           metricName: series.displayName,
-          metricId: widget.metricId,
+          metricId: widget.detail.series.metricId,
           currentValue: series.currentValue,
           unit: unitLabel,
         ),
