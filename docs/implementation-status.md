@@ -1040,3 +1040,77 @@ Systematic remediation of the Settings system: all user-configurable preferences
 
 `dart analyze lib/features/settings/` — **No issues found.**
 Project-wide baseline: 24 pre-existing warnings/infos in unrelated files (unchanged).
+
+---
+
+## Coach Tab — Settings Wiring (feat/coach-settings-wiring, 2026-03-08)
+
+**Branch:** `feat/coach-settings-wiring` (commit `aa26e2c`)  
+**Status:** Complete
+
+Completed all P0, P1, and P2 items from the Settings Mapping Audit for the Coach tab. All coach preferences are now wired end-to-end: frontend reads from global `UserPreferencesNotifier`, chat screens pass preferences to backend on message send, and backend persists all 6 new preference columns.
+
+### Files changed
+
+**Frontend (Flutter):**
+- `zuralog/lib/features/coach/presentation/new_chat_screen.dart` — `suggestedPromptsEnabled` gates prompt chip rendering; `voiceInputEnabled` gates mic button visibility; `sendMessage` calls include `persona`, `proactivity`, `responseLength` params
+- `zuralog/lib/features/coach/presentation/chat_thread_screen.dart` — `voiceInputEnabled` gates mic button visibility; `sendMessage` calls include coach preferences; fixed duplicate `conversationId` bug; added `kDebugMode` guard for mock attachment URLs
+- `zuralog/lib/features/coach/data/coach_repository.dart` — `sendMessage` contract extended with `persona`, `proactivity`, `responseLength` parameters
+- `zuralog/lib/features/settings/domain/user_preferences_model.dart` — Added missing `onboarding_complete` field to `toPatchJson()`
+
+**Backend (Python/FastAPI):**
+- `cloud-brain/alembic/versions/l7g8h9i0j1k2_add_coach_preferences.py` — NEW migration adding 6 columns to `user_preferences` table:
+  - `response_length` (VARCHAR, DEFAULT 'concise')
+  - `suggested_prompts_enabled` (BOOLEAN, DEFAULT true)
+  - `voice_input_enabled` (BOOLEAN, DEFAULT true)
+  - `wellness_checkin_card_visible` (BOOLEAN, DEFAULT true)
+  - `data_maturity_banner_dismissed` (BOOLEAN, DEFAULT false)
+  - `analytics_opt_out` (BOOLEAN, DEFAULT false)
+- `cloud-brain/app/schemas/preferences_schemas.py` — Pydantic models updated with 6 new fields; route validation updated
+- `cloud-brain/tests/api/test_preferences.py` — 8/8 tests passing
+
+### What was implemented
+
+**P0 Items:**
+1. **`suggestedPromptsEnabled` conditional rendering** — `new_chat_screen.dart` reads `suggestedPromptsEnabledProvider` and conditionally renders the prompt suggestion chips grid. When disabled, only the input bar and quick actions are shown.
+2. **`voiceInputEnabled` conditional visibility** — Both `new_chat_screen.dart` and `chat_thread_screen.dart` read `voiceInputEnabledProvider` and conditionally show/hide the mic button in `_ChatInputBar`. When disabled, the input bar shows only the text field and send button.
+3. **All 5 Coach Settings providers are GLOBAL** — `coachPersonaProvider`, `proactivityLevelProvider`, `responseLengthProvider`, `suggestedPromptsEnabledProvider`, `voiceInputEnabledProvider` are all derived from the global `userPreferencesProvider` (loaded from API on app start). No file-private providers.
+
+**P1 Items:**
+1. **`sendMessage` contract with coach preferences** — `CoachRepository.sendMessage()` interface now accepts `persona`, `proactivity`, `responseLength` parameters. Both `new_chat_screen.dart` and `chat_thread_screen.dart` read these from providers and pass them on every message send.
+2. **Backend schema + validation** — 6 new columns added to `user_preferences` table via Alembic migration. Pydantic schemas updated; route validation enforces valid enum values for `persona` (tough_love/balanced/gentle), `proactivity` (low/medium/high), `response_length` (concise/detailed).
+3. **Backend tests** — 8/8 tests passing for preferences CRUD and validation.
+
+**P2 Items:**
+1. **Chat message timestamps use system locale** — `chat_thread_screen.dart` now calls `TimeOfDay.format(context)` to render timestamps in the user's 12h/24h preference (system locale).
+
+**Bonus Fixes:**
+1. **Fixed duplicate `conversationId` bug** — `new_chat_screen.dart` was passing `conversationId` twice in the message payload. Removed the duplicate.
+2. **Added `kDebugMode` guard for mock attachment URLs** — `chat_thread_screen.dart` now guards mock attachment URLs behind `kDebugMode` to prevent them from appearing in production builds.
+3. **Added missing `onboarding_complete` field** — `user_preferences_model.dart` `toPatchJson()` was missing the `onboarding_complete` field. Added with proper null handling.
+
+### Key decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| All coach providers derived from global `userPreferencesProvider` | Single source of truth; eliminates stale local state; all preferences load from API on app start and persist via `mutate()` |
+| `sendMessage` params passed on every send (not cached) | Coach preferences can change mid-session; always passing current values ensures the backend receives the user's latest choice |
+| 6 new columns in `user_preferences` table (not separate table) | Keeps all user preferences in one place; simplifies API contract (`GET/PATCH /api/v1/preferences`); no join complexity |
+| `response_length` enum: concise/detailed (not numeric) | Semantic clarity; easier to extend with new options in future (e.g., "balanced") without numeric remapping |
+| Timestamps via `TimeOfDay.format(context)` | Respects system locale setting; no hardcoded 12h/24h logic in the app |
+
+### Test coverage
+
+**Backend:** 8/8 tests passing in `test_preferences.py`
+- Preferences CRUD (GET, PATCH)
+- Enum validation (persona, proactivity, response_length)
+- Default values on new user
+- Null handling for optional fields
+
+**Frontend:** No new tests added (settings wiring tested via integration with existing Coach tab tests)
+
+### Analyze status
+
+`flutter analyze lib/features/coach/` — **0 issues introduced.**  
+`flutter analyze lib/features/settings/` — **0 issues introduced.**  
+Project-wide baseline: 24 pre-existing warnings/infos (unchanged).
