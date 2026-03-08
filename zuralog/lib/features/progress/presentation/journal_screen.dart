@@ -256,7 +256,7 @@ class JournalScreen extends ConsumerWidget {
               padding: EdgeInsets.only(
                 left: AppDimens.spaceMd,
                 right: AppDimens.spaceMd,
-                bottom: AppDimens.bottomClearance(context),
+                bottom: MediaQuery.of(context).padding.bottom,
               ),
               itemCount: _sectionItemCount(sections),
               itemBuilder: (context, index) {

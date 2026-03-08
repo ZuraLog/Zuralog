@@ -326,11 +326,11 @@ class TodayFeedScreen extends ConsumerWidget {
             if (wellnessCardVisible)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(
+                  padding: const EdgeInsets.fromLTRB(
                     AppDimens.spaceMd,
                     AppDimens.spaceLg,
                     AppDimens.spaceMd,
-                    AppDimens.bottomClearance(context),
+                    AppDimens.spaceMd,
                   ),
                   child: _FadeSlideIn(
                     delay: const Duration(milliseconds: 300),
@@ -338,6 +338,13 @@ class TodayFeedScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+
+            // ── Bottom clearance — always present ─────────────────────────
+            // Unconditional spacer so content always clears the frosted nav
+            // bar regardless of which conditional slivers are visible above.
+            SliverToBoxAdapter(
+              child: SizedBox(height: AppDimens.bottomClearance(context)),
+            ),
           ],
         ),
       ),

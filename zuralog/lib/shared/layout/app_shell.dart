@@ -17,11 +17,16 @@ import 'package:zuralog/shared/widgets/profile_side_panel.dart';
 const double _kPanelWidth = 320.0;
 const Duration _kPanelDuration = Duration(milliseconds: 300);
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
   static const List<NavigationDestination> _destinations = [
     NavigationDestination(
       icon: Icon(Icons.wb_sunny_outlined),
@@ -50,20 +55,36 @@ class AppShell extends ConsumerWidget {
     ),
   ];
 
-  void _onDestinationSelected(WidgetRef ref, int index) {
+  // True while the panel is open OR animating closed.
+  // The Positioned panel is only in the Stack when this is true, so it can
+  // never interfere with hit-testing on the underlying AppBar buttons when the
+  // panel is fully closed and not animating.
+  bool _showPanel = false;
+
+  void _onDestinationSelected(int index) {
     if (ref.read(sidePanelOpenProvider)) {
       ref.read(sidePanelOpenProvider.notifier).state = false;
     }
     ref.read(hapticServiceProvider).selectionTick();
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isPanelOpen = ref.watch(sidePanelOpenProvider);
+
+    // Sync _showPanel with isPanelOpen:
+    //   open  → show immediately
+    //   close → keep showing until AnimatedSlide.onEnd fires (300 ms later)
+    if (isPanelOpen && !_showPanel) {
+      // Schedule as post-frame to avoid setState during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _showPanel = true);
+      });
+    }
 
     return Scaffold(
       extendBody: true,
@@ -71,7 +92,7 @@ class AppShell extends ConsumerWidget {
         fit: StackFit.expand,
         children: [
           // Main content — always full size, no transforms.
-          navigationShell,
+          widget.navigationShell,
 
           // Backdrop — only present when panel is open.
           if (isPanelOpen)
@@ -86,28 +107,32 @@ class AppShell extends ConsumerWidget {
 
           // Side panel — slides in from the right.
           //
-          // Architecture note: AnimatedPositioned (an ImplicitlyAnimatedWidget)
-          // continuously updates StackParentData during its animation, which can
-          // cause RenderStack hit-testing to misfire on certain tabs and leave
-          // AppBar buttons unresponsive even when the panel is off-screen.
+          // Critically, the Positioned widget is ONLY in the Stack while
+          // _showPanel is true (i.e. the panel is open or mid-close-animation).
+          // When _showPanel is false the node is absent entirely, so it cannot
+          // interfere with AppBar hit-testing on any tab — which was the root
+          // cause of the Today/Coach AppBar button unresponsiveness.
           //
-          // Fix: use a static Positioned (a plain ParentDataWidget) as the direct
-          // Stack child so layout is stable. IgnorePointer at this level blocks
-          // the entire 320px-wide slot when the panel is closed. ClipRect masks
-          // the panel visually, and AnimatedSlide handles the slide animation
-          // entirely within the clipped region — no Stack layout changes at all.
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: _kPanelWidth,
-            child: IgnorePointer(
-              ignoring: !isPanelOpen,
+          // AnimatedSlide handles the visual slide; its onEnd callback clears
+          // _showPanel once the close animation completes, removing the node.
+          if (_showPanel)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: _kPanelWidth,
               child: ClipRect(
                 child: AnimatedSlide(
                   duration: _kPanelDuration,
                   curve: Curves.easeInOutCubic,
                   offset: isPanelOpen ? Offset.zero : const Offset(1, 0),
+                  onEnd: () {
+                    // Animation finished. If the panel is now closed, remove
+                    // the Positioned node from the Stack entirely.
+                    if (!isPanelOpen && mounted) {
+                      setState(() => _showPanel = false);
+                    }
+                  },
                   child: ProfileSidePanelWidget(
                     onClose: () =>
                         ref.read(sidePanelOpenProvider.notifier).state = false,
@@ -115,12 +140,11 @@ class AppShell extends ConsumerWidget {
                 ),
               ),
             ),
-          ),
         ],
       ),
       bottomNavigationBar: _FrostedNavigationBar(
-        currentIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => _onDestinationSelected(ref, index),
+        currentIndex: widget.navigationShell.currentIndex,
+        onDestinationSelected: _onDestinationSelected,
       ),
     );
   }
@@ -195,7 +219,7 @@ class _FrostedNavigationBar extends StatelessWidget {
               onDestinationSelected: onDestinationSelected,
               // 200ms cross-fade for icon/label transitions.
               animationDuration: const Duration(milliseconds: 200),
-              destinations: AppShell._destinations,
+              destinations: _AppShellState._destinations,
             ),
           ),
         ),

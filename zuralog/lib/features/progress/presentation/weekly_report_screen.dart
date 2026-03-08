@@ -307,7 +307,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                     0,
                     AppDimens.spaceMd,
                     0,
-                    AppDimens.bottomClearance(context),
+                    MediaQuery.of(context).padding.bottom,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

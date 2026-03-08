@@ -81,7 +81,7 @@ class _ReportsList extends ConsumerWidget {
           AppDimens.spaceMd,
           AppDimens.spaceMd,
           AppDimens.spaceMd,
-          AppDimens.bottomClearance(context),
+          MediaQuery.of(context).padding.bottom,
         ),
         itemCount: reports.length,
         separatorBuilder: (_, _) =>

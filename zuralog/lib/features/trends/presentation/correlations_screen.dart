@@ -103,7 +103,7 @@ class _CorrelationsBodyState extends ConsumerState<_CorrelationsBody> {
         AppDimens.spaceMd,
         AppDimens.spaceMd,
         AppDimens.spaceMd,
-        AppDimens.bottomClearance(context),
+        MediaQuery.of(context).padding.bottom,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
