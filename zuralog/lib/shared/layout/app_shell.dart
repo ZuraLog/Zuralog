@@ -85,26 +85,34 @@ class AppShell extends ConsumerWidget {
             ),
 
           // Side panel — slides in from the right.
-          // IMPORTANT: AnimatedPositioned must be a DIRECT child of Stack.
-          // Positioned widgets write parent data that Stack reads from direct
-          // children only. Wrapping AnimatedPositioned in any non-Positioned
-          // widget (e.g. IgnorePointer) breaks positioning — Stack treats it
-          // as a non-positioned child and StackFit.expand forces it full-screen.
-          // IgnorePointer is therefore placed INSIDE AnimatedPositioned so the
-          // positioning semantics are preserved while still blocking hit tests
-          // on the off-screen panel (bell, avatar, hamburger, bolt) when closed.
-          AnimatedPositioned(
-            duration: _kPanelDuration,
-            curve: Curves.easeInOutCubic,
+          //
+          // Architecture note: AnimatedPositioned (an ImplicitlyAnimatedWidget)
+          // continuously updates StackParentData during its animation, which can
+          // cause RenderStack hit-testing to misfire on certain tabs and leave
+          // AppBar buttons unresponsive even when the panel is off-screen.
+          //
+          // Fix: use a static Positioned (a plain ParentDataWidget) as the direct
+          // Stack child so layout is stable. IgnorePointer at this level blocks
+          // the entire 320px-wide slot when the panel is closed. ClipRect masks
+          // the panel visually, and AnimatedSlide handles the slide animation
+          // entirely within the clipped region — no Stack layout changes at all.
+          Positioned(
             top: 0,
             bottom: 0,
-            right: isPanelOpen ? 0 : -_kPanelWidth,
+            right: 0,
             width: _kPanelWidth,
             child: IgnorePointer(
               ignoring: !isPanelOpen,
-              child: ProfileSidePanelWidget(
-                onClose: () =>
-                    ref.read(sidePanelOpenProvider.notifier).state = false,
+              child: ClipRect(
+                child: AnimatedSlide(
+                  duration: _kPanelDuration,
+                  curve: Curves.easeInOutCubic,
+                  offset: isPanelOpen ? Offset.zero : const Offset(1, 0),
+                  child: ProfileSidePanelWidget(
+                    onClose: () =>
+                        ref.read(sidePanelOpenProvider.notifier).state = false,
+                  ),
+                ),
               ),
             ),
           ),
