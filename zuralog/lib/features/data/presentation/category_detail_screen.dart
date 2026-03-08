@@ -18,7 +18,9 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 // ── CategoryDetailScreen ──────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
     final color = (overrideInt != null && overrideInt != 0)
         ? Color(overrideInt)
         : categoryColor(cat);
+    final unitsSystem = ref.watch(unitsSystemProvider);
     // When custom is selected with a picked range, encode dates into the
     // time range key so the cache treats it as a distinct entry.
     final timeRangeKey = _selectedRange == TimeRange.custom && _customRange != null
@@ -148,6 +151,8 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                     return _MetricChartCard(
                       series: detail.metrics[i],
                       color: color,
+                      displayUnit: displayUnit(
+                          detail.metrics[i].unit, unitsSystem),
                       onTap: () => context
                           .push('/data/metric/${detail.metrics[i].metricId}'),
                     );
@@ -180,11 +185,13 @@ class _MetricChartCard extends StatefulWidget {
   const _MetricChartCard({
     required this.series,
     required this.color,
+    required this.displayUnit,
     required this.onTap,
   });
 
   final MetricSeries series;
   final Color color;
+  final String displayUnit;
   final VoidCallback onTap;
 
   @override
@@ -277,9 +284,9 @@ class _MetricChartCardState extends State<_MetricChartCard>
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                if (series.unit.isNotEmpty)
+                                if (widget.displayUnit.isNotEmpty)
                                   TextSpan(
-                                    text: ' ${series.unit}',
+                                    text: ' ${widget.displayUnit}',
                                     style: AppTextStyles.caption.copyWith(
                                       color: AppColors.textSecondary,
                                     ),
@@ -369,7 +376,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
             getTooltipColor: (_) => AppColors.surfaceDark,
             getTooltipItems: (spots) => spots
                 .map((s) => LineTooltipItem(
-                      s.y.toStringAsFixed(1),
+                      '${s.y.toStringAsFixed(1)} ${widget.displayUnit}',
                       AppTextStyles.caption.copyWith(
                         color: color,
                         fontWeight: FontWeight.w600,

@@ -19,8 +19,8 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
-import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
@@ -54,41 +54,6 @@ String _sourceLabel(String? source) {
     default:
       return 'from ${s[0].toUpperCase()}${s.substring(1)}';
   }
-}
-
-// ── Unit display helper ───────────────────────────────────────────────────────
-
-/// Maps an API unit string to the correct display label for [system].
-///
-/// For [UnitsSystem.metric] the unit is returned unchanged.
-/// For [UnitsSystem.imperial] known metric labels are mapped to their imperial
-/// equivalents. All other unit strings (steps, bpm, %, hrs, glasses, etc.)
-/// pass through unchanged regardless of system.
-///
-/// NOTE: This function only adjusts the *label* — numeric value conversion
-/// (e.g. kg * 2.205 → lbs) is intentionally out of scope and is a separate
-/// future task (TODO: P2 — add numeric value conversion for imperial display).
-String _displayUnit(String apiUnit, UnitsSystem system) {
-  // System-agnostic display normalizations (not tied to imperial/metric).
-  // kJ is the SI energy unit but nutrition display convention uses kcal universally.
-  // TODO: P2 — add numeric value conversion for imperial display
-  if (apiUnit == 'kJ') return 'kcal';
-
-  if (system == UnitsSystem.metric) return apiUnit;
-  // Imperial label mappings
-  return switch (apiUnit) {
-    'kg'   => 'lbs',
-    'km'   => 'mi',
-    'cm'   => 'in',
-    '°C'   => '°F',
-    'ml'   => 'fl oz',
-    'L'    => 'fl oz',
-    'g'    => 'oz',
-    'm'    => 'ft',
-    'm/s'  => 'mph',
-    'km/h' => 'mph',
-    _      => apiUnit,
-  };
 }
 
 // ── MetricDetailScreen ────────────────────────────────────────────────────────
@@ -245,10 +210,16 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
   Widget build(BuildContext context) {
     final series = widget.detail.series;
     final cat = widget.detail.category;
-    final color = categoryColor(cat);
+    final overrideInt = ref.watch(
+      dashboardLayoutProvider
+          .select((l) => l.categoryColorOverrides[cat.name]),
+    );
+    final color = (overrideInt != null && overrideInt != 0)
+        ? Color(overrideInt)
+        : categoryColor(cat);
 
     final unitsSystem = ref.watch(unitsSystemProvider);
-    final displayUnit = _displayUnit(series.unit, unitsSystem);
+    final unitLabel = displayUnit(series.unit, unitsSystem);
 
     final spots = [
       for (var i = 0; i < series.dataPoints.length; i++)
@@ -274,7 +245,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
         const SizedBox(height: AppDimens.spaceMd),
 
         // ── Stats row ────────────────────────────────────────────────────────
-        _StatsRow(series: series, color: color, displayUnit: displayUnit),
+        _StatsRow(series: series, color: color, displayUnit: unitLabel),
 
         const SizedBox(height: AppDimens.spaceMd),
 
@@ -285,7 +256,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
             color: color,
             opacity: _chartOpacity,
             series: series,
-            displayUnit: displayUnit,
+            displayUnit: unitLabel,
           ),
           const SizedBox(height: 6),
           Center(
@@ -339,7 +310,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
             isExpanded: widget.showRawTable,
             onToggle: widget.onToggleRawTable,
             series: series,
-            displayUnit: displayUnit,
+            displayUnit: unitLabel,
           ),
           const SizedBox(height: AppDimens.spaceMd),
         ],
@@ -349,7 +320,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
           metricName: series.displayName,
           metricId: widget.metricId,
           currentValue: series.currentValue,
-          unit: displayUnit,
+          unit: unitLabel,
         ),
       ],
     );
@@ -848,7 +819,9 @@ class _AskCoachButton extends ConsumerWidget {
         var prefill = 'Tell me about my $metricName'
             '${currentVal.isNotEmpty ? ': $currentVal${unit.isNotEmpty ? ' $unit' : ''}' : ''}';
         // HIGH-05: prevent abnormally large strings from reaching the coach input
-        if (prefill.length > _kCoachPrefillMaxLength) prefill = prefill.substring(0, _kCoachPrefillMaxLength);
+        if (prefill.length > _kCoachPrefillMaxLength) {
+          prefill = '${prefill.substring(0, _kCoachPrefillMaxLength - 1)}…';
+        }
         ref.read(coachPrefillProvider.notifier).state = prefill;
         context.go(RouteNames.coachPath);
       },
