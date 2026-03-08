@@ -85,17 +85,23 @@ class AppShell extends ConsumerWidget {
             ),
 
           // Side panel — slides in from the right.
-          // IgnorePointer prevents the off-screen panel from intercepting
-          // taps on the AppBar (bell, avatar, hamburger, bolt) when closed.
-          IgnorePointer(
-            ignoring: !isPanelOpen,
-            child: AnimatedPositioned(
-              duration: _kPanelDuration,
-              curve: Curves.easeInOutCubic,
-              top: 0,
-              bottom: 0,
-              right: isPanelOpen ? 0 : -_kPanelWidth,
-              width: _kPanelWidth,
+          // IMPORTANT: AnimatedPositioned must be a DIRECT child of Stack.
+          // Positioned widgets write parent data that Stack reads from direct
+          // children only. Wrapping AnimatedPositioned in any non-Positioned
+          // widget (e.g. IgnorePointer) breaks positioning — Stack treats it
+          // as a non-positioned child and StackFit.expand forces it full-screen.
+          // IgnorePointer is therefore placed INSIDE AnimatedPositioned so the
+          // positioning semantics are preserved while still blocking hit tests
+          // on the off-screen panel (bell, avatar, hamburger, bolt) when closed.
+          AnimatedPositioned(
+            duration: _kPanelDuration,
+            curve: Curves.easeInOutCubic,
+            top: 0,
+            bottom: 0,
+            right: isPanelOpen ? 0 : -_kPanelWidth,
+            width: _kPanelWidth,
+            child: IgnorePointer(
+              ignoring: !isPanelOpen,
               child: ProfileSidePanelWidget(
                 onClose: () =>
                     ref.read(sidePanelOpenProvider.notifier).state = false,
