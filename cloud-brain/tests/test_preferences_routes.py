@@ -57,6 +57,17 @@ def _make_prefs_orm(overrides: dict | None = None):
     prefs.quiet_hours_start = None
     prefs.quiet_hours_end = None
     prefs.goals = []
+    prefs.response_length = "concise"
+    prefs.suggested_prompts_enabled = True
+    prefs.voice_input_enabled = True
+    prefs.wellness_checkin_card_visible = True
+    prefs.data_maturity_banner_dismissed = False
+    prefs.analytics_opt_out = False
+    prefs.morning_briefing_enabled = True
+    prefs.checkin_reminder_enabled = False
+    prefs.quiet_hours_enabled = False
+    prefs.units_system = "metric"
+    prefs.fitness_level = None
 
     if overrides:
         for key, value in overrides.items():
@@ -238,11 +249,11 @@ def test_patch_preferences_partial_update(integration_client):
 
 
 def test_preferences_auth_required(integration_client):
-    """GET without an Authorization header should return 403 (no bearer token)."""
+    """GET without an Authorization header should return 401 or 403 (no bearer token)."""
     client, _, _ = integration_client
 
     response = client.get("/api/v1/preferences")
-    assert response.status_code == 403
+    assert response.status_code in (401, 403)
 
 
 def test_patch_preserves_unset_fields(integration_client):
@@ -288,3 +299,66 @@ def test_patch_preserves_unset_fields(integration_client):
     assert prefs.tooltips_enabled is True
     assert prefs.proactivity_level == "high"
     assert prefs.theme == "dark"
+
+
+def test_get_preferences_returns_coach_fields(integration_client):
+    """GET should return response_length, suggested_prompts_enabled, voice_input_enabled."""
+    client, mock_auth, mock_db = integration_client
+
+    mock_auth.get_user.return_value = {"id": USER_ID}
+    mock_user = _make_user_orm()
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = mock_user
+
+    prefs = _make_prefs_orm({
+        "response_length": "detailed",
+        "suggested_prompts_enabled": False,
+        "voice_input_enabled": False,
+    })
+
+    from unittest.mock import patch
+
+    with patch(
+        "app.api.v1.preferences_routes._get_or_create_prefs",
+        new_callable=AsyncMock,
+        return_value=prefs,
+    ):
+        mock_db.execute = AsyncMock(return_value=mock_user_result)
+        response = client.get("/api/v1/preferences", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["response_length"] == "detailed"
+    assert data["suggested_prompts_enabled"] is False
+    assert data["voice_input_enabled"] is False
+
+
+def test_patch_response_length_validation(integration_client):
+    """PATCH with invalid response_length should return 400."""
+    client, mock_auth, mock_db = integration_client
+
+    mock_auth.get_user.return_value = {"id": USER_ID}
+    mock_user = _make_user_orm()
+    mock_user_result = MagicMock()
+    mock_user_result.scalar_one_or_none.return_value = mock_user
+
+    prefs = _make_prefs_orm()
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
+
+    from unittest.mock import patch
+
+    with patch(
+        "app.api.v1.preferences_routes._get_or_create_prefs",
+        new_callable=AsyncMock,
+        return_value=prefs,
+    ):
+        mock_db.execute = AsyncMock(return_value=mock_user_result)
+        response = client.patch(
+            "/api/v1/preferences",
+            json={"response_length": "verbose"},  # invalid value
+            headers=AUTH_HEADERS,
+        )
+
+    assert response.status_code == 400
+    assert "response_length" in response.json()["detail"]

@@ -27,6 +27,21 @@ abstract interface class CoachRepository {
 
   /// Archives the conversation with [conversationId].
   Future<void> archiveConversation(String conversationId);
+
+  /// Sends [text] as a new user message in [conversationId].
+  ///
+  /// The [persona], [proactivity], and [responseLength] values are forwarded
+  /// to the backend so the AI system prompt is tailored to the user's preferences.
+  ///
+  /// Returns the AI's reply message (may be streamed in a future implementation).
+  Future<ChatMessage> sendMessage({
+    required String conversationId,
+    required String text,
+    required String persona,
+    required String proactivity,
+    required String responseLength,
+    List<String> attachmentUrls = const [],
+  });
 }
 
 // ── Mock Implementation ────────────────────────────────────────────────────────
@@ -171,6 +186,25 @@ final class MockCoachRepository implements CoachRepository {
   Future<void> archiveConversation(String conversationId) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     // Mock: no-op in mock implementation
+  }
+
+  @override
+  Future<ChatMessage> sendMessage({
+    required String conversationId,
+    required String text,
+    required String persona,
+    required String proactivity,
+    required String responseLength,
+    List<String> attachmentUrls = const [],
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return ChatMessage(
+      id: 'mock_${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: conversationId,
+      role: MessageRole.assistant,
+      content: 'Mock response',
+      createdAt: DateTime.now(),
+    );
   }
 
   @override

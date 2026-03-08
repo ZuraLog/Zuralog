@@ -8,6 +8,7 @@
 /// and rich message bubble UI.
 library;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -23,6 +24,7 @@ import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 // ── ChatThreadScreen ──────────────────────────────────────────────────────────
@@ -56,6 +58,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
+
+    // Read current coach preferences to include in message payload.
+    final persona = ref.read(coachPersonaProvider).value;
+    final proactivity = ref.read(proactivityLevelProvider).value;
+    final responseLength = ref.read(responseLengthProvider).value;
+
     ref.read(analyticsServiceProvider).capture(
       event: 'coach_message_sent',
       properties: {
@@ -65,6 +73,18 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       },
     );
     _inputCtrl.clear();
+
+    // Send message with coach preferences to backend.
+    // TODO(phase9): await response and handle streaming once real API is wired.
+    // Errors are intentionally ignored here — when the real API is wired, replace
+    // this with an awaited call inside a try/catch that shows a SnackBar on failure.
+    ref.read(coachRepositoryProvider).sendMessage(
+      conversationId: widget.conversationId,
+      text: text,
+      persona: persona,
+      proactivity: proactivity,
+      responseLength: responseLength,
+    ).ignore();
 
     // Start a Sentry performance transaction to measure AI response latency.
     final transaction = Sentry.startTransaction(
@@ -215,10 +235,13 @@ class _MessageBubble extends StatelessWidget {
 
   bool get _isUser => message.role == MessageRole.user;
 
-  String _formatTime(DateTime dt) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+  /// Formats [dt] according to the device's 12 h / 24 h locale preference.
+  ///
+  /// Uses [TimeOfDay.format] which reads [MediaQueryData.alwaysUse24HourFormat]
+  /// (or the equivalent platform locale setting) — no custom Zuralog setting
+  /// required, as specified in the settings-mapping audit.
+  String _formatTime(DateTime dt, BuildContext context) {
+    return TimeOfDay.fromDateTime(dt).format(context);
   }
 
   /// Returns true if the URL points to an image type we can render inline.
@@ -425,7 +448,7 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _formatTime(message.createdAt),
+                  _formatTime(message.createdAt, context),
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.textTertiary,
                     fontSize: 10,
@@ -535,9 +558,11 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
         // TODO(supabase): replace with real Supabase Storage upload
         for (final a in _attachments) {
           await Future.delayed(const Duration(milliseconds: 800));
-          attachmentUrls.add(
-            'https://mock.supabase.co/storage/attachments/${a.name}',
-          );
+          if (kDebugMode) {
+            attachmentUrls.add(
+              'https://mock.supabase.co/storage/attachments/${a.name}',
+            );
+          }
         }
       }
 
@@ -552,6 +577,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   Widget build(BuildContext context) {
     final speechState = ref.watch(speechNotifierProvider);
     final isListening = speechState.status == SpeechStatus.listening;
+    final voiceInputEnabled = ref.watch(voiceInputEnabledProvider);
 
     // Sync recognized text to input field.
     ref.listen<SpeechState>(speechNotifierProvider, (prev, next) {
@@ -676,6 +702,9 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                         onTap: _handleSend,
                         tooltip: 'Send',
                       );
+                    }
+                    if (!voiceInputEnabled) {
+                      return const SizedBox.shrink();
                     }
                     return _InputIcon(
                       icon: isListening

@@ -37,6 +37,13 @@ class ProactivityLevel(str, enum.Enum):
     HIGH = "high"
 
 
+class ResponseLength(str, enum.Enum):
+    """AI coach response verbosity."""
+
+    CONCISE = "concise"
+    DETAILED = "detailed"
+
+
 class AppTheme(str, enum.Enum):
     """App colour-theme preference."""
 
@@ -70,10 +77,16 @@ class UserPreferences(Base):
         quiet_hours_enabled: Whether quiet hours are active.
         quiet_hours_start: HH:MM string for start of the quiet-hours window.
         quiet_hours_end: HH:MM string for end of the quiet-hours window.
+        wellness_checkin_card_visible: Controls visibility of wellness check-in card on Today tab.
+        data_maturity_banner_dismissed: True when user has permanently dismissed the data maturity banner.
+        analytics_opt_out: True when user has opted out of anonymous product analytics.
         goals: JSON array of goal-type strings.
         units_system: 'metric' or 'imperial'.
         fitness_level: Self-assessed fitness level from onboarding.
             One of: 'beginner', 'active', 'athletic'. Nullable.
+        response_length: AI coach response verbosity. One of: 'concise', 'detailed'.
+        suggested_prompts_enabled: Whether suggested prompts are shown in the coach UI.
+        voice_input_enabled: Whether voice input is active in the coach UI.
         created_at: Row creation timestamp (server-managed).
         updated_at: Timestamp of last modification (server-managed).
     """
@@ -109,6 +122,25 @@ class UserPreferences(Base):
         server_default="medium",
         nullable=False,
         comment="low | medium | high",
+    )
+    response_length: Mapped[str] = mapped_column(
+        String,
+        default="concise",
+        server_default="concise",
+        nullable=False,
+        comment="concise | detailed",
+    )
+    suggested_prompts_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
+    )
+    voice_input_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
     )
 
     # Dashboard layout (JSON — card order + visibility + colour overrides)
@@ -196,6 +228,29 @@ class UserPreferences(Base):
         Time,
         nullable=True,
         comment="End of quiet hours",
+    )
+
+    # Privacy & visibility
+    wellness_checkin_card_visible: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
+        comment="Controls visibility of wellness check-in card on Today tab",
+    )
+    data_maturity_banner_dismissed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+        comment="True when user has permanently dismissed the data maturity banner",
+    )
+    analytics_opt_out: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+        comment="True when user has opted out of anonymous product analytics",
     )
 
     # High-level goal types
