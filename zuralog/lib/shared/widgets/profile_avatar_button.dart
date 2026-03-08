@@ -30,17 +30,12 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 /// using the same colour and size as the avatar inside [ProfileSidePanelWidget],
 /// so the two always look identical to the user.
 ///
-/// Typically placed in a screen's `AppBar` [actions] list:
+/// Typically used via [ZuralogAppBar], which appends this widget
+/// automatically as the last action on every screen:
 /// ```dart
-/// appBar: AppBar(
-///   actions: const [
-///     Padding(
-///       padding: EdgeInsets.only(right: AppDimens.spaceMd),
-///       child: ProfileAvatarButton(),
-///     ),
-///   ],
-/// )
+/// appBar: ZuralogAppBar(title: 'My Screen')
 /// ```
+/// Only use this widget directly if you are not using [ZuralogAppBar].
 class ProfileAvatarButton extends ConsumerWidget {
   /// Creates a [ProfileAvatarButton].
   const ProfileAvatarButton({super.key});

@@ -36,6 +36,10 @@ class ZuralogAppBarTooltipConfig {
 /// Zuralog shared AppBar — base properties hardcoded (backgroundColor,
 /// elevation, scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
 /// always appended as last action. Used by every root tab screen.
+///
+/// Note: this widget embeds [ProfileAvatarButton], which is a Riverpod
+/// [ConsumerWidget] and requires a [ProviderScope] ancestor. Wrap with
+/// [ProviderScope] in widget tests.
 class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ZuralogAppBar({
     super.key,
