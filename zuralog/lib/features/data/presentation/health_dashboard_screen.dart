@@ -27,8 +27,7 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/category_card.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/score_trend_hero.dart';
-import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── HealthDashboardScreen ─────────────────────────────────────────────────────
 
@@ -152,16 +151,13 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final showDataBanner = dataDays < 7 && !layout.bannerDismissed;
 
     return Scaffold(
-      appBar: AppBar(
-        title: OnboardingTooltip(
+      appBar: ZuralogAppBar(
+        title: 'Data',
+        tooltipConfig: const ZuralogAppBarTooltipConfig(
           screenKey: 'health_dashboard',
           tooltipKey: 'welcome',
           message: 'This is your data command center. Long-press a card to '
               'reorder, or tap the edit button to show/hide categories.',
-          child: Text(
-            'Data',
-            style: AppTextStyles.h2,
-          ),
         ),
         actions: [
           if (_isEditMode)
@@ -178,10 +174,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
               onPressed: _toggleEditMode,
               tooltip: 'Customize',
             ),
-          const Padding(
-            padding: EdgeInsets.only(right: AppDimens.spaceMd),
-            child: ProfileAvatarButton(),
-          ),
         ],
       ),
       body: RefreshIndicator(
