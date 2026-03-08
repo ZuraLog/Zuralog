@@ -99,6 +99,13 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
   /// stale IDs (from previous sessions where suggestions have rotated) are
   /// pruned automatically. This prevents unbounded set growth and ensures a
   /// reused suggestion ID is always shown fresh.
+  ///
+  /// **Multi-account safety:** Suggestion IDs are derived server-side as
+  /// `uuid5(userId, goal, category)` — they are unique per user. If a
+  /// different user logs in, their suggestion IDs will never match the
+  /// previous user's dismissed IDs, so the intersection will produce an
+  /// empty set and `prefs.remove` will clean up the stale key. No SharedPreferences
+  /// namespacing by user ID is required.
   Future<void> _loadDismissals() async {
     try {
       final prefs = await SharedPreferences.getInstance();
