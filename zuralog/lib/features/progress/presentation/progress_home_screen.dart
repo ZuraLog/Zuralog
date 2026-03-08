@@ -1035,14 +1035,15 @@ class _WoWSection extends StatelessWidget {
 
 // ── _WoWMetricRow ─────────────────────────────────────────────────────────────
 
-class _WoWMetricRow extends StatelessWidget {
+class _WoWMetricRow extends ConsumerWidget {
   const _WoWMetricRow({required this.metric});
 
   final WoWMetric metric;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final delta = metric.deltaPercent;
+    final unitsSystem = ref.watch(unitsSystemProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -1058,7 +1059,7 @@ class _WoWMetricRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${_formatValue(metric.currentValue)} ${metric.unit}',
+            '${_formatValue(metric.currentValue)} ${displayUnit(metric.unit, unitsSystem)}',
             style: AppTextStyles.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
             ),
