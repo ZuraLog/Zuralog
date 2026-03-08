@@ -349,7 +349,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: (maxY - minY) / 3 + 1,
+          horizontalInterval: ((maxY - minY) / 3).clamp(0.1, 1e9),
           getDrawingHorizontalLine: (value) => FlLine(
             color: (isDark ? AppColors.borderDark : AppColors.borderLight)
                 .withValues(alpha: 0.5),
@@ -389,6 +389,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
           LineChartBarData(
             spots: spots,
             isCurved: true,
+            preventCurveOverShooting: true,
             color: color,
             barWidth: 2,
             dotData: const FlDotData(show: false),

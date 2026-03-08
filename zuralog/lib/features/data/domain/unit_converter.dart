@@ -11,17 +11,16 @@ import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 
 /// Returns the display label for [apiUnit] given the user's [system].
 ///
-/// For [UnitsSystem.metric], the API unit is returned unchanged
-/// (except for system-agnostic normalizations like kJ → kcal).
+/// For [UnitsSystem.metric], the API unit is returned unchanged.
 ///
 /// For [UnitsSystem.imperial], known metric units are mapped to their
 /// imperial equivalents.
 ///
 /// TODO: P2 — add numeric value conversion for imperial display.
 String displayUnit(String apiUnit, UnitsSystem system) {
-  // System-agnostic display normalization: nutrition apps universally display
-  // energy in kcal regardless of unit system preference.
-  if (apiUnit == 'kJ') return 'kcal';
+  // Note: kJ (kilojoules) is returned as-is for both metric and imperial users.
+  // Displaying 'kcal' without numeric conversion would misrepresent the value
+  // (1 kJ ≈ 0.239 kcal). See TODO below for deferred numeric conversion.
 
   if (system == UnitsSystem.metric) return apiUnit;
 

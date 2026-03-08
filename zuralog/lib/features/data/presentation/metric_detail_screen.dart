@@ -775,6 +775,7 @@ class _RawTableToggle extends StatelessWidget {
   }
 
   static String _formatDate(String iso) {
+    if (iso.isEmpty) return 'Unknown date';
     try {
       final dt = DateTime.parse(iso).toLocal();
       final months = [
