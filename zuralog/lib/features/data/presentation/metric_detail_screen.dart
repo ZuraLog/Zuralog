@@ -20,6 +20,8 @@ import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 // ── Source attribution label ──────────────────────────────────────────────────
@@ -43,6 +45,31 @@ String _sourceLabel(String? source) {
       return 'from Google Fit';
     default:
       return 'from ${s[0].toUpperCase()}${s.substring(1)}';
+  }
+}
+
+// ── Unit display helper ───────────────────────────────────────────────────────
+
+/// Maps an API unit string to the correct display label for [system].
+///
+/// For [UnitsSystem.metric] the unit is returned unchanged.
+/// For [UnitsSystem.imperial] known metric labels are mapped to their imperial
+/// equivalents. All other unit strings (steps, bpm, %, hrs, glasses, etc.)
+/// pass through unchanged regardless of system.
+///
+/// NOTE: This function only adjusts the *label* — numeric value conversion
+/// (e.g. kg * 2.205 → lbs) is intentionally out of scope and is a separate
+/// future task (TODO: P2 — add numeric value conversion for imperial display).
+String _displayUnit(String apiUnit, UnitsSystem system) {
+  if (system == UnitsSystem.metric) return apiUnit;
+  switch (apiUnit) {
+    case 'kg':    return 'lbs';
+    case 'km':    return 'mi';
+    case 'cm':    return 'in';
+    case '°C':    return '°F';
+    case 'ml':    return 'fl oz';
+    case 'kJ':    return 'kcal';
+    default:      return apiUnit;
   }
 }
 
@@ -127,7 +154,7 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
 
 // ── _MetricDetailBody ─────────────────────────────────────────────────────────
 
-class _MetricDetailBody extends StatefulWidget {
+class _MetricDetailBody extends ConsumerStatefulWidget {
   const _MetricDetailBody({
     required this.detail,
     required this.selectedRange,
@@ -149,10 +176,10 @@ class _MetricDetailBody extends StatefulWidget {
   final String metricId;
 
   @override
-  State<_MetricDetailBody> createState() => _MetricDetailBodyState();
+  ConsumerState<_MetricDetailBody> createState() => _MetricDetailBodyState();
 }
 
-class _MetricDetailBodyState extends State<_MetricDetailBody>
+class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _chartOpacity;
@@ -195,6 +222,9 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
     final cat = widget.detail.category;
     final color = categoryColor(cat);
 
+    final unitsSystem = ref.watch(unitsSystemProvider);
+    final displayUnit = _displayUnit(series.unit, unitsSystem);
+
     final spots = [
       for (var i = 0; i < series.dataPoints.length; i++)
         FlSpot(i.toDouble(), series.dataPoints[i].value),
@@ -219,7 +249,7 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
         const SizedBox(height: AppDimens.spaceMd),
 
         // ── Stats row ────────────────────────────────────────────────────────
-        _StatsRow(series: series, color: color),
+        _StatsRow(series: series, color: color, displayUnit: displayUnit),
 
         const SizedBox(height: AppDimens.spaceMd),
 
@@ -230,6 +260,7 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
             color: color,
             opacity: _chartOpacity,
             series: series,
+            displayUnit: displayUnit,
           ),
           const SizedBox(height: 6),
           Center(
@@ -283,6 +314,7 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
             isExpanded: widget.showRawTable,
             onToggle: widget.onToggleRawTable,
             series: series,
+            displayUnit: displayUnit,
           ),
           const SizedBox(height: AppDimens.spaceMd),
         ],
@@ -292,7 +324,7 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
           metricName: series.displayName,
           metricId: widget.metricId,
           currentValue: series.currentValue,
-          unit: series.unit,
+          unit: displayUnit,
         ),
       ],
     );
@@ -302,9 +334,14 @@ class _MetricDetailBodyState extends State<_MetricDetailBody>
 // ── _StatsRow ─────────────────────────────────────────────────────────────────
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.series, required this.color});
+  const _StatsRow({
+    required this.series,
+    required this.color,
+    required this.displayUnit,
+  });
   final MetricSeries series;
   final Color color;
+  final String displayUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -323,14 +360,14 @@ class _StatsRow extends StatelessWidget {
           _StatCell(
             label: 'Current',
             value: series.currentValue ?? '—',
-            unit: series.unit,
+            unit: displayUnit.isNotEmpty ? displayUnit : null,
             color: color,
           ),
           const _VerticalDivider(),
           _StatCell(
             label: 'Average',
             value: series.average?.toStringAsFixed(1) ?? '—',
-            unit: series.unit,
+            unit: displayUnit.isNotEmpty ? displayUnit : null,
           ),
           if (series.deltaPercent != null) ...[
             const _VerticalDivider(),
@@ -412,12 +449,14 @@ class _ChartCard extends StatelessWidget {
     required this.color,
     required this.opacity,
     required this.series,
+    required this.displayUnit,
   });
 
   final List<FlSpot> spots;
   final Color color;
   final Animation<double> opacity;
   final MetricSeries series;
+  final String displayUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -491,7 +530,7 @@ class _ChartCard extends StatelessWidget {
                     getTooltipColor: (_) => AppColors.surfaceDark,
                     getTooltipItems: (touchedSpots) => touchedSpots
                         .map((s) => LineTooltipItem(
-                              '${s.y.toStringAsFixed(1)} ${series.unit}',
+                              '${s.y.toStringAsFixed(1)} $displayUnit',
                               AppTextStyles.caption.copyWith(
                                 color: color,
                                 fontWeight: FontWeight.w600,
@@ -630,11 +669,13 @@ class _RawTableToggle extends StatelessWidget {
     required this.isExpanded,
     required this.onToggle,
     required this.series,
+    required this.displayUnit,
   });
 
   final bool isExpanded;
   final VoidCallback onToggle;
   final MetricSeries series;
+  final String displayUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -717,7 +758,7 @@ class _RawTableToggle extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '${dp.value.toStringAsFixed(1)} ${series.unit}',
+                              '${dp.value.toStringAsFixed(1)} $displayUnit',
                               textAlign: TextAlign.right,
                               style: AppTextStyles.caption.copyWith(
                                 color: Theme.of(context)
