@@ -18,6 +18,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── GoalCreateEditSheet ───────────────────────────────────────────────────────
 
@@ -611,7 +613,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   String _defaultUnitFor(GoalType type) {
     switch (type) {
       case GoalType.weightTarget:
-        return 'kg';
+        final system = ref.read(unitsSystemProvider);
+        return system == UnitsSystem.imperial ? 'lbs' : 'kg';
       case GoalType.weeklyRunCount:
         return 'runs';
       case GoalType.dailyCalorieLimit:
