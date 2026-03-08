@@ -610,6 +610,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   /// Returns a sensible default unit string for a given [GoalType].
   ///
   /// Used to pre-fill the unit field when the user changes the goal type.
+  /// For [GoalType.weightTarget], reads [unitsSystemProvider] via [ref] so
+  /// the pre-fill respects the user's metric/imperial preference.
   String _defaultUnitFor(GoalType type) {
     switch (type) {
       case GoalType.weightTarget:
