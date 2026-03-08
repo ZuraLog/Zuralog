@@ -94,16 +94,34 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
   /// Called from [initState] (cannot be async directly). The widget renders
   /// immediately with an empty set; a [setState] call triggers a rebuild once
   /// the saved IDs are available.
+  ///
+  /// Intersects the stored IDs against [widget.data.suggestionCards] so that
+  /// stale IDs (from previous sessions where suggestions have rotated) are
+  /// pruned automatically. This prevents unbounded set growth and ensures a
+  /// reused suggestion ID is always shown fresh.
   Future<void> _loadDismissals() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_kDismissedKey);
       if (raw != null && mounted) {
-        final ids = (jsonDecode(raw) as List<dynamic>)
+        final stored = (jsonDecode(raw) as List<dynamic>)
             .whereType<String>()
             .toSet();
-        if (ids.isNotEmpty) {
-          setState(() => _dismissedSuggestions.addAll(ids));
+        // Only keep IDs that are still present in the current suggestion list.
+        // This prunes stale IDs and prevents ID-reuse from hiding new cards.
+        final currentIds =
+            widget.data.suggestionCards.map((s) => s.id).toSet();
+        final validIds = stored.intersection(currentIds);
+        if (validIds.isNotEmpty) {
+          setState(() => _dismissedSuggestions.addAll(validIds));
+          // Re-persist the pruned set to keep storage clean.
+          await prefs.setString(
+            _kDismissedKey,
+            jsonEncode(validIds.toList()),
+          );
+        } else if (stored.isNotEmpty) {
+          // All stored IDs are stale — clear storage.
+          await prefs.remove(_kDismissedKey);
         }
       }
     } catch (_) {
