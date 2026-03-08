@@ -18,8 +18,10 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 
@@ -472,13 +474,14 @@ class _GoalsRow extends StatelessWidget {
 
 // ── _GoalCard ─────────────────────────────────────────────────────────────────
 
-class _GoalCard extends StatelessWidget {
+class _GoalCard extends ConsumerWidget {
   const _GoalCard({required this.goal});
 
   final Goal goal;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unitsSystem = ref.watch(unitsSystemProvider);
     return Container(
       width: 160,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -527,7 +530,7 @@ class _GoalCard extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             '${_formatValue(goal.currentValue)} / '
-            '${_formatValue(goal.targetValue)} ${goal.unit}',
+            '${_formatValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.textSecondary,
             ),
