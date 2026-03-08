@@ -303,8 +303,11 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
 
                 // ── Dot indicator ─────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppDimens.spaceMd,
+                  padding: EdgeInsets.fromLTRB(
+                    0,
+                    AppDimens.spaceMd,
+                    0,
+                    AppDimens.bottomClearance(context),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

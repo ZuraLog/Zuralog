@@ -85,16 +85,21 @@ class AppShell extends ConsumerWidget {
             ),
 
           // Side panel — slides in from the right.
-          AnimatedPositioned(
-            duration: _kPanelDuration,
-            curve: Curves.easeInOutCubic,
-            top: 0,
-            bottom: 0,
-            right: isPanelOpen ? 0 : -_kPanelWidth,
-            width: _kPanelWidth,
-            child: ProfileSidePanelWidget(
-              onClose: () =>
-                  ref.read(sidePanelOpenProvider.notifier).state = false,
+          // IgnorePointer prevents the off-screen panel from intercepting
+          // taps on the AppBar (bell, avatar, hamburger, bolt) when closed.
+          IgnorePointer(
+            ignoring: !isPanelOpen,
+            child: AnimatedPositioned(
+              duration: _kPanelDuration,
+              curve: Curves.easeInOutCubic,
+              top: 0,
+              bottom: 0,
+              right: isPanelOpen ? 0 : -_kPanelWidth,
+              width: _kPanelWidth,
+              child: ProfileSidePanelWidget(
+                onClose: () =>
+                    ref.read(sidePanelOpenProvider.notifier).state = false,
+              ),
             ),
           ),
         ],

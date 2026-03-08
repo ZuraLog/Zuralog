@@ -126,6 +126,15 @@ class JournalScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.backgroundDark,
         surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimaryDark,
+            size: 20,
+          ),
+          onPressed: () => Navigator.of(context).maybePop(),
+          tooltip: 'Back',
+        ),
         title: Text('Journal', style: AppTextStyles.h2),
         actions: [
           IconButton(
@@ -244,10 +253,10 @@ class JournalScreen extends ConsumerWidget {
             backgroundColor: AppColors.cardBackgroundDark,
             onRefresh: () => _refresh(ref),
             child: ListView.builder(
-              padding: const EdgeInsets.only(
+              padding: EdgeInsets.only(
                 left: AppDimens.spaceMd,
                 right: AppDimens.spaceMd,
-                bottom: AppDimens.spaceXxl,
+                bottom: AppDimens.bottomClearance(context),
               ),
               itemCount: _sectionItemCount(sections),
               itemBuilder: (context, index) {

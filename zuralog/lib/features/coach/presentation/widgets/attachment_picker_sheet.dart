@@ -40,12 +40,13 @@ class AttachmentPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surfaceDark,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

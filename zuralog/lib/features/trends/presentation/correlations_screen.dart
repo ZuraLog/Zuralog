@@ -99,7 +99,12 @@ class _CorrelationsBodyState extends ConsumerState<_CorrelationsBody> {
         key != null ? ref.watch(correlationAnalysisProvider(key)) : null;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      padding: EdgeInsets.fromLTRB(
+        AppDimens.spaceMd,
+        AppDimens.spaceMd,
+        AppDimens.spaceMd,
+        AppDimens.bottomClearance(context),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -137,8 +142,6 @@ class _CorrelationsBodyState extends ConsumerState<_CorrelationsBody> {
                 onChartTabChanged: (tab) => setState(() => _chartTab = tab),
               ),
             ),
-
-          const SizedBox(height: AppDimens.spaceXxl),
         ],
       ),
     );

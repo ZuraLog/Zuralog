@@ -629,7 +629,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
               AppDimens.spaceMd,
-              AppDimens.spaceMd + MediaQuery.of(context).padding.bottom,
+              AppDimens.bottomClearance(context),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -650,6 +650,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       context: context,
                       backgroundColor: Colors.transparent,
                       isScrollControlled: true,
+                      useSafeArea: true,
                       builder: (_) => AttachmentPickerSheet(
                         onAttachment: (attachment) {
                           setState(() => _attachments.add(attachment));
@@ -712,7 +713,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                           : Icons.mic_none_rounded,
                       filled: false,
                       activeColor: isListening ? AppColors.statusError : null,
-                      onTap: () {
+                      onTap: () async {
                         if (isListening) {
                           ref
                               .read(speechNotifierProvider.notifier)
@@ -720,9 +721,18 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                           ref.read(hapticServiceProvider).light();
                         } else {
                           ref.read(hapticServiceProvider).medium();
-                          ref
-                              .read(speechNotifierProvider.notifier)
-                              .startListening();
+                          // Initialize the speech engine on first use (requests
+                          // microphone permission and sets up the recognizer).
+                          final notifier =
+                              ref.read(speechNotifierProvider.notifier);
+                          final currentStatus = ref
+                              .read(speechNotifierProvider)
+                              .status;
+                          if (currentStatus == SpeechStatus.uninitialized) {
+                            final available = await notifier.initialize();
+                            if (!available) return;
+                          }
+                          notifier.startListening();
                         }
                       },
                       tooltip: isListening ? 'Stop listening' : 'Voice input',

@@ -77,7 +77,12 @@ class _ReportsList extends ConsumerWidget {
       },
       color: AppColors.primary,
       child: ListView.separated(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        padding: EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          AppDimens.spaceMd,
+          AppDimens.spaceMd,
+          AppDimens.bottomClearance(context),
+        ),
         itemCount: reports.length,
         separatorBuilder: (_, _) =>
             const SizedBox(height: AppDimens.spaceSm),
