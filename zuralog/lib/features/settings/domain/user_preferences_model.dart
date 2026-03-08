@@ -420,6 +420,7 @@ class UserPreferencesModel {
         'theme': appTheme.value,
         'haptic_enabled': hapticEnabled,
         'tooltips_enabled': tooltipsEnabled,
+        'onboarding_complete': onboardingComplete,
         'morning_briefing_enabled': morningBriefingEnabled,
         'morning_briefing_time': _timeToString(morningBriefingTime),
         'checkin_reminder_enabled': checkinReminderEnabled,

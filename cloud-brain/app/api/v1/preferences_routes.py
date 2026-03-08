@@ -37,6 +37,7 @@ router = APIRouter(prefix="/preferences", tags=["preferences"])
 
 _VALID_PERSONAS: frozenset[str] = frozenset({"tough_love", "balanced", "gentle"})
 _VALID_PROACTIVITY: frozenset[str] = frozenset({"low", "medium", "high"})
+_VALID_RESPONSE_LENGTHS: frozenset[str] = frozenset({"concise", "detailed"})
 _VALID_THEMES: frozenset[str] = frozenset({"dark", "light", "system"})
 _VALID_FITNESS_LEVELS: frozenset[str] = frozenset({"beginner", "active", "athletic"})
 
@@ -54,6 +55,9 @@ class PreferencesResponse(BaseModel):
     user_id: str
     coach_persona: str
     proactivity_level: str
+    response_length: str = "concise"
+    suggested_prompts_enabled: bool = True
+    voice_input_enabled: bool = True
     dashboard_layout: dict | None = None
     notification_settings: dict | None = None
     theme: str
@@ -70,6 +74,9 @@ class PreferencesResponse(BaseModel):
     goals: list | None = None
     units_system: str = "metric"
     fitness_level: str | None = None
+    wellness_checkin_card_visible: bool = True
+    data_maturity_banner_dismissed: bool = False
+    analytics_opt_out: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -94,6 +101,9 @@ class PreferencesUpdate(BaseModel):
 
     coach_persona: str | None = Field(None, description="tough_love | balanced | gentle")
     proactivity_level: str | None = Field(None, description="low | medium | high")
+    response_length: str | None = Field(None, description="concise | detailed")
+    suggested_prompts_enabled: bool | None = None
+    voice_input_enabled: bool | None = None
     dashboard_layout: dict | None = None
     notification_settings: dict | None = None
     theme: str | None = Field(None, description="dark | light | system")
@@ -110,6 +120,9 @@ class PreferencesUpdate(BaseModel):
     goals: list | None = None
     units_system: str | None = Field(None, description="metric | imperial")
     fitness_level: str | None = Field(None, description="beginner | active | athletic")
+    wellness_checkin_card_visible: bool | None = None
+    data_maturity_banner_dismissed: bool | None = None
+    analytics_opt_out: bool | None = None
 
 
 class PreferencesCreate(BaseModel):
@@ -117,6 +130,9 @@ class PreferencesCreate(BaseModel):
 
     coach_persona: str | None = Field(None, description="tough_love | balanced | gentle")
     proactivity_level: str | None = Field(None, description="low | medium | high")
+    response_length: str | None = Field(None, description="concise | detailed")
+    suggested_prompts_enabled: bool | None = None
+    voice_input_enabled: bool | None = None
     dashboard_layout: dict | None = None
     notification_settings: dict | None = None
     theme: str | None = Field(None, description="dark | light | system")
@@ -133,6 +149,9 @@ class PreferencesCreate(BaseModel):
     goals: list | None = None
     units_system: str | None = Field(None, description="metric | imperial")
     fitness_level: str | None = Field(None, description="beginner | active | athletic")
+    wellness_checkin_card_visible: bool | None = None
+    data_maturity_banner_dismissed: bool | None = None
+    analytics_opt_out: bool | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +216,11 @@ def _validate_enums(data: dict[str, Any]) -> None:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"fitness_level must be one of: {sorted(_VALID_FITNESS_LEVELS)}",
             )
+    if "response_length" in data and data["response_length"] not in _VALID_RESPONSE_LENGTHS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"response_length must be one of: {sorted(_VALID_RESPONSE_LENGTHS)}",
+        )
 
 
 # ---------------------------------------------------------------------------

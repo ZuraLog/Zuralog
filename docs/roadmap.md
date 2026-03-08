@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-08 (Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation)
+**Last Updated:** 2026-03-08 (Coach tab settings wiring: suggestedPromptsEnabled, voiceInputEnabled, sendMessage contract, backend user_preferences columns, chat message timestamps; Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -196,7 +196,7 @@
 | P1 | Settings — Account | ✅ Complete | Phase 8 |
 | P1 | Settings — Notifications | ✅ Complete | Phase 8; re-wired to API + SharedPrefs persistence in feat/settings-providers |
 | P1 | Settings — Appearance | ✅ Complete | Phase 8; fixed tooltips/haptics/theme wiring in feat/settings-providers |
-| P1 | Settings — Coach Settings | ✅ Complete | feat/coach-tab-gaps + feat/settings-providers — private StateProviders replaced with global UserPreferencesNotifier |
+| P1 | Settings — Coach Settings | ✅ Complete | feat/coach-tab-gaps + feat/settings-providers + feat/coach-settings-wiring — private StateProviders replaced with global UserPreferencesNotifier; all 5 coach preferences wired to chat screens |
 | P1 | Settings — Integrations | ✅ Complete | Phase 8 |
 | P1 | Settings — Privacy & Data | ✅ Complete | Phase 8; re-wired to global providers in feat/settings-providers |
 | P1 | Settings — Units (metric/imperial) | ✅ Complete | feat/settings-providers — segmented toggle in Account screen, persisted via UserPreferencesNotifier |

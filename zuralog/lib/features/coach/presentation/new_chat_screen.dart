@@ -29,6 +29,7 @@ import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
@@ -94,6 +95,12 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
+
+    // Read current coach preferences to include in message payload.
+    final persona = ref.read(coachPersonaProvider).value;
+    final proactivity = ref.read(proactivityLevelProvider).value;
+    final responseLength = ref.read(responseLengthProvider).value;
+
     ref
         .read(analyticsServiceProvider)
         .capture(
@@ -101,11 +108,29 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           properties: {'source': 'new_chat', 'char_count': text.length},
         );
     _inputCtrl.clear();
+
+    // Capture a single ID so the sendMessage call and the navigation route
+    // reference the same conversation. Using two separate DateTime.now() calls
+    // would produce different IDs across the ~1ms gap.
+    final newConversationId = 'new_${DateTime.now().millisecondsSinceEpoch}';
+
+    // Send message with coach preferences to backend.
+    // TODO(phase9): await response and handle streaming once real API is wired.
+    // Errors are intentionally ignored here — when the real API is wired, replace
+    // this with an awaited call inside a try/catch that shows a SnackBar on failure.
+    ref.read(coachRepositoryProvider).sendMessage(
+      conversationId: newConversationId,
+      text: text,
+      persona: persona,
+      proactivity: proactivity,
+      responseLength: responseLength,
+    ).ignore();
+
     // In production: create a new conversation via the repository, then push
     // to the thread screen. For Phase 10 we just navigate to a stub thread.
     context.pushNamed(
       RouteNames.coachThread,
-      pathParameters: {'id': 'new_${DateTime.now().millisecondsSinceEpoch}'},
+      pathParameters: {'id': newConversationId},
     );
   }
 
@@ -149,6 +174,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     }
 
     final suggestionsAsync = ref.watch(coachPromptSuggestionsProvider);
+    final suggestedPromptsEnabled = ref.watch(suggestedPromptsEnabledProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -182,10 +208,12 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
               error: (e, _) => _CoachEmptyState(
                 onSuggestionTap: _onSuggestionTap,
                 suggestions: const [],
+                suggestedPromptsEnabled: suggestedPromptsEnabled,
               ),
               data: (suggestions) => _CoachEmptyState(
                 onSuggestionTap: _onSuggestionTap,
                 suggestions: suggestions,
+                suggestedPromptsEnabled: suggestedPromptsEnabled,
               ),
             ),
           ),
@@ -208,10 +236,12 @@ class _CoachEmptyState extends StatelessWidget {
   const _CoachEmptyState({
     required this.suggestions,
     required this.onSuggestionTap,
+    required this.suggestedPromptsEnabled,
   });
 
   final List<PromptSuggestion> suggestions;
   final ValueChanged<String> onSuggestionTap;
+  final bool suggestedPromptsEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -259,7 +289,7 @@ class _CoachEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: AppDimens.spaceXl),
           // ── Suggestion chips ───────────────────────────────────────────────
-          if (suggestions.isNotEmpty) ...[
+          if (suggestedPromptsEnabled && suggestions.isNotEmpty) ...[
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -464,6 +494,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   Widget build(BuildContext context) {
     final speechState = ref.watch(speechNotifierProvider);
     final isListening = speechState.status == SpeechStatus.listening;
+    final voiceInputEnabled = ref.watch(voiceInputEnabledProvider);
 
     // Sync recognized text to input field.
     ref.listen<SpeechState>(speechNotifierProvider, (prev, next) {
@@ -591,6 +622,9 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                         onTap: _handleSend,
                         tooltip: 'Send',
                       );
+                    }
+                    if (!voiceInputEnabled) {
+                      return const SizedBox.shrink();
                     }
                     return _InputIconButton(
                       icon: isListening
