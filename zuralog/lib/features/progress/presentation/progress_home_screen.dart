@@ -22,8 +22,7 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
-import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── ProgressHomeScreen ────────────────────────────────────────────────────────
 
@@ -61,22 +60,14 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        surfaceTintColor: Colors.transparent,
-        title: OnboardingTooltip(
+      appBar: ZuralogAppBar(
+        title: 'Progress',
+        tooltipConfig: const ZuralogAppBarTooltipConfig(
           screenKey: 'progress_home',
           tooltipKey: 'welcome',
           message: 'Set goals and I\'ll track your streaks automatically. '
               'Consistency is what matters most.',
-          child: Text('Progress', style: AppTextStyles.h2),
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: AppDimens.spaceMd),
-            child: ProfileAvatarButton(),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         color: AppColors.primary,
