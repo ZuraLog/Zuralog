@@ -11,9 +11,12 @@
 ///   - Quick-nav row → Correlations, Reports, Data Sources
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
@@ -76,7 +79,52 @@ class _TrendsHomeBody extends ConsumerStatefulWidget {
 }
 
 class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
+  static const _kDismissedKey = 'dismissed_correlation_suggestions';
+
   final Set<String> _dismissedSuggestions = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDismissals();
+  }
+
+  /// Loads persisted dismissed suggestion IDs from SharedPreferences.
+  ///
+  /// Called from [initState] (cannot be async directly). The widget renders
+  /// immediately with an empty set; a [setState] call triggers a rebuild once
+  /// the saved IDs are available.
+  Future<void> _loadDismissals() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kDismissedKey);
+      if (raw != null && mounted) {
+        final ids = (jsonDecode(raw) as List<dynamic>)
+            .whereType<String>()
+            .toSet();
+        if (ids.isNotEmpty) {
+          setState(() => _dismissedSuggestions.addAll(ids));
+        }
+      }
+    } catch (_) {
+      // Corrupt or missing data — start with empty set.
+    }
+  }
+
+  /// Persists the current [_dismissedSuggestions] set to SharedPreferences.
+  ///
+  /// Fire-and-forget: called without `await` so [setState] is not blocked.
+  Future<void> _persistDismissals() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _kDismissedKey,
+        jsonEncode(_dismissedSuggestions.toList()),
+      );
+    } catch (_) {
+      // Write failures are non-fatal — the in-memory set remains correct.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,8 +197,10 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
                     ),
                     child: _CorrelationSuggestionCard(
                       suggestion: s,
-                      onDismiss: () =>
-                          setState(() => _dismissedSuggestions.add(s.id)),
+                      onDismiss: () {
+                        setState(() => _dismissedSuggestions.add(s.id));
+                        _persistDismissals(); // fire-and-forget
+                      },
                       onCtaTap: () {
                         ref.read(hapticServiceProvider).light();
                         ref.read(analyticsServiceProvider).capture(
