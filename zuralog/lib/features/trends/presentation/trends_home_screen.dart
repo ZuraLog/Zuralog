@@ -27,8 +27,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
-import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── TrendsHomeScreen ──────────────────────────────────────────────────────────
 
@@ -42,20 +41,14 @@ class TrendsHomeScreen extends ConsumerWidget {
     final trendsAsync = ref.watch(trendsHomeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: OnboardingTooltip(
+      appBar: ZuralogAppBar(
+        title: 'Trends',
+        tooltipConfig: const ZuralogAppBarTooltipConfig(
           screenKey: 'trends_home',
           tooltipKey: 'welcome',
           message: 'This is where patterns hide. '
-              'I\'ll surface correlations you\'d never find on your own.',
-          child: const Text('Trends'),
+              "I'll surface correlations you'd never find on your own.",
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppDimens.spaceMd),
-            child: const ProfileAvatarButton(),
-          ),
-        ],
       ),
       body: trendsAsync.when(
         loading: () => const _TrendsLoadingSkeleton(),
