@@ -13,9 +13,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── GoalDetailScreen ──────────────────────────────────────────────────────────
 
@@ -127,6 +130,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
   @override
   Widget build(BuildContext context) {
     final goalsAsync = ref.watch(goalsProvider);
+    final unitsSystem = ref.watch(unitsSystemProvider);
 
     return goalsAsync.when(
       loading: () => Scaffold(
@@ -204,6 +208,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
         return _GoalDetailView(
           goal: goal,
           ringAnimation: _ringAnimation,
+          unitsSystem: unitsSystem,
           onEdit: () => _openEdit(context, goal!),
           onDelete: () => _confirmDelete(context, goal!),
         );
@@ -218,12 +223,14 @@ class _GoalDetailView extends StatelessWidget {
   const _GoalDetailView({
     required this.goal,
     required this.ringAnimation,
+    required this.unitsSystem,
     required this.onEdit,
     required this.onDelete,
   });
 
   final Goal goal;
   final Animation<double> ringAnimation;
+  final UnitsSystem unitsSystem;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -375,7 +382,7 @@ class _GoalDetailView extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceXs),
           // Target unit subtitle
           Text(
-            '/ ${_fmtValue(goal.targetValue)} ${goal.unit}',
+            '/ ${_fmtValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
             style: AppTextStyles.body.copyWith(
               color: AppColors.textSecondary,
             ),

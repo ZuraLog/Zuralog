@@ -16,8 +16,10 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── GoalsScreen ───────────────────────────────────────────────────────────────
 
@@ -373,7 +375,7 @@ class _DismissBackground extends StatelessWidget {
 
 // ── _GoalCard ─────────────────────────────────────────────────────────────────
 
-class _GoalCard extends StatelessWidget {
+class _GoalCard extends ConsumerWidget {
   const _GoalCard({
     required this.goal,
     required this.onTap,
@@ -385,7 +387,8 @@ class _GoalCard extends StatelessWidget {
   final VoidCallback onLongPress;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unitsSystem = ref.watch(unitsSystemProvider);
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -434,7 +437,7 @@ class _GoalCard extends StatelessWidget {
                   // Current / target
                   Text(
                     '${_fmtValue(goal.currentValue)} / '
-                    '${_fmtValue(goal.targetValue)} ${goal.unit}',
+                    '${_fmtValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.textPrimaryDark,
                       fontWeight: FontWeight.w600,
