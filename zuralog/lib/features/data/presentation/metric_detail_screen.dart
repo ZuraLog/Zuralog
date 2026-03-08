@@ -24,6 +24,14 @@ import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
+// ── Private constants ─────────────────────────────────────────────────────────
+
+/// Maximum number of rows shown in the raw data table.
+const int _kRawTableMaxRows = 30;
+
+/// Maximum character length for the coach prefill string.
+const int _kCoachPrefillMaxLength = 500;
+
 // ── Source attribution label ──────────────────────────────────────────────────
 
 String _sourceLabel(String? source) {
@@ -61,16 +69,26 @@ String _sourceLabel(String? source) {
 /// (e.g. kg * 2.205 → lbs) is intentionally out of scope and is a separate
 /// future task (TODO: P2 — add numeric value conversion for imperial display).
 String _displayUnit(String apiUnit, UnitsSystem system) {
+  // System-agnostic display normalizations (not tied to imperial/metric).
+  // kJ is the SI energy unit but nutrition display convention uses kcal universally.
+  // TODO: P2 — add numeric value conversion for imperial display
+  if (apiUnit == 'kJ') return 'kcal';
+
   if (system == UnitsSystem.metric) return apiUnit;
-  switch (apiUnit) {
-    case 'kg':    return 'lbs';
-    case 'km':    return 'mi';
-    case 'cm':    return 'in';
-    case '°C':    return '°F';
-    case 'ml':    return 'fl oz';
-    case 'kJ':    return 'kcal';
-    default:      return apiUnit;
-  }
+  // Imperial label mappings
+  return switch (apiUnit) {
+    'kg'   => 'lbs',
+    'km'   => 'mi',
+    'cm'   => 'in',
+    '°C'   => '°F',
+    'ml'   => 'fl oz',
+    'L'    => 'fl oz',
+    'g'    => 'oz',
+    'm'    => 'ft',
+    'm/s'  => 'mph',
+    'km/h' => 'mph',
+    _      => apiUnit,
+  };
 }
 
 // ── MetricDetailScreen ────────────────────────────────────────────────────────
@@ -154,6 +172,13 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
 
 // ── _MetricDetailBody ─────────────────────────────────────────────────────────
 
+/// Body widget for the metric detail screen.
+///
+/// Must be a [ConsumerStatefulWidget] for two reasons:
+/// 1. It owns an [AnimationController] via [SingleTickerProviderStateMixin] —
+///    cannot be stateless.
+/// 2. It reads [unitsSystemProvider] via `ref.watch` — requires a Riverpod
+///    Consumer.
 class _MetricDetailBody extends ConsumerStatefulWidget {
   const _MetricDetailBody({
     required this.detail,
@@ -404,7 +429,6 @@ class _StatCell extends StatelessWidget {
         color ?? Theme.of(context).colorScheme.onSurface;
     return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
@@ -737,9 +761,9 @@ class _RawTableToggle extends StatelessWidget {
                 ],
               ),
               const Divider(height: 16),
-              // Table rows (latest first, max 30)
+              // Table rows (latest first, max _kRawTableMaxRows)
               ...series.dataPoints.reversed
-                  .take(30)
+                  .take(_kRawTableMaxRows)
                   .map(
                     (dp) => Padding(
                       padding:
@@ -779,7 +803,7 @@ class _RawTableToggle extends StatelessWidget {
     );
   }
 
-  String _formatDate(String iso) {
+  static String _formatDate(String iso) {
     try {
       final dt = DateTime.parse(iso).toLocal();
       final months = [
@@ -824,7 +848,7 @@ class _AskCoachButton extends ConsumerWidget {
         var prefill = 'Tell me about my $metricName'
             '${currentVal.isNotEmpty ? ': $currentVal${unit.isNotEmpty ? ' $unit' : ''}' : ''}';
         // HIGH-05: prevent abnormally large strings from reaching the coach input
-        if (prefill.length > 500) prefill = prefill.substring(0, 500);
+        if (prefill.length > _kCoachPrefillMaxLength) prefill = prefill.substring(0, _kCoachPrefillMaxLength);
         ref.read(coachPrefillProvider.notifier).state = prefill;
         context.go(RouteNames.coachPath);
       },
