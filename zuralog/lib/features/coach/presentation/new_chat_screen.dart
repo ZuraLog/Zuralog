@@ -31,8 +31,8 @@ import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_b
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── NewChatScreen ─────────────────────────────────────────────────────────────
 
@@ -178,10 +178,8 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        surfaceTintColor: Colors.transparent,
-        title: Text('Coach', style: AppTextStyles.h2),
+      appBar: ZuralogAppBar(
+        title: 'Coach',
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded),
           onPressed: () => _openDrawer(context),
@@ -192,10 +190,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             icon: const Icon(Icons.bolt_rounded),
             onPressed: () => _openQuickActions(context),
             tooltip: 'Quick Actions',
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: AppDimens.spaceMd),
-            child: ProfileAvatarButton(),
           ),
         ],
       ),
