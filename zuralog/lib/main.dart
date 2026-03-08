@@ -106,9 +106,9 @@ void main() async {
         defaultValue: 'development',
       );
       options.tracesSampleRate = 1.0;
-      options.profilesSampleRate = 0.25;
+      options.profilesSampleRate = 0.25; // ignore: experimental_member_use
       options.attachScreenshot = true;
-      options.attachViewHierarchy = true;
+      options.attachViewHierarchy = true; // ignore: experimental_member_use
       options.sendDefaultPii = false;
       options.enableAutoNativeBreadcrumbs = true;
       options.enableAutoPerformanceTracing = true;

@@ -176,7 +176,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
         'title': title,
         'target_value': targetValue,
         'unit': unit,
-        if (deadline != null) 'deadline': deadline,
+        'deadline': ?deadline,
       },
     );
     _goalsCache = null;
@@ -196,10 +196,10 @@ class ProgressRepository implements ProgressRepositoryInterface {
     final response = await _api.patch(
       '/api/v1/goals/$goalId',
       body: {
-        if (title != null) 'title': title,
-        if (targetValue != null) 'target_value': targetValue,
-        if (unit != null) 'unit': unit,
-        if (deadline != null) 'deadline': deadline,
+        'title': ?title,
+        'target_value': ?targetValue,
+        'unit': ?unit,
+        'deadline': ?deadline,
       },
     );
     _goalsCache = null;
@@ -297,7 +297,7 @@ class ProgressRepository implements ProgressRepositoryInterface {
         'mood': mood,
         'energy': energy,
         'stress': stress,
-        if (sleepQuality != null) 'sleep_quality': sleepQuality,
+        'sleep_quality': ?sleepQuality,
         'notes': notes,
         'tags': tags,
       },
@@ -320,12 +320,12 @@ class ProgressRepository implements ProgressRepositoryInterface {
     final response = await _api.patch(
       '/api/v1/journal/$entryId',
       body: {
-        if (mood != null) 'mood': mood,
-        if (energy != null) 'energy': energy,
-        if (stress != null) 'stress': stress,
-        if (sleepQuality != null) 'sleep_quality': sleepQuality,
-        if (notes != null) 'notes': notes,
-        if (tags != null) 'tags': tags,
+        'mood': ?mood,
+        'energy': ?energy,
+        'stress': ?stress,
+        'sleep_quality': ?sleepQuality,
+        'notes': ?notes,
+        'tags': ?tags,
       },
     );
     _journalCache = null;

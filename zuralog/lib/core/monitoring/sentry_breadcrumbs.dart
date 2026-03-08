@@ -82,8 +82,8 @@ abstract final class SentryBreadcrumbs {
         data: {
           'method': method,
           'url': path,
-          if (statusCode != null) 'status_code': statusCode,
-          if (durationMs != null) 'duration_ms': durationMs,
+          'status_code': ?statusCode,
+          'duration_ms': ?durationMs,
         },
       ),
     );
@@ -148,7 +148,7 @@ abstract final class SentryBreadcrumbs {
         data: {
           'platform': platform,
           'status': status,
-          if (recordCount != null) 'record_count': recordCount,
+          'record_count': ?recordCount,
         },
       ),
     );
@@ -169,7 +169,7 @@ abstract final class SentryBreadcrumbs {
         level: SentryLevel.info,
         data: {
           'event': event,
-          if (method != null) 'method': method,
+          'method': ?method,
         },
       ),
     );

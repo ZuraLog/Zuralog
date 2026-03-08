@@ -6,6 +6,7 @@
 ///
 /// All PostHog calls are fire-and-forget — errors are caught and logged.
 /// Analytics must never break app functionality.
+library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -146,7 +147,7 @@ class AnalyticsService {
     if (!enabled) return defaultValue;
     try {
       final result = await _posthog.isFeatureEnabled(flagKey);
-      return result ?? defaultValue;
+      return result;
     } catch (e) {
       debugPrint('PostHog feature flag failed: $flagKey — $e');
       return defaultValue;

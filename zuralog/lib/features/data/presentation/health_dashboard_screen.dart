@@ -496,7 +496,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
 
 class _EditableList extends StatelessWidget {
   const _EditableList({
-    super.key,
     required this.items,
     required this.layout,
     required this.onReorder,

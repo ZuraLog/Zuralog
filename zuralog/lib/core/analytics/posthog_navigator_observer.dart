@@ -7,6 +7,7 @@
 ///   GoRouter(
 ///     observers: [PostHogNavigatorObserver(analyticsService)],
 ///   )
+library;
 
 import 'package:flutter/material.dart';
 import 'analytics_service.dart';

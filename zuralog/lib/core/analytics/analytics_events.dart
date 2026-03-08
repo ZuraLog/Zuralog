@@ -35,7 +35,7 @@ abstract final class AnalyticsEvents {
   static const String onboardingStepCompleted = 'onboarding_step_completed';
   /// Emitted when user goes back. Include `from_step` (int).
   static const String onboardingStepBack = 'onboarding_step_back';
-  /// Include `goals` (List<String> — goal keys, no PII).
+  /// Include `goals` (`List<String>` — goal keys, no PII).
   static const String onboardingGoalsSelected = 'onboarding_goals_selected';
   /// Include `persona` ('tough_love' | 'balanced' | 'gentle').
   static const String onboardingPersonaSelected = 'onboarding_persona_selected';
