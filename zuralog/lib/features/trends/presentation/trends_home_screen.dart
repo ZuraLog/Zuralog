@@ -41,6 +41,7 @@ class TrendsHomeScreen extends ConsumerWidget {
     final trendsAsync = ref.watch(trendsHomeProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
       appBar: ZuralogAppBar(
         title: 'Trends',
         tooltipConfig: const ZuralogAppBarTooltipConfig(

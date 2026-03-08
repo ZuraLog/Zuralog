@@ -30,8 +30,8 @@ import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 import 'package:zuralog/shared/widgets/streak_badge.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── TodayFeedScreen ───────────────────────────────────────────────────────────
 

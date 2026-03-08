@@ -151,6 +151,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final showDataBanner = dataDays < 7 && !layout.bannerDismissed;
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
       appBar: ZuralogAppBar(
         title: 'Data',
         tooltipConfig: const ZuralogAppBarTooltipConfig(
