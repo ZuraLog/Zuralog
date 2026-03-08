@@ -4,7 +4,7 @@
 /// that lets the user swipe through week-by-week historical summaries.
 ///
 /// Layout:
-///   - AppBar: ZuralogAppBar — "Trends" title + onboarding tooltip + ProfileAvatarButton
+///   - AppBar: ZuralogAppBar — "Trends" title + onboarding tooltip (avatar auto-appended)
 ///   - Time-machine horizontal scroll strip (periods, newest first)
 ///   - Section: "Patterns We Found" — correlation cards
 ///   - Onboarding empty state when [hasEnoughData] is false
