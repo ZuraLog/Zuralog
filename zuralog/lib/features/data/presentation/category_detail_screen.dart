@@ -46,9 +46,13 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final cat = _category;
-    final layout = ref.watch(dashboardLayoutProvider);
-    final overrideInt = layout.categoryColorOverrides[cat.name];
-    final color = overrideInt != null ? Color(overrideInt) : categoryColor(cat);
+    final overrideInt = ref.watch(
+      dashboardLayoutProvider
+          .select((l) => l.categoryColorOverrides[cat.name]),
+    );
+    final color = (overrideInt != null && overrideInt != 0)
+        ? Color(overrideInt)
+        : categoryColor(cat);
     // When custom is selected with a picked range, encode dates into the
     // time range key so the cache treats it as a distinct entry.
     final timeRangeKey = _selectedRange == TimeRange.custom && _customRange != null
