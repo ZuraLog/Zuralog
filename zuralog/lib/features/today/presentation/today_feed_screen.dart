@@ -29,8 +29,8 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/profile_avatar_button.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 import 'package:zuralog/shared/widgets/streak_badge.dart';
 
 // ── TodayFeedScreen ───────────────────────────────────────────────────────────
@@ -73,7 +73,22 @@ class TodayFeedScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      appBar: _TodayAppBar(feedAsync: feedAsync),
+      appBar: ZuralogAppBar(
+        title: 'Today',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              ref.read(hapticServiceProvider).light();
+              ref.read(analyticsServiceProvider).capture(
+                event: AnalyticsEvents.notificationHistoryViewed,
+              );
+              context.pushNamed(RouteNames.notificationHistory);
+            },
+            tooltip: 'Notifications',
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         color: AppColors.primary,
         backgroundColor: AppColors.cardBackgroundDark,
@@ -349,50 +364,6 @@ class TodayFeedScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: _QuickLogFAB(),
-    );
-  }
-}
-
-// ── _TodayAppBar ──────────────────────────────────────────────────────────────
-
-class _TodayAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const _TodayAppBar({required this.feedAsync});
-
-  final AsyncValue<TodayFeedData> feedAsync;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AppBar(
-      backgroundColor: AppColors.backgroundDark,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      title: Text(
-        _formattedDate(),
-        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(
-            Icons.notifications_outlined,
-            color: AppColors.textSecondary,
-          ),
-          onPressed: () {
-            ref.read(hapticServiceProvider).light();
-            ref.read(analyticsServiceProvider).capture(
-              event: AnalyticsEvents.notificationHistoryViewed,
-            );
-            context.pushNamed(RouteNames.notificationHistory);
-          },
-          tooltip: 'Notifications',
-        ),
-        const Padding(
-          padding: EdgeInsets.only(right: AppDimens.spaceMd),
-          child: ProfileAvatarButton(),
-        ),
-      ],
     );
   }
 }
@@ -1418,27 +1389,6 @@ String _timeOfDayGreeting([String? name]) {
   }
   if (name != null && name.isNotEmpty) return '$base, $name';
   return base;
-}
-
-/// Returns a formatted date string for the app bar (e.g. "Wednesday, Mar 4").
-String _formattedDate() {
-  final now = DateTime.now();
-  const weekdays = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
-  final weekday = weekdays[now.weekday - 1];
-  final month = months[now.month - 1];
-  return '$weekday, $month ${now.day}';
 }
 
 /// Returns a human-readable relative time string (e.g. "2h ago").
