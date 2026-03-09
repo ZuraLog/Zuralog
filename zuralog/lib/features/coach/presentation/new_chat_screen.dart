@@ -191,7 +191,12 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           // ── Empty State Body ───────────────────────────────────────────────
           Expanded(
             child: suggestionsAsync.when(
-              loading: () => const _CoachLoadingSkeleton(),
+              loading: () => _CoachEmptyState(
+                onSuggestionTap: _onSuggestionTap,
+                suggestions: const [],
+                suggestedPromptsEnabled: suggestedPromptsEnabled,
+                isLoading: true,
+              ),
               error: (e, _) => _CoachEmptyState(
                 onSuggestionTap: _onSuggestionTap,
                 suggestions: const [],
@@ -220,125 +225,351 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
 // ── _CoachEmptyState ──────────────────────────────────────────────────────────
 
-class _CoachEmptyState extends StatelessWidget {
+class _CoachEmptyState extends StatefulWidget {
   const _CoachEmptyState({
     required this.suggestions,
     required this.onSuggestionTap,
     required this.suggestedPromptsEnabled,
+    this.isLoading = false,
   });
 
   final List<PromptSuggestion> suggestions;
   final ValueChanged<String> onSuggestionTap;
   final bool suggestedPromptsEnabled;
 
+  /// When true, shows the pulsing logo instead of the static logo.
+  final bool isLoading;
+
+  @override
+  State<_CoachEmptyState> createState() => _CoachEmptyStateState();
+}
+
+class _CoachEmptyStateState extends State<_CoachEmptyState>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fadeCtrl;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Groups suggestions by their [PromptSuggestion.category] field.
+  ///
+  /// Suggestions with a null, empty, or blank category are placed under
+  /// the `'other'` key to prevent downstream `RangeError` on empty strings.
+  Map<String, List<PromptSuggestion>> _groupByCategory(
+    List<PromptSuggestion> suggestions,
+  ) {
+    final groups = <String, List<PromptSuggestion>>{};
+    for (final s in suggestions) {
+      final key = (s.category?.trim().isNotEmpty == true)
+          ? s.category!.toLowerCase().trim()
+          : 'other';
+      groups.putIfAbsent(key, () => []).add(s);
+    }
+    return groups;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Column(
-        children: [
-          const SizedBox(height: AppDimens.spaceXxl),
-          // ── Brand icon ─────────────────────────────────────────────────────
-          OnboardingTooltip(
-            screenKey: 'coach_new_chat',
-            tooltipKey: 'welcome',
-            message:
-                'Ask me anything about your health. I can see data from all your connected apps and remember our past conversations.',
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: SvgPicture.asset(
-                  AppAssets.logoSvg,
-                  colorFilter: const ColorFilter.mode(
-                    AppColors.primary,
-                    BlendMode.srcIn,
-                  ),
-                ),
+    final grouped = _groupByCategory(widget.suggestions);
+
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppDimens.spaceXxl),
+            // ── Brand icon / pulsing logo ──────────────────────────────────
+            Center(
+              child: OnboardingTooltip(
+                screenKey: 'coach_new_chat',
+                tooltipKey: 'welcome',
+                message:
+                    'Ask me anything about your health. I can see data from all your connected apps and remember our past conversations.',
+                child: widget.isLoading
+                    ? const _PulsingLogo()
+                    : _StaticLogo(),
               ),
             ),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            'Your health coach',
-            style: AppTextStyles.h2,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            'Ask me anything. I have full context from\nyour connected apps and health history.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppDimens.spaceXl),
-          // ── Suggestion chips ───────────────────────────────────────────────
-          if (suggestedPromptsEnabled && suggestions.isNotEmpty) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Try asking',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textTertiary,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                ),
-              ),
+            const SizedBox(height: AppDimens.spaceMd),
+            Text(
+              'Your health coach',
+              style: AppTextStyles.h2,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceSm),
-            Wrap(
-              spacing: AppDimens.spaceSm,
-              runSpacing: AppDimens.spaceSm,
-              children: suggestions
-                  .map(
-                    (s) => _SuggestionChip(
-                      text: s.text,
-                      onTap: () => onSuggestionTap(s.text),
-                    ),
-                  )
-                  .toList(),
+            Text(
+              'Ask me anything. I have full context from\nyour connected apps and health history.',
+              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: AppDimens.spaceXl),
+            // ── "What I can do" capability row ────────────────────────────
+            _CapabilityRow(),
+            const SizedBox(height: AppDimens.spaceXl),
+            // ── Grouped suggestion cards ───────────────────────────────────
+            if (widget.suggestedPromptsEnabled &&
+                widget.suggestions.isNotEmpty) ...[
+              for (final entry in grouped.entries) ...[
+                _CategoryHeader(category: entry.key),
+                const SizedBox(height: AppDimens.spaceSm),
+                for (final suggestion in entry.value) ...[
+                  _SuggestionCard(
+                    suggestion: suggestion,
+                    onTap: () => widget.onSuggestionTap(suggestion.text),
+                  ),
+                  const SizedBox(height: AppDimens.spaceSm),
+                ],
+                const SizedBox(height: AppDimens.spaceSm),
+              ],
+            ],
+            const SizedBox(height: AppDimens.spaceXl),
           ],
-          const SizedBox(height: AppDimens.spaceXl),
-        ],
+        ),
       ),
     );
   }
 }
 
-// ── _SuggestionChip ───────────────────────────────────────────────────────────
+// ── _StaticLogo ───────────────────────────────────────────────────────────────
 
-class _SuggestionChip extends ConsumerWidget {
-  const _SuggestionChip({required this.text, required this.onTap});
+class _StaticLogo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: SvgPicture.asset(
+          AppAssets.logoSvg,
+          colorFilter: const ColorFilter.mode(
+            AppColors.primary,
+            BlendMode.srcIn,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-  final String text;
+// ── _PulsingLogo ──────────────────────────────────────────────────────────────
+
+/// Animated logo that pulses (scale 1.0 → 1.05) while suggestions are loading.
+class _PulsingLogo extends StatefulWidget {
+  const _PulsingLogo();
+
+  @override
+  State<_PulsingLogo> createState() => _PulsingLogoState();
+}
+
+class _PulsingLogoState extends State<_PulsingLogo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnim,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          shape: BoxShape.circle,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: SvgPicture.asset(
+            AppAssets.logoSvg,
+            colorFilter: const ColorFilter.mode(
+              AppColors.primary,
+              BlendMode.srcIn,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _CapabilityRow ────────────────────────────────────────────────────────────
+
+/// Horizontal row of 3 capability icons: Analyze, Plan, Track.
+class _CapabilityRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      (icon: Icons.insights_rounded, label: 'Analyze'),
+      (icon: Icons.edit_note_rounded, label: 'Plan'),
+      (icon: Icons.trending_up_rounded, label: 'Track'),
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: items
+          .map(
+            (item) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(item.icon, size: 24, color: AppColors.primary),
+                const SizedBox(height: AppDimens.spaceXs),
+                Text(
+                  item.label,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+// ── _categoryColor ────────────────────────────────────────────────────────────
+
+/// Maps a normalised category key to its design-system color token.
+///
+/// Accepts a pre-lowercased, non-empty string. Defaults to [AppColors.primary].
+Color _categoryColor(String category) {
+  return switch (category) {
+    'sleep' => AppColors.categorySleep,
+    'activity' => AppColors.categoryActivity,
+    'nutrition' => AppColors.categoryNutrition,
+    _ => AppColors.primary,
+  };
+}
+
+// ── _CategoryHeader ───────────────────────────────────────────────────────────
+
+/// Small header with a colored dot and category name label.
+class _CategoryHeader extends StatelessWidget {
+  const _CategoryHeader({required this.category});
+
+  final String category;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _categoryColor(category);
+    // Guard against empty string: category is normalised by _groupByCategory
+    // but _CategoryHeader is also defensive on its own.
+    final label = category.isEmpty
+        ? 'Other'
+        : category[0].toUpperCase() + category.substring(1);
+
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.8,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── _SuggestionCard ───────────────────────────────────────────────────────────
+
+/// Full-width card with a left colored border for a prompt suggestion.
+///
+/// Haptic feedback is intentionally omitted here — the caller's [onTap]
+/// callback (routed through [_NewChatScreenState._onSuggestionTap]) already
+/// fires a light haptic, so a second `ConsumerWidget` element is unnecessary.
+class _SuggestionCard extends StatelessWidget {
+  const _SuggestionCard({required this.suggestion, required this.onTap});
+
+  final PromptSuggestion suggestion;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final borderColor = _categoryColor(
+      suggestion.category?.trim().toLowerCase() ?? 'other',
+    );
+
     return GestureDetector(
-      onTap: () {
-        ref.read(hapticServiceProvider).light();
-        onTap();
-      },
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceSm,
-        ),
+        width: double.infinity,
         decoration: BoxDecoration(
           color: AppColors.cardBackgroundDark,
-          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           border: Border.all(color: AppColors.borderDark, width: 1),
         ),
-        child: Text(
-          text,
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textSecondaryDark,
+        clipBehavior: Clip.hardEdge,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left colored accent border
+              Container(width: 4, color: borderColor),
+              // Card content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceMd,
+                  ),
+                  child: Text(
+                    suggestion.text,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -719,11 +950,42 @@ class _InputIconButton extends ConsumerWidget {
 // ── _ConversationDrawer ───────────────────────────────────────────────────────
 
 /// Bottom sheet listing past conversations (Conversation Drawer).
-class _ConversationDrawer extends ConsumerWidget {
+class _ConversationDrawer extends ConsumerStatefulWidget {
   const _ConversationDrawer();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ConversationDrawer> createState() =>
+      _ConversationDrawerState();
+}
+
+class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  bool _isSearching = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  List<Conversation> _filterConversations(
+    List<Conversation> conversations,
+    String query,
+  ) {
+    if (query.isEmpty) return conversations;
+    final lower = query.toLowerCase();
+    return conversations.where((c) {
+      final titleMatch = c.title.toLowerCase().contains(lower);
+      final previewMatch =
+          c.preview != null && c.preview!.toLowerCase().contains(lower);
+      return titleMatch || previewMatch;
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final conversationsAsync = ref.watch(coachConversationsProvider);
 
     return DraggableScrollableSheet(
@@ -767,6 +1029,13 @@ class _ConversationDrawer extends ConsumerWidget {
                       child: Text('Conversations', style: AppTextStyles.h3),
                     ),
                     IconButton(
+                      icon: const Icon(Icons.search_rounded),
+                      onPressed: () {
+                        setState(() => _isSearching = true);
+                      },
+                      tooltip: 'Search conversations',
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.add_rounded),
                       onPressed: () {
                         ref.read(hapticServiceProvider).light();
@@ -776,6 +1045,60 @@ class _ConversationDrawer extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+              // Search field — expands/collapses with AnimatedSize
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: _isSearching
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppDimens.spaceMd,
+                          0,
+                          AppDimens.spaceMd,
+                          AppDimens.spaceSm,
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.inputBackgroundDark,
+                            borderRadius:
+                                BorderRadius.circular(AppDimens.radiusInput),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocus,
+                            autofocus: true,
+                            style: AppTextStyles.body,
+                            decoration: InputDecoration(
+                              hintText: 'Search conversations...',
+                              hintStyle: AppTextStyles.body.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppDimens.spaceMd,
+                                vertical: AppDimens.spaceSm,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  size: 18,
+                                  color: AppColors.textTertiary,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isSearching = false;
+                                    _searchController.clear();
+                                  });
+                                  _searchFocus.unfocus();
+                                },
+                              ),
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
               const Divider(height: 1, color: AppColors.borderDark),
               // List
@@ -795,29 +1118,97 @@ class _ConversationDrawer extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  data: (conversations) => ListView.separated(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppDimens.spaceSm,
-                    ),
-                    itemCount: conversations.length,
-                    separatorBuilder: (context, _) => const Divider(
-                      height: 1,
-                      indent: AppDimens.spaceMd,
-                      color: AppColors.borderDark,
-                    ),
-                    itemBuilder: (_, i) => _ConversationTile(
-                      conversation: conversations[i],
-                      onTap: () {
-                        ref.read(hapticServiceProvider).light();
-                        Navigator.of(ctx).pop();
-                        context.pushNamed(
-                          RouteNames.coachThread,
-                          pathParameters: {'id': conversations[i].id},
-                        );
-                      },
-                    ),
-                  ),
+                  data: (conversations) {
+                    if (conversations.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppDimens.spaceXl),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 48,
+                                color: AppColors.textTertiary.withValues(
+                                  alpha: 0.4,
+                                ),
+                              ),
+                              const SizedBox(height: AppDimens.spaceMd),
+                              Text(
+                                'No conversations yet',
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                              const SizedBox(height: AppDimens.spaceSm),
+                              Text(
+                                'Start a new chat to get started',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    final filtered = _filterConversations(
+                      conversations,
+                      _searchController.text.trim(),
+                    );
+
+                    if (filtered.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppDimens.spaceXl),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.search_off_rounded,
+                                size: 48,
+                                color: AppColors.textTertiary,
+                              ),
+                              const SizedBox(height: AppDimens.spaceMd),
+                              Text(
+                                'No conversations match your search',
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppDimens.spaceSm,
+                      ),
+                      itemCount: filtered.length,
+                      separatorBuilder: (context, _) => const Divider(
+                        height: 1,
+                        indent: AppDimens.spaceMd,
+                        color: AppColors.borderDark,
+                      ),
+                      itemBuilder: (_, i) => _ConversationTile(
+                        conversation: filtered[i],
+                        onTap: () {
+                          ref.read(hapticServiceProvider).light();
+                          Navigator.of(ctx).pop();
+                          context.pushNamed(
+                            RouteNames.coachThread,
+                            pathParameters: {'id': filtered[i].id},
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

@@ -13,6 +13,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -57,6 +58,16 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
   /// Tracks whether [_initConversation] has been called.
   bool _initialized = false;
+
+  /// True when the user is editing a previously sent message.
+  bool _isEditing = false;
+
+  /// The original content of the message being edited (shown in the indicator bar).
+  String? _editingContent;
+
+  /// Snapshot of [CoachChatState.messages] taken just before [editMessage]
+  /// truncates state. Restored if the user cancels the edit.
+  List<ChatMessage>? _editSnapshot;
 
   @override
   void initState() {
@@ -174,6 +185,13 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final responseLength = ref.read(responseLengthProvider).value;
 
     _inputCtrl.clear();
+    if (_isEditing) {
+      setState(() {
+        _isEditing = false;
+        _editingContent = null;
+        _editSnapshot = null;
+      });
+    }
 
     // Determine the effective conversation ID.
     // If the notifier already resolved a real ID (e.g. from a prior message
@@ -254,9 +272,18 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           if (chatState.errorMessage != null)
             _ErrorBanner(
               message: chatState.errorMessage!,
-              onRetry: () => ref
-                  .read(coachChatNotifierProvider(widget.conversationId).notifier)
-                  .loadHistory(),
+              onRetry: () {
+                final notifier = ref.read(
+                  coachChatNotifierProvider(widget.conversationId).notifier,
+                );
+                if (widget.conversationId.startsWith('new_')) {
+                  // For new conversations there is no history to load —
+                  // just clear the error so the user can re-type and send.
+                  notifier.clearError();
+                } else {
+                  notifier.loadHistory();
+                }
+              },
             ),
           // ── Message list + streaming bubble ──────────────────────────────
           Expanded(
@@ -267,14 +294,87 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     streamingContent: chatState.streamingContent,
                     activeToolName: chatState.activeToolName,
                     scrollController: _scrollCtrl,
+                    conversationId: widget.conversationId,
+                    isSending: chatState.isSending,
+                    onEditMessage: (snapshot, content) {
+                      _editSnapshot = snapshot;
+                      setState(() {
+                        _isEditing = true;
+                        _editingContent = content;
+                      });
+                      _inputCtrl.text = content;
+                      _inputCtrl.selection = TextSelection.collapsed(
+                        offset: content.length,
+                      );
+                      _inputFocus.requestFocus();
+                    },
                   ),
           ),
+          // ── Editing indicator bar ─────────────────────────────────────────
+          if (_isEditing)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceSm,
+              ),
+              color: AppColors.cardBackgroundDark,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.edit_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Expanded(
+                    child: Text(
+                      _editingContent != null
+                          ? 'Editing: $_editingContent'
+                          : 'Editing message',
+                      style: const TextStyle(
+                        color: AppColors.textTertiary,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    color: AppColors.textTertiary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Cancel edit',
+                    onPressed: () {
+                      final snapshot = _editSnapshot;
+                      setState(() {
+                        _isEditing = false;
+                        _editingContent = null;
+                        _editSnapshot = null;
+                      });
+                      if (snapshot != null) {
+                        ref
+                            .read(
+                              coachChatNotifierProvider(
+                                widget.conversationId,
+                              ).notifier,
+                            )
+                            .restoreMessages(snapshot);
+                      }
+                      _inputCtrl.clear();
+                    },
+                  ),
+                ],
+              ),
+            ),
           _ChatInputBar(
             controller: _inputCtrl,
             focusNode: _inputFocus,
             onSend: ({attachments = const []}) =>
                 _sendMessage(attachments: attachments),
             isSending: chatState.isSending,
+            conversationId: widget.conversationId,
           ),
         ],
       ),
@@ -497,24 +597,48 @@ class _ErrorBanner extends StatelessWidget {
 
 // ── _MessageList ──────────────────────────────────────────────────────────────
 
-class _MessageList extends StatelessWidget {
+class _MessageList extends ConsumerWidget {
   const _MessageList({
     required this.messages,
     required this.scrollController,
+    required this.conversationId,
+    required this.isSending,
+    required this.onEditMessage,
     this.streamingContent,
     this.activeToolName,
   });
 
   final List<ChatMessage> messages;
   final ScrollController scrollController;
+  final String conversationId;
+  final bool isSending;
+
+  /// Called when the user taps "Edit" on a user message bubble.
+  /// Receives the pre-truncation message [snapshot] (for cancel-restore) and
+  /// the [content] of the message being edited.
+  final void Function(List<ChatMessage> snapshot, String content) onEditMessage;
+
   final String? streamingContent;
   final String? activeToolName;
 
+  /// True when the Regenerate button should be visible:
+  /// not streaming, last message is assistant, and there is at least one
+  /// user message.
+  bool get _showRegenerateButton {
+    if (isSending) return false;
+    if (streamingContent != null || activeToolName != null) return false;
+    if (messages.isEmpty) return false;
+    if (messages.last.role != MessageRole.assistant) return false;
+    return messages.any((m) => m.role == MessageRole.user);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final showTypingBubble =
         streamingContent != null || activeToolName != null;
-    final totalItems = messages.length + (showTypingBubble ? 1 : 0);
+    final showRegenerate = _showRegenerateButton;
+    final totalItems =
+        messages.length + (showTypingBubble ? 1 : 0) + (showRegenerate ? 1 : 0);
 
     return ListView.builder(
       controller: scrollController,
@@ -525,12 +649,62 @@ class _MessageList extends StatelessWidget {
       itemCount: totalItems,
       itemBuilder: (_, i) {
         if (i < messages.length) {
-          return _MessageBubble(message: messages[i]);
+          final msg = messages[i];
+          return _MessageBubble(
+            message: msg,
+            onEdit: (msg.role == MessageRole.user && !isSending)
+                ? () {
+                    // Snapshot the full message list before truncation so the
+                    // state can be restored if the user cancels the edit.
+                    final snapshot = ref
+                        .read(coachChatNotifierProvider(conversationId))
+                        .messages
+                        .toList();
+                    final content = ref
+                        .read(
+                          coachChatNotifierProvider(conversationId).notifier,
+                        )
+                        .editMessage(i);
+                    if (content != null) {
+                      onEditMessage(snapshot, content);
+                    }
+                  }
+                : null,
+          );
         }
         // Streaming / tool-progress bubble at the bottom.
-        return _StreamingBubble(
-          content: streamingContent,
-          toolName: activeToolName,
+        if (showTypingBubble && i == messages.length) {
+          return _StreamingBubble(
+            content: streamingContent,
+            toolName: activeToolName,
+          );
+        }
+        // Regenerate button — appears below the last AI message.
+        return Padding(
+          padding: const EdgeInsets.only(
+            bottom: AppDimens.spaceMd,
+            top: AppDimens.spaceSm,
+          ),
+          child: Center(
+            child: TextButton.icon(
+              onPressed: () => ref
+                  .read(coachChatNotifierProvider(conversationId).notifier)
+                  .regenerate(),
+              icon: const Icon(
+                Icons.refresh_rounded,
+                size: 16,
+              ),
+              label: const Text('Regenerate'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textSecondaryDark,
+                textStyle: AppTextStyles.caption,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                  vertical: AppDimens.spaceSm,
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
@@ -657,9 +831,13 @@ class _ToolProgressIndicator extends StatelessWidget {
 // ── _MessageBubble ────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, this.onEdit});
 
   final ChatMessage message;
+
+  /// Called when the user taps "Edit" in the long-press sheet.
+  /// Only provided for user messages; null for AI messages.
+  final VoidCallback? onEdit;
 
   bool get _isUser => message.role == MessageRole.user;
 
@@ -743,6 +921,66 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
+  void _showCopySheet(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.cardBackgroundDark,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppDimens.radiusCard),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.borderDark,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // ── Actions ─────────────────────────────────────────────────────
+            ListTile(
+              leading: const Icon(Icons.copy_rounded, color: AppColors.primary),
+              title: Text('Copy', style: AppTextStyles.body),
+              onTap: () async {
+                Navigator.pop(sheetCtx);
+                await Clipboard.setData(ClipboardData(text: message.content));
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Copied to clipboard',
+                      style: AppTextStyles.body,
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (onEdit != null) ...[
+              const Divider(height: 1, color: AppColors.borderDark),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: AppColors.primary),
+                title: Text('Edit', style: AppTextStyles.body),
+                onTap: () {
+                  Navigator.pop(sheetCtx);
+                  onEdit!();
+                },
+              ),
+            ],
+            SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasAttachments = message.attachmentUrls.isNotEmpty;
@@ -784,70 +1022,73 @@ class _MessageBubble extends StatelessWidget {
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
                 ],
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceSm + 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _isUser
-                        ? AppColors.userBubble
-                        : AppColors.aiBubbleDark,
-                    borderRadius: BorderRadius.only(
-                      topLeft:
-                          const Radius.circular(AppDimens.radiusCard),
-                      topRight:
-                          const Radius.circular(AppDimens.radiusCard),
-                      bottomLeft: _isUser
-                          ? const Radius.circular(AppDimens.radiusCard)
-                          : const Radius.circular(4),
-                      bottomRight: _isUser
-                          ? const Radius.circular(4)
-                          : const Radius.circular(AppDimens.radiusCard),
+                GestureDetector(
+                  onLongPress: () => _showCopySheet(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceSm + 2,
                     ),
+                    decoration: BoxDecoration(
+                      color: _isUser
+                          ? AppColors.userBubble
+                          : AppColors.aiBubbleDark,
+                      borderRadius: BorderRadius.only(
+                        topLeft:
+                            const Radius.circular(AppDimens.radiusCard),
+                        topRight:
+                            const Radius.circular(AppDimens.radiusCard),
+                        bottomLeft: _isUser
+                            ? const Radius.circular(AppDimens.radiusCard)
+                            : const Radius.circular(4),
+                        bottomRight: _isUser
+                            ? const Radius.circular(4)
+                            : const Radius.circular(AppDimens.radiusCard),
+                      ),
+                    ),
+                    child: _isUser
+                        ? Text(
+                            message.content,
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.userBubbleText,
+                              height: 1.45,
+                            ),
+                          )
+                        : MarkdownBody(
+                            data: message.content,
+                            styleSheet: MarkdownStyleSheet.fromTheme(
+                              Theme.of(context).copyWith(
+                                textTheme: Theme.of(context).textTheme.apply(
+                                      bodyColor: AppColors.textPrimaryDark,
+                                      displayColor: AppColors.textPrimaryDark,
+                                    ),
+                              ),
+                            ).copyWith(
+                              p: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                height: 1.45,
+                              ),
+                              strong: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              em: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              listBullet: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                height: 1.45,
+                              ),
+                              code: AppTextStyles.caption.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.08),
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
                   ),
-                  child: _isUser
-                      ? Text(
-                          message.content,
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.userBubbleText,
-                            height: 1.45,
-                          ),
-                        )
-                      : MarkdownBody(
-                          data: message.content,
-                          styleSheet: MarkdownStyleSheet.fromTheme(
-                            Theme.of(context).copyWith(
-                              textTheme: Theme.of(context).textTheme.apply(
-                                    bodyColor: AppColors.textPrimaryDark,
-                                    displayColor: AppColors.textPrimaryDark,
-                                  ),
-                            ),
-                          ).copyWith(
-                            p: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              height: 1.45,
-                            ),
-                            strong: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            em: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            listBullet: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              height: 1.45,
-                            ),
-                            code: AppTextStyles.caption.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.08),
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -932,6 +1173,7 @@ class _ChatInputBar extends ConsumerStatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.onSend,
+    required this.conversationId,
     this.isSending = false,
   });
 
@@ -939,7 +1181,10 @@ class _ChatInputBar extends ConsumerStatefulWidget {
   final FocusNode focusNode;
   final void Function({List<Map<String, dynamic>> attachments}) onSend;
 
-  /// When true the send button is replaced by a loading indicator.
+  /// The conversation ID — used to call [cancelStream] on the notifier.
+  final String conversationId;
+
+  /// When true the send button is replaced by a stop button.
   final bool isSending;
 
   @override
@@ -1097,16 +1342,15 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                     final hasContent = hasText || _attachments.isNotEmpty;
 
                     if (widget.isSending) {
-                      return const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                      return _InputIcon(
+                        icon: Icons.stop_rounded,
+                        filledColor: AppColors.statusError,
+                        onTap: () => ref
+                            .read(coachChatNotifierProvider(
+                                    widget.conversationId)
+                                .notifier)
+                            .cancelStream(),
+                        tooltip: 'Stop generation',
                       );
                     }
 
@@ -1163,17 +1407,38 @@ class _InputIcon extends ConsumerWidget {
     required this.onTap,
     required this.tooltip,
     this.filled = false,
+    this.filledColor,
     this.activeColor,
   });
 
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final String tooltip;
+
+  /// When true, fills the background with [AppColors.primary].
   final bool filled;
+
+  /// When non-null, fills the background with this color instead of
+  /// [AppColors.primary]. Takes precedence over [filled].
+  final Color? filledColor;
+
   final Color? activeColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final Color bgColor;
+    final Color defaultIconColor;
+    if (filledColor != null) {
+      bgColor = filledColor!;
+      defaultIconColor = Colors.white;
+    } else if (filled) {
+      bgColor = AppColors.primary;
+      defaultIconColor = AppColors.primaryButtonText;
+    } else {
+      bgColor = AppColors.inputBackgroundDark;
+      defaultIconColor = AppColors.textSecondaryDark;
+    }
+
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -1182,16 +1447,13 @@ class _InputIcon extends ConsumerWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: filled ? AppColors.primary : AppColors.inputBackgroundDark,
+            color: bgColor,
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
             size: 20,
-            color: activeColor ??
-                (filled
-                    ? AppColors.primaryButtonText
-                    : AppColors.textSecondaryDark),
+            color: activeColor ?? defaultIconColor,
           ),
         ),
       ),

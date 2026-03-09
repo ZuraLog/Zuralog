@@ -316,7 +316,6 @@ app.include_router(polar_router, prefix="/api/v1")  # Polar integration
 app.include_router(polar_webhook_router, prefix="/api/v1")  # Polar webhooks
 app.include_router(withings_router, prefix="/api/v1")  # Withings integration
 app.include_router(withings_webhook_router, prefix="/api/v1")  # Withings webhooks
-app.include_router(preferences_router, prefix="/api/v1")  # Phase 2.1 — user preferences
 app.include_router(health_score_router, prefix="/api/v1")  # Phase 2.2 — health score
 app.include_router(health_score_history_router, prefix="/api/v1")  # Phase 2.2 — health score history
 app.include_router(memory_router, prefix="/api/v1")  # Phase 2.4 — memory management

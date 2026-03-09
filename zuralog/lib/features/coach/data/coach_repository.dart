@@ -104,6 +104,9 @@ abstract interface class CoachRepository {
   /// 4. [StreamComplete] — final assembled message with server-assigned ID.
   ///
   /// On failure emits [StreamError] and the stream closes.
+  ///
+  /// When [isRegenerate] is true, the backend will skip persisting the user
+  /// message (it was already saved during the original send).
   Stream<ChatStreamEvent> sendMessageStream({
     required String? conversationId,
     required String text,
@@ -111,6 +114,7 @@ abstract interface class CoachRepository {
     required String proactivity,
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
+    bool isRegenerate = false,
   });
 }
 
@@ -214,6 +218,7 @@ final class MockCoachRepository implements CoachRepository {
     required String proactivity,
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
+    bool isRegenerate = false,
   }) async* {
     final String effectiveId = conversationId ?? 'mock_${DateTime.now().millisecondsSinceEpoch}';
 

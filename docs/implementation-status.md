@@ -1,9 +1,51 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-08 (Trends Tab — Persist Dismissed Correlation Suggestion IDs)  
+**Last Updated:** 2026-03-09 (Coach Tab AI Features — Stop Generation, Regenerate, Copy, Edit, Empty State, Search)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Coach Tab AI Features (feat/coach-tab-full-ai, 2026-03-09)
+
+**Step:** Phase 10.5 — All 6 Coach tab AI conversation features.  
+**Branch:** `feat/coach-tab-full-ai`
+
+**Files changed:**
+- `zuralog/lib/features/coach/presentation/chat_thread_screen.dart` — Stop button, regenerate, copy, edit, empty state
+- `zuralog/lib/features/coach/presentation/new_chat_screen.dart` — Better empty state, search drawer
+- `zuralog/lib/features/coach/providers/coach_providers.dart` — Provider updates
+- `zuralog/lib/features/coach/data/api_coach_repository.dart` — API contract updates
+- `zuralog/lib/features/coach/data/coach_repository.dart` — Interface updates
+- `cloud-brain/app/api/v1/chat.py` — Backend support for message editing/deletion
+
+**What was built:**
+
+1. **Stop Generation Button** — During streaming, a red stop button replaces the spinner. Tapping calls `cancelStream()`, which commits any partial content received so far or displays `'_Generation stopped._'` as a placeholder if nothing was received. The WebSocket connection is cleanly closed. Prevents user frustration when the AI response is taking too long.
+
+2. **Regenerate / Retry Last Response** — A "Regenerate" button appears below the last AI message in the thread. Tapping re-sends the last user message without creating a duplicate database entry. The request reads the user's current persona and proactivity settings from `userPreferencesProvider`, ensuring the regenerated response respects any preference changes since the original message.
+
+3. **Copy Message (Long-press)** — Long-pressing any message bubble (user or AI) opens a bottom sheet with a "Copy" action. The message text is written to the clipboard via `Clipboard.setData()` with proper `await` handling. `ScaffoldMessenger` is correctly scoped to avoid cross-screen toast conflicts.
+
+4. **Message Editing** — Long-pressing a user message adds an "Edit" option to the bottom sheet. Tapping opens the input field with the message text pre-filled. On submit, the message is updated and all subsequent AI responses are truncated from the thread (snapshot-and-restore pattern). On cancel, the original message is restored. An editing indicator bar appears above the input field while editing is active.
+
+5. **Better Empty State & Suggestions** — Replaced the generic empty state with `_CoachEmptyState`: a fade-in animation, pulsing Zuralog logo, "What I can do" capability row (4 icons: analyze, suggest, log, discuss), and grouped suggestion cards below. Each suggestion card has a 4px left-side colored border matching its category (e.g., blue for "Sleep", green for "Activity"), a category header, and 2–3 suggestion prompts per category. Improves discoverability for new users.
+
+6. **Search Conversations** — The `_ConversationDrawer` now includes an `AnimatedSize` search field at the top. Typing filters conversations by title and preview text (client-side, case-insensitive substring match). An empty-results state appears when no conversations match the query. Improves navigation for users with many past conversations.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Stop button replaces spinner | Streaming UI must show the user they can interrupt. A button is more discoverable than a hidden gesture. |
+| Regenerate reads current preferences | If a user changed their persona/proactivity since the original message, they expect the regenerated response to reflect the new settings. |
+| Copy via `Clipboard.setData()` with `await` | Ensures the write completes before dismissing the bottom sheet. Prevents race conditions on fast devices. |
+| Edit truncates subsequent AI responses | Editing a user message invalidates all downstream AI reasoning. Truncation is the safest approach — no guessing which responses are still valid. |
+| Grouped suggestion cards with colored borders | Visual categorization (color + header) helps users scan suggestions faster. The 4px left border is a subtle design cue borrowed from modern chat apps. |
+| Client-side search filtering | Conversations are already loaded in memory. Client-side filtering is instant and requires no backend round-trip. |
+
+**`flutter analyze`:** No new issues introduced.
 
 ---
 

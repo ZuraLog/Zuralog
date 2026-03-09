@@ -15,20 +15,26 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/coach/data/api_coach_repository.dart';
 import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
 /// Provides the live [ApiCoachRepository].
 ///
-/// Depends on [apiClientProvider] and [secureStorageProvider] from the
-/// core DI layer. Override in tests with [MockCoachRepository].
+/// In debug builds (`kDebugMode`) a [MockCoachRepository] is returned so the
+/// Coach tab works without a running backend.
+/// Override in tests with [MockCoachRepository].
 final coachRepositoryProvider = Provider<CoachRepository>((ref) {
+  if (kDebugMode) return const MockCoachRepository();
   return ApiCoachRepository(
     apiClient: ref.watch(apiClientProvider),
     secureStorage: ref.watch(secureStorageProvider),
@@ -40,16 +46,25 @@ final coachRepositoryProvider = Provider<CoachRepository>((ref) {
 /// State for the conversation list used by the Conversation Drawer.
 class _ConversationsNotifier extends AsyncNotifier<List<Conversation>> {
   @override
-  Future<List<Conversation>> build() {
-    return ref.read(coachRepositoryProvider).listConversations();
+  Future<List<Conversation>> build() async {
+    try {
+      return await ref.read(coachRepositoryProvider).listConversations();
+    } on DioException catch (e) {
+      throw Exception(ApiClient.friendlyError(e));
+    }
   }
 
   /// Re-fetches the conversation list from the server.
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(coachRepositoryProvider).listConversations(),
-    );
+    try {
+      final result = await ref.read(coachRepositoryProvider).listConversations();
+      state = AsyncData(result);
+    } on DioException catch (e) {
+      state = AsyncError(Exception(ApiClient.friendlyError(e)), StackTrace.current);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+    }
   }
 
   /// Optimistically archives [conversationId] and syncs with the server.
@@ -206,18 +221,34 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
           .read(coachRepositoryProvider)
           .listMessages(arg);
       state = state.copyWith(messages: messages, isLoadingHistory: false);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoadingHistory: false,
+        errorMessage: ApiClient.friendlyError(e),
+      );
     } catch (e) {
       state = state.copyWith(
         isLoadingHistory: false,
-        errorMessage: 'Could not load conversation: $e',
+        errorMessage: 'Could not load conversation. Please try again.',
       );
     }
+  }
+
+  /// Clears the current error message without triggering any network request.
+  ///
+  /// Used by the retry button for new conversations, where there is nothing
+  /// to reload — the user simply re-types and sends again.
+  void clearError() {
+    state = state.copyWith(clearError: true);
   }
 
   /// Sends [text] (with optional [attachments]) and streams the AI response.
   ///
   /// [conversationId] is null for new conversations; the server will create
   /// one and the [ConversationCreated] event will propagate it back.
+  ///
+  /// When [isRegenerate] is true, the backend skips persisting the user
+  /// message (it was already saved during the original send).
   Future<void> sendMessage({
     required String? conversationId,
     required String text,
@@ -225,28 +256,33 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     required String proactivity,
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
+    bool isRegenerate = false,
   }) async {
     if (state.isSending) return;
 
-    // Optimistically append the user's message.
+    // Optimistically append the user's message (skipped when regenerating
+    // because the user bubble is already present in state).
     final tempMsgId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
-    final userMsg = ChatMessage(
-      id: tempMsgId,
-      conversationId: conversationId ?? arg,
-      role: MessageRole.user,
-      content: text,
-      createdAt: DateTime.now(),
-      attachmentUrls: attachments
-          .map((a) => (a['signed_url'] ?? a['storage_path'] ?? '') as String)
-          .where((u) => u.isNotEmpty)
-          .toList(),
-    );
-
-    state = state.copyWith(
-      messages: [...state.messages, userMsg],
-      isSending: true,
-      clearError: true,
-    );
+    if (!isRegenerate) {
+      final userMsg = ChatMessage(
+        id: tempMsgId,
+        conversationId: conversationId ?? arg,
+        role: MessageRole.user,
+        content: text,
+        createdAt: DateTime.now(),
+        attachmentUrls: attachments
+            .map((a) => (a['signed_url'] ?? a['storage_path'] ?? '') as String)
+            .where((u) => u.isNotEmpty)
+            .toList(),
+      );
+      state = state.copyWith(
+        messages: [...state.messages, userMsg],
+        isSending: true,
+        clearError: true,
+      );
+    } else {
+      state = state.copyWith(isSending: true, clearError: true);
+    }
 
     await _streamSub?.cancel();
 
@@ -257,6 +293,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       proactivity: proactivity,
       responseLength: responseLength,
       attachments: attachments,
+      isRegenerate: isRegenerate,
     );
 
     final completer = Completer<void>();
@@ -323,17 +360,106 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     await completer.future;
   }
 
-  /// Cancels any in-flight stream (e.g. when navigating away).
+  /// Removes the last assistant message from local state and re-sends the
+  /// last user message, telling the backend NOT to persist a duplicate.
+  ///
+  /// No-op if there is no assistant message or no user message in the list.
+  Future<void> regenerate() async {
+    if (state.isSending) return;
+
+    final messages = state.messages;
+
+    // Find the last assistant message index.
+    final lastAssistantIndex =
+        messages.lastIndexWhere((m) => m.role == MessageRole.assistant);
+    if (lastAssistantIndex == -1) return;
+
+    // Find the user message immediately before the assistant message being
+    // removed — not just the last user message in the whole list.
+    ChatMessage? lastUserMsg;
+    for (int i = lastAssistantIndex - 1; i >= 0; i--) {
+      if (messages[i].role == MessageRole.user) {
+        lastUserMsg = messages[i];
+        break;
+      }
+    }
+    if (lastUserMsg == null) return;
+
+    // Read the user's actual settings so the regenerated response respects
+    // their configured persona, proactivity, and response-length preferences.
+    final persona = ref.read(coachPersonaProvider).value;
+    final proactivity = ref.read(proactivityLevelProvider).value;
+    final responseLength = ref.read(responseLengthProvider).value;
+
+    // Remove the last assistant message from local state only.
+    final updatedMessages = List<ChatMessage>.from(messages)
+      ..removeAt(lastAssistantIndex);
+    state = state.copyWith(messages: updatedMessages);
+
+    // Re-send the last user message, skipping DB persistence on the backend.
+    await sendMessage(
+      conversationId: state.resolvedConversationId,
+      text: lastUserMsg.content,
+      persona: persona,
+      proactivity: proactivity,
+      responseLength: responseLength,
+      isRegenerate: true,
+    );
+  }
+
+  /// Removes the message at [messageIndex] and all messages after it from
+  /// local state, then returns the content of the removed message so the
+  /// caller can pre-fill the input field.
+  ///
+  /// This is a local-only operation — nothing is persisted to the DB.
+  ///
+  /// Returns null if [messageIndex] is out of bounds (e.g. state changed
+  /// between render and tap).
+  String? editMessage(int messageIndex) {
+    if (state.isSending) return null;
+    if (messageIndex < 0 || messageIndex >= state.messages.length) return null;
+    final content = state.messages[messageIndex].content;
+    state = state.copyWith(messages: state.messages.sublist(0, messageIndex));
+    return content;
+  }
+
+  /// Restores [messages] into state.
+  ///
+  /// Called when the user cancels an edit so the truncated messages come back.
+  void restoreMessages(List<ChatMessage> messages) {
+    state = state.copyWith(messages: messages);
+  }
+
+  /// Cancels any in-flight stream.
+  ///
+  /// If partial tokens have already arrived ([streamingContent] is non-empty),
+  /// they are committed as a final assistant message. Otherwise a placeholder
+  /// message `_Generation stopped._` is appended so the user knows the
+  /// generation was cancelled.
   void cancelStream() {
+    final wasSending = state.isSending; // capture before cancel
     _streamSub?.cancel();
     _streamSub = null;
-    if (state.isSending) {
-      state = state.copyWith(
-        isSending: false,
-        clearStreaming: true,
-        clearTool: true,
-      );
-    }
+
+    if (!wasSending) return;
+
+    final partial = state.streamingContent ?? '';
+    final content = partial.isNotEmpty ? partial : '_Generation stopped._';
+
+    final stoppedMsg = ChatMessage(
+      id: 'stopped_${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: state.resolvedConversationId ?? arg,
+      role: MessageRole.assistant,
+      content: content,
+      createdAt: DateTime.now(),
+    );
+
+    state = state.copyWith(
+      messages: [...state.messages, stoppedMsg],
+      isSending: false,
+      clearStreaming: true,
+      clearTool: true,
+    );
   }
 }
 

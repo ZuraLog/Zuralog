@@ -64,7 +64,7 @@ class ApiClient {
 
     _dio.options.baseUrl = finalUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
-    _dio.options.receiveTimeout = const Duration(seconds: 30);
+    _dio.options.receiveTimeout = const Duration(seconds: 60);
 
     // Attach Sentry performance tracing and breadcrumb capture for all requests.
     _dio.addSentry();
