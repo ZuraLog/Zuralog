@@ -404,7 +404,11 @@ async def websocket_chat(
                 if history and history[-1]["role"] == "user" and history[-1]["content"] == message_text:
                     history = history[:-1]
 
-                persona, proactivity = await _load_user_preferences(db, user_id)
+                db_persona, db_proactivity = await _load_user_preferences(db, user_id)
+                # Client-supplied values (from user settings at send time) take
+                # precedence; fall back to DB preferences when absent.
+                persona = data.get("persona") or db_persona
+                proactivity = data.get("proactivity") or db_proactivity
 
             # ── Orchestrate with streaming ────────────────────────────────────
             await websocket.send_json({"type": "typing_start"})

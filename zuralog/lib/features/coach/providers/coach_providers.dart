@@ -260,25 +260,29 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   }) async {
     if (state.isSending) return;
 
-    // Optimistically append the user's message.
+    // Optimistically append the user's message (skipped when regenerating
+    // because the user bubble is already present in state).
     final tempMsgId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
-    final userMsg = ChatMessage(
-      id: tempMsgId,
-      conversationId: conversationId ?? arg,
-      role: MessageRole.user,
-      content: text,
-      createdAt: DateTime.now(),
-      attachmentUrls: attachments
-          .map((a) => (a['signed_url'] ?? a['storage_path'] ?? '') as String)
-          .where((u) => u.isNotEmpty)
-          .toList(),
-    );
-
-    state = state.copyWith(
-      messages: [...state.messages, userMsg],
-      isSending: true,
-      clearError: true,
-    );
+    if (!isRegenerate) {
+      final userMsg = ChatMessage(
+        id: tempMsgId,
+        conversationId: conversationId ?? arg,
+        role: MessageRole.user,
+        content: text,
+        createdAt: DateTime.now(),
+        attachmentUrls: attachments
+            .map((a) => (a['signed_url'] ?? a['storage_path'] ?? '') as String)
+            .where((u) => u.isNotEmpty)
+            .toList(),
+      );
+      state = state.copyWith(
+        messages: [...state.messages, userMsg],
+        isSending: true,
+        clearError: true,
+      );
+    } else {
+      state = state.copyWith(isSending: true, clearError: true);
+    }
 
     await _streamSub?.cancel();
 
@@ -370,11 +374,12 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         messages.lastIndexWhere((m) => m.role == MessageRole.assistant);
     if (lastAssistantIndex == -1) return;
 
-    // Find the last user message.
+    // Find the user message immediately before the assistant message being
+    // removed — not just the last user message in the whole list.
     ChatMessage? lastUserMsg;
-    for (final m in messages.reversed) {
-      if (m.role == MessageRole.user) {
-        lastUserMsg = m;
+    for (int i = lastAssistantIndex - 1; i >= 0; i--) {
+      if (messages[i].role == MessageRole.user) {
+        lastUserMsg = messages[i];
         break;
       }
     }
