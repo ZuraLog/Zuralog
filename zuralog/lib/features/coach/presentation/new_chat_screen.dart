@@ -950,11 +950,42 @@ class _InputIconButton extends ConsumerWidget {
 // ── _ConversationDrawer ───────────────────────────────────────────────────────
 
 /// Bottom sheet listing past conversations (Conversation Drawer).
-class _ConversationDrawer extends ConsumerWidget {
+class _ConversationDrawer extends ConsumerStatefulWidget {
   const _ConversationDrawer();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ConversationDrawer> createState() =>
+      _ConversationDrawerState();
+}
+
+class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  bool _isSearching = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  List<Conversation> _filterConversations(
+    List<Conversation> conversations,
+    String query,
+  ) {
+    if (query.isEmpty) return conversations;
+    final lower = query.toLowerCase();
+    return conversations.where((c) {
+      final titleMatch = c.title.toLowerCase().contains(lower);
+      final previewMatch =
+          c.preview != null && c.preview!.toLowerCase().contains(lower);
+      return titleMatch || previewMatch;
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final conversationsAsync = ref.watch(coachConversationsProvider);
 
     return DraggableScrollableSheet(
@@ -998,6 +1029,13 @@ class _ConversationDrawer extends ConsumerWidget {
                       child: Text('Conversations', style: AppTextStyles.h3),
                     ),
                     IconButton(
+                      icon: const Icon(Icons.search_rounded),
+                      onPressed: () {
+                        setState(() => _isSearching = true);
+                      },
+                      tooltip: 'Search conversations',
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.add_rounded),
                       onPressed: () {
                         ref.read(hapticServiceProvider).light();
@@ -1007,6 +1045,60 @@ class _ConversationDrawer extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+              // Search field — expands/collapses with AnimatedSize
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: _isSearching
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppDimens.spaceMd,
+                          0,
+                          AppDimens.spaceMd,
+                          AppDimens.spaceSm,
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.inputBackgroundDark,
+                            borderRadius:
+                                BorderRadius.circular(AppDimens.radiusInput),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocus,
+                            autofocus: true,
+                            style: AppTextStyles.body,
+                            decoration: InputDecoration(
+                              hintText: 'Search conversations...',
+                              hintStyle: AppTextStyles.body.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppDimens.spaceMd,
+                                vertical: AppDimens.spaceSm,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  size: 18,
+                                  color: AppColors.textTertiary,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isSearching = false;
+                                    _searchController.clear();
+                                  });
+                                  _searchFocus.unfocus();
+                                },
+                              ),
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
               const Divider(height: 1, color: AppColors.borderDark),
               // List
@@ -1037,7 +1129,9 @@ class _ConversationDrawer extends ConsumerWidget {
                               Icon(
                                 Icons.chat_bubble_outline_rounded,
                                 size: 48,
-                                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                                color: AppColors.textTertiary.withValues(
+                                  alpha: 0.4,
+                                ),
                               ),
                               const SizedBox(height: AppDimens.spaceMd),
                               Text(
@@ -1059,25 +1153,57 @@ class _ConversationDrawer extends ConsumerWidget {
                         ),
                       );
                     }
+
+                    final filtered = _filterConversations(
+                      conversations,
+                      _searchController.text.trim(),
+                    );
+
+                    if (filtered.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppDimens.spaceXl),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.search_off_rounded,
+                                size: 48,
+                                color: AppColors.textTertiary,
+                              ),
+                              const SizedBox(height: AppDimens.spaceMd),
+                              Text(
+                                'No conversations match your search',
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
                     return ListView.separated(
                       controller: scrollController,
                       padding: const EdgeInsets.symmetric(
                         vertical: AppDimens.spaceSm,
                       ),
-                      itemCount: conversations.length,
+                      itemCount: filtered.length,
                       separatorBuilder: (context, _) => const Divider(
                         height: 1,
                         indent: AppDimens.spaceMd,
                         color: AppColors.borderDark,
                       ),
                       itemBuilder: (_, i) => _ConversationTile(
-                        conversation: conversations[i],
+                        conversation: filtered[i],
                         onTap: () {
                           ref.read(hapticServiceProvider).light();
                           Navigator.of(ctx).pop();
                           context.pushNamed(
                             RouteNames.coachThread,
-                            pathParameters: {'id': conversations[i].id},
+                            pathParameters: {'id': filtered[i].id},
                           );
                         },
                       ),
