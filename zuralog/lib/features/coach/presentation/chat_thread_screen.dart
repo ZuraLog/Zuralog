@@ -104,6 +104,13 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
         // Clear the pending message immediately to prevent double-send.
         ref.read(pendingFirstMessageProvider(widget.conversationId).notifier).state = null;
 
+        // Determine whether there are raw attachments that need to be uploaded
+        // after the conversation is created. If so, we must suppress the
+        // route-replace that normally fires inside _dispatchSend — otherwise
+        // the widget is disposed before the uploads complete. The route-replace
+        // is performed manually at the very end of this method instead.
+        final hasRawAttachments = pending.rawAttachments.isNotEmpty;
+
         // Send the text message first (no attachments — the conversation does
         // not exist on the server yet, so there is no endpoint to upload to).
         await _dispatchSend(
@@ -113,12 +120,17 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           proactivity: pending.proactivity,
           responseLength: pending.responseLength,
           attachments: pending.attachments,
+          // Suppress route-replace when raw attachments follow — the widget
+          // must stay alive until all uploads and the follow-up send finish.
+          skipRouteReplace: hasRawAttachments,
         );
 
         // After the first send completes, the notifier holds a real UUID from
         // the ConversationCreated event. Upload any raw attachments now and
         // deliver them as a follow-up message so they appear in the thread.
-        if (pending.rawAttachments.isNotEmpty && mounted) {
+        // The widget is guaranteed to still be mounted here because the
+        // route-replace was deferred via skipRouteReplace above.
+        if (hasRawAttachments && mounted) {
           final resolvedId = ref
               .read(coachChatNotifierProvider(widget.conversationId))
               .resolvedConversationId;
@@ -163,6 +175,18 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                 proactivity: pending.proactivity,
                 responseLength: pending.responseLength,
                 attachments: uploadedPayloads,
+                // Route-replace still suppressed — we do it once below after
+                // all uploads and follow-up sends are done.
+                skipRouteReplace: true,
+              );
+            }
+
+            // All async work is done — now it is safe to replace the route.
+            // The widget is still mounted because we deferred navigation.
+            if (mounted) {
+              context.replaceNamed(
+                RouteNames.coachThread,
+                pathParameters: {'id': resolvedId},
               );
             }
           }
@@ -176,6 +200,14 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     }
   }
 
+  /// Sends a message via the notifier and optionally replaces the route.
+  ///
+  /// [skipRouteReplace] — when true the `context.replaceNamed` call that
+  /// transitions to the real conversation UUID is suppressed. Use this when
+  /// the caller (e.g. [_initConversation]) needs to do additional async work
+  /// (such as uploading raw attachments and sending a follow-up message)
+  /// before navigation happens. The caller is then responsible for performing
+  /// the route-replace once all work is complete.
   Future<void> _dispatchSend({
     required String? conversationId,
     required String text,
@@ -183,6 +215,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     required String proactivity,
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
+    bool skipRouteReplace = false,
   }) async {
     final transaction = Sentry.startTransaction(
       'ai.chat_response',
@@ -213,7 +246,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
       // After the stream completes, check if we got a new conversation ID
       // and replace the current route so the URL reflects the real UUID.
-      if (mounted) {
+      // Skipped when the caller needs to do more async work before navigation.
+      if (!skipRouteReplace && mounted) {
         final resolvedId = ref
             .read(coachChatNotifierProvider(widget.conversationId))
             .resolvedConversationId;
@@ -1255,68 +1289,77 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   final List<PendingAttachment> _attachments = [];
 
   Future<void> _handleSend() async {
-    final text = widget.controller.text.trim();
-    if (text.isEmpty && _attachments.isEmpty) return;
-    if (widget.isSending) return;
+    try {
+      final text = widget.controller.text.trim();
+      if (text.isEmpty && _attachments.isEmpty) return;
+      if (widget.isSending) return;
 
-    // Upload attachments.
-    //
-    // A real conversation UUID is required by the backend endpoint
-    // `/api/v1/chat/{conversationId}/attachments`. By the time the user can
-    // type a second message here the first message has already completed and
-    // [CoachChatNotifier] holds the resolved UUID. For a brand-new conversation
-    // (widget.conversationId starts with "new_") we read the resolved ID from
-    // notifier state rather than using the temporary ID.
-    final List<Map<String, dynamic>> attachmentPayloads = [];
-    if (_attachments.isNotEmpty) {
-      // Resolve the real conversation UUID — must not be a temp "new_" ID.
-      final notifierState = ref.read(
-        coachChatNotifierProvider(widget.conversationId),
-      );
-      final resolvedConvId = notifierState.resolvedConversationId;
+      // Upload attachments.
+      //
+      // A real conversation UUID is required by the backend endpoint
+      // `/api/v1/chat/{conversationId}/attachments`. By the time the user can
+      // type a second message here the first message has already completed and
+      // [CoachChatNotifier] holds the resolved UUID. For a brand-new conversation
+      // (widget.conversationId starts with "new_") we read the resolved ID from
+      // notifier state rather than using the temporary ID.
+      final List<Map<String, dynamic>> attachmentPayloads = [];
+      if (_attachments.isNotEmpty) {
+        // Resolve the real conversation UUID — must not be a temp "new_" ID.
+        final notifierState = ref.read(
+          coachChatNotifierProvider(widget.conversationId),
+        );
+        final resolvedConvId = notifierState.resolvedConversationId;
 
-      if (resolvedConvId == null || resolvedConvId.startsWith('new_')) {
-        // No real conversation ID yet — uploading is impossible. Show an error
-        // and abort rather than hitting a non-existent endpoint.
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Attachments cannot be uploaded yet — please wait for the conversation to start.',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      final attachmentRepo = ref.read(attachmentRepositoryProvider);
-      for (final a in _attachments) {
-        try {
-          final uploaded = await attachmentRepo.uploadAttachment(
-            a.file.path,
-            conversationId: resolvedConvId,
-          );
-          attachmentPayloads.add({
-            'type': uploaded.type.name,
-            'filename': a.name,
-            'storage_path': uploaded.storagePath ?? '',
-            'signed_url': uploaded.signedUrl ?? '',
-            'size_bytes': uploaded.sizeBytes ?? 0,
-            'mime_type': uploaded.mimeType ?? '',
-          });
-        } catch (e) {
+        if (resolvedConvId == null || resolvedConvId.startsWith('new_')) {
+          // No real conversation ID yet — uploading is impossible. Show an error
+          // and abort rather than hitting a non-existent endpoint.
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to upload ${a.name}: $e')),
+              const SnackBar(
+                content: Text(
+                  'Attachments cannot be uploaded yet — please wait for the conversation to start.',
+                ),
+              ),
             );
+          }
+          return;
+        }
+
+        final attachmentRepo = ref.read(attachmentRepositoryProvider);
+        for (final a in _attachments) {
+          try {
+            final uploaded = await attachmentRepo.uploadAttachment(
+              a.file.path,
+              conversationId: resolvedConvId,
+            );
+            attachmentPayloads.add({
+              'type': uploaded.type.name,
+              'filename': a.name,
+              'storage_path': uploaded.storagePath ?? '',
+              'signed_url': uploaded.signedUrl ?? '',
+              'size_bytes': uploaded.sizeBytes ?? 0,
+              'mime_type': uploaded.mimeType ?? '',
+            });
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to upload ${a.name}: $e')),
+              );
+            }
           }
         }
       }
-    }
 
-    setState(() => _attachments.clear());
-    widget.onSend(attachments: attachmentPayloads);
+      setState(() => _attachments.clear());
+      widget.onSend(attachments: attachmentPayloads);
+    } catch (e, st) {
+      Sentry.captureException(e, stackTrace: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message: $e')),
+        );
+      }
+    }
   }
 
   @override
