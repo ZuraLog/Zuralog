@@ -15,9 +15,12 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/coach/data/api_coach_repository.dart';
 import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
@@ -26,9 +29,11 @@ import 'package:zuralog/features/coach/domain/coach_models.dart';
 
 /// Provides the live [ApiCoachRepository].
 ///
-/// Depends on [apiClientProvider] and [secureStorageProvider] from the
-/// core DI layer. Override in tests with [MockCoachRepository].
+/// In debug builds (`kDebugMode`) a [MockCoachRepository] is returned so the
+/// Coach tab works without a running backend.
+/// Override in tests with [MockCoachRepository].
 final coachRepositoryProvider = Provider<CoachRepository>((ref) {
+  if (kDebugMode) return const MockCoachRepository();
   return ApiCoachRepository(
     apiClient: ref.watch(apiClientProvider),
     secureStorage: ref.watch(secureStorageProvider),
@@ -40,16 +45,25 @@ final coachRepositoryProvider = Provider<CoachRepository>((ref) {
 /// State for the conversation list used by the Conversation Drawer.
 class _ConversationsNotifier extends AsyncNotifier<List<Conversation>> {
   @override
-  Future<List<Conversation>> build() {
-    return ref.read(coachRepositoryProvider).listConversations();
+  Future<List<Conversation>> build() async {
+    try {
+      return await ref.read(coachRepositoryProvider).listConversations();
+    } on DioException catch (e) {
+      throw Exception(ApiClient.friendlyError(e));
+    }
   }
 
   /// Re-fetches the conversation list from the server.
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(coachRepositoryProvider).listConversations(),
-    );
+    try {
+      final result = await ref.read(coachRepositoryProvider).listConversations();
+      state = AsyncData(result);
+    } on DioException catch (e) {
+      state = AsyncError(Exception(ApiClient.friendlyError(e)), StackTrace.current);
+    } catch (e) {
+      state = AsyncError(e, StackTrace.current);
+    }
   }
 
   /// Optimistically archives [conversationId] and syncs with the server.
@@ -206,12 +220,25 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
           .read(coachRepositoryProvider)
           .listMessages(arg);
       state = state.copyWith(messages: messages, isLoadingHistory: false);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoadingHistory: false,
+        errorMessage: ApiClient.friendlyError(e),
+      );
     } catch (e) {
       state = state.copyWith(
         isLoadingHistory: false,
-        errorMessage: 'Could not load conversation: $e',
+        errorMessage: 'Could not load conversation. Please try again.',
       );
     }
+  }
+
+  /// Clears the current error message without triggering any network request.
+  ///
+  /// Used by the retry button for new conversations, where there is nothing
+  /// to reload — the user simply re-types and sends again.
+  void clearError() {
+    state = state.copyWith(clearError: true);
   }
 
   /// Sends [text] (with optional [attachments]) and streams the AI response.

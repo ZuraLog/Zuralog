@@ -795,29 +795,63 @@ class _ConversationDrawer extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  data: (conversations) => ListView.separated(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppDimens.spaceSm,
-                    ),
-                    itemCount: conversations.length,
-                    separatorBuilder: (context, _) => const Divider(
-                      height: 1,
-                      indent: AppDimens.spaceMd,
-                      color: AppColors.borderDark,
-                    ),
-                    itemBuilder: (_, i) => _ConversationTile(
-                      conversation: conversations[i],
-                      onTap: () {
-                        ref.read(hapticServiceProvider).light();
-                        Navigator.of(ctx).pop();
-                        context.pushNamed(
-                          RouteNames.coachThread,
-                          pathParameters: {'id': conversations[i].id},
-                        );
-                      },
-                    ),
-                  ),
+                  data: (conversations) {
+                    if (conversations.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppDimens.spaceXl),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 48,
+                                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                              ),
+                              const SizedBox(height: AppDimens.spaceMd),
+                              Text(
+                                'No conversations yet',
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                              const SizedBox(height: AppDimens.spaceSm),
+                              Text(
+                                'Start a new chat to get started',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppDimens.spaceSm,
+                      ),
+                      itemCount: conversations.length,
+                      separatorBuilder: (context, _) => const Divider(
+                        height: 1,
+                        indent: AppDimens.spaceMd,
+                        color: AppColors.borderDark,
+                      ),
+                      itemBuilder: (_, i) => _ConversationTile(
+                        conversation: conversations[i],
+                        onTap: () {
+                          ref.read(hapticServiceProvider).light();
+                          Navigator.of(ctx).pop();
+                          context.pushNamed(
+                            RouteNames.coachThread,
+                            pathParameters: {'id': conversations[i].id},
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

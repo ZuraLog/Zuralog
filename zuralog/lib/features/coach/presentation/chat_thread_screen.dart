@@ -254,9 +254,18 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           if (chatState.errorMessage != null)
             _ErrorBanner(
               message: chatState.errorMessage!,
-              onRetry: () => ref
-                  .read(coachChatNotifierProvider(widget.conversationId).notifier)
-                  .loadHistory(),
+              onRetry: () {
+                final notifier = ref.read(
+                  coachChatNotifierProvider(widget.conversationId).notifier,
+                );
+                if (widget.conversationId.startsWith('new_')) {
+                  // For new conversations there is no history to load —
+                  // just clear the error so the user can re-type and send.
+                  notifier.clearError();
+                } else {
+                  notifier.loadHistory();
+                }
+              },
             ),
           // ── Message list + streaming bubble ──────────────────────────────
           Expanded(
