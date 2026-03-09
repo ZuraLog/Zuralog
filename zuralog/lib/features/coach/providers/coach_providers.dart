@@ -412,11 +412,21 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// caller can pre-fill the input field.
   ///
   /// This is a local-only operation — nothing is persisted to the DB.
-  String editMessage(int messageIndex) {
+  ///
+  /// Returns null if [messageIndex] is out of bounds (e.g. state changed
+  /// between render and tap).
+  String? editMessage(int messageIndex) {
+    if (messageIndex < 0 || messageIndex >= state.messages.length) return null;
     final content = state.messages[messageIndex].content;
-    final truncated = state.messages.sublist(0, messageIndex);
-    state = state.copyWith(messages: truncated);
+    state = state.copyWith(messages: state.messages.sublist(0, messageIndex));
     return content;
+  }
+
+  /// Restores [messages] into state.
+  ///
+  /// Called when the user cancels an edit so the truncated messages come back.
+  void restoreMessages(List<ChatMessage> messages) {
+    state = state.copyWith(messages: messages);
   }
 
   /// Cancels any in-flight stream.

@@ -65,6 +65,10 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   /// The original content of the message being edited (shown in the indicator bar).
   String? _editingContent;
 
+  /// Snapshot of [CoachChatState.messages] taken just before [editMessage]
+  /// truncates state. Restored if the user cancels the edit.
+  List<ChatMessage>? _editSnapshot;
+
   @override
   void initState() {
     super.initState();
@@ -185,6 +189,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       setState(() {
         _isEditing = false;
         _editingContent = null;
+        _editSnapshot = null;
       });
     }
 
@@ -291,14 +296,15 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     scrollController: _scrollCtrl,
                     conversationId: widget.conversationId,
                     isSending: chatState.isSending,
-                    onEditMessage: (content) {
+                    onEditMessage: (snapshot, content) {
+                      _editSnapshot = snapshot;
                       setState(() {
                         _isEditing = true;
                         _editingContent = content;
                       });
                       _inputCtrl.text = content;
-                      _inputCtrl.selection = TextSelection.fromPosition(
-                        TextPosition(offset: content.length),
+                      _inputCtrl.selection = TextSelection.collapsed(
+                        offset: content.length,
                       );
                       _inputFocus.requestFocus();
                     },
@@ -341,10 +347,21 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     constraints: const BoxConstraints(),
                     tooltip: 'Cancel edit',
                     onPressed: () {
+                      final snapshot = _editSnapshot;
                       setState(() {
                         _isEditing = false;
                         _editingContent = null;
+                        _editSnapshot = null;
                       });
+                      if (snapshot != null) {
+                        ref
+                            .read(
+                              coachChatNotifierProvider(
+                                widget.conversationId,
+                              ).notifier,
+                            )
+                            .restoreMessages(snapshot);
+                      }
                       _inputCtrl.clear();
                     },
                   ),
@@ -597,8 +614,9 @@ class _MessageList extends ConsumerWidget {
   final bool isSending;
 
   /// Called when the user taps "Edit" on a user message bubble.
-  /// Receives the message index (already removed from state) and the content.
-  final void Function(String content) onEditMessage;
+  /// Receives the pre-truncation message [snapshot] (for cancel-restore) and
+  /// the [content] of the message being edited.
+  final void Function(List<ChatMessage> snapshot, String content) onEditMessage;
 
   final String? streamingContent;
   final String? activeToolName;
@@ -634,14 +652,22 @@ class _MessageList extends ConsumerWidget {
           final msg = messages[i];
           return _MessageBubble(
             message: msg,
-            onEdit: msg.role == MessageRole.user
+            onEdit: (msg.role == MessageRole.user && !isSending)
                 ? () {
+                    // Snapshot the full message list before truncation so the
+                    // state can be restored if the user cancels the edit.
+                    final snapshot = ref
+                        .read(coachChatNotifierProvider(conversationId))
+                        .messages
+                        .toList();
                     final content = ref
                         .read(
                           coachChatNotifierProvider(conversationId).notifier,
                         )
                         .editMessage(i);
-                    onEditMessage(content);
+                    if (content != null) {
+                      onEditMessage(snapshot, content);
+                    }
                   }
                 : null,
           );
