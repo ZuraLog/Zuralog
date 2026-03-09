@@ -5,7 +5,6 @@
 ///  - [coachRepositoryProvider]          — the live [ApiCoachRepository]
 ///  - [coachConversationsProvider]       — list of conversations (async notifier)
 ///  - [coachChatNotifierProvider]        — per-conversation streaming chat state
-///  - [coachMessagesProvider]            — one-shot message fetch for a conversation
 ///  - [coachPromptSuggestionsProvider]   — contextual prompt chips
 ///  - [coachQuickActionsProvider]        — contextual quick-action tiles
 ///  - [coachPrefillProvider]             — cross-tab prefill text
@@ -469,19 +468,6 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 final coachChatNotifierProvider =
     NotifierProviderFamily<CoachChatNotifier, CoachChatState, String>(
   CoachChatNotifier.new,
-);
-
-// ── Messages (simple fetch — for initial load without the notifier) ────────────
-
-/// Loads messages for a specific [conversationId].
-///
-/// Prefer [coachChatNotifierProvider] for the full chat experience;
-/// this provider is a simpler read-only fetch for cases that don't
-/// need streaming state.
-final coachMessagesProvider = FutureProvider.family<List<ChatMessage>, String>(
-  (ref, conversationId) async {
-    return ref.read(coachRepositoryProvider).listMessages(conversationId);
-  },
 );
 
 // ── Prompt Suggestions ────────────────────────────────────────────────────────

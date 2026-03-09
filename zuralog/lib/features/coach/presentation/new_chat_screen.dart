@@ -304,7 +304,7 @@ class _CoachEmptyStateState extends State<_CoachEmptyState>
                     'Ask me anything about your health. I can see data from all your connected apps and remember our past conversations.',
                 child: widget.isLoading
                     ? const _PulsingLogo()
-                    : _StaticLogo(),
+                    : const _StaticLogo(),
               ),
             ),
             const SizedBox(height: AppDimens.spaceMd),
@@ -321,7 +321,7 @@ class _CoachEmptyStateState extends State<_CoachEmptyState>
             ),
             const SizedBox(height: AppDimens.spaceXl),
             // ── "What I can do" capability row ────────────────────────────
-            _CapabilityRow(),
+            const _CapabilityRow(),
             const SizedBox(height: AppDimens.spaceXl),
             // ── Grouped suggestion cards ───────────────────────────────────
             if (widget.suggestedPromptsEnabled &&
@@ -350,6 +350,8 @@ class _CoachEmptyStateState extends State<_CoachEmptyState>
 // ── _StaticLogo ───────────────────────────────────────────────────────────────
 
 class _StaticLogo extends StatelessWidget {
+  const _StaticLogo();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -436,6 +438,8 @@ class _PulsingLogoState extends State<_PulsingLogo>
 
 /// Horizontal row of 3 capability icons: Analyze, Plan, Track.
 class _CapabilityRow extends StatelessWidget {
+  const _CapabilityRow();
+
   @override
   Widget build(BuildContext context) {
     const items = [
@@ -903,7 +907,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   }
 }
 
-class _InputIconButton extends ConsumerWidget {
+class _InputIconButton extends StatelessWidget {
   const _InputIconButton({
     required this.icon,
     required this.onTap,
@@ -921,7 +925,7 @@ class _InputIconButton extends ConsumerWidget {
   final Color? activeColor;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -1692,112 +1696,4 @@ class _QuickLogTile extends ConsumerWidget {
   }
 }
 
-// ── _CoachLoadingSkeleton ─────────────────────────────────────────────────────
 
-/// Shimmer skeleton shown while prompt suggestions are loading.
-class _CoachLoadingSkeleton extends StatefulWidget {
-  const _CoachLoadingSkeleton();
-
-  @override
-  State<_CoachLoadingSkeleton> createState() => _CoachLoadingSkeletonState();
-}
-
-class _CoachLoadingSkeletonState extends State<_CoachLoadingSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _shimmerCtrl;
-  late final Animation<double> _shimmerAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _shimmerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-    _shimmerAnim = CurvedAnimation(
-      parent: _shimmerCtrl,
-      curve: Curves.easeInOut,
-    );
-  }
-
-  @override
-  void dispose() {
-    _shimmerCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _shimmerAnim,
-      builder: (context, _) {
-        final opacity = 0.3 + (_shimmerAnim.value * 0.3);
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-          child: Column(
-            children: [
-              const SizedBox(height: AppDimens.spaceXxl),
-              // Avatar skeleton
-              Center(
-                child: _Bone(
-                  width: 72,
-                  height: 72,
-                  radius: 36,
-                  opacity: opacity,
-                ),
-              ),
-              const SizedBox(height: AppDimens.spaceMd),
-              Center(child: _Bone(width: 160, height: 22, opacity: opacity)),
-              const SizedBox(height: AppDimens.spaceSm),
-              Center(child: _Bone(width: 240, height: 16, opacity: opacity)),
-              const SizedBox(height: AppDimens.spaceXl),
-              // Label
-              Align(
-                alignment: Alignment.centerLeft,
-                child: _Bone(width: 80, height: 12, opacity: opacity),
-              ),
-              const SizedBox(height: AppDimens.spaceSm),
-              // Chips row 1
-              Wrap(
-                spacing: AppDimens.spaceSm,
-                runSpacing: AppDimens.spaceSm,
-                children: [
-                  _Bone(width: 180, height: 36, radius: 18, opacity: opacity),
-                  _Bone(width: 140, height: 36, radius: 18, opacity: opacity),
-                  _Bone(width: 200, height: 36, radius: 18, opacity: opacity),
-                  _Bone(width: 160, height: 36, radius: 18, opacity: opacity),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _Bone extends StatelessWidget {
-  const _Bone({
-    required this.width,
-    required this.height,
-    required this.opacity,
-    this.radius = 8,
-  });
-
-  final double width;
-  final double height;
-  final double opacity;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: AppColors.shimmerBase.withValues(alpha: opacity),
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
-}

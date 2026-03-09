@@ -299,7 +299,6 @@ final class ApiCoachRepository implements CoachRepository {
       String? resolvedConversationId = conversationId;
       bool messageSent = false;
       String accumulated = '';
-      String? finalConversationId;
 
       final wsCompleter = Completer<void>();
 
@@ -315,7 +314,6 @@ final class ApiCoachRepository implements CoachRepository {
               case 'conversation_init':
                 // Server assigned a UUID (always sent, even for existing convs).
                 resolvedConversationId = msg['conversation_id'] as String?;
-                finalConversationId = resolvedConversationId;
 
                 // If conversationId was null, this is a new conversation.
                 if (conversationId == null && resolvedConversationId != null) {
@@ -366,7 +364,6 @@ final class ApiCoachRepository implements CoachRepository {
                 final msgId = msg['message_id'] as String? ??
                     'msg_${DateTime.now().millisecondsSinceEpoch}';
                 final convId = msg['conversation_id'] as String? ??
-                    finalConversationId ??
                     resolvedConversationId ??
                     'unknown';
 
