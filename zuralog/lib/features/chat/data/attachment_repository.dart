@@ -1,7 +1,8 @@
 /// Zuralog Edge Agent — Attachment Repository.
 ///
 /// Handles uploading file attachments to the Cloud Brain backend,
-/// which stores them in Supabase Storage and returns metadata.
+/// which processes files in memory and returns metadata — no permanent
+/// storage is performed.
 library;
 
 import 'dart:io';
@@ -14,7 +15,7 @@ import 'package:zuralog/features/chat/domain/attachment_types.dart';
 /// Repository for uploading chat attachments to the backend.
 ///
 /// Uses [ApiClient] (Dio) for multipart file uploads to the
-/// `/api/v1/chat/attachments` endpoint.
+/// `/api/v1/chat/{conversationId}/attachments` endpoint.
 class AttachmentRepository {
   /// The REST API client for upload requests.
   final ApiClient _apiClient;
@@ -25,15 +26,19 @@ class AttachmentRepository {
   AttachmentRepository({required ApiClient apiClient})
       : _apiClient = apiClient;
 
-  /// Uploads a local file to the backend storage.
+  /// Uploads a local file to the backend for processing.
   ///
   /// [filePath] is the absolute path to the local file.
+  /// [conversationId] is the UUID of the target conversation. When provided,
+  /// the file is uploaded to `/api/v1/chat/{conversationId}/attachments`.
+  /// When null (new conversation before server assigns an ID), falls back to
+  /// `/api/v1/chat/attachments`.
   ///
   /// Returns a [ChatAttachment] populated with server-side metadata
-  /// (storage path, signed URL, size, MIME type).
+  /// (extracted text, health facts, size, MIME type).
   ///
   /// Throws on network or validation errors.
-  Future<ChatAttachment> uploadAttachment(String filePath) async {
+  Future<ChatAttachment> uploadAttachment(String filePath, {String? conversationId}) async {
     final file = File(filePath);
     final filename = file.uri.pathSegments.last;
     final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
@@ -51,8 +56,12 @@ class AttachmentRepository {
       'file': await MultipartFile.fromFile(filePath, filename: filename),
     });
 
+    final endpoint = conversationId != null
+        ? '/api/v1/chat/$conversationId/attachments'
+        : '/api/v1/chat/attachments'; // fallback for new conversations before ID is known
+
     final response = await _apiClient.post(
-      '/api/v1/chat/attachments',
+      endpoint,
       data: formData,
     );
 

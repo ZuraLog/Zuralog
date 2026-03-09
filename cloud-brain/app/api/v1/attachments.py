@@ -168,7 +168,7 @@ async def upload_attachment(
     # 3. Process through AttachmentProcessor
     # ------------------------------------------------------------------
     try:
-        processed = await AttachmentProcessor.process(
+        processed = AttachmentProcessor.process(
             file_bytes=file_bytes,
             filename=filename,
             content_type=content_type,

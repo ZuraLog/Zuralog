@@ -161,7 +161,7 @@ class AttachmentProcessor:
     # -----------------------------------------------------------------------
 
     @staticmethod
-    async def process(
+    def process(
         file_bytes: bytes,
         filename: str,
         content_type: str,
@@ -228,9 +228,7 @@ class AttachmentProcessor:
             )
 
         # Step 3 — extract text content
-        extracted_text: str | None = AttachmentProcessor._extract_text(
-            file_bytes, content_type
-        )
+        extracted_text: str | None = AttachmentProcessor._extract_text(file_bytes, content_type)
 
         # Step 4 — identify health facts from any text
         health_facts: list[str] = []
@@ -271,8 +269,8 @@ class AttachmentProcessor:
         "image/png": [b"\x89PNG\r\n\x1a\n"],
         "image/heic": [],  # HEIC containers vary; skip magic-byte check
         "application/pdf": [b"%PDF"],
-        "text/plain": [],   # No reliable magic bytes for plain text
-        "text/csv": [],     # No reliable magic bytes for CSV
+        "text/plain": [],  # No reliable magic bytes for plain text
+        "text/csv": [],  # No reliable magic bytes for CSV
     }
 
     @staticmethod
@@ -297,18 +295,12 @@ class AttachmentProcessor:
 
         if normalised_type not in AttachmentProcessor.ALLOWED_TYPES:
             allowed = ", ".join(sorted(AttachmentProcessor.ALLOWED_TYPES.keys()))
-            raise ValueError(
-                f"Unsupported file type '{normalised_type}'. "
-                f"Allowed types: {allowed}."
-            )
+            raise ValueError(f"Unsupported file type '{normalised_type}'. Allowed types: {allowed}.")
 
         size = len(file_bytes)
         if size > AttachmentProcessor.MAX_SIZE_BYTES:
             max_mb = AttachmentProcessor.MAX_SIZE_BYTES / (1024 * 1024)
-            raise ValueError(
-                f"File size {size / (1024 * 1024):.1f} MB exceeds the "
-                f"{max_mb:.0f} MB limit."
-            )
+            raise ValueError(f"File size {size / (1024 * 1024):.1f} MB exceeds the {max_mb:.0f} MB limit.")
 
         # Magic-byte verification for types with known signatures
         magic_prefixes = AttachmentProcessor._MAGIC_BYTES.get(normalised_type, [])
@@ -368,9 +360,7 @@ class AttachmentProcessor:
                 try:
                     return file_bytes.decode("latin-1")
                 except Exception:
-                    logger.warning(
-                        "_extract_text: could not decode text file — returning None"
-                    )
+                    logger.warning("_extract_text: could not decode text file — returning None")
                     return None
 
         if normalised == "application/pdf":
@@ -447,8 +437,7 @@ class AttachmentProcessor:
         safe_filename = re.sub(r'[\r\n\x00-\x1f"\'`]', "", filename)[:255]
 
         lines: list[str] = [
-            f"[Attachment] The user has shared a {file_type}: '{safe_filename}' "
-            f"({content_type}, {size_label}).",
+            f"[Attachment] The user has shared a {file_type}: '{safe_filename}' ({content_type}, {size_label}).",
         ]
 
         if file_type == "image":
@@ -458,10 +447,7 @@ class AttachmentProcessor:
                     "Consider providing nutritional context or asking about the meal."
                 )
             else:
-                lines.append(
-                    "The image has been received. "
-                    "Describe or reference it as needed in your response."
-                )
+                lines.append("The image has been received. Describe or reference it as needed in your response.")
 
         if extracted_text:
             # Truncate very long texts for the context summary
@@ -472,8 +458,6 @@ class AttachmentProcessor:
 
         if health_facts:
             facts_formatted = "\n".join(f"  - {f}" for f in health_facts)
-            lines.append(
-                f"Health-relevant information detected in the document:\n{facts_formatted}"
-            )
+            lines.append(f"Health-relevant information detected in the document:\n{facts_formatted}")
 
         return "\n\n".join(lines)

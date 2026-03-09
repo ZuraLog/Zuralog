@@ -702,7 +702,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
           try {
             final uploaded = await attachmentRepo.uploadAttachment(a.file.path);
             attachmentPayloads.add({
-              'type': 'image',
+              'type': uploaded.type.name,
               'filename': a.name,
               'storage_path': uploaded.storagePath ?? '',
               'signed_url': uploaded.signedUrl ?? '',

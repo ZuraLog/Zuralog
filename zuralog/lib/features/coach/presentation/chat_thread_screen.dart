@@ -1203,9 +1203,15 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
       final attachmentRepo = ref.read(attachmentRepositoryProvider);
       for (final a in _attachments) {
         try {
-          final uploaded = await attachmentRepo.uploadAttachment(a.file.path);
+          final effectiveConvId = widget.conversationId.startsWith('new_')
+              ? null
+              : widget.conversationId;
+          final uploaded = await attachmentRepo.uploadAttachment(
+            a.file.path,
+            conversationId: effectiveConvId,
+          );
           attachmentPayloads.add({
-            'type': 'image',
+            'type': uploaded.type.name,
             'filename': a.name,
             'storage_path': uploaded.storagePath ?? '',
             'signed_url': uploaded.signedUrl ?? '',
