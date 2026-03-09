@@ -11,19 +11,17 @@ conversation loop with ReAct-style function-calling. It:
 5. Feeds tool results back to the LLM.
 6. Returns the final assistant response.
 
-This replaces the Phase 1.3 scaffold with a production-ready
-implementation.
+Supports both non-streaming (process_message) and streaming
+(process_message_stream) modes. The streaming mode yields partial
+tokens to the caller so the WebSocket endpoint can forward them to
+the client in real time.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
 import json
 import logging
+from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 import sentry_sdk
 
@@ -34,6 +32,9 @@ from app.agent.prompts.system import build_system_prompt
 from app.agent.response import AgentResponse
 from app.services.usage_tracker import UsageTracker
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 logger = logging.getLogger(__name__)
 
 MAX_TOOL_TURNS = 5
@@ -42,6 +43,10 @@ MAX_TOOL_TURNS = 5
 Prevents infinite loops if the model continuously requests tools
 without generating a final text response.
 """
+
+# Lightweight model used only for auto-generating conversation titles.
+# A small, cheap model is preferred since this is a one-shot, low-stakes call.
+_TITLE_MODEL = "openai/gpt-4.1-nano"
 
 
 class Orchestrator:
@@ -76,6 +81,8 @@ class Orchestrator:
         self.memory_store = memory_store
         self.llm_client = llm_client or LLMClient()
         self.usage_tracker = usage_tracker
+        # Dedicated lightweight client for title generation only.
+        self._title_client = LLMClient(model=_TITLE_MODEL)
 
     def _build_tools_for_llm(
         self,
@@ -110,6 +117,74 @@ class Orchestrator:
             )
         return openai_tools
 
+    def _build_messages(
+        self,
+        system_prompt: str,
+        message: str,
+        conversation_history: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Build the initial messages list for an LLM request.
+
+        Injects the system prompt, optional conversation history (for
+        multi-turn context), and the current user message.
+
+        Args:
+            system_prompt: The fully-assembled system prompt string.
+            message: The current user message text.
+            conversation_history: Optional prior messages in
+                ``[{"role": ..., "content": ...}]`` format. Injected
+                between the system prompt and the new user message.
+
+        Returns:
+            A list of message dicts ready for the LLM API.
+        """
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+        ]
+        if conversation_history:
+            messages.extend(conversation_history)
+        messages.append({"role": "user", "content": message})
+        return messages
+
+    async def generate_title(self, first_user_message: str) -> str:
+        """Generate a short, descriptive conversation title.
+
+        Uses a lightweight model (gpt-4.1-nano) to produce a concise title
+        from the user's first message. Falls back to a truncated version of
+        the message if the LLM call fails.
+
+        Args:
+            first_user_message: The user's opening message in the conversation.
+
+        Returns:
+            A short title string (typically 3-8 words, no trailing period).
+        """
+        try:
+            response = await self._title_client.chat(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a title generator. Given the user's first message "
+                            "in a health coaching conversation, produce a concise title "
+                            "(3-7 words, title case, no trailing punctuation) that captures "
+                            "the topic. Output ONLY the title text, nothing else."
+                        ),
+                    },
+                    {"role": "user", "content": first_user_message[:300]},
+                ],
+                temperature=0.3,
+            )
+            title = (response.choices[0].message.content or "").strip().strip('"').strip("'")
+            # Fallback if the model returns something odd.
+            if not title or len(title) > 80:
+                raise ValueError("title out of range")
+            return title
+        except Exception:
+            logger.warning("Title generation failed; falling back to truncation")
+            truncated = first_user_message[:60].strip()
+            return truncated + ("…" if len(first_user_message) > 60 else "")
+
     async def process_message(
         self,
         user_id: str,
@@ -118,6 +193,7 @@ class Orchestrator:
         persona: str = "balanced",
         proactivity: str = "medium",
         db: AsyncSession | None = None,
+        conversation_history: list[dict[str, Any]] | None = None,
     ) -> AgentResponse:
         """Process a user message through the AI Brain.
 
@@ -138,6 +214,9 @@ class Orchestrator:
             db: Optional async database session. When provided, tools are
                 filtered to only those for integrations the user has
                 connected. When None, all tools are injected (legacy).
+            conversation_history: Prior messages for multi-turn context.
+                Injected between the system prompt and the current user
+                message. Each entry must have ``role`` and ``content`` keys.
 
         Returns:
             An ``AgentResponse`` containing the assistant's message and
@@ -159,11 +238,8 @@ class Orchestrator:
                 user_context_suffix=user_context_suffix,
             )
 
-            # 2. Build initial messages (memories already injected into system prompt)
-            messages: list[dict[str, Any]] = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message},
-            ]
+            # 2. Build initial messages (with optional history for multi-turn context)
+            messages = self._build_messages(system_prompt, message, conversation_history)
 
             # 3. Get available tools — filtered per user if DB session provided
             if db is not None:
@@ -222,7 +298,6 @@ class Orchestrator:
 
                 # Check for tool calls
                 if assistant_message.tool_calls:
-                    # Add assistant message with tool calls to history
                     messages.append(
                         {
                             "role": "assistant",
@@ -241,7 +316,6 @@ class Orchestrator:
                         }
                     )
 
-                    # Execute each tool call
                     for tool_call in assistant_message.tool_calls:
                         func_name = tool_call.function.name
                         try:
@@ -256,7 +330,6 @@ class Orchestrator:
                             arguments,
                         )
 
-                        # Execute via MCP — wrapped in a Sentry span per tool call
                         with sentry_sdk.start_span(op="ai.tool_call", description=func_name) as tool_span:
                             tool_span.set_tag("tool.name", func_name)
                             tool_span.set_tag("turn", turn + 1)
@@ -269,11 +342,9 @@ class Orchestrator:
                                     sentry_sdk.capture_exception(tool_exc)
                                 raise
 
-                        # Extract client_action if tool returned one (e.g. deep links)
                         if result.success and isinstance(result.data, dict) and "client_action" in result.data:
                             last_client_action = result.data
 
-                        # Build tool result message
                         if result.success:
                             result_content = json.dumps(result.data)
                         else:
@@ -287,7 +358,6 @@ class Orchestrator:
                             }
                         )
 
-                    # Continue loop — LLM will process tool results
                     continue
 
                 # No tool calls — return final text response
@@ -312,3 +382,178 @@ class Orchestrator:
                 message="I'm having trouble retrieving all the information right now. "
                 "Please try again or rephrase your question.",
             )
+
+    async def process_message_stream(
+        self,
+        user_id: str,
+        message: str,
+        user_context_suffix: str | None = None,
+        persona: str = "balanced",
+        proactivity: str = "medium",
+        db: AsyncSession | None = None,
+        conversation_history: list[dict[str, Any]] | None = None,
+    ) -> AsyncGenerator[dict[str, Any], None]:
+        """Process a user message and stream the final response token-by-token.
+
+        Identical to :meth:`process_message` for the ReAct tool-call turns
+        (non-streaming, to support function-calling). Once the LLM produces a
+        final text response with no tool calls, the response is streamed back
+        as individual ``stream_token`` events followed by a ``stream_end`` event.
+
+        Yields:
+            - ``{"type": "tool_start", "tool_name": str}`` — tool execution begins.
+            - ``{"type": "tool_end", "tool_name": str}`` — tool execution completes.
+            - ``{"type": "stream_token", "content": str}`` — partial response token.
+            - ``{"type": "stream_end", "content": str, "client_action": ...}`` — done.
+            - ``{"type": "error", "content": str}`` — unrecoverable error.
+
+        Args:
+            user_id: The authenticated user's ID.
+            message: The user's chat message.
+            user_context_suffix: Optional legacy context suffix.
+            persona: Coach persona key (``"balanced"``, etc.).
+            proactivity: Proactivity level key (``"medium"``, etc.).
+            db: Optional DB session for per-user tool filtering.
+            conversation_history: Prior messages for multi-turn context.
+        """
+        with sentry_sdk.start_transaction(
+            op="ai.process_message_stream", name="orchestrator.process_message_stream"
+        ) as txn:
+            txn.set_tag("user_id", user_id)
+
+            try:
+                # Build context (same as process_message)
+                context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
+                memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
+
+                system_prompt = build_system_prompt(
+                    persona=persona,
+                    proactivity=proactivity,
+                    memories=memory_texts if memory_texts else None,
+                    user_context_suffix=user_context_suffix,
+                )
+
+                messages = self._build_messages(system_prompt, message, conversation_history)
+
+                if db is not None:
+                    mcp_tools = await self.mcp_client.get_tools_for_user(db, user_id)
+                else:
+                    mcp_tools = self.mcp_client.get_all_tools()
+                tools = self._build_tools_for_llm(mcp_tools)
+
+                last_client_action: dict[str, Any] | None = None
+
+                for turn in range(MAX_TOOL_TURNS):
+                    # Check if we should stream this turn.
+                    # We use non-streaming for all tool-call turns and only
+                    # stream the final text response.
+                    with sentry_sdk.start_span(op="ai.llm_call", description=f"Stream turn {turn + 1}") as llm_span:
+                        llm_span.set_tag("turn", turn + 1)
+                        response = await self.llm_client.chat(
+                            messages,
+                            tools=tools if tools else None,
+                        )
+
+                    if self.usage_tracker:
+                        try:
+                            await self.usage_tracker.track_from_response(user_id, response)
+                        except Exception:
+                            pass
+
+                    if not response.choices:
+                        break
+
+                    assistant_message = response.choices[0].message
+
+                    if assistant_message.tool_calls:
+                        # Tool-call turn: emit progress events, execute tools.
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": assistant_message.content,
+                                "tool_calls": [
+                                    {
+                                        "id": tc.id,
+                                        "type": "function",
+                                        "function": {
+                                            "name": tc.function.name,
+                                            "arguments": tc.function.arguments,
+                                        },
+                                    }
+                                    for tc in assistant_message.tool_calls
+                                ],
+                            }
+                        )
+
+                        for tool_call in assistant_message.tool_calls:
+                            func_name = tool_call.function.name
+                            try:
+                                arguments = json.loads(tool_call.function.arguments)
+                            except json.JSONDecodeError:
+                                arguments = {}
+
+                            yield {"type": "tool_start", "tool_name": func_name}
+
+                            with sentry_sdk.start_span(op="ai.tool_call", description=func_name):
+                                try:
+                                    result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
+                                except Exception as tool_exc:
+                                    sentry_sdk.capture_exception(tool_exc)
+                                    yield {"type": "tool_end", "tool_name": func_name}
+                                    yield {"type": "error", "content": f"Tool error: {tool_exc!s}"}
+                                    return
+
+                            yield {"type": "tool_end", "tool_name": func_name}
+
+                            if result.success and isinstance(result.data, dict) and "client_action" in result.data:
+                                last_client_action = result.data
+
+                            result_content = (
+                                json.dumps(result.data)
+                                if result.success
+                                else json.dumps({"error": result.error or "Tool execution failed"})
+                            )
+
+                            messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tool_call.id,
+                                    "content": result_content,
+                                }
+                            )
+
+                        continue  # Next ReAct turn
+
+                    # No tool calls — this is the final response; stream it.
+                    # Re-invoke the LLM in streaming mode with the accumulated messages.
+                    with sentry_sdk.start_span(op="ai.stream_final", description="streaming final response"):
+                        stream = await self.llm_client.stream_chat(
+                            messages,
+                            tools=None,  # No tools on final streaming turn
+                        )
+
+                        full_content = ""
+                        async for chunk in stream:
+                            delta = chunk.choices[0].delta if chunk.choices else None
+                            if delta and delta.content:
+                                full_content += delta.content
+                                yield {"type": "stream_token", "content": delta.content}
+
+                    yield {
+                        "type": "stream_end",
+                        "content": full_content or (assistant_message.content or ""),
+                        "client_action": last_client_action,
+                    }
+                    return
+
+                # Max turns exceeded
+                yield {
+                    "type": "stream_end",
+                    "content": "I'm having trouble retrieving all the information right now. Please try again.",
+                    "client_action": None,
+                }
+
+            except Exception as exc:
+                sentry_sdk.capture_exception(exc)
+                logger.exception("process_message_stream error for user '%s'", user_id)
+                yield {"type": "error", "content": f"Processing error: {exc!s}"}

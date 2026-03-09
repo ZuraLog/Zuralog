@@ -5,6 +5,20 @@ WebSocket endpoint for real-time AI chat streaming and REST endpoints
 for chat history retrieval and conversation management. Handles
 authentication, message routing through the Orchestrator, and message
 persistence.
+
+WebSocket Protocol (server → client):
+  - {"type": "conversation_init", "conversation_id": str}  — sent once on connect
+  - {"type": "typing_start"}                               — AI is processing
+  - {"type": "tool_start", "tool_name": str}               — tool executing
+  - {"type": "tool_end",   "tool_name": str}               — tool done
+  - {"type": "stream_token", "content": str}               — partial token
+  - {"type": "stream_end",   "content": str,
+     "message_id": str, "conversation_id": str,
+     "client_action": dict|null}                           — final response
+  - {"type": "error", "content": str}                      — error
+
+WebSocket Protocol (client → server):
+  - {"message": str, "attachments": [...], "persona": str, "proactivity": str}
 """
 
 import logging
@@ -25,7 +39,7 @@ from fastapi import (
 )
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.context_manager.memory_store import MemoryStore
@@ -36,6 +50,7 @@ from app.api.deps import check_rate_limit
 from app.config import settings
 from app.database import async_session, get_db
 from app.models.conversation import Conversation, Message
+from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
 from app.services.rate_limiter import RateLimiter
 from app.services.storage_service import StorageService
@@ -106,6 +121,8 @@ async def _transcribe_audio(content: bytes, filename: str) -> str:
     if not settings.openai_api_key:
         return "[Voice note — transcription unavailable]"
     try:
+        from openai import AsyncOpenAI  # noqa: PLC0415
+
         client = AsyncOpenAI(api_key=settings.openai_api_key)
         transcription = await client.audio.transcriptions.create(
             model="whisper-1",
@@ -177,25 +194,100 @@ async def _refresh_attachment_urls(
     return refreshed
 
 
+def _message_to_dict(msg: Message) -> dict[str, Any]:
+    """Serialise a Message ORM object to a response dict.
+
+    Args:
+        msg: The SQLAlchemy Message instance.
+
+    Returns:
+        A dict suitable for JSON serialisation.
+    """
+    created = msg.created_at
+    return {
+        "id": msg.id,
+        "role": msg.role,
+        "content": msg.content,
+        "created_at": created.isoformat() if hasattr(created, "isoformat") else str(created),
+        "attachments": msg.attachments or [],
+    }
+
+
+async def _load_conversation_history(
+    db: AsyncSession,
+    conversation_id: str,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """Load recent messages for LLM context injection.
+
+    Fetches the last ``limit`` messages for the given conversation, ordered
+    oldest-first, and maps them to the OpenAI message format.
+
+    Args:
+        db: Async database session.
+        conversation_id: The conversation to fetch history for.
+        limit: Maximum number of messages to load (caps token usage).
+
+    Returns:
+        A list of ``{"role": str, "content": str}`` dicts.
+    """
+    result = await db.execute(
+        select(Message)
+        .where(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.asc())
+        .limit(limit)
+    )
+    messages = result.scalars().all()
+    # Only pass user/assistant roles to the LLM; skip tool/system rows.
+    return [{"role": m.role, "content": m.content or ""} for m in messages if m.role in ("user", "assistant")]
+
+
+async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str]:
+    """Load the user's coach persona and proactivity preferences.
+
+    Args:
+        db: Async database session.
+        user_id: The authenticated user's ID.
+
+    Returns:
+        A (persona, proactivity) tuple; defaults to ("balanced", "medium").
+    """
+    try:
+        result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
+        prefs = result.scalar_one_or_none()
+        if prefs:
+            return (prefs.coach_persona or "balanced", prefs.proactivity_level or "medium")
+    except Exception:  # noqa: BLE001
+        pass
+    return ("balanced", "medium")
+
+
+# ---------------------------------------------------------------------------
+# WebSocket — real-time AI chat with streaming
+# ---------------------------------------------------------------------------
+
+
 @router.websocket("/ws")
 async def websocket_chat(
     websocket: WebSocket,
     token: str | None = Query(default=None),
+    conversation_id: str | None = Query(default=None, alias="conversation_id"),
 ) -> None:
-    """WebSocket endpoint for real-time AI chat.
+    """WebSocket endpoint for real-time AI chat with token streaming.
 
-    Authenticates via a `token` query parameter, then enters a
-    message loop: receives user messages, routes them through the
-    Orchestrator, and streams responses back.
-
-    Protocol:
-        Client sends: ``{"message": "Hello", "attachments": [...]}``
-        Server replies: ``{"type": "message", "content": "...", "role": "assistant"}``
-        Server errors: ``{"type": "error", "content": "..."}``
+    On connect:
+      1. Validates the JWT token.
+      2. Resolves or creates the conversation (returns its UUID to the client).
+      3. Enters a message loop: receives user messages, runs them through
+         the Orchestrator with streaming, persists both messages, and updates
+         the conversation title on first exchange.
 
     Args:
         websocket: The WebSocket connection.
-        token: JWT access token passed as a query parameter.
+        token: JWT access token (query param).
+        conversation_id: Optional existing conversation UUID (query param).
+            If omitted, a new conversation is created and its ID is returned
+            in the ``conversation_init`` message.
     """
     app = websocket.app
     auth_service: AuthService = app.state.auth_service
@@ -203,67 +295,119 @@ async def websocket_chat(
     memory_store: MemoryStore = app.state.memory_store
     llm_client: LLMClient = app.state.llm_client
     rate_limiter: RateLimiter | None = getattr(app.state, "rate_limiter", None)
+    analytics = getattr(app.state, "analytics_service", None)
+    storage_service: StorageService = app.state.storage_service
 
-    # Authenticate before accepting the connection
+    # ── Auth ──────────────────────────────────────────────────────────────────
     user = await _authenticate_ws(websocket, auth_service, token)
     if user is None:
         return
 
-    user_id = user.get("id", "unknown")
-    await websocket.accept()
-    logger.info("WebSocket connected for user '%s'", user_id)
+    user_id: str = user.get("id", "unknown")
 
+    # ── Resolve / create conversation ─────────────────────────────────────────
+    resolved_conv_id: str
+    is_new_conversation = False
+
+    async with async_session() as db:
+        if conversation_id:
+            result = await db.execute(
+                select(Conversation).where(
+                    Conversation.id == conversation_id,
+                    Conversation.user_id == user_id,
+                    Conversation.deleted_at.is_(None),
+                )
+            )
+            conv = result.scalar_one_or_none()
+            if conv is None:
+                await websocket.close(code=4004, reason="Conversation not found")
+                return
+            resolved_conv_id = conv.id
+        else:
+            conv = Conversation(user_id=user_id)
+            db.add(conv)
+            await db.commit()
+            await db.refresh(conv)
+            resolved_conv_id = conv.id
+            is_new_conversation = True
+
+    await websocket.accept()
+    logger.info(
+        "WebSocket connected for user '%s', conversation '%s' (new=%s)",
+        user_id,
+        resolved_conv_id,
+        is_new_conversation,
+    )
+
+    # Send conversation ID immediately so the client can update its route.
+    await websocket.send_json({"type": "conversation_init", "conversation_id": resolved_conv_id})
+
+    # ── Message loop ──────────────────────────────────────────────────────────
     try:
         while True:
             data = await websocket.receive_json()
-            message_text = data.get("message", "")
-            raw_attachments = data.get("attachments")
+            message_text: str = data.get("message", "")
+            raw_attachments: list[dict] | None = data.get("attachments")
 
             if not message_text and not raw_attachments:
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "content": "Empty message",
-                    }
-                )
+                await websocket.send_json({"type": "error", "content": "Empty message"})
                 continue
 
-            analytics = getattr(app.state, "analytics_service", None)
-
-            # Enforce per-user rate limit before processing
+            # ── Rate limiting ─────────────────────────────────────────────────
             if rate_limiter:
                 try:
                     async with async_session() as db:
                         await check_rate_limit(user, rate_limiter, db)
                 except HTTPException as exc:
                     if exc.status_code == 429:
-                        await websocket.send_json(
-                            {
-                                "type": "error",
-                                "content": exc.detail or "Rate limit exceeded",
-                            }
-                        )
+                        await websocket.send_json({"type": "error", "content": exc.detail or "Rate limit exceeded"})
                         continue
                     raise
 
-            # Only count messages that pass the rate-limit gate
+            # ── Analytics ─────────────────────────────────────────────────────
             if analytics:
-                _sent_props: dict[str, Any] = {"message_length": len(message_text)}
                 analytics.capture(
                     distinct_id=user_id,
                     event="chat_message_sent",
-                    properties=_sent_props,
+                    properties={
+                        "message_length": len(message_text),
+                        "conversation_id": resolved_conv_id,
+                    },
                 )
 
-            # Process attachments (transcribe audio, note images for LLM)
+            # ── Attachment processing ─────────────────────────────────────────
             augmented_text = message_text
             if raw_attachments:
-                storage_service: StorageService = app.state.storage_service
                 extra_context = await _process_attachments(raw_attachments, storage_service)
                 if extra_context:
                     augmented_text = f"{message_text}\n\n{extra_context}" if message_text else extra_context
 
-            # Build orchestrator with a fresh DB session for usage tracking
+            # ── Persist user message ──────────────────────────────────────────
+            async with async_session() as db:
+                user_msg = Message(
+                    conversation_id=resolved_conv_id,
+                    role="user",
+                    content=message_text,
+                    attachments=raw_attachments or None,
+                )
+                db.add(user_msg)
+                await db.commit()
+                await db.refresh(user_msg)
+                user_msg_id = user_msg.id
+
+                # Load conversation history for LLM context (excludes the
+                # message we just persisted — it will be the current message).
+                history = await _load_conversation_history(db, resolved_conv_id, limit=50)
+                # Remove the last entry if it matches the message we just saved
+                # (to avoid passing it twice — it will be passed as `message`).
+                if history and history[-1]["role"] == "user" and history[-1]["content"] == message_text:
+                    history = history[:-1]
+
+                persona, proactivity = await _load_user_preferences(db, user_id)
+
+            # ── Orchestrate with streaming ────────────────────────────────────
+            await websocket.send_json({"type": "typing_start"})
+
             async with async_session() as db:
                 usage_tracker = UsageTracker(session=db)
                 orchestrator = Orchestrator(
@@ -273,58 +417,109 @@ async def websocket_chat(
                     usage_tracker=usage_tracker,
                 )
 
-                # Load user persona/proactivity preferences for system prompt
-                persona = "balanced"
-                proactivity = "medium"
-                try:
-                    from app.models.user_preferences import UserPreferences  # noqa: PLC0415
-                    from sqlalchemy import select as _select  # noqa: PLC0415
+                full_content = ""
+                client_action = None
+                had_error = False
 
-                    _pref_stmt = _select(UserPreferences).where(UserPreferences.user_id == user_id)
-                    _pref_result = await db.execute(_pref_stmt)
-                    _prefs = _pref_result.scalar_one_or_none()
-                    if _prefs:
-                        persona = _prefs.coach_persona or "balanced"
-                        proactivity = _prefs.proactivity_level or "medium"
-                except Exception:  # noqa: BLE001
-                    pass  # Fall back to defaults if preferences unavailable
-
-                # Process through the Orchestrator
                 try:
-                    agent_response = await orchestrator.process_message(
-                        user_id, augmented_text, persona=persona, proactivity=proactivity, db=db
-                    )
-                    if analytics:
-                        analytics.capture(
-                            distinct_id=user_id,
-                            event="chat_response_received",
-                            properties={
-                                "response_length": len(agent_response.message),
-                                "had_client_action": agent_response.client_action is not None,
-                            },
-                        )
-                    ws_payload: dict[str, Any] = {
-                        "type": "message",
-                        "content": agent_response.message,
-                        "role": "assistant",
-                    }
-                    if agent_response.client_action is not None:
-                        ws_payload["client_action"] = agent_response.client_action
-                    await websocket.send_json(ws_payload)
-                except Exception as e:
-                    logger.exception("Orchestrator error for user '%s'", user_id)
-                    sentry_sdk.capture_exception(e)
-                    await websocket.send_json(
-                        {
-                            "type": "error",
-                            "content": f"Processing error: {e!s}",
-                        }
-                    )
+                    async for event in orchestrator.process_message_stream(
+                        user_id=user_id,
+                        message=augmented_text,
+                        persona=persona,
+                        proactivity=proactivity,
+                        db=db,
+                        conversation_history=history,
+                    ):
+                        etype = event.get("type")
+
+                        if etype in ("tool_start", "tool_end"):
+                            await websocket.send_json(event)
+
+                        elif etype == "stream_token":
+                            full_content += event["content"]
+                            await websocket.send_json(event)
+
+                        elif etype == "stream_end":
+                            full_content = event.get("content", full_content)
+                            client_action = event.get("client_action")
+
+                        elif etype == "error":
+                            had_error = True
+                            await websocket.send_json(event)
+                            break
+
+                except Exception as orch_exc:
+                    logger.exception("Orchestrator stream error for user '%s'", user_id)
+                    sentry_sdk.capture_exception(orch_exc)
+                    await websocket.send_json({"type": "error", "content": f"Processing error: {orch_exc!s}"})
+                    continue
+
+                if had_error:
+                    continue
+
+            # ── Persist assistant message ─────────────────────────────────────
+            async with async_session() as db:
+                assistant_msg = Message(
+                    conversation_id=resolved_conv_id,
+                    role="assistant",
+                    content=full_content,
+                )
+                db.add(assistant_msg)
+
+                # Update conversation.updated_at and auto-generate title.
+                conv_result = await db.execute(select(Conversation).where(Conversation.id == resolved_conv_id))
+                conv_row = conv_result.scalar_one_or_none()
+                if conv_row:
+                    conv_row.updated_at = datetime.now(timezone.utc)
+
+                    # Generate title on the first exchange.
+                    if conv_row.title is None and message_text:
+                        try:
+                            title_orchestrator = Orchestrator(
+                                mcp_client=mcp_client,
+                                memory_store=memory_store,
+                                llm_client=llm_client,
+                            )
+                            conv_row.title = await title_orchestrator.generate_title(message_text)
+                        except Exception:
+                            conv_row.title = message_text[:60] + ("…" if len(message_text) > 60 else "")
+
+                await db.commit()
+                await db.refresh(assistant_msg)
+                assistant_msg_id = assistant_msg.id
+
+            # ── Analytics ─────────────────────────────────────────────────────
+            if analytics:
+                analytics.capture(
+                    distinct_id=user_id,
+                    event="chat_response_received",
+                    properties={
+                        "response_length": len(full_content),
+                        "had_client_action": client_action is not None,
+                        "conversation_id": resolved_conv_id,
+                    },
+                )
+
+            # ── Final stream_end with persisted IDs ───────────────────────────
+            final_payload: dict[str, Any] = {
+                "type": "stream_end",
+                "content": full_content,
+                "message_id": assistant_msg_id,
+                "conversation_id": resolved_conv_id,
+            }
+            if client_action is not None:
+                final_payload["client_action"] = client_action
+            await websocket.send_json(final_payload)
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected for user '%s'", user_id)
     except Exception:
         logger.exception("Unexpected WebSocket error for user '%s'", user_id)
+
+
+# ---------------------------------------------------------------------------
+# REST — conversation list, messages, history, management
+# ---------------------------------------------------------------------------
 
 
 @router.get("/history")
@@ -337,7 +532,7 @@ async def get_chat_history(
 ) -> list[dict]:
     """Retrieve chat history for the authenticated user.
 
-    Returns all conversations and their messages, ordered by
+    Returns all non-deleted conversations and their messages, ordered by
     most recent conversation first, messages chronologically.
     Attachment signed URLs are refreshed on each request.
 
@@ -357,7 +552,12 @@ async def get_chat_history(
     user_id = user.get("id", "unknown")
 
     result = await db.execute(
-        select(Conversation).where(Conversation.user_id == user_id).order_by(Conversation.created_at.desc())
+        select(Conversation)
+        .where(
+            Conversation.user_id == user_id,
+            Conversation.deleted_at.is_(None),
+        )
+        .order_by(Conversation.updated_at.desc(), Conversation.created_at.desc())
     )
     conversations = result.scalars().all()
 
@@ -370,12 +570,7 @@ async def get_chat_history(
 
         msg_dicts = []
         for msg in messages:
-            msg_dict: dict[str, Any] = {
-                "id": msg.id,
-                "role": msg.role,
-                "content": msg.content,
-                "created_at": msg.created_at.isoformat() if msg.created_at else None,
-            }
+            msg_dict = _message_to_dict(msg)
             if msg.attachments:
                 msg_dict["attachments"] = await _refresh_attachment_urls(
                     msg.attachments,
@@ -383,16 +578,158 @@ async def get_chat_history(
                 )
             msg_dicts.append(msg_dict)
 
+        created = conv.created_at
+        updated = conv.updated_at or conv.created_at
         history.append(
             {
                 "id": conv.id,
                 "title": conv.title,
-                "created_at": conv.created_at.isoformat() if conv.created_at else None,
+                "created_at": created.isoformat() if hasattr(created, "isoformat") else str(created),
+                "updated_at": updated.isoformat() if hasattr(updated, "isoformat") else str(updated),
+                "archived": conv.archived,
                 "messages": msg_dicts,
             }
         )
 
     return history
+
+
+@router.get("/conversations")
+async def list_conversations(
+    request: Request,
+    include_archived: bool = Query(default=False),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """List all conversations for the authenticated user.
+
+    Returns non-deleted conversations ordered newest (by last activity) first.
+    Each entry includes a message count and a preview snippet (the last message,
+    truncated to 100 characters).
+
+    Args:
+        include_archived: When True, include archived conversations.
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for token validation.
+        db: Injected async database session.
+
+    Returns:
+        A list of conversation summary dicts.
+
+    Raises:
+        HTTPException: 401 if the token is invalid.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    user_id = user.get("id", "unknown")
+
+    stmt = select(Conversation).where(
+        Conversation.user_id == user_id,
+        Conversation.deleted_at.is_(None),
+    )
+    if not include_archived:
+        stmt = stmt.where(Conversation.archived.is_(False))
+
+    stmt = stmt.order_by(
+        Conversation.updated_at.desc(),
+        Conversation.created_at.desc(),
+    )
+
+    result = await db.execute(stmt)
+    conversations = result.scalars().all()
+
+    output = []
+    for conv in conversations:
+        msg_result = await db.execute(
+            select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at.desc())
+        )
+        messages = msg_result.scalars().all()
+
+        message_count = len(messages)
+        preview_snippet: str | None = None
+        if messages:
+            last_body = messages[0].content or ""
+            preview_snippet = last_body[:100]
+
+        created = conv.created_at
+        updated = conv.updated_at or conv.created_at
+        output.append(
+            {
+                "id": conv.id,
+                "title": conv.title,
+                "created_at": created.isoformat() if hasattr(created, "isoformat") else str(created),
+                "updated_at": updated.isoformat() if hasattr(updated, "isoformat") else str(updated),
+                "archived": conv.archived,
+                "message_count": message_count,
+                "preview_snippet": preview_snippet,
+            }
+        )
+
+    return output
+
+
+@router.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(
+    conversation_id: str,
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    storage_service: StorageService = Depends(_get_storage_service),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Return all messages for a specific conversation.
+
+    Validates that the authenticated user owns the conversation.
+    Attachment signed URLs are refreshed on each request.
+
+    Args:
+        conversation_id: The UUID of the conversation.
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for token validation.
+        storage_service: Injected storage service for signed URLs.
+        db: Injected async database session.
+
+    Returns:
+        A list of message dicts ordered chronologically.
+
+    Raises:
+        HTTPException: 401 if the token is invalid.
+        HTTPException: 404 if the conversation does not exist or belongs
+            to a different user.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    user_id = user.get("id", "unknown")
+
+    conv_result = await db.execute(
+        select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id,
+            Conversation.deleted_at.is_(None),
+        )
+    )
+    conv = conv_result.scalar_one_or_none()
+    if conv is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found",
+        )
+
+    msg_result = await db.execute(
+        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at.asc())
+    )
+    messages = msg_result.scalars().all()
+
+    msg_dicts = []
+    for msg in messages:
+        msg_dict = _message_to_dict(msg)
+        if msg.attachments:
+            msg_dict["attachments"] = await _refresh_attachment_urls(
+                msg.attachments,
+                storage_service,
+            )
+        msg_dicts.append(msg_dict)
+
+    return msg_dicts
 
 
 # ---------------------------------------------------------------------------
@@ -410,64 +747,6 @@ class ConversationUpdateRequest(BaseModel):
 
     title: Optional[str] = None
     archived: Optional[bool] = None
-
-
-@router.get("/conversations")
-async def list_conversations(
-    request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
-    db: AsyncSession = Depends(get_db),
-) -> list[dict]:
-    """List all conversations for the authenticated user.
-
-    Returns conversations ordered newest first. Each entry includes a
-    message count and a preview snippet (the last message, truncated to
-    100 characters).
-
-    Args:
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
-        db: Injected async database session.
-
-    Returns:
-        A list of conversation summary dicts.
-
-    Raises:
-        HTTPException: 401 if the token is invalid.
-    """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
-
-    result = await db.execute(
-        select(Conversation).where(Conversation.user_id == user_id).order_by(Conversation.created_at.desc())
-    )
-    conversations = result.scalars().all()
-
-    output = []
-    for conv in conversations:
-        msg_result = await db.execute(
-            select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at.desc())
-        )
-        messages = msg_result.scalars().all()
-
-        message_count = len(messages)
-        preview_snippet: str | None = None
-        if messages:
-            last_body = messages[0].content or ""
-            preview_snippet = last_body[:100]
-
-        output.append(
-            {
-                "id": conv.id,
-                "title": conv.title,
-                "created_at": conv.created_at.isoformat() if conv.created_at else None,
-                "message_count": message_count,
-                "preview_snippet": preview_snippet,
-            }
-        )
-
-    return output
 
 
 @router.patch("/conversations/{conversation_id}")
@@ -501,7 +780,12 @@ async def update_conversation(
     user = await auth_service.get_user(credentials.credentials)
     user_id = user.get("id", "unknown")
 
-    result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
+    result = await db.execute(
+        select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.deleted_at.is_(None),
+        )
+    )
     conv = result.scalar_one_or_none()
 
     if conv is None or conv.user_id != user_id:
@@ -514,22 +798,19 @@ async def update_conversation(
         conv.title = body.title
 
     if body.archived is not None:
-        try:
-            conv.archived = body.archived
-        except AttributeError:
-            logger.warning(
-                "Conversation model does not have an 'archived' column; skipping archive update for conversation '%s'",
-                conversation_id,
-            )
+        conv.archived = body.archived
 
     await db.commit()
     await db.refresh(conv)
 
+    created = conv.created_at
+    updated = conv.updated_at or conv.created_at
     return {
         "id": conv.id,
         "title": conv.title,
-        "created_at": conv.created_at.isoformat() if conv.created_at else None,
-        "archived": getattr(conv, "archived", None),
+        "created_at": created.isoformat() if hasattr(created, "isoformat") else str(created),
+        "updated_at": updated.isoformat() if hasattr(updated, "isoformat") else str(updated),
+        "archived": conv.archived,
     }
 
 
@@ -543,8 +824,7 @@ async def delete_conversation(
 ) -> Response:
     """Soft-delete a conversation.
 
-    Sets ``deleted_at`` if the column exists on the model; otherwise
-    falls back to setting ``archived=True``. Only the owner may delete.
+    Sets ``deleted_at`` to the current UTC timestamp. Only the owner may delete.
 
     Args:
         conversation_id: The UUID of the conversation to delete.
@@ -563,7 +843,12 @@ async def delete_conversation(
     user = await auth_service.get_user(credentials.credentials)
     user_id = user.get("id", "unknown")
 
-    result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
+    result = await db.execute(
+        select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.deleted_at.is_(None),
+        )
+    )
     conv = result.scalar_one_or_none()
 
     if conv is None or conv.user_id != user_id:
@@ -572,22 +857,6 @@ async def delete_conversation(
             detail="Conversation not found",
         )
 
-    # Prefer soft-delete via deleted_at; fall back to archived flag
-    try:
-        conv.deleted_at = datetime.now(timezone.utc)
-    except AttributeError:
-        logger.warning(
-            "Conversation model does not have a 'deleted_at' column; "
-            "falling back to archived=True for conversation '%s'",
-            conversation_id,
-        )
-        try:
-            conv.archived = True
-        except AttributeError:
-            logger.warning(
-                "Conversation model also lacks 'archived'; soft-delete is a no-op for conversation '%s'",
-                conversation_id,
-            )
-
+    conv.deleted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
