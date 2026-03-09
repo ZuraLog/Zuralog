@@ -262,8 +262,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 
     // Optimistically append the user's message (skipped when regenerating
     // because the user bubble is already present in state).
-    final tempMsgId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    String? tempMsgId;
     if (!isRegenerate) {
+      tempMsgId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
       final userMsg = ChatMessage(
         id: tempMsgId,
         conversationId: conversationId ?? arg,
@@ -314,14 +315,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(streamingContent: accumulated);
 
           case StreamComplete(:final message, :final conversationId):
-            // Replace the optimistic user message with the server version
-            // (same content, server-assigned ID) and append the AI reply.
-            final updated = state.messages.map((m) {
-              return m.id == tempMsgId ? m.copyWith(id: m.id) : m;
-            }).toList();
-
+            // Append the AI reply to the existing messages list.
             state = state.copyWith(
-              messages: [...updated, message],
+              messages: [...state.messages, message],
               isSending: false,
               clearStreaming: true,
               clearTool: true,
