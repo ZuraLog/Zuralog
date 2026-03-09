@@ -257,6 +257,7 @@ final class ApiCoachRepository implements CoachRepository {
       text: text,
       persona: persona,
       proactivity: proactivity,
+      responseLength: responseLength,
       attachments: attachments,
       isRegenerate: isRegenerate,
     );
@@ -270,6 +271,7 @@ final class ApiCoachRepository implements CoachRepository {
     required String text,
     required String persona,
     required String proactivity,
+    required String responseLength,
     required List<Map<String, dynamic>> attachments,
     bool isRegenerate = false,
   }) async {
@@ -289,7 +291,7 @@ final class ApiCoachRepository implements CoachRepository {
       final convParam =
           conversationId != null ? '&conversation_id=$conversationId' : '';
       final uri = Uri.parse(
-        '$_wsBaseUrl/api/v1/chat/ws?token=$token$convParam',
+        '$_wsBaseUrl/api/v1/chat/ws?token=${Uri.encodeQueryComponent(token)}$convParam',
       );
 
       channel = WebSocketChannel.connect(uri);
@@ -327,6 +329,7 @@ final class ApiCoachRepository implements CoachRepository {
                     'message': text,
                     'persona': persona,
                     'proactivity': proactivity,
+                    'response_length': responseLength,
                     if (attachments.isNotEmpty) 'attachments': attachments,
                     if (isRegenerate) 'regenerate': true,
                   };
