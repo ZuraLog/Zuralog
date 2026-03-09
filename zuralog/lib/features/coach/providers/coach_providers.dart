@@ -475,7 +475,7 @@ final coachChatNotifierProvider =
 /// Loads contextual prompt suggestion chips for the New Chat screen.
 final coachPromptSuggestionsProvider =
     FutureProvider<List<PromptSuggestion>>((ref) async {
-  return ref.read(coachRepositoryProvider).fetchPromptSuggestions();
+  return ref.watch(coachRepositoryProvider).fetchPromptSuggestions();
 });
 
 // ── Quick Actions ─────────────────────────────────────────────────────────────
@@ -483,7 +483,7 @@ final coachPromptSuggestionsProvider =
 /// Loads quick-action tiles for the Quick Actions bottom sheet.
 final coachQuickActionsProvider =
     FutureProvider<List<QuickAction>>((ref) async {
-  return ref.read(coachRepositoryProvider).fetchQuickActions();
+  return ref.watch(coachRepositoryProvider).fetchQuickActions();
 });
 
 // ── Coach Prefill ─────────────────────────────────────────────────────────────
