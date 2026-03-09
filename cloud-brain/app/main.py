@@ -59,7 +59,6 @@ from app.api.v1.quick_log_routes import router as quick_log_router
 from app.api.v1.report_routes import router as report_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.streak_routes import router as streak_router
-from app.api.v1.transcribe import router as transcribe_router
 from app.api.v1.trends_routes import router as trends_router
 from app.api.v1.users import router as users_router
 from app.api.v1.webhooks import router as webhooks_router
@@ -299,7 +298,6 @@ app.add_middleware(PostHogAnalyticsMiddleware)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")  # Phase 1.9
 app.include_router(integrations_router, prefix="/api/v1")  # Phase 1.6
-app.include_router(transcribe_router, prefix="/api/v1")  # Phase 1.8.5
 app.include_router(users_router, prefix="/api/v1")  # Phase 1.8.6
 app.include_router(preferences_router, prefix="/api/v1")  # Phase 2.1
 app.include_router(devices_router, prefix="/api/v1")  # Phase 1.10

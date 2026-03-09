@@ -47,7 +47,6 @@ from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.orchestrator import Orchestrator
 from app.api.deps import check_rate_limit
-from app.config import settings
 from app.database import async_session, get_db
 from app.models.conversation import Conversation, Message
 from app.models.user_preferences import UserPreferences
@@ -108,40 +107,12 @@ async def _authenticate_ws(
         return None
 
 
-async def _transcribe_audio(content: bytes, filename: str) -> str:
-    """Transcribe audio bytes via OpenAI Whisper.
-
-    Args:
-        content: Raw audio file bytes.
-        filename: Original filename for the Whisper API.
-
-    Returns:
-        The transcription text, or a fallback message on failure.
-    """
-    if not settings.openai_api_key:
-        return "[Voice note — transcription unavailable]"
-    try:
-        from openai import AsyncOpenAI  # noqa: PLC0415
-
-        client = AsyncOpenAI(api_key=settings.openai_api_key)
-        transcription = await client.audio.transcriptions.create(
-            model="whisper-1",
-            file=(filename, content),
-            response_format="text",
-        )
-        return str(transcription).strip()
-    except Exception:
-        logger.exception("Whisper transcription failed for '%s'", filename)
-        return "[Voice note — transcription failed]"
-
-
 async def _process_attachments(
     attachments: list[dict],
     storage_service: StorageService,
 ) -> str:
     """Process attachments and return text to augment the user message.
 
-    Audio attachments are downloaded and transcribed via Whisper.
     Image attachments are noted as metadata for the LLM.
 
     Args:
@@ -153,18 +124,7 @@ async def _process_attachments(
     """
     parts: list[str] = []
     for att in attachments:
-        if att.get("type") == "audio" and att.get("storage_path"):
-            bucket, _, obj_path = att["storage_path"].partition("/")
-            audio_bytes = await storage_service.download_file(bucket, obj_path)
-            if audio_bytes:
-                transcription = await _transcribe_audio(
-                    audio_bytes,
-                    att.get("filename", "voice_note"),
-                )
-                parts.append(f"[Voice note transcription]: {transcription}")
-            else:
-                parts.append("[Voice note — could not download audio]")
-        elif att.get("type") == "image":
+        if att.get("type") == "image":
             parts.append(f"[User attached image: {att.get('filename', 'image')}]")
     return "\n".join(parts)
 

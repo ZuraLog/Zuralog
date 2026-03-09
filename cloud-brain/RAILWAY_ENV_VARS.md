@@ -103,7 +103,7 @@ The Fitbit app is registered at [dev.fitbit.com](https://dev.fitbit.com) under `
 | Variable | Purpose | When Needed |
 |----------|---------|-------------|
 | `PINECONE_API_KEY` | Vector memory for long-term AI context | Phase 2 — deferred |
-| `OPENAI_API_KEY` | Direct OpenAI API access (Whisper fallback) | Only if not routing through OpenRouter |
+| `OPENAI_API_KEY` | OpenAI API access for Pinecone embeddings | Required when `PINECONE_API_KEY` is set |
 | `FCM_CREDENTIALS_PATH` | Firebase credentials file path | **Not used on Railway** — use `FIREBASE_CREDENTIALS_JSON` instead |
 
 ---
