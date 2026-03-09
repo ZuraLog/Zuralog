@@ -481,6 +481,35 @@ Legal routes added: `/settings/privacy-policy`, `/settings/terms` in `route_name
 
 ---
 
+## Voice Input — On-Device STT (2026-03-02)
+
+**Branch:** `feat/voice-input-stt`
+
+**Status:** ✅ Complete. On-device speech-to-text fully implemented and wired to Coach tab mic button. Audio never leaves the device.
+
+**What was built:**
+
+- `zuralog/lib/core/speech/` — New directory with `speech_notifier.dart` (Riverpod `AsyncNotifier` wrapping `speech_to_text` package), `speech_models.dart` (SpeechState enum: idle/listening/processing/done/error), `speech_providers.dart` (global `speechNotifierProvider`)
+- `zuralog/lib/features/chat/presentation/chat_screen.dart` — Wires `SpeechNotifier` to `ChatInputBar`; listening overlay banner with `_PulsingDot`; speech error SnackBars; PostHog analytics (`voice_input_started`, `voice_input_completed` with `text_length` / `has_text` properties)
+- `zuralog/lib/features/chat/presentation/widgets/chat_input_bar.dart` — Mic button (hold-to-talk) wired to `speechNotifierProvider.listen()`. On release, transcribed text is injected into the input field. User can review and edit before tapping Send.
+- `zuralog/android/app/src/main/AndroidManifest.xml` — Added `RECORD_AUDIO` permission + speech `RecognitionService` query (BLUETOOTH/BLUETOOTH_CONNECT intentionally omitted — not required for on-device mic STT and would trigger Play Store dangerous-permission review)
+- `zuralog/test/features/chat/presentation/widgets/chat_input_bar_test.dart` — Updated for new widget structure; 4 new voice input tests (11 total)
+- `zuralog/pubspec.yaml` — Added `speech_to_text: ^7.3.0` (removed `record` and `audioplayers` packages)
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| On-device STT (not Cloud Whisper) | Free, offline, no API key; audio never leaves device |
+| Hold-to-talk UX | Familiar pattern (like Slack, Discord). User taps mic, speaks, releases. Text appears in input field for review. |
+| Text injection into input field | User can edit transcribed text before sending. Prevents sending incorrect transcriptions. |
+| No audio storage | Audio is processed in-memory by the platform's native speech engine and discarded immediately. |
+| RECORD_AUDIO permission only | Sufficient for on-device STT. BLUETOOTH permissions omitted to avoid Play Store review delays. |
+
+**`flutter analyze`:** No new issues introduced.
+
+---
+
 ## Website
 
 ### Built
@@ -826,7 +855,7 @@ On-device speech-to-text using the `speech_to_text` Flutter package (v7.3.0). Au
 
 | Decision | Rationale |
 |----------|-----------|
-| On-device STT (not Cloud Whisper) | Free, offline, no API key; audio never leaves device; existing `/api/v1/transcribe/` endpoint remains as future option |
+| On-device STT (not Cloud Whisper) | Free, offline, no API key; audio never leaves device |
 | Hold-to-talk (not tap-to-toggle) | More intuitive for short phrases; matches iMessage/WhatsApp voice note UX; natural start/stop boundary |
 | Fill text field (not auto-send) | Users review and edit transcription before sending; prevents embarrassing mis-transcriptions |
 | Lazy initialization | Speech engine initialized on first mic tap, not app startup; avoids permission prompt on first launch |

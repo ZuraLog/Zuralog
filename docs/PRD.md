@@ -76,7 +76,7 @@ Tracks health, time, and money holistically. Wants Zuralog to integrate with YNA
 ### AI Chat Interface
 The primary interaction model. Users talk to Zuralog like a personal health assistant.
 - Streaming text responses
-- Voice input (Whisper STT via OpenAI API — coming soon)
+- Voice input (on-device STT via `speech_to_text` Flutter package — hold-to-talk, text appears in input field for review before sending)
 - File attachments (coming soon)
 - The AI has full context of all connected apps — no need to specify where data lives
 

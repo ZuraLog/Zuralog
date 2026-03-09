@@ -103,7 +103,6 @@ cloud-brain/
 │   │   ├── analytics.py     # Correlation engine endpoints
 │   │   ├── users.py         # User profile management
 │   │   ├── devices.py       # Device registration (FCM tokens)
-│   │   ├── transcribe.py    # Voice input (Whisper)
 │   │   └── dev.py           # Dev-only debug endpoints
 │   │
 │   ├── services/            # Business logic

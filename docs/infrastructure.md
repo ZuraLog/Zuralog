@@ -127,7 +127,6 @@ All services used in production, current tier, and purpose:
 | Service | Model | Cost/User/Month | Notes |
 |---------|-------|----------------|-------|
 | **Kimi K2.5** | Via OpenRouter (`moonshotai/kimi-k2.5`) | ~$2.16 | Based on ~30 msgs/day/user |
-| **Whisper STT** | OpenAI API (`whisper-1`) | ~$0.50 | Based on heavy voice usage ($0.006/min) |
 | **OpenAI Embeddings** | `text-embedding-3-small` | ~$0.05 | For Pinecone vector store (planned) |
 
 ### Revenue Share (Post-Launch)
