@@ -416,6 +416,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// Returns null if [messageIndex] is out of bounds (e.g. state changed
   /// between render and tap).
   String? editMessage(int messageIndex) {
+    if (state.isSending) return null;
     if (messageIndex < 0 || messageIndex >= state.messages.length) return null;
     final content = state.messages[messageIndex].content;
     state = state.copyWith(messages: state.messages.sublist(0, messageIndex));
