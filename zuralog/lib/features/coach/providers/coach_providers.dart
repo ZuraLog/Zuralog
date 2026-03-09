@@ -500,6 +500,12 @@ final coachPrefillProvider = StateProvider<String?>((ref) => null);
 /// [NewChatScreen] sets this before pushing the thread route with a temp ID.
 /// [ChatThreadScreen] reads and clears it on first build, triggering the
 /// actual [CoachChatNotifier.sendMessage] call.
+///
+/// Attachments from [NewChatScreen] cannot be uploaded before the conversation
+/// exists on the server. Raw file paths are stored in [rawAttachments] and
+/// [ChatThreadScreen] uploads them after receiving a real conversation UUID
+/// from the [ConversationCreated] stream event, then sends a follow-up message
+/// with the resulting payloads.
 class PendingMessage {
   const PendingMessage({
     required this.text,
@@ -507,13 +513,25 @@ class PendingMessage {
     required this.proactivity,
     required this.responseLength,
     this.attachments = const [],
+    this.rawAttachments = const [],
   });
 
   final String text;
   final String persona;
   final String proactivity;
   final String responseLength;
+
+  /// Pre-uploaded attachment payloads (used when a conversation ID was already
+  /// available at upload time, e.g. follow-up messages in [ChatThreadScreen]).
   final List<Map<String, dynamic>> attachments;
+
+  /// Raw local file paths for attachments that could not be uploaded before
+  /// the conversation was created. Each entry is a map with keys:
+  /// - `path`: absolute path to the local file
+  /// - `name`: display filename
+  ///
+  /// [ChatThreadScreen] uploads these after the server assigns a real UUID.
+  final List<Map<String, String>> rawAttachments;
 }
 
 final pendingFirstMessageProvider =

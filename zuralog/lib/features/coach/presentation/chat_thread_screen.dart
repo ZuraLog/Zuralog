@@ -85,6 +85,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
   /// Either loads history (existing conversation) or fires the pending
   /// first message (new conversation).
+  ///
+  /// For new conversations, any [PendingMessage.rawAttachments] are uploaded
+  /// AFTER the first message completes and the server has assigned a real
+  /// conversation UUID (received via the [ConversationCreated] stream event).
+  /// They are then delivered as a follow-up message so the user sees them in
+  /// the thread without losing any content.
   Future<void> _initConversation() async {
     if (_initialized) return;
     _initialized = true;
@@ -97,6 +103,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       if (pending != null) {
         // Clear the pending message immediately to prevent double-send.
         ref.read(pendingFirstMessageProvider(widget.conversationId).notifier).state = null;
+
+        // Send the text message first (no attachments — the conversation does
+        // not exist on the server yet, so there is no endpoint to upload to).
         await _dispatchSend(
           conversationId: null, // new — server will create one
           text: pending.text,
@@ -105,6 +114,59 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           responseLength: pending.responseLength,
           attachments: pending.attachments,
         );
+
+        // After the first send completes, the notifier holds a real UUID from
+        // the ConversationCreated event. Upload any raw attachments now and
+        // deliver them as a follow-up message so they appear in the thread.
+        if (pending.rawAttachments.isNotEmpty && mounted) {
+          final resolvedId = ref
+              .read(coachChatNotifierProvider(widget.conversationId))
+              .resolvedConversationId;
+
+          if (resolvedId != null && !resolvedId.startsWith('new_')) {
+            final attachmentRepo = ref.read(attachmentRepositoryProvider);
+            final List<Map<String, dynamic>> uploadedPayloads = [];
+
+            for (final raw in pending.rawAttachments) {
+              final path = raw['path'] ?? '';
+              final name = raw['name'] ?? '';
+              if (path.isEmpty) continue;
+              try {
+                final uploaded = await attachmentRepo.uploadAttachment(
+                  path,
+                  conversationId: resolvedId,
+                );
+                uploadedPayloads.add({
+                  'type': uploaded.type.name,
+                  'filename': name,
+                  'storage_path': uploaded.storagePath ?? '',
+                  'signed_url': uploaded.signedUrl ?? '',
+                  'size_bytes': uploaded.sizeBytes ?? 0,
+                  'mime_type': uploaded.mimeType ?? '',
+                });
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to upload $name: $e')),
+                  );
+                }
+              }
+            }
+
+            // Send the uploaded attachments as a follow-up message so they
+            // appear visually in the conversation thread.
+            if (uploadedPayloads.isNotEmpty && mounted) {
+              await _dispatchSend(
+                conversationId: resolvedId,
+                text: '',
+                persona: pending.persona,
+                proactivity: pending.proactivity,
+                responseLength: pending.responseLength,
+                attachments: uploadedPayloads,
+              );
+            }
+          }
+        }
       }
     } else {
       // Load existing message history.
@@ -1198,17 +1260,42 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
     if (widget.isSending) return;
 
     // Upload attachments.
+    //
+    // A real conversation UUID is required by the backend endpoint
+    // `/api/v1/chat/{conversationId}/attachments`. By the time the user can
+    // type a second message here the first message has already completed and
+    // [CoachChatNotifier] holds the resolved UUID. For a brand-new conversation
+    // (widget.conversationId starts with "new_") we read the resolved ID from
+    // notifier state rather than using the temporary ID.
     final List<Map<String, dynamic>> attachmentPayloads = [];
     if (_attachments.isNotEmpty) {
+      // Resolve the real conversation UUID — must not be a temp "new_" ID.
+      final notifierState = ref.read(
+        coachChatNotifierProvider(widget.conversationId),
+      );
+      final resolvedConvId = notifierState.resolvedConversationId;
+
+      if (resolvedConvId == null || resolvedConvId.startsWith('new_')) {
+        // No real conversation ID yet — uploading is impossible. Show an error
+        // and abort rather than hitting a non-existent endpoint.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Attachments cannot be uploaded yet — please wait for the conversation to start.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       final attachmentRepo = ref.read(attachmentRepositoryProvider);
       for (final a in _attachments) {
         try {
-          final effectiveConvId = widget.conversationId.startsWith('new_')
-              ? null
-              : widget.conversationId;
           final uploaded = await attachmentRepo.uploadAttachment(
             a.file.path,
-            conversationId: effectiveConvId,
+            conversationId: resolvedConvId,
           );
           attachmentPayloads.add({
             'type': uploaded.type.name,

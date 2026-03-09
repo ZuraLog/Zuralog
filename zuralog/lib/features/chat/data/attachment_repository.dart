@@ -29,16 +29,19 @@ class AttachmentRepository {
   /// Uploads a local file to the backend for processing.
   ///
   /// [filePath] is the absolute path to the local file.
-  /// [conversationId] is the UUID of the target conversation. When provided,
-  /// the file is uploaded to `/api/v1/chat/{conversationId}/attachments`.
-  /// When null (new conversation before server assigns an ID), falls back to
-  /// `/api/v1/chat/attachments`.
+  /// [conversationId] is the UUID of the conversation that owns this
+  /// attachment. The file is uploaded to
+  /// `/api/v1/chat/{conversationId}/attachments`. A real server-assigned UUID
+  /// must be provided — the backend has no pre-conversation upload route.
   ///
   /// Returns a [ChatAttachment] populated with server-side metadata
   /// (extracted text, health facts, size, MIME type).
   ///
   /// Throws on network or validation errors.
-  Future<ChatAttachment> uploadAttachment(String filePath, {String? conversationId}) async {
+  Future<ChatAttachment> uploadAttachment(
+    String filePath, {
+    required String conversationId,
+  }) async {
     final file = File(filePath);
     final filename = file.uri.pathSegments.last;
     final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
@@ -56,12 +59,8 @@ class AttachmentRepository {
       'file': await MultipartFile.fromFile(filePath, filename: filename),
     });
 
-    final endpoint = conversationId != null
-        ? '/api/v1/chat/$conversationId/attachments'
-        : '/api/v1/chat/attachments'; // fallback for new conversations before ID is known
-
     final response = await _apiClient.post(
-      endpoint,
+      '/api/v1/chat/$conversationId/attachments',
       data: formData,
     );
 

@@ -14,7 +14,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/analytics/analytics_service.dart';
-import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/speech/speech_providers.dart';
@@ -90,9 +89,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     );
   }
 
-  void _sendMessage({List<Map<String, dynamic>> attachments = const []}) {
+  void _sendMessage({List<Map<String, String>> rawAttachments = const []}) {
     final text = _inputCtrl.text.trim();
-    if (text.isEmpty && attachments.isEmpty) return;
+    if (text.isEmpty && rawAttachments.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
 
     // Read current coach preferences.
@@ -111,14 +110,17 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     // will swap it once the ConversationCreated event arrives.
     final tempId = 'new_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Store the first message in the pending provider so ChatThreadScreen
-    // can pick it up and trigger the actual send after mounting.
+    // Attachments cannot be uploaded here because there is no conversation ID
+    // yet — the backend requires a real UUID
+    // (`/api/v1/chat/{conversationId}/attachments`). Raw file paths are stored
+    // in [PendingMessage.rawAttachments] and [ChatThreadScreen] uploads them
+    // once the server assigns the real conversation UUID.
     ref.read(pendingFirstMessageProvider(tempId).notifier).state = PendingMessage(
       text: text,
       persona: persona,
       proactivity: proactivity,
       responseLength: responseLength,
-      attachments: attachments,
+      rawAttachments: rawAttachments,
     );
 
     context.pushNamed(
@@ -214,8 +216,8 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           _ChatInputBar(
             controller: _inputCtrl,
             focusNode: _inputFocus,
-            onSend: ({attachments = const []}) =>
-                _sendMessage(attachments: attachments),
+            onSend: ({rawAttachments = const []}) =>
+                _sendMessage(rawAttachments: rawAttachments),
           ),
         ],
       ),
@@ -676,8 +678,11 @@ class _ChatInputBar extends ConsumerStatefulWidget {
   final FocusNode focusNode;
 
   /// Called when the user taps Send.
-  /// [attachments] contains uploaded attachment metadata payloads.
-  final void Function({List<Map<String, dynamic>> attachments}) onSend;
+  ///
+  /// [rawAttachments] contains raw local file info (path + name) for any
+  /// attachments the user added. Upload is deferred to [ChatThreadScreen]
+  /// because no conversation ID exists yet at this point.
+  final void Function({List<Map<String, String>> rawAttachments}) onSend;
 
   @override
   ConsumerState<_ChatInputBar> createState() => _ChatInputBarState();
@@ -685,46 +690,21 @@ class _ChatInputBar extends ConsumerStatefulWidget {
 
 class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   final List<PendingAttachment> _attachments = [];
-  bool _isSending = false;
 
-  Future<void> _handleSend() async {
+  void _handleSend() {
     final text = widget.controller.text.trim();
     if (text.isEmpty && _attachments.isEmpty) return;
-    if (_isSending) return;
-    setState(() => _isSending = true);
 
-    try {
-      // Upload attachments to Supabase Storage via AttachmentRepository.
-      final List<Map<String, dynamic>> attachmentPayloads = [];
-      if (_attachments.isNotEmpty) {
-        final attachmentRepo = ref.read(attachmentRepositoryProvider);
-        for (final a in _attachments) {
-          try {
-            final uploaded = await attachmentRepo.uploadAttachment(a.file.path);
-            attachmentPayloads.add({
-              'type': uploaded.type.name,
-              'filename': a.name,
-              'storage_path': uploaded.storagePath ?? '',
-              'signed_url': uploaded.signedUrl ?? '',
-              'size_bytes': uploaded.sizeBytes ?? 0,
-              'mime_type': uploaded.mimeType ?? '',
-            });
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to upload ${a.name}: $e')),
-              );
-            }
-            // Continue with other attachments rather than aborting.
-          }
-        }
-      }
+    // Attachments cannot be uploaded here because there is no conversation ID
+    // yet. Pass the raw file paths to [ChatThreadScreen], which will upload
+    // them after the server assigns a real UUID via the ConversationCreated
+    // event.
+    final rawAttachments = _attachments
+        .map((a) => {'path': a.file.path, 'name': a.name})
+        .toList();
 
-      setState(() => _attachments.clear());
-      widget.onSend(attachments: attachmentPayloads);
-    } finally {
-      if (mounted) setState(() => _isSending = false);
-    }
+    setState(() => _attachments.clear());
+    widget.onSend(rawAttachments: rawAttachments);
   }
 
   @override
