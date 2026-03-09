@@ -241,9 +241,17 @@ final class ApiCoachRepository implements CoachRepository {
     List<Map<String, dynamic>> attachments = const [],
   }) {
     // Using a StreamController so we can handle async WS setup cleanly.
-    final controller = StreamController<ChatStreamEvent>();
+    // The cancelCompleter is completed when the consumer cancels, which
+    // unblocks _runWebSocketStream so it can close the WebSocket promptly.
+    final cancelCompleter = Completer<void>();
+    final controller = StreamController<ChatStreamEvent>(
+      onCancel: () {
+        if (!cancelCompleter.isCompleted) cancelCompleter.complete();
+      },
+    );
     _runWebSocketStream(
       controller: controller,
+      cancelCompleter: cancelCompleter,
       conversationId: conversationId,
       text: text,
       persona: persona,
@@ -255,6 +263,7 @@ final class ApiCoachRepository implements CoachRepository {
 
   Future<void> _runWebSocketStream({
     required StreamController<ChatStreamEvent> controller,
+    required Completer<void> cancelCompleter,
     required String? conversationId,
     required String text,
     required String persona,
@@ -287,7 +296,7 @@ final class ApiCoachRepository implements CoachRepository {
       String accumulated = '';
       String? finalConversationId;
 
-      final completer = Completer<void>();
+      final wsCompleter = Completer<void>();
 
       subscription = channel.stream.listen(
         (rawMessage) {
@@ -382,15 +391,18 @@ final class ApiCoachRepository implements CoachRepository {
         },
         onError: (Object error) {
           controller.add(StreamError('WebSocket error: $error'));
-          if (!completer.isCompleted) completer.completeError(error);
+          if (!wsCompleter.isCompleted) wsCompleter.completeError(error);
         },
         onDone: () {
-          if (!completer.isCompleted) completer.complete();
+          if (!wsCompleter.isCompleted) wsCompleter.complete();
         },
         cancelOnError: false,
       );
 
-      await completer.future;
+      // Wait for either the WebSocket to finish naturally or the consumer to
+      // cancel (via cancelCompleter). Whichever fires first unblocks us, and
+      // the finally block closes the channel and the controller.
+      await Future.any([wsCompleter.future, cancelCompleter.future]);
     } catch (e) {
       controller.add(StreamError('Connection error: $e'));
     } finally {

@@ -357,10 +357,11 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// message `_Generation stopped._` is appended so the user knows the
   /// generation was cancelled.
   void cancelStream() {
+    final wasSending = state.isSending; // capture before cancel
     _streamSub?.cancel();
     _streamSub = null;
 
-    if (!state.isSending) return;
+    if (!wasSending) return;
 
     final partial = state.streamingContent ?? '';
     final content = partial.isNotEmpty ? partial : '_Generation stopped._';
