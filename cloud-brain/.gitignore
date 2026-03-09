@@ -37,3 +37,6 @@ htmlcov/
 # Firebase service account private key — never commit this
 firebase-service-account.json
 *-firebase-adminsdk-*.json
+
+# Generated OpenAPI snapshot — produced by scripts/export_openapi.py, not hand-maintained
+openapi.json
