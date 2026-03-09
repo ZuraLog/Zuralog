@@ -1,20 +1,26 @@
-/// Chat Thread Screen — pushed from Conversation Drawer.
+/// Chat Thread Screen — pushed from Conversation Drawer or NewChatScreen.
 ///
 /// Displays an existing conversation with full message history.
-/// Streaming AI responses rendered with a typing indicator, markdown-style
-/// bold/italic text, and a sticky input bar with send, voice, and attachment.
+/// Streaming AI responses are rendered token-by-token with a live typing
+/// indicator bubble. Supports file attachments, voice input, and connection
+/// status feedback.
 ///
-/// Phase 10: Full production implementation with haptics, skeleton loading,
-/// and rich message bubble UI.
+/// Handles both:
+///  • New conversations (conversationId starts with "new_") — sends the
+///    pending first message from [pendingFirstMessageProvider] and replaces
+///    the route with the server-assigned UUID once [ConversationCreated] fires.
+///  • Existing conversations — loads history via [CoachChatNotifier.loadHistory].
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/speech/speech_providers.dart';
 import 'package:zuralog/core/speech/speech_state.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -29,12 +35,15 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 // ── ChatThreadScreen ──────────────────────────────────────────────────────────
 
-/// Chat Thread screen — full message history + live input.
+/// Chat Thread screen — full message history + live streaming input.
 class ChatThreadScreen extends ConsumerStatefulWidget {
   /// Creates a [ChatThreadScreen] for the given [conversationId].
   const ChatThreadScreen({super.key, required this.conversationId});
 
-  /// The conversation ID to load and display.
+  /// The conversation ID to load.
+  ///
+  /// May be a temporary "new_XXXX" string for brand-new conversations;
+  /// the screen replaces it with the real UUID after [ConversationCreated].
   final String conversationId;
 
   @override
@@ -46,6 +55,15 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   final FocusNode _inputFocus = FocusNode();
   final ScrollController _scrollCtrl = ScrollController();
 
+  /// Tracks whether [_initConversation] has been called.
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initConversation());
+  }
+
   @override
   void dispose() {
     _inputCtrl.dispose();
@@ -54,146 +72,422 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
-    final text = _inputCtrl.text.trim();
-    if (text.isEmpty) return;
-    ref.read(hapticServiceProvider).medium();
+  /// Either loads history (existing conversation) or fires the pending
+  /// first message (new conversation).
+  Future<void> _initConversation() async {
+    if (_initialized) return;
+    _initialized = true;
 
-    // Read current coach preferences to include in message payload.
-    final persona = ref.read(coachPersonaProvider).value;
-    final proactivity = ref.read(proactivityLevelProvider).value;
-    final responseLength = ref.read(responseLengthProvider).value;
+    final isNew = widget.conversationId.startsWith('new_');
 
-    ref.read(analyticsServiceProvider).capture(
-      event: 'coach_message_sent',
-      properties: {
-        'source': 'thread',
-        'conversation_id': widget.conversationId,
-        'char_count': text.length,
-      },
-    );
-    _inputCtrl.clear();
+    if (isNew) {
+      // Pick up the pending message stored by NewChatScreen.
+      final pending = ref.read(pendingFirstMessageProvider(widget.conversationId));
+      if (pending != null) {
+        // Clear the pending message immediately to prevent double-send.
+        ref.read(pendingFirstMessageProvider(widget.conversationId).notifier).state = null;
+        await _dispatchSend(
+          conversationId: null, // new — server will create one
+          text: pending.text,
+          persona: pending.persona,
+          proactivity: pending.proactivity,
+          responseLength: pending.responseLength,
+          attachments: pending.attachments,
+        );
+      }
+    } else {
+      // Load existing message history.
+      await ref
+          .read(coachChatNotifierProvider(widget.conversationId).notifier)
+          .loadHistory();
+    }
+  }
 
-    // Send message with coach preferences to backend.
-    // TODO(phase9): await response and handle streaming once real API is wired.
-    // Errors are intentionally ignored here — when the real API is wired, replace
-    // this with an awaited call inside a try/catch that shows a SnackBar on failure.
-    ref.read(coachRepositoryProvider).sendMessage(
-      conversationId: widget.conversationId,
-      text: text,
-      persona: persona,
-      proactivity: proactivity,
-      responseLength: responseLength,
-    ).ignore();
-
-    // Start a Sentry performance transaction to measure AI response latency.
+  Future<void> _dispatchSend({
+    required String? conversationId,
+    required String text,
+    required String persona,
+    required String proactivity,
+    required String responseLength,
+    List<Map<String, dynamic>> attachments = const [],
+  }) async {
     final transaction = Sentry.startTransaction(
       'ai.chat_response',
       'ai',
       description: 'AI coach chat response',
     );
-    transaction.setTag('conversation_id', widget.conversationId);
 
-    // In production: append message to provider, stream AI response.
-    // Scroll to bottom after state update.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        transaction.finish(status: const SpanStatus.cancelled());
-        return;
+    ref.read(analyticsServiceProvider).capture(
+      event: 'coach_message_sent',
+      properties: {
+        'source': 'thread',
+        'conversation_id': conversationId ?? 'new',
+        'char_count': text.length,
+      },
+    );
+
+    try {
+      await ref
+          .read(coachChatNotifierProvider(widget.conversationId).notifier)
+          .sendMessage(
+            conversationId: conversationId,
+            text: text,
+            persona: persona,
+            proactivity: proactivity,
+            responseLength: responseLength,
+            attachments: attachments,
+          );
+
+      // After the stream completes, check if we got a new conversation ID
+      // and replace the current route so the URL reflects the real UUID.
+      if (mounted) {
+        final resolvedId = ref
+            .read(coachChatNotifierProvider(widget.conversationId))
+            .resolvedConversationId;
+        if (resolvedId != null &&
+            resolvedId != widget.conversationId &&
+            widget.conversationId.startsWith('new_')) {
+          // Replace the current route — keeps the back stack clean.
+          context.replaceNamed(
+            RouteNames.coachThread,
+            pathParameters: {'id': resolvedId},
+          );
+        }
       }
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-      // TODO(streaming): finish transaction when streaming response completes.
-      // For now, finish immediately — replace with stream completion callback.
+
       transaction.finish(status: const SpanStatus.ok());
+    } catch (e, st) {
+      transaction.finish(status: const SpanStatus.internalError());
+      Sentry.captureException(e, stackTrace: st);
+    }
+
+    _scrollToBottom();
+  }
+
+  void _sendMessage({List<Map<String, dynamic>> attachments = const []}) {
+    final text = _inputCtrl.text.trim();
+    if (text.isEmpty && attachments.isEmpty) return;
+    ref.read(hapticServiceProvider).medium();
+
+    final persona = ref.read(coachPersonaProvider).value;
+    final proactivity = ref.read(proactivityLevelProvider).value;
+    final responseLength = ref.read(responseLengthProvider).value;
+
+    _inputCtrl.clear();
+
+    // Determine the effective conversation ID.
+    // If the notifier already resolved a real ID (e.g. from a prior message
+    // in the same session), pass that; otherwise pass the widget ID.
+    final notifierState =
+        ref.read(coachChatNotifierProvider(widget.conversationId));
+    final effectiveId = notifierState.resolvedConversationId;
+    final isNewConversation = effectiveId == null ||
+        effectiveId.startsWith('new_') ||
+        widget.conversationId.startsWith('new_');
+
+    _dispatchSend(
+      conversationId: isNewConversation ? null : effectiveId,
+      text: text,
+      persona: persona,
+      proactivity: proactivity,
+      responseLength: responseLength,
+      attachments: attachments,
+    );
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollCtrl.hasClients) return;
+      _scrollCtrl.animateTo(
+        _scrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final messagesAsync =
-        ref.watch(coachMessagesProvider(widget.conversationId));
-    // Watch unconditionally so title stays reactive regardless of load order.
+    final chatState = ref.watch(coachChatNotifierProvider(widget.conversationId));
     final conversations = ref.watch(coachConversationsProvider).valueOrNull;
+
+    // Auto-scroll whenever new content arrives.
+    ref.listen(coachChatNotifierProvider(widget.conversationId), (prev, next) {
+      final wasStreaming = prev?.streamingContent != null;
+      final isStreaming = next.streamingContent != null;
+      final newMessage = (next.messages.length) > (prev?.messages.length ?? 0);
+      if (newMessage || (!wasStreaming && isStreaming)) {
+        _scrollToBottom();
+      }
+    });
+
+    // Derive title: prefer the conversation list entry (which gets updated
+    // once the server assigns the AI-generated title), fall back to "Conversation".
+    final resolvedId =
+        chatState.resolvedConversationId ?? widget.conversationId;
+    final convo = conversations?.where((c) => c.id == resolvedId).firstOrNull;
+    final title = convo?.title ??
+        (widget.conversationId.startsWith('new_') ? 'New Conversation' : 'Conversation');
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       appBar: AppBar(
         backgroundColor: AppColors.backgroundDark,
         surfaceTintColor: Colors.transparent,
-        title: messagesAsync.maybeWhen(
-          data: (msgs) {
-            // Derive title from conversation list if available.
-            final convo = conversations?.where(
-              (c) => c.id == widget.conversationId,
-            ).firstOrNull;
-            return Text(
-              convo?.title ?? 'Conversation',
-              style: AppTextStyles.h3,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            );
-          },
-          orElse: () => Text('Conversation', style: AppTextStyles.h3),
+        title: Text(
+          title,
+          style: AppTextStyles.h3,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert_rounded),
-            onPressed: () => ref.read(hapticServiceProvider).light(),
+            onPressed: () => _showConversationOptions(context, resolvedId),
             tooltip: 'More options',
           ),
         ],
       ),
       body: Column(
         children: [
-          Expanded(
-            child: messagesAsync.when(
-              loading: () => const _MessagesLoadingSkeleton(),
-              error: (e, _) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline_rounded,
-                      color: AppColors.statusError,
-                      size: 40,
-                    ),
-                    const SizedBox(height: AppDimens.spaceMd),
-                    Text(
-                      'Could not load conversation',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppDimens.spaceMd),
-                    TextButton(
-                      onPressed: () => ref
-                          .invalidate(coachMessagesProvider(widget.conversationId)),
-                      child: Text(
-                        'Retry',
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              data: (messages) => _MessageList(
-                messages: messages,
-                scrollController: _scrollCtrl,
-              ),
+          // ── Error banner ─────────────────────────────────────────────────
+          if (chatState.errorMessage != null)
+            _ErrorBanner(
+              message: chatState.errorMessage!,
+              onRetry: () => ref
+                  .read(coachChatNotifierProvider(widget.conversationId).notifier)
+                  .loadHistory(),
             ),
+          // ── Message list + streaming bubble ──────────────────────────────
+          Expanded(
+            child: chatState.isLoadingHistory
+                ? const _MessagesLoadingSkeleton()
+                : _MessageList(
+                    messages: chatState.messages,
+                    streamingContent: chatState.streamingContent,
+                    activeToolName: chatState.activeToolName,
+                    scrollController: _scrollCtrl,
+                  ),
           ),
           _ChatInputBar(
             controller: _inputCtrl,
             focusNode: _inputFocus,
-            onSend: _sendMessage,
+            onSend: ({attachments = const []}) =>
+                _sendMessage(attachments: attachments),
+            isSending: chatState.isSending,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showConversationOptions(
+    BuildContext context,
+    String conversationId,
+  ) async {
+    if (conversationId.startsWith('new_')) return;
+    ref.read(hapticServiceProvider).light();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.cardBackgroundDark,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.borderDark,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              title: Text('Rename', style: AppTextStyles.body),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showRenameDialog(context, conversationId);
+              },
+            ),
+            const Divider(height: 1, color: AppColors.borderDark),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined, color: AppColors.primary),
+              title: Text('Archive', style: AppTextStyles.body),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _archiveAndPop(context, conversationId);
+              },
+            ),
+            const Divider(height: 1, color: AppColors.borderDark),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.statusError),
+              title: Text(
+                'Delete',
+                style: AppTextStyles.body.copyWith(color: AppColors.statusError),
+              ),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showDeleteDialog(context, conversationId);
+              },
+            ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, String conversationId) {
+    final ctrl = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        title: Text('Rename Conversation', style: AppTextStyles.h3),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: AppTextStyles.body,
+          decoration: const InputDecoration(hintText: 'New title…'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newTitle = ctrl.text.trim();
+              if (newTitle.isEmpty) return;
+              Navigator.pop(context);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref
+                    .read(coachConversationsProvider.notifier)
+                    .rename(conversationId, newTitle);
+              } catch (e) {
+                if (mounted) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Rename failed: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _archiveAndPop(BuildContext context, String conversationId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = GoRouter.of(context);
+    try {
+      await ref.read(coachConversationsProvider.notifier).archive(conversationId);
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Conversation archived')),
+        );
+        nav.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text('Archive failed: $e')));
+      }
+    }
+  }
+
+  void _showDeleteDialog(BuildContext context, String conversationId) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surfaceDark,
+        title: Text('Delete conversation?', style: AppTextStyles.h3),
+        content: Text(
+          'This cannot be undone.',
+          style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryDark),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final nav = GoRouter.of(context);
+              try {
+                await ref
+                    .read(coachConversationsProvider.notifier)
+                    .delete(conversationId);
+                if (mounted) {
+                  nav.pop();
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('Conversation deleted')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  messenger
+                      .showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+                }
+              }
+            },
+            child: const Text('Delete',
+                style: TextStyle(color: AppColors.statusError)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _ErrorBanner ──────────────────────────────────────────────────────────────
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceSm,
+      ),
+      color: AppColors.statusError.withValues(alpha: 0.15),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded,
+              color: AppColors.statusError, size: 18),
+          const SizedBox(width: AppDimens.spaceSm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.caption
+                  .copyWith(color: AppColors.statusError),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Retry',
+                style: TextStyle(color: AppColors.statusError)),
           ),
         ],
       ),
@@ -207,21 +501,155 @@ class _MessageList extends StatelessWidget {
   const _MessageList({
     required this.messages,
     required this.scrollController,
+    this.streamingContent,
+    this.activeToolName,
   });
 
   final List<ChatMessage> messages;
   final ScrollController scrollController;
+  final String? streamingContent;
+  final String? activeToolName;
 
   @override
   Widget build(BuildContext context) {
+    final showTypingBubble =
+        streamingContent != null || activeToolName != null;
+    final totalItems = messages.length + (showTypingBubble ? 1 : 0);
+
     return ListView.builder(
       controller: scrollController,
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
         vertical: AppDimens.spaceMd,
       ),
-      itemCount: messages.length,
-      itemBuilder: (_, i) => _MessageBubble(message: messages[i]),
+      itemCount: totalItems,
+      itemBuilder: (_, i) {
+        if (i < messages.length) {
+          return _MessageBubble(message: messages[i]);
+        }
+        // Streaming / tool-progress bubble at the bottom.
+        return _StreamingBubble(
+          content: streamingContent,
+          toolName: activeToolName,
+        );
+      },
+    );
+  }
+}
+
+// ── _StreamingBubble ──────────────────────────────────────────────────────────
+
+/// Shows partial streaming tokens or a tool-progress indicator.
+class _StreamingBubble extends StatelessWidget {
+  const _StreamingBubble({this.content, this.toolName});
+
+  final String? content;
+  final String? toolName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.smart_toy_rounded,
+              size: 16,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceSm + 2,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.aiBubbleDark,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppDimens.radiusCard),
+                  topRight: Radius.circular(AppDimens.radiusCard),
+                  bottomLeft: Radius.circular(4),
+                  bottomRight: Radius.circular(AppDimens.radiusCard),
+                ),
+              ),
+              child: toolName != null && (content == null || content!.isEmpty)
+                  ? _ToolProgressIndicator(toolName: toolName!)
+                  : content != null && content!.isNotEmpty
+                      ? MarkdownBody(
+                          data: content!,
+                          styleSheet: MarkdownStyleSheet.fromTheme(
+                            Theme.of(context).copyWith(
+                              textTheme: Theme.of(context).textTheme.apply(
+                                    bodyColor: AppColors.textPrimaryDark,
+                                    displayColor: AppColors.textPrimaryDark,
+                                  ),
+                            ),
+                          ).copyWith(
+                            p: AppTextStyles.body.copyWith(
+                              color: AppColors.textPrimaryDark,
+                              height: 1.45,
+                            ),
+                          ),
+                        )
+                      : const _TypingIndicator(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolProgressIndicator extends StatelessWidget {
+  const _ToolProgressIndicator({required this.toolName});
+
+  final String toolName;
+
+  String _friendlyName(String tool) {
+    return switch (tool) {
+      'apple_health_read_metrics' => 'Reading your health data…',
+      'health_connect_read_metrics' => 'Reading your health data…',
+      'get_activities' => 'Checking your Strava activities…',
+      'get_fitbit_data' => 'Checking your Fitbit data…',
+      'get_oura_data' => 'Checking your Oura data…',
+      'query_memory' => 'Checking your history…',
+      'save_memory' => 'Saving to memory…',
+      _ => 'Checking your data…',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.primary.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        Text(
+          _friendlyName(toolName),
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textSecondaryDark,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -235,18 +663,12 @@ class _MessageBubble extends StatelessWidget {
 
   bool get _isUser => message.role == MessageRole.user;
 
-  /// Formats [dt] according to the device's 12 h / 24 h locale preference.
-  ///
-  /// Uses [TimeOfDay.format] which reads [MediaQueryData.alwaysUse24HourFormat]
-  /// (or the equivalent platform locale setting) — no custom Zuralog setting
-  /// required, as specified in the settings-mapping audit.
   String _formatTime(DateTime dt, BuildContext context) {
     return TimeOfDay.fromDateTime(dt).format(context);
   }
 
-  /// Returns true if the URL points to an image type we can render inline.
   bool _isImageUrl(String url) {
-    final lower = url.toLowerCase();
+    final lower = url.toLowerCase().split('?').first;
     return lower.endsWith('.jpg') ||
         lower.endsWith('.jpeg') ||
         lower.endsWith('.png') ||
@@ -254,13 +676,11 @@ class _MessageBubble extends StatelessWidget {
         lower.endsWith('.webp');
   }
 
-  /// Extracts a short filename from a URL for display on file cards.
   String _filename(String url) {
     final name = url.split('/').last.split('?').first;
     return name.length > 18 ? '${name.substring(0, 15)}…' : name;
   }
 
-  /// Builds a single attachment thumbnail widget for a given URL.
   Widget _buildThumbnail(String url) {
     if (_isImageUrl(url)) {
       return ClipRRect(
@@ -287,16 +707,12 @@ class _MessageBubble extends StatelessWidget {
               color: AppColors.surfaceDark,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.broken_image_outlined,
-              color: AppColors.textTertiary,
-              size: 28,
-            ),
+            child: const Icon(Icons.broken_image_outlined,
+                color: AppColors.textTertiary, size: 28),
           ),
         ),
       );
     }
-    // Non-image file card (e.g. PDF).
     return Container(
       width: 80,
       height: 52,
@@ -307,11 +723,8 @@ class _MessageBubble extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.picture_as_pdf_rounded,
-            color: AppColors.statusError,
-            size: 24,
-          ),
+          const Icon(Icons.picture_as_pdf_rounded,
+              color: AppColors.statusError, size: 24),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -342,7 +755,6 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!_isUser) ...[
-            // AI avatar
             Container(
               width: 28,
               height: 28,
@@ -350,11 +762,8 @@ class _MessageBubble extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.smart_toy_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
+              child: const Icon(Icons.smart_toy_rounded,
+                  size: 16, color: AppColors.primary),
             ),
             const SizedBox(width: AppDimens.spaceSm),
           ],
@@ -364,19 +773,17 @@ class _MessageBubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
-                // ── Gap 2: Attachment thumbnails above the bubble ────────────
                 if (hasAttachments) ...[
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    alignment: _isUser ? WrapAlignment.end : WrapAlignment.start,
-                    children: message.attachmentUrls
-                        .map(_buildThumbnail)
-                        .toList(),
+                    alignment:
+                        _isUser ? WrapAlignment.end : WrapAlignment.start,
+                    children:
+                        message.attachmentUrls.map(_buildThumbnail).toList(),
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
                 ],
-                // ── Bubble container ─────────────────────────────────────────
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppDimens.spaceMd,
@@ -387,8 +794,10 @@ class _MessageBubble extends StatelessWidget {
                         ? AppColors.userBubble
                         : AppColors.aiBubbleDark,
                     borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(AppDimens.radiusCard),
-                      topRight: const Radius.circular(AppDimens.radiusCard),
+                      topLeft:
+                          const Radius.circular(AppDimens.radiusCard),
+                      topRight:
+                          const Radius.circular(AppDimens.radiusCard),
                       bottomLeft: _isUser
                           ? const Radius.circular(AppDimens.radiusCard)
                           : const Radius.circular(4),
@@ -397,54 +806,48 @@ class _MessageBubble extends StatelessWidget {
                           : const Radius.circular(AppDimens.radiusCard),
                     ),
                   ),
-                  // ── Gap 1 / content ─────────────────────────────────────
-                  child: message.isStreaming
-                      ? const _TypingIndicator()
-                      : _isUser
-                          ? Text(
-                              message.content,
-                              style: AppTextStyles.body.copyWith(
-                                color: AppColors.userBubbleText,
-                                height: 1.45,
-                              ),
-                            )
-                          : MarkdownBody(
-                              data: message.content,
-                              styleSheet: MarkdownStyleSheet.fromTheme(
-                                Theme.of(context).copyWith(
-                                  textTheme:
-                                      Theme.of(context).textTheme.apply(
-                                            bodyColor:
-                                                AppColors.textPrimaryDark,
-                                            displayColor:
-                                                AppColors.textPrimaryDark,
-                                          ),
-                                ),
-                              ).copyWith(
-                                p: AppTextStyles.body.copyWith(
-                                  color: AppColors.textPrimaryDark,
-                                  height: 1.45,
-                                ),
-                                strong: AppTextStyles.body.copyWith(
-                                  color: AppColors.textPrimaryDark,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                em: AppTextStyles.body.copyWith(
-                                  color: AppColors.textPrimaryDark,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                                listBullet: AppTextStyles.body.copyWith(
-                                  color: AppColors.textPrimaryDark,
-                                  height: 1.45,
-                                ),
-                                code: AppTextStyles.caption.copyWith(
-                                  color: AppColors.textPrimaryDark,
-                                  backgroundColor:
-                                      Colors.white.withValues(alpha: 0.08),
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
+                  child: _isUser
+                      ? Text(
+                          message.content,
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.userBubbleText,
+                            height: 1.45,
+                          ),
+                        )
+                      : MarkdownBody(
+                          data: message.content,
+                          styleSheet: MarkdownStyleSheet.fromTheme(
+                            Theme.of(context).copyWith(
+                              textTheme: Theme.of(context).textTheme.apply(
+                                    bodyColor: AppColors.textPrimaryDark,
+                                    displayColor: AppColors.textPrimaryDark,
+                                  ),
                             ),
+                          ).copyWith(
+                            p: AppTextStyles.body.copyWith(
+                              color: AppColors.textPrimaryDark,
+                              height: 1.45,
+                            ),
+                            strong: AppTextStyles.body.copyWith(
+                              color: AppColors.textPrimaryDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            em: AppTextStyles.body.copyWith(
+                              color: AppColors.textPrimaryDark,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            listBullet: AppTextStyles.body.copyWith(
+                              color: AppColors.textPrimaryDark,
+                              height: 1.45,
+                            ),
+                            code: AppTextStyles.caption.copyWith(
+                              color: AppColors.textPrimaryDark,
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.08),
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -466,7 +869,6 @@ class _MessageBubble extends StatelessWidget {
 
 // ── _TypingIndicator ──────────────────────────────────────────────────────────
 
-/// Animated three-dot typing indicator for streaming AI responses.
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator();
 
@@ -530,11 +932,15 @@ class _ChatInputBar extends ConsumerStatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.onSend,
+    this.isSending = false,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
-  final VoidCallback onSend;
+  final void Function({List<Map<String, dynamic>> attachments}) onSend;
+
+  /// When true the send button is replaced by a loading indicator.
+  final bool isSending;
 
   @override
   ConsumerState<_ChatInputBar> createState() => _ChatInputBarState();
@@ -542,35 +948,39 @@ class _ChatInputBar extends ConsumerStatefulWidget {
 
 class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   final List<PendingAttachment> _attachments = [];
-  bool _isSending = false;
 
   Future<void> _handleSend() async {
     final text = widget.controller.text.trim();
     if (text.isEmpty && _attachments.isEmpty) return;
-    if (_isSending) return;
-    _isSending = true;
+    if (widget.isSending) return;
 
-    try {
-      // Mock upload attachments before sending.
-      // TODO(supabase): pass attachmentUrls to onSend once backend upload is wired
-      List<String> attachmentUrls = [];
-      if (_attachments.isNotEmpty) {
-        // TODO(supabase): replace with real Supabase Storage upload
-        for (final a in _attachments) {
-          await Future.delayed(const Duration(milliseconds: 800));
-          if (kDebugMode) {
-            attachmentUrls.add(
-              'https://mock.supabase.co/storage/attachments/${a.name}',
+    // Upload attachments.
+    final List<Map<String, dynamic>> attachmentPayloads = [];
+    if (_attachments.isNotEmpty) {
+      final attachmentRepo = ref.read(attachmentRepositoryProvider);
+      for (final a in _attachments) {
+        try {
+          final uploaded = await attachmentRepo.uploadAttachment(a.file.path);
+          attachmentPayloads.add({
+            'type': 'image',
+            'filename': a.name,
+            'storage_path': uploaded.storagePath ?? '',
+            'signed_url': uploaded.signedUrl ?? '',
+            'size_bytes': uploaded.sizeBytes ?? 0,
+            'mime_type': uploaded.mimeType ?? '',
+          });
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to upload ${a.name}: $e')),
             );
           }
         }
       }
-
-      setState(() => _attachments.clear());
-      widget.onSend();
-    } finally {
-      if (mounted) setState(() => _isSending = false);
     }
+
+    setState(() => _attachments.clear());
+    widget.onSend(attachments: attachmentPayloads);
   }
 
   @override
@@ -579,16 +989,13 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
     final isListening = speechState.status == SpeechStatus.listening;
     final voiceInputEnabled = ref.watch(voiceInputEnabledProvider);
 
-    // Sync recognized text to input field.
     ref.listen<SpeechState>(speechNotifierProvider, (prev, next) {
-      // Stream partial results while listening.
       if (next.recognizedText.isNotEmpty && !next.isFinal) {
         widget.controller.text = next.recognizedText;
         widget.controller.selection = TextSelection.fromPosition(
           TextPosition(offset: widget.controller.text.length),
         );
       }
-      // Commit final transcript when listening ends.
       if (prev?.isFinal == false &&
           next.isFinal &&
           next.recognizedText.isNotEmpty) {
@@ -597,13 +1004,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
           TextPosition(offset: widget.controller.text.length),
         );
       }
-      // Show error snackbar.
       if (next.status == SpeechStatus.error) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.errorMessage ?? 'Microphone unavailable'),
-          ),
+          SnackBar(content: Text(next.errorMessage ?? 'Microphone unavailable')),
         );
       }
     });
@@ -618,12 +1022,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Attachment previews ──────────────────────────────────────────
           AttachmentPreviewBar(
             attachments: _attachments,
             onRemove: (i) => setState(() => _attachments.removeAt(i)),
           ),
-          // ── Input row ────────────────────────────────────────────────────
           Padding(
             padding: EdgeInsets.fromLTRB(
               AppDimens.spaceMd,
@@ -652,9 +1054,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       isScrollControlled: true,
                       useSafeArea: true,
                       builder: (_) => AttachmentPickerSheet(
-                        onAttachment: (attachment) {
-                          setState(() => _attachments.add(attachment));
-                        },
+                        onAttachment: (a) => setState(() => _attachments.add(a)),
                       ),
                     );
                   },
@@ -676,9 +1076,8 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       style: AppTextStyles.body,
                       decoration: InputDecoration(
                         hintText: 'Message your coach…',
-                        hintStyle: AppTextStyles.body.copyWith(
-                          color: AppColors.textTertiary,
-                        ),
+                        hintStyle: AppTextStyles.body
+                            .copyWith(color: AppColors.textTertiary),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppDimens.spaceMd,
@@ -696,6 +1095,21 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                   builder: (context, value, _) {
                     final hasText = value.text.trim().isNotEmpty;
                     final hasContent = hasText || _attachments.isNotEmpty;
+
+                    if (widget.isSending) {
+                      return const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Padding(
+                          padding: EdgeInsets.all(8),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      );
+                    }
+
                     if (hasContent) {
                       return _InputIcon(
                         icon: Icons.arrow_upward_rounded,
@@ -704,14 +1118,13 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                         tooltip: 'Send',
                       );
                     }
-                    if (!voiceInputEnabled) {
-                      return const SizedBox.shrink();
-                    }
+
+                    if (!voiceInputEnabled) return const SizedBox.shrink();
+
                     return _InputIcon(
                       icon: isListening
                           ? Icons.stop_circle_rounded
                           : Icons.mic_none_rounded,
-                      filled: false,
                       activeColor: isListening ? AppColors.statusError : null,
                       onTap: () async {
                         if (isListening) {
@@ -721,14 +1134,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                           ref.read(hapticServiceProvider).light();
                         } else {
                           ref.read(hapticServiceProvider).medium();
-                          // Initialize the speech engine on first use (requests
-                          // microphone permission and sets up the recognizer).
                           final notifier =
                               ref.read(speechNotifierProvider.notifier);
-                          final currentStatus = ref
-                              .read(speechNotifierProvider)
-                              .status;
-                          if (currentStatus == SpeechStatus.uninitialized) {
+                          if (ref.read(speechNotifierProvider).status ==
+                              SpeechStatus.uninitialized) {
                             final available = await notifier.initialize();
                             if (!available) return;
                           }
@@ -761,8 +1170,6 @@ class _InputIcon extends ConsumerWidget {
   final VoidCallback onTap;
   final String tooltip;
   final bool filled;
-
-  /// Override icon color (e.g. red when mic is recording).
   final Color? activeColor;
 
   @override
@@ -775,9 +1182,7 @@ class _InputIcon extends ConsumerWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: filled
-                ? AppColors.primary
-                : AppColors.inputBackgroundDark,
+            color: filled ? AppColors.primary : AppColors.inputBackgroundDark,
             shape: BoxShape.circle,
           ),
           child: Icon(

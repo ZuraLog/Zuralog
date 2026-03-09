@@ -1,16 +1,80 @@
 /// Zuralog — Coach Repository.
 ///
-/// Provides a mock data layer for the Coach feature.
-/// In production this will call the Cloud Brain API; for Phase 10 Polish
-/// the repository supplies realistic stub data so the screens render
-/// without a live backend dependency.
+/// Defines the abstract [CoachRepository] interface used by all Coach
+/// screens, plus the sealed [ChatStreamEvent] hierarchy used for
+/// real-time streaming, and the [MockCoachRepository] stub for tests.
 library;
 
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 
+// ── Stream Events ─────────────────────────────────────────────────────────────
+
+/// Sealed base class for all events emitted by [CoachRepository.sendMessageStream].
+sealed class ChatStreamEvent {
+  const ChatStreamEvent();
+}
+
+/// The server assigned a real UUID to the conversation.
+///
+/// Emitted as the first event when a new conversation is created
+/// so the Flutter client can update its route / state with the
+/// server-assigned ID before the first token arrives.
+final class ConversationCreated extends ChatStreamEvent {
+  const ConversationCreated(this.conversationId);
+
+  /// The server-assigned conversation UUID.
+  final String conversationId;
+}
+
+/// A partial response token from the LLM.
+final class StreamToken extends ChatStreamEvent {
+  const StreamToken({required this.delta, required this.accumulated});
+
+  /// The incremental text fragment for this token.
+  final String delta;
+
+  /// All text received so far (running concatenation).
+  final String accumulated;
+}
+
+/// The AI is running a MCP tool (e.g. fetching Apple Health data).
+final class ToolProgress extends ChatStreamEvent {
+  const ToolProgress({required this.toolName, required this.isStart});
+
+  /// The internal tool name (e.g. ``apple_health_read_metrics``).
+  final String toolName;
+
+  /// True when the tool starts; false when it completes.
+  final bool isStart;
+}
+
+/// Streaming has finished — the complete message is available.
+final class StreamComplete extends ChatStreamEvent {
+  const StreamComplete({
+    required this.message,
+    required this.conversationId,
+  });
+
+  /// The fully assembled [ChatMessage] including its server-assigned ID.
+  final ChatMessage message;
+
+  /// The conversation ID (may differ from the initial temp ID if new).
+  final String conversationId;
+}
+
+/// An error occurred during the stream.
+final class StreamError extends ChatStreamEvent {
+  const StreamError(this.error);
+
+  /// A human-readable description of the error.
+  final String error;
+}
+
+// ── Repository Interface ───────────────────────────────────────────────────────
+
 /// Abstract interface for the coach data source.
 abstract interface class CoachRepository {
-  /// Returns all non-archived conversations ordered by [updatedAt] desc.
+  /// Returns all non-deleted conversations ordered by [updatedAt] desc.
   Future<List<Conversation>> listConversations();
 
   /// Returns all messages for [conversationId] ordered by [createdAt] asc.
@@ -22,31 +86,39 @@ abstract interface class CoachRepository {
   /// Returns quick-action tiles for the current user context.
   Future<List<QuickAction>> fetchQuickActions();
 
-  /// Permanently deletes the conversation with [conversationId].
+  /// Permanently soft-deletes the conversation with [conversationId].
   Future<void> deleteConversation(String conversationId);
 
   /// Archives the conversation with [conversationId].
   Future<void> archiveConversation(String conversationId);
 
-  /// Sends [text] as a new user message in [conversationId].
+  /// Renames the conversation with [conversationId] to [newTitle].
+  Future<void> renameConversation(String conversationId, String newTitle);
+
+  /// Sends [text] as a new user message and streams the AI response.
   ///
-  /// The [persona], [proactivity], and [responseLength] values are forwarded
-  /// to the backend so the AI system prompt is tailored to the user's preferences.
+  /// Emits [ChatStreamEvent] subtypes in this order:
+  /// 1. [ConversationCreated] — only if this is a new conversation.
+  /// 2. [ToolProgress] — zero or more pairs (isStart=true then false).
+  /// 3. [StreamToken] — one per partial token from the LLM.
+  /// 4. [StreamComplete] — final assembled message with server-assigned ID.
   ///
-  /// Returns the AI's reply message (may be streamed in a future implementation).
-  Future<ChatMessage> sendMessage({
-    required String conversationId,
+  /// On failure emits [StreamError] and the stream closes.
+  Stream<ChatStreamEvent> sendMessageStream({
+    required String? conversationId,
     required String text,
     required String persona,
     required String proactivity,
     required String responseLength,
-    List<String> attachmentUrls = const [],
+    List<Map<String, dynamic>> attachments = const [],
   });
 }
 
 // ── Mock Implementation ────────────────────────────────────────────────────────
 
 /// Stub implementation of [CoachRepository] backed by in-memory fixtures.
+///
+/// Used in unit tests and widget tests via provider overrides.
 final class MockCoachRepository implements CoachRepository {
   const MockCoachRepository();
 
@@ -79,14 +151,6 @@ final class MockCoachRepository implements CoachRepository {
         preview: 'Try adding protein within 45 min of waking based on your energy dips.',
         messageCount: 22,
       ),
-      Conversation(
-        id: 'c4',
-        title: 'Stress Management Strategies',
-        createdAt: now.subtract(const Duration(days: 21)),
-        updatedAt: now.subtract(const Duration(days: 10)),
-        preview: 'Your HRV drops sharply on high-stress days. Let\'s build a protocol.',
-        messageCount: 6,
-      ),
     ];
   }
 
@@ -109,32 +173,9 @@ final class MockCoachRepository implements CoachRepository {
         content:
             'Looking at your data from the past 7 days, I can see a few contributing factors:\n\n'
             '**1. Later bedtimes** — You\'ve been going to bed 45 min later on average since Tuesday.\n\n'
-            '**2. Elevated resting heart rate** — Your RHR is up 6 bpm compared to your 30-day baseline, '
-            'which often signals under-recovery or mild illness.\n\n'
-            '**3. Increased evening activity** — Your step count after 8pm has doubled this week.\n\n'
+            '**2. Elevated resting heart rate** — Your RHR is up 6 bpm compared to your 30-day baseline.\n\n'
             'Would you like me to build a short wind-down protocol based on what\'s worked best for you historically?',
         createdAt: now.subtract(const Duration(hours: 6, minutes: 15)),
-      ),
-      ChatMessage(
-        id: 'm3',
-        conversationId: conversationId,
-        role: MessageRole.user,
-        content: 'Yes, what worked best before?',
-        createdAt: now.subtract(const Duration(hours: 5, minutes: 50)),
-      ),
-      ChatMessage(
-        id: 'm4',
-        conversationId: conversationId,
-        role: MessageRole.assistant,
-        content:
-            'Based on your HRV trend over the past 3 months, your best sleep quality '
-            '(consistently above 85) correlated with:\n\n'
-            '- No screens 45 min before bed\n'
-            '- A short 10-min walk after dinner\n'
-            '- Consistent wake time within a ±15 min window\n\n'
-            'I recommend shifting your bedtime target to **10:30 PM** for the next week. '
-            'Want me to set a gentle reminder?',
-        createdAt: now.subtract(const Duration(hours: 5, minutes: 44)),
       ),
     ];
   }
@@ -143,67 +184,66 @@ final class MockCoachRepository implements CoachRepository {
   Future<List<PromptSuggestion>> fetchPromptSuggestions() async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     return const [
-      PromptSuggestion(
-        id: 'ps1',
-        text: 'Why has my sleep score been dropping?',
-        category: 'sleep',
-      ),
-      PromptSuggestion(
-        id: 'ps2',
-        text: 'How was my recovery this week?',
-        category: 'activity',
-      ),
-      PromptSuggestion(
-        id: 'ps3',
-        text: 'What should I focus on to improve my health score?',
-        category: 'general',
-      ),
-      PromptSuggestion(
-        id: 'ps4',
-        text: 'Analyze my stress and HRV patterns',
-        category: 'heart',
-      ),
-      PromptSuggestion(
-        id: 'ps5',
-        text: 'Help me understand my nutrition trends',
-        category: 'nutrition',
-      ),
-      PromptSuggestion(
-        id: 'ps6',
-        text: 'What\'s the best time for me to work out?',
-        category: 'activity',
-      ),
+      PromptSuggestion(id: 'ps1', text: 'Why has my sleep score been dropping?', category: 'sleep'),
+      PromptSuggestion(id: 'ps2', text: 'How was my recovery this week?', category: 'activity'),
+      PromptSuggestion(id: 'ps3', text: 'What should I focus on to improve my health score?', category: 'general'),
+      PromptSuggestion(id: 'ps4', text: 'Analyze my stress and HRV patterns', category: 'heart'),
     ];
   }
 
   @override
   Future<void> deleteConversation(String conversationId) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    // Mock: no-op in mock implementation
   }
 
   @override
   Future<void> archiveConversation(String conversationId) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    // Mock: no-op in mock implementation
   }
 
   @override
-  Future<ChatMessage> sendMessage({
-    required String conversationId,
+  Future<void> renameConversation(String conversationId, String newTitle) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+
+  @override
+  Stream<ChatStreamEvent> sendMessageStream({
+    required String? conversationId,
     required String text,
     required String persona,
     required String proactivity,
     required String responseLength,
-    List<String> attachmentUrls = const [],
-  }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    return ChatMessage(
-      id: 'mock_${DateTime.now().millisecondsSinceEpoch}',
-      conversationId: conversationId,
-      role: MessageRole.assistant,
-      content: 'Mock response',
-      createdAt: DateTime.now(),
+    List<Map<String, dynamic>> attachments = const [],
+  }) async* {
+    final String effectiveId = conversationId ?? 'mock_${DateTime.now().millisecondsSinceEpoch}';
+
+    if (conversationId == null) {
+      yield ConversationCreated(effectiveId);
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    yield const ToolProgress(toolName: 'apple_health_read_metrics', isStart: true);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    yield const ToolProgress(toolName: 'apple_health_read_metrics', isStart: false);
+
+    const mockReply = 'This is a mock streaming response. Wire the real backend to see actual AI responses.';
+    String accumulated = '';
+    for (final word in mockReply.split(' ')) {
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      final delta = '$word ';
+      accumulated += delta;
+      yield StreamToken(delta: delta, accumulated: accumulated);
+    }
+
+    yield StreamComplete(
+      message: ChatMessage(
+        id: 'mock_${DateTime.now().millisecondsSinceEpoch}',
+        conversationId: effectiveId,
+        role: MessageRole.assistant,
+        content: accumulated.trim(),
+        createdAt: DateTime.now(),
+      ),
+      conversationId: effectiveId,
     );
   }
 
@@ -215,43 +255,29 @@ final class MockCoachRepository implements CoachRepository {
         id: 'qa1',
         title: 'Log Sleep',
         subtitle: 'Tell me how you slept last night',
-        icon: 0xe3ab, // Icons.bedtime_rounded codepoint
+        icon: 0xe3ab,
         prompt: 'I want to log my sleep from last night.',
       ),
       QuickAction(
         id: 'qa2',
         title: 'Log Workout',
         subtitle: 'Describe your training session',
-        icon: 0xe3b2, // Icons.fitness_center_rounded codepoint
+        icon: 0xe3b2,
         prompt: 'I want to log a workout I just completed.',
       ),
       QuickAction(
         id: 'qa3',
         title: 'Log Mood',
         subtitle: 'How are you feeling right now?',
-        icon: 0xe5c8, // Icons.mood_rounded codepoint
+        icon: 0xe5c8,
         prompt: 'I want to log my current mood and energy level.',
       ),
       QuickAction(
         id: 'qa4',
-        title: 'Log Meal',
-        subtitle: 'Describe what you ate',
-        icon: 0xe56c, // Icons.restaurant_rounded codepoint
-        prompt: 'I want to log a meal I just had.',
-      ),
-      QuickAction(
-        id: 'qa5',
         title: 'Weekly Check-in',
         subtitle: 'Review your week with me',
-        icon: 0xe5d0, // Icons.check_circle_rounded codepoint
+        icon: 0xe5d0,
         prompt: 'Let\'s do a weekly health check-in and review my progress.',
-      ),
-      QuickAction(
-        id: 'qa6',
-        title: 'Ask Anything',
-        subtitle: 'Open-ended health question',
-        icon: 0xe8b6, // Icons.help_outline_rounded codepoint
-        prompt: '',
       ),
     ];
   }

@@ -17,11 +17,8 @@ import 'package:zuralog/core/deeplink/deeplink_handler.dart';
 import 'package:zuralog/core/deeplink/deeplink_launcher.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/network/api_client.dart';
-import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
-import 'package:zuralog/features/chat/data/chat_repository.dart';
-import 'package:zuralog/features/chat/domain/message.dart';
 import 'package:zuralog/features/catalog/catalog_screen.dart';
 import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/features/subscription/presentation/paywall_screen.dart';
@@ -69,29 +66,13 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   final _outputController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _chatController = TextEditingController();
   final _scrollController = ScrollController();
 
-  StreamSubscription<ChatMessage>? _wsSubscription;
-  StreamSubscription<ConnectionStatus>? _wsStatusSubscription;
-  ConnectionStatus _chatStatus = ConnectionStatus.disconnected;
   bool _backendOnline = false;
-
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    // Animation starts stopped; only runs while chat status is "connecting".
-    // Avoids continuous compositor activity when not visually needed.
-    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
     DeeplinkHandler.init(ref, onLog: _log);
     _checkBackendStatus();
   }
@@ -99,13 +80,9 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   @override
   void dispose() {
     DeeplinkHandler.dispose();
-    _pulseController.dispose();
-    _wsSubscription?.cancel();
-    _wsStatusSubscription?.cancel();
     _outputController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _chatController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -121,36 +98,6 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     // every log message, causing jank during keyboard animations.
     _outputController.text += '[$timestamp] $message\n';
   }
-
-  // -----------------------------------------------------------------------
-  // Chat Status
-  // -----------------------------------------------------------------------
-
-  void _updateChatStatus(ConnectionStatus status) {
-    setState(() => _chatStatus = status);
-    // Drive the pulse animation only while actively connecting.
-    if (status == ConnectionStatus.connecting) {
-      if (!_pulseController.isAnimating) {
-        _pulseController.repeat(reverse: true);
-      }
-    } else {
-      _pulseController.stop();
-      // Ensure the indicator is fully visible when not animating.
-      _pulseController.value = 1.0;
-    }
-  }
-
-  Color get _chatStatusColor => switch (_chatStatus) {
-    ConnectionStatus.connected => _Colors.success,
-    ConnectionStatus.connecting => _Colors.warning,
-    ConnectionStatus.disconnected => _Colors.textSecondary,
-  };
-
-  String get _chatStatusLabel => switch (_chatStatus) {
-    ConnectionStatus.connected => 'Connected',
-    ConnectionStatus.connecting => 'Connecting...',
-    ConnectionStatus.disconnected => 'Disconnected',
-  };
 
   // -----------------------------------------------------------------------
   // Backend Connectivity
@@ -365,89 +312,13 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   }
 
   // -----------------------------------------------------------------------
-  // Chat Actions
-  // -----------------------------------------------------------------------
-
-  Future<void> _connectWebSocket() async {
-    _log('Connecting WebSocket...');
-    final chatRepo = ref.read(chatRepositoryProvider);
-
-    // Get the real auth token from secure storage.
-    final storage = ref.read(secureStorageProvider);
-    final token = await storage.getAuthToken();
-    if (token == null || token.isEmpty) {
-      _log('⚠️ No auth token stored — please log in first.');
-      return;
-    }
-
-    _wsSubscription?.cancel();
-    _wsSubscription = chatRepo.messages.listen((msg) {
-      _log('💬 [${msg.role}] ${msg.content}');
-
-      // Phase 1.12: Auto-execute deep links from AI client_action payloads.
-      if (msg.clientAction != null &&
-          msg.clientAction!['client_action'] == 'open_url') {
-        final url = msg.clientAction!['url'] as String? ?? '';
-        final fallback = msg.clientAction!['fallback_url'] as String?;
-        if (url.isNotEmpty) {
-          DeepLinkLauncher.executeDeepLink(url, fallbackUrl: fallback);
-        }
-      }
-    });
-
-    _wsStatusSubscription?.cancel();
-    _wsStatusSubscription = chatRepo.connectionStatus.listen((status) {
-      _updateChatStatus(status);
-      switch (status) {
-        case ConnectionStatus.connected:
-          _log('✅ WS Connected');
-        case ConnectionStatus.connecting:
-          _log('⏳ WS Connecting...');
-        case ConnectionStatus.disconnected:
-          _log('🔴 WS Disconnected');
-      }
-    });
-
-    chatRepo.connect(token);
-  }
-
-  void _sendChatMessage() {
-    final text = _chatController.text.trim();
-    if (text.isEmpty) {
-      _log('⚠️ Chat message is empty');
-      return;
-    }
-    _log('📤 Sending: $text');
-    final chatRepo = ref.read(chatRepositoryProvider);
-    chatRepo.sendMessage(text);
-    _chatController.clear();
-  }
-
-  void _disconnectWebSocket() {
-    _log('Disconnecting WebSocket...');
-    final chatRepo = ref.read(chatRepositoryProvider);
-    chatRepo.dispose();
-    _wsSubscription?.cancel();
-    _wsStatusSubscription?.cancel();
-    _updateChatStatus(ConnectionStatus.disconnected);
-    _log('✅ WS Disconnected');
-  }
-
-  // -----------------------------------------------------------------------
   // AI Brain Actions
   // -----------------------------------------------------------------------
 
   Future<void> _testAiChat() async {
-    _log('Sending test AI message...');
-    final chatRepo = ref.read(chatRepositoryProvider);
-    if (_chatStatus != ConnectionStatus.connected) {
-      _log('Connecting WS first...');
-      _connectWebSocket();
-      // Give time for connection
-      await Future<void>.delayed(const Duration(seconds: 1));
-    }
-    chatRepo.sendMessage('How are my steps today?');
-    _log('Sent: "How are my steps today?"');
+    _log('Sending test AI message via /api/v1/chat/ws...');
+    _log('ℹ️  Use the Coach tab (Tab 2) to send real AI messages.');
+    _log('   This endpoint is now tested end-to-end through the Coach UI.');
   }
 
   Future<void> _testVoiceUpload() async {
@@ -735,8 +606,6 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
                   _buildHealthKitSection(),
                   const SizedBox(height: 16),
                   _buildIntegrationsSection(),
-                  const SizedBox(height: 16),
-                  _buildChatSection(),
                   const SizedBox(height: 16),
                   _buildAiBrainSection(),
                   const SizedBox(height: 16),
@@ -1172,91 +1041,6 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
   }
 
   // -----------------------------------------------------------------------
-  // Section: Chat
-  // -----------------------------------------------------------------------
-
-  Widget _buildChatSection() {
-    return _SectionCard(
-      icon: Icons.chat_bubble_rounded,
-      iconColor: _Colors.primary,
-      title: 'CHAT',
-      trailing: _buildStatusPill(),
-      children: [
-        // Input + Send
-        Row(
-          children: [
-            Expanded(
-              child: _StyledTextField(
-                controller: _chatController,
-                hint: 'Type a message...',
-                icon: Icons.message_outlined,
-                onSubmitted: (_) => _sendChatMessage(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: _chatStatus == ConnectionStatus.connected
-                      ? [_Colors.primary, const Color(0xFF8B5CF6)]
-                      : [_Colors.border, _Colors.border],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: _chatStatus == ConnectionStatus.connected
-                    ? [
-                        BoxShadow(
-                          color: _Colors.primary.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : [],
-              ),
-              child: IconButton(
-                onPressed: _chatStatus == ConnectionStatus.connected
-                    ? _sendChatMessage
-                    : null,
-                icon: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // Connect / Disconnect
-        Row(
-          children: [
-            Expanded(
-              child: _ActionButton(
-                label: 'Connect',
-                icon: Icons.power_settings_new_rounded,
-                color: _Colors.success,
-                enabled: _chatStatus == ConnectionStatus.disconnected,
-                onTap: _connectWebSocket,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _ActionButton(
-                label: 'Disconnect',
-                icon: Icons.power_off_rounded,
-                color: _Colors.danger,
-                enabled: _chatStatus != ConnectionStatus.disconnected,
-                onTap: _disconnectWebSocket,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // -----------------------------------------------------------------------
   // Section: AI Brain
   // -----------------------------------------------------------------------
 
@@ -1652,43 +1436,6 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     );
   }
 
-  Widget _buildStatusPill() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: _chatStatusColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _chatStatusColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _chatStatus == ConnectionStatus.connecting
-              ? FadeTransition(
-                  opacity: _pulseAnimation,
-                  child: _Dot(color: _chatStatusColor),
-                )
-              : _Dot(color: _chatStatusColor),
-          const SizedBox(width: 6),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: Text(
-              _chatStatusLabel,
-              key: ValueKey(_chatStatus),
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: _chatStatusColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // -----------------------------------------------------------------------
   // Section: Output Log
   // -----------------------------------------------------------------------
@@ -1918,45 +1665,42 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  final bool enabled;
 
   const _ActionButton({
     required this.label,
     required this.icon,
     required this.color,
     required this.onTap,
-    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = enabled ? color : _Colors.textSecondary;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: enabled ? onTap : null,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: effectiveColor.withValues(alpha: enabled ? 0.08 : 0.04),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: effectiveColor.withValues(alpha: enabled ? 0.2 : 0.1),
+              color: color.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: effectiveColor),
+              Icon(icon, size: 16, color: color),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: effectiveColor,
+                  color: color,
                 ),
               ),
             ],
@@ -1974,7 +1718,6 @@ class _StyledTextField extends StatelessWidget {
   final IconData icon;
   final bool obscureText;
   final TextInputType? keyboardType;
-  final ValueChanged<String>? onSubmitted;
 
   const _StyledTextField({
     required this.controller,
@@ -1982,7 +1725,6 @@ class _StyledTextField extends StatelessWidget {
     required this.icon,
     this.obscureText = false,
     this.keyboardType,
-    this.onSubmitted,
   });
 
   @override
@@ -1991,7 +1733,6 @@ class _StyledTextField extends StatelessWidget {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      onSubmitted: onSubmitted,
       style: const TextStyle(fontSize: 14, color: _Colors.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
@@ -2023,17 +1764,4 @@ class _StyledTextField extends StatelessWidget {
   }
 }
 
-/// A tiny colored dot for status indicators.
-class _Dot extends StatelessWidget {
-  final Color color;
-  const _Dot({required this.color});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 7,
-      height: 7,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}

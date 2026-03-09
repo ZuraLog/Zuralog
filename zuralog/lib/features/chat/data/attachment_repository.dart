@@ -9,7 +9,51 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
-import 'package:zuralog/features/chat/domain/attachment.dart';
+
+// ── Domain types (previously in features/chat/domain/attachment.dart) ─────────
+
+/// The media category of an uploaded attachment.
+enum AttachmentType { image, audio, pdf, document }
+
+/// The upload lifecycle state of an attachment.
+enum AttachmentStatus { pending, uploading, uploaded, error }
+
+/// Metadata returned by the backend after a successful upload.
+class ChatAttachment {
+  final String id;
+  final AttachmentType type;
+  final String filename;
+  final String localPath;
+  final String? storagePath;
+  final String? signedUrl;
+  final int? sizeBytes;
+  final String? mimeType;
+  final AttachmentStatus status;
+
+  const ChatAttachment({
+    required this.id,
+    required this.type,
+    required this.filename,
+    required this.localPath,
+    this.storagePath,
+    this.signedUrl,
+    this.sizeBytes,
+    this.mimeType,
+    required this.status,
+  });
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'type': type.name,
+    'filename': filename,
+    'local_path': localPath,
+    'storage_path': storagePath,
+    'signed_url': signedUrl,
+    'size_bytes': sizeBytes,
+    'mime_type': mimeType,
+    'status': status.name,
+  };
+}
 
 /// Repository for uploading chat attachments to the backend.
 ///

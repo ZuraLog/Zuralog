@@ -8,13 +8,13 @@
 /// conversation drawer, quick actions sheet, and skeleton loading state.
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/speech/speech_providers.dart';
@@ -83,7 +83,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             _inputCtrl.text = prompt;
             _sendMessage();
           } else {
-            // "Ask Anything" — just focus the input field
             _inputFocus.requestFocus();
           }
         },
@@ -91,46 +90,40 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     );
   }
 
-  void _sendMessage() {
+  void _sendMessage({List<Map<String, dynamic>> attachments = const []}) {
     final text = _inputCtrl.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && attachments.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
 
-    // Read current coach preferences to include in message payload.
+    // Read current coach preferences.
     final persona = ref.read(coachPersonaProvider).value;
     final proactivity = ref.read(proactivityLevelProvider).value;
     final responseLength = ref.read(responseLengthProvider).value;
 
-    ref
-        .read(analyticsServiceProvider)
-        .capture(
-          event: 'coach_message_sent',
-          properties: {'source': 'new_chat', 'char_count': text.length},
-        );
+    ref.read(analyticsServiceProvider).capture(
+      event: 'coach_message_sent',
+      properties: {'source': 'new_chat', 'char_count': text.length},
+    );
     _inputCtrl.clear();
 
-    // Capture a single ID so the sendMessage call and the navigation route
-    // reference the same conversation. Using two separate DateTime.now() calls
-    // would produce different IDs across the ~1ms gap.
-    final newConversationId = 'new_${DateTime.now().millisecondsSinceEpoch}';
+    // Generate a temp ID for this new conversation so we can navigate
+    // immediately. The server will assign a real UUID and the ChatThreadScreen
+    // will swap it once the ConversationCreated event arrives.
+    final tempId = 'new_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Send message with coach preferences to backend.
-    // TODO(phase9): await response and handle streaming once real API is wired.
-    // Errors are intentionally ignored here — when the real API is wired, replace
-    // this with an awaited call inside a try/catch that shows a SnackBar on failure.
-    ref.read(coachRepositoryProvider).sendMessage(
-      conversationId: newConversationId,
+    // Store the first message in the pending provider so ChatThreadScreen
+    // can pick it up and trigger the actual send after mounting.
+    ref.read(pendingFirstMessageProvider(tempId).notifier).state = PendingMessage(
       text: text,
       persona: persona,
       proactivity: proactivity,
       responseLength: responseLength,
-    ).ignore();
+      attachments: attachments,
+    );
 
-    // In production: create a new conversation via the repository, then push
-    // to the thread screen. For Phase 10 we just navigate to a stub thread.
     context.pushNamed(
       RouteNames.coachThread,
-      pathParameters: {'id': newConversationId},
+      pathParameters: {'id': tempId},
     );
   }
 
@@ -216,7 +209,8 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           _ChatInputBar(
             controller: _inputCtrl,
             focusNode: _inputFocus,
-            onSend: _sendMessage,
+            onSend: ({attachments = const []}) =>
+                _sendMessage(attachments: attachments),
           ),
         ],
       ),
@@ -445,7 +439,10 @@ class _ChatInputBar extends ConsumerStatefulWidget {
 
   final TextEditingController controller;
   final FocusNode focusNode;
-  final VoidCallback onSend;
+
+  /// Called when the user taps Send.
+  /// [attachments] contains uploaded attachment metadata payloads.
+  final void Function({List<Map<String, dynamic>> attachments}) onSend;
 
   @override
   ConsumerState<_ChatInputBar> createState() => _ChatInputBarState();
@@ -459,26 +456,37 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
     final text = widget.controller.text.trim();
     if (text.isEmpty && _attachments.isEmpty) return;
     if (_isSending) return;
-    _isSending = true;
+    setState(() => _isSending = true);
 
     try {
-      // Mock upload attachments before sending.
-      // TODO(supabase): pass attachmentUrls to onSend once backend upload is wired
-      List<String> attachmentUrls = [];
+      // Upload attachments to Supabase Storage via AttachmentRepository.
+      final List<Map<String, dynamic>> attachmentPayloads = [];
       if (_attachments.isNotEmpty) {
-        // TODO(supabase): replace with real Supabase Storage upload
+        final attachmentRepo = ref.read(attachmentRepositoryProvider);
         for (final a in _attachments) {
-          await Future.delayed(const Duration(milliseconds: 800));
-          if (kDebugMode) {
-            attachmentUrls.add(
-              'https://mock.supabase.co/storage/attachments/${a.name}',
-            );
+          try {
+            final uploaded = await attachmentRepo.uploadAttachment(a.file.path);
+            attachmentPayloads.add({
+              'type': 'image',
+              'filename': a.name,
+              'storage_path': uploaded.storagePath ?? '',
+              'signed_url': uploaded.signedUrl ?? '',
+              'size_bytes': uploaded.sizeBytes ?? 0,
+              'mime_type': uploaded.mimeType ?? '',
+            });
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to upload ${a.name}: $e')),
+              );
+            }
+            // Continue with other attachments rather than aborting.
           }
         }
       }
 
       setState(() => _attachments.clear());
-      widget.onSend();
+      widget.onSend(attachments: attachmentPayloads);
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -901,14 +909,19 @@ class _ConversationTile extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    await ref
-        .read(coachRepositoryProvider)
-        .archiveConversation(conversation.id);
-    ref.invalidate(coachConversationsProvider);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conversation archived')),
-      );
+    try {
+      await ref.read(coachConversationsProvider.notifier).archive(conversation.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Conversation archived')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Archive failed: $e')),
+        );
+      }
     }
   }
 
@@ -946,14 +959,19 @@ class _ConversationTile extends ConsumerWidget {
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     ref.read(hapticServiceProvider).medium();
-    await ref
-        .read(coachRepositoryProvider)
-        .deleteConversation(conversation.id);
-    ref.invalidate(coachConversationsProvider);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conversation deleted')),
-      );
+    try {
+      await ref.read(coachConversationsProvider.notifier).delete(conversation.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Conversation deleted')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Delete failed: $e')),
+        );
+      }
     }
   }
 
