@@ -59,6 +59,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   /// Tracks whether [_initConversation] has been called.
   bool _initialized = false;
 
+  /// True when the user is editing a previously sent message.
+  bool _isEditing = false;
+
+  /// The original content of the message being edited (shown in the indicator bar).
+  String? _editingContent;
+
   @override
   void initState() {
     super.initState();
@@ -175,6 +181,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final responseLength = ref.read(responseLengthProvider).value;
 
     _inputCtrl.clear();
+    if (_isEditing) {
+      setState(() {
+        _isEditing = false;
+        _editingContent = null;
+      });
+    }
 
     // Determine the effective conversation ID.
     // If the notifier already resolved a real ID (e.g. from a prior message
@@ -279,8 +291,66 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     scrollController: _scrollCtrl,
                     conversationId: widget.conversationId,
                     isSending: chatState.isSending,
+                    onEditMessage: (index, content) {
+                      setState(() {
+                        _isEditing = true;
+                        _editingContent = content;
+                      });
+                      _inputCtrl.text = content;
+                      _inputCtrl.selection = TextSelection.fromPosition(
+                        TextPosition(offset: content.length),
+                      );
+                      _inputFocus.requestFocus();
+                    },
                   ),
           ),
+          // ── Editing indicator bar ─────────────────────────────────────────
+          if (_isEditing)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceSm,
+              ),
+              color: AppColors.cardBackgroundDark,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.edit_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Expanded(
+                    child: Text(
+                      _editingContent != null
+                          ? 'Editing: $_editingContent'
+                          : 'Editing message',
+                      style: const TextStyle(
+                        color: AppColors.textTertiary,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    color: AppColors.textTertiary,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Cancel edit',
+                    onPressed: () {
+                      setState(() {
+                        _isEditing = false;
+                        _editingContent = null;
+                      });
+                      _inputCtrl.clear();
+                    },
+                  ),
+                ],
+              ),
+            ),
           _ChatInputBar(
             controller: _inputCtrl,
             focusNode: _inputFocus,
@@ -516,6 +586,7 @@ class _MessageList extends ConsumerWidget {
     required this.scrollController,
     required this.conversationId,
     required this.isSending,
+    required this.onEditMessage,
     this.streamingContent,
     this.activeToolName,
   });
@@ -524,6 +595,11 @@ class _MessageList extends ConsumerWidget {
   final ScrollController scrollController;
   final String conversationId;
   final bool isSending;
+
+  /// Called when the user taps "Edit" on a user message bubble.
+  /// Receives the message index (already removed from state) and the content.
+  final void Function(int messageIndex, String content) onEditMessage;
+
   final String? streamingContent;
   final String? activeToolName;
 
@@ -555,7 +631,20 @@ class _MessageList extends ConsumerWidget {
       itemCount: totalItems,
       itemBuilder: (_, i) {
         if (i < messages.length) {
-          return _MessageBubble(message: messages[i]);
+          final msg = messages[i];
+          return _MessageBubble(
+            message: msg,
+            onEdit: msg.role == MessageRole.user
+                ? () {
+                    final content = ref
+                        .read(
+                          coachChatNotifierProvider(conversationId).notifier,
+                        )
+                        .editMessage(i);
+                    onEditMessage(i, content);
+                  }
+                : null,
+          );
         }
         // Streaming / tool-progress bubble at the bottom.
         if (showTypingBubble && i == messages.length) {
@@ -716,9 +805,13 @@ class _ToolProgressIndicator extends StatelessWidget {
 // ── _MessageBubble ────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, this.onEdit});
 
   final ChatMessage message;
+
+  /// Called when the user taps "Edit" in the long-press sheet.
+  /// Only provided for user messages; null for AI messages.
+  final VoidCallback? onEdit;
 
   bool get _isUser => message.role == MessageRole.user;
 
@@ -844,7 +937,17 @@ class _MessageBubble extends StatelessWidget {
                 );
               },
             ),
-            // Task 4 will add an Edit ListTile here (user messages only).
+            if (onEdit != null) ...[
+              const Divider(height: 1, color: AppColors.borderDark),
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: AppColors.primary),
+                title: Text('Edit', style: AppTextStyles.body),
+                onTap: () {
+                  Navigator.pop(sheetCtx);
+                  onEdit!();
+                },
+              ),
+            ],
             SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom),
           ],
         ),

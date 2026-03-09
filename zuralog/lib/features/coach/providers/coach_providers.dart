@@ -407,6 +407,18 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     );
   }
 
+  /// Removes the message at [messageIndex] and all messages after it from
+  /// local state, then returns the content of the removed message so the
+  /// caller can pre-fill the input field.
+  ///
+  /// This is a local-only operation — nothing is persisted to the DB.
+  String editMessage(int messageIndex) {
+    final content = state.messages[messageIndex].content;
+    final truncated = state.messages.sublist(0, messageIndex);
+    state = state.copyWith(messages: truncated);
+    return content;
+  }
+
   /// Cancels any in-flight stream.
   ///
   /// If partial tokens have already arrived ([streamingContent] is non-empty),
