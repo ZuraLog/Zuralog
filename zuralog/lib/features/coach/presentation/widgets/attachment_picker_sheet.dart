@@ -11,24 +11,10 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/chat/domain/attachment_types.dart';
 
-// ── PendingAttachment ─────────────────────────────────────────────────────────
-
-/// Represents a pending attachment before upload.
-class PendingAttachment {
-  const PendingAttachment({
-    required this.file,
-    required this.type,
-    required this.name,
-  });
-
-  final File file;
-  final AttachmentType type;
-  final String name;
-}
-
-/// The type of a pending attachment.
-enum AttachmentType { image, pdf, document }
+export 'package:zuralog/features/chat/domain/attachment_types.dart'
+    show AttachmentType, PendingAttachment;
 
 // ── AttachmentPickerSheet ─────────────────────────────────────────────────────
 
