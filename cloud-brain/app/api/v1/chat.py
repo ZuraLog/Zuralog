@@ -107,17 +107,13 @@ async def _authenticate_ws(
         return None
 
 
-async def _process_attachments(
-    attachments: list[dict],
-    storage_service: StorageService,
-) -> str:
+def _process_attachments(attachments: list[dict]) -> str:
     """Process attachments and return text to augment the user message.
 
     Image attachments are noted as metadata for the LLM.
 
     Args:
         attachments: List of attachment dicts from the client.
-        storage_service: Storage service for downloading files.
 
     Returns:
         Combined text fragments to append to the user message.
@@ -339,7 +335,7 @@ async def websocket_chat(
             # ── Attachment processing ─────────────────────────────────────────
             augmented_text = message_text
             if raw_attachments:
-                extra_context = await _process_attachments(raw_attachments, storage_service)
+                extra_context = _process_attachments(raw_attachments)
                 if extra_context:
                     augmented_text = f"{message_text}\n\n{extra_context}" if message_text else extra_context
 
