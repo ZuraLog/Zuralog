@@ -24,6 +24,7 @@ import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/features/coach/data/api_coach_repository.dart';
 import 'package:zuralog/features/coach/data/coach_repository.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
@@ -360,6 +361,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   ///
   /// No-op if there is no assistant message or no user message in the list.
   Future<void> regenerate() async {
+    if (state.isSending) return;
+
     final messages = state.messages;
 
     // Find the last assistant message index.
@@ -377,6 +380,12 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     }
     if (lastUserMsg == null) return;
 
+    // Read the user's actual settings so the regenerated response respects
+    // their configured persona, proactivity, and response-length preferences.
+    final persona = ref.read(coachPersonaProvider).value;
+    final proactivity = ref.read(proactivityLevelProvider).value;
+    final responseLength = ref.read(responseLengthProvider).value;
+
     // Remove the last assistant message from local state only.
     final updatedMessages = List<ChatMessage>.from(messages)
       ..removeAt(lastAssistantIndex);
@@ -386,9 +395,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     await sendMessage(
       conversationId: state.resolvedConversationId,
       text: lastUserMsg.content,
-      persona: 'balanced',
-      proactivity: 'medium',
-      responseLength: 'medium',
+      persona: persona,
+      proactivity: proactivity,
+      responseLength: responseLength,
       isRegenerate: true,
     );
   }
