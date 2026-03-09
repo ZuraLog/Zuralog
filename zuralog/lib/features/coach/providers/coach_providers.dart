@@ -350,17 +350,35 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     await completer.future;
   }
 
-  /// Cancels any in-flight stream (e.g. when navigating away).
+  /// Cancels any in-flight stream.
+  ///
+  /// If partial tokens have already arrived ([streamingContent] is non-empty),
+  /// they are committed as a final assistant message. Otherwise a placeholder
+  /// message `_Generation stopped._` is appended so the user knows the
+  /// generation was cancelled.
   void cancelStream() {
     _streamSub?.cancel();
     _streamSub = null;
-    if (state.isSending) {
-      state = state.copyWith(
-        isSending: false,
-        clearStreaming: true,
-        clearTool: true,
-      );
-    }
+
+    if (!state.isSending) return;
+
+    final partial = state.streamingContent ?? '';
+    final content = partial.isNotEmpty ? partial : '_Generation stopped._';
+
+    final stoppedMsg = ChatMessage(
+      id: 'stopped_${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: state.resolvedConversationId ?? arg,
+      role: MessageRole.assistant,
+      content: content,
+      createdAt: DateTime.now(),
+    );
+
+    state = state.copyWith(
+      messages: [...state.messages, stoppedMsg],
+      isSending: false,
+      clearStreaming: true,
+      clearTool: true,
+    );
   }
 }
 

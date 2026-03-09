@@ -284,6 +284,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             onSend: ({attachments = const []}) =>
                 _sendMessage(attachments: attachments),
             isSending: chatState.isSending,
+            conversationId: widget.conversationId,
           ),
         ],
       ),
@@ -941,6 +942,7 @@ class _ChatInputBar extends ConsumerStatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.onSend,
+    required this.conversationId,
     this.isSending = false,
   });
 
@@ -948,7 +950,10 @@ class _ChatInputBar extends ConsumerStatefulWidget {
   final FocusNode focusNode;
   final void Function({List<Map<String, dynamic>> attachments}) onSend;
 
-  /// When true the send button is replaced by a loading indicator.
+  /// The conversation ID — used to call [cancelStream] on the notifier.
+  final String conversationId;
+
+  /// When true the send button is replaced by a stop button.
   final bool isSending;
 
   @override
@@ -1106,16 +1111,15 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                     final hasContent = hasText || _attachments.isNotEmpty;
 
                     if (widget.isSending) {
-                      return const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                      return _InputIcon(
+                        icon: Icons.stop_rounded,
+                        filledColor: AppColors.statusError,
+                        onTap: () => ref
+                            .read(coachChatNotifierProvider(
+                                    widget.conversationId)
+                                .notifier)
+                            .cancelStream(),
+                        tooltip: 'Stop generation',
                       );
                     }
 
@@ -1172,17 +1176,38 @@ class _InputIcon extends ConsumerWidget {
     required this.onTap,
     required this.tooltip,
     this.filled = false,
+    this.filledColor,
     this.activeColor,
   });
 
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final String tooltip;
+
+  /// When true, fills the background with [AppColors.primary].
   final bool filled;
+
+  /// When non-null, fills the background with this color instead of
+  /// [AppColors.primary]. Takes precedence over [filled].
+  final Color? filledColor;
+
   final Color? activeColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final Color bgColor;
+    final Color defaultIconColor;
+    if (filledColor != null) {
+      bgColor = filledColor!;
+      defaultIconColor = Colors.white;
+    } else if (filled) {
+      bgColor = AppColors.primary;
+      defaultIconColor = AppColors.primaryButtonText;
+    } else {
+      bgColor = AppColors.inputBackgroundDark;
+      defaultIconColor = AppColors.textSecondaryDark;
+    }
+
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -1191,16 +1216,13 @@ class _InputIcon extends ConsumerWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: filled ? AppColors.primary : AppColors.inputBackgroundDark,
+            color: bgColor,
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
             size: 20,
-            color: activeColor ??
-                (filled
-                    ? AppColors.primaryButtonText
-                    : AppColors.textSecondaryDark),
+            color: activeColor ?? defaultIconColor,
           ),
         ),
       ),
