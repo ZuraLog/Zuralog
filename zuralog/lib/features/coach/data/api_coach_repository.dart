@@ -257,6 +257,7 @@ final class ApiCoachRepository implements CoachRepository {
       text: text,
       persona: persona,
       proactivity: proactivity,
+      responseLength: responseLength,
       attachments: attachments,
       isRegenerate: isRegenerate,
     );
@@ -270,6 +271,7 @@ final class ApiCoachRepository implements CoachRepository {
     required String text,
     required String persona,
     required String proactivity,
+    required String responseLength,
     required List<Map<String, dynamic>> attachments,
     bool isRegenerate = false,
   }) async {
@@ -289,7 +291,7 @@ final class ApiCoachRepository implements CoachRepository {
       final convParam =
           conversationId != null ? '&conversation_id=$conversationId' : '';
       final uri = Uri.parse(
-        '$_wsBaseUrl/api/v1/chat/ws?token=$token$convParam',
+        '$_wsBaseUrl/api/v1/chat/ws?token=${Uri.encodeQueryComponent(token)}$convParam',
       );
 
       channel = WebSocketChannel.connect(uri);
@@ -297,7 +299,6 @@ final class ApiCoachRepository implements CoachRepository {
       String? resolvedConversationId = conversationId;
       bool messageSent = false;
       String accumulated = '';
-      String? finalConversationId;
 
       final wsCompleter = Completer<void>();
 
@@ -313,7 +314,6 @@ final class ApiCoachRepository implements CoachRepository {
               case 'conversation_init':
                 // Server assigned a UUID (always sent, even for existing convs).
                 resolvedConversationId = msg['conversation_id'] as String?;
-                finalConversationId = resolvedConversationId;
 
                 // If conversationId was null, this is a new conversation.
                 if (conversationId == null && resolvedConversationId != null) {
@@ -327,6 +327,7 @@ final class ApiCoachRepository implements CoachRepository {
                     'message': text,
                     'persona': persona,
                     'proactivity': proactivity,
+                    'response_length': responseLength,
                     if (attachments.isNotEmpty) 'attachments': attachments,
                     if (isRegenerate) 'regenerate': true,
                   };
@@ -363,7 +364,6 @@ final class ApiCoachRepository implements CoachRepository {
                 final msgId = msg['message_id'] as String? ??
                     'msg_${DateTime.now().millisecondsSinceEpoch}';
                 final convId = msg['conversation_id'] as String? ??
-                    finalConversationId ??
                     resolvedConversationId ??
                     'unknown';
 

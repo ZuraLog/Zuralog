@@ -983,8 +983,6 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasAttachments = message.attachmentUrls.isNotEmpty;
-
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
       child: Row(
@@ -1011,7 +1009,7 @@ class _MessageBubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
-                if (hasAttachments) ...[
+                if (message.hasAttachments) ...[
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -1401,7 +1399,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   }
 }
 
-class _InputIcon extends ConsumerWidget {
+class _InputIcon extends StatelessWidget {
   const _InputIcon({
     required this.icon,
     required this.onTap,
@@ -1425,7 +1423,7 @@ class _InputIcon extends ConsumerWidget {
   final Color? activeColor;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final Color bgColor;
     final Color defaultIconColor;
     if (filledColor != null) {

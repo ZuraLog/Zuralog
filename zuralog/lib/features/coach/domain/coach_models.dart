@@ -99,9 +99,7 @@ class ChatMessage {
     required this.role,
     required this.content,
     required this.createdAt,
-    this.isStreaming = false,
     this.attachmentUrls = const [],
-    this.confirmationPayload,
   });
 
   /// Unique message identifier.
@@ -119,14 +117,8 @@ class ChatMessage {
   /// When the message was created.
   final DateTime createdAt;
 
-  /// Whether the message is currently being streamed.
-  final bool isStreaming;
-
   /// Attachment preview URLs (images, PDFs).
   final List<String> attachmentUrls;
-
-  /// Optional confirmation payload for NL logging / food photo cards.
-  final Map<String, dynamic>? confirmationPayload;
 
   /// Whether the message has any attachments.
   bool get hasAttachments => attachmentUrls.isNotEmpty;
@@ -138,9 +130,7 @@ class ChatMessage {
     MessageRole? role,
     String? content,
     DateTime? createdAt,
-    bool? isStreaming,
     List<String>? attachmentUrls,
-    Map<String, dynamic>? confirmationPayload,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -148,9 +138,7 @@ class ChatMessage {
       role: role ?? this.role,
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
-      isStreaming: isStreaming ?? this.isStreaming,
       attachmentUrls: attachmentUrls ?? this.attachmentUrls,
-      confirmationPayload: confirmationPayload ?? this.confirmationPayload,
     );
   }
 

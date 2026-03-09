@@ -23,7 +23,7 @@ WebSocket Protocol (client → server):
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 import sentry_sdk
 from fastapi import (
@@ -257,8 +257,8 @@ async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, s
         prefs = result.scalar_one_or_none()
         if prefs:
             return (prefs.coach_persona or "balanced", prefs.proactivity_level or "medium")
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Failed to load user preferences for user %s: %s", user_id, e)
     return ("balanced", "medium")
 
 
@@ -529,7 +529,6 @@ async def websocket_chat(
 
 @router.get("/history")
 async def get_chat_history(
-    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     storage_service: StorageService = Depends(_get_storage_service),
@@ -601,7 +600,6 @@ async def get_chat_history(
 
 @router.get("/conversations")
 async def list_conversations(
-    request: Request,
     include_archived: bool = Query(default=False),
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
@@ -676,7 +674,6 @@ async def list_conversations(
 @router.get("/conversations/{conversation_id}/messages")
 async def get_conversation_messages(
     conversation_id: str,
-    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     storage_service: StorageService = Depends(_get_storage_service),
@@ -750,15 +747,14 @@ class ConversationUpdateRequest(BaseModel):
         archived: Optional flag to archive the conversation.
     """
 
-    title: Optional[str] = None
-    archived: Optional[bool] = None
+    title: str | None = None
+    archived: bool | None = None
 
 
 @router.patch("/conversations/{conversation_id}")
 async def update_conversation(
     conversation_id: str,
     body: ConversationUpdateRequest,
-    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     db: AsyncSession = Depends(get_db),
@@ -788,12 +784,13 @@ async def update_conversation(
     result = await db.execute(
         select(Conversation).where(
             Conversation.id == conversation_id,
+            Conversation.user_id == user_id,
             Conversation.deleted_at.is_(None),
         )
     )
     conv = result.scalar_one_or_none()
 
-    if conv is None or conv.user_id != user_id:
+    if conv is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found",
@@ -822,7 +819,6 @@ async def update_conversation(
 @router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_conversation(
     conversation_id: str,
-    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     db: AsyncSession = Depends(get_db),
@@ -851,12 +847,13 @@ async def delete_conversation(
     result = await db.execute(
         select(Conversation).where(
             Conversation.id == conversation_id,
+            Conversation.user_id == user_id,
             Conversation.deleted_at.is_(None),
         )
     )
     conv = result.scalar_one_or_none()
 
-    if conv is None or conv.user_id != user_id:
+    if conv is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found",
