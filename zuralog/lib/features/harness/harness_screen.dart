@@ -6,7 +6,6 @@
 library;
 
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -319,60 +318,6 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
     _log('Sending test AI message via /api/v1/chat/ws...');
     _log('ℹ️  Use the Coach tab (Tab 2) to send real AI messages.');
     _log('   This endpoint is now tested end-to-end through the Coach UI.');
-  }
-
-  Future<void> _testVoiceUpload() async {
-    _log('Testing voice transcription endpoint...');
-    try {
-      final apiClient = ref.read(apiClientProvider);
-
-      // Create a dummy WAV file with a valid RIFF header for the mock endpoint.
-      // OpenAI's Whisper API requires audio to be at least 0.1 seconds long.
-      // We generate 0.125s of silence at 8kHz, Mono, 16-bit (2000 bytes of data).
-      const pcmBytes = 2000;
-      final dummyBytes = Uint8List(44 + pcmBytes);
-      final byteData = ByteData.view(dummyBytes.buffer);
-
-      // "RIFF"
-      dummyBytes.setAll(0, [0x52, 0x49, 0x46, 0x46]);
-      // Chunk size (36 + data size)
-      byteData.setUint32(4, 36 + pcmBytes, Endian.little);
-      // "WAVE"
-      dummyBytes.setAll(8, [0x57, 0x41, 0x56, 0x45]);
-      // "fmt "
-      dummyBytes.setAll(12, [0x66, 0x6d, 0x74, 0x20]);
-      // Subchunk1Size (16 for PCM)
-      byteData.setUint32(16, 16, Endian.little);
-      // AudioFormat (1 = PCM)
-      byteData.setUint16(20, 1, Endian.little);
-      // NumChannels (1)
-      byteData.setUint16(22, 1, Endian.little);
-      // SampleRate (8000)
-      byteData.setUint32(24, 8000, Endian.little);
-      // ByteRate (16000) // SampleRate * NumChannels * BitsPerSample/8
-      byteData.setUint32(28, 16000, Endian.little);
-      // BlockAlign (2) // NumChannels * BitsPerSample/8
-      byteData.setUint16(32, 2, Endian.little);
-      // BitsPerSample (16)
-      byteData.setUint16(34, 16, Endian.little);
-      // "data"
-      dummyBytes.setAll(36, [0x64, 0x61, 0x74, 0x61]);
-      // Subchunk2Size (pcmBytes)
-      byteData.setUint32(40, pcmBytes, Endian.little);
-
-      // The rest of the array (indices 44 to 44+pcmBytes-1) defaults to 0, representing pure silence.
-      final formData = FormData.fromMap({
-        'file': MultipartFile.fromBytes(dummyBytes, filename: 'test_audio.wav'),
-      });
-
-      final response = await apiClient.post(
-        '/api/v1/transcribe',
-        data: formData,
-      );
-      _log('Transcribe response: ${response.data}');
-    } catch (e) {
-      _log('Transcribe endpoint error: $e');
-    }
   }
 
   // -----------------------------------------------------------------------
@@ -1059,12 +1004,6 @@ class _HarnessScreenState extends ConsumerState<HarnessScreen>
               label: 'Test AI Chat',
               color: _Colors.primary,
               onTap: _testAiChat,
-            ),
-            _ActionChip(
-              icon: Icons.mic_rounded,
-              label: 'Voice Test',
-              color: _Colors.warning,
-              onTap: _testVoiceUpload,
             ),
           ],
         ),

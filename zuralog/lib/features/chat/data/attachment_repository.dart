@@ -13,7 +13,7 @@ import 'package:zuralog/core/network/api_client.dart';
 // ── Domain types (previously in features/chat/domain/attachment.dart) ─────────
 
 /// The media category of an uploaded attachment.
-enum AttachmentType { image, audio, pdf, document }
+enum AttachmentType { image, pdf, document }
 
 /// The upload lifecycle state of an attachment.
 enum AttachmentStatus { pending, uploading, uploaded, error }
@@ -82,7 +82,14 @@ class AttachmentRepository {
     final filename = file.uri.pathSegments.last;
     final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
 
-    final type = _isAudioExtension(ext) ? AttachmentType.audio : AttachmentType.image;
+    final AttachmentType type;
+    if (const {'pdf'}.contains(ext)) {
+      type = AttachmentType.pdf;
+    } else if (const {'doc', 'docx', 'txt', 'rtf'}.contains(ext)) {
+      type = AttachmentType.document;
+    } else {
+      type = AttachmentType.image;
+    }
 
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath, filename: filename),
@@ -108,8 +115,4 @@ class AttachmentRepository {
     );
   }
 
-  /// Returns `true` if the file extension is an audio format.
-  bool _isAudioExtension(String ext) {
-    return const {'m4a', 'wav', 'mp3', 'webm', 'aac'}.contains(ext);
-  }
 }
