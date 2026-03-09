@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-08 (Coach tab settings wiring: suggestedPromptsEnabled, voiceInputEnabled, sendMessage contract, backend user_preferences columns, chat message timestamps; Today tab settings wiring: greeting personalization, data maturity banner persistence, wellness check-in gating, units-aware water label; Data tab settings wiring: units_system to metric/category detail, category color overrides propagation; Progress tab settings wiring: units_system to goal default unit pre-fill and all goal/WoW metric display labels; Trends tab: persist dismissed correlation suggestion IDs with stale-ID pruning and multi-account safety)
+**Last Updated:** 2026-03-09 (Coach tab AI features: stop generation button, regenerate/retry, copy message long-press, message editing, better empty state with suggestions, search conversations)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -286,6 +286,23 @@ Completed both P1 Progress tab actions from the Settings Mapping Audit plan, wir
 | P0 | Shimmer skeleton loading | ✅ Done | Coach (both screens), Progress Home (replaces spinner), Trends Home |
 | P0 | Pull-to-refresh (sage-green) + haptic | ✅ Done | All tab roots — Today, Data, Progress, Trends |
 | P1 | Apple Sign In | ⛔ Blocked | Requires Apple Developer subscription |
+
+---
+
+## Phase 10.5 — Coach Tab AI Features (`feat/coach-tab-full-ai`)
+
+> **Branch:** `feat/coach-tab-full-ai` → merged to main (2026-03-09)
+
+All 6 Coach tab AI conversation features implemented and reviewed.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Stop Generation Button | ✅ Done | Red stop button replaces spinner during streaming; `cancelStream()` commits partial content or shows `'_Generation stopped._'` placeholder; WebSocket cleanly closed on cancel |
+| P0 | Regenerate / Retry Last Response | ✅ Done | "Regenerate" button below last AI message; re-sends last user message without duplicate DB insert; reads user's actual persona/proactivity settings |
+| P0 | Copy Message (Long-press) | ✅ Done | Long-press any bubble → bottom sheet with "Copy" action; clipboard write awaited; correct `ScaffoldMessenger` handling |
+| P0 | Message Editing | ✅ Done | Long-press user message → "Edit" in bottom sheet; truncates messages from that index; snapshot-and-restore on cancel; editing indicator bar above input |
+| P0 | Better Empty State & Suggestions | ✅ Done | `_CoachEmptyState` with fade-in, pulsing logo, "What I can do" capability row, grouped suggestion cards with 4px left colored border and category headers |
+| P0 | Search Conversations | ✅ Done | `_ConversationDrawer` gets `AnimatedSize` search field; client-side filtering by title and preview; empty-results state |
 
 ---
 
