@@ -268,13 +268,16 @@ class _CoachEmptyStateState extends State<_CoachEmptyState>
 
   /// Groups suggestions by their [PromptSuggestion.category] field.
   ///
-  /// Suggestions without a category are placed under the `'other'` key.
+  /// Suggestions with a null, empty, or blank category are placed under
+  /// the `'other'` key to prevent downstream `RangeError` on empty strings.
   Map<String, List<PromptSuggestion>> _groupByCategory(
     List<PromptSuggestion> suggestions,
   ) {
     final groups = <String, List<PromptSuggestion>>{};
     for (final s in suggestions) {
-      final key = s.category?.toLowerCase() ?? 'other';
+      final key = (s.category?.trim().isNotEmpty == true)
+          ? s.category!.toLowerCase().trim()
+          : 'other';
       groups.putIfAbsent(key, () => []).add(s);
     }
     return groups;
@@ -464,6 +467,20 @@ class _CapabilityRow extends StatelessWidget {
   }
 }
 
+// ── _categoryColor ────────────────────────────────────────────────────────────
+
+/// Maps a normalised category key to its design-system color token.
+///
+/// Accepts a pre-lowercased, non-empty string. Defaults to [AppColors.primary].
+Color _categoryColor(String category) {
+  return switch (category) {
+    'sleep' => AppColors.categorySleep,
+    'activity' => AppColors.categoryActivity,
+    'nutrition' => AppColors.categoryNutrition,
+    _ => AppColors.primary,
+  };
+}
+
 // ── _CategoryHeader ───────────────────────────────────────────────────────────
 
 /// Small header with a colored dot and category name label.
@@ -472,24 +489,14 @@ class _CategoryHeader extends StatelessWidget {
 
   final String category;
 
-  static Color _colorFor(String category) {
-    switch (category) {
-      case 'sleep':
-        return AppColors.categorySleep;
-      case 'activity':
-        return AppColors.categoryActivity;
-      case 'nutrition':
-        return AppColors.categoryNutrition;
-      default:
-        return AppColors.primary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _colorFor(category);
-    final label =
-        category[0].toUpperCase() + category.substring(1);
+    final color = _categoryColor(category);
+    // Guard against empty string: category is normalised by _groupByCategory
+    // but _CategoryHeader is also defensive on its own.
+    final label = category.isEmpty
+        ? 'Other'
+        : category[0].toUpperCase() + category.substring(1);
 
     return Row(
       children: [
@@ -515,34 +522,24 @@ class _CategoryHeader extends StatelessWidget {
 // ── _SuggestionCard ───────────────────────────────────────────────────────────
 
 /// Full-width card with a left colored border for a prompt suggestion.
-class _SuggestionCard extends ConsumerWidget {
+///
+/// Haptic feedback is intentionally omitted here — the caller's [onTap]
+/// callback (routed through [_NewChatScreenState._onSuggestionTap]) already
+/// fires a light haptic, so a second `ConsumerWidget` element is unnecessary.
+class _SuggestionCard extends StatelessWidget {
   const _SuggestionCard({required this.suggestion, required this.onTap});
 
   final PromptSuggestion suggestion;
   final VoidCallback onTap;
 
-  static Color _colorFor(String? category) {
-    switch (category?.toLowerCase()) {
-      case 'sleep':
-        return AppColors.categorySleep;
-      case 'activity':
-        return AppColors.categoryActivity;
-      case 'nutrition':
-        return AppColors.categoryNutrition;
-      default:
-        return AppColors.primary;
-    }
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final borderColor = _colorFor(suggestion.category);
+  Widget build(BuildContext context) {
+    final borderColor = _categoryColor(
+      suggestion.category?.trim().toLowerCase() ?? 'other',
+    );
 
     return GestureDetector(
-      onTap: () {
-        ref.read(hapticServiceProvider).light();
-        onTap();
-      },
+      onTap: onTap,
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
