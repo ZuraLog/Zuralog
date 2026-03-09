@@ -803,6 +803,7 @@ class _MessageBubble extends StatelessWidget {
   }
 
   void _showCopySheet(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -830,10 +831,10 @@ class _MessageBubble extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.copy_rounded, color: AppColors.primary),
               title: Text('Copy', style: AppTextStyles.body),
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: message.content));
+              onTap: () async {
                 Navigator.pop(sheetCtx);
-                ScaffoldMessenger.of(context).showSnackBar(
+                await Clipboard.setData(ClipboardData(text: message.content));
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(
                       'Copied to clipboard',
@@ -844,7 +845,7 @@ class _MessageBubble extends StatelessWidget {
               },
             ),
             // Task 4 will add an Edit ListTile here (user messages only).
-            SizedBox(height: MediaQuery.of(context).padding.bottom),
+            SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom),
           ],
         ),
       ),
