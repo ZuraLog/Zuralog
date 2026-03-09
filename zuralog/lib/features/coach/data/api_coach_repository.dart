@@ -300,6 +300,7 @@ final class ApiCoachRepository implements CoachRepository {
 
       subscription = channel.stream.listen(
         (rawMessage) {
+          if (controller.isClosed) return;
           try {
             final Map<String, dynamic> msg =
                 jsonDecode(rawMessage as String) as Map<String, dynamic>;
