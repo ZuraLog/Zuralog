@@ -348,6 +348,7 @@ async def websocket_chat(
             data = await websocket.receive_json()
             message_text: str = data.get("message", "")
             raw_attachments: list[dict] | None = data.get("attachments")
+            is_regenerate: bool = bool(data.get("regenerate", False))
 
             if not message_text and not raw_attachments:
                 await websocket.send_json({"type": "error", "content": "Empty message"})
@@ -383,22 +384,22 @@ async def websocket_chat(
                     augmented_text = f"{message_text}\n\n{extra_context}" if message_text else extra_context
 
             # ── Persist user message ──────────────────────────────────────────
+            # When regenerating, the user message is already in the DB from the
+            # original send — skip inserting a duplicate.
             async with async_session() as db:
-                user_msg = Message(
-                    conversation_id=resolved_conv_id,
-                    role="user",
-                    content=message_text,
-                    attachments=raw_attachments or None,
-                )
-                db.add(user_msg)
-                await db.commit()
-                await db.refresh(user_msg)
-                user_msg_id = user_msg.id
+                if not is_regenerate:
+                    user_msg = Message(
+                        conversation_id=resolved_conv_id,
+                        role="user",
+                        content=message_text,
+                        attachments=raw_attachments or None,
+                    )
+                    db.add(user_msg)
+                    await db.commit()
 
-                # Load conversation history for LLM context (excludes the
-                # message we just persisted — it will be the current message).
+                # Load conversation history for LLM context.
                 history = await _load_conversation_history(db, resolved_conv_id, limit=50)
-                # Remove the last entry if it matches the message we just saved
+                # Remove the last entry if it matches the current user message
                 # (to avoid passing it twice — it will be passed as `message`).
                 if history and history[-1]["role"] == "user" and history[-1]["content"] == message_text:
                     history = history[:-1]

@@ -245,6 +245,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   ///
   /// [conversationId] is null for new conversations; the server will create
   /// one and the [ConversationCreated] event will propagate it back.
+  ///
+  /// When [isRegenerate] is true, the backend skips persisting the user
+  /// message (it was already saved during the original send).
   Future<void> sendMessage({
     required String? conversationId,
     required String text,
@@ -252,6 +255,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     required String proactivity,
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
+    bool isRegenerate = false,
   }) async {
     if (state.isSending) return;
 
@@ -284,6 +288,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       proactivity: proactivity,
       responseLength: responseLength,
       attachments: attachments,
+      isRegenerate: isRegenerate,
     );
 
     final completer = Completer<void>();
@@ -348,6 +353,44 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     );
 
     await completer.future;
+  }
+
+  /// Removes the last assistant message from local state and re-sends the
+  /// last user message, telling the backend NOT to persist a duplicate.
+  ///
+  /// No-op if there is no assistant message or no user message in the list.
+  Future<void> regenerate() async {
+    final messages = state.messages;
+
+    // Find the last assistant message index.
+    final lastAssistantIndex =
+        messages.lastIndexWhere((m) => m.role == MessageRole.assistant);
+    if (lastAssistantIndex == -1) return;
+
+    // Find the last user message.
+    ChatMessage? lastUserMsg;
+    for (final m in messages.reversed) {
+      if (m.role == MessageRole.user) {
+        lastUserMsg = m;
+        break;
+      }
+    }
+    if (lastUserMsg == null) return;
+
+    // Remove the last assistant message from local state only.
+    final updatedMessages = List<ChatMessage>.from(messages)
+      ..removeAt(lastAssistantIndex);
+    state = state.copyWith(messages: updatedMessages);
+
+    // Re-send the last user message, skipping DB persistence on the backend.
+    await sendMessage(
+      conversationId: state.resolvedConversationId,
+      text: lastUserMsg.content,
+      persona: 'balanced',
+      proactivity: 'medium',
+      responseLength: 'medium',
+      isRegenerate: true,
+    );
   }
 
   /// Cancels any in-flight stream.

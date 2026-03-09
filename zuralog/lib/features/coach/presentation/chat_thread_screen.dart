@@ -276,6 +276,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     streamingContent: chatState.streamingContent,
                     activeToolName: chatState.activeToolName,
                     scrollController: _scrollCtrl,
+                    conversationId: widget.conversationId,
+                    isSending: chatState.isSending,
                   ),
           ),
           _ChatInputBar(
@@ -507,24 +509,41 @@ class _ErrorBanner extends StatelessWidget {
 
 // ── _MessageList ──────────────────────────────────────────────────────────────
 
-class _MessageList extends StatelessWidget {
+class _MessageList extends ConsumerWidget {
   const _MessageList({
     required this.messages,
     required this.scrollController,
+    required this.conversationId,
+    required this.isSending,
     this.streamingContent,
     this.activeToolName,
   });
 
   final List<ChatMessage> messages;
   final ScrollController scrollController;
+  final String conversationId;
+  final bool isSending;
   final String? streamingContent;
   final String? activeToolName;
 
+  /// True when the Regenerate button should be visible:
+  /// not streaming, last message is assistant, and there is at least one
+  /// user message.
+  bool get _showRegenerateButton {
+    if (isSending) return false;
+    if (streamingContent != null || activeToolName != null) return false;
+    if (messages.isEmpty) return false;
+    if (messages.last.role != MessageRole.assistant) return false;
+    return messages.any((m) => m.role == MessageRole.user);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final showTypingBubble =
         streamingContent != null || activeToolName != null;
-    final totalItems = messages.length + (showTypingBubble ? 1 : 0);
+    final showRegenerate = _showRegenerateButton;
+    final totalItems =
+        messages.length + (showTypingBubble ? 1 : 0) + (showRegenerate ? 1 : 0);
 
     return ListView.builder(
       controller: scrollController,
@@ -538,9 +557,38 @@ class _MessageList extends StatelessWidget {
           return _MessageBubble(message: messages[i]);
         }
         // Streaming / tool-progress bubble at the bottom.
-        return _StreamingBubble(
-          content: streamingContent,
-          toolName: activeToolName,
+        if (showTypingBubble && i == messages.length) {
+          return _StreamingBubble(
+            content: streamingContent,
+            toolName: activeToolName,
+          );
+        }
+        // Regenerate button — appears below the last AI message.
+        return Padding(
+          padding: const EdgeInsets.only(
+            bottom: AppDimens.spaceMd,
+            top: AppDimens.spaceSm,
+          ),
+          child: Center(
+            child: TextButton.icon(
+              onPressed: () => ref
+                  .read(coachChatNotifierProvider(conversationId).notifier)
+                  .regenerate(),
+              icon: const Icon(
+                Icons.refresh_rounded,
+                size: 16,
+              ),
+              label: const Text('Regenerate'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textSecondaryDark,
+                textStyle: AppTextStyles.caption,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                  vertical: AppDimens.spaceSm,
+                ),
+              ),
+            ),
+          ),
         );
       },
     );

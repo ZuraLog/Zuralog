@@ -239,6 +239,7 @@ final class ApiCoachRepository implements CoachRepository {
     required String proactivity,
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
+    bool isRegenerate = false,
   }) {
     // Using a StreamController so we can handle async WS setup cleanly.
     // The cancelCompleter is completed when the consumer cancels, which
@@ -257,6 +258,7 @@ final class ApiCoachRepository implements CoachRepository {
       persona: persona,
       proactivity: proactivity,
       attachments: attachments,
+      isRegenerate: isRegenerate,
     );
     return controller.stream;
   }
@@ -269,6 +271,7 @@ final class ApiCoachRepository implements CoachRepository {
     required String persona,
     required String proactivity,
     required List<Map<String, dynamic>> attachments,
+    bool isRegenerate = false,
   }) async {
     WebSocketChannel? channel;
     StreamSubscription<dynamic>? subscription;
@@ -325,6 +328,7 @@ final class ApiCoachRepository implements CoachRepository {
                     'persona': persona,
                     'proactivity': proactivity,
                     if (attachments.isNotEmpty) 'attachments': attachments,
+                    if (isRegenerate) 'regenerate': true,
                   };
                   channel?.sink.add(jsonEncode(payload));
                 }
