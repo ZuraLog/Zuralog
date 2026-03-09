@@ -788,12 +788,13 @@ async def update_conversation(
     result = await db.execute(
         select(Conversation).where(
             Conversation.id == conversation_id,
+            Conversation.user_id == user_id,
             Conversation.deleted_at.is_(None),
         )
     )
     conv = result.scalar_one_or_none()
 
-    if conv is None or conv.user_id != user_id:
+    if conv is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found",
@@ -851,12 +852,13 @@ async def delete_conversation(
     result = await db.execute(
         select(Conversation).where(
             Conversation.id == conversation_id,
+            Conversation.user_id == user_id,
             Conversation.deleted_at.is_(None),
         )
     )
     conv = result.scalar_one_or_none()
 
-    if conv is None or conv.user_id != user_id:
+    if conv is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found",
