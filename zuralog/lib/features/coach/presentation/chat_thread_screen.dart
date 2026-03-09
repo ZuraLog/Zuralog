@@ -291,7 +291,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     scrollController: _scrollCtrl,
                     conversationId: widget.conversationId,
                     isSending: chatState.isSending,
-                    onEditMessage: (index, content) {
+                    onEditMessage: (content) {
                       setState(() {
                         _isEditing = true;
                         _editingContent = content;
@@ -598,7 +598,7 @@ class _MessageList extends ConsumerWidget {
 
   /// Called when the user taps "Edit" on a user message bubble.
   /// Receives the message index (already removed from state) and the content.
-  final void Function(int messageIndex, String content) onEditMessage;
+  final void Function(String content) onEditMessage;
 
   final String? streamingContent;
   final String? activeToolName;
@@ -641,7 +641,7 @@ class _MessageList extends ConsumerWidget {
                           coachChatNotifierProvider(conversationId).notifier,
                         )
                         .editMessage(i);
-                    onEditMessage(i, content);
+                    onEditMessage(content);
                   }
                 : null,
           );
