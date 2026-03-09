@@ -13,6 +13,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -801,6 +802,55 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
+  void _showCopySheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.cardBackgroundDark,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppDimens.radiusCard),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.borderDark,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // ── Actions ─────────────────────────────────────────────────────
+            ListTile(
+              leading: const Icon(Icons.copy_rounded, color: AppColors.primary),
+              title: Text('Copy', style: AppTextStyles.body),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: message.content));
+                Navigator.pop(sheetCtx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Copied to clipboard',
+                      style: AppTextStyles.body,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Task 4 will add an Edit ListTile here (user messages only).
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasAttachments = message.attachmentUrls.isNotEmpty;
@@ -842,70 +892,73 @@ class _MessageBubble extends StatelessWidget {
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
                 ],
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceSm + 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _isUser
-                        ? AppColors.userBubble
-                        : AppColors.aiBubbleDark,
-                    borderRadius: BorderRadius.only(
-                      topLeft:
-                          const Radius.circular(AppDimens.radiusCard),
-                      topRight:
-                          const Radius.circular(AppDimens.radiusCard),
-                      bottomLeft: _isUser
-                          ? const Radius.circular(AppDimens.radiusCard)
-                          : const Radius.circular(4),
-                      bottomRight: _isUser
-                          ? const Radius.circular(4)
-                          : const Radius.circular(AppDimens.radiusCard),
+                GestureDetector(
+                  onLongPress: () => _showCopySheet(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceSm + 2,
                     ),
+                    decoration: BoxDecoration(
+                      color: _isUser
+                          ? AppColors.userBubble
+                          : AppColors.aiBubbleDark,
+                      borderRadius: BorderRadius.only(
+                        topLeft:
+                            const Radius.circular(AppDimens.radiusCard),
+                        topRight:
+                            const Radius.circular(AppDimens.radiusCard),
+                        bottomLeft: _isUser
+                            ? const Radius.circular(AppDimens.radiusCard)
+                            : const Radius.circular(4),
+                        bottomRight: _isUser
+                            ? const Radius.circular(4)
+                            : const Radius.circular(AppDimens.radiusCard),
+                      ),
+                    ),
+                    child: _isUser
+                        ? Text(
+                            message.content,
+                            style: AppTextStyles.body.copyWith(
+                              color: AppColors.userBubbleText,
+                              height: 1.45,
+                            ),
+                          )
+                        : MarkdownBody(
+                            data: message.content,
+                            styleSheet: MarkdownStyleSheet.fromTheme(
+                              Theme.of(context).copyWith(
+                                textTheme: Theme.of(context).textTheme.apply(
+                                      bodyColor: AppColors.textPrimaryDark,
+                                      displayColor: AppColors.textPrimaryDark,
+                                    ),
+                              ),
+                            ).copyWith(
+                              p: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                height: 1.45,
+                              ),
+                              strong: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              em: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              listBullet: AppTextStyles.body.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                height: 1.45,
+                              ),
+                              code: AppTextStyles.caption.copyWith(
+                                color: AppColors.textPrimaryDark,
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.08),
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
                   ),
-                  child: _isUser
-                      ? Text(
-                          message.content,
-                          style: AppTextStyles.body.copyWith(
-                            color: AppColors.userBubbleText,
-                            height: 1.45,
-                          ),
-                        )
-                      : MarkdownBody(
-                          data: message.content,
-                          styleSheet: MarkdownStyleSheet.fromTheme(
-                            Theme.of(context).copyWith(
-                              textTheme: Theme.of(context).textTheme.apply(
-                                    bodyColor: AppColors.textPrimaryDark,
-                                    displayColor: AppColors.textPrimaryDark,
-                                  ),
-                            ),
-                          ).copyWith(
-                            p: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              height: 1.45,
-                            ),
-                            strong: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            em: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            listBullet: AppTextStyles.body.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              height: 1.45,
-                            ),
-                            code: AppTextStyles.caption.copyWith(
-                              color: AppColors.textPrimaryDark,
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.08),
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        ),
                 ),
                 const SizedBox(height: 4),
                 Text(
