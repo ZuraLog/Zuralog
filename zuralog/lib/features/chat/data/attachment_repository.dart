@@ -83,12 +83,14 @@ class AttachmentRepository {
     final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
 
     final AttachmentType type;
-    if (const {'pdf'}.contains(ext)) {
+    if (const {'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'bmp', 'tiff', 'tif', 'svg'}.contains(ext)) {
+      type = AttachmentType.image;
+    } else if (const {'pdf'}.contains(ext)) {
       type = AttachmentType.pdf;
     } else if (const {'doc', 'docx', 'txt', 'rtf'}.contains(ext)) {
       type = AttachmentType.document;
     } else {
-      type = AttachmentType.image;
+      type = AttachmentType.document;
     }
 
     final formData = FormData.fromMap({
@@ -114,5 +116,4 @@ class AttachmentRepository {
       status: AttachmentStatus.uploaded,
     );
   }
-
 }
