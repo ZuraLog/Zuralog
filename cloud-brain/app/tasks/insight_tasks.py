@@ -26,14 +26,15 @@ Architecture notes
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.analytics.insight_generator import InsightGenerator
-from app.database import async_session
+from app.database import worker_async_session as async_session
 from app.models.daily_metrics import DailyHealthMetrics
 from app.models.insight import Insight
+from app.models.integration import Integration
 from app.worker import celery_app
 
 logger = logging.getLogger(__name__)
@@ -105,7 +106,6 @@ def generate_insights_for_user(user_id: str) -> dict:
 
     async def _run() -> dict:
         async with async_session() as db:  # type: ignore[attr-defined]
-
             # ------------------------------------------------------------------
             # 1. Check data maturity
             # ------------------------------------------------------------------
@@ -281,3 +281,45 @@ def _build_card_text(
     }
 
     return _templates.get(insight_type, ("Health insight", dashboard_text))
+
+
+# ---------------------------------------------------------------------------
+# Stale integration check task
+# ---------------------------------------------------------------------------
+
+
+@celery_app.task(name="app.tasks.insight_tasks.check_stale_integrations_task")
+def check_stale_integrations_task() -> dict[str, int]:
+    """Check for integrations that haven't synced in 24+ hours.
+
+    Logs warnings for stale integrations. Runs daily via Beat.
+
+    Returns:
+        dict with 'stale_count' key indicating number of stale integrations found.
+    """
+
+    async def _run() -> dict[str, int]:
+        async with async_session() as session:
+            now = datetime.now(timezone.utc)
+            cutoff = now - timedelta(hours=24)
+
+            stmt = select(Integration).where(
+                Integration.is_active == True,  # noqa: E712
+                or_(
+                    Integration.last_synced_at < cutoff,
+                    (Integration.last_synced_at.is_(None) & (Integration.created_at < cutoff)),
+                ),
+            )
+            result = await session.execute(stmt)
+            stale_integrations = result.scalars().all()
+
+            stale_count = len(stale_integrations)
+            if stale_count > 0:
+                logger.warning(
+                    "Found %d stale integrations (not synced in 24h)",
+                    stale_count,
+                )
+
+            return {"stale_count": stale_count}
+
+    return asyncio.run(_run())
