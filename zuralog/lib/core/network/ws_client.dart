@@ -89,9 +89,14 @@ class WsClient {
         : 'http://10.0.2.2:8001';
     final String httpUrl = envUrl.isNotEmpty ? envUrl : defaultUrl;
 
-    return httpUrl
-        .replaceFirst('https://', 'wss://')
-        .replaceFirst('http://', 'ws://');
+    // dart:io WebSocket.connect does not resolve default ports for wss:// or
+    // ws://, producing port 0 and a failed connection. Parse as http(s) first
+    // (which Dart resolves correctly to port 443/80), then rebuild with the
+    // wss/ws scheme and the resolved port set explicitly.
+    final parsed = Uri.parse(httpUrl);
+    final wsScheme = parsed.scheme == 'https' ? 'wss' : 'ws';
+    final wsPort = parsed.hasPort ? parsed.port : (wsScheme == 'wss' ? 443 : 80);
+    return Uri(scheme: wsScheme, host: parsed.host, port: wsPort).toString();
   }
 
   /// The incoming message stream from the Cloud Brain.
@@ -127,7 +132,10 @@ class WsClient {
     _setStatus(ConnectionStatus.connecting);
 
     try {
-      final uri = Uri.parse('$_baseUrl/api/v1/chat/ws?token=$_token');
+      final uri = Uri.parse(_baseUrl).replace(
+        path: '/api/v1/chat/ws',
+        queryParameters: <String, String>{'token': _token!},
+      );
       _channel = WebSocketChannel.connect(uri);
 
       _channelSubscription = _channel!.stream.listen(
