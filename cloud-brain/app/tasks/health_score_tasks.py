@@ -18,7 +18,7 @@ from celery import shared_task
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.database import async_session
+from app.database import worker_async_session as async_session
 from app.models.health_score_cache import HealthScoreCache
 from app.services.health_score import HealthScoreCalculator
 

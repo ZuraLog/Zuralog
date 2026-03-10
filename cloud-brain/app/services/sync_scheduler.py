@@ -344,7 +344,7 @@ def sync_strava_activity_task(
     Returns:
         A dict with ``"status"`` key describing the outcome.
     """
-    from app.database import async_session
+    from app.database import worker_async_session as async_session
     from app.models.health_data import UnifiedActivity
     from app.models.integration import Integration
     from app.services.strava_token_service import StravaTokenService
@@ -506,7 +506,7 @@ def refresh_tokens_task() -> dict[str, Any]:
     Returns:
         A dict with the number of tokens refreshed.
     """
-    from app.database import async_session
+    from app.database import worker_async_session as async_session
     from app.services.strava_token_service import StravaTokenService
 
     logger.info("Checking for expiring OAuth tokens")

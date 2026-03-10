@@ -21,6 +21,11 @@ response is processed.
 Fail-open policy: if Redis is unavailable, all requests are allowed so
 that a Redis outage does not block Polar API calls.
 
+Connection reuse: a single aioredis connection pool is lazy-initialized on
+first use and reused for the lifetime of the limiter instance. aioredis
+from_url() returns a connection pool (not a single connection) so this is
+safe for high concurrency across 1M users.
+
 Usage:
     limiter = PolarRateLimiter(redis_url=settings.redis_url)
     if not await limiter.check_and_increment():
@@ -67,10 +72,22 @@ class PolarRateLimiter:
     counters, then checks each against its safety threshold.
 
     Fail-open: returns True when Redis is unavailable.
+
+    Connection reuse: a single aioredis pool is lazy-initialized on first use
+    and shared across all method calls on this instance.
     """
 
     def __init__(self, redis_url: str) -> None:
         self._redis_url = redis_url
+        self._redis = None  # Lazy-initialized Redis connection pool
+
+    async def _get_redis(self):
+        """Lazy-initialize and reuse Redis connection pool."""
+        if self._redis is None:
+            import redis.asyncio as aioredis
+
+            self._redis = aioredis.from_url(self._redis_url, decode_responses=True)
+        return self._redis
 
     async def check_and_increment(self) -> bool:
         """Check whether a Polar API call is allowed and increment counters.
@@ -87,45 +104,43 @@ class PolarRateLimiter:
           6. Return True
         """
         try:
-            import redis.asyncio as aioredis
+            r = await self._get_redis()
+            short_limit, long_limit = await self._get_dynamic_limits(r)
 
-            async with aioredis.from_url(self._redis_url, decode_responses=True) as r:
-                short_limit, long_limit = await self._get_dynamic_limits(r)
+            async with r.pipeline() as pipe:
+                pipe.incr(_KEY_SHORT_COUNTER)
+                pipe.incr(_KEY_LONG_COUNTER)
+                results = await pipe.execute()
 
-                async with r.pipeline() as pipe:
-                    pipe.incr(_KEY_SHORT_COUNTER)
-                    pipe.incr(_KEY_LONG_COUNTER)
-                    results = await pipe.execute()
+            short_count, long_count = results[0], results[1]
 
-                short_count, long_count = results[0], results[1]
+            # Set TTL only on the very first increment (avoids resetting existing windows)
+            if short_count == 1:
+                await r.expire(_KEY_SHORT_COUNTER, SHORT_WINDOW)
+            if long_count == 1:
+                await r.expire(_KEY_LONG_COUNTER, LONG_WINDOW)
 
-                # Set TTL only on the very first increment (avoids resetting existing windows)
-                if short_count == 1:
-                    await r.expire(_KEY_SHORT_COUNTER, SHORT_WINDOW)
-                if long_count == 1:
-                    await r.expire(_KEY_LONG_COUNTER, LONG_WINDOW)
+            short_threshold = short_limit * SAFETY_MARGIN
+            if short_count > short_threshold:
+                logger.warning(
+                    "Polar short-window rate limit threshold reached (count=%d, limit=%d, threshold=%.0f)",
+                    short_count,
+                    short_limit,
+                    short_threshold,
+                )
+                return False
 
-                short_threshold = short_limit * SAFETY_MARGIN
-                if short_count > short_threshold:
-                    logger.warning(
-                        "Polar short-window rate limit threshold reached (count=%d, limit=%d, threshold=%.0f)",
-                        short_count,
-                        short_limit,
-                        short_threshold,
-                    )
-                    return False
+            long_threshold = long_limit * SAFETY_MARGIN
+            if long_count > long_threshold:
+                logger.warning(
+                    "Polar long-window rate limit threshold reached (count=%d, limit=%d, threshold=%.0f)",
+                    long_count,
+                    long_limit,
+                    long_threshold,
+                )
+                return False
 
-                long_threshold = long_limit * SAFETY_MARGIN
-                if long_count > long_threshold:
-                    logger.warning(
-                        "Polar long-window rate limit threshold reached (count=%d, limit=%d, threshold=%.0f)",
-                        long_count,
-                        long_limit,
-                        long_threshold,
-                    )
-                    return False
-
-                return True
+            return True
 
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis unavailable, skipping Polar rate limit check: %s", exc)
@@ -142,8 +157,6 @@ class PolarRateLimiter:
         Fails open on any error.
         """
         try:
-            import redis.asyncio as aioredis
-
             usage_header = headers.get("RateLimit-Usage")
             limit_header = headers.get("RateLimit-Limit")
             reset_header = headers.get("RateLimit-Reset")
@@ -151,38 +164,38 @@ class PolarRateLimiter:
             if not any([usage_header, limit_header, reset_header]):
                 return  # nothing to update
 
-            async with aioredis.from_url(self._redis_url, decode_responses=True) as r:
-                if usage_header:
-                    parts = [v.strip() for v in usage_header.split(",")]
-                    if len(parts) == 2:
-                        short_usage, long_usage = parts[0], parts[1]
+            r = await self._get_redis()
+            if usage_header:
+                parts = [v.strip() for v in usage_header.split(",")]
+                if len(parts) == 2:
+                    short_usage, long_usage = parts[0], parts[1]
 
-                        # Preserve existing TTL; default to window duration on first write
-                        short_ttl = await r.ttl(_KEY_SHORT_COUNTER)
-                        long_ttl = await r.ttl(_KEY_LONG_COUNTER)
+                    # Preserve existing TTL; default to window duration on first write
+                    short_ttl = await r.ttl(_KEY_SHORT_COUNTER)
+                    long_ttl = await r.ttl(_KEY_LONG_COUNTER)
 
-                        await r.set(
-                            _KEY_SHORT_COUNTER,
-                            short_usage,
-                            ex=max(short_ttl, 1) if short_ttl > 0 else SHORT_WINDOW,
-                        )
-                        await r.set(
-                            _KEY_LONG_COUNTER,
-                            long_usage,
-                            ex=max(long_ttl, 1) if long_ttl > 0 else LONG_WINDOW,
-                        )
+                    await r.set(
+                        _KEY_SHORT_COUNTER,
+                        short_usage,
+                        ex=max(short_ttl, 1) if short_ttl > 0 else SHORT_WINDOW,
+                    )
+                    await r.set(
+                        _KEY_LONG_COUNTER,
+                        long_usage,
+                        ex=max(long_ttl, 1) if long_ttl > 0 else LONG_WINDOW,
+                    )
 
-                if limit_header:
-                    parts = [v.strip() for v in limit_header.split(",")]
-                    if len(parts) == 2:
-                        await r.set(_KEY_SHORT_LIMIT, parts[0])
-                        await r.set(_KEY_LONG_LIMIT, parts[1])
+            if limit_header:
+                parts = [v.strip() for v in limit_header.split(",")]
+                if len(parts) == 2:
+                    await r.set(_KEY_SHORT_LIMIT, parts[0])
+                    await r.set(_KEY_LONG_LIMIT, parts[1])
 
-                if reset_header:
-                    parts = [v.strip() for v in reset_header.split(",")]
-                    if len(parts) == 2:
-                        await r.set(_KEY_SHORT_RESET, parts[0], ex=SHORT_WINDOW)
-                        await r.set(_KEY_LONG_RESET, parts[1], ex=LONG_WINDOW)
+            if reset_header:
+                parts = [v.strip() for v in reset_header.split(",")]
+                if len(parts) == 2:
+                    await r.set(_KEY_SHORT_RESET, parts[0], ex=SHORT_WINDOW)
+                    await r.set(_KEY_LONG_RESET, parts[1], ex=LONG_WINDOW)
 
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to update Polar rate limit state from headers: %s", exc)
@@ -190,21 +203,19 @@ class PolarRateLimiter:
     async def get_remaining(self) -> tuple[int, int]:
         """Get (short_remaining, long_remaining). Returns (999, 9999) on error."""
         try:
-            import redis.asyncio as aioredis
+            r = await self._get_redis()
+            short_limit, long_limit = await self._get_dynamic_limits(r)
 
-            async with aioredis.from_url(self._redis_url, decode_responses=True) as r:
-                short_limit, long_limit = await self._get_dynamic_limits(r)
+            short_count_str = await r.get(_KEY_SHORT_COUNTER)
+            long_count_str = await r.get(_KEY_LONG_COUNTER)
 
-                short_count_str = await r.get(_KEY_SHORT_COUNTER)
-                long_count_str = await r.get(_KEY_LONG_COUNTER)
+            short_count = int(short_count_str) if short_count_str is not None else 0
+            long_count = int(long_count_str) if long_count_str is not None else 0
 
-                short_count = int(short_count_str) if short_count_str is not None else 0
-                long_count = int(long_count_str) if long_count_str is not None else 0
-
-                return (
-                    max(short_limit - short_count, 0),
-                    max(long_limit - long_count, 0),
-                )
+            return (
+                max(short_limit - short_count, 0),
+                max(long_limit - long_count, 0),
+            )
 
         except Exception:  # noqa: BLE001
             return (999, 9999)
@@ -212,16 +223,14 @@ class PolarRateLimiter:
     async def get_reset_seconds(self) -> tuple[int, int]:
         """Get (short_reset_secs, long_reset_secs). Returns (0, 0) on error."""
         try:
-            import redis.asyncio as aioredis
+            r = await self._get_redis()
+            short_reset_str = await r.get(_KEY_SHORT_RESET)
+            long_reset_str = await r.get(_KEY_LONG_RESET)
 
-            async with aioredis.from_url(self._redis_url, decode_responses=True) as r:
-                short_reset_str = await r.get(_KEY_SHORT_RESET)
-                long_reset_str = await r.get(_KEY_LONG_RESET)
+            short_reset = int(short_reset_str) if short_reset_str is not None else 0
+            long_reset = int(long_reset_str) if long_reset_str is not None else 0
 
-                short_reset = int(short_reset_str) if short_reset_str is not None else 0
-                long_reset = int(long_reset_str) if long_reset_str is not None else 0
-
-                return (short_reset, long_reset)
+            return (short_reset, long_reset)
 
         except Exception:  # noqa: BLE001
             return (0, 0)
@@ -229,10 +238,8 @@ class PolarRateLimiter:
     async def update_user_count(self, count: int) -> None:
         """Update registered user count for dynamic limit calculation. Fail-open."""
         try:
-            import redis.asyncio as aioredis
-
-            async with aioredis.from_url(self._redis_url, decode_responses=True) as r:
-                await r.set(_KEY_USER_COUNT, str(count))
+            r = await self._get_redis()
+            await r.set(_KEY_USER_COUNT, str(count))
 
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to update Polar user count in Redis: %s", exc)

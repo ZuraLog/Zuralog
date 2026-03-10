@@ -29,7 +29,7 @@ import sentry_sdk
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import async_session
+from app.database import worker_async_session as async_session
 from app.services.anomaly_detector import AnomalyDetector, AnomalyResult
 from app.services.push_service import PushService
 from app.worker import celery_app
