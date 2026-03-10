@@ -99,9 +99,14 @@ final class ApiCoachRepository implements CoachRepository {
         : Platform.isIOS
             ? 'http://127.0.0.1:8001'
             : 'http://10.0.2.2:8001';
-    return httpUrl
-        .replaceFirst('https://', 'wss://')
-        .replaceFirst('http://', 'ws://');
+    // dart:io WebSocket.connect does not resolve default ports for wss:// or
+    // ws://, producing port 0 and a failed connection. Parse as http(s) first
+    // (which Dart resolves correctly to port 443/80), then rebuild with the
+    // wss/ws scheme and the resolved port set explicitly.
+    final parsed = Uri.parse(httpUrl);
+    final wsScheme = parsed.scheme == 'https' ? 'wss' : 'ws';
+    final wsPort = parsed.hasPort ? parsed.port : (wsScheme == 'wss' ? 443 : 80);
+    return Uri(scheme: wsScheme, host: parsed.host, port: wsPort).toString();
   }
 
   // ── listConversations ──────────────────────────────────────────────────────
@@ -287,11 +292,18 @@ final class ApiCoachRepository implements CoachRepository {
         return;
       }
 
-      // Build the WS URL.
-      final convParam =
-          conversationId != null ? '&conversation_id=$conversationId' : '';
-      final uri = Uri.parse(
-        '$_wsBaseUrl/api/v1/chat/ws?token=${Uri.encodeQueryComponent(token)}$convParam',
+      // Build the WS URI by replacing only the path and query parameters on
+      // _wsBaseUrl, which is already the correct wss:// or ws:// base URL
+      // (produced by _deriveWsUrl). Uri.replace() preserves the scheme, host,
+      // and any explicit port as-is — no scheme conversion or port arithmetic
+      // needed, and no risk of introducing a spurious :0 port.
+      final queryParams = <String, String>{
+        'token': token,
+        'conversation_id': ?conversationId,
+      };
+      final uri = Uri.parse(_wsBaseUrl).replace(
+        path: '/api/v1/chat/ws',
+        queryParameters: queryParams,
       );
 
       channel = WebSocketChannel.connect(uri);

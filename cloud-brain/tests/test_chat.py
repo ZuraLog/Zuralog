@@ -78,6 +78,9 @@ def client(mock_auth_service, mock_db):
             # Disable rate limiter for most tests (tested separately)
             app.state.rate_limiter = None
 
+            # Storage service (needed by websocket_chat and REST endpoints)
+            app.state.storage_service = MagicMock()
+
             yield c
 
     app.dependency_overrides.clear()
@@ -89,22 +92,24 @@ def client(mock_auth_service, mock_db):
 
 
 def test_ws_rejects_without_token(client):
-    """WebSocket connection without a token should be rejected."""
-    with pytest.raises(Exception):
-        with client.websocket_connect("/api/v1/chat/ws"):
-            pass
+    """WebSocket connection without a token should send error and close."""
+    with client.websocket_connect("/api/v1/chat/ws") as ws:
+        response = ws.receive_json()
+        assert response["type"] == "error"
+        assert "auth token" in response["content"].lower()
 
 
 def test_ws_rejects_with_invalid_token(client, mock_auth_service):
-    """WebSocket connection with invalid token should be rejected."""
+    """WebSocket connection with invalid token should send error and close."""
     mock_auth_service.get_user.side_effect = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid token",
     )
 
-    with pytest.raises(Exception):
-        with client.websocket_connect("/api/v1/chat/ws?token=bad-token"):
-            pass
+    with client.websocket_connect("/api/v1/chat/ws?token=bad-token") as ws:
+        response = ws.receive_json()
+        assert response["type"] == "error"
+        assert "invalid" in response["content"].lower() or "expired" in response["content"].lower()
 
 
 def test_ws_connect_and_echo(client, mock_auth_service):

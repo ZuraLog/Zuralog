@@ -96,6 +96,7 @@ async def _authenticate_ws(
         The user data dict on success, or None on failure.
     """
     if not token:
+        await websocket.send_json({"type": "error", "content": "Missing auth token"})
         await websocket.close(code=4001, reason="Missing auth token")
         return None
 
@@ -103,6 +104,7 @@ async def _authenticate_ws(
         user = await auth_service.get_user(token)
         return user
     except HTTPException:
+        await websocket.send_json({"type": "error", "content": "Invalid or expired token"})
         await websocket.close(code=4003, reason="Invalid or expired token")
         return None
 
@@ -254,12 +256,18 @@ async def websocket_chat(
     analytics = getattr(app.state, "analytics_service", None)
     storage_service: StorageService = app.state.storage_service
 
+    # Accept immediately so all failure paths can send JSON error messages
+    # instead of closing an unaccepted socket (which causes HTTP 500).
+    await websocket.accept()
+
+    user_id: str = "unknown"
+
     # ── Auth ──────────────────────────────────────────────────────────────────
     user = await _authenticate_ws(websocket, auth_service, token)
     if user is None:
         return
 
-    user_id: str = user.get("id", "unknown")
+    user_id = user.get("id", "unknown")
 
     # ── Resolve / create conversation ─────────────────────────────────────────
     resolved_conv_id: str
@@ -276,6 +284,7 @@ async def websocket_chat(
             )
             conv = result.scalar_one_or_none()
             if conv is None:
+                await websocket.send_json({"type": "error", "content": "Conversation not found"})
                 await websocket.close(code=4004, reason="Conversation not found")
                 return
             resolved_conv_id = conv.id
@@ -287,7 +296,6 @@ async def websocket_chat(
             resolved_conv_id = conv.id
             is_new_conversation = True
 
-    await websocket.accept()
     logger.info(
         "WebSocket connected for user '%s', conversation '%s' (new=%s)",
         user_id,
