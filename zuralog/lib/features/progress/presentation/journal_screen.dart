@@ -14,6 +14,8 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/presentation/journal_entry_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -121,21 +123,9 @@ class JournalScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final journalAsync = ref.watch(journalProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: AppColors.textPrimaryDark,
-            size: 20,
-          ),
-          onPressed: () => Navigator.of(context).maybePop(),
-          tooltip: 'Back',
-        ),
-        title: Text('Journal', style: AppTextStyles.h2),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(
+        title: 'Journal',
         actions: [
           IconButton(
             icon: const Icon(
@@ -174,14 +164,14 @@ class JournalScreen extends ConsumerWidget {
                       const SizedBox(height: AppDimens.spaceMd),
                       Text(
                         'Failed to load journal',
-                        style: AppTextStyles.h3.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
                       Text(
                         err.toString(),
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textTertiary,
                         ),
                         textAlign: TextAlign.center,
@@ -213,12 +203,12 @@ class JournalScreen extends ConsumerWidget {
                           color: AppColors.textTertiary,
                         ),
                         const SizedBox(height: AppDimens.spaceMd),
-                        Text(
-                          'No entries yet',
-                          style: AppTextStyles.h3.copyWith(
-                            color: AppColors.textPrimaryDark,
+                          Text(
+                            'No entries yet',
+                            style: AppTextStyles.titleMedium.copyWith(
+                              color: AppColors.textPrimaryDark,
+                            ),
                           ),
-                        ),
                         const SizedBox(height: AppDimens.spaceSm),
                         Text(
                           'Capture how you feel each day.',
@@ -256,7 +246,7 @@ class JournalScreen extends ConsumerWidget {
               padding: EdgeInsets.only(
                 left: AppDimens.spaceMd,
                 right: AppDimens.spaceMd,
-                bottom: MediaQuery.of(context).padding.bottom,
+                bottom: AppDimens.bottomClearance(context),
               ),
               itemCount: _sectionItemCount(sections),
               itemBuilder: (context, index) {
@@ -271,7 +261,7 @@ class JournalScreen extends ConsumerWidget {
                     ),
                     child: Text(
                       resolved.header!,
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textTertiary,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.6,
@@ -365,7 +355,7 @@ class _EntryCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     _shortDate(entry.date),
-                    style: AppTextStyles.h3.copyWith(
+                    style: AppTextStyles.titleMedium.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
@@ -406,7 +396,7 @@ class _EntryCard extends StatelessWidget {
                       (tag) => Chip(
                         label: Text(
                           tag,
-                          style: AppTextStyles.labelXs.copyWith(
+                          style: AppTextStyles.labelSmall.copyWith(
                             color: AppColors.textSecondaryDark,
                           ),
                         ),
@@ -463,7 +453,7 @@ class _MiniIndicator extends StatelessWidget {
         const SizedBox(width: AppDimens.spaceXs),
         Text(
           '$label $value',
-          style: AppTextStyles.labelXs.copyWith(
+          style: AppTextStyles.labelSmall.copyWith(
             color: AppColors.textTertiary,
           ),
         ),

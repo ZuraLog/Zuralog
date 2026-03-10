@@ -20,6 +20,8 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── GoalsScreen ───────────────────────────────────────────────────────────────
 
@@ -83,12 +85,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
   Widget build(BuildContext context) {
     final asyncGoals = ref.watch(goalsProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        surfaceTintColor: Colors.transparent,
-        title: Text('Goals', style: AppTextStyles.h2),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(
+        title: 'Goals',
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -179,11 +178,11 @@ class _ErrorState extends StatelessWidget {
               color: AppColors.statusError,
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              'Could not load goals',
-              style: AppTextStyles.h3,
-              textAlign: TextAlign.center,
-            ),
+              Text(
+                'Could not load goals',
+                style: AppTextStyles.titleMedium,
+                textAlign: TextAlign.center,
+              ),
             const SizedBox(height: AppDimens.spaceSm),
             Text(
               message,
@@ -234,13 +233,13 @@ class _EmptyState extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.6),
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text('No goals yet', style: AppTextStyles.h2),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'Create your first goal and I\'ll track your progress.',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textSecondary,
-              ),
+            Text('No goals yet', style: AppTextStyles.displaySmall),
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                'Create your first goal and I\'ll track your progress.',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceLg),
@@ -259,7 +258,7 @@ class _EmptyState extends StatelessWidget {
               ),
               child: Text(
                 'Add your first goal',
-                style: AppTextStyles.h3.copyWith(
+                style: AppTextStyles.titleMedium.copyWith(
                   color: AppColors.primaryButtonText,
                 ),
               ),
@@ -320,7 +319,7 @@ class _GoalsList extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.elevatedSurfaceDark,
-        title: Text('Delete goal?', style: AppTextStyles.h3),
+        title: Text('Delete goal?', style: AppTextStyles.titleMedium),
         content: Text(
           'This action cannot be undone.',
           style: AppTextStyles.bodyMedium.copyWith(
@@ -413,14 +412,14 @@ class _GoalCard extends ConsumerWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          goal.title,
-                          style: AppTextStyles.h3,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        Expanded(
+                          child: Text(
+                            goal.title,
+                            style: AppTextStyles.titleMedium,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
                       const SizedBox(width: AppDimens.spaceSm),
                       _PeriodChip(period: goal.period),
                     ],
@@ -429,7 +428,7 @@ class _GoalCard extends ConsumerWidget {
                   // Type display name
                   Text(
                     goal.type.displayName,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -469,7 +468,7 @@ class _GoalCard extends ConsumerWidget {
                         const SizedBox(width: AppDimens.spaceXs),
                         Text(
                           'Due ${_formatDeadline(goal.deadline!)}',
-                          style: AppTextStyles.caption.copyWith(
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textTertiary,
                           ),
                         ),
@@ -548,9 +547,9 @@ class _GoalRing extends StatelessWidget {
           child: CustomPaint(
             painter: _RingPainter(progress: value),
             child: Center(
-              child: Text(
+                child: Text(
                 '${(value * 100).round()}%',
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
                 ),
@@ -627,7 +626,7 @@ class _PeriodChip extends StatelessWidget {
       ),
       child: Text(
         period.displayName,
-        style: AppTextStyles.labelXs.copyWith(color: AppColors.primary),
+        style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
       ),
     );
   }
@@ -658,7 +657,7 @@ class _CompletedPill extends StatelessWidget {
           const SizedBox(width: AppDimens.spaceXs),
           Text(
             'Completed',
-            style: AppTextStyles.labelXs.copyWith(
+            style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.categoryActivity,
               fontWeight: FontWeight.w600,
             ),

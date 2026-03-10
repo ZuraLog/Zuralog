@@ -17,29 +17,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
-
-// ── Color mapping ─────────────────────────────────────────────────────────────
-
-Color _categoryColor(String gradientCategory) {
-  switch (gradientCategory) {
-    case 'activity':
-      return AppColors.categoryActivity;
-    case 'sleep':
-      return AppColors.categorySleep;
-    case 'body':
-      return AppColors.categoryBody;
-    case 'heart':
-      return AppColors.categoryHeart;
-    case 'nutrition':
-      return AppColors.categoryNutrition;
-    case 'wellness':
-      return AppColors.categoryWellness;
-    default:
-      return AppColors.primary;
-  }
-}
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -138,12 +120,9 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
   Widget build(BuildContext context) {
     final reportAsync = ref.watch(weeklyReportProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        surfaceTintColor: Colors.transparent,
-        title: Text('Weekly Report', style: AppTextStyles.h2),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(
+        title: 'Weekly Report',
         actions: [
           IconButton(
             icon: const Icon(
@@ -182,14 +161,14 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                       const SizedBox(height: AppDimens.spaceMd),
                       Text(
                         'Failed to load report',
-                        style: AppTextStyles.h3.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
                       Text(
                         'Something went wrong. Pull down to try again.',
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textTertiary,
                         ),
                         textAlign: TextAlign.center,
@@ -223,7 +202,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                         const SizedBox(height: AppDimens.spaceMd),
                         Text(
                           'No report available yet',
-                          style: AppTextStyles.h3.copyWith(
+                          style: AppTextStyles.titleMedium.copyWith(
                             color: AppColors.textPrimaryDark,
                           ),
                         ),
@@ -263,7 +242,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                     ),
                     child: Text(
                       periodLabel,
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textTertiary,
                         letterSpacing: 0.4,
                       ),
@@ -307,7 +286,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                     0,
                     AppDimens.spaceMd,
                     0,
-                    MediaQuery.of(context).padding.bottom,
+                    AppDimens.bottomClearance(context),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -348,7 +327,7 @@ class _WeeklyReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categoryColor = _categoryColor(card.gradientCategory);
+    final categoryColor = categoryColorFromString(card.gradientCategory);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppDimens.spaceSm),
@@ -373,7 +352,7 @@ class _WeeklyReportCard extends StatelessWidget {
             // ── Card title ────────────────────────────────────────────────
             Text(
               card.title,
-              style: AppTextStyles.h1.copyWith(
+              style: AppTextStyles.displayLarge.copyWith(
                 color: AppColors.backgroundLight,
                 fontWeight: FontWeight.w800,
               ),
@@ -437,7 +416,7 @@ class _MetricRow extends StatelessWidget {
             children: [
               Text(
                 metric.label,
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.backgroundLight.withValues(alpha: 0.65),
                 ),
               ),
@@ -447,12 +426,12 @@ class _MetricRow extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: metric.value,
-                      style: AppTextStyles.h2.copyWith(color: AppColors.backgroundLight),
+                      style: AppTextStyles.displaySmall.copyWith(color: AppColors.backgroundLight),
                     ),
                     if (metric.unit.isNotEmpty)
                       TextSpan(
                         text: '  ${metric.unit}',
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.backgroundLight.withValues(alpha: 0.65),
                         ),
                       ),
@@ -481,7 +460,7 @@ class _MetricRow extends StatelessWidget {
             ),
             child: Text(
               metric.delta!,
-              style: AppTextStyles.labelXs.copyWith(
+              style: AppTextStyles.labelSmall.copyWith(
                 color: isPositive
                     ? AppColors.categoryActivity
                     : isNegative

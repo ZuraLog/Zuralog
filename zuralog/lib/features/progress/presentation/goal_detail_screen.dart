@@ -19,6 +19,8 @@ import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.da
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── GoalDetailScreen ──────────────────────────────────────────────────────────
 
@@ -80,7 +82,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
         ),
         title: Text(
           'Delete Goal?',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
         ),
         content: Text(
           'This will permanently delete "${goal.title}". This action cannot be undone.',
@@ -92,7 +94,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: AppTextStyles.h3.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.titleMedium.copyWith(color: AppColors.textSecondary),
             ),
           ),
           TextButton(
@@ -100,7 +102,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
             child: Text(
               'Delete',
               style:
-                  AppTextStyles.h3.copyWith(color: AppColors.accentDark),
+                  AppTextStyles.titleMedium.copyWith(color: AppColors.accentDark),
             ),
           ),
         ],
@@ -133,28 +135,18 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
     final unitsSystem = ref.watch(unitsSystemProvider);
 
     return goalsAsync.when(
-      loading: () => Scaffold(
-        backgroundColor: AppColors.backgroundDark,
-        appBar: AppBar(
-          backgroundColor: AppColors.backgroundDark,
-          foregroundColor: AppColors.textPrimaryDark,
-          title: Text('Goal', style: AppTextStyles.h2),
-        ),
+      loading: () => ZuralogScaffold(
+        appBar: const ZuralogAppBar(title: 'Goal'),
         body: const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
       ),
-      error: (err, _) => Scaffold(
-        backgroundColor: AppColors.backgroundDark,
-        appBar: AppBar(
-          backgroundColor: AppColors.backgroundDark,
-          foregroundColor: AppColors.textPrimaryDark,
-          title: Text('Goal', style: AppTextStyles.h2),
-        ),
+      error: (err, _) => ZuralogScaffold(
+        appBar: const ZuralogAppBar(title: 'Goal'),
         body: Center(
           child: Text(
             'Failed to load goal',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
           ),
         ),
       ),
@@ -168,13 +160,8 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
         }
 
         if (goal == null) {
-          return Scaffold(
-            backgroundColor: AppColors.backgroundDark,
-            appBar: AppBar(
-              backgroundColor: AppColors.backgroundDark,
-              foregroundColor: AppColors.textPrimaryDark,
-              title: Text('Goal', style: AppTextStyles.h2),
-            ),
+          return ZuralogScaffold(
+            appBar: const ZuralogAppBar(title: 'Goal'),
             body: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -187,7 +174,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
                   const SizedBox(height: AppDimens.spaceMd),
                   Text(
                     'Goal not found',
-                    style: AppTextStyles.h3
+                    style: AppTextStyles.titleMedium
                         .copyWith(color: AppColors.textPrimaryDark),
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
@@ -196,7 +183,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
                     child: Text(
                       'Go back',
                       style:
-                          AppTextStyles.body.copyWith(color: AppColors.primary),
+                          AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
                     ),
                   ),
                 ],
@@ -283,15 +270,9 @@ class _GoalDetailView extends StatelessWidget {
     final hasAiCommentary = goal.aiCommentary != null;
     final showAiCard = hasAiCommentary || projected != null;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        foregroundColor: AppColors.textPrimaryDark,
-        title: Text(
-          goal.title,
-          style: AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
-        ),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(
+        title: goal.title,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_rounded),
@@ -359,12 +340,12 @@ class _GoalDetailView extends StatelessWidget {
                     progressColor: AppColors.primary,
                   ),
                   child: Center(
-                    child: Text(
-                      '${(goal.progressFraction * 100).round()}%',
-                      style: AppTextStyles.h2.copyWith(
-                        color: AppColors.textPrimaryDark,
+                      child: Text(
+                        '${(goal.progressFraction * 100).round()}%',
+                        style: AppTextStyles.displaySmall.copyWith(
+                          color: AppColors.textPrimaryDark,
+                        ),
                       ),
-                    ),
                   ),
                 ),
               );
@@ -374,7 +355,7 @@ class _GoalDetailView extends StatelessWidget {
           // Current value
           Text(
             _fmtValue(goal.currentValue),
-            style: AppTextStyles.h1.copyWith(
+            style: AppTextStyles.displayLarge.copyWith(
               color: AppColors.textPrimaryDark,
               fontSize: 40,
             ),
@@ -383,7 +364,7 @@ class _GoalDetailView extends StatelessWidget {
           // Target unit subtitle
           Text(
             '/ ${_fmtValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
-            style: AppTextStyles.body.copyWith(
+            style: AppTextStyles.bodyLarge.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
@@ -409,7 +390,7 @@ class _GoalDetailView extends StatelessWidget {
                   const SizedBox(width: AppDimens.spaceXs),
                   Text(
                     'Completed',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -442,7 +423,7 @@ class _GoalDetailView extends StatelessWidget {
         children: [
           Text(
             'Progress History',
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
@@ -477,7 +458,7 @@ class _GoalDetailView extends StatelessWidget {
         children: [
           Text(
             'Details',
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),

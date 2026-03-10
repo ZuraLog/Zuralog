@@ -22,6 +22,7 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── ProgressHomeScreen ────────────────────────────────────────────────────────
@@ -58,8 +59,8 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
   Widget build(BuildContext context) {
     final asyncData = ref.watch(progressHomeProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
+      addBottomNavPadding: true,
       appBar: ZuralogAppBar(
         title: 'Progress',
         tooltipConfig: const ZuralogAppBarTooltipConfig(
@@ -236,7 +237,7 @@ class _ErrorState extends StatelessWidget {
               const SizedBox(height: AppDimens.spaceMd),
               Text(
                 'Could not load progress',
-                style: AppTextStyles.h3,
+                style: AppTextStyles.titleMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppDimens.spaceSm),
@@ -295,11 +296,11 @@ class _EmptyState extends StatelessWidget {
                 color: AppColors.primary.withValues(alpha: 0.6),
               ),
               const SizedBox(height: AppDimens.spaceMd),
-              Text('Start your journey', style: AppTextStyles.h2),
+              Text('Start your journey', style: AppTextStyles.displaySmall),
               const SizedBox(height: AppDimens.spaceSm),
               Text(
                 'Set a goal and I\'ll track your streaks and progress.',
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
@@ -320,7 +321,7 @@ class _EmptyState extends StatelessWidget {
                 ),
                 child: Text(
                   'Set First Goal',
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.primaryButtonText,
                   ),
                 ),
@@ -419,7 +420,7 @@ class _SectionHeader extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Text(title, style: AppTextStyles.h3),
+          Text(title, style: AppTextStyles.titleMedium),
           const Spacer(),
           if (trailingLabel != null && onTrailingTap != null)
             GestureDetector(
@@ -498,7 +499,7 @@ class _GoalCard extends ConsumerWidget {
                     child: Center(
                       child: Text(
                         '${(value * 100).round()}%',
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w700,
                         ),
@@ -522,11 +523,11 @@ class _GoalCard extends ConsumerWidget {
           Text(
             '${_formatValue(goal.currentValue)} / '
             '${_formatValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
           ),
           const Spacer(),
           _StatusChip(isCompleted: goal.isCompleted),
@@ -608,12 +609,12 @@ class _StatusChip extends StatelessWidget {
             : AppColors.surfaceDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
-      child: Text(
-        isCompleted ? 'Completed' : 'In progress',
-        style: AppTextStyles.labelXs.copyWith(
-          color: isCompleted ? AppColors.primary : AppColors.textSecondary,
-        ),
-      ),
+        child: Text(
+            isCompleted ? 'Completed' : 'In progress',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: isCompleted ? AppColors.primary : AppColors.textSecondary,
+            ),
+          ),
     );
   }
 }
@@ -685,7 +686,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
-        title: Text('Use a Streak Freeze?', style: AppTextStyles.h3),
+        title: Text('Use a Streak Freeze?', style: AppTextStyles.titleMedium),
         content: Text(
           'This will protect your streak if you miss today. '
           'You have $remaining freeze(s) remaining after this.',
@@ -783,7 +784,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
               Expanded(
                 child: Text(
                   streak.type.displayName,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
                   maxLines: 1,
@@ -823,7 +824,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
           const Spacer(),
           Text(
             '${streak.currentCount}',
-            style: AppTextStyles.h1.copyWith(
+            style: AppTextStyles.displayLarge.copyWith(
               color: AppColors.primary,
               height: 1,
             ),
@@ -831,14 +832,14 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             'day streak',
-            style: AppTextStyles.labelXs.copyWith(
+            style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.textTertiary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             '$freezesAvailable freeze(s) available',
-            style: AppTextStyles.labelXs.copyWith(
+            style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.textTertiary,
             ),
           ),
@@ -965,7 +966,7 @@ class _MilestoneCelebrationCardState
                       // Headline
                       Text(
                         '${widget.days}-Day Streak!',
-                        style: AppTextStyles.h2.copyWith(
+                        style: AppTextStyles.displaySmall.copyWith(
                           color: AppColors.primary,
                         ),
                       ),
@@ -1089,7 +1090,7 @@ class _DeltaChip extends StatelessWidget {
         ),
         child: Text(
           '—',
-          style: AppTextStyles.labelXs.copyWith(
+          style: AppTextStyles.labelSmall.copyWith(
             color: AppColors.textTertiary,
           ),
         ),
@@ -1111,7 +1112,7 @@ class _DeltaChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.labelXs.copyWith(color: color),
+        style: AppTextStyles.labelSmall.copyWith(color: color),
       ),
     );
   }
@@ -1208,7 +1209,7 @@ class _QuickNavItem extends ConsumerWidget {
             const SizedBox(height: AppDimens.spaceXs),
             Text(
               label,
-              style: AppTextStyles.labelXs.copyWith(
+              style: AppTextStyles.labelSmall.copyWith(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
@@ -1315,7 +1316,7 @@ class _AchievementBadge extends StatelessWidget {
                   ),
                   child: Text(
                     'NEW',
-                    style: AppTextStyles.labelXs.copyWith(
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1327,7 +1328,7 @@ class _AchievementBadge extends StatelessWidget {
           const Spacer(),
           Text(
             achievement.title,
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               fontWeight: FontWeight.w600,
             ),
             maxLines: 2,

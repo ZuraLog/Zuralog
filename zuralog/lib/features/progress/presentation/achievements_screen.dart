@@ -16,6 +16,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── AchievementsScreen ────────────────────────────────────────────────────────
 
@@ -41,16 +43,8 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
   Widget build(BuildContext context) {
     final achievementsAsync = ref.watch(achievementsProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        foregroundColor: AppColors.textPrimaryDark,
-        title: Text(
-          'Achievements',
-          style: AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
-        ),
-      ),
+    return ZuralogScaffold(
+      appBar: const ZuralogAppBar(title: 'Achievements'),
       body: RefreshIndicator(
         color: AppColors.primary,
         backgroundColor: AppColors.cardBackgroundDark,
@@ -75,7 +69,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                       const SizedBox(height: AppDimens.spaceMd),
                       Text(
                         'Failed to load achievements',
-                        style: AppTextStyles.h3.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -104,7 +98,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           const SizedBox(height: AppDimens.spaceMd),
                           Text(
                             'No achievements yet',
-                            style: AppTextStyles.h3.copyWith(
+                            style: AppTextStyles.titleMedium.copyWith(
                               color: AppColors.textPrimaryDark,
                             ),
                           ),
@@ -176,7 +170,7 @@ class _CategoryHeader extends StatelessWidget {
       children: [
         Text(
           category.displayName,
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
         ),
         const Spacer(),
         Container(
@@ -191,7 +185,7 @@ class _CategoryHeader extends StatelessWidget {
           child: Text(
             '$unlockedCount / $total',
             style:
-                AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
           ),
         ),
       ],
@@ -381,7 +375,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
         const SizedBox(height: AppDimens.spaceXs),
         Text(
           label,
-          style: AppTextStyles.labelXs.copyWith(
+          style: AppTextStyles.labelSmall.copyWith(
             color: AppColors.textTertiary,
           ),
         ),
@@ -477,7 +471,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
               // Title
               Text(
                 achievement.title,
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: isUnlocked
                       ? AppColors.textPrimaryDark
                       : AppColors.textTertiary,
@@ -490,7 +484,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
               // Description
               Text(
                 achievement.description,
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                   color: AppColors.textSecondary,
                 ),
                 maxLines: 2,
@@ -501,7 +495,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
               if (isUnlocked && achievement.unlockedAt != null)
                 Text(
                   'Earned ${_formatDate(achievement.unlockedAt!)}',
-                  style: AppTextStyles.labelXs.copyWith(
+                  style: AppTextStyles.labelSmall.copyWith(
                     color: categoryColor,
                     fontWeight: FontWeight.w600,
                   ),
@@ -514,7 +508,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
               else
                 Text(
                   'Locked',
-                  style: AppTextStyles.labelXs.copyWith(
+                  style: AppTextStyles.labelSmall.copyWith(
                     color: AppColors.textTertiary,
                   ),
                 ),
