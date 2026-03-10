@@ -190,7 +190,7 @@ class PushService:
             try:
                 from sqlalchemy import select
 
-                from app.database import async_session as _session_factory
+                from app.database import worker_async_session as _session_factory
                 from app.models.user_device import UserDevice
 
                 async with _session_factory() as _token_db:
@@ -230,7 +230,7 @@ class PushService:
                 db.add(log_row)
                 await db.flush()
             else:
-                from app.database import async_session as _factory
+                from app.database import worker_async_session as _factory
 
                 async with _factory() as _persist_db:
                     _persist_db.add(log_row)
