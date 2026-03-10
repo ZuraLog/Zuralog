@@ -22,9 +22,15 @@
 # | run-ios-prod      | --release    | api.zuralog.com      | NO          |
 # | run-device        | --debug      | local (DEVICE_IP)    | YES (auto)  |
 # | run-device-prod   | --release    | api.zuralog.com      | NO          |
+# | reinstall         | --debug      | local (10.0.2.2)     | YES (auto)  |
+# | reinstall-prod    | --release    | api.zuralog.com      | NO          |
 #
 # Mock data: --debug builds use kDebugMode=true, which activates MockRepository
 # in each feature provider. Release builds always use the real API.
+#
+# reinstall / reinstall-prod: uninstall the existing APK, run flutter clean,
+# then build and install fresh. Use these whenever make run / make run-prod
+# launches stale code after making source changes in release mode.
 # ---------------------------------------------------------------------------
 
 # Force Git Bash on Windows — prevents make from falling back to cmd.exe
@@ -40,7 +46,19 @@ POSTHOG_API_KEY      := $(shell grep -m1 '^POSTHOG_API_KEY=' cloud-brain/.env 2>
 # Physical device LAN IP — set DEVICE_IP=192.168.x.x in cloud-brain/.env
 DEVICE_IP            := $(shell grep -m1 '^DEVICE_IP=' cloud-brain/.env 2>/dev/null | cut -d '=' -f2-)
 
+# ---------------------------------------------------------------------------
+# Android app package ID and ADB path
+# ADB is auto-located from the standard Android SDK location on Windows.
+# Override ADB by setting ADB=/path/to/adb in your shell if needed.
+# ---------------------------------------------------------------------------
+APP_ID := com.zuralog.zuralog
+ADB    := $(shell ls "$$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe" 2>/dev/null \
+           || ls "$$HOME/AppData/Local/Android/Sdk/platform-tools/adb.exe" 2>/dev/null \
+           || which adb 2>/dev/null \
+           || echo "adb")
+
 .PHONY: run run-mock run-prod run-ios run-ios-prod run-device run-device-prod \
+        uninstall reinstall reinstall-prod \
         analyze test build-apk build-appbundle build-prod build-prod-ios
 
 # ---------------------------------------------------------------------------
@@ -125,6 +143,37 @@ run-device:
 # Physical Device — RELEASE (production backend, real data, no mocks)
 # ---------------------------------------------------------------------------
 run-device-prod:
+	cd zuralog && flutter run --release \
+		--dart-define=BASE_URL=https://api.zuralog.com \
+		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
+		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
+		--dart-define=APP_ENV=production
+
+# ---------------------------------------------------------------------------
+# Uninstall / clean reinstall helpers
+# ---------------------------------------------------------------------------
+## Uninstall the app from the connected Android emulator or device.
+## Useful when you need a guaranteed clean state (e.g. after code changes
+## that the incremental build won't pick up in release mode).
+uninstall:
+	@echo "Uninstalling $(APP_ID)..."
+	@"$(ADB)" uninstall $(APP_ID) 2>&1 || echo "App not installed — nothing to uninstall."
+
+## Uninstall, flutter clean, then run debug build on the Android emulator.
+## Use this when make run produces stale behaviour after code changes.
+reinstall: uninstall
+	cd zuralog && flutter clean
+	cd zuralog && flutter run --debug \
+		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
+		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
+		--dart-define=APP_ENV=development
+
+## Uninstall, flutter clean, then run release build against production backend.
+## Use this when make run-prod produces stale behaviour after code changes.
+reinstall-prod: uninstall
+	cd zuralog && flutter clean
 	cd zuralog && flutter run --release \
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
