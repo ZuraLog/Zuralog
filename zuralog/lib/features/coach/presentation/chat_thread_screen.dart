@@ -59,6 +59,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   /// Tracks whether [_initConversation] has been called.
   bool _initialized = false;
 
+  /// True when the user has scrolled up far enough that auto-scroll should pause.
+  /// Reset to false when the stream completes, always bringing the user back to
+  /// the finished response.
+  bool _userScrolledUp = false;
+
   /// True when the user is editing a previously sent message.
   bool _isEditing = false;
 
@@ -72,15 +77,29 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollCtrl.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initConversation());
   }
 
   @override
   void dispose() {
+    _scrollCtrl.removeListener(_onScroll);
     _inputCtrl.dispose();
     _inputFocus.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  /// Updates [_userScrolledUp] based on the current scroll position.
+  ///
+  /// When the user is within 80 px of the bottom they are considered "at the
+  /// bottom" and auto-scroll is active. Beyond 80 px auto-scroll pauses so
+  /// the user can read earlier messages without being interrupted.
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    final atBottom = pos.pixels >= pos.maxScrollExtent - 80.0;
+    _userScrolledUp = !atBottom;
   }
 
   /// Either loads history (existing conversation) or fires the pending
@@ -337,6 +356,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   }
 
   void _scrollToBottom() {
+    // Respect the user's scroll position — if they scrolled up to read
+    // earlier messages, don't yank them back to the bottom mid-stream.
+    if (_userScrolledUp) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollCtrl.hasClients) return;
       _scrollCtrl.animateTo(
@@ -352,12 +374,23 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final chatState = ref.watch(coachChatNotifierProvider(widget.conversationId));
     final conversations = ref.watch(coachConversationsProvider).valueOrNull;
 
-    // Auto-scroll whenever new content arrives.
+    // Auto-scroll whenever new content arrives, respecting the user's
+    // scroll position via the [_userScrolledUp] guard in [_scrollToBottom].
     ref.listen(coachChatNotifierProvider(widget.conversationId), (prev, next) {
-      final wasStreaming = prev?.streamingContent != null;
-      final isStreaming = next.streamingContent != null;
-      final newMessage = (next.messages.length) > (prev?.messages.length ?? 0);
-      if (newMessage || (!wasStreaming && isStreaming)) {
+      final newMessage = next.messages.length > (prev?.messages.length ?? 0);
+      final streamStarted =
+          prev?.streamingContent == null && next.streamingContent != null;
+      final isActivelyStreaming = next.streamingContent != null;
+      final streamFinished =
+          (prev?.isSending ?? false) && !next.isSending && next.streamingContent == null;
+
+      if (streamFinished) {
+        // Response complete — always bring the user to the finished message,
+        // even if they scrolled up while waiting.
+        _userScrolledUp = false;
+        _scrollToBottom();
+      } else if (newMessage || streamStarted || isActivelyStreaming) {
+        // Respects [_userScrolledUp] guard inside [_scrollToBottom].
         _scrollToBottom();
       }
     });
@@ -744,24 +777,17 @@ class _MessageList extends ConsumerWidget {
   final String? streamingContent;
   final String? activeToolName;
 
-  /// True when the Regenerate button should be visible:
-  /// not streaming, last message is assistant, and there is at least one
-  /// user message.
-  bool get _showRegenerateButton {
-    if (isSending) return false;
-    if (streamingContent != null || activeToolName != null) return false;
-    if (messages.isEmpty) return false;
-    if (messages.last.role != MessageRole.assistant) return false;
-    return messages.any((m) => m.role == MessageRole.user);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Show the streaming bubble whenever the AI is working — including the
+    // "thinking" gap between Send and the first token/tool event.
     final showTypingBubble =
-        streamingContent != null || activeToolName != null;
-    final showRegenerate = _showRegenerateButton;
-    final totalItems =
-        messages.length + (showTypingBubble ? 1 : 0) + (showRegenerate ? 1 : 0);
+        isSending || streamingContent != null || activeToolName != null;
+    // Pre-compute the last assistant message index for the Regenerate action.
+    final lastAssistantIndex = (!isSending && streamingContent == null && activeToolName == null)
+        ? messages.lastIndexWhere((m) => m.role == MessageRole.assistant)
+        : -1;
+    final totalItems = messages.length + (showTypingBubble ? 1 : 0);
 
     return ListView.builder(
       controller: scrollController,
@@ -773,6 +799,10 @@ class _MessageList extends ConsumerWidget {
       itemBuilder: (_, i) {
         if (i < messages.length) {
           final msg = messages[i];
+          // Regenerate is available on the last assistant message only,
+          // and only when nothing is in flight.
+          final isLastAssistant =
+              msg.role == MessageRole.assistant && i == lastAssistantIndex;
           return _MessageBubble(
             message: msg,
             onEdit: (msg.role == MessageRole.user && !isSending)
@@ -793,41 +823,18 @@ class _MessageList extends ConsumerWidget {
                     }
                   }
                 : null,
+            onRegenerate: isLastAssistant
+                ? () => ref
+                    .read(coachChatNotifierProvider(conversationId).notifier)
+                    .regenerate()
+                : null,
           );
         }
-        // Streaming / tool-progress bubble at the bottom.
-        if (showTypingBubble && i == messages.length) {
-          return _StreamingBubble(
-            content: streamingContent,
-            toolName: activeToolName,
-          );
-        }
-        // Regenerate button — appears below the last AI message.
-        return Padding(
-          padding: const EdgeInsets.only(
-            bottom: AppDimens.spaceMd,
-            top: AppDimens.spaceSm,
-          ),
-          child: Center(
-            child: TextButton.icon(
-              onPressed: () => ref
-                  .read(coachChatNotifierProvider(conversationId).notifier)
-                  .regenerate(),
-              icon: const Icon(
-                Icons.refresh_rounded,
-                size: 16,
-              ),
-              label: const Text('Regenerate'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.textSecondaryDark,
-                textStyle: AppTextStyles.caption,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                  vertical: AppDimens.spaceSm,
-                ),
-              ),
-            ),
-          ),
+        // Streaming / tool-progress / thinking bubble at the bottom.
+        return _StreamingBubble(
+          content: streamingContent,
+          toolName: activeToolName,
+          isSending: isSending,
         );
       },
     );
@@ -836,12 +843,17 @@ class _MessageList extends ConsumerWidget {
 
 // ── _StreamingBubble ──────────────────────────────────────────────────────────
 
-/// Shows partial streaming tokens or a tool-progress indicator.
+/// Shows partial streaming tokens, a tool-progress indicator, or a
+/// "Thinking…" label while the AI is formulating its first response.
 class _StreamingBubble extends StatelessWidget {
-  const _StreamingBubble({this.content, this.toolName});
+  const _StreamingBubble({this.content, this.toolName, required this.isSending});
 
   final String? content;
   final String? toolName;
+
+  /// True while [CoachChatState.isSending] is set — used to display the
+  /// "Thinking…" label before the first token arrives.
+  final bool isSending;
 
   @override
   Widget build(BuildContext context) {
@@ -880,8 +892,10 @@ class _StreamingBubble extends StatelessWidget {
                 ),
               ),
               child: toolName != null && (content == null || content!.isEmpty)
+                  // Tool in progress — show named tool indicator.
                   ? _ToolProgressIndicator(toolName: toolName!)
                   : content != null && content!.isNotEmpty
+                      // Tokens streaming — render markdown live.
                       ? MarkdownBody(
                           data: content!,
                           styleSheet: MarkdownStyleSheet.fromTheme(
@@ -898,7 +912,22 @@ class _StreamingBubble extends StatelessWidget {
                             ),
                           ),
                         )
-                      : const _TypingIndicator(),
+                      // Thinking phase — animated dots + label.
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _TypingIndicator(),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Thinking…',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.textSecondaryDark,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
             ),
           ),
         ],
@@ -954,13 +983,17 @@ class _ToolProgressIndicator extends StatelessWidget {
 // ── _MessageBubble ────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, this.onEdit});
+  const _MessageBubble({required this.message, this.onEdit, this.onRegenerate});
 
   final ChatMessage message;
 
   /// Called when the user taps "Edit" in the long-press sheet.
   /// Only provided for user messages; null for AI messages.
   final VoidCallback? onEdit;
+
+  /// Called when the user taps "Regenerate" in the long-press sheet.
+  /// Only provided for the last assistant message when nothing is in flight.
+  final VoidCallback? onRegenerate;
 
   bool get _isUser => message.role == MessageRole.user;
 
@@ -1094,6 +1127,17 @@ class _MessageBubble extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   onEdit!();
+                },
+              ),
+            ],
+            if (onRegenerate != null) ...[
+              const Divider(height: 1, color: AppColors.borderDark),
+              ListTile(
+                leading: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+                title: Text('Regenerate', style: AppTextStyles.body),
+                onTap: () {
+                  Navigator.pop(sheetCtx);
+                  onRegenerate!();
                 },
               ),
             ],

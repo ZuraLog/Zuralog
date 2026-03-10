@@ -201,10 +201,12 @@ class CoachChatState {
 /// (which may be a temporary "new_XXXX" string for brand-new conversations).
 class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   StreamSubscription<ChatStreamEvent>? _streamSub;
+  Timer? _timeoutTimer;
 
   @override
   CoachChatState build(String conversationId) {
     ref.onDispose(() {
+      _timeoutTimer?.cancel();
       _streamSub?.cancel();
     });
     return CoachChatState(resolvedConversationId: conversationId);
@@ -305,15 +307,23 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(resolvedConversationId: conversationId);
 
           case ToolProgress(:final toolName, :final isStart):
+            // Tool started — server is alive, cancel the pre-token timeout.
+            _timeoutTimer?.cancel();
+            _timeoutTimer = null;
             state = state.copyWith(
               activeToolName: isStart ? toolName : null,
               clearTool: !isStart,
             );
 
           case StreamToken(:final accumulated):
+            // First token arrived — cancel the pre-token timeout.
+            _timeoutTimer?.cancel();
+            _timeoutTimer = null;
             state = state.copyWith(streamingContent: accumulated);
 
           case StreamComplete(:final message, :final conversationId):
+            _timeoutTimer?.cancel();
+            _timeoutTimer = null;
             // Append the AI reply to the existing messages list.
             state = state.copyWith(
               messages: [...state.messages, message],
@@ -329,6 +339,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             if (!completer.isCompleted) completer.complete();
 
           case StreamError(:final error):
+            _timeoutTimer?.cancel();
+            _timeoutTimer = null;
             state = state.copyWith(
               isSending: false,
               clearStreaming: true,
@@ -339,6 +351,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         }
       },
       onError: (Object error) {
+        _timeoutTimer?.cancel();
+        _timeoutTimer = null;
         state = state.copyWith(
           isSending: false,
           clearStreaming: true,
@@ -347,12 +361,40 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         if (!completer.isCompleted) completer.complete();
       },
       onDone: () {
+        _timeoutTimer?.cancel();
+        _timeoutTimer = null;
         if (!completer.isCompleted) completer.complete();
       },
       cancelOnError: false,
     );
 
+    // Start a 30-second timeout. If no token or tool event arrives within
+    // that window, the stream is considered stuck and we surface an error.
+    _timeoutTimer = Timer(const Duration(seconds: 30), _onTimeout);
+
     await completer.future;
+  }
+
+  /// Called when the 30-second pre-token timeout fires.
+  ///
+  /// Only acts when no tokens or tool events have arrived yet (i.e. the
+  /// server never started responding). Cancels the stream and surfaces a
+  /// user-facing error message.
+  void _onTimeout() {
+    // If tokens or a tool already arrived, the timer should have been
+    // cancelled already. Guard against the edge case where it fires late.
+    if (state.streamingContent != null || state.activeToolName != null) return;
+
+    _streamSub?.cancel();
+    _streamSub = null;
+    _timeoutTimer = null;
+
+    state = state.copyWith(
+      isSending: false,
+      clearStreaming: true,
+      clearTool: true,
+      errorMessage: 'Response timed out. The AI took too long to respond.',
+    );
   }
 
   /// Removes the last assistant message from local state and re-sends the
@@ -449,6 +491,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// message `_Generation stopped._` is appended so the user knows the
   /// generation was cancelled.
   void cancelStream() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
     final wasSending = state.isSending; // capture before cancel
     _streamSub?.cancel();
     _streamSub = null;
