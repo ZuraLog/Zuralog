@@ -201,10 +201,12 @@ class CoachChatState {
 /// (which may be a temporary "new_XXXX" string for brand-new conversations).
 class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   StreamSubscription<ChatStreamEvent>? _streamSub;
+  Timer? _timeoutTimer;
 
   @override
   CoachChatState build(String conversationId) {
     ref.onDispose(() {
+      _timeoutTimer?.cancel();
       _streamSub?.cancel();
     });
     return CoachChatState(resolvedConversationId: conversationId);
@@ -300,6 +302,10 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 
     _streamSub = stream.listen(
       (event) {
+        // Every event from the server proves the connection is alive — reset
+        // the inactivity timer so a legitimately long response is never killed.
+        _resetInactivityTimer();
+
         switch (event) {
           case ConversationCreated(:final conversationId):
             state = state.copyWith(resolvedConversationId: conversationId);
@@ -314,6 +320,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             state = state.copyWith(streamingContent: accumulated);
 
           case StreamComplete(:final message, :final conversationId):
+            _cancelInactivityTimer();
             // Append the AI reply to the existing messages list.
             state = state.copyWith(
               messages: [...state.messages, message],
@@ -329,6 +336,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             if (!completer.isCompleted) completer.complete();
 
           case StreamError(:final error):
+            _cancelInactivityTimer();
             state = state.copyWith(
               isSending: false,
               clearStreaming: true,
@@ -339,6 +347,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         }
       },
       onError: (Object error) {
+        _cancelInactivityTimer();
         state = state.copyWith(
           isSending: false,
           clearStreaming: true,
@@ -347,12 +356,59 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         if (!completer.isCompleted) completer.complete();
       },
       onDone: () {
+        _cancelInactivityTimer();
         if (!completer.isCompleted) completer.complete();
       },
       cancelOnError: false,
     );
 
+    // Start the inactivity timer. It resets on every server event, so it only
+    // fires when the connection goes completely silent — matching how OpenAI,
+    // Anthropic, and all major AI products handle this. The AI can think for
+    // as long as it needs; we only give up if the server stops responding.
+    _resetInactivityTimer();
+
     await completer.future;
+  }
+
+  /// The inactivity window before treating a silent connection as dead.
+  ///
+  /// 10 minutes matches the OpenAI SDK default and Anthropic's recommended
+  /// threshold for streaming requests. Resets on every server event.
+  static const _kInactivityTimeout = Duration(minutes: 10);
+
+  /// Cancels the current inactivity timer and starts a fresh one.
+  ///
+  /// Called on every received server event so the timer only fires when the
+  /// connection has been completely silent for [_kInactivityTimeout].
+  void _resetInactivityTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(_kInactivityTimeout, _onInactivityTimeout);
+  }
+
+  /// Cancels the inactivity timer without restarting it.
+  ///
+  /// Called when the stream completes normally or errors — no timeout needed.
+  void _cancelInactivityTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
+  }
+
+  /// Called when the server has been silent for [_kInactivityTimeout].
+  ///
+  /// The connection is considered dead — cancel the stream and surface a
+  /// clear error so the user knows they can try again.
+  void _onInactivityTimeout() {
+    _streamSub?.cancel();
+    _streamSub = null;
+    _timeoutTimer = null;
+
+    state = state.copyWith(
+      isSending: false,
+      clearStreaming: true,
+      clearTool: true,
+      errorMessage: 'The connection went silent. Please try again.',
+    );
   }
 
   /// Removes the last assistant message from local state and re-sends the
@@ -449,6 +505,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// message `_Generation stopped._` is appended so the user knows the
   /// generation was cancelled.
   void cancelStream() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
     final wasSending = state.isSending; // capture before cancel
     _streamSub?.cancel();
     _streamSub = null;

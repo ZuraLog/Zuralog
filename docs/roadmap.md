@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-10 (Phase 10.6 — Coach tab WebSocket production fix; AI chat fully working end-to-end)
+**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX: thinking state, inactivity timeout, smart auto-scroll + scroll-to-bottom button, regenerate in long-press)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -321,6 +321,19 @@ End-to-end fix making the Coach tab's AI chat work against the production backen
 | P0 | Fix new-conversation stale history bug (`chat_thread_screen.dart`, `coach_providers.dart`) | ✅ Done | `seedFromPrior()` added to `CoachChatNotifier`; called before `replaceNamed()` to prevent redundant `loadHistory()` call |
 | P1 | Fix backend tests for streaming protocol | ✅ Done | `test_ws_connect_and_echo` and `test_ws_empty_message_returns_error` updated to match `conversation_init` → `stream_token` → `stream_end` protocol; LLM mock updated to use `stream_chat` async generator |
 | P1 | Add `make uninstall`, `make reinstall`, `make reinstall-prod` targets | ✅ Done | Ensures old APK is removed before reinstall; required because `flutter run --release` does not uninstall stale APKs |
+
+---
+
+## Phase 10.7 — Coach Chat UX Polish (`feat/coach-chat-ux-improvements`)
+
+> **Branch:** `feat/coach-chat-ux-improvements` — in progress
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Thinking state — "Thinking…" label between Send and first token | ✅ Done | Animated dots + italic "Thinking…" shown while `isSending=true` and no tokens/tool yet; disappears when tokens arrive |
+| P0 | Inactivity timeout — surface error when connection goes silent | ✅ Done | 10-minute inactivity timer in `CoachChatNotifier`; resets on every server event (token/tool/complete/error); fires only if connection is completely silent; matches OpenAI SDK default |
+| P0 | Smart auto-scroll — follow bottom, pause when scrolled up | ✅ Done | 80 px threshold; pauses on user scroll-up; floating scroll-to-bottom arrow button (sage green) fades in when user scrolls up; tapping it scrolls back down and clears the flag |
+| P1 | Regenerate moved to long-press sheet | ✅ Done | Standalone button removed; long-press last AI message → Copy + Regenerate |
 
 ---
 
