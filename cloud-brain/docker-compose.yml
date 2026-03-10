@@ -39,21 +39,15 @@ services:
   celery-worker:
     build: .
     container_name: zuralog-celery-worker
-    command: /app/.venv/bin/celery -A app.worker worker --loglevel=info --concurrency=2
+    # --beat merges the scheduler into the worker process (safe with single replica).
+    # If Worker is ever scaled to 2+ replicas, split Beat back to a dedicated service
+    # to avoid duplicate task execution.
+    command: /app/.venv/bin/celery -A app.worker worker --beat --loglevel=info --concurrency=2
     env_file: .env
     depends_on:
       redis:
         condition: service_healthy
       postgres:
-        condition: service_healthy
-
-  celery-beat:
-    build: .
-    container_name: zuralog-celery-beat
-    command: /app/.venv/bin/celery -A app.worker beat --loglevel=info
-    env_file: .env
-    depends_on:
-      redis:
         condition: service_healthy
 
 volumes:

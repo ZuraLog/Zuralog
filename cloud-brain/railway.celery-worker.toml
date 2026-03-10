@@ -15,7 +15,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "celery -A app.worker worker --loglevel=info --concurrency=2"
+startCommand = "celery -A app.worker worker --beat --loglevel=info --concurrency=2"
 
 # No healthcheckPath — Celery is not an HTTP service.
 # Railway will consider the service healthy once the process starts.
