@@ -83,6 +83,7 @@ abstract final class AppTheme {
       fontFamily: AppTextStyles.bodyLarge.fontFamily,
       textTheme: _buildTextTheme(
         isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
+        isLight,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor:
@@ -238,8 +239,9 @@ abstract final class AppTheme {
           horizontal: AppDimens.spaceMd,
           vertical: AppDimens.spaceMd,
         ),
-        hintStyle: AppTextStyles.bodyLarge
-            .copyWith(color: AppColors.textSecondary),
+        hintStyle: AppTextStyles.bodyLarge.copyWith(
+          color: isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark,
+        ),
         labelStyle: AppTextStyles.bodyLarge.copyWith(
           color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         ),
@@ -254,7 +256,8 @@ abstract final class AppTheme {
             isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
         selectedItemColor:
             isLight ? AppColors.primaryOnLight : AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
+        unselectedItemColor:
+            isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
         selectedLabelStyle: AppTextStyles.labelSmall,
@@ -271,7 +274,9 @@ abstract final class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: activeColor);
           }
-          return const IconThemeData(color: AppColors.textSecondary);
+          return IconThemeData(
+            color: isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark,
+          );
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final activeColor =
@@ -279,8 +284,9 @@ abstract final class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return AppTextStyles.labelSmall.copyWith(color: activeColor);
           }
-          return AppTextStyles.labelSmall
-              .copyWith(color: AppColors.textSecondary);
+          return AppTextStyles.labelSmall.copyWith(
+            color: isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark,
+          );
         }),
       ),
       switchTheme: SwitchThemeData(
@@ -288,7 +294,7 @@ abstract final class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return isLight ? AppColors.surfaceLight : AppColors.surfaceDark;
           }
-          return AppColors.textSecondary;
+          return isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -323,8 +329,8 @@ abstract final class AppTheme {
       // Tooltip styling — used by OnboardingTooltip and system tooltips.
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isLight ? AppColors.surfaceLight : const Color(0xFF3A3A3C),
-          borderRadius: BorderRadius.circular(12),
+          color: isLight ? AppColors.surfaceLight : AppColors.surfaceDark,
+          borderRadius: BorderRadius.circular(AppDimens.shapeSm),
         ),
         textStyle: AppTextStyles.bodySmall.copyWith(
           color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
@@ -339,7 +345,10 @@ abstract final class AppTheme {
   /// Maps [AppTextStyles] to Material [TextTheme] slots.
   ///
   /// [defaultColor] is the primary text color for the current brightness.
-  static TextTheme _buildTextTheme(Color defaultColor) {
+  /// [isLight] selects the correct secondary color token for WCAG AA contrast.
+  static TextTheme _buildTextTheme(Color defaultColor, bool isLight) {
+    final secondaryColor =
+        isLight ? AppColors.textSecondaryLight : AppColors.textSecondaryDark;
     return TextTheme(
       displayLarge: AppTextStyles.displayLarge.copyWith(color: defaultColor),
       displayMedium: AppTextStyles.displayMedium.copyWith(color: defaultColor),
@@ -352,10 +361,10 @@ abstract final class AppTheme {
       titleSmall: AppTextStyles.labelLarge.copyWith(color: defaultColor),
       bodyLarge: AppTextStyles.bodyLarge.copyWith(color: defaultColor),
       bodyMedium: AppTextStyles.bodyMedium.copyWith(color: defaultColor),
-      bodySmall: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+      bodySmall: AppTextStyles.bodySmall.copyWith(color: secondaryColor),
       labelLarge: AppTextStyles.labelLarge.copyWith(color: defaultColor),
       labelMedium: AppTextStyles.labelMedium.copyWith(color: defaultColor),
-      labelSmall: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
+      labelSmall: AppTextStyles.labelSmall.copyWith(color: secondaryColor),
     );
   }
 }

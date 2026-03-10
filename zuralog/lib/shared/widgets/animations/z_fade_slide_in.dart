@@ -73,13 +73,19 @@ class _ZFadeSlideInState extends State<ZFadeSlideIn>
 
   @override
   Widget build(BuildContext context) {
+    // FadeTransition is a ListenableBuilder internally and avoids the extra
+    // per-frame Opacity widget rebuild. AnimatedBuilder handles the translate
+    // and passes the already-fading subtree as its pre-built child.
     return AnimatedBuilder(
-      animation: _controller,
+      animation: _slide,
       builder: (context, child) => Transform.translate(
         offset: Offset(0, _slide.value),
-        child: Opacity(opacity: _opacity.value, child: child),
+        child: child,
       ),
-      child: widget.child,
+      child: FadeTransition(
+        opacity: _opacity,
+        child: widget.child,
+      ),
     );
   }
 }

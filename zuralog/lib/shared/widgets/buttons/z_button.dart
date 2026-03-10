@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
 
 /// Button visual style variants.
@@ -72,7 +73,7 @@ class ZButton extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 18),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppDimens.spaceSm),
               ],
               Text(label),
             ],

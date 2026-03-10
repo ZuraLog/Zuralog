@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 
@@ -29,12 +30,12 @@ class ZErrorState extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppDimens.spaceXl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.error_outline, size: 56, color: colorScheme.error),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppDimens.spaceMd),
             Text(
               message,
               style: AppTextStyles.bodyLarge.copyWith(
@@ -43,7 +44,7 @@ class ZErrorState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: AppDimens.spaceLg),
               ZButton(
                 label: 'Try Again',
                 onPressed: onRetry,
