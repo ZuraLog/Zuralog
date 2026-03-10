@@ -8,10 +8,9 @@ and wires up the MCP framework (registry, client, memory store).
 """
 
 import logging
-import subprocess
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import httpx
 import sentry_sdk
@@ -19,7 +18,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
-from sentry_sdk.integrations.celery import CeleryIntegration
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -102,26 +100,17 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _get_release() -> str:
-    """Return a Sentry release string derived from the current git SHA.
+    """Return a Sentry release string from the Railway git SHA env var.
 
-    Falls back to ``cloud-brain@unknown`` if git is unavailable (e.g. in
-    Docker images built without the ``.git`` directory).
+    Falls back to ``cloud-brain@unknown`` if the env var is not set.
+    Railway injects RAILWAY_GIT_COMMIT_SHA at build time.
     """
-    try:
-        sha = (
-            subprocess.check_output(
-                ["git", "rev-parse", "--short", "HEAD"],
-                stderr=subprocess.DEVNULL,
-                cwd=Path(__file__).parent,
-            )
-            .decode()
-            .strip()
-        )
-        return f"cloud-brain@{sha}"
-    except Exception:
-        return "cloud-brain@unknown"
+    sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA", "unknown")
+    return f"cloud-brain@{sha[:7] if sha != 'unknown' else sha}"
 
 
 if settings.sentry_dsn:
@@ -136,10 +125,9 @@ if settings.sentry_dsn:
         integrations=[
             FastApiIntegration(transaction_style="endpoint"),
             StarletteIntegration(transaction_style="endpoint"),
-            CeleryIntegration(),
         ],
     )
-    logging.info("Sentry initialized for Cloud Brain (%s)", settings.app_env)
+    logger.info("Sentry initialized for Cloud Brain (%s)", settings.app_env)
 
 
 @asynccontextmanager
@@ -177,78 +165,106 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             device_write_service=device_write_svc,
         )
     )
-    # Phase 1.7: DB-backed token service wired into StravaServer
-    strava_token_service = StravaTokenService()
-    strava_server = StravaServer(
-        token_service=strava_token_service,
-        db_factory=async_session,
-        rate_limiter=StravaRateLimiter(redis_url=settings.redis_url),
-    )
-    registry.register(strava_server)  # Phase 1.6 + 1.7
+    # Phase 1.7: DB-backed token service wired into StravaServer (conditional on credentials)
+    if settings.strava_client_id:
+        strava_token_service = StravaTokenService()
+        strava_server = StravaServer(
+            token_service=strava_token_service,
+            db_factory=async_session,
+            rate_limiter=StravaRateLimiter(redis_url=settings.redis_url),
+        )
+        registry.register(strava_server)
+        app.state.strava_token_service = strava_token_service
+    else:
+        app.state.strava_token_service = None
+
     registry.register(DeepLinkServer())  # Phase 1.12
     app.state.mcp_registry = registry
-    app.state.strava_token_service = strava_token_service
 
     # Fitbit wiring (Phase 5.1 / Task-3)
-    fitbit_token_service = FitbitTokenService()
-    fitbit_rate_limiter = FitbitRateLimiter(redis_url=settings.redis_url)
-    fitbit_server = FitbitServer(
-        token_service=fitbit_token_service,
-        db_factory=async_session,
-        rate_limiter=fitbit_rate_limiter,
-    )
-    registry.register(fitbit_server)
-    app.state.fitbit_token_service = fitbit_token_service
-    app.state.fitbit_rate_limiter = fitbit_rate_limiter
+    if settings.fitbit_client_id:
+        fitbit_token_service = FitbitTokenService()
+        fitbit_rate_limiter = FitbitRateLimiter(redis_url=settings.redis_url)
+        fitbit_server = FitbitServer(
+            token_service=fitbit_token_service,
+            db_factory=async_session,
+            rate_limiter=fitbit_rate_limiter,
+        )
+        registry.register(fitbit_server)
+        app.state.fitbit_token_service = fitbit_token_service
+        app.state.fitbit_rate_limiter = fitbit_rate_limiter
+    else:
+        app.state.fitbit_token_service = None
+        app.state.fitbit_rate_limiter = None
 
     # Oura wiring (Phase 5.2)
-    oura_token_service = OuraTokenService()
-    oura_rate_limiter = OuraRateLimiter(redis_url=settings.redis_url)
-    oura_server = OuraServer(
-        token_service=oura_token_service,
-        db_factory=async_session,
-    )
-    registry.register(oura_server)
-    app.state.oura_token_service = oura_token_service
-    app.state.oura_rate_limiter = oura_rate_limiter
+    if settings.oura_client_id:
+        oura_token_service = OuraTokenService()
+        oura_rate_limiter = OuraRateLimiter(redis_url=settings.redis_url)
+        oura_server = OuraServer(
+            token_service=oura_token_service,
+            db_factory=async_session,
+        )
+        registry.register(oura_server)
+        app.state.oura_token_service = oura_token_service
+        app.state.oura_rate_limiter = oura_rate_limiter
+    else:
+        app.state.oura_token_service = None
+        app.state.oura_rate_limiter = None
 
     # Withings wiring
-    withings_signature_service = WithingsSignatureService(
-        client_id=settings.withings_client_id,
-        client_secret=settings.withings_client_secret,
-    )
-    withings_token_service = WithingsTokenService()
-    withings_rate_limiter = WithingsRateLimiter(redis_url=settings.redis_url)
-    withings_server = WithingsServer(
-        token_service=withings_token_service,
-        signature_service=withings_signature_service,
-        db_factory=async_session,
-        rate_limiter=withings_rate_limiter,
-    )
-    registry.register(withings_server)
-    app.state.withings_token_service = withings_token_service
-    app.state.withings_signature_service = withings_signature_service
-    app.state.withings_rate_limiter = withings_rate_limiter
+    if settings.withings_client_id:
+        withings_signature_service = WithingsSignatureService(
+            client_id=settings.withings_client_id,
+            client_secret=settings.withings_client_secret,
+        )
+        withings_token_service = WithingsTokenService()
+        withings_rate_limiter = WithingsRateLimiter(redis_url=settings.redis_url)
+        withings_server = WithingsServer(
+            token_service=withings_token_service,
+            signature_service=withings_signature_service,
+            db_factory=async_session,
+            rate_limiter=withings_rate_limiter,
+        )
+        registry.register(withings_server)
+        app.state.withings_token_service = withings_token_service
+        app.state.withings_signature_service = withings_signature_service
+        app.state.withings_rate_limiter = withings_rate_limiter
+    else:
+        app.state.withings_token_service = None
+        app.state.withings_signature_service = None
+        app.state.withings_rate_limiter = None
 
     # Polar wiring
-    polar_token_service = PolarTokenService()
-    polar_rate_limiter = PolarRateLimiter(redis_url=settings.redis_url)
-    polar_server = PolarServer(
-        token_service=polar_token_service,
-        db_factory=async_session,
-        rate_limiter=polar_rate_limiter,
-    )
-    registry.register(polar_server)
-    app.state.polar_token_service = polar_token_service
-    app.state.polar_rate_limiter = polar_rate_limiter
+    if settings.polar_client_id:
+        polar_token_service = PolarTokenService()
+        polar_rate_limiter = PolarRateLimiter(redis_url=settings.redis_url)
+        polar_server = PolarServer(
+            token_service=polar_token_service,
+            db_factory=async_session,
+            rate_limiter=polar_rate_limiter,
+        )
+        registry.register(polar_server)
+        app.state.polar_token_service = polar_token_service
+        app.state.polar_rate_limiter = polar_rate_limiter
+    else:
+        app.state.polar_token_service = None
+        app.state.polar_rate_limiter = None
 
     # Dynamic tool injection: resolve tools per user at chat time
     tool_resolver = UserToolResolver(registry=registry)
     app.state.mcp_client = MCPClient(registry=registry, tool_resolver=tool_resolver)
     # Use Pinecone for long-term memory when configured, fall back to in-memory
-    _pinecone_store = PineconeMemoryStore()
-    app.state.memory_store = _pinecone_store if _pinecone_store.is_available else InMemoryStore()
-    app.state.llm_client = LLMClient()
+    if settings.pinecone_api_key:
+        _pinecone_store = PineconeMemoryStore()
+        app.state.memory_store = _pinecone_store if _pinecone_store.is_available else InMemoryStore()
+    else:
+        app.state.memory_store = InMemoryStore()
+    # LLM client: only initialize when API key is configured
+    if settings.openrouter_api_key:
+        app.state.llm_client = LLMClient()
+    else:
+        app.state.llm_client = None
     app.state.rate_limiter = RateLimiter()
     app.state.cache_service = CacheService()
     app.state.analytics_service = AnalyticsService()

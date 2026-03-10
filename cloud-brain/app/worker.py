@@ -13,6 +13,7 @@ import logging
 import ssl
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.config import settings
 
@@ -75,9 +76,13 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    task_track_started=True,
+    task_track_started=False,  # was True — saves 1,350 Redis keys/day
     task_acks_late=True,
     worker_prefetch_multiplier=1,
+    result_expires=3600,  # results expire after 1 hour (saves Redis memory)
+    task_reject_on_worker_lost=True,  # requeue if worker dies mid-task
+    beat_scheduler="redbeat.RedBeatScheduler",
+    redbeat_redis_url=settings.redis_url,
 )
 
 # When using TLS Redis (rediss://), ssl_cert_reqs must be set explicitly for Celery.
@@ -92,25 +97,21 @@ if settings.redis_url.startswith("rediss://"):
 
 # Beat schedule: periodic tasks
 celery_app.conf.beat_schedule = {
-    "sync-active-users-15m": {
-        "task": "app.services.sync_scheduler.sync_all_users_task",
-        "schedule": 900.0,  # 15 minutes
-    },
     "refresh-expiring-tokens-1h": {
         "task": "app.services.sync_scheduler.refresh_tokens_task",
         "schedule": 3600.0,  # 1 hour
     },
-    "sync-fitbit-users-15m": {
+    "sync-fitbit-users-1h": {
         "task": "app.tasks.fitbit_sync.sync_fitbit_periodic_task",
-        "schedule": 900.0,  # 15 minutes
+        "schedule": 3600.0,  # 1 hour (was 15 min)
     },
     "refresh-fitbit-tokens-1h": {
         "task": "app.tasks.fitbit_sync.refresh_fitbit_tokens_task",
         "schedule": 3600.0,  # 1 hour
     },
-    "sync-oura-users-15m": {
+    "sync-oura-users-1h": {
         "task": "app.tasks.oura_sync.sync_oura_periodic_task",
-        "schedule": 900.0,  # 15 minutes
+        "schedule": 3600.0,  # 1 hour (was 15 min)
     },
     "refresh-oura-tokens-4h": {
         "task": "app.tasks.oura_sync.refresh_oura_tokens_task",
@@ -120,17 +121,17 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.oura_sync.renew_oura_webhook_subscriptions_task",
         "schedule": 86400.0,  # 24 hours
     },
-    "sync-withings-users-15m": {
+    "sync-withings-users-1h": {
         "task": "app.tasks.withings_sync.sync_withings_periodic_task",
-        "schedule": 900.0,  # 15 minutes
+        "schedule": 3600.0,  # 1 hour (was 15 min)
     },
     "refresh-withings-tokens-1h": {
         "task": "app.tasks.withings_sync.refresh_withings_tokens_task",
         "schedule": 3600.0,  # 1 hour (tokens expire in 3h, refresh buffer is 30min)
     },
-    "sync-polar-users-15m": {
+    "sync-polar-users-1h": {
         "task": "polar.sync_periodic",
-        "schedule": 900.0,  # 15 minutes
+        "schedule": 3600.0,  # 1 hour (was 15 min)
     },
     "monitor-polar-token-expiry-daily": {
         "task": "polar.monitor_token_expiry",
@@ -150,12 +151,12 @@ celery_app.conf.beat_schedule = {
         "schedule": 3600.0,  # 1 hour
     },
     "generate-weekly-reports-monday": {
-        "task": "app.tasks.report_tasks.generate_weekly_reports_task",
-        "schedule": 604800.0,  # 7 days — triggered Monday 06:00 UTC via crontab
+        "task": "app.tasks.report.generate_weekly_reports_task",
+        "schedule": crontab(hour=6, minute=0, day_of_week=1),  # Monday 06:00 UTC
     },
     "generate-monthly-reports-1st": {
-        "task": "app.tasks.report_tasks.generate_monthly_reports_task",
-        "schedule": 2592000.0,  # ~30 days — triggered 1st of month 06:00 UTC
+        "task": "app.tasks.report.generate_monthly_reports_task",
+        "schedule": crontab(hour=6, minute=0, day_of_month=1),  # 1st of month 06:00 UTC
     },
     "check-stale-integrations-daily": {
         "task": "app.tasks.insight_tasks.check_stale_integrations_task",

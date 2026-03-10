@@ -23,9 +23,18 @@ class SentryUserContextMiddleware(BaseHTTPMiddleware):
     Handlers must set ``request.state.user_id`` after validating the bearer
     token. This middleware reads that value and propagates it to Sentry so
     every event on the request is tagged with the authenticated user.
+
+    Health check and documentation paths are skipped entirely to avoid
+    unnecessary Sentry context overhead on high-frequency probes.
     """
 
+    _SKIP_PATHS = frozenset({"/health", "/docs", "/openapi.json", "/redoc"})
+
     async def dispatch(self, request: Request, call_next):
+        # Skip Sentry context for health checks and docs
+        if request.url.path in self._SKIP_PATHS:
+            return await call_next(request)
+
         # Run the handler first — it populates request.state.user_id
         # via auth_service.get_user() and the explicit state assignment.
         response = await call_next(request)

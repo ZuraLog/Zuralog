@@ -21,7 +21,7 @@ from datetime import date, timedelta
 import sentry_sdk
 from sqlalchemy import select
 
-from app.database import async_session
+from app.database import worker_async_session as async_session
 from app.models.report import Report, ReportType
 from app.models.user import User
 from app.services.report_generator import ReportGenerator

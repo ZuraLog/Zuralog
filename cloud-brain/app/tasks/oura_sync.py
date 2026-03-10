@@ -36,7 +36,7 @@ import sentry_sdk
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import async_session
+from app.database import worker_async_session as async_session
 from app.models.health_data import ActivityType, SleepRecord, UnifiedActivity
 from app.models.integration import Integration
 from app.services.oura_token_service import OuraTokenService

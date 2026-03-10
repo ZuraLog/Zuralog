@@ -6,6 +6,9 @@ Gated behind the ``fcm_credentials_path`` setting — returns None
 if no credentials are configured, allowing graceful degradation
 during development.
 
+Firebase is lazy-initialized on first use rather than at import time.
+This avoids startup cost and errors when credentials are not configured.
+
 Key methods
 -----------
 ``send_notification``       — Send a push to a single device token (existing).
@@ -26,38 +29,58 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# FCM is optional — only initialize if credentials are configured.
-_fcm_initialized = False
+# FCM initialization state: None = not yet attempted, True/False = result
+_fcm_initialized = None
 
-if settings.firebase_credentials_json:
-    # Production path: credentials provided as a JSON string env var (Railway).
-    try:
-        import json
 
-        import firebase_admin  # type: ignore[import-untyped]
-        from firebase_admin import credentials
+def _ensure_fcm_initialized() -> bool:
+    """Lazy-initialize Firebase if not already attempted.
 
-        cred_dict = json.loads(settings.firebase_credentials_json)
-        cred = credentials.Certificate(cred_dict)
-        firebase_admin.initialize_app(cred)
-        _fcm_initialized = True
-        logger.info("FCM initialized from FIREBASE_CREDENTIALS_JSON env var")
-    except Exception:
-        logger.exception("Failed to initialize FCM from JSON env var")
-elif settings.fcm_credentials_path:
-    # Local dev path: credentials loaded from a file.
-    try:
-        import firebase_admin  # type: ignore[import-untyped]
-        from firebase_admin import credentials
+    Called on first use rather than at module import time. This avoids
+    startup overhead and import-time errors when FCM credentials are absent.
 
-        cred = credentials.Certificate(settings.fcm_credentials_path)
-        firebase_admin.initialize_app(cred)
-        _fcm_initialized = True
-        logger.info("FCM initialized with credentials from %s", settings.fcm_credentials_path)
-    except Exception:
-        logger.exception("Failed to initialize FCM")
-else:
-    logger.info("FCM not configured — push notifications disabled")
+    Returns:
+        True if FCM was successfully initialized, False otherwise.
+    """
+    global _fcm_initialized
+
+    if _fcm_initialized is not None:
+        return _fcm_initialized
+
+    if settings.firebase_credentials_json:
+        # Production path: credentials provided as a JSON string env var (Railway).
+        try:
+            import json
+
+            import firebase_admin  # type: ignore[import-untyped]
+            from firebase_admin import credentials
+
+            cred_dict = json.loads(settings.firebase_credentials_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            _fcm_initialized = True
+            logger.info("FCM initialized from FIREBASE_CREDENTIALS_JSON env var")
+        except Exception:
+            logger.exception("Failed to initialize FCM from JSON env var")
+            _fcm_initialized = False
+    elif settings.fcm_credentials_path:
+        # Local dev path: credentials loaded from a file.
+        try:
+            import firebase_admin  # type: ignore[import-untyped]
+            from firebase_admin import credentials
+
+            cred = credentials.Certificate(settings.fcm_credentials_path)
+            firebase_admin.initialize_app(cred)
+            _fcm_initialized = True
+            logger.info("FCM initialized with credentials from %s", settings.fcm_credentials_path)
+        except Exception:
+            logger.exception("Failed to initialize FCM")
+            _fcm_initialized = False
+    else:
+        logger.info("FCM not configured — push notifications disabled")
+        _fcm_initialized = False
+
+    return _fcm_initialized
 
 
 class PushService:
@@ -74,7 +97,7 @@ class PushService:
         Returns:
             True if FCM was successfully initialized.
         """
-        return _fcm_initialized
+        return _ensure_fcm_initialized()
 
     def send_notification(
         self,
@@ -95,7 +118,7 @@ class PushService:
             The FCM message ID on success, or None if FCM is not
             configured or the send fails.
         """
-        if not _fcm_initialized:
+        if not _ensure_fcm_initialized():
             logger.debug("FCM not initialized — skipping notification")
             return None
 
@@ -163,21 +186,29 @@ class PushService:
         # ------------------------------------------------------------------
         push_sent = False
 
-        if _fcm_initialized:
+        if _ensure_fcm_initialized():
             try:
                 from sqlalchemy import select
 
-                from app.database import async_session as _session_factory
+                from app.database import worker_async_session as _session_factory
                 from app.models.user_device import UserDevice
 
-                async with _session_factory() as _token_db:
-                    token_result = await _token_db.execute(
+                async def _fetch_tokens(session) -> list[str]:
+                    token_result = await session.execute(
                         select(UserDevice.fcm_token).where(
                             UserDevice.user_id == user_id,
                             UserDevice.fcm_token.isnot(None),
                         )
                     )
-                    tokens: list[str] = [row[0] for row in token_result.all() if row[0]]
+                    return [row[0] for row in token_result.all() if row[0]]
+
+                # Reuse the caller's session if provided — avoids an extra
+                # NullPool connect/disconnect cycle per notification.
+                if db is not None:
+                    tokens: list[str] = await _fetch_tokens(db)
+                else:
+                    async with _session_factory() as _token_db:
+                        tokens = await _fetch_tokens(_token_db)
 
                 for token in tokens:
                     msg_id = self.send_notification(token, title, body, data)
@@ -185,9 +216,7 @@ class PushService:
                         push_sent = True
 
             except Exception:
-                logger.exception(
-                    "send_and_persist: FCM delivery failed for user=%s", user_id
-                )
+                logger.exception("send_and_persist: FCM delivery failed for user=%s", user_id)
 
         # ------------------------------------------------------------------
         # 2. Persist to notification_logs regardless of push outcome
@@ -209,7 +238,7 @@ class PushService:
                 db.add(log_row)
                 await db.flush()
             else:
-                from app.database import async_session as _factory
+                from app.database import worker_async_session as _factory
 
                 async with _factory() as _persist_db:
                     _persist_db.add(log_row)
@@ -244,7 +273,7 @@ class PushService:
             The FCM message ID on success, or None if FCM is not
             configured or the send fails.
         """
-        if not _fcm_initialized:
+        if not _ensure_fcm_initialized():
             logger.debug("FCM not initialized — skipping data message")
             return None
 

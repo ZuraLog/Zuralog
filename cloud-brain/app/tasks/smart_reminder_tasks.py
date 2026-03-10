@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 import sentry_sdk
 
-from app.database import async_session
+from app.database import worker_async_session as async_session
 from app.services.smart_reminder import SmartReminderEngine
 from app.worker import celery_app
 
