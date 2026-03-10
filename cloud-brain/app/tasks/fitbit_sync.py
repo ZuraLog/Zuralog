@@ -491,70 +491,7 @@ async def _sync_fitbit_user(
         total_weight += await _sync_fitbit_weight(db, user_id, access_token, date_str)
         total_nutrition += await _sync_fitbit_nutrition(db, user_id, access_token, date_str)
 
-        # Heart Rate — no dedicated model; store as log only.
-        # TODO(task-future): upsert into a HeartRateRecord model when created.
-        hr_url = f"{_FITBIT_API_BASE}/1/user/-/activities/heart/date/{date_str}/1d.json"
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                hr_resp = await client.get(
-                    hr_url,
-                    headers={"Authorization": f"Bearer {access_token}"},
-                )
-            if hr_resp.status_code == 200:
-                hr_data = hr_resp.json()
-                resting_hr = hr_data.get("activities-heart", [{}])[0].get("value", {}).get("restingHeartRate")
-                if resting_hr:
-                    logger.debug(
-                        "Fitbit HR: resting=%d bpm for user '%s' date '%s' (no model, skipped)",
-                        resting_hr,
-                        user_id,
-                        date_str,
-                    )
-            else:
-                logger.debug(
-                    "Fitbit HR API returned %d for user '%s' date '%s'",
-                    hr_resp.status_code,
-                    user_id,
-                    date_str,
-                )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Fitbit HR fetch error for user '%s': %s", user_id, exc)
-
-        # SpO2 — no dedicated model.
-        # TODO(task-future): upsert into a SpO2Record model when created.
-        spo2_url = f"{_FITBIT_API_BASE}/1/user/-/spo2/date/{date_str}.json"
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                spo2_resp = await client.get(
-                    spo2_url,
-                    headers={"Authorization": f"Bearer {access_token}"},
-                )
-            if spo2_resp.status_code == 200:
-                logger.debug(
-                    "Fitbit SpO2 data received for user '%s' date '%s' (no model, skipped)",
-                    user_id,
-                    date_str,
-                )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Fitbit SpO2 fetch error for user '%s': %s", user_id, exc)
-
-        # HRV — no dedicated model.
-        # TODO(task-future): upsert into an HRVRecord model when created.
-        hrv_url = f"{_FITBIT_API_BASE}/1/user/-/hrv/date/{date_str}.json"
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                hrv_resp = await client.get(
-                    hrv_url,
-                    headers={"Authorization": f"Bearer {access_token}"},
-                )
-            if hrv_resp.status_code == 200:
-                logger.debug(
-                    "Fitbit HRV data received for user '%s' date '%s' (no model, skipped)",
-                    user_id,
-                    date_str,
-                )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Fitbit HRV fetch error for user '%s': %s", user_id, exc)
+        # TODO: HR, SpO2, HRV fetch removed — no DB models yet. Re-add when HeartRateRecord/SpO2Record/HRVRecord exist.
 
     return {
         "activities": total_activities,
