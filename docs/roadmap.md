@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-09 (Coach tab AI features: stop generation button, regenerate/retry, copy message long-press, message editing, better empty state with suggestions, search conversations)
+**Last Updated:** 2026-03-10 (Phase 10.6 — Coach tab WebSocket production fix; AI chat fully working end-to-end)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -303,6 +303,24 @@ All 6 Coach tab AI conversation features implemented and reviewed.
 | P0 | Message Editing | ✅ Done | Long-press user message → "Edit" in bottom sheet; truncates messages from that index; snapshot-and-restore on cancel; editing indicator bar above input |
 | P0 | Better Empty State & Suggestions | ✅ Done | `_CoachEmptyState` with fade-in, pulsing logo, "What I can do" capability row, grouped suggestion cards with 4px left colored border and category headers |
 | P0 | Search Conversations | ✅ Done | `_ConversationDrawer` gets `AnimatedSize` search field; client-side filtering by title and preview; empty-results state |
+
+---
+
+## Phase 10.6 — Coach Tab WebSocket Production Fix (2026-03-10)
+
+> **Branch:** `fix/websocket-connection` → merged to main (2026-03-10); subsequent fixes direct to main
+
+End-to-end fix making the Coach tab's AI chat work against the production backend. All changes are live on `main`.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Fix WebSocket URI construction (`ws_client.dart`) | ✅ Done | `_deriveWsUrl()` now parses base URL as `https://` to get port 443, then rebuilds as `wss://` with explicit port |
+| P0 | Fix WebSocket `accept()` ordering (`chat.py`) | ✅ Done | Moved `await websocket.accept()` to top of `websocket_chat` before auth; fixes HTTP 500 on auth failure |
+| P0 | Wire `StorageService` into app state (`main.py`) | ✅ Done | `StorageService` imported and initialised in lifespan startup |
+| P0 | Fix missing `archived`/`deleted_at` columns in production DB | ✅ Done | `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS` run directly against production Supabase |
+| P0 | Fix new-conversation stale history bug (`chat_thread_screen.dart`, `coach_providers.dart`) | ✅ Done | `seedFromPrior()` added to `CoachChatNotifier`; called before `replaceNamed()` to prevent redundant `loadHistory()` call |
+| P1 | Fix backend tests for streaming protocol | ✅ Done | `test_ws_connect_and_echo` and `test_ws_empty_message_returns_error` updated to match `conversation_init` → `stream_token` → `stream_end` protocol; LLM mock updated to use `stream_chat` async generator |
+| P1 | Add `make uninstall`, `make reinstall`, `make reinstall-prod` targets | ✅ Done | Ensures old APK is removed before reinstall; required because `flutter run --release` does not uninstall stale APKs |
 
 ---
 

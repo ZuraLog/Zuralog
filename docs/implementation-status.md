@@ -1,9 +1,41 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-10 (Railway Infrastructure Optimization — Upstash removal, Celery_Beat consolidation, observability tuning)  
+**Last Updated:** 2026-03-10 (Coach tab WebSocket production fix — AI chat fully working end-to-end)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Coach Tab WebSocket Production Fix (2026-03-10)
+
+**Scope:** End-to-end fix for the Coach tab AI chat against the production backend.  
+**Commits:** `19537c3`, `3008934`, `503ca98`, `96481f1`, `13245b2`
+
+**What was fixed:**
+
+1. **WebSocket URI construction** (`zuralog/lib/core/network/ws_client.dart`) — `_deriveWsUrl()` was passing `wss://api.zuralog.com` to `dart:io WebSocket.connect()`, which left the port as 0. Fix: parse the base URL as `https://` first (Dart resolves this to port 443), then rebuild the URI as `wss://` with the port set explicitly.
+
+2. **WebSocket `accept()` ordering** (`cloud-brain/app/api/v1/chat.py`) — `websocket.accept()` was called after auth validation. Starlette cannot close an unaccepted WebSocket; unanticipated failures returned HTTP 500 instead of a JSON error. Fix: moved `await websocket.accept()` to the very first line of `websocket_chat`, before all auth and DB work. Updated `_authenticate_ws` to send a JSON error before closing the socket on auth failure.
+
+3. **`StorageService` missing from app state** (`cloud-brain/app/main.py`) — `StorageService` was used throughout `chat.py` but was never initialised in the lifespan startup, causing `AttributeError: 'State' object has no attribute 'storage_service'` on every WebSocket request. Fix: imported and wired up `StorageService` in the lifespan.
+
+4. **Missing `archived`/`deleted_at` columns in production DB** — Alembic reported the migration `i4d5e6f7a8b9` as already applied (its revision ID was in the `alembic_version` table) but the columns had never actually been added. The `ALTER TABLE` SQL was run directly against the production Supabase database using the `DATABASE_URL` from Railway environment variables.
+
+5. **New-conversation stale history bug** (`zuralog/lib/features/coach/presentation/chat_thread_screen.dart`, `zuralog/lib/features/coach/providers/coach_providers.dart`) — After streaming completed for a new conversation, `context.replaceNamed()` navigated to the real UUID. The new `ChatThreadScreen` called `loadHistory()` which replaced the just-streamed messages with stale data from the DB (which may not have fully persisted yet). Fix: added `seedFromPrior()` to `CoachChatNotifier` — seeds the incoming notifier (keyed on the real UUID) with already-streamed messages before `replaceNamed()` runs. `_initConversation` skips `loadHistory()` when messages are already present.
+
+6. **Backend tests updated for streaming protocol** (`cloud-brain/tests/test_chat.py`) — `test_ws_connect_and_echo` and `test_ws_empty_message_returns_error` were written for the old single-message protocol. Updated to match the real sequence: `conversation_init` → `typing_start` → `stream_token` → `stream_end`. Fixed the LLM mock in the test fixture to use `stream_chat` (async generator) instead of the synchronous `chat` mock. All 7 tests pass.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Parse base URL as `https://` before rebuilding as `wss://` | Dart resolves default ports for `https://` (→443) but not for `wss://`. Parsing first ensures the correct port is always explicit. |
+| `websocket.accept()` before all auth logic | Starlette requires an accepted WebSocket to be able to send or close it gracefully. Accepting first means every failure path can send a structured JSON error instead of crashing. |
+| `seedFromPrior()` instead of relying on `loadHistory()` | `loadHistory()` is async and may race against the DB commit for the just-streamed messages. Seeding the notifier directly from in-memory state is instant and guaranteed correct. |
+| Skip `loadHistory()` when notifier is pre-seeded | Prevents the new screen from overwriting perfectly good in-memory state with a potentially stale or slower DB read. |
+
+**Verified working:** AI response rendered correctly in the production app on an Android emulator. The backend logs confirmed: WebSocket accepted, user authenticated, conversation created, LLM responded (`moonshotai/kimi-k2.5` via OpenRouter), `apple_health_read_metrics` tool call routed.
 
 ---
 
