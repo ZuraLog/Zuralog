@@ -119,12 +119,11 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
       }
     }
 
-    final capturedContext = context;
     final capturedPreferBelow = effectivePreferBelow;
 
     _overlayEntry = OverlayEntry(
-      builder: (_) {
-        final isDark = Theme.of(capturedContext).brightness == Brightness.dark;
+      builder: (overlayContext) {
+        final isDark = Theme.of(overlayContext).brightness == Brightness.dark;
         final bubbleBg = isDark
             ? AppColors.surfaceDark
             : AppColors.surfaceLight;
@@ -203,8 +202,6 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
     ref.listen(tooltipSeenProvider, (prev, next) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _syncVisibility());
     });
-    ref.watch(tooltipsEnabledProvider);
-    ref.watch(tooltipSeenProvider);
     return CompositedTransformTarget(link: _layerLink, child: widget.child);
   }
 }

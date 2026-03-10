@@ -70,171 +70,171 @@ class ProfileSidePanelWidget extends ConsumerWidget {
       color: cs.surface,
       elevation: 0,
       child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Panel Header: avatar + name + email ─────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Avatar circle
-                    CircleAvatar(
-                      radius: _kPanelAvatarSize / 2,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.85),
-                      child: Text(
-                        initial,
-                        style: AppTextStyles.displaySmall.copyWith(
-                          color: AppColors.primaryButtonText,
-                          fontWeight: FontWeight.w700,
-                        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Panel Header: avatar + name + email ─────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                AppDimens.spaceMd,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar circle
+                  CircleAvatar(
+                    radius: _kPanelAvatarSize / 2,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.85),
+                    child: Text(
+                      initial,
+                      style: AppTextStyles.displaySmall.copyWith(
+                        color: AppColors.primaryButtonText,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: AppDimens.spaceSm),
-                    // Display name
+                  ),
+                  const SizedBox(height: AppDimens.spaceSm),
+                  // Display name
+                  Text(
+                    displayName,
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: cs.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  // Email (shown only when available)
+                  if (email.isNotEmpty) ...[
+                    const SizedBox(height: AppDimens.spaceXs),
                     Text(
-                      displayName,
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w600,
+                      email,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    // Email (shown only when available)
-                    if (email.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        email,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
+            ),
 
-              // ── Divider ──────────────────────────────────────────────────
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
-              ),
+            // ── Divider ──────────────────────────────────────────────────
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
 
-              const SizedBox(height: AppDimens.spaceSm),
+            const SizedBox(height: AppDimens.spaceSm),
 
-              // ── Navigation Links ─────────────────────────────────────────
-              _NavItem(
-                icon: Icons.person_outline_rounded,
-                label: 'Account',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsAccountPath);
-                },
-              ),
-              _NavItem(
-                icon: Icons.notifications_none_rounded,
-                label: 'Notifications',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsNotificationsPath);
-                },
-              ),
-              _NavItem(
-                icon: Icons.palette_outlined,
-                label: 'Appearance',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsAppearancePath);
-                },
-              ),
-              _NavItem(
-                icon: Icons.psychology_outlined,
-                label: 'Coach',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsCoachPath);
-                },
-              ),
-              _NavItem(
-                icon: Icons.link_rounded,
-                label: 'Integrations',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsIntegrationsPath);
-                },
-              ),
-              _NavItem(
-                icon: Icons.shield_outlined,
-                label: 'Privacy & Data',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsPrivacyPath);
-                },
-              ),
-              _NavItem(
-                icon: Icons.star_outline_rounded,
-                label: 'Subscription',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsSubscriptionPath);
-                },
-              ),
-              _NavItem(
-                icon: Icons.info_outline_rounded,
-                label: 'About',
-                onTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  context.push(RouteNames.settingsAboutPath);
-                },
-              ),
+            // ── Navigation Links ─────────────────────────────────────────
+            _NavItem(
+              icon: Icons.person_outline_rounded,
+              label: 'Account',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsAccountPath);
+              },
+            ),
+            _NavItem(
+              icon: Icons.notifications_none_rounded,
+              label: 'Notifications',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsNotificationsPath);
+              },
+            ),
+            _NavItem(
+              icon: Icons.palette_outlined,
+              label: 'Appearance',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsAppearancePath);
+              },
+            ),
+            _NavItem(
+              icon: Icons.psychology_outlined,
+              label: 'Coach',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsCoachPath);
+              },
+            ),
+            _NavItem(
+              icon: Icons.link_rounded,
+              label: 'Integrations',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsIntegrationsPath);
+              },
+            ),
+            _NavItem(
+              icon: Icons.shield_outlined,
+              label: 'Privacy & Data',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsPrivacyPath);
+              },
+            ),
+            _NavItem(
+              icon: Icons.star_outline_rounded,
+              label: 'Subscription',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsSubscriptionPath);
+              },
+            ),
+            _NavItem(
+              icon: Icons.info_outline_rounded,
+              label: 'About',
+              onTap: () {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                context.push(RouteNames.settingsAboutPath);
+              },
+            ),
 
-              const Spacer(),
+            const Spacer(),
 
-              // ── Divider ──────────────────────────────────────────────────
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
-              ),
+            // ── Divider ──────────────────────────────────────────────────
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
 
-              // ── Sign Out ─────────────────────────────────────────────────
-              _NavItem(
-                icon: Icons.logout_rounded,
-                label: 'Sign Out',
-                color: isDark ? AppColors.accentDark : AppColors.accentLight,
-                onTap: () async {
-                  ref.read(hapticServiceProvider).light();
-                  onClose();
-                  await ref.read(authStateProvider.notifier).logout();
-                  if (context.mounted) {
-                    context.go(RouteNames.welcomePath);
-                  }
-                },
-              ),
+            // ── Sign Out ─────────────────────────────────────────────────
+            _NavItem(
+              icon: Icons.logout_rounded,
+              label: 'Sign Out',
+              color: isDark ? AppColors.accentDark : AppColors.accentLight,
+              onTap: () async {
+                ref.read(hapticServiceProvider).light();
+                onClose();
+                await ref.read(authStateProvider.notifier).logout();
+                if (context.mounted) {
+                  context.go(RouteNames.welcomePath);
+                }
+              },
+            ),
 
-              const SizedBox(height: AppDimens.spaceMd),
-            ],
-          ),
+            const SizedBox(height: AppDimens.spaceMd),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 
