@@ -1,9 +1,43 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-10 (Coach tab WebSocket production fix — AI chat fully working end-to-end)  
+**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX polish)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Coach Chat UX Polish (feat/coach-chat-ux-improvements, 2026-03-10)
+
+**Scope:** Four UX improvements to the Coach chat screen.  
+**Branch:** `feat/coach-chat-ux-improvements`  
+**Commit:** `0342f02`
+
+**Files changed:**
+- `zuralog/lib/features/coach/presentation/chat_thread_screen.dart`
+- `zuralog/lib/features/coach/providers/coach_providers.dart`
+
+**What was built:**
+
+1. **Thinking state** — Between when the user sends a message and when the first token arrives from the AI, the streaming bubble now shows the animated 3-dot typing indicator plus an italic "Thinking…" label. Previously the bubble only appeared once tokens were already flowing, so there was a silent gap where nothing indicated the AI was working. The bubble is now visible for the entire duration of `isSending == true`, regardless of whether tokens have arrived.
+
+2. **30-second timeout** — `CoachChatNotifier` now starts a `dart:async Timer` of 30 seconds immediately after subscribing to the response stream. The timer is cancelled as soon as any `StreamToken`, `ToolProgress`, `StreamComplete`, or `StreamError` event arrives. If 30 seconds elapse with none of these events (the server accepted the connection but never responded), the stream is cancelled and a clear error is shown: "Response timed out. The AI took too long to respond." The timer is also cancelled in `cancelStream()` and in `onDispose`.
+
+3. **Smart auto-scroll** — Auto-scroll now tracks whether the user has scrolled away from the bottom. A scroll listener on `_scrollCtrl` sets `_userScrolledUp = true` when the user is more than 80 px from the bottom. `_scrollToBottom()` is a no-op while `_userScrolledUp` is true, so streaming tokens no longer yank the user back down while they are reading history. When the response fully completes (`isSending` goes false), `_userScrolledUp` is reset and the view scrolls to the finished message — ensuring the user always sees the complete response.
+
+4. **Regenerate in long-press sheet** — The standalone "Regenerate" text button below the last AI message has been removed. Long-pressing the last AI message now shows a bottom sheet with Copy and Regenerate. Long-pressing any other AI message shows only Copy. User messages continue to show Copy + Edit. The `_showRegenerateButton` getter and the associated `ListView` item have been deleted; `onRegenerate` is passed as a callback to `_MessageBubble` only for the last assistant message when nothing is in flight.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Show bubble on `isSending`, not just on first token | Eliminates the silent gap where the user sees nothing after pressing Send. The 3-dot + "Thinking…" label is immediately reassuring. |
+| 30s timeout only for pre-token gap | Once tokens or a tool event arrive, the server is clearly alive. Timing out mid-stream would cut off a valid long response. |
+| 80 px scroll threshold | Small enough that "at the bottom" feels natural, large enough to not trip accidentally when the list grows by one line during streaming. |
+| Force-scroll on stream complete | The user may have scrolled up while waiting. When the response finishes, they should always see it — this is a deliberate UX choice, not an accident. |
+| Regenerate in long-press, not a button | The button cluttered the thread between responses. Long-press is already the established gesture for message actions (Copy, Edit) in this chat — Regenerate belongs there. |
+
+**`flutter analyze`:** No issues found.
 
 ---
 
