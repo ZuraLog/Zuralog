@@ -26,12 +26,12 @@ abstract final class AppColors {
   /// Sage Green — Main actions, active states, brand identity (dark mode).
   static const Color primary = Color(0xFFCFE1B9);
 
-  /// Forest Green — Primary color for light mode only.
+  /// Deep Forest Green — Primary color for light mode only.
   ///
   /// Sage Green (#CFE1B9) has insufficient contrast (~1.4:1) on white
-  /// backgrounds. Forest Green (#3A7D44) passes WCAG AA at ~4.8:1 on white
-  /// while remaining on-brand. Used as [ColorScheme.primary] in light theme.
-  static const Color primaryOnLight = Color(0xFF3A7D44);
+  /// backgrounds. Deep Forest (#344E41) passes WCAG AA on white while
+  /// remaining on-brand. Used as [ColorScheme.primary] in light theme.
+  static const Color primaryOnLight = Color(0xFF344E41);
 
   /// Sage Dark — Pressed states on primary elements.
   static const Color primaryDark = Color(0xFFA8C68A);
@@ -65,37 +65,37 @@ abstract final class AppColors {
 
   // ── Backgrounds ──────────────────────────────────────────────────────────
 
-  /// Main scaffold background — light mode (pure white).
-  static const Color backgroundLight = Color(0xFFFFFFFF);
+  /// Main scaffold background — light mode (Brand Cream — matches website light palette).
+  static const Color backgroundLight = Color(0xFFFAFAF5);
 
-  /// Main scaffold background — dark mode (OLED true black for battery savings).
-  static const Color backgroundDark = Color(0xFF000000);
+  /// Main scaffold background — dark mode (Brand Dark Charcoal — matches website dark palette).
+  static const Color backgroundDark = Color(0xFF2D2D2D);
 
   // ── Surfaces ─────────────────────────────────────────────────────────────
 
   /// Elevated surfaces (colorScheme.surface) — light mode (system grey).
   static const Color surfaceLight = Color(0xFFF2F2F7);
 
-  /// Elevated surfaces (colorScheme.surface) — dark mode (dark island).
-  static const Color surfaceDark = Color(0xFF1C1C1E);
+  /// Elevated surfaces (colorScheme.surface) — dark mode.
+  static const Color surfaceDark = Color(0xFF3A3A3C);
 
   /// Standard card background — light mode (white on white-scaffold).
   static const Color cardBackgroundLight = Color(0xFFFFFFFF);
 
-  /// Standard card background — dark mode (near-black for contrast on true black).
-  static const Color cardBackgroundDark = Color(0xFF121212);
+  /// Standard card background — dark mode.
+  static const Color cardBackgroundDark = Color(0xFF383838);
 
   /// Elevated card / modal surface — light mode.
   static const Color elevatedSurfaceLight = Color(0xFFFFFFFF);
 
   /// Elevated card / modal surface — dark mode.
-  static const Color elevatedSurfaceDark = Color(0xFF1C1C1E);
+  static const Color elevatedSurfaceDark = Color(0xFF444444);
 
   /// Input field background — light mode.
   static const Color inputBackgroundLight = Color(0xFFF2F2F7);
 
   /// Input field background — dark mode.
-  static const Color inputBackgroundDark = Color(0xFF1C1C1E);
+  static const Color inputBackgroundDark = Color(0xFF3A3A3C);
 
   // ── Text ─────────────────────────────────────────────────────────────────
 
@@ -103,13 +103,13 @@ abstract final class AppColors {
   static const Color textPrimaryLight = Color(0xFF000000);
 
   /// Primary heading / body text — dark mode.
-  static const Color textPrimaryDark = Color(0xFFF2F2F7);
+  static const Color textPrimaryDark = Color(0xFFFAFAF5);
 
   /// Subtitles, captions, secondary metadata — light mode.
   static const Color textSecondaryLight = Color(0xFF636366);
 
   /// Subtitles, captions, secondary metadata — dark mode.
-  static const Color textSecondaryDark = Color(0xFF8E8E93);
+  static const Color textSecondaryDark = Color(0xFFA0A0A5);
 
   /// De-emphasised labels, placeholders, disabled text — both modes.
   static const Color textTertiary = Color(0xFFABABAB);
@@ -124,7 +124,7 @@ abstract final class AppColors {
   static const Color borderLight = Color(0xFFE5E5EA);
 
   /// Dividers, card borders — dark mode.
-  static const Color borderDark = Color(0xFF38383A);
+  static const Color borderDark = Color(0xFF4A4A4C);
 
   // ── Health Category Colors ────────────────────────────────────────────────
   // Vivid, saturated colors designed to pop on OLED black backgrounds.
@@ -183,7 +183,7 @@ abstract final class AppColors {
   static const Color aiBubbleLight = Color(0xFFF2F2F7);
 
   /// AI message bubble — dark mode.
-  static const Color aiBubbleDark = Color(0xFF2C2C2E);
+  static const Color aiBubbleDark = Color(0xFF3A3A3C);
 
   // ── Status Indicators ────────────────────────────────────────────────────
 
@@ -204,8 +204,8 @@ abstract final class AppColors {
   /// Secondary button background — light mode (translucent grey).
   static const Color secondaryButtonLight = Color(0xFFF2F2F7);
 
-  /// Secondary button background — dark mode (dark translucent grey).
-  static const Color secondaryButtonDark = Color(0xFF2C2C2E);
+  /// Secondary button background — dark mode.
+  static const Color secondaryButtonDark = Color(0xFF444444);
 
   // ── Brand / Integration Colors ────────────────────────────────────────────
   // Official brand palette for third-party app integration tiles.
@@ -232,9 +232,9 @@ abstract final class AppColors {
 
   // ── Shimmer / skeleton loading ────────────────────────────────────────────
 
-  /// Shimmer base color — used as the skeleton background in loading states.
-  static const Color shimmerBase = Color(0x4DFFFFFF);
+  /// Shimmer base color — surface-relative overlay on dark background (#2D2D2D).
+  static const Color shimmerBase = Color(0x26FFFFFF);
 
-  /// Shimmer highlight color — the sweep highlight over the skeleton.
-  static const Color shimmerHighlight = Color(0xCCFFFFFF);
+  /// Shimmer highlight color — surface-relative sweep highlight on dark background.
+  static const Color shimmerHighlight = Color(0x66FFFFFF);
 }

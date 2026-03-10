@@ -22,16 +22,18 @@ void main() {
       expect(light.brightness, Brightness.light);
     });
 
-    test('scaffold background is backgroundLight (#FAFAFA)', () {
+    test('scaffold background is backgroundLight (#FAFAF5)', () {
       expect(light.scaffoldBackgroundColor, AppColors.backgroundLight);
     });
 
-    test('primary color is Sage Green (#CFE1B9)', () {
-      expect(light.colorScheme.primary, AppColors.primary);
+    test('primary color is primaryOnLight (Deep Forest #344E41)', () {
+      // Light mode uses primaryOnLight for WCAG AA contrast on light surfaces.
+      // Sage Green (#CFE1B9) is too pale on white backgrounds.
+      expect(light.colorScheme.primary, AppColors.primaryOnLight);
     });
 
-    test('onPrimary is primaryButtonText (dark grey)', () {
-      expect(light.colorScheme.onPrimary, AppColors.primaryButtonText);
+    test('onPrimary is white (on primaryOnLight in light mode)', () {
+      expect(light.colorScheme.onPrimary, Colors.white);
     });
 
     test('secondary color is secondaryLight (Muted Slate)', () {
@@ -72,11 +74,11 @@ void main() {
       expect(radius, 20.0); // AppDimens.radiusCard = 20
     });
 
-    test('ElevatedButton background is Sage Green', () {
+    test('ElevatedButton background is primaryOnLight in light mode', () {
       final bg = light.elevatedButtonTheme.style
           ?.backgroundColor
           ?.resolve({});
-      expect(bg, AppColors.primary);
+      expect(bg, AppColors.primaryOnLight);
     });
 
     test('divider color is borderLight', () {
@@ -95,10 +97,10 @@ void main() {
       expect(dark.brightness, Brightness.dark);
     });
 
-    test('scaffold background is backgroundDark (OLED #000000)', () {
+    test('scaffold background is backgroundDark (Dark Charcoal #2D2D2D)', () {
       expect(dark.scaffoldBackgroundColor, AppColors.backgroundDark);
-      // Confirm it is truly black for OLED benefit.
-      expect(dark.scaffoldBackgroundColor, const Color(0xFF000000));
+      // Confirm it matches the brand Dark Charcoal palette.
+      expect(dark.scaffoldBackgroundColor, const Color(0xFF2D2D2D));
     });
 
     test('primary color is still Sage Green (#CFE1B9)', () {
@@ -146,11 +148,15 @@ void main() {
       expect(AppTheme.light.brightness, isNot(AppTheme.dark.brightness));
     });
 
-    test('primary color is identical in both modes', () {
+    test('primary colors differ between modes (light uses primaryOnLight for contrast)', () {
+      // Light mode uses primaryOnLight (Deep Forest #344E41) for WCAG AA contrast.
+      // Dark mode uses primary (Sage Green #CFE1B9) for brand identity on dark bg.
       expect(
         AppTheme.light.colorScheme.primary,
-        AppTheme.dark.colorScheme.primary,
+        isNot(AppTheme.dark.colorScheme.primary),
       );
+      expect(AppTheme.light.colorScheme.primary, AppColors.primaryOnLight);
+      expect(AppTheme.dark.colorScheme.primary, AppColors.primary);
     });
 
     test('scaffold backgrounds differ', () {

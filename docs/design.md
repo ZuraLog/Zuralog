@@ -21,7 +21,7 @@ Zuralog's design targets **award-winning premium quality**. The visual language 
 2. **Color is semantic, not decorative.** Every color means something — a health category, a state, a brand element. No color without purpose.
 3. **Content is the interface.** No visible chrome (borders, shadows, dividers) unless absolutely necessary. Data fills the screen edge-to-edge.
 4. **Motion earns its place.** Every animation communicates a state change. Nothing moves just to move.
-5. **Black is the canvas.** Pure black backgrounds let OLED screens shine and make every color pop. The app should feel like colored light on darkness.
+5. **Dark Charcoal is the canvas.** Brand Dark Charcoal (#2D2D2D) backgrounds create premium depth and make every color pop. The app should feel like colored light on a rich, warm darkness.
 
 ### What Stays Constant
 - Color palette and semantic tokens
@@ -74,26 +74,26 @@ Each of the 10 health categories has a signature color used on cards, charts, ic
 - Category color as **text** is used only for metric values and category labels, never for body text
 - Two category colors should never appear adjacent at full saturation without a black separator
 
-### Surface Colors (Dark Theme — OLED Black)
+### Surface Colors (Dark Theme — Dark Charcoal)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `surface-900` | `#000000` | Primary background — pure OLED black |
-| `surface-800` | `#121212` | Card backgrounds, content containers |
-| `surface-700` | `#1C1C1E` | Elevated cards, bottom sheets, drawers |
-| `surface-600` | `#2C2C2E` | Dividers (used sparingly), disabled states |
-| `surface-500` | `#3A3A3C` | Input backgrounds, chips, search bars |
+| `surface-900` | `#2D2D2D` | Primary background — Brand Dark Charcoal |
+| `surface-800` | `#383838` | Card backgrounds, content containers |
+| `surface-700` | `#3A3A3C` | Elevated cards, bottom sheets, drawers |
+| `surface-600` | `#444444` | Dividers (used sparingly), disabled states |
+| `surface-500` | `#4A4A4C` | Input backgrounds, chips, search bars |
 
-**Note:** Primary background is now `#000000` (true black), upgraded from `#0A0A0A`. This maximizes OLED contrast and makes card backgrounds (`#121212`) clearly distinct without any border.
+**Note:** Primary background is `#2D2D2D` (Brand Dark Charcoal), matching the Zuralog website dark palette. Card backgrounds (`#383838`) are clearly distinct without a border.
 
 ### Text Colors
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `text-primary` | `#FFFFFF` | Primary text, headlines, metric values |
-| `text-secondary` | `#ABABAB` | Secondary text, captions, labels, hints |
+| `text-primary` | `#FAFAF5` | Primary text, headlines, metric values |
+| `text-secondary` | `#A0A0A5` | Secondary text, captions, labels, hints |
 | `text-tertiary` | `#636366` | Placeholder text, disabled states, timestamps |
-| `text-inverse` | `#000000` | Text on sage-green buttons and light fills |
+| `text-inverse` | `#1C1C1E` | Text on sage-green buttons and light fills |
 
 ### Semantic Colors
 
@@ -190,14 +190,14 @@ All shape tokens map to `BorderRadius.circular(value)` and are implemented as co
 
 Cards are the primary content container across the app. They are defined by **background color contrast only** — no borders, no shadows, no elevation.
 
-- Background: `cardBackgroundDark` (`#121212`) on `backgroundDark` (`#000000`)
-- **No border** in dark mode. The color difference between `#000000` and `#121212` provides sufficient definition on OLED screens.
+- Background: `cardBackgroundDark` (`#383838`) on `backgroundDark` (`#2D2D2D`)
+- **No border** in dark mode. The color difference between `#2D2D2D` and `#383838` provides sufficient definition.
 - **No shadow** in dark mode. Light mode uses `cardShadowLight` (`0px 4px 20px rgba(0,0,0,0.05)`).
 - Shape: `shapeMd` (20px radius)
 - Padding: 16px (`md`) internal, 24px (`lg`) gap between cards
 - Category cards may use their category color at 8–12% opacity as a subtle background tint
 
-**Elevated cards** (bottom sheets, drawers, modals) use `elevatedSurfaceDark` (`#1C1C1E`) — one step above standard cards.
+**Elevated cards** (bottom sheets, drawers, modals) use `elevatedSurfaceDark` (`#444444`) — one step above standard cards.
 
 #### Interactive State (tappable cards only)
 
@@ -284,7 +284,7 @@ Inspired by Apple Fitness+ activity rings. Used on the Today feed, Progress tab,
 ### Chat Bubbles
 
 - **User messages:** Sage-green (`#CFE1B9`) background, black text, right-aligned. Radius: 20px (with 4px bottom-right for tail effect).
-- **AI messages:** `surface-700` (`#1C1C1E`) background, white text, left-aligned, markdown-rendered. Radius: 20px (with 4px bottom-left for tail effect).
+- **AI messages:** `surface-700` (`#3A3A3C`) background, white text, left-aligned, markdown-rendered. Radius: 20px (with 4px bottom-left for tail effect).
 - **Streaming:** Animated typing indicator using three dots with staggered pulse animation in sage-green.
 - **Suggested prompts:** Horizontal scrollable chips below the input bar when conversation is empty. `surface-500` background, `text-secondary` text, sage-green border on tap.
 
@@ -298,7 +298,7 @@ Inspired by Apple Fitness+ activity rings. Used on the Today feed, Progress tab,
 ### Bottom Navigation Bar
 
 - Frosted glass effect retained: `BackdropFilter` with Gaussian blur beneath the nav bar
-- Background: `surface-900` at 70% opacity (true black, translucent)
+- Background: `surface-900` at 70% opacity (Brand Dark Charcoal, translucent)
 - 5 destinations: Today, Data, Coach, Progress, Trends
 - Active tab: sage-green icon + label
 - Inactive tab: `text-tertiary` icon + label
@@ -307,8 +307,8 @@ Inspired by Apple Fitness+ activity rings. Used on the Today feed, Progress tab,
 
 ### Skeleton Loading States
 
-- Base color: `surface-800` (`#121212`)
-- Shimmer highlight: `surface-600` (`#2C2C2E`)
+- Base color: `surface-800` (`#383838`)
+- Shimmer highlight: `surface-600` (`#444444`)
 - Animation: horizontal shimmer sweep, 1200ms loop, `Curves.easeInOut`
 - Skeleton shapes match the layout of the content they replace (rounded rectangles for text, circles for avatars, card-shaped blocks for cards)
 
@@ -332,17 +332,18 @@ Settings, Profile, Integrations, and Subscription are accessed from header icons
 
 ---
 
-## Dark Theme First
+## Dark Theme Priority
 
-Zuralog is **dark-first** — dark mode is the primary theme and the default experience. A light mode is supported but dark is the priority, as it is the mode most users will use.
+Zuralog **prioritizes dark mode** — it is the default experience and the most tested theme. A light mode is fully supported but dark is primary, as it is the mode most users will choose.
 
 **Dark mode (primary):**
-- True OLED black (`#000000`) background — pixels turn off entirely on OLED screens for battery savings and visual depth
-- Maximum contrast — every category color, every chart, every piece of text pops against pure black
+- Brand Dark Charcoal (`#2D2D2D`) background — matches the Zuralog website dark palette, creating visual continuity across platforms
+- High contrast — every category color, every chart, every piece of text pops against the warm dark canvas
 - Premium aesthetic aligned with the editorial design direction
-- The Apple Fitness+ and Linear apps both use this approach to great effect
+- Card backgrounds at `#383838` create visible hierarchy without borders
 
 **Light mode (supported):**
+- Brand Cream (`#FAFAF5`) background — matches the Zuralog website light palette
 - Light mode should feel equally polished, not like an afterthought
 - Surface and text color tokens must have light-mode equivalents defined in `AppColors` / `AppTheme`
 - Category colors remain the same across both themes — they are designed to work on both light and dark backgrounds
@@ -496,7 +497,7 @@ The first thing a new user ever sees. Three full-bleed slides that establish Zur
 #### Layout Structure (per slide)
 
 ```
-┌─────────────────────────────┐  ← Full screen, OLED black scaffold
+┌─────────────────────────────┐  ← Full screen, Dark Charcoal scaffold
 │                             │
 │    [Hero Image / Visual]    │  ← Top 58% of screen height
 │                             │     shapeLg (28px) corner radius
@@ -578,7 +579,7 @@ The screen the user lands on after the slideshow (or directly, on every subseque
 #### Layout Structure
 
 ```
-┌─────────────────────────────┐  ← Full screen, OLED black scaffold
+┌─────────────────────────────┐  ← Full screen, Dark Charcoal scaffold
 │                             │
 │    [Sage Green radial bloom] │  ← Very subtle: 200px radial gradient at top-center
 │                             │     AppColors.primary at 7% opacity, radial spread
@@ -618,7 +619,7 @@ Replaces the separate `LoginScreen` and `RegisterScreen`. A single screen with a
 #### Layout Structure
 
 ```
-┌─────────────────────────────┐  ← Full screen, OLED black scaffold
+┌─────────────────────────────┐  ← Full screen, Dark Charcoal scaffold
 │ ←  Zuralog                  │  ← Back chevron + "Zuralog" wordmark (AppColors.primary)
 │                             │
 │ ╔═══════════╦═══════════╗   │  ← TabBar: "Log in" | "Create account"
@@ -753,7 +754,7 @@ No top bar (no back arrow, no dots). Full screen feel. The logo card entrance is
 ```
 
 **Chip spec:**
-- Unselected: `cardBackgroundDark` (`#121212`) fill, `borderDark` border 1px, `shapeMd` (20px radius)
+- Unselected: `cardBackgroundDark` (`#383838`) fill, `borderDark` border 1px, `shapeMd` (20px radius)
 - Selected: Category-relevant color at 15% opacity fill + category color border 1.5px + category color checkmark icon top-right
 - Spring press: scale `1.04x` on select, `fastSpatial` spring bounce-back
 - The scale overshoot on select makes the chip feel "snappy" and satisfying
@@ -892,19 +893,19 @@ Light mode is a first-class theme. It mirrors dark mode's information density bu
 
 | Token | AppColors constant | Light Hex | Dark Hex | Usage |
 |-------|--------------------|-----------|----------|-------|
-| Scaffold background | `backgroundLight` / `backgroundDark` | `#FFFFFF` | `#000000` | App scaffold (`Scaffold.backgroundColor`) |
-| Surface (colorScheme.surface) | `surfaceLight` / `surfaceDark` | `#F2F2F7` | `#1C1C1E` | Elevated surfaces |
-| Card background | `cardBackgroundLight` / `cardBackgroundDark` | `#FFFFFF` | `#121212` | Standard cards |
-| Elevated surface | `elevatedSurfaceLight` / `elevatedSurfaceDark` | `#FFFFFF` | `#1C1C1E` | Bottom sheets, drawers, modals |
-| Input background | `inputBackgroundLight` / `inputBackgroundDark` | `#F2F2F7` | `#1C1C1E` | Text fields, search bars |
-| Divider / border | `borderLight` / `borderDark` | `#E5E5EA` | `#38383A` | Dividers, card separators |
-| Text primary | `textPrimaryLight` / `textPrimaryDark` | `#000000` | `#F2F2F7` | Headlines, body text |
-| Text secondary | `textSecondaryLight` / `textSecondaryDark` | `#636366` | `#8E8E93` | Captions, labels, metadata |
+| Scaffold background | `backgroundLight` / `backgroundDark` | `#FAFAF5` | `#2D2D2D` | App scaffold (`Scaffold.backgroundColor`) |
+| Surface (colorScheme.surface) | `surfaceLight` / `surfaceDark` | `#F2F2F7` | `#3A3A3C` | Elevated surfaces |
+| Card background | `cardBackgroundLight` / `cardBackgroundDark` | `#FFFFFF` | `#383838` | Standard cards |
+| Elevated surface | `elevatedSurfaceLight` / `elevatedSurfaceDark` | `#FFFFFF` | `#444444` | Bottom sheets, drawers, modals |
+| Input background | `inputBackgroundLight` / `inputBackgroundDark` | `#F2F2F7` | `#3A3A3C` | Text fields, search bars |
+| Divider / border | `borderLight` / `borderDark` | `#E5E5EA` | `#4A4A4C` | Dividers, card separators |
+| Text primary | `textPrimaryLight` / `textPrimaryDark` | `#000000` | `#FAFAF5` | Headlines, body text |
+| Text secondary | `textSecondaryLight` / `textSecondaryDark` | `#636366` | `#A0A0A5` | Captions, labels, metadata |
 | Text tertiary | `textTertiary` | `#ABABAB` | `#ABABAB` | Placeholders, disabled, timestamps |
 
 **Rules:**
 - Category colors are identical in both themes and require no `Light`/`Dark` suffix.
-- `AppColors.primary` (Sage Green `#CFE1B9`) is the same in both modes.
+- `AppColors.primary` (Sage Green `#CFE1B9`) is the same in both modes. In light mode, `AppColors.primaryOnLight` (`#344E41`) is used instead for WCAG AA contrast.
 - Widget files must never use raw hex — always reference `AppColors.*` constants.
 
 ---

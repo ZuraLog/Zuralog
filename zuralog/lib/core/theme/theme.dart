@@ -13,4 +13,5 @@ export 'app_dimens.dart';
 export 'app_motion.dart';
 export 'app_text_styles.dart';
 export 'app_theme.dart';
+export 'category_colors.dart';
 export 'theme_provider.dart';

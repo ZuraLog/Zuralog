@@ -18,15 +18,15 @@ import 'app_text_styles.dart';
 /// Both themes use Material 3 and `useMaterial3: true`.
 ///
 /// Design principles:
-/// - Light: white surfaces, soft diffusion shadows, dark text.
-/// - Dark: OLED black background, bordered surfaces, no shadows, light text.
+/// - Light: Brand Cream (#FAFAF5) surfaces, soft diffusion shadows, dark text.
+/// - Dark: Dark Charcoal (#2D2D2D) background, bordered surfaces, no shadows, light text.
 abstract final class AppTheme {
   // ── Public API ────────────────────────────────────────────────────────────
 
-  /// Light theme — white surfaces, soft shadows, dark text on light backgrounds.
+  /// Light theme — Brand Cream surfaces, soft shadows, dark text on light backgrounds.
   static ThemeData get light => _build(Brightness.light);
 
-  /// Dark theme — OLED black, bordered card surfaces, no shadows, light text.
+  /// Dark theme — Dark Charcoal (#2D2D2D) background, bordered card surfaces, no shadows, light text.
   static ThemeData get dark => _build(Brightness.dark);
 
   // ── Private Builder ───────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ abstract final class AppTheme {
       scaffoldBackgroundColor:
           isLight ? AppColors.backgroundLight : AppColors.backgroundDark,
 
-      fontFamily: AppTextStyles.body.fontFamily,
+      fontFamily: AppTextStyles.bodyLarge.fontFamily,
       textTheme: _buildTextTheme(
         isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
       ),
@@ -95,7 +95,7 @@ abstract final class AppTheme {
         systemOverlayStyle: isLight
             ? SystemUiOverlayStyle.dark
             : SystemUiOverlayStyle.light,
-        titleTextStyle: AppTextStyles.h2.copyWith(
+        titleTextStyle: AppTextStyles.displaySmall.copyWith(
           color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         ),
       ),
@@ -128,7 +128,7 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusButton),
           ),
-          textStyle: AppTextStyles.h3,
+          textStyle: AppTextStyles.labelLarge,
           padding: const EdgeInsets.symmetric(
             horizontal: AppDimens.spaceLg,
             vertical: AppDimens.spaceMd,
@@ -151,7 +151,7 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusButton),
           ),
-          textStyle: AppTextStyles.body.copyWith(
+          textStyle: AppTextStyles.bodyLarge.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -171,7 +171,7 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
           ),
-          textStyle: AppTextStyles.h3,
+          textStyle: AppTextStyles.labelLarge,
           elevation: 0,
           shadowColor: Colors.transparent,
         ),
@@ -194,7 +194,7 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusButton),
           ),
-          textStyle: AppTextStyles.h3,
+          textStyle: AppTextStyles.labelLarge,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -238,9 +238,9 @@ abstract final class AppTheme {
           horizontal: AppDimens.spaceMd,
           vertical: AppDimens.spaceMd,
         ),
-        hintStyle: AppTextStyles.body
+        hintStyle: AppTextStyles.bodyLarge
             .copyWith(color: AppColors.textSecondary),
-        labelStyle: AppTextStyles.body.copyWith(
+        labelStyle: AppTextStyles.bodyLarge.copyWith(
           color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         ),
       ),
@@ -257,8 +257,8 @@ abstract final class AppTheme {
         unselectedItemColor: AppColors.textSecondary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: AppTextStyles.caption,
-        unselectedLabelStyle: AppTextStyles.caption,
+        selectedLabelStyle: AppTextStyles.labelSmall,
+        unselectedLabelStyle: AppTextStyles.labelSmall,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor:
@@ -277,9 +277,9 @@ abstract final class AppTheme {
           final activeColor =
               isLight ? AppColors.primaryOnLight : AppColors.primary;
           if (states.contains(WidgetState.selected)) {
-            return AppTextStyles.caption.copyWith(color: activeColor);
+            return AppTextStyles.labelSmall.copyWith(color: activeColor);
           }
-          return AppTextStyles.caption
+          return AppTextStyles.labelSmall
               .copyWith(color: AppColors.textSecondary);
         }),
       ),
@@ -305,11 +305,11 @@ abstract final class AppTheme {
         iconColor: isLight
             ? AppColors.textSecondaryLight
             : AppColors.textSecondaryDark,
-        titleTextStyle: AppTextStyles.body.copyWith(
+        titleTextStyle: AppTextStyles.bodyLarge.copyWith(
           color:
               isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         ),
-        subtitleTextStyle: AppTextStyles.caption.copyWith(
+        subtitleTextStyle: AppTextStyles.bodySmall.copyWith(
           color: isLight
               ? AppColors.textSecondaryLight
               : AppColors.textSecondaryDark,
@@ -326,7 +326,7 @@ abstract final class AppTheme {
           color: isLight ? AppColors.surfaceLight : const Color(0xFF3A3A3C),
           borderRadius: BorderRadius.circular(12),
         ),
-        textStyle: AppTextStyles.caption.copyWith(
+        textStyle: AppTextStyles.bodySmall.copyWith(
           color: isLight ? AppColors.textPrimaryLight : AppColors.textPrimaryDark,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -341,26 +341,21 @@ abstract final class AppTheme {
   /// [defaultColor] is the primary text color for the current brightness.
   static TextTheme _buildTextTheme(Color defaultColor) {
     return TextTheme(
-      // Largest display text — not used in Zuralog but required for completeness.
-      displayLarge: AppTextStyles.h1.copyWith(color: defaultColor),
-      displayMedium: AppTextStyles.h1.copyWith(color: defaultColor),
-      displaySmall: AppTextStyles.h1.copyWith(color: defaultColor),
-      // Headings
-      headlineLarge: AppTextStyles.h1.copyWith(color: defaultColor),
-      headlineMedium: AppTextStyles.h2.copyWith(color: defaultColor),
-      headlineSmall: AppTextStyles.h3.copyWith(color: defaultColor),
-      // Titles (used by AppBar, ListTile, etc.)
-      titleLarge: AppTextStyles.h2.copyWith(color: defaultColor),
-      titleMedium: AppTextStyles.h3.copyWith(color: defaultColor),
-      titleSmall: AppTextStyles.h3.copyWith(color: defaultColor),
-      // Body text
-      bodyLarge: AppTextStyles.body.copyWith(color: defaultColor),
-      bodyMedium: AppTextStyles.body.copyWith(color: defaultColor),
-      bodySmall: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-      // Labels (used by buttons, chips, badges)
-      labelLarge: AppTextStyles.h3.copyWith(color: defaultColor),
-      labelMedium: AppTextStyles.caption.copyWith(color: defaultColor),
-      labelSmall: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+      displayLarge: AppTextStyles.displayLarge.copyWith(color: defaultColor),
+      displayMedium: AppTextStyles.displayMedium.copyWith(color: defaultColor),
+      displaySmall: AppTextStyles.displaySmall.copyWith(color: defaultColor),
+      headlineLarge: AppTextStyles.displayLarge.copyWith(color: defaultColor),
+      headlineMedium: AppTextStyles.displayMedium.copyWith(color: defaultColor),
+      headlineSmall: AppTextStyles.displaySmall.copyWith(color: defaultColor),
+      titleLarge: AppTextStyles.titleLarge.copyWith(color: defaultColor),
+      titleMedium: AppTextStyles.titleMedium.copyWith(color: defaultColor),
+      titleSmall: AppTextStyles.labelLarge.copyWith(color: defaultColor),
+      bodyLarge: AppTextStyles.bodyLarge.copyWith(color: defaultColor),
+      bodyMedium: AppTextStyles.bodyMedium.copyWith(color: defaultColor),
+      bodySmall: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+      labelLarge: AppTextStyles.labelLarge.copyWith(color: defaultColor),
+      labelMedium: AppTextStyles.labelMedium.copyWith(color: defaultColor),
+      labelSmall: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary),
     );
   }
 }
