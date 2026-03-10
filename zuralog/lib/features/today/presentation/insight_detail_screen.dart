@@ -23,9 +23,13 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
 
 // ── InsightDetailScreen ───────────────────────────────────────────────────────
 
@@ -91,16 +95,14 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
       }
     });
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: AppColors.textPrimaryDark,
+            color: Theme.of(context).colorScheme.onSurface,
             size: 20,
           ),
           onPressed: () => context.pop(),
@@ -108,8 +110,8 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
         title: detailAsync.whenOrNull(
           data: (detail) => Text(
             _categoryLabel(detail.category),
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondaryDark,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -135,15 +137,13 @@ class _DetailBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoryColor = _categoryColor(detail.category);
+    final categoryColor = categoryColorFromString(detail.category);
 
-    return SafeArea(
-      top: false,
-      child: CustomScrollView(
+    return CustomScrollView(
         slivers: [
         // ── Header: full-bleed category gradient wash + title ─────────────
         SliverToBoxAdapter(
-          child: _FadeSlideIn(
+          child: ZFadeSlideIn(
             delay: Duration.zero,
             child: Stack(
               children: [
@@ -210,7 +210,7 @@ class _DetailBody extends ConsumerWidget {
                                   ),
                                   child: Text(
                                     _insightTypeLabel(detail.type),
-                                    style: AppTextStyles.labelXs.copyWith(
+                                     style: AppTextStyles.labelSmall.copyWith(
                                       color: categoryColor,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -224,14 +224,14 @@ class _DetailBody extends ConsumerWidget {
                       const SizedBox(height: AppDimens.spaceMd),
                       Text(
                         detail.title,
-                        style: AppTextStyles.h1.copyWith(
+                        style: AppTextStyles.displayLarge.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
                       Text(
                         detail.summary,
-                        style: AppTextStyles.body.copyWith(
+                        style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textSecondaryDark,
                         ),
                       ),
@@ -246,7 +246,7 @@ class _DetailBody extends ConsumerWidget {
         // ── Chart ─────────────────────────────────────────────────────────
         if (detail.dataPoints.isNotEmpty)
           SliverToBoxAdapter(
-            child: _FadeSlideIn(
+            child: ZFadeSlideIn(
               delay: const Duration(milliseconds: 80),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -263,7 +263,7 @@ class _DetailBody extends ConsumerWidget {
 
         // ── AI Reasoning ──────────────────────────────────────────────────
         SliverToBoxAdapter(
-          child: _FadeSlideIn(
+          child: ZFadeSlideIn(
             delay: const Duration(milliseconds: 130),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -274,7 +274,7 @@ class _DetailBody extends ConsumerWidget {
               ),
               child: Text(
                 'AI Analysis',
-                style: AppTextStyles.h3.copyWith(
+                style: AppTextStyles.titleMedium.copyWith(
                   color: AppColors.textPrimaryDark,
                 ),
               ),
@@ -283,7 +283,7 @@ class _DetailBody extends ConsumerWidget {
         ),
 
         SliverToBoxAdapter(
-          child: _FadeSlideIn(
+          child: ZFadeSlideIn(
             delay: const Duration(milliseconds: 160),
             child: Padding(
               padding: const EdgeInsets.symmetric(
@@ -323,25 +323,25 @@ class _DetailBody extends ConsumerWidget {
                                       AppColors.primary.withValues(alpha: 0.8),
                                 ),
                                 const SizedBox(width: AppDimens.spaceSm),
-                                Text(
-                                  'Reasoning',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.textSecondaryDark,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppDimens.spaceSm),
-                            Text(
-                              detail.reasoning.isNotEmpty
-                                  ? detail.reasoning
-                                  : 'This insight was generated from your recent health data.',
-                              style: AppTextStyles.body.copyWith(
-                                color: AppColors.textPrimaryDark,
-                                height: 1.55,
-                              ),
-                            ),
+                                 Text(
+                                   'Reasoning',
+                                   style: AppTextStyles.bodySmall.copyWith(
+                                     color: AppColors.textSecondaryDark,
+                                     fontWeight: FontWeight.w600,
+                                   ),
+                                 ),
+                               ],
+                             ),
+                             const SizedBox(height: AppDimens.spaceSm),
+                             Text(
+                               detail.reasoning.isNotEmpty
+                                   ? detail.reasoning
+                                   : 'This insight was generated from your recent health data.',
+                               style: AppTextStyles.bodyLarge.copyWith(
+                                 color: AppColors.textPrimaryDark,
+                                 height: 1.55,
+                               ),
+                             ),
                           ],
                         ),
                       ),
@@ -356,7 +356,7 @@ class _DetailBody extends ConsumerWidget {
         // ── Data Sources ──────────────────────────────────────────────────
         if (detail.sources.isNotEmpty) ...[
           SliverToBoxAdapter(
-            child: _FadeSlideIn(
+            child: ZFadeSlideIn(
               delay: const Duration(milliseconds: 200),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -367,7 +367,7 @@ class _DetailBody extends ConsumerWidget {
                 ),
                 child: Text(
                   'Data Sources',
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.textPrimaryDark,
                   ),
                 ),
@@ -375,7 +375,7 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
           SliverToBoxAdapter(
-            child: _FadeSlideIn(
+            child: ZFadeSlideIn(
               delay: const Duration(milliseconds: 220),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -395,7 +395,7 @@ class _DetailBody extends ConsumerWidget {
 
         // ── Discuss with Coach CTA ─────────────────────────────────────
         SliverToBoxAdapter(
-          child: _FadeSlideIn(
+          child: ZFadeSlideIn(
             delay: const Duration(milliseconds: 260),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -443,8 +443,7 @@ class _DetailBody extends ConsumerWidget {
           ),
         ),
         ],
-      ),
-    );
+      );
   }
 }
 
@@ -483,66 +482,6 @@ class _PressScaleButtonState extends State<_PressScaleButton> {
   }
 }
 
-// ── _FadeSlideIn ──────────────────────────────────────────────────────────────
-
-/// Staggered fade + 6% slide-up entrance animation.
-class _FadeSlideIn extends StatefulWidget {
-  const _FadeSlideIn({required this.child, this.delay = Duration.zero});
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  State<_FadeSlideIn> createState() => _FadeSlideInState();
-}
-
-class _FadeSlideInState extends State<_FadeSlideIn>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-  late final Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _opacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
-
-    if (widget.delay == Duration.zero) {
-      _ctrl.forward();
-    } else {
-      Future.delayed(widget.delay, () {
-        if (mounted) _ctrl.forward();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: SlideTransition(position: _slide, child: widget.child),
-    );
-  }
-}
-
 // ── _InsightChart ─────────────────────────────────────────────────────────────
 
 /// Bar chart rendered from [InsightDetail.dataPoints].
@@ -572,7 +511,7 @@ class _InsightChart extends StatelessWidget {
           if (detail.chartTitle != null) ...[
             Text(
               detail.chartTitle!,
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondaryDark,
               ),
             ),
@@ -616,7 +555,7 @@ class _InsightChart extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             points[idx].label,
-                            style: AppTextStyles.labelXs.copyWith(
+                            style: AppTextStyles.labelSmall.copyWith(
                               color: AppColors.textTertiary,
                             ),
                           ),
@@ -653,7 +592,7 @@ class _InsightChart extends StatelessWidget {
                       final unit = detail.chartUnit ?? '';
                       return BarTooltipItem(
                         '${rod.toY.toStringAsFixed(1)} $unit',
-                        AppTextStyles.caption.copyWith(
+                        AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       );
@@ -668,7 +607,7 @@ class _InsightChart extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceXs),
             Text(
               detail.chartUnit!,
-              style: AppTextStyles.labelXs.copyWith(
+              style: AppTextStyles.labelSmall.copyWith(
                 color: AppColors.textTertiary,
               ),
             ),
@@ -705,7 +644,7 @@ class _SourceChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             source.name,
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondaryDark,
             ),
           ),
@@ -727,70 +666,18 @@ class _DetailSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SkeletonBox(width: 200, height: 34),
+          const ZLoadingSkeleton(width: 200, height: 34),
           const SizedBox(height: AppDimens.spaceMd),
-          _SkeletonBox(width: double.infinity, height: 16),
+          const ZLoadingSkeleton(width: double.infinity, height: 16),
           const SizedBox(height: 8),
-          _SkeletonBox(width: 280, height: 16),
+          const ZLoadingSkeleton(width: 280, height: 16),
           const SizedBox(height: AppDimens.spaceLg),
-          _SkeletonBox(width: double.infinity, height: 180),
+          const ZLoadingSkeleton(width: double.infinity, height: 180),
           const SizedBox(height: AppDimens.spaceLg),
-          _SkeletonBox(width: 120, height: 18),
+          const ZLoadingSkeleton(width: 120, height: 18),
           const SizedBox(height: AppDimens.spaceSm),
-          _SkeletonBox(width: double.infinity, height: 100),
+          const ZLoadingSkeleton(width: double.infinity, height: 100),
         ],
-      ),
-    );
-  }
-}
-
-class _SkeletonBox extends StatefulWidget {
-  const _SkeletonBox({required this.width, required this.height});
-
-  final double width;
-  final double height;
-
-  @override
-  State<_SkeletonBox> createState() => _SkeletonBoxState();
-}
-
-class _SkeletonBoxState extends State<_SkeletonBox>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _opacity,
-      builder: (_, child) => Opacity(
-        opacity: _opacity.value,
-        child: Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: AppColors.cardBackgroundDark,
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
       ),
     );
   }
@@ -817,7 +704,7 @@ class _DetailError extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceMd),
           Text(
             'Could not load insight',
-            style: AppTextStyles.h3.copyWith(
+            style: AppTextStyles.titleMedium.copyWith(
               color: AppColors.textSecondaryDark,
             ),
           ),
@@ -826,7 +713,7 @@ class _DetailError extends StatelessWidget {
             onPressed: onRetry,
             child: Text(
               'Try again',
-              style: AppTextStyles.body.copyWith(color: AppColors.primary),
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
             ),
           ),
         ],
@@ -860,39 +747,6 @@ String _categoryLabel(String category) =>
     category.isEmpty
         ? 'Health'
         : category[0].toUpperCase() + category.substring(1);
-
-/// Returns the category color token for a health category string.
-Color _categoryColor(String category) {
-  switch (category.toLowerCase()) {
-    case 'sleep':
-      return AppColors.categorySleep;
-    case 'activity':
-    case 'fitness':
-      return AppColors.categoryActivity;
-    case 'heart':
-    case 'cardio':
-      return AppColors.categoryHeart;
-    case 'body':
-    case 'weight':
-      return AppColors.categoryBody;
-    case 'nutrition':
-    case 'food':
-      return AppColors.categoryNutrition;
-    case 'wellness':
-    case 'mood':
-      return AppColors.categoryWellness;
-    case 'vitals':
-      return AppColors.categoryVitals;
-    case 'cycle':
-      return AppColors.categoryCycle;
-    case 'mobility':
-      return AppColors.categoryMobility;
-    case 'environment':
-      return AppColors.categoryEnvironment;
-    default:
-      return AppColors.primary;
-  }
-}
 
 /// Returns an icon for the given [InsightType].
 IconData _insightIcon(InsightType type) {

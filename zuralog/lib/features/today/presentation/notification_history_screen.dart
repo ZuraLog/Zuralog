@@ -18,6 +18,9 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
 
 // ── NotificationHistoryScreen ─────────────────────────────────────────────────
 
@@ -33,24 +36,19 @@ class NotificationHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(notificationsProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: AppColors.textPrimaryDark,
+            color: Theme.of(context).colorScheme.onSurface,
             size: 20,
           ),
           onPressed: () => context.pop(),
         ),
-        title: Text(
-          'Notifications',
-          style: AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
-        ),
+        title: const Text('Notifications'),
       ),
       body: RefreshIndicator(
         color: AppColors.primary,
@@ -95,7 +93,7 @@ class NotificationHistoryScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Day section header — staggered by dayIndex.
-                    _FadeSlideIn(
+                    ZFadeSlideIn(
                       delay: Duration(
                         milliseconds: dayStartIndex * 50,
                       ),
@@ -108,7 +106,7 @@ class NotificationHistoryScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           dayKey,
-                          style: AppTextStyles.caption.copyWith(
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondaryDark,
                             fontWeight: FontWeight.w600,
                           ),
@@ -117,7 +115,7 @@ class NotificationHistoryScreen extends ConsumerWidget {
                     ),
                     // Notification rows — each staggered 50ms apart.
                     for (var i = 0; i < items.length; i++)
-                      _FadeSlideIn(
+                      ZFadeSlideIn(
                         delay: Duration(
                           milliseconds: (dayStartIndex + i) * 50 + 30,
                         ),
@@ -245,7 +243,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
                           children: [
                             Text(
                               widget.item.title,
-                              style: AppTextStyles.h3.copyWith(
+                              style: AppTextStyles.titleMedium.copyWith(
                                 color: isRead
                                     ? AppColors.textSecondaryDark
                                     : AppColors.textPrimaryDark,
@@ -257,7 +255,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
                               const SizedBox(height: 4),
                               Text(
                                 widget.item.body,
-                                style: AppTextStyles.body.copyWith(
+                                style: AppTextStyles.bodyLarge.copyWith(
                                   color: AppColors.textSecondaryDark,
                                   fontSize: 14,
                                 ),
@@ -269,7 +267,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
                               const SizedBox(height: AppDimens.spaceXs),
                               Text(
                                 _timeString(widget.item.receivedAt!),
-                                style: AppTextStyles.labelXs.copyWith(
+                                style: AppTextStyles.labelSmall.copyWith(
                                   color: AppColors.textTertiary,
                                 ),
                               ),
@@ -301,66 +299,6 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
   }
 }
 
-// ── _FadeSlideIn ──────────────────────────────────────────────────────────────
-
-/// Staggered fade + 6% slide-up entrance animation.
-class _FadeSlideIn extends StatefulWidget {
-  const _FadeSlideIn({required this.child, this.delay = Duration.zero});
-
-  final Widget child;
-  final Duration delay;
-
-  @override
-  State<_FadeSlideIn> createState() => _FadeSlideInState();
-}
-
-class _FadeSlideInState extends State<_FadeSlideIn>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-  late final Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _opacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
-
-    if (widget.delay == Duration.zero) {
-      _ctrl.forward();
-    } else {
-      Future.delayed(widget.delay, () {
-        if (mounted) _ctrl.forward();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: SlideTransition(position: _slide, child: widget.child),
-    );
-  }
-}
-
 // ── Empty / Loading / Error states ───────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
@@ -380,14 +318,14 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceMd),
           Text(
             'No notifications yet',
-            style: AppTextStyles.h3.copyWith(
+            style: AppTextStyles.titleMedium.copyWith(
               color: AppColors.textSecondaryDark,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             "You're all caught up.",
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textTertiary,
             ),
           ),
@@ -405,57 +343,9 @@ class _LoadingList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       itemCount: 6,
-      itemBuilder: (_, i) => Padding(
-        padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
-        child: _NotificationSkeleton(),
-      ),
-    );
-  }
-}
-
-class _NotificationSkeleton extends StatefulWidget {
-  const _NotificationSkeleton();
-
-  @override
-  State<_NotificationSkeleton> createState() => _NotificationSkeletonState();
-}
-
-class _NotificationSkeletonState extends State<_NotificationSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _opacity,
-      builder: (_, child) => Opacity(
-        opacity: _opacity.value,
-        child: Container(
-          height: 72,
-          decoration: BoxDecoration(
-            color: AppColors.cardBackgroundDark,
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          ),
-        ),
+      itemBuilder: (_, i) => const Padding(
+        padding: EdgeInsets.only(bottom: AppDimens.spaceSm),
+        child: ZLoadingSkeleton(width: double.infinity, height: 72),
       ),
     );
   }
@@ -480,14 +370,14 @@ class _ErrorState extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceMd),
           Text(
             'Could not load notifications',
-            style: AppTextStyles.h3.copyWith(color: AppColors.textSecondaryDark),
+            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textSecondaryDark),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           TextButton(
             onPressed: onRetry,
             child: Text(
               'Retry',
-              style: AppTextStyles.body.copyWith(color: AppColors.primary),
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
             ),
           ),
         ],

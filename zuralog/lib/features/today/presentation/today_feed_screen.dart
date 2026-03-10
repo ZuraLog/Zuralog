@@ -17,12 +17,14 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
 import 'package:zuralog/shared/widgets/streak_badge.dart';
@@ -66,8 +68,8 @@ class TodayFeedScreen extends ConsumerWidget {
         .read(userPreferencesProvider.notifier)
         .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true));
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
+      addBottomNavPadding: true,
       appBar: ZuralogAppBar(
         title: 'Today',
         actions: [
@@ -108,9 +110,6 @@ class TodayFeedScreen extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(
-            bottom: AppDimens.bottomClearance(context),
-          ),
           children: [
             // ── Health Score hero ───────────────────────────────────────────
             Padding(
@@ -380,7 +379,7 @@ class _HealthScoreHero extends ConsumerWidget {
                         child: Center(
                           child: Text(
                             '—',
-                            style: AppTextStyles.h3.copyWith(
+                            style: AppTextStyles.titleMedium.copyWith(
                               color: AppColors.textTertiary,
                             ),
                           ),
@@ -408,7 +407,7 @@ class _HealthScoreHero extends ConsumerWidget {
                               const SizedBox(width: AppDimens.spaceXs),
                               Text(
                                 'Tap to retry',
-                                style: AppTextStyles.caption.copyWith(
+                                style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.primary,
                                 ),
                               ),
@@ -454,7 +453,7 @@ class _SectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: AppTextStyles.h2.copyWith(
+            style: AppTextStyles.displaySmall.copyWith(
               color: AppColors.textPrimaryDark,
             ),
           ),
@@ -482,7 +481,7 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
 
   @override
   Widget build(BuildContext context) {
-    final categoryColor = _categoryColor(widget.insight.category);
+    final categoryColor = categoryColorFromString(widget.insight.category);
     final isUnread = !widget.insight.isRead;
 
     return GestureDetector(
@@ -591,14 +590,14 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                                   const SizedBox(width: AppDimens.spaceXs),
                                 ],
                                 Expanded(
-                                  child: Text(
-                                    widget.insight.title,
-                                    style: AppTextStyles.h3.copyWith(
-                                      color: AppColors.textPrimaryDark,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                   child: Text(
+                                     widget.insight.title,
+                                     style: AppTextStyles.titleMedium.copyWith(
+                                       color: AppColors.textPrimaryDark,
+                                     ),
+                                     maxLines: 2,
+                                     overflow: TextOverflow.ellipsis,
+                                   ),
                                 ),
                               ],
                             ),
@@ -626,22 +625,22 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                                       AppDimens.radiusChip,
                                     ),
                                   ),
-                                  child: Text(
-                                    widget.insight.category,
-                                    style: AppTextStyles.labelXs.copyWith(
-                                      color: categoryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                                   child: Text(
+                                     widget.insight.category,
+                                     style: AppTextStyles.labelSmall.copyWith(
+                                       color: categoryColor,
+                                       fontWeight: FontWeight.w600,
+                                     ),
+                                   ),
                                 ),
                                 const Spacer(),
                                 if (widget.insight.createdAt != null)
-                                  Text(
-                                    _relativeTime(widget.insight.createdAt!),
-                                    style: AppTextStyles.labelXs.copyWith(
-                                      color: AppColors.textTertiary,
-                                    ),
-                                  ),
+                                   Text(
+                                     _relativeTime(widget.insight.createdAt!),
+                                     style: AppTextStyles.labelSmall.copyWith(
+                                       color: AppColors.textTertiary,
+                                     ),
+                                   ),
                                 const SizedBox(width: AppDimens.spaceXs),
                                 Icon(
                                   Icons.chevron_right_rounded,
@@ -722,7 +721,7 @@ class _QuickActionCardState extends State<_QuickActionCard> {
                   children: [
                     Text(
                       widget.action.title,
-                      style: AppTextStyles.h3.copyWith(
+                      style: AppTextStyles.titleMedium.copyWith(
                         color: AppColors.textPrimaryDark,
                       ),
                     ),
@@ -730,7 +729,7 @@ class _QuickActionCardState extends State<_QuickActionCard> {
                       const SizedBox(height: 2),
                       Text(
                         widget.action.subtitle,
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -831,16 +830,16 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                           Text(
                             'Wellness check-in',
-                            style: AppTextStyles.h3.copyWith(
+                            style: AppTextStyles.titleMedium.copyWith(
                               color: AppColors.textPrimaryDark,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Log mood, energy, and water intake',
-                            style: AppTextStyles.caption.copyWith(
+                            style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                             ),
                           ),
@@ -901,7 +900,7 @@ class _EmptyInsightsCard extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceMd),
             Text(
               'No insights yet',
-              style: AppTextStyles.h3.copyWith(
+              style: AppTextStyles.titleMedium.copyWith(
                 color: AppColors.textPrimaryDark,
               ),
             ),
@@ -974,7 +973,7 @@ class _ErrorCard extends StatelessWidget {
               ),
               child: Text(
                 'Retry',
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1015,39 +1014,6 @@ String _relativeTime(DateTime dt) {
   if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
   if (diff.inHours < 24) return '${diff.inHours}h ago';
   return '${diff.inDays}d ago';
-}
-
-/// Returns the category color token for a health category string.
-Color _categoryColor(String category) {
-  switch (category.toLowerCase()) {
-    case 'sleep':
-      return AppColors.categorySleep;
-    case 'activity':
-    case 'fitness':
-      return AppColors.categoryActivity;
-    case 'heart':
-    case 'cardio':
-      return AppColors.categoryHeart;
-    case 'body':
-    case 'weight':
-      return AppColors.categoryBody;
-    case 'nutrition':
-    case 'food':
-      return AppColors.categoryNutrition;
-    case 'wellness':
-    case 'mood':
-      return AppColors.categoryWellness;
-    case 'vitals':
-      return AppColors.categoryVitals;
-    case 'cycle':
-      return AppColors.categoryCycle;
-    case 'mobility':
-      return AppColors.categoryMobility;
-    case 'environment':
-      return AppColors.categoryEnvironment;
-    default:
-      return AppColors.primary;
-  }
 }
 
 /// Returns an icon for the given [InsightType].
