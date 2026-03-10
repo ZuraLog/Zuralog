@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX: thinking state, timeout, smart auto-scroll, regenerate in long-press)
+**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX: thinking state, inactivity timeout, smart auto-scroll + scroll-to-bottom button, regenerate in long-press)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -331,8 +331,8 @@ End-to-end fix making the Coach tab's AI chat work against the production backen
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
 | P0 | Thinking state — "Thinking…" label between Send and first token | ✅ Done | Animated dots + italic "Thinking…" shown while `isSending=true` and no tokens/tool yet; disappears when tokens arrive |
-| P0 | 30-second timeout — surface error when AI takes too long | ✅ Done | `Timer` in `CoachChatNotifier.sendMessage()`; cancelled on first token/tool/complete/error; fires only during pre-token gap |
-| P0 | Smart auto-scroll — follow bottom, pause when scrolled up | ✅ Done | 80 px threshold; pauses on user scroll-up; always resumes when stream completes |
+| P0 | Inactivity timeout — surface error when connection goes silent | ✅ Done | 10-minute inactivity timer in `CoachChatNotifier`; resets on every server event (token/tool/complete/error); fires only if connection is completely silent; matches OpenAI SDK default |
+| P0 | Smart auto-scroll — follow bottom, pause when scrolled up | ✅ Done | 80 px threshold; pauses on user scroll-up; floating scroll-to-bottom arrow button (sage green) fades in when user scrolls up; tapping it scrolls back down and clears the flag |
 | P1 | Regenerate moved to long-press sheet | ✅ Done | Standalone button removed; long-press last AI message → Copy + Regenerate |
 
 ---

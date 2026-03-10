@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX polish)  
+**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX polish; inactivity timeout + scroll-to-bottom button)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -9,9 +9,9 @@
 
 ## Coach Chat UX Polish (feat/coach-chat-ux-improvements, 2026-03-10)
 
-**Scope:** Four UX improvements to the Coach chat screen.  
+**Scope:** Four UX improvements to the Coach chat screen, plus two follow-up refinements (inactivity timeout, scroll-to-bottom button).  
 **Branch:** `feat/coach-chat-ux-improvements`  
-**Commit:** `0342f02`
+**Commits:** `0342f02`, `5d58b15`
 
 **Files changed:**
 - `zuralog/lib/features/coach/presentation/chat_thread_screen.dart`
@@ -21,9 +21,9 @@
 
 1. **Thinking state** — Between when the user sends a message and when the first token arrives from the AI, the streaming bubble now shows the animated 3-dot typing indicator plus an italic "Thinking…" label. Previously the bubble only appeared once tokens were already flowing, so there was a silent gap where nothing indicated the AI was working. The bubble is now visible for the entire duration of `isSending == true`, regardless of whether tokens have arrived.
 
-2. **30-second timeout** — `CoachChatNotifier` now starts a `dart:async Timer` of 30 seconds immediately after subscribing to the response stream. The timer is cancelled as soon as any `StreamToken`, `ToolProgress`, `StreamComplete`, or `StreamError` event arrives. If 30 seconds elapse with none of these events (the server accepted the connection but never responded), the stream is cancelled and a clear error is shown: "Response timed out. The AI took too long to respond." The timer is also cancelled in `cancelStream()` and in `onDispose`.
+2. **Inactivity-based timeout** — `CoachChatNotifier` now uses a 10-minute inactivity timer (`_kInactivityTimeout = Duration(minutes: 10)`) instead of the original 30-second wall-clock timer. The key difference: `_resetInactivityTimer()` is called on every server event (`StreamToken`, `ToolProgress`, `StreamComplete`, `StreamError`, `ConversationCreated`), so the timer resets as long as the server is alive and sending data. The timer only fires when the connection goes completely silent — matching the OpenAI SDK default behavior. On timeout, `_onInactivityTimeout()` cancels the stream and shows: "The connection went silent. Please try again." `_cancelInactivityTimer()` is called on normal completion and in `cancelStream()`.
 
-3. **Smart auto-scroll** — Auto-scroll now tracks whether the user has scrolled away from the bottom. A scroll listener on `_scrollCtrl` sets `_userScrolledUp = true` when the user is more than 80 px from the bottom. `_scrollToBottom()` is a no-op while `_userScrolledUp` is true, so streaming tokens no longer yank the user back down while they are reading history. When the response fully completes (`isSending` goes false), `_userScrolledUp` is reset and the view scrolls to the finished message — ensuring the user always sees the complete response.
+3. **Smart auto-scroll + scroll-to-bottom button** — Auto-scroll tracks whether the user has scrolled away from the bottom via a scroll listener on `_scrollCtrl` that sets `_userScrolledUp = true` when more than 80 px from the bottom. `_scrollToBottom()` is a no-op while `_userScrolledUp` is true. When streaming completes, the view no longer force-scrolls back — instead, a floating circular arrow button (sage green, 36×36, bottom-right of the message list) fades in when the user is scrolled up and fades out when they return to the bottom. Tapping the button clears `_userScrolledUp`, clears `_showScrollToBottom`, and calls `_scrollToBottom()`. The button uses `AnimatedOpacity` + `IgnorePointer` for a smooth appearance/disappearance.
 
 4. **Regenerate in long-press sheet** — The standalone "Regenerate" text button below the last AI message has been removed. Long-pressing the last AI message now shows a bottom sheet with Copy and Regenerate. Long-pressing any other AI message shows only Copy. User messages continue to show Copy + Edit. The `_showRegenerateButton` getter and the associated `ListView` item have been deleted; `onRegenerate` is passed as a callback to `_MessageBubble` only for the last assistant message when nothing is in flight.
 
@@ -32,9 +32,9 @@
 | Decision | Rationale |
 |----------|-----------|
 | Show bubble on `isSending`, not just on first token | Eliminates the silent gap where the user sees nothing after pressing Send. The 3-dot + "Thinking…" label is immediately reassuring. |
-| 30s timeout only for pre-token gap | Once tokens or a tool event arrive, the server is clearly alive. Timing out mid-stream would cut off a valid long response. |
+| 10-minute inactivity timeout (not 30-second wall-clock) | A 30s wall-clock timer would kill the connection before the AI finishes thinking on complex queries. Inactivity detection — timer resets on every received event — matches OpenAI SDK behavior and is the correct approach for AI streaming. |
 | 80 px scroll threshold | Small enough that "at the bottom" feels natural, large enough to not trip accidentally when the list grows by one line during streaming. |
-| Force-scroll on stream complete | The user may have scrolled up while waiting. When the response finishes, they should always see it — this is a deliberate UX choice, not an accident. |
+| Floating arrow instead of force-scroll on complete | Force-scrolling the user back to the bottom when they've deliberately scrolled up to read history is disruptive. The arrow button gives the user agency — they can return when ready. |
 | Regenerate in long-press, not a button | The button cluttered the thread between responses. Long-press is already the established gesture for message actions (Copy, Edit) in this chat — Regenerate belongs there. |
 
 **`flutter analyze`:** No issues found.
