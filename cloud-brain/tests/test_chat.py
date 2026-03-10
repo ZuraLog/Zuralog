@@ -32,8 +32,22 @@ def mock_auth_service():
 
 @pytest.fixture
 def mock_db():
-    """Create a mocked async database session."""
-    return AsyncMock()
+    """Create a mocked async database session.
+
+    Configures execute() to return a MagicMock with sync .scalars()/.scalar_one_or_none()
+    methods so that ORM result-processing code works without a real DB.
+    """
+    db = AsyncMock()
+    # execute() is awaited, so its return_value is what callers receive.
+    # The result object must support sync calls like .scalars().all() and
+    # .scalar_one_or_none() — use a plain MagicMock for those.
+    mock_result = MagicMock()
+    mock_scalars = MagicMock()
+    mock_scalars.all.return_value = []
+    mock_result.scalars.return_value = mock_scalars
+    mock_result.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_result
+    return db
 
 
 @pytest.fixture
@@ -55,7 +69,17 @@ def client(mock_auth_service, mock_db):
     async def _fake_session():
         yield mock_db
 
-    with patch("app.api.v1.chat.async_session", _fake_session):
+    # Patch LLMClient in the orchestrator module so the _title_client created
+    # inside Orchestrator.__init__ doesn't attempt real OpenAI API calls.
+    mock_title_llm = MagicMock()
+    mock_title_resp = MagicMock()
+    mock_title_resp.choices = [MagicMock(message=MagicMock(content="Test Title"))]
+    mock_title_llm.chat = AsyncMock(return_value=mock_title_resp)
+
+    with (
+        patch("app.api.v1.chat.async_session", _fake_session),
+        patch("app.agent.orchestrator.LLMClient", return_value=mock_title_llm),
+    ):
         with TestClient(app, raise_server_exceptions=False) as c:
             # Override app.state AFTER lifespan has run (it sets real services)
             app.state.auth_service = mock_auth_service
@@ -73,6 +97,21 @@ def client(mock_auth_service, mock_db):
             mock_resp = MagicMock()
             mock_resp.choices = [MagicMock(message=mock_msg)]
             mock_llm.chat = AsyncMock(return_value=mock_resp)
+
+            # stream_chat is awaited and then iterated: stream = await llm_client.stream_chat(...)
+            # then: async for chunk in stream: chunk.choices[0].delta.content
+            # So stream_chat must be a coroutine that returns an async iterable.
+            async def _fake_stream_iterable():
+                mock_delta = MagicMock()
+                mock_delta.content = "Hello from the AI Brain!"
+                mock_chunk = MagicMock()
+                mock_chunk.choices = [MagicMock(delta=mock_delta)]
+                yield mock_chunk
+
+            async def _fake_stream_chat(messages, tools=None):
+                return _fake_stream_iterable()
+
+            mock_llm.stream_chat = _fake_stream_chat
             app.state.llm_client = mock_llm
 
             # Disable rate limiter for most tests (tested separately)
@@ -120,12 +159,34 @@ def test_ws_connect_and_echo(client, mock_auth_service):
     }
 
     with client.websocket_connect("/api/v1/chat/ws?token=valid-token") as ws:
-        ws.send_json({"message": "Hello"})
-        response = ws.receive_json()
+        # Server sends conversation_init immediately on connect
+        init_msg = ws.receive_json()
+        assert init_msg["type"] == "conversation_init"
+        assert "conversation_id" in init_msg
 
-        assert response["type"] == "message"
-        assert response["role"] == "assistant"
-        assert "AI Brain" in response["content"]
+        # Send user message
+        ws.send_json({"message": "Hello"})
+
+        # Server sends typing_start before processing
+        typing_msg = ws.receive_json()
+        assert typing_msg["type"] == "typing_start"
+
+        # Collect stream_token events until stream_end
+        full_content = ""
+        while True:
+            event = ws.receive_json()
+            if event["type"] == "stream_token":
+                full_content += event["content"]
+            elif event["type"] == "stream_end":
+                # stream_end carries the final assembled content
+                full_content = event.get("content", full_content)
+                assert "conversation_id" in event
+                assert "message_id" in event
+                break
+            else:
+                raise AssertionError(f"Unexpected event type: {event['type']}")
+
+        assert "AI Brain" in full_content
         mock_auth_service.get_user.assert_called_once_with("valid-token")
 
 
@@ -137,9 +198,15 @@ def test_ws_empty_message_returns_error(client, mock_auth_service):
     }
 
     with client.websocket_connect("/api/v1/chat/ws?token=valid-token") as ws:
-        ws.send_json({"message": ""})
-        response = ws.receive_json()
+        # Server sends conversation_init immediately on connect (before any message)
+        init_msg = ws.receive_json()
+        assert init_msg["type"] == "conversation_init"
 
+        # Send empty message
+        ws.send_json({"message": ""})
+
+        # Server should respond with an error (and keep the connection open)
+        response = ws.receive_json()
         assert response["type"] == "error"
         assert "Empty message" in response["content"]
 
