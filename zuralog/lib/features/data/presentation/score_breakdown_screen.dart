@@ -16,6 +16,7 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 // ── ScoreBreakdownScreen ──────────────────────────────────────────────────────
 
@@ -28,9 +29,9 @@ class ScoreBreakdownScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scoreAsync = ref.watch(healthScoreProvider);
 
-    return Scaffold(
+    return ZuralogScaffold(
       appBar: AppBar(
-        title: Text('Score Breakdown', style: AppTextStyles.h2),
+        title: Text('Score Breakdown', style: AppTextStyles.displaySmall),
       ),
       body: scoreAsync.when(
         loading: () => const Center(
@@ -47,7 +48,7 @@ class ScoreBreakdownScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimens.spaceSm),
                 Text(
                   'Could not load score',
-                  style: AppTextStyles.body
+                  style: AppTextStyles.bodyLarge
                       .copyWith(color: AppColors.textSecondary),
                 ),
               ],
@@ -84,7 +85,7 @@ class _ScoreBreakdownBody extends StatelessWidget {
               const SizedBox(height: AppDimens.spaceSm),
               Text(
                 'Your composite health score',
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.textSecondary,
                 ),
               ),
@@ -95,12 +96,12 @@ class _ScoreBreakdownBody extends StatelessWidget {
         const SizedBox(height: AppDimens.spaceLg),
 
         // ── Section title ─────────────────────────────────────────────────
-        Text('Score Inputs', style: AppTextStyles.h3),
+        Text('Score Inputs', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimens.spaceSm),
         Text(
           'Each input is normalized to 0–100 based on your 30-day history. '
           'Missing inputs are excluded and weights redistribute proportionally.',
-          style: AppTextStyles.caption.copyWith(
+          style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.textSecondary,
           ),
         ),
@@ -159,7 +160,7 @@ class _InputRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   input.label,
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -174,7 +175,7 @@ class _InputRow extends StatelessWidget {
                 ),
                 child: Text(
                   '${(input.weight * 100).round()}%',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600,
                   ),
@@ -186,7 +187,7 @@ class _InputRow extends StatelessWidget {
                 input.hasData && input.subScore != null
                     ? '${input.subScore}'
                     : '—',
-                style: AppTextStyles.h3.copyWith(
+                style: AppTextStyles.titleMedium.copyWith(
                   color: barColor,
                   fontWeight: FontWeight.w700,
                 ),
@@ -213,7 +214,7 @@ class _InputRow extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceXs),
             Text(
               'No data connected for this input',
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textTertiary,
               ),
             ),
@@ -225,7 +226,7 @@ class _InputRow extends StatelessWidget {
               input.description!.length > 120
                   ? '${input.description!.substring(0, 120)}…'
                   : input.description!,
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
@@ -263,14 +264,14 @@ class _EmptyInputsCard extends StatelessWidget {
                 color: AppColors.primary,
               ),
               const SizedBox(width: AppDimens.spaceSm),
-              Text('Breakdown coming soon', style: AppTextStyles.body),
+              Text('Breakdown coming soon', style: AppTextStyles.bodyLarge),
             ],
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             'Score input breakdown will be available once more of your health '
             'data builds up. Keep your integrations connected.',
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
@@ -312,12 +313,12 @@ class _CommentaryCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppDimens.spaceSm),
                     Expanded(
-                      child: Text(
-                        commentary,
-                        style: AppTextStyles.caption.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
+                       child: Text(
+                         commentary,
+                         style: AppTextStyles.bodySmall.copyWith(
+                           color: Theme.of(context).colorScheme.onSurface,
+                         ),
+                       ),
                     ),
                   ],
                 ),

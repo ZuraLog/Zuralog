@@ -21,6 +21,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 // ── CategoryDetailScreen ──────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
     );
     final detailAsync = ref.watch(categoryDetailProvider(params));
 
-    return Scaffold(
+    return ZuralogScaffold(
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -81,7 +82,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
               ),
             ),
             const SizedBox(width: AppDimens.spaceSm),
-            Text(cat.displayName, style: AppTextStyles.h2),
+            Text(cat.displayName, style: AppTextStyles.displaySmall),
           ],
         ),
       ),
@@ -123,21 +124,21 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                     const SizedBox(height: AppDimens.spaceSm),
                     Text(
                       'Could not load ${cat.displayName}',
-                      style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              data: (detail) {
-                if (detail.metrics.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No metrics for ${cat.displayName} yet.',
-                      style: AppTextStyles.body.copyWith(
-                          color: AppColors.textSecondary),
-                    ),
-                  );
+                     ),
+                   ],
+                 ),
+               ),
+               data: (detail) {
+                 if (detail.metrics.isEmpty) {
+                   return Center(
+                     child: Text(
+                       'No metrics for ${cat.displayName} yet.',
+                       style: AppTextStyles.bodyLarge.copyWith(
+                           color: AppColors.textSecondary),
+                     ),
+                   );
                 }
                 return ListView.builder(
                   padding: EdgeInsets.fromLTRB(
@@ -270,7 +271,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
                       children: [
                         Text(
                           series.displayName,
-                          style: AppTextStyles.h3,
+                          style: AppTextStyles.titleMedium,
                         ),
                         if (series.currentValue != null) ...[
                           const SizedBox(height: 2),
@@ -279,18 +280,18 @@ class _MetricChartCardState extends State<_MetricChartCard>
                               children: [
                                 TextSpan(
                                   text: series.currentValue!,
-                                  style: AppTextStyles.h2.copyWith(
+                                  style: AppTextStyles.displaySmall.copyWith(
                                     color: color,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                if (widget.displayUnit.isNotEmpty)
-                                  TextSpan(
-                                    text: ' ${widget.displayUnit}',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
+                                 if (widget.displayUnit.isNotEmpty)
+                                   TextSpan(
+                                     text: ' ${widget.displayUnit}',
+                                     style: AppTextStyles.bodySmall.copyWith(
+                                       color: AppColors.textSecondary,
+                                     ),
+                                   ),
                               ],
                             ),
                           ),
@@ -321,12 +322,12 @@ class _MetricChartCardState extends State<_MetricChartCard>
                 ),
               ] else if (spots.length == 1) ...[
                 const SizedBox(height: AppDimens.spaceSm),
-                Text(
-                  'Only one data point available',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
+                 Text(
+                   'Only one data point available',
+                   style: AppTextStyles.bodySmall.copyWith(
+                     color: AppColors.textTertiary,
+                   ),
+                 ),
               ],
             ],
           ),
@@ -377,15 +378,15 @@ class _MetricChartCardState extends State<_MetricChartCard>
             getTooltipItems: (spots) => spots
                 .map((s) => LineTooltipItem(
                       '${s.y.toStringAsFixed(1)} ${widget.displayUnit}',
-                      AppTextStyles.caption.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ))
-                .toList(),
-          ),
-        ),
-        lineBarsData: [
+                       AppTextStyles.bodySmall.copyWith(
+                         color: color,
+                         fontWeight: FontWeight.w600,
+                       ),
+                     ))
+                 .toList(),
+           ),
+         ),
+         lineBarsData: [
           LineChartBarData(
             spots: spots,
             isCurved: true,
@@ -449,7 +450,7 @@ class _DeltaBadge extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             label,
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: color,
               fontWeight: FontWeight.w600,
             ),

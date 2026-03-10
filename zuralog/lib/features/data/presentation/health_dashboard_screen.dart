@@ -26,6 +26,7 @@ import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/category_card.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/score_trend_hero.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
@@ -150,8 +151,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
         : DataMaturityMode.progress;
     final showDataBanner = dataDays < 7 && !layout.bannerDismissed;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
+      addBottomNavPadding: true,
       appBar: ZuralogAppBar(
         title: 'Data',
         tooltipConfig: const ZuralogAppBarTooltipConfig(
@@ -166,7 +167,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
               onPressed: _toggleEditMode,
               child: Text(
                 'Done',
-                style: AppTextStyles.body.copyWith(color: AppColors.primary),
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
               ),
             )
           else
@@ -256,7 +257,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 ),
                 child: Text(
                   _isEditMode ? 'Customize Dashboard' : 'Categories',
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: _isEditMode
                         ? AppColors.primary
                         : Theme.of(context).colorScheme.onSurface,
@@ -305,12 +306,12 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                             color: AppColors.textTertiary,
                           ),
                           const SizedBox(height: AppDimens.spaceSm),
-                          Text(
-                            'Could not load data',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
+                           Text(
+                             'Could not load data',
+                             style: AppTextStyles.bodyLarge.copyWith(
+                               color: AppColors.textSecondary,
+                             ),
+                           ),
                         ],
                       ),
                     ),
@@ -350,10 +351,10 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                           child: Text(
                             'No health data yet.\nConnect an integration to get started.',
                             textAlign: TextAlign.center,
-                            style: AppTextStyles.body.copyWith(
+                            style: AppTextStyles.bodyLarge.copyWith(
                               color: AppColors.textSecondary,
                             ),
-                          ),
+                           ),
                         ),
                       ),
                     ),
@@ -625,7 +626,7 @@ class _ColorPickerSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppDimens.spaceMd),
-          Text('Accent Color', style: AppTextStyles.h3),
+          Text('Accent Color', style: AppTextStyles.titleMedium),
           const SizedBox(height: AppDimens.spaceMd),
           Wrap(
             spacing: 12,

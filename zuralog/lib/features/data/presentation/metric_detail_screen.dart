@@ -22,6 +22,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
 // ── Private constants ─────────────────────────────────────────────────────────
@@ -88,12 +89,12 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
     );
     final detailAsync = ref.watch(metricDetailProvider(params));
 
-    return Scaffold(
+    return ZuralogScaffold(
       appBar: AppBar(
         title: detailAsync.when(
-          data: (d) => Text(d.series.displayName, style: AppTextStyles.h2),
+          data: (d) => Text(d.series.displayName, style: AppTextStyles.displaySmall),
           loading: () => const SizedBox.shrink(),
-          error: (err, stack) => Text(widget.metricId, style: AppTextStyles.h2),
+          error: (err, stack) => Text(widget.metricId, style: AppTextStyles.displaySmall),
         ),
       ),
       body: detailAsync.when(
@@ -110,7 +111,7 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
               Text(
                 'Could not load metric',
                 style:
-                    AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                    AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -259,7 +260,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
           Center(
             child: Text(
               'Pinch to zoom · drag to pan',
-              style: AppTextStyles.labelXs.copyWith(
+              style: AppTextStyles.labelSmall.copyWith(
                 color: AppColors.textTertiary,
               ),
             ),
@@ -271,7 +272,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
           Center(
             child: Text(
               'Only one data point available',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textSecondary),
             ),
           ),
@@ -282,7 +283,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
           Center(
             child: Text(
               'No data for this period',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textSecondary),
             ),
           ),
@@ -400,13 +401,13 @@ class _StatCell extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary),
           ),
           const SizedBox(height: 2),
           Text(
             unit != null ? '$value $unit' : value,
-            style: AppTextStyles.h3.copyWith(
+            style: AppTextStyles.titleMedium.copyWith(
               color: textColor,
               fontWeight: FontWeight.w700,
             ),
@@ -502,8 +503,8 @@ class _ChartCard extends StatelessWidget {
                       getTitlesWidget: (val, meta) => Text(
                         val.toStringAsFixed(
                             val.abs() >= 100 ? 0 : 1),
-                        style: AppTextStyles.labelXs.copyWith(
-                            color: AppColors.textTertiary),
+                         style: AppTextStyles.labelSmall.copyWith(
+                             color: AppColors.textTertiary),
                       ),
                     ),
                   ),
@@ -523,10 +524,10 @@ class _ChartCard extends StatelessWidget {
                     getTooltipItems: (touchedSpots) => touchedSpots
                         .map((s) => LineTooltipItem(
                               '${s.y.toStringAsFixed(1)} $displayUnit',
-                              AppTextStyles.caption.copyWith(
-                                color: color,
-                                fontWeight: FontWeight.w600,
-                              ),
+                               AppTextStyles.bodySmall.copyWith(
+                                 color: color,
+                                 fontWeight: FontWeight.w600,
+                               ),
                             ))
                         .toList(),
                   ),
@@ -591,7 +592,7 @@ class _SourceAttribution extends StatelessWidget {
         Flexible(
           child: Text(
             _sourceLabel(source),
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textTertiary,
             ),
             overflow: TextOverflow.ellipsis,
@@ -636,12 +637,12 @@ class _AiInsightCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppDimens.spaceSm),
                     Expanded(
-                      child: Text(
-                        insight,
-                        style: AppTextStyles.caption.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
+                       child: Text(
+                         insight,
+                         style: AppTextStyles.bodySmall.copyWith(
+                           color: Theme.of(context).colorScheme.onSurface,
+                         ),
+                       ),
                     ),
                   ],
                 ),
@@ -687,10 +688,10 @@ class _RawTableToggle extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  'Raw Data',
-                  style: AppTextStyles.h3,
-                ),
+                 Text(
+                   'Raw Data',
+                   style: AppTextStyles.titleMedium,
+                 ),
                 const Spacer(),
                 Icon(
                   isExpanded
@@ -707,25 +708,25 @@ class _RawTableToggle extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: 3,
-                    child: Text(
-                      'Date',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      'Value',
-                      textAlign: TextAlign.right,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                     child: Text(
+                       'Date',
+                       style: AppTextStyles.bodySmall.copyWith(
+                         color: AppColors.textSecondary,
+                         fontWeight: FontWeight.w600,
+                       ),
+                     ),
+                   ),
+                   Expanded(
+                     flex: 2,
+                     child: Text(
+                       'Value',
+                       textAlign: TextAlign.right,
+                       style: AppTextStyles.bodySmall.copyWith(
+                         color: AppColors.textSecondary,
+                         fontWeight: FontWeight.w600,
+                       ),
+                     ),
+                   ),
                 ],
               ),
               const Divider(height: 16),
@@ -742,22 +743,22 @@ class _RawTableToggle extends StatelessWidget {
                             flex: 3,
                             child: Text(
                               _formatDate(dp.timestamp),
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              '${dp.value.toStringAsFixed(1)} $displayUnit',
-                              textAlign: TextAlign.right,
-                              style: AppTextStyles.caption.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface,
-                                fontWeight: FontWeight.w600,
-                              ),
+                             style: AppTextStyles.bodySmall.copyWith(
+                                 color: AppColors.textSecondary,
+                               ),
+                             ),
+                           ),
+                           Expanded(
+                             flex: 2,
+                             child: Text(
+                               '${dp.value.toStringAsFixed(1)} $displayUnit',
+                               textAlign: TextAlign.right,
+                               style: AppTextStyles.bodySmall.copyWith(
+                                 color: Theme.of(context)
+                                     .colorScheme
+                                     .onSurface,
+                                 fontWeight: FontWeight.w600,
+                               ),
                             ),
                           ),
                         ],
@@ -826,7 +827,7 @@ class _AskCoachButton extends ConsumerWidget {
       icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
       label: Text(
         'Ask Coach about $metricName',
-        style: AppTextStyles.body.copyWith(
+        style: AppTextStyles.bodyLarge.copyWith(
           color: AppColors.primaryButtonText,
           fontWeight: FontWeight.w600,
         ),
