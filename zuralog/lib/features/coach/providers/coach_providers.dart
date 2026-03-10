@@ -302,28 +302,25 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 
     _streamSub = stream.listen(
       (event) {
+        // Every event from the server proves the connection is alive — reset
+        // the inactivity timer so a legitimately long response is never killed.
+        _resetInactivityTimer();
+
         switch (event) {
           case ConversationCreated(:final conversationId):
             state = state.copyWith(resolvedConversationId: conversationId);
 
           case ToolProgress(:final toolName, :final isStart):
-            // Tool started — server is alive, cancel the pre-token timeout.
-            _timeoutTimer?.cancel();
-            _timeoutTimer = null;
             state = state.copyWith(
               activeToolName: isStart ? toolName : null,
               clearTool: !isStart,
             );
 
           case StreamToken(:final accumulated):
-            // First token arrived — cancel the pre-token timeout.
-            _timeoutTimer?.cancel();
-            _timeoutTimer = null;
             state = state.copyWith(streamingContent: accumulated);
 
           case StreamComplete(:final message, :final conversationId):
-            _timeoutTimer?.cancel();
-            _timeoutTimer = null;
+            _cancelInactivityTimer();
             // Append the AI reply to the existing messages list.
             state = state.copyWith(
               messages: [...state.messages, message],
@@ -339,8 +336,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
             if (!completer.isCompleted) completer.complete();
 
           case StreamError(:final error):
-            _timeoutTimer?.cancel();
-            _timeoutTimer = null;
+            _cancelInactivityTimer();
             state = state.copyWith(
               isSending: false,
               clearStreaming: true,
@@ -351,8 +347,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         }
       },
       onError: (Object error) {
-        _timeoutTimer?.cancel();
-        _timeoutTimer = null;
+        _cancelInactivityTimer();
         state = state.copyWith(
           isSending: false,
           clearStreaming: true,
@@ -361,30 +356,49 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         if (!completer.isCompleted) completer.complete();
       },
       onDone: () {
-        _timeoutTimer?.cancel();
-        _timeoutTimer = null;
+        _cancelInactivityTimer();
         if (!completer.isCompleted) completer.complete();
       },
       cancelOnError: false,
     );
 
-    // Start a 30-second timeout. If no token or tool event arrives within
-    // that window, the stream is considered stuck and we surface an error.
-    _timeoutTimer = Timer(const Duration(seconds: 30), _onTimeout);
+    // Start the inactivity timer. It resets on every server event, so it only
+    // fires when the connection goes completely silent — matching how OpenAI,
+    // Anthropic, and all major AI products handle this. The AI can think for
+    // as long as it needs; we only give up if the server stops responding.
+    _resetInactivityTimer();
 
     await completer.future;
   }
 
-  /// Called when the 30-second pre-token timeout fires.
+  /// The inactivity window before treating a silent connection as dead.
   ///
-  /// Only acts when no tokens or tool events have arrived yet (i.e. the
-  /// server never started responding). Cancels the stream and surfaces a
-  /// user-facing error message.
-  void _onTimeout() {
-    // If tokens or a tool already arrived, the timer should have been
-    // cancelled already. Guard against the edge case where it fires late.
-    if (state.streamingContent != null || state.activeToolName != null) return;
+  /// 10 minutes matches the OpenAI SDK default and Anthropic's recommended
+  /// threshold for streaming requests. Resets on every server event.
+  static const _kInactivityTimeout = Duration(minutes: 10);
 
+  /// Cancels the current inactivity timer and starts a fresh one.
+  ///
+  /// Called on every received server event so the timer only fires when the
+  /// connection has been completely silent for [_kInactivityTimeout].
+  void _resetInactivityTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(_kInactivityTimeout, _onInactivityTimeout);
+  }
+
+  /// Cancels the inactivity timer without restarting it.
+  ///
+  /// Called when the stream completes normally or errors — no timeout needed.
+  void _cancelInactivityTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
+  }
+
+  /// Called when the server has been silent for [_kInactivityTimeout].
+  ///
+  /// The connection is considered dead — cancel the stream and surface a
+  /// clear error so the user knows they can try again.
+  void _onInactivityTimeout() {
     _streamSub?.cancel();
     _streamSub = null;
     _timeoutTimer = null;
@@ -393,7 +407,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       isSending: false,
       clearStreaming: true,
       clearTool: true,
-      errorMessage: 'Response timed out. The AI took too long to respond.',
+      errorMessage: 'The connection went silent. Please try again.',
     );
   }
 

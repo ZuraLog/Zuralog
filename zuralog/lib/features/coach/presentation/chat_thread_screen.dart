@@ -60,9 +60,10 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   bool _initialized = false;
 
   /// True when the user has scrolled up far enough that auto-scroll should pause.
-  /// Reset to false when the stream completes, always bringing the user back to
-  /// the finished response.
   bool _userScrolledUp = false;
+
+  /// True when the floating scroll-to-bottom arrow button should be visible.
+  bool _showScrollToBottom = false;
 
   /// True when the user is editing a previously sent message.
   bool _isEditing = false;
@@ -100,6 +101,10 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final pos = _scrollCtrl.position;
     final atBottom = pos.pixels >= pos.maxScrollExtent - 80.0;
     _userScrolledUp = !atBottom;
+    final shouldShow = _userScrolledUp;
+    if (shouldShow != _showScrollToBottom) {
+      setState(() => _showScrollToBottom = shouldShow);
+    }
   }
 
   /// Either loads history (existing conversation) or fires the pending
@@ -385,10 +390,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           (prev?.isSending ?? false) && !next.isSending && next.streamingContent == null;
 
       if (streamFinished) {
-        // Response complete — always bring the user to the finished message,
-        // even if they scrolled up while waiting.
-        _userScrolledUp = false;
-        _scrollToBottom();
+        // Response complete — do nothing; let the user stay where they are.
+        // The floating scroll-to-bottom button will be visible if they scrolled up.
       } else if (newMessage || streamStarted || isActivelyStreaming) {
         // Respects [_userScrolledUp] guard inside [_scrollToBottom].
         _scrollToBottom();
@@ -443,28 +446,73 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             ),
           // ── Message list + streaming bubble ──────────────────────────────
           Expanded(
-            child: chatState.isLoadingHistory
-                ? const _MessagesLoadingSkeleton()
-                : _MessageList(
-                    messages: chatState.messages,
-                    streamingContent: chatState.streamingContent,
-                    activeToolName: chatState.activeToolName,
-                    scrollController: _scrollCtrl,
-                    conversationId: widget.conversationId,
-                    isSending: chatState.isSending,
-                    onEditMessage: (snapshot, content) {
-                      _editSnapshot = snapshot;
-                      setState(() {
-                        _isEditing = true;
-                        _editingContent = content;
-                      });
-                      _inputCtrl.text = content;
-                      _inputCtrl.selection = TextSelection.collapsed(
-                        offset: content.length,
-                      );
-                      _inputFocus.requestFocus();
-                    },
+            child: Stack(
+              children: [
+                chatState.isLoadingHistory
+                    ? const _MessagesLoadingSkeleton()
+                    : _MessageList(
+                        messages: chatState.messages,
+                        streamingContent: chatState.streamingContent,
+                        activeToolName: chatState.activeToolName,
+                        scrollController: _scrollCtrl,
+                        conversationId: widget.conversationId,
+                        isSending: chatState.isSending,
+                        onEditMessage: (snapshot, content) {
+                          _editSnapshot = snapshot;
+                          setState(() {
+                            _isEditing = true;
+                            _editingContent = content;
+                          });
+                          _inputCtrl.text = content;
+                          _inputCtrl.selection = TextSelection.collapsed(
+                            offset: content.length,
+                          );
+                          _inputFocus.requestFocus();
+                        },
+                      ),
+                // ── Scroll-to-bottom button ───────────────────────────────
+                Positioned(
+                  right: AppDimens.spaceMd,
+                  bottom: AppDimens.spaceMd,
+                  child: AnimatedOpacity(
+                    opacity: _showScrollToBottom ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: IgnorePointer(
+                      ignoring: !_showScrollToBottom,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _userScrolledUp = false;
+                            _showScrollToBottom = false;
+                          });
+                          _scrollToBottom();
+                        },
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
+                ),
+              ],
+            ),
           ),
           // ── Editing indicator bar ─────────────────────────────────────────
           if (_isEditing)
