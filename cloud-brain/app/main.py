@@ -91,6 +91,7 @@ from app.services.strava_rate_limiter import StravaRateLimiter
 from app.services.strava_token_service import StravaTokenService
 from app.services.analytics import AnalyticsService
 from app.services.cache_service import CacheService
+from app.services.storage_service import StorageService
 from app.services.user_tool_resolver import UserToolResolver
 
 # Configure root logger based on environment.
@@ -147,6 +148,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # HTTP client (shared across services)
     http_client = httpx.AsyncClient(timeout=30.0)
     app.state.auth_service = AuthService(client=http_client)
+    app.state.storage_service = StorageService(client=http_client)
 
     # MCP Framework (Phase 1.3+)
     registry = MCPServerRegistry()
