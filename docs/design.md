@@ -80,9 +80,9 @@ Each of the 10 health categories has a signature color used on cards, charts, ic
 |-------|-----|-------|
 | `surface-900` | `#2D2D2D` | Primary background — Brand Dark Charcoal |
 | `surface-800` | `#383838` | Card backgrounds, content containers |
-| `surface-700` | `#3A3A3C` | Elevated cards, bottom sheets, drawers |
-| `surface-600` | `#444444` | Dividers (used sparingly), disabled states |
-| `surface-500` | `#4A4A4C` | Input backgrounds, chips, search bars |
+| `surface-700` | `#3A3A3C` | Input backgrounds, chip fills, search bars, surfaces |
+| `surface-600` | `#444444` | Elevated cards, bottom sheets, disabled states |
+| `surface-500` | `#4A4A4C` | Dividers, card borders, input field borders |
 
 **Note:** Primary background is `#2D2D2D` (Brand Dark Charcoal), matching the Zuralog website dark palette. Card backgrounds (`#383838`) are clearly distinct without a border.
 

@@ -94,10 +94,17 @@ class ZButton extends StatelessWidget {
     ColorScheme colorScheme,
     Widget child,
   ) {
+    // Inner buttons use a no-op callback when enabled so they render in the
+    // correct enabled visual state without firing the action themselves.
+    // ZuralogSpringButton.onTap is the sole owner of the actual callback,
+    // preventing the double-fire that occurs when both onTap and onPressed
+    // point to the same callback.
+    final innerCallback = _isDisabled ? null : () {};
+
     switch (variant) {
       case ZButtonVariant.primary:
         return ElevatedButton(
-          onPressed: _isDisabled ? null : onPressed,
+          onPressed: innerCallback,
           style: ElevatedButton.styleFrom(
             minimumSize: isFullWidth
                 ? const Size(double.infinity, 56)
@@ -107,7 +114,7 @@ class ZButton extends StatelessWidget {
         );
       case ZButtonVariant.secondary:
         return OutlinedButton(
-          onPressed: _isDisabled ? null : onPressed,
+          onPressed: innerCallback,
           style: OutlinedButton.styleFrom(
             minimumSize: isFullWidth
                 ? const Size(double.infinity, 56)
@@ -117,7 +124,7 @@ class ZButton extends StatelessWidget {
         );
       case ZButtonVariant.destructive:
         return ElevatedButton(
-          onPressed: _isDisabled ? null : onPressed,
+          onPressed: innerCallback,
           style: ElevatedButton.styleFrom(
             backgroundColor: colorScheme.error,
             foregroundColor: colorScheme.onError,
@@ -129,7 +136,7 @@ class ZButton extends StatelessWidget {
         );
       case ZButtonVariant.ghost:
         return TextButton(
-          onPressed: _isDisabled ? null : onPressed,
+          onPressed: innerCallback,
           style: TextButton.styleFrom(
             minimumSize: isFullWidth
                 ? const Size(double.infinity, 56)

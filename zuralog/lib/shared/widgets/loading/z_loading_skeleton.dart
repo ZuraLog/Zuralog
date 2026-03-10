@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 
 /// A shimmer placeholder used during loading states.
@@ -60,13 +61,10 @@ class _ZLoadingSkeletonState extends State<ZLoadingSkeleton>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Surface-relative shimmer colors — work on both light and dark themes.
-    final baseColor = isDark
-        ? const Color(0x26FFFFFF) // 15% white overlay on dark
-        : const Color(0x1A000000); // 10% black overlay on light
-    final highlightColor = isDark
-        ? const Color(0x66FFFFFF) // 40% white overlay on dark
-        : const Color(0x33000000); // 20% black overlay on light
+    // Surface-relative shimmer colors sourced from AppColors tokens.
+    final baseColor = isDark ? AppColors.shimmerBase : AppColors.shimmerBaseLight;
+    final highlightColor =
+        isDark ? AppColors.shimmerHighlight : AppColors.shimmerHighlightLight;
 
     return AnimatedBuilder(
       animation: _controller,

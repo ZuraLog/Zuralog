@@ -237,4 +237,10 @@ abstract final class AppColors {
 
   /// Shimmer highlight color — surface-relative sweep highlight on dark background.
   static const Color shimmerHighlight = Color(0x66FFFFFF);
+
+  /// Shimmer base color — light mode (10% black overlay on light surface).
+  static const Color shimmerBaseLight = Color(0x1A000000);
+
+  /// Shimmer highlight color — light mode (20% black overlay on light surface).
+  static const Color shimmerHighlightLight = Color(0x33000000);
 }
