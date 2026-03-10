@@ -425,6 +425,23 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     state = state.copyWith(messages: messages);
   }
 
+  /// Seeds this notifier with [messages] and [resolvedConversationId] from a
+  /// prior (temp-ID) notifier instance.
+  ///
+  /// Called by [ChatThreadScreen] immediately after a new conversation's
+  /// route-replace — before [_initConversation] runs — so the incoming screen
+  /// shows the already-streamed messages instead of triggering a redundant
+  /// history load.
+  void seedFromPrior({
+    required List<ChatMessage> messages,
+    required String resolvedConversationId,
+  }) {
+    state = CoachChatState(
+      messages: messages,
+      resolvedConversationId: resolvedConversationId,
+    );
+  }
+
   /// Cancels any in-flight stream.
   ///
   /// If partial tokens have already arrived ([streamingContent] is non-empty),

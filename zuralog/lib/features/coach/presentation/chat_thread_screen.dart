@@ -182,8 +182,18 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             }
 
             // All async work is done — now it is safe to replace the route.
-            // The widget is still mounted because we deferred navigation.
+            // Seed the incoming notifier first so the new screen shows the
+            // streamed + attachment messages instead of loading stale history.
             if (mounted) {
+              final currentState = ref.read(
+                coachChatNotifierProvider(widget.conversationId),
+              );
+              ref
+                  .read(coachChatNotifierProvider(resolvedId).notifier)
+                  .seedFromPrior(
+                    messages: currentState.messages,
+                    resolvedConversationId: resolvedId,
+                  );
               context.replaceNamed(
                 RouteNames.coachThread,
                 pathParameters: {'id': resolvedId},
@@ -193,10 +203,16 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
         }
       }
     } else {
-      // Load existing message history.
-      await ref
-          .read(coachChatNotifierProvider(widget.conversationId).notifier)
-          .loadHistory();
+      // If the notifier was pre-seeded (e.g. after a new-conversation
+      // route-replace from _dispatchSend), messages are already present —
+      // skip the history load to avoid replacing them with stale data.
+      final alreadySeeded =
+          ref.read(coachChatNotifierProvider(widget.conversationId)).messages.isNotEmpty;
+      if (!alreadySeeded) {
+        await ref
+            .read(coachChatNotifierProvider(widget.conversationId).notifier)
+            .loadHistory();
+      }
     }
   }
 
@@ -248,12 +264,23 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       // and replace the current route so the URL reflects the real UUID.
       // Skipped when the caller needs to do more async work before navigation.
       if (!skipRouteReplace && mounted) {
-        final resolvedId = ref
-            .read(coachChatNotifierProvider(widget.conversationId))
-            .resolvedConversationId;
+        final currentState =
+            ref.read(coachChatNotifierProvider(widget.conversationId));
+        final resolvedId = currentState.resolvedConversationId;
         if (resolvedId != null &&
             resolvedId != widget.conversationId &&
             widget.conversationId.startsWith('new_')) {
+          // Seed the incoming notifier (keyed on the real UUID) with the
+          // messages that were streamed under the temp ID. This prevents the
+          // new ChatThreadScreen from calling loadHistory() and replacing the
+          // conversation with stale/mock data.
+          ref
+              .read(coachChatNotifierProvider(resolvedId).notifier)
+              .seedFromPrior(
+                messages: currentState.messages,
+                resolvedConversationId: resolvedId,
+              );
+
           // Replace the current route — keeps the back stack clean.
           context.replaceNamed(
             RouteNames.coachThread,
