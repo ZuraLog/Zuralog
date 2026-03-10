@@ -1,13 +1,13 @@
 /// Zuralog — ZuralogAppBar shared widget.
 ///
-/// Zuralog shared AppBar — base properties hardcoded (backgroundColor,
-/// elevation, scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
+/// Zuralog shared AppBar — base properties hardcoded (elevation,
+/// scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
 /// always appended as last action. Used by every root tab screen.
+/// Background color is inherited from AppBarTheme in AppTheme.
 library;
 
 import 'package:flutter/material.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
@@ -33,9 +33,10 @@ class ZuralogAppBarTooltipConfig {
 
 // ── ZuralogAppBar ─────────────────────────────────────────────────────────────
 
-/// Zuralog shared AppBar — base properties hardcoded (backgroundColor,
-/// elevation, scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
-/// always appended as last action. Used by every root tab screen.
+/// Zuralog shared AppBar — base properties hardcoded (elevation,
+/// scrolledUnderElevation, surfaceTintColor), ProfileAvatarButton
+/// always appended as last action. Background inherited from AppBarTheme.
+/// Used by every root tab screen.
 ///
 /// Note: this widget embeds [ProfileAvatarButton], which is a Riverpod
 /// [ConsumerWidget] and requires a [ProviderScope] ancestor. Wrap with
@@ -66,7 +67,7 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleText = Text(title, style: AppTextStyles.h2);
+    final titleText = Text(title, style: AppTextStyles.displaySmall);
 
     final Widget titleWidget = tooltipConfig != null
         ? OnboardingTooltip(
@@ -86,7 +87,6 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
     ];
 
     return AppBar(
-      backgroundColor: AppColors.backgroundDark,
       elevation: 0,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,

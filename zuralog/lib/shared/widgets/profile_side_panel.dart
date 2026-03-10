@@ -90,7 +90,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
                       backgroundColor: AppColors.primary.withValues(alpha: 0.85),
                       child: Text(
                         initial,
-                        style: AppTextStyles.h2.copyWith(
+                        style: AppTextStyles.displaySmall.copyWith(
                           color: AppColors.primaryButtonText,
                           fontWeight: FontWeight.w700,
                         ),
@@ -100,7 +100,7 @@ class ProfileSidePanelWidget extends ConsumerWidget {
                     // Display name
                     Text(
                       displayName,
-                      style: AppTextStyles.h3.copyWith(
+                      style: AppTextStyles.titleMedium.copyWith(
                         color: cs.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
@@ -112,8 +112,8 @@ class ProfileSidePanelWidget extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         email,
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textSecondary,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -275,7 +275,7 @@ class _NavItem extends StatelessWidget {
       leading: Icon(icon, color: effectiveColor, size: AppDimens.iconMd),
       title: Text(
         label,
-        style: AppTextStyles.body.copyWith(color: effectiveColor),
+        style: AppTextStyles.bodyLarge.copyWith(color: effectiveColor),
       ),
       trailing: color == null
           ? Icon(

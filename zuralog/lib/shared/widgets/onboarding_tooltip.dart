@@ -83,14 +83,50 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
 
   void _showOverlay(BuildContext context) {
     if (_overlayEntry != null) return;
+
+    // ── Boundary detection ─────────────────────────────────────────────────
+    // Compute available space above and below the target widget and auto-flip
+    // the preferred direction if there is not enough room.
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final screenSize = MediaQuery.of(context).size;
+    final viewPadding = MediaQuery.of(context).viewPadding;
+
+    // Estimate tooltip height (~80px for typical tooltip content).
+    const kTooltipHeight = 80.0;
+    const kAppBarHeight = kToolbarHeight; // 56px default
+    const kNavBarHeight = 80.0; // AppDimens.bottomNavHeight
+
+    bool effectivePreferBelow = widget.preferBelow;
+
+    if (renderBox != null) {
+      final targetPos = renderBox.localToGlobal(Offset.zero);
+      final targetHeight = renderBox.size.height;
+
+      // Space available above the tooltip (between tooltip top and AppBar bottom).
+      final spaceAbove =
+          targetPos.dy - kTooltipHeight - kAppBarHeight - viewPadding.top;
+      // Space available below the tooltip (between tooltip bottom and NavBar top).
+      final spaceBelow = screenSize.height -
+          (targetPos.dy + targetHeight + kTooltipHeight + kNavBarHeight + viewPadding.bottom);
+
+      if (!widget.preferBelow && spaceAbove < 0 && spaceBelow >= 0) {
+        // Not enough room above → flip to below.
+        effectivePreferBelow = true;
+      } else if (widget.preferBelow && spaceBelow < 0 && spaceAbove >= 0) {
+        // Not enough room below → flip to above.
+        effectivePreferBelow = false;
+      }
+    }
+
     final capturedContext = context;
+    final capturedPreferBelow = effectivePreferBelow;
 
     _overlayEntry = OverlayEntry(
       builder: (_) {
         final isDark = Theme.of(capturedContext).brightness == Brightness.dark;
         final bubbleBg = isDark
-            ? const Color(0xFF3A3A3C)
-            : const Color(0xFFEBEBF0);
+            ? AppColors.surfaceDark
+            : AppColors.surfaceLight;
         final textColor = isDark
             ? AppColors.textPrimaryDark
             : AppColors.textPrimaryLight;
@@ -110,21 +146,21 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
             CompositedTransformFollower(
               link: _layerLink,
               showWhenUnlinked: false,
-              targetAnchor: widget.preferBelow
+              targetAnchor: capturedPreferBelow
                   ? Alignment.bottomCenter
                   : Alignment.topCenter,
-              followerAnchor: widget.preferBelow
+              followerAnchor: capturedPreferBelow
                   ? Alignment.topCenter
                   : Alignment.bottomCenter,
               offset: Offset(
                 0,
-                widget.preferBelow ? _kArrowSize + 4 : -(_kArrowSize + 4),
+                capturedPreferBelow ? _kArrowSize + 4 : -(_kArrowSize + 4),
               ),
               child: SizedBox(
                 width: _kMaxWidth,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: widget.preferBelow
+                  children: capturedPreferBelow
                       ? [
                           _ArrowPaint(color: bubbleBg, pointingDown: false),
                           _BubbleContent(
@@ -201,7 +237,7 @@ class _BubbleContent extends StatelessWidget {
         children: [
           Text(
             message,
-            style: AppTextStyles.caption.copyWith(color: textColor),
+            style: AppTextStyles.bodySmall.copyWith(color: textColor),
           ),
           const SizedBox(height: 6),
           GestureDetector(
@@ -209,7 +245,7 @@ class _BubbleContent extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             child: Text(
               'Got it',
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),

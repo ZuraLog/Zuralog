@@ -2,7 +2,7 @@
 ///
 /// A theme-aware card that implements the view-design.md Section 1.3 spec:
 /// - Light mode: white surface, soft diffusion shadow.
-/// - Dark mode: dark surface (#1C1C1E), 1px border (#38383A), no shadow.
+/// - Dark mode: dark surface (#3A3A3C), 1px border (#4A4A4C), no shadow.
 /// - 24px corner radius in both modes.
 library;
 
@@ -15,8 +15,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 /// Renders differently in light and dark mode:
 /// - **Light**: White background with a subtle diffusion shadow
 ///   (`0px 4px 20px rgba(0,0,0,0.05)`) and no border.
-/// - **Dark**: Dark surface (`#1C1C1E`) with a 1px separator border
-///   (`#38383A`) and no shadow (prevents glow artifacts on OLED).
+/// - **Dark**: Dark surface (`#3A3A3C`) with a 1px separator border
+///   (`#4A4A4C`) and no shadow (prevents glow artifacts on OLED).
 ///
 /// Corner radius is fixed at 24px per the design specification.
 ///
