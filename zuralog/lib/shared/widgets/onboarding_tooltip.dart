@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'onboarding_tooltip_provider.dart';
 
@@ -94,7 +95,7 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
     // Estimate tooltip height (~80px for typical tooltip content).
     const kTooltipHeight = 80.0;
     const kAppBarHeight = kToolbarHeight; // 56px default
-    const kNavBarHeight = 80.0; // AppDimens.bottomNavHeight
+    const kNavBarHeight = AppDimens.bottomNavHeight;
 
     bool effectivePreferBelow = widget.preferBelow;
 
