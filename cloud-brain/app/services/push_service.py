@@ -193,14 +193,22 @@ class PushService:
                 from app.database import worker_async_session as _session_factory
                 from app.models.user_device import UserDevice
 
-                async with _session_factory() as _token_db:
-                    token_result = await _token_db.execute(
+                async def _fetch_tokens(session) -> list[str]:
+                    token_result = await session.execute(
                         select(UserDevice.fcm_token).where(
                             UserDevice.user_id == user_id,
                             UserDevice.fcm_token.isnot(None),
                         )
                     )
-                    tokens: list[str] = [row[0] for row in token_result.all() if row[0]]
+                    return [row[0] for row in token_result.all() if row[0]]
+
+                # Reuse the caller's session if provided — avoids an extra
+                # NullPool connect/disconnect cycle per notification.
+                if db is not None:
+                    tokens: list[str] = await _fetch_tokens(db)
+                else:
+                    async with _session_factory() as _token_db:
+                        tokens = await _fetch_tokens(_token_db)
 
                 for token in tokens:
                     msg_id = self.send_notification(token, title, body, data)

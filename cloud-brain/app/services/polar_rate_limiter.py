@@ -78,15 +78,16 @@ class PolarRateLimiter:
     """
 
     def __init__(self, redis_url: str) -> None:
+        import redis.asyncio as aioredis
+
         self._redis_url = redis_url
-        self._redis = None  # Lazy-initialized Redis connection pool
+        # aioredis.from_url() is a synchronous factory — returns a pool object immediately,
+        # no network I/O until the first command. Initialising here is safe and eliminates
+        # an async race condition that would occur with lazy initialisation.
+        self._redis = aioredis.from_url(redis_url, decode_responses=True)
 
     async def _get_redis(self):
-        """Lazy-initialize and reuse Redis connection pool."""
-        if self._redis is None:
-            import redis.asyncio as aioredis
-
-            self._redis = aioredis.from_url(self._redis_url, decode_responses=True)
+        """Return the shared Redis connection pool."""
         return self._redis
 
     async def check_and_increment(self) -> bool:

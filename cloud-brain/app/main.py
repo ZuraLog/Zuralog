@@ -100,6 +100,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _get_release() -> str:
     """Return a Sentry release string from the Railway git SHA env var.
@@ -125,7 +127,7 @@ if settings.sentry_dsn:
             StarletteIntegration(transaction_style="endpoint"),
         ],
     )
-    logging.info("Sentry initialized for Cloud Brain (%s)", settings.app_env)
+    logger.info("Sentry initialized for Cloud Brain (%s)", settings.app_env)
 
 
 @asynccontextmanager

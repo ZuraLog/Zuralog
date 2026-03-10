@@ -28,7 +28,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 
 from app.analytics.insight_generator import InsightGenerator
 from app.database import worker_async_session as async_session
@@ -303,17 +303,24 @@ def check_stale_integrations_task() -> dict[str, int]:
             now = datetime.now(timezone.utc)
             cutoff = now - timedelta(hours=24)
 
-            stmt = select(Integration).where(
-                Integration.is_active == True,  # noqa: E712
-                or_(
-                    Integration.last_synced_at < cutoff,
-                    (Integration.last_synced_at.is_(None) & (Integration.created_at < cutoff)),
-                ),
+            # Use COUNT — never load ORM objects just to count rows.
+            # At 1M users × 5 integrations = 5M rows; a full fetch would OOM the worker.
+            stmt = (
+                select(func.count())
+                .select_from(Integration)
+                .where(
+                    Integration.is_active == True,  # noqa: E712
+                    or_(
+                        Integration.last_synced_at < cutoff,
+                        and_(
+                            Integration.last_synced_at.is_(None),
+                            Integration.created_at < cutoff,
+                        ),
+                    ),
+                )
             )
-            result = await session.execute(stmt)
-            stale_integrations = result.scalars().all()
+            stale_count: int = (await session.execute(stmt)).scalar_one()
 
-            stale_count = len(stale_integrations)
             if stale_count > 0:
                 logger.warning(
                     "Found %d stale integrations (not synced in 24h)",
