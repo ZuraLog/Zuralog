@@ -9,7 +9,7 @@
 FROM python:3.12-slim AS builder
 
 # Install uv for fast dependency resolution
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.10.9 /uv /usr/local/bin/uv
 
 WORKDIR /app
 
@@ -52,4 +52,4 @@ ENV PORT=8000
 EXPOSE 8000
 
 # Use shell form so ${PORT} is expanded by the shell at container start.
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --timeout-keep-alive 15

@@ -3,13 +3,14 @@ Zuralog Cloud Brain — Correlation Analyzer.
 
 Finds statistical relationships between different health metrics
 (e.g., "Does better sleep lead to higher activity the next day?").
-Uses numpy for Pearson correlation with support for lag analysis.
+Uses stdlib statistics and math for Pearson correlation with support
+for lag analysis — no numpy dependency required.
 """
 
 import logging
+import math
+import statistics
 from typing import Any
-
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,13 @@ class CorrelationAnalyzer:
             return {"score": 0.0, "message": "Not enough data for correlation analysis."}
 
         try:
-            score = float(np.corrcoef(metric_x, metric_y)[0, 1])
+            score = float(statistics.correlation(metric_x, metric_y))
+        except statistics.StatisticsError:
+            return {"score": 0.0, "message": "No variance in data — correlation undefined."}
         except (ValueError, FloatingPointError):
             return {"score": 0.0, "message": "Unable to compute correlation."}
 
-        if np.isnan(score):
+        if math.isnan(score):
             return {"score": 0.0, "message": "No variance in data — correlation undefined."}
 
         message = self._classify_correlation(score)
