@@ -19,7 +19,7 @@
 | P0 | Alembic migrations setup | ✅ Done | |
 | P0 | Docker Compose (local Postgres + Redis) | ✅ Done | |
 | P0 | uv + pyproject.toml project setup | ✅ Done | |
-| P0 | Railway deployment + Dockerfile | ✅ Done | All 3 services (web, Celery_Worker, Celery_Beat) live |
+| P0 | Railway deployment + Dockerfile | ✅ Done | 2 services (web, Celery_Worker with integrated Beat) live |
 | P0 | Sentry integration (FastAPI + Celery + SQLAlchemy) | ✅ Done | |
 | P0 | `.env.example` + RAILWAY_ENV_VARS.md | ✅ Done | |
 
@@ -324,6 +324,20 @@ All 6 Coach tab AI conversation features implemented and reviewed.
 | P1 | Email confirmation (Resend) | ✅ Done | |
 | P1 | Upstash Redis removal (Website + Cloud-Brain) | ✅ Done | Replaced with HTTP Cache-Control headers + in-memory TTL cache; Railway Redis for Celery/rate limiters |
 | P1 | Google reCAPTCHA v2 on waitlist form | ✅ Done | `react-google-recaptcha`; server-side token verification in `POST /api/waitlist/join` |
+
+---
+
+## Infrastructure Optimization (2026-03-10)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Remove Upstash Redis, migrate to Railway Redis | ✅ Done | All 3 services use `redis.railway.internal:6379`; new `Redis` service provisioned |
+| P0 | Consolidate Celery_Beat into Celery_Worker | ✅ Done | Worker runs `celery -A app.worker worker --beat --concurrency=2`; single-replica constraint documented |
+| P0 | Optimize observability sampling rates | ✅ Done | Zuralog: 5% traces, 0% profiles; Celery_Worker: 0% traces; PostHog disabled |
+| P0 | Fix Beat schedule (task names, intervals, crontab) | ✅ Done | Removed stub tasks, extended 4 syncs to 60min, added `celery-redbeat` for crash-safe persistence |
+| P0 | Reduce Docker image size | ✅ Done | Removed `numpy` (−50MB), removed `psycopg2-binary` (−10MB), fixed git call to env var |
+| P0 | Optimize database connection pools | ✅ Done | FastAPI: 2+3 (was 10+20); Celery: NullPool for all tasks |
+| P0 | Cost reduction: ~$3.48 → ~$0.95/mo | ✅ Done | 73% savings via Redis consolidation + observability tuning + 1 fewer service |
 
 ---
 

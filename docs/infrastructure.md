@@ -49,7 +49,7 @@ All services used in production, current tier, and purpose:
 |---------|------|-----------------|--------------|
 | **Railway** | Backend hosting (Cloud Brain) | $5 trial credit | ~$5–10/mo |
 | **Supabase** | PostgreSQL + Auth + Row Level Security | 500MB DB, 50K MAU | $0 |
-| **Railway Redis** | Redis — Celery queue + rate limiting | Flat compute cost | ~$1-3/mo |
+| **Railway Redis** | Redis — Celery queue + rate limiting | Flat compute cost | ~$0.50/mo |
 | **Pinecone** | Vector DB — AI long-term memory (planned, not active) | 1 index, 100K vectors | $0 |
 | **Firebase (FCM)** | Push notifications to mobile | Unlimited | $0 |
 | **Sentry** | Error tracking — Cloud Brain + Flutter + Website | 5K events/mo | $0 |
@@ -113,11 +113,11 @@ All services used in production, current tier, and purpose:
 | **Sentry (Flutter)** | Dart exceptions, network errors, app crashes | `sentry_flutter` + `sentry_dio` in pubspec.yaml |
 | **Sentry (Website)** | Next.js server errors, client errors | `@sentry/nextjs` in package.json |
 | **Vercel Analytics** | Website traffic, Core Web Vitals | `@vercel/analytics` |
-| **PostHog** | Feature usage, funnel analytics, user journeys | (Cloud Brain events) |
+| **PostHog** | Feature usage, funnel analytics, user journeys | Disabled (env var empty) |
 
 **Sentry Configuration (Cloud Brain):**
-- `sentry_traces_sample_rate`: 1.0 (dev), lower in prod
-- `sentry_profiles_sample_rate`: 0.25
+- **Zuralog (web):** `sentry_traces_sample_rate: 0.05`, `sentry_profiles_sample_rate: 0` (cost optimization)
+- **Celery_Worker:** `sentry_traces_sample_rate: 0.0`, `sentry_profiles_sample_rate: 0.0` (task errors only)
 - Integrated with FastAPI middleware, Celery signals, SQLAlchemy
 
 ---
@@ -151,6 +151,46 @@ All services used in production, current tier, and purpose:
 1. **LLM costs** — Primary COGS. Scales linearly with message volume. **Mitigation:** Rate limiting per tier, response caching for common queries.
 2. **Supabase Pro upgrade** — Required at ~500 active users (> 500MB DB). Cost: $25/mo.
 3. **Integration API rate limits** — Not a cost issue, but operational. **Mitigation:** Intelligent caching, webhook-driven sync over polling, per-provider rate limiters in Redis.
+
+---
+
+## 5.5 Infrastructure Optimization (2026-03-10)
+
+**Completed:** Upstash Redis removal, Celery_Beat service consolidation, observability cost reduction.
+
+### Changes
+
+**Redis Migration**
+- Removed Upstash Redis entirely. All three services (Zuralog, Celery_Worker, Celery_Beat) now use Railway-native Redis at `redis.railway.internal:6379`.
+- New `Redis` service provisioned in the Railway project.
+- Cost reduction: Upstash ~$2.50/mo → Railway Redis ~$0.50/mo.
+
+**Celery_Beat Consolidation**
+- Deleted the standalone `Celery_Beat` service.
+- Beat (periodic task scheduler) merged into `Celery_Worker` via the `--beat` flag.
+- Worker now runs: `celery -A app.worker worker --beat --loglevel=info --concurrency=2`
+- Cost reduction: 1 fewer service instance.
+
+**Safety Constraint**
+- Beat merged into Worker is **only safe with a single Worker replica**. If Worker scales to 2+ replicas, Beat must be split back to a dedicated service to prevent duplicate task execution.
+- This constraint is documented in the Worker service configuration.
+
+**Observability Cost Reduction**
+- Zuralog (web): `SENTRY_TRACES_SAMPLE_RATE=0.05` (5% sampling), `SENTRY_PROFILES_SAMPLE_RATE=0` (disabled)
+- Celery_Worker: `SENTRY_TRACES_SAMPLE_RATE=0.0`, `SENTRY_PROFILES_SAMPLE_RATE=0.0` (task errors only, no tracing)
+- PostHog: `POSTHOG_API_KEY=` (disabled)
+
+**Code Changes (commit `eed860f`)**
+- Beat schedule: Fixed broken task names, removed stub tasks, extended 4 sync intervals from 15min to 60min (Fitbit, Oura, Withings, Polar), replaced raw float schedules with `crontab()` for weekly/monthly reports, added `celery-redbeat>=2.2.0` with `RedBeatScheduler` for crash-safe schedule persistence.
+- Database: NullPool for all Celery worker tasks, reduced FastAPI connection pool from 10+20 to 2+3, all task files use `worker_async_session`.
+- Task cleanup: Removed 3 dead Fitbit API calls (HR, SpO2, HRV), lazy Firebase initialization.
+- FastAPI startup: All 7 integrations guarded on credential env vars, `CeleryIntegration` removed from Sentry init, `/health` excluded from Sentry middleware.
+- Image size: Replaced `numpy` with stdlib `statistics` (−50MB), removed `psycopg2-binary` (−10MB), fixed `_get_release()` to read `RAILWAY_GIT_COMMIT_SHA` env var, pinned uv to `0.10.9`, added `--timeout-keep-alive 15` to uvicorn.
+
+**Cost Impact**
+- Before: ~$3.48/mo (Upstash + Sentry + 3 services)
+- After: ~$0.95/mo (Railway Redis ~$0.50 + Sentry 5% sample rate + 2 services)
+- **Savings: ~$2.53/mo (73% reduction)**
 
 ---
 
@@ -189,20 +229,21 @@ graph TD
         D --> H[OpenRouter\nKimi K2.5]
         D --> I[Firebase\nFCM]
         D --> J[Sentry\nErrors]
+        D --> K[Railway\nCelery_Worker + Beat]
     end
 
     subgraph "Production: Mobile"
-        K[Codemagic\nCI/CD] --> L[App Store]
-        K --> M[Play Store]
-        N[RevenueCat] --> L
-        N --> M
+        L[Codemagic\nCI/CD] --> M[App Store]
+        L --> N[Play Store]
+        O[RevenueCat] --> M
+        O --> N
     end
 
     subgraph "Production: Website"
-        O[Vercel] --> P[Supabase\nWaitlist]
-        O --> Q[Resend\nEmail]
-        O --> T[reCAPTCHA v2\nAbuse Protection]
-        O --> R[Vercel Analytics]
-        O --> S[Sentry]
+        P[Vercel] --> Q[Supabase\nWaitlist]
+        P --> R[Resend\nEmail]
+        P --> S[reCAPTCHA v2\nAbuse Protection]
+        P --> T[Vercel Analytics]
+        P --> U[Sentry]
     end
 ```

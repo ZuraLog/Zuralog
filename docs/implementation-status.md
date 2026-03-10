@@ -1,9 +1,50 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-09 (Coach Tab AI Features — Stop Generation, Regenerate, Copy, Edit, Empty State, Search)  
+**Last Updated:** 2026-03-10 (Railway Infrastructure Optimization — Upstash removal, Celery_Beat consolidation, observability tuning)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Railway Infrastructure Optimization (2026-03-10)
+
+**Scope:** Production cost reduction via Redis consolidation, Celery_Beat service elimination, and observability sampling tuning.  
+**Commit:** `eed860f`
+
+**What was done:**
+
+1. **Upstash Redis Removal** — All three services (Zuralog, Celery_Worker, Celery_Beat) migrated from Upstash to Railway-native Redis at `redis.railway.internal:6379`. New `Redis` service provisioned in the Railway project. Cost reduction: Upstash ~$2.50/mo → Railway Redis ~$0.50/mo.
+
+2. **Celery_Beat Service Consolidation** — Deleted the standalone `Celery_Beat` service. Beat (periodic task scheduler) merged into `Celery_Worker` via the `--beat` flag. Worker now runs: `celery -A app.worker worker --beat --loglevel=info --concurrency=2`. Cost reduction: 1 fewer service instance (~$1/mo).
+
+3. **Beat Schedule Fixes** — Fixed broken task names (`report_tasks` → `report`), removed stub `sync-active-users-15m` task, extended 4 sync intervals from 15min to 60min (Fitbit, Oura, Withings, Polar), replaced raw float schedules with `crontab()` for weekly/monthly reports, added `celery-redbeat>=2.2.0` with `RedBeatScheduler` for crash-safe schedule persistence.
+
+4. **Observability Cost Reduction** — Zuralog (web): `SENTRY_TRACES_SAMPLE_RATE=0.05` (5% sampling), `SENTRY_PROFILES_SAMPLE_RATE=0` (disabled). Celery_Worker: `SENTRY_TRACES_SAMPLE_RATE=0.0`, `SENTRY_PROFILES_SAMPLE_RATE=0.0` (task errors only, no tracing). PostHog: `POSTHOG_API_KEY=` (disabled).
+
+5. **Database Optimization** — NullPool for all Celery worker tasks (correct for `asyncio.run()` boundaries), reduced FastAPI connection pool from 10+20 to 2+3, all task files now use `worker_async_session`.
+
+6. **Task Cleanup** — Removed 3 dead Fitbit API calls (HR, SpO2, HRV — no DB models), lazy Firebase initialization in `push_service.py`.
+
+7. **FastAPI Startup Hardening** — All 7 integrations (Strava, Fitbit, Oura, Withings, Polar, Pinecone, LLM) now guarded on credential env vars, `CeleryIntegration` removed from FastAPI Sentry init, `/health` excluded from Sentry middleware.
+
+8. **Docker Image Size Reduction** — Replaced `numpy` with stdlib `statistics` (−50MB), removed `psycopg2-binary` (−10MB, unused), fixed `_get_release()` to read `RAILWAY_GIT_COMMIT_SHA` env var instead of subprocess git call, pinned uv to `0.10.9`, added `--timeout-keep-alive 15` to uvicorn.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Beat merged into Worker (single-replica constraint) | Eliminates a service and its cost. Safe only with 1 Worker replica; constraint documented in Railway config. If Worker scales to 2+, Beat must be split back to dedicated service. |
+| Railway Redis over Upstash | Railway Redis is cheaper (~$0.50/mo vs ~$2.50/mo) and co-located with backend services (lower latency). No external vendor lock-in. |
+| 5% Sentry traces for web, 0% for Celery | Web traces are valuable for debugging user-facing issues. Celery task errors are captured regardless of sampling; tracing overhead not justified for background jobs. |
+| NullPool for Celery tasks | Celery tasks use `asyncio.run()` which creates a new event loop per task. Connection pooling across task boundaries is unsafe; NullPool creates a fresh connection per task. |
+| Reduced FastAPI pool from 10+20 to 2+3 | FastAPI is a single-threaded async app. 10 connections is overkill; 2 is sufficient for typical request concurrency. Reduces idle connection overhead. |
+| Lazy Firebase initialization | Firebase SDK is heavy (~10MB). Only initialize when actually sending push notifications. Saves startup time and memory for non-notification code paths. |
+
+**Cost impact:**
+- Before: ~$3.48/mo (Upstash ~$2.50 + Sentry ~$0.50 + 3 services ~$0.48)
+- After: ~$0.95/mo (Railway Redis ~$0.50 + Sentry 5% sample ~$0.05 + 2 services ~$0.40)
+- **Savings: ~$2.53/mo (73% reduction)**
 
 ---
 
