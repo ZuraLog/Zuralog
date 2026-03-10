@@ -31,6 +31,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── CorrelationsScreen ────────────────────────────────────────────────────────
 
@@ -43,10 +45,8 @@ class CorrelationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final metricsAsync = ref.watch(availableMetricsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Explorer'),
-      ),
+    return ZuralogScaffold(
+      appBar: const ZuralogAppBar(title: 'Explorer'),
       body: metricsAsync.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
@@ -103,7 +103,7 @@ class _CorrelationsBodyState extends ConsumerState<_CorrelationsBody> {
         AppDimens.spaceMd,
         AppDimens.spaceMd,
         AppDimens.spaceMd,
-        MediaQuery.of(context).padding.bottom,
+        AppDimens.bottomClearance(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,14 +285,14 @@ class _MetricPickerButton extends ConsumerWidget {
                 children: [
                   Text(
                     label,
-                    style: AppTextStyles.labelXs.copyWith(
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.textTertiary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     selectedLabel ?? 'Tap to select',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: selectedLabel != null
                           ? AppColors.textPrimaryDark
                           : AppColors.textSecondaryDark,
@@ -355,7 +355,7 @@ class _MetricPickerSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd),
-              child: Text('Select Metric', style: AppTextStyles.h2),
+              child: Text('Select Metric', style: AppTextStyles.displaySmall),
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Expanded(
@@ -370,19 +370,19 @@ class _MetricPickerSheet extends StatelessWidget {
                           vertical: AppDimens.spaceSm),
                       child: Text(
                         entry.key.toUpperCase(),
-                        style: AppTextStyles.labelXs.copyWith(
+                        style: AppTextStyles.labelSmall.copyWith(
                           color: AppColors.textTertiary,
                           letterSpacing: 1.2,
                         ),
                       ),
                     ),
                     ...entry.value.map(
-                      (m) => ListTile(
+                       (m) => ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text(m.label, style: AppTextStyles.body),
+                        title: Text(m.label, style: AppTextStyles.bodyLarge),
                         subtitle: Text(
                           m.unit,
-                          style: AppTextStyles.caption.copyWith(
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondaryDark,
                           ),
                         ),
@@ -535,7 +535,7 @@ class _RangeChip extends ConsumerWidget {
         ),
         child: Text(
           label,
-          style: AppTextStyles.caption.copyWith(
+          style: AppTextStyles.bodySmall.copyWith(
             color: isSelected
                 ? AppColors.primary
                 : AppColors.textSecondaryDark,
@@ -561,7 +561,7 @@ class _LagSelector extends ConsumerWidget {
       children: [
         Text(
           'Lag Offset',
-          style: AppTextStyles.caption.copyWith(
+          style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.textSecondaryDark,
           ),
         ),
@@ -650,7 +650,7 @@ class _ChartTabChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTextStyles.caption.copyWith(
+          style: AppTextStyles.bodySmall.copyWith(
             color: selected ? Colors.black : AppColors.textSecondaryDark,
             fontWeight: FontWeight.w600,
           ),
@@ -688,7 +688,7 @@ class _AnalysisResult extends StatelessWidget {
         const SizedBox(height: AppDimens.spaceMd),
 
         // ── Chart tab selector ────────────────────────────────────
-        Text('Visualisation', style: AppTextStyles.h3),
+        Text('Visualisation', style: AppTextStyles.titleMedium),
         const SizedBox(height: AppDimens.spaceSm),
         _ChartTabSelector(
           selectedIndex: chartTab,
@@ -733,11 +733,11 @@ class _DataMaturityGate extends StatelessWidget {
             size: 36,
           ),
           const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            'Not enough data yet',
-            style: AppTextStyles.h3,
-            textAlign: TextAlign.center,
-          ),
+            Text(
+              'Not enough data yet',
+              style: AppTextStyles.titleMedium,
+              textAlign: TextAlign.center,
+            ),
           const SizedBox(height: 4),
           Text(
             'Correlations need at least 7 days of data. Keep logging and check back soon.',
@@ -787,7 +787,7 @@ class _CoefficientSummaryCard extends StatelessWidget {
             child: Center(
               child: Text(
                 analysis.coefficient.toStringAsFixed(2),
-                style: AppTextStyles.h2.copyWith(color: coeffColor),
+                style: AppTextStyles.displaySmall.copyWith(color: coeffColor),
               ),
             ),
           ),
@@ -798,12 +798,12 @@ class _CoefficientSummaryCard extends StatelessWidget {
               children: [
                 Text(
                   analysis.interpretation,
-                  style: AppTextStyles.h3,
+                  style: AppTextStyles.titleMedium,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${analysis.metricA.label} × ${analysis.metricB.label}',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondaryDark,
                   ),
                 ),
@@ -811,7 +811,7 @@ class _CoefficientSummaryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '+${analysis.lagDays}d lag applied',
-                    style: AppTextStyles.labelXs.copyWith(
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.textTertiary,
                     ),
                   ),
@@ -928,7 +928,7 @@ class _ScatterPlotCard extends StatelessWidget {
                     reservedSize: leftReserved,
                     getTitlesWidget: (value, meta) => Text(
                       value.toStringAsFixed(0),
-                      style: AppTextStyles.labelXs.copyWith(
+                      style: AppTextStyles.labelSmall.copyWith(
                         color: AppColors.textTertiary,
                       ),
                     ),
@@ -940,7 +940,7 @@ class _ScatterPlotCard extends StatelessWidget {
                     reservedSize: bottomReserved,
                     getTitlesWidget: (value, meta) => Text(
                       value.toStringAsFixed(0),
-                      style: AppTextStyles.labelXs.copyWith(
+                      style: AppTextStyles.labelSmall.copyWith(
                         color: AppColors.textTertiary,
                       ),
                     ),
@@ -1082,7 +1082,7 @@ class _OverlayChartCard extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 analysis.metricA.label,
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                     color: AppColors.textSecondaryDark),
               ),
               const SizedBox(width: AppDimens.spaceMd),
@@ -1090,7 +1090,7 @@ class _OverlayChartCard extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 analysis.metricB.label,
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                     color: AppColors.textSecondaryDark),
               ),
             ],
@@ -1135,7 +1135,7 @@ class _OverlayChartCard extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             'Both metrics normalised to 0–1 for comparison.',
-            style: AppTextStyles.labelXs.copyWith(
+            style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.textTertiary,
             ),
           ),
@@ -1246,11 +1246,11 @@ class _PickerPrompt extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.6),
           ),
           const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            'Select Two Metrics',
-            style: AppTextStyles.h3,
-            textAlign: TextAlign.center,
-          ),
+            Text(
+              'Select Two Metrics',
+              style: AppTextStyles.titleMedium,
+              textAlign: TextAlign.center,
+            ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Choose a Metric A and Metric B above to explore the correlation between them.',
@@ -1293,7 +1293,7 @@ class _AnalysisErrorState extends StatelessWidget {
         children: [
           Text(
             'Could not load analysis.',
-            style: AppTextStyles.body.copyWith(
+            style: AppTextStyles.bodyLarge.copyWith(
               color: AppColors.textSecondaryDark,
             ),
           ),
@@ -1334,7 +1334,7 @@ class _ExplorerErrorState extends StatelessWidget {
               color: AppColors.textTertiary,
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text('Could not load metrics', style: AppTextStyles.h3),
+            Text('Could not load metrics', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimens.spaceLg),
             FilledButton(
               onPressed: onRetry,

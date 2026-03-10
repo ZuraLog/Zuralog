@@ -27,6 +27,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── TrendsHomeScreen ──────────────────────────────────────────────────────────
@@ -40,8 +42,8 @@ class TrendsHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trendsAsync = ref.watch(trendsHomeProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
+      addBottomNavPadding: true,
       appBar: ZuralogAppBar(
         title: 'Trends',
         tooltipConfig: const ZuralogAppBarTooltipConfig(
@@ -312,7 +314,7 @@ class _TimePeriodCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   period.label,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondaryDark,
                   ),
                   maxLines: 1,
@@ -330,7 +332,7 @@ class _TimePeriodCard extends StatelessWidget {
                 ),
                 child: Text(
                   '${period.overallScore}',
-                  style: AppTextStyles.caption.copyWith(color: scoreColor),
+                  style: AppTextStyles.bodySmall.copyWith(color: scoreColor),
                 ),
               ),
             ],
@@ -344,7 +346,7 @@ class _TimePeriodCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           h.label,
-                          style: AppTextStyles.labelXs.copyWith(
+                          style: AppTextStyles.labelSmall.copyWith(
                             color: AppColors.textTertiary,
                           ),
                           maxLines: 1,
@@ -353,7 +355,7 @@ class _TimePeriodCard extends StatelessWidget {
                       ),
                       Text(
                         '${h.value} ${h.unit}'.trim(),
-                        style: AppTextStyles.labelXs.copyWith(
+                        style: AppTextStyles.labelSmall.copyWith(
                           color: AppColors.textPrimaryDark,
                           fontWeight: FontWeight.w600,
                         ),
@@ -435,14 +437,14 @@ class _CorrelationCard extends ConsumerWidget {
                     children: [
                       Text(
                         '${highlight.metricA}  ×  ${highlight.metricB}',
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondaryDark,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         highlight.headline,
-                        style: AppTextStyles.h3,
+                        style: AppTextStyles.titleMedium,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -493,7 +495,7 @@ class _CorrelationCard extends ConsumerWidget {
                 const SizedBox(width: 4),
                 Text(
                   highlight.direction.label,
-                  style: AppTextStyles.labelXs.copyWith(color: accentColor),
+                  style: AppTextStyles.labelSmall.copyWith(color: accentColor),
                 ),
                 const Spacer(),
                 Icon(
@@ -541,11 +543,11 @@ class _CorrelationStrengthBadge extends StatelessWidget {
         children: [
           Text(
             coefficient.toStringAsFixed(2),
-            style: AppTextStyles.h3.copyWith(color: accentColor),
+            style: AppTextStyles.titleMedium.copyWith(color: accentColor),
           ),
           Text(
             _strengthLabel(coefficient),
-            style: AppTextStyles.labelXs.copyWith(color: accentColor),
+            style: AppTextStyles.labelSmall.copyWith(color: accentColor),
           ),
         ],
       ),
@@ -641,7 +643,7 @@ class _QuickNavButton extends ConsumerWidget {
             const SizedBox(height: AppDimens.spaceXs),
             Text(
               item.label,
-              style: AppTextStyles.labelXs.copyWith(
+              style: AppTextStyles.labelSmall.copyWith(
                 color: AppColors.textSecondaryDark,
               ),
             ),
@@ -680,7 +682,7 @@ class _EmptyCorrelationsState extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceMd),
             Text(
               'This is where patterns hide',
-              style: AppTextStyles.h3,
+              style: AppTextStyles.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceSm),
@@ -717,12 +719,12 @@ class _SectionHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.h2),
+          Text(title, style: AppTextStyles.displaySmall),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
             Text(
               subtitle!,
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondaryDark,
               ),
             ),
@@ -779,7 +781,7 @@ class _CorrelationSuggestionCard extends ConsumerWidget {
               children: [
                 Text(
                   suggestion.metricNeeded,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimaryDark,
                   ),
@@ -789,7 +791,7 @@ class _CorrelationSuggestionCard extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   suggestion.description,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondaryDark,
                   ),
                   maxLines: 2,
@@ -806,7 +808,7 @@ class _CorrelationSuggestionCard extends ConsumerWidget {
                   ),
                   child: Text(
                     suggestion.ctaLabel,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -859,7 +861,7 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               itemCount: 4,
               separatorBuilder: (_, _) => const SizedBox(width: AppDimens.spaceSm),
-              itemBuilder: (_, _) => _SkeletonBox(width: 160, height: 120),
+              itemBuilder: (_, _) => const ZLoadingSkeleton(width: 160, height: 120),
             ),
           ),
           const SizedBox(height: AppDimens.spaceLg),
@@ -871,28 +873,10 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
                 horizontal: AppDimens.spaceMd,
                 vertical: AppDimens.spaceSm / 2,
               ),
-              child: _SkeletonBox(width: double.infinity, height: 110),
+              child: const ZLoadingSkeleton(width: double.infinity, height: 110),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SkeletonBox extends StatelessWidget {
-  const _SkeletonBox({required this.width, required this.height});
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: AppColors.shimmerBase,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
     );
   }
@@ -922,7 +906,7 @@ class _TrendsErrorState extends StatelessWidget {
                 color: AppColors.textTertiary,
               ),
               const SizedBox(height: AppDimens.spaceMd),
-              Text('Could not load trends', style: AppTextStyles.h3),
+              Text('Could not load trends', style: AppTextStyles.titleMedium),
               const SizedBox(height: AppDimens.spaceSm),
               Text(
                 'Check your connection and try again.',

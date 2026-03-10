@@ -22,6 +22,8 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── DataSourcesScreen ─────────────────────────────────────────────────────────
 
@@ -34,10 +36,8 @@ class DataSourcesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sourcesAsync = ref.watch(dataSourcesProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Data Sources'),
-      ),
+    return ZuralogScaffold(
+      appBar: const ZuralogAppBar(title: 'Data Sources'),
       body: sourcesAsync.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
@@ -106,10 +106,10 @@ class _SectionLabel extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: AppTextStyles.labelXs.copyWith(
-          color: AppColors.textTertiary,
-          letterSpacing: 1.2,
-        ),
+      style: AppTextStyles.labelSmall.copyWith(
+        color: AppColors.textTertiary,
+        letterSpacing: 1.2,
+      ),
       ),
     );
   }
@@ -176,7 +176,7 @@ class _DataSourceCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(source.name, style: AppTextStyles.h3),
+                    Text(source.name, style: AppTextStyles.titleMedium),
                     const SizedBox(height: 2),
                     Row(
                       children: [
@@ -196,7 +196,7 @@ class _DataSourceCard extends ConsumerWidget {
                           source.isConnected
                               ? 'Last synced: ${_lastSyncLabel()}'
                               : 'Not connected',
-                          style: AppTextStyles.caption.copyWith(
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondaryDark,
                           ),
                         ),
@@ -219,7 +219,7 @@ class _DataSourceCard extends ConsumerWidget {
                   ),
                   child: Text(
                     'Error',
-                    style: AppTextStyles.labelXs
+                    style: AppTextStyles.labelSmall
                         .copyWith(color: AppColors.statusError),
                   ),
                 ),
@@ -246,7 +246,7 @@ class _DataSourceCard extends ConsumerWidget {
                       ),
                       child: Text(
                         type,
-                        style: AppTextStyles.labelXs.copyWith(
+                        style: AppTextStyles.labelSmall.copyWith(
                           color: AppColors.textSecondaryDark,
                         ),
                       ),
@@ -366,7 +366,7 @@ class _EmptySourcesState extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.6),
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text('No Data Sources', style: AppTextStyles.h3),
+            Text('No Data Sources', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimens.spaceSm),
             Text(
               'Connect integrations in Settings to see your data sources here.',
@@ -414,7 +414,7 @@ class _DataSourcesErrorState extends StatelessWidget {
               color: AppColors.textTertiary,
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text('Could not load data sources', style: AppTextStyles.h3),
+            Text('Could not load data sources', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimens.spaceLg),
             FilledButton(
               onPressed: onRetry,

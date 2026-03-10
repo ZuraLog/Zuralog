@@ -29,8 +29,11 @@ import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── ReportsScreen ─────────────────────────────────────────────────────────────
 
@@ -43,10 +46,8 @@ class ReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reportsAsync = ref.watch(reportsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reports'),
-      ),
+    return ZuralogScaffold(
+      appBar: const ZuralogAppBar(title: 'Reports'),
       body: reportsAsync.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
@@ -81,7 +82,7 @@ class _ReportsList extends ConsumerWidget {
           AppDimens.spaceMd,
           AppDimens.spaceMd,
           AppDimens.spaceMd,
-          MediaQuery.of(context).padding.bottom,
+          AppDimens.bottomClearance(context),
         ),
         itemCount: reports.length,
         separatorBuilder: (_, _) =>
@@ -164,11 +165,11 @@ class _ReportCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(report.title, style: AppTextStyles.h3),
+                  Text(report.title, style: AppTextStyles.titleMedium),
                   const SizedBox(height: 4),
                   Text(
                     '${_formatDate(report.periodStart)} – ${_formatDate(report.periodEnd)}',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondaryDark,
                     ),
                   ),
@@ -196,32 +197,11 @@ class _CategoryAvatarRow extends StatelessWidget {
   const _CategoryAvatarRow({required this.summaries});
   final List<ReportCategorySummary> summaries;
 
-  Color _categoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'activity':
-        return AppColors.categoryActivity;
-      case 'sleep':
-        return AppColors.categorySleep;
-      case 'heart':
-        return AppColors.categoryHeart;
-      case 'nutrition':
-        return AppColors.categoryNutrition;
-      case 'body':
-        return AppColors.categoryBody;
-      case 'wellness':
-        return AppColors.categoryWellness;
-      case 'vitals':
-        return AppColors.categoryVitals;
-      default:
-        return AppColors.primary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Row(
       children: summaries.take(5).map((s) {
-        final color = _categoryColor(s.category);
+        final color = categoryColorFromString(s.category);
         return Container(
           width: 20,
           height: 20,
@@ -236,7 +216,7 @@ class _CategoryAvatarRow extends StatelessWidget {
               s.categoryLabel.isNotEmpty
                   ? s.categoryLabel[0].toUpperCase()
                   : '?',
-              style: AppTextStyles.labelXs.copyWith(
+              style: AppTextStyles.labelSmall.copyWith(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
                 color: color,
@@ -262,27 +242,6 @@ class _ReportDetailSheet extends StatefulWidget {
 class _ReportDetailSheetState extends State<_ReportDetailSheet> {
   final _screenshotController = ScreenshotController();
   bool _isSharing = false;
-
-  Color _categoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'activity':
-        return AppColors.categoryActivity;
-      case 'sleep':
-        return AppColors.categorySleep;
-      case 'heart':
-        return AppColors.categoryHeart;
-      case 'nutrition':
-        return AppColors.categoryNutrition;
-      case 'body':
-        return AppColors.categoryBody;
-      case 'wellness':
-        return AppColors.categoryWellness;
-      case 'vitals':
-        return AppColors.categoryVitals;
-      default:
-        return AppColors.primary;
-    }
-  }
 
   IconData _trendIcon(String direction) {
     switch (direction) {
@@ -368,7 +327,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(report.title, style: AppTextStyles.h2),
+                    child: Text(report.title, style: AppTextStyles.displaySmall),
                   ),
                   // PDF export — deferred (pdf package not in pubspec)
                   IconButton(
@@ -421,9 +380,9 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                       if (report.categorySummaries.isNotEmpty) ...[
                         _SheetSectionHeader(title: 'By Category'),
                         ...report.categorySummaries.map(
-                          (s) => _CategorySummaryRow(
+                           (s) => _CategorySummaryRow(
                             summary: s,
-                            accentColor: _categoryColor(s.category),
+                            accentColor: categoryColorFromString(s.category),
                           ),
                         ),
                         const SizedBox(height: AppDimens.spaceMd),
@@ -464,8 +423,8 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                                   const SizedBox(width: 4),
                                   Text(
                                     t.metricLabel,
-                                    style: AppTextStyles.labelXs
-                                        .copyWith(color: color),
+                                  style: AppTextStyles.labelSmall
+                                      .copyWith(color: color),
                                   ),
                                 ],
                               ),
@@ -499,7 +458,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                                       children: [
                                         Text(
                                           c.headline,
-                                          style: AppTextStyles.caption,
+                                          style: AppTextStyles.bodySmall,
                                         ),
                                         Text(
                                           '${c.metricA} × ${c.metricB}',
@@ -514,7 +473,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                                   ),
                                   Text(
                                     c.coefficient.toStringAsFixed(2),
-                                    style: AppTextStyles.h3.copyWith(
+                                    style: AppTextStyles.titleMedium.copyWith(
                                       color: AppColors.primary,
                                     ),
                                   ),
@@ -547,7 +506,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                                   child: Center(
                                     child: Text(
                                       '${entry.key + 1}',
-                                      style: AppTextStyles.labelXs.copyWith(
+                                       style: AppTextStyles.labelSmall.copyWith(
                                         color: AppColors.primary,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -612,11 +571,11 @@ class _GoalAdherenceRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(goal.goalLabel, style: AppTextStyles.caption),
+                child: Text(goal.goalLabel, style: AppTextStyles.bodySmall),
               ),
               Text(
                 '$pct%',
-                style: AppTextStyles.h3.copyWith(color: color),
+                style: AppTextStyles.titleMedium.copyWith(color: color),
               ),
             ],
           ),
@@ -634,7 +593,7 @@ class _GoalAdherenceRow extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceXs),
             Text(
               '${goal.streakDays}-day streak at end of period',
-              style: AppTextStyles.labelXs.copyWith(
+              style: AppTextStyles.labelSmall.copyWith(
                 color: AppColors.textTertiary,
               ),
             ),
@@ -682,7 +641,7 @@ class _CategorySummaryRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(summary.categoryLabel, style: AppTextStyles.caption),
+                Text(summary.categoryLabel, style: AppTextStyles.bodySmall),
                 if (summary.keyMetric.isNotEmpty)
                   Text(
                     '${summary.keyMetric}: ${summary.keyMetricValue}',
@@ -698,11 +657,11 @@ class _CategorySummaryRow extends StatelessWidget {
             children: [
               Text(
                 '${summary.averageScore}',
-                style: AppTextStyles.h3.copyWith(color: accentColor),
+                style: AppTextStyles.titleMedium.copyWith(color: accentColor),
               ),
               Text(
                 '${isPositive ? '+' : ''}${delta.toStringAsFixed(1)}%',
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                   color: isPositive
                       ? AppColors.categoryActivity
                       : AppColors.accentDark,
@@ -727,7 +686,7 @@ class _SheetSectionHeader extends StatelessWidget {
         top: AppDimens.spaceMd,
         bottom: AppDimens.spaceSm,
       ),
-      child: Text(title, style: AppTextStyles.h3),
+      child: Text(title, style: AppTextStyles.titleMedium),
     );
   }
 }
@@ -751,7 +710,7 @@ class _EmptyReportsState extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.6),
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text('No Reports Yet', style: AppTextStyles.h3),
+            Text('No Reports Yet', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimens.spaceSm),
             Text(
               'Your first monthly report will be generated after 30 days of data collection.',
@@ -785,7 +744,7 @@ class _ReportsErrorState extends StatelessWidget {
               color: AppColors.textTertiary,
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text('Could not load reports', style: AppTextStyles.h3),
+            Text('Could not load reports', style: AppTextStyles.titleMedium),
             const SizedBox(height: AppDimens.spaceLg),
             FilledButton(
               onPressed: onRetry,
