@@ -27,6 +27,7 @@ import 'package:zuralog/core/speech/speech_state.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
@@ -406,14 +407,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final title = convo?.title ??
         (widget.conversationId.startsWith('new_') ? 'New Conversation' : 'Conversation');
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
         surfaceTintColor: Colors.transparent,
         title: Text(
           title,
-          style: AppTextStyles.h3,
+          style: AppTextStyles.titleMedium,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -615,7 +614,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.edit_outlined, color: AppColors.primary),
-              title: Text('Rename', style: AppTextStyles.body),
+              title: Text('Rename', style: AppTextStyles.bodyLarge),
               onTap: () {
                 Navigator.pop(sheetCtx);
                 _showRenameDialog(context, conversationId);
@@ -624,7 +623,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             const Divider(height: 1, color: AppColors.borderDark),
             ListTile(
               leading: const Icon(Icons.archive_outlined, color: AppColors.primary),
-              title: Text('Archive', style: AppTextStyles.body),
+              title: Text('Archive', style: AppTextStyles.bodyLarge),
               onTap: () {
                 Navigator.pop(sheetCtx);
                 _archiveAndPop(context, conversationId);
@@ -636,7 +635,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                   color: AppColors.statusError),
               title: Text(
                 'Delete',
-                style: AppTextStyles.body.copyWith(color: AppColors.statusError),
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.statusError),
               ),
               onTap: () {
                 Navigator.pop(sheetCtx);
@@ -656,11 +655,11 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
-        title: Text('Rename Conversation', style: AppTextStyles.h3),
+         title: Text('Rename Conversation', style: AppTextStyles.titleMedium),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          style: AppTextStyles.body,
+          style: AppTextStyles.bodyLarge,
           decoration: const InputDecoration(hintText: 'New title…'),
         ),
         actions: [
@@ -716,10 +715,10 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
-        title: Text('Delete conversation?', style: AppTextStyles.h3),
+         title: Text('Delete conversation?', style: AppTextStyles.titleMedium),
         content: Text(
           'This cannot be undone.',
-          style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryDark),
+          style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondaryDark),
         ),
         actions: [
           TextButton(
@@ -782,7 +781,7 @@ class _ErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: AppTextStyles.caption
+              style: AppTextStyles.bodySmall
                   .copyWith(color: AppColors.statusError),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -954,7 +953,7 @@ class _StreamingBubble extends StatelessWidget {
                                   ),
                             ),
                           ).copyWith(
-                            p: AppTextStyles.body.copyWith(
+                            p: AppTextStyles.bodyLarge.copyWith(
                               color: AppColors.textPrimaryDark,
                               height: 1.45,
                             ),
@@ -969,7 +968,7 @@ class _StreamingBubble extends StatelessWidget {
                             const SizedBox(height: 6),
                             Text(
                               'Thinking…',
-                              style: AppTextStyles.caption.copyWith(
+                              style: AppTextStyles.bodySmall.copyWith(
                                 color: AppColors.textSecondaryDark,
                                 fontStyle: FontStyle.italic,
                               ),
@@ -1018,7 +1017,7 @@ class _ToolProgressIndicator extends StatelessWidget {
         const SizedBox(width: AppDimens.spaceSm),
         Text(
           _friendlyName(toolName),
-          style: AppTextStyles.caption.copyWith(
+          style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.textSecondaryDark,
             fontStyle: FontStyle.italic,
           ),
@@ -1112,7 +1111,7 @@ class _MessageBubble extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               _filename(url),
-              style: AppTextStyles.caption.copyWith(
+               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textTertiary,
                 fontSize: 12,
               ),
@@ -1153,7 +1152,7 @@ class _MessageBubble extends StatelessWidget {
             // ── Actions ─────────────────────────────────────────────────────
             ListTile(
               leading: const Icon(Icons.copy_rounded, color: AppColors.primary),
-              title: Text('Copy', style: AppTextStyles.body),
+              title: Text('Copy', style: AppTextStyles.bodyLarge),
               onTap: () async {
                 Navigator.pop(sheetCtx);
                 await Clipboard.setData(ClipboardData(text: message.content));
@@ -1161,7 +1160,7 @@ class _MessageBubble extends StatelessWidget {
                   SnackBar(
                     content: Text(
                       'Copied to clipboard',
-                      style: AppTextStyles.body,
+                      style: AppTextStyles.bodyLarge,
                     ),
                   ),
                 );
@@ -1171,7 +1170,7 @@ class _MessageBubble extends StatelessWidget {
               const Divider(height: 1, color: AppColors.borderDark),
               ListTile(
                 leading: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                title: Text('Edit', style: AppTextStyles.body),
+                title: Text('Edit', style: AppTextStyles.bodyLarge),
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   onEdit!();
@@ -1182,7 +1181,7 @@ class _MessageBubble extends StatelessWidget {
               const Divider(height: 1, color: AppColors.borderDark),
               ListTile(
                 leading: const Icon(Icons.refresh_rounded, color: AppColors.primary),
-                title: Text('Regenerate', style: AppTextStyles.body),
+                title: Text('Regenerate', style: AppTextStyles.bodyLarge),
                 onTap: () {
                   Navigator.pop(sheetCtx);
                   onRegenerate!();
@@ -1262,7 +1261,7 @@ class _MessageBubble extends StatelessWidget {
                     child: _isUser
                         ? Text(
                             message.content,
-                            style: AppTextStyles.body.copyWith(
+                            style: AppTextStyles.bodyLarge.copyWith(
                               color: AppColors.userBubbleText,
                               height: 1.45,
                             ),
@@ -1277,23 +1276,23 @@ class _MessageBubble extends StatelessWidget {
                                     ),
                               ),
                             ).copyWith(
-                              p: AppTextStyles.body.copyWith(
+                              p: AppTextStyles.bodyLarge.copyWith(
                                 color: AppColors.textPrimaryDark,
                                 height: 1.45,
                               ),
-                              strong: AppTextStyles.body.copyWith(
+                              strong: AppTextStyles.bodyLarge.copyWith(
                                 color: AppColors.textPrimaryDark,
                                 fontWeight: FontWeight.w600,
                               ),
-                              em: AppTextStyles.body.copyWith(
+                              em: AppTextStyles.bodyLarge.copyWith(
                                 color: AppColors.textPrimaryDark,
                                 fontStyle: FontStyle.italic,
                               ),
-                              listBullet: AppTextStyles.body.copyWith(
+                              listBullet: AppTextStyles.bodyLarge.copyWith(
                                 color: AppColors.textPrimaryDark,
                                 height: 1.45,
                               ),
-                              code: AppTextStyles.caption.copyWith(
+                              code: AppTextStyles.bodySmall.copyWith(
                                 color: AppColors.textPrimaryDark,
                                 backgroundColor:
                                     Colors.white.withValues(alpha: 0.08),
@@ -1306,7 +1305,7 @@ class _MessageBubble extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   _formatTime(message.createdAt, context),
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textTertiary,
                     fontSize: 10,
                   ),
@@ -1571,10 +1570,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       focusNode: widget.focusNode,
                       maxLines: 5,
                       minLines: 1,
-                      style: AppTextStyles.body,
+                       style: AppTextStyles.bodyLarge,
                       decoration: InputDecoration(
                         hintText: 'Message your coach…',
-                        hintStyle: AppTextStyles.body
+                        hintStyle: AppTextStyles.bodyLarge
                             .copyWith(color: AppColors.textTertiary),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(

@@ -22,6 +22,7 @@ import 'package:zuralog/core/theme/app_assets.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
@@ -29,6 +30,7 @@ import 'package:zuralog/features/integrations/domain/integrations_provider.dart'
 import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
@@ -171,8 +173,8 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     final suggestionsAsync = ref.watch(coachPromptSuggestionsProvider);
     final suggestedPromptsEnabled = ref.watch(suggestedPromptsEnabledProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
+      addBottomNavPadding: true,
       appBar: ZuralogAppBar(
         title: 'Coach',
         leading: IconButton(
@@ -312,13 +314,13 @@ class _CoachEmptyStateState extends State<_CoachEmptyState>
             const SizedBox(height: AppDimens.spaceMd),
             Text(
               'Your health coach',
-              style: AppTextStyles.h2,
+               style: AppTextStyles.displaySmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Text(
               'Ask me anything. I have full context from\nyour connected apps and health history.',
-              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceXl),
@@ -459,32 +461,18 @@ class _CapabilityRow extends StatelessWidget {
               children: [
                 Icon(item.icon, size: 24, color: AppColors.primary),
                 const SizedBox(height: AppDimens.spaceXs),
-                Text(
-                  item.label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
+                 Text(
+                   item.label,
+                   style: AppTextStyles.bodySmall.copyWith(
+                     color: AppColors.textTertiary,
+                   ),
+                 ),
               ],
             ),
           )
           .toList(),
     );
   }
-}
-
-// ── _categoryColor ────────────────────────────────────────────────────────────
-
-/// Maps a normalised category key to its design-system color token.
-///
-/// Accepts a pre-lowercased, non-empty string. Defaults to [AppColors.primary].
-Color _categoryColor(String category) {
-  return switch (category) {
-    'sleep' => AppColors.categorySleep,
-    'activity' => AppColors.categoryActivity,
-    'nutrition' => AppColors.categoryNutrition,
-    _ => AppColors.primary,
-  };
 }
 
 // ── _CategoryHeader ───────────────────────────────────────────────────────────
@@ -497,7 +485,7 @@ class _CategoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _categoryColor(category);
+    final color = categoryColorFromString(category);
     // Guard against empty string: category is normalised by _groupByCategory
     // but _CategoryHeader is also defensive on its own.
     final label = category.isEmpty
@@ -514,7 +502,7 @@ class _CategoryHeader extends StatelessWidget {
         const SizedBox(width: AppDimens.spaceSm),
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(
+           style: AppTextStyles.bodySmall.copyWith(
             color: color,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
@@ -540,7 +528,7 @@ class _SuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = _categoryColor(
+    final borderColor = categoryColorFromString(
       suggestion.category?.trim().toLowerCase() ?? 'other',
     );
 
@@ -567,12 +555,12 @@ class _SuggestionCard extends StatelessWidget {
                     horizontal: AppDimens.spaceMd,
                     vertical: AppDimens.spaceMd,
                   ),
-                  child: Text(
-                    suggestion.text,
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                   child: Text(
+                     suggestion.text,
+                     style: AppTextStyles.bodyLarge.copyWith(
+                       color: AppColors.textSecondary,
+                     ),
+                   ),
                 ),
               ),
             ],
@@ -809,10 +797,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       focusNode: widget.focusNode,
                       maxLines: 5,
                       minLines: 1,
-                      style: AppTextStyles.body,
+                       style: AppTextStyles.bodyLarge,
                       decoration: InputDecoration(
                         hintText: 'Message your coach…',
-                        hintStyle: AppTextStyles.body.copyWith(
+                        hintStyle: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textTertiary,
                         ),
                         border: InputBorder.none,
@@ -1010,7 +998,7 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('Conversations', style: AppTextStyles.h3),
+                      child: Text('Conversations', style: AppTextStyles.titleMedium),
                     ),
                     IconButton(
                       icon: const Icon(Icons.search_rounded),
@@ -1052,10 +1040,10 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                             controller: _searchController,
                             focusNode: _searchFocus,
                             autofocus: true,
-                            style: AppTextStyles.body,
+                             style: AppTextStyles.bodyLarge,
                             decoration: InputDecoration(
                               hintText: 'Search conversations...',
-                              hintStyle: AppTextStyles.body.copyWith(
+                              hintStyle: AppTextStyles.bodyLarge.copyWith(
                                 color: AppColors.textTertiary,
                               ),
                               border: InputBorder.none,
@@ -1094,10 +1082,10 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                       strokeWidth: 2,
                     ),
                   ),
-                  error: (e, _) => Center(
+                   error: (e, _) => Center(
                     child: Text(
                       'Could not load conversations',
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textTertiary,
                       ),
                     ),
@@ -1120,14 +1108,14 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                               const SizedBox(height: AppDimens.spaceMd),
                               Text(
                                 'No conversations yet',
-                                style: AppTextStyles.body.copyWith(
+                                style: AppTextStyles.bodyLarge.copyWith(
                                   color: AppColors.textTertiary,
                                 ),
                               ),
                               const SizedBox(height: AppDimens.spaceSm),
                               Text(
                                 'Start a new chat to get started',
-                                style: AppTextStyles.caption.copyWith(
+                                style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.textTertiary,
                                 ),
                                 textAlign: TextAlign.center,
@@ -1158,7 +1146,7 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                               const SizedBox(height: AppDimens.spaceMd),
                               Text(
                                 'No conversations match your search',
-                                style: AppTextStyles.body.copyWith(
+                                style: AppTextStyles.bodyLarge.copyWith(
                                   color: AppColors.textTertiary,
                                 ),
                                 textAlign: TextAlign.center,
@@ -1247,7 +1235,7 @@ class _ConversationTile extends ConsumerWidget {
                   Icons.archive_outlined,
                   color: AppColors.primary,
                 ),
-                title: Text('Archive', style: AppTextStyles.body),
+                 title: Text('Archive', style: AppTextStyles.bodyLarge),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _archiveConversation(context, ref);
@@ -1259,12 +1247,12 @@ class _ConversationTile extends ConsumerWidget {
                   Icons.delete_outline_rounded,
                   color: AppColors.statusError,
                 ),
-                title: Text(
-                  'Delete',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.statusError,
-                  ),
-                ),
+                 title: Text(
+                   'Delete',
+                   style: AppTextStyles.bodyLarge.copyWith(
+                     color: AppColors.statusError,
+                   ),
+                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _showDeleteConfirmation(context, ref);
@@ -1305,10 +1293,10 @@ class _ConversationTile extends ConsumerWidget {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceDark,
-        title: Text('Delete conversation?', style: AppTextStyles.h3),
+         title: Text('Delete conversation?', style: AppTextStyles.titleMedium),
         content: Text(
           'This cannot be undone.',
-          style: AppTextStyles.body.copyWith(
+          style: AppTextStyles.bodyLarge.copyWith(
             color: AppColors.textSecondaryDark,
           ),
         ),
@@ -1387,7 +1375,7 @@ class _ConversationTile extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             conversation.title,
-                            style: AppTextStyles.h3.copyWith(
+                             style: AppTextStyles.titleMedium.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
@@ -1397,7 +1385,7 @@ class _ConversationTile extends ConsumerWidget {
                         const SizedBox(width: AppDimens.spaceSm),
                         Text(
                           _formatDate(conversation.updatedAt),
-                          style: AppTextStyles.caption.copyWith(
+                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textTertiary,
                           ),
                         ),
@@ -1407,7 +1395,7 @@ class _ConversationTile extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         conversation.preview!,
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
                         maxLines: 2,
@@ -1471,7 +1459,7 @@ class _QuickActionsSheet extends ConsumerWidget {
                 ),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('Quick Actions', style: AppTextStyles.h3),
+                   child: Text('Quick Actions', style: AppTextStyles.titleMedium),
                 ),
               ),
               const Divider(height: 1, color: AppColors.borderDark),
@@ -1483,10 +1471,10 @@ class _QuickActionsSheet extends ConsumerWidget {
                       strokeWidth: 2,
                     ),
                   ),
-                  error: (e, _) => Center(
+                   error: (e, _) => Center(
                     child: Text(
                       'Could not load quick actions',
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textTertiary,
                       ),
                     ),
@@ -1564,7 +1552,7 @@ class _QuickActionTile extends StatelessWidget {
               children: [
                 Text(
                   action.title,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -1572,7 +1560,7 @@ class _QuickActionTile extends StatelessWidget {
                 ),
                 Text(
                   action.subtitle,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textTertiary,
                     fontSize: 11,
                   ),
@@ -1652,7 +1640,7 @@ class _QuickLogTile extends ConsumerWidget {
               children: [
                 Text(
                   'Quick Log',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
@@ -1660,7 +1648,7 @@ class _QuickLogTile extends ConsumerWidget {
                 ),
                 Text(
                   'Log metrics manually',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textTertiary,
                     fontSize: 11,
                   ),
