@@ -91,7 +91,7 @@ The following uses of `AppColors.cardBackgroundDark` are **not** card containers
 
 ---
 
-### Safe to Migrate (44 sites)
+### Safe to Migrate (43 sites)
 
 Plain card-shaped containers: `BoxDecoration(color: cardBackground, borderRadius: radiusCard)` with standard padding and no extra decoration. These match `ZuralogCard` directly.
 
@@ -99,7 +99,6 @@ Plain card-shaped containers: `BoxDecoration(color: cardBackground, borderRadius
 |------|------|---------|
 | `zuralog/lib/features/progress/presentation/progress_home_screen.dart` | 359 | Goal mini-card (160 px wide, progress ring + label) |
 | `zuralog/lib/features/progress/presentation/progress_home_screen.dart` | 654 | Streak mini-card (128 px wide, streak count + freeze info) |
-| `zuralog/lib/features/progress/presentation/progress_home_screen.dart` | 800 | Week-of-week summary card (plain card with gradient overlay — see Needs Review) |
 | `zuralog/lib/features/progress/presentation/progress_home_screen.dart` | 884 | Week-over-week metrics list card |
 | `zuralog/lib/features/progress/presentation/progress_home_screen.dart` | 1043 | Quick-nav row card (horizontal nav items) |
 | `zuralog/lib/features/progress/presentation/progress_home_screen.dart` | 1171 | Achievement mini-card (100 px wide) |
@@ -144,7 +143,7 @@ Plain card-shaped containers: `BoxDecoration(color: cardBackground, borderRadius
 
 ---
 
-### Needs Review (25 sites)
+### Needs Review (26 sites)
 
 These have additional decoration (colored border, box shadow, gradient overlay, asymmetric border radius, left accent stripe, or are inside a `ClipRRect`/`Material`/`AnimatedContainer` wrapper) that goes beyond what `ZuralogCard` provides. Migration may require adding props to `ZuralogCard` or keeping a custom `Container`.
 
@@ -175,10 +174,11 @@ These have additional decoration (colored border, box shadow, gradient overlay, 
 | `zuralog/lib/features/profile/presentation/emergency_card_edit_screen.dart` | 499 | Emergency contact editor card — plain card | Safe |
 | `zuralog/lib/features/today/presentation/notification_history_screen.dart` | 215 | Notification item body — `borderRadius` is conditional: full-radius if read, right-only if unread (left side has an accent stripe) | Conditional border radius based on read state |
 | `zuralog/lib/features/achievements_screen.dart` | 433 | Achievement card — `boxShadow` with category glow at `glowOpacity > 0`, border radius = `radiusCard` | Conditional `boxShadow` glow effect — `ZuralogCard` supports only a fixed light-mode shadow |
+| `zuralog/lib/features/profile/presentation/profile_screen.dart` | 218 | Profile header card — avatar, name, and camera-badge overlay | Inner `Stack` with avatar + camera badge — review before migrating |
 
 ---
 
-### Keep As-Is (19 sites)
+### Keep As-Is (18 sites)
 
 These are intentionally different from `ZuralogCard`: they are not stand-alone cards (they are chip containers, skeleton shimmer widgets, score hero widgets, `Color.lerp` interpolation targets, or shared widgets that already abstract the card pattern internally).
 
@@ -202,7 +202,6 @@ These are intentionally different from `ZuralogCard`: they are not stand-alone c
 | `zuralog/lib/features/progress/presentation/goals_screen.dart` | 102 | `RefreshIndicator(backgroundColor: ...)` | Pull-to-refresh spinner background |
 | `zuralog/lib/features/progress/presentation/goals_screen.dart` | 212 | `AlertDialog(backgroundColor: ...)` — delete goal confirmation dialog | Dialog background, not a card component |
 | `zuralog/lib/features/progress/presentation/goal_detail_screen.dart` | 79 | `AlertDialog(backgroundColor: AppColors.elevatedSurfaceDark)` — delete goal dialog | Dialog background using elevated surface color; keep as-is |
-| `zuralog/lib/features/profile/presentation/profile_screen.dart` | 218 | Profile header card — plain card with avatar stack | Safe to migrate; listed here because the inner `Stack` with avatar + camera badge is tightly coupled to profile presentation |
 
 ---
 
@@ -216,9 +215,9 @@ These are intentionally different from `ZuralogCard`: they are not stand-alone c
 **Total raw card Container sites (AppColors.cardBackground\* / elevatedSurface in BoxDecoration): 88 card-context occurrences**  
 (33 occurrences excluded as non-card uses: RefreshIndicator backgrounds, dialog backgrounds, shimmer lerp, chip badges, CustomPaint color values)
 
-- Safe to migrate: 44
-- Needs review: 25
-- Keep as-is: 19
+- Safe to migrate: 43
+- Needs review: 26
+- Keep as-is: 18
 
 ### Key Findings
 
