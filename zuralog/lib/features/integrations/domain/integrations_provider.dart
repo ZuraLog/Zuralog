@@ -200,25 +200,26 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   // ── Public Actions ─────────────────────────────────────────────────────────
 
-  /// Populates the integration list with default data, restoring persisted
-  /// connected states from SharedPreferences.
+  /// Populates the integration list, fetching real connection status from
+  /// the server for OAuth providers and from SharedPreferences for on-device
+  /// health providers (Apple Health, Google Health Connect).
   ///
-  /// Sets [IntegrationsState.isLoading] to `true` at the start and `false`
-  /// once the list has been finalized.
-  ///
-  /// Preserves the [IntegrationStatus] of already-connected integrations
-  /// so toggling the switch and then pulling to refresh does not reset state.
-  ///
-  /// Note: Health Connect's `getGrantedPermissions()` is unreliable on cold
-  /// start (returns stale/empty results until the system propagates the grant).
-  /// SharedPreferences is used as the authoritative source of truth for
-  /// connection state. The connected flag is only written after the OS
-  /// permission callback confirms a successful grant, so it is always accurate.
+  /// **Flow:**
+  /// 1. Start from the `_defaultIntegrations` catalog (defines the known set).
+  /// 2. Preserve any in-memory connected state from the current session.
+  /// 3. For device-local providers (apple_health, google_health_connect):
+  ///    restore from SharedPreferences — the OS remembers the permission grant
+  ///    and SharedPreferences records whether it was granted.
+  /// 4. For server-side OAuth providers (strava, fitbit, oura, polar, withings):
+  ///    call each provider's `/status` endpoint in parallel. The server is the
+  ///    authoritative source for whether an OAuth token is active.
+  /// 5. Update SharedPreferences as a fast-start cache so the next cold-start
+  ///    shows the right state before the server responds.
   Future<void> loadIntegrations() async {
     state = state.copyWith(isLoading: true, clearError: true);
 
-    // 1. Build the existing in-memory status map (preserves live connected state
-    //    for integrations that were connected in the current session).
+    // 1. Build the existing in-memory status map (preserves live connected
+    //    state for integrations that were connected in the current session).
     final existing = {for (final i in state.integrations) i.id: i};
 
     // 2. Populate from defaults, preserving any live connected state.
@@ -230,16 +231,15 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       return defaults;
     }).toList();
 
-    // 3. Restore persisted connected states from SharedPreferences.
-    //    This handles the app restart case where in-memory state is empty
-    //    but SharedPreferences remembers which integrations were connected.
-    //    SharedPreferences is the authoritative source of truth — the flag is
-    //    only written after the OS confirms a successful permission grant.
+    // 3. Restore device-local providers from SharedPreferences.
+    //    Apple Health and Google Health Connect don't have server-side tokens —
+    //    their connection state is tracked locally. SharedPreferences is the
+    //    authoritative source for these two only.
+    const deviceLocalProviders = {'apple_health', 'google_health_connect'};
     final prefs = await SharedPreferences.getInstance();
     merged = merged.map((integration) {
-      // Only restore persisted state if the integration isn't already connected
-      // from in-memory state (to avoid overwriting a live disconnection).
-      if (integration.status != IntegrationStatus.connected) {
+      if (deviceLocalProviders.contains(integration.id) &&
+          integration.status != IntegrationStatus.connected) {
         final saved = prefs.getBool('$_connectedPrefix${integration.id}');
         if (saved == true) {
           return integration.copyWith(status: IntegrationStatus.connected);
@@ -248,7 +248,75 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       return integration;
     }).toList();
 
+    // Show the list immediately with cached/default states so the screen
+    // isn't blank while we wait for the server calls below.
     state = state.copyWith(integrations: merged, isLoading: false);
+
+    // 4. Fetch real status from the server for OAuth-based providers.
+    //    All calls run in parallel for speed.
+    try {
+      final statusFutures = <String, Future<Map<String, dynamic>>>{};
+      for (final provider in OAuthRepository.serverProviders) {
+        statusFutures[provider] = _oauthRepository.getProviderStatus(provider);
+      }
+
+      final results = <String, Map<String, dynamic>>{};
+      for (final entry in statusFutures.entries) {
+        results[entry.key] = await entry.value;
+      }
+
+      // 5. Merge server results into the integration list.
+      merged = state.integrations.map((integration) {
+        final serverStatus = results[integration.id];
+        if (serverStatus == null) return integration;
+
+        final connected = serverStatus['connected'] as bool? ?? false;
+        final lastSyncedStr = serverStatus['last_synced_at'] as String?;
+        final syncStatus = serverStatus['sync_status'] as String?;
+
+        DateTime? lastSynced;
+        if (lastSyncedStr != null) {
+          lastSynced = DateTime.tryParse(lastSyncedStr);
+        }
+
+        IntegrationStatus newStatus;
+        if (connected) {
+          if (syncStatus == 'syncing') {
+            newStatus = IntegrationStatus.syncing;
+          } else if (syncStatus == 'error') {
+            newStatus = IntegrationStatus.error;
+          } else {
+            newStatus = IntegrationStatus.connected;
+          }
+        } else {
+          // Only reset to available if the integration isn't a comingSoon one.
+          newStatus = integration.status == IntegrationStatus.comingSoon
+              ? IntegrationStatus.comingSoon
+              : IntegrationStatus.available;
+        }
+
+        return integration.copyWith(
+          status: newStatus,
+          lastSynced: lastSynced,
+        );
+      }).toList();
+
+      state = state.copyWith(integrations: merged);
+
+      // 6. Update SharedPreferences cache for server-side providers.
+      for (final provider in OAuthRepository.serverProviders) {
+        final connected =
+            results[provider]?['connected'] as bool? ?? false;
+        await prefs.setBool('$_connectedPrefix$provider', connected);
+      }
+    } catch (e, st) {
+      // Server fetch failed — keep the default/cached states shown above.
+      // Don't surface an error to the user; the cached view is good enough.
+      debugPrint(
+        '[IntegrationsNotifier] Server status fetch failed: $e\n$st',
+      );
+      Sentry.captureException(e, stackTrace: st);
+    }
   }
 
   /// Connects the integration identified by [integrationId].
@@ -453,6 +521,10 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
 
   /// Disconnects the integration identified by [integrationId].
   ///
+  /// For server-side OAuth providers, also tells the backend to revoke tokens
+  /// and deactivate the integration record. The backend call is fire-and-forget
+  /// so the UI updates instantly.
+  ///
   /// Sets the integration's status back to [IntegrationStatus.available]
   /// and clears [IntegrationModel.lastSynced].
   ///
@@ -464,6 +536,23 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
       event: 'integration_disconnected',
       properties: {'provider': integrationId},
     );
+
+    // For server-side OAuth providers, tell the backend to revoke tokens.
+    if (OAuthRepository.serverProviders.contains(integrationId)) {
+      unawaited(
+        _oauthRepository.disconnectProvider(integrationId).catchError((
+          Object e,
+          StackTrace st,
+        ) {
+          Sentry.captureException(e, stackTrace: st);
+          debugPrint(
+            '[IntegrationsNotifier] Backend disconnect failed for '
+            '$integrationId: $e\n$st',
+          );
+        }),
+      );
+    }
+
     // Clear persisted state so the integration shows as Available after restart.
     unawaited(
       _saveConnectedState(integrationId, connected: false).catchError((

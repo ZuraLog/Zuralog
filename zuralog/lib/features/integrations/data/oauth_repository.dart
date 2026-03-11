@@ -220,6 +220,53 @@ class OAuthRepository {
   }
 
 
+  // ── Status & Disconnect ──────────────────────────────────────────────────
+
+  /// Providers that have server-side OAuth tokens stored in the database.
+  ///
+  /// These can be queried via `GET /api/v1/integrations/<provider>/status`
+  /// and disconnected via `DELETE /api/v1/integrations/<provider>/disconnect`.
+  static const Set<String> serverProviders = {
+    'strava',
+    'fitbit',
+    'oura',
+    'polar',
+    'withings',
+  };
+
+  /// Fetches the connection status for a server-side OAuth provider.
+  ///
+  /// [provider] is one of: 'strava', 'fitbit', 'oura', 'polar', 'withings'.
+  /// Returns a map with at minimum `{"connected": true/false}`.
+  /// On network error, returns `{"connected": false}` so the UI shows the
+  /// integration as available rather than crashing.
+  Future<Map<String, dynamic>> getProviderStatus(String provider) async {
+    try {
+      final response = await _apiClient.get(
+        '/api/v1/integrations/$provider/status',
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (_) {
+      return {'connected': false};
+    }
+  }
+
+  /// Tells the backend to revoke tokens and deactivate the integration.
+  ///
+  /// [provider] is one of: 'strava', 'fitbit', 'oura', 'polar', 'withings'.
+  /// Returns `true` if the backend confirmed disconnection.
+  Future<bool> disconnectProvider(String provider) async {
+    try {
+      final response = await _apiClient.delete(
+        '/api/v1/integrations/$provider/disconnect',
+      );
+      final data = response.data as Map<String, dynamic>;
+      return (data['success'] as bool?) ?? true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Forward the intercepted Oura authorization code to the Cloud Brain
   /// for server-side token exchange.
   ///
