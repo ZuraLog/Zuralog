@@ -42,6 +42,48 @@
 
 **`flutter analyze`:** Zero issues.
 
+**Phase 2 — Provider never-error pattern + shared widget extraction (2026-03-11, commit ab688e9)**
+
+**Problem discovered:** The four main data providers were propagating API/network errors up to the UI layer, causing users to see error messages ("Score unavailable / Tap to retry", "Could not load insights.", "Could not load data") instead of the new empty states. This violated the mobile app principle of never showing connection errors to users.
+
+**Files changed:**
+- `zuralog/lib/features/today/providers/today_providers.dart` — `healthScoreProvider` + `todayFeedProvider` wrapped in try/catch
+- `zuralog/lib/features/data/providers/data_providers.dart` — `dashboardProvider` wrapped in try/catch
+- `zuralog/lib/features/trends/providers/trends_providers.dart` — `trendsHomeProvider` wrapped in try/catch
+- `zuralog/lib/shared/widgets/health_score_zero_state.dart` — NEW: extracted shared widget
+- `zuralog/lib/features/today/presentation/today_feed_screen.dart` — uses shared widget; dead code removed
+- `zuralog/lib/shared/widgets/score_trend_hero.dart` — uses shared widget; zero-data check added
+
+**What was built:**
+
+1. **Never-error provider pattern** — All four providers (`healthScoreProvider`, `todayFeedProvider`, `dashboardProvider`, `trendsHomeProvider`) now catch any exception at the provider level and return empty data objects instead of rethrowing. The UI's `AsyncValue.when()` error branch becomes a pure safety net — it can never be reached in practice. Users see empty states, not network error messages.
+
+   Fallback values used:
+   - `healthScoreProvider` → `HealthScoreData(score: 0, trend: [], dataDays: 0)`
+   - `todayFeedProvider` → `TodayFeedData(insights: [], quickActions: [], streak: null)`
+   - `dashboardProvider` → `const DashboardData(categories: [], visibleOrder: [])`
+   - `trendsHomeProvider` → empty `TrendsHomeData`
+
+2. **Shared `HealthScoreZeroState` widget** — The private `_HealthScoreZeroState` defined in `today_feed_screen.dart` was extracted to `lib/shared/widgets/health_score_zero_state.dart`. Both the Today tab hero card and the Data tab `ScoreTrendHero` compact ring now import and use this single shared widget. The private duplicate was deleted.
+
+3. **Zero-data check in `data:` branch** — When `score == 0 && dataDays == 0` (the error fallback value), both the Today hero and the Data compact ring now show `HealthScoreZeroState` instead of rendering a `0` on the score ring.
+
+4. **Dead code removed:**
+   - `_ErrorCard` class in `today_feed_screen.dart`
+   - Private `_HealthScoreZeroState` class in `today_feed_screen.dart`
+   - `_TrendsErrorState` class in `trends_home_screen.dart`
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Catch at provider layer, not repository layer | Repositories already handle some errors but inconsistently. The provider layer is the last boundary before the UI — catching here guarantees the UI never sees an error regardless of what any repository does. |
+| Return empty objects (not null) as fallback | Empty objects let the UI's existing empty-state rendering path handle the zero-data case uniformly. Null would require null-checks everywhere. |
+| Extract to shared widget instead of duplicating | Two screens needed identical zero-state UI for the health score ring. A shared widget in `lib/shared/widgets/` enforces a single source of truth and prevents the two copies from drifting apart. |
+| Check `score == 0 && dataDays == 0` in `data:` branch | The error fallback produces this sentinel value. Without the check, the ring would render a `0` which is misleading — the user has no score, not a score of zero. |
+
+**`flutter analyze`:** Zero issues.
+
 ---
 
 ## Goals API — Production 404 Fix (fix/goals-api-endpoints, 2026-03-11)
