@@ -16,6 +16,8 @@ import 'onboarding_tooltip_provider.dart';
 const double _kMaxWidth = 240.0;
 const double _kBorderRadius = 12.0;
 const double _kArrowSize = 8.0;
+const double _kHorizontalMargin = 16.0;
+const double _kTooltipHeightEstimate = 80.0;
 const EdgeInsets _kPadding = EdgeInsets.symmetric(horizontal: 14, vertical: 10);
 
 class OnboardingTooltip extends ConsumerStatefulWidget {
@@ -93,11 +95,13 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
     final viewPadding = MediaQuery.of(context).viewPadding;
 
     // Estimate tooltip height (~80px for typical tooltip content).
-    const kTooltipHeight = 80.0;
     const kAppBarHeight = kToolbarHeight; // 56px default
     const kNavBarHeight = AppDimens.bottomNavHeight;
 
     bool effectivePreferBelow = widget.preferBelow;
+
+    // Horizontal offset needed to keep the bubble within screen margins.
+    double horizontalOffset = 0.0;
 
     if (renderBox != null) {
       final targetPos = renderBox.localToGlobal(Offset.zero);
@@ -105,10 +109,10 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
 
       // Space available above the tooltip (between tooltip top and AppBar bottom).
       final spaceAbove =
-          targetPos.dy - kTooltipHeight - kAppBarHeight - viewPadding.top;
+          targetPos.dy - _kTooltipHeightEstimate - kAppBarHeight - viewPadding.top;
       // Space available below the tooltip (between tooltip bottom and NavBar top).
       final spaceBelow = screenSize.height -
-          (targetPos.dy + targetHeight + kTooltipHeight + kNavBarHeight + viewPadding.bottom);
+          (targetPos.dy + targetHeight + _kTooltipHeightEstimate + kNavBarHeight + viewPadding.bottom);
 
       if (!widget.preferBelow && spaceAbove < 0 && spaceBelow >= 0) {
         // Not enough room above → flip to below.
@@ -117,9 +121,25 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
         // Not enough room below → flip to above.
         effectivePreferBelow = false;
       }
+
+      // ── Horizontal clamping ───────────────────────────────────────────────
+      // CompositedTransformFollower centers the bubble on the target's center
+      // X. If the target is near the left or right edge the 240px bubble
+      // overflows off-screen. Compute the correction needed to keep the bubble
+      // within a 16px margin on both sides.
+      final targetCenterX = targetPos.dx + renderBox.size.width / 2;
+      final bubbleLeft = targetCenterX - _kMaxWidth / 2;
+      final bubbleRight = targetCenterX + _kMaxWidth / 2;
+
+      if (bubbleLeft < _kHorizontalMargin) {
+        horizontalOffset = _kHorizontalMargin - bubbleLeft;
+      } else if (bubbleRight > screenSize.width - _kHorizontalMargin) {
+        horizontalOffset = (screenSize.width - _kHorizontalMargin) - bubbleRight;
+      }
     }
 
     final capturedPreferBelow = effectivePreferBelow;
+    final capturedHorizontalOffset = horizontalOffset;
 
     _overlayEntry = OverlayEntry(
       builder: (overlayContext) {
@@ -153,34 +173,44 @@ class _OnboardingTooltipState extends ConsumerState<OnboardingTooltip> {
                   ? Alignment.topCenter
                   : Alignment.bottomCenter,
               offset: Offset(
-                0,
+                capturedHorizontalOffset,
                 capturedPreferBelow ? _kArrowSize + 4 : -(_kArrowSize + 4),
               ),
               child: SizedBox(
-                width: _kMaxWidth,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: capturedPreferBelow
-                      ? [
-                          _ArrowPaint(color: bubbleBg, pointingDown: false),
-                          _BubbleContent(
-                            message: widget.message,
-                            bubbleBg: bubbleBg,
-                            textColor: textColor,
-                            onDismiss: _dismiss,
-                          ),
-                        ]
-                      : [
-                          _BubbleContent(
-                            message: widget.message,
-                            bubbleBg: bubbleBg,
-                            textColor: textColor,
-                            onDismiss: _dismiss,
-                          ),
-                          _ArrowPaint(color: bubbleBg, pointingDown: true),
-                        ],
+                  width: _kMaxWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: capturedPreferBelow
+                        ? [
+                            // arrowOffset keeps the tip pointing at the
+                            // target center after horizontal bubble clamping.
+                            _ArrowPaint(
+                              color: bubbleBg,
+                              pointingDown: false,
+                              arrowOffset: capturedHorizontalOffset,
+                            ),
+                            _BubbleContent(
+                              message: widget.message,
+                              bubbleBg: bubbleBg,
+                              textColor: textColor,
+                              onDismiss: _dismiss,
+                            ),
+                          ]
+                        : [
+                            _BubbleContent(
+                              message: widget.message,
+                              bubbleBg: bubbleBg,
+                              textColor: textColor,
+                              onDismiss: _dismiss,
+                            ),
+                            _ArrowPaint(
+                              color: bubbleBg,
+                              pointingDown: true,
+                              arrowOffset: capturedHorizontalOffset,
+                            ),
+                          ],
+                  ),
                 ),
-              ),
             ),
           ],
         );
@@ -257,17 +287,36 @@ class _BubbleContent extends StatelessWidget {
 
 // ── _ArrowPaint ───────────────────────────────────────────────────────────────
 
+/// Draws the tooltip arrow triangle spanning the full bubble width.
+///
+/// [arrowOffset] shifts the arrow tip left (negative) or right (positive)
+/// from the bubble center so it continues to point at the target widget
+/// after the bubble has been horizontally clamped to stay on-screen.
+/// Drawing on a full-width canvas avoids overflow-paint fragility.
 class _ArrowPaint extends StatelessWidget {
-  const _ArrowPaint({required this.color, required this.pointingDown});
+  const _ArrowPaint({
+    required this.color,
+    required this.pointingDown,
+    this.arrowOffset = 0.0,
+  });
 
   final Color color;
   final bool pointingDown;
 
+  /// Horizontal correction so the tip aligns with the original target center.
+  final double arrowOffset;
+
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      size: Size(_kArrowSize * 2, _kArrowSize),
-      painter: _ArrowPainter(color: color, pointingDown: pointingDown),
+      // Canvas spans the full bubble width so the tip can be drawn at any
+      // position without relying on overflow painting.
+      size: Size(_kMaxWidth, _kArrowSize),
+      painter: _ArrowPainter(
+        color: color,
+        pointingDown: pointingDown,
+        arrowOffset: arrowOffset,
+      ),
     );
   }
 }
@@ -275,28 +324,44 @@ class _ArrowPaint extends StatelessWidget {
 // ── _ArrowPainter ─────────────────────────────────────────────────────────────
 
 class _ArrowPainter extends CustomPainter {
-  const _ArrowPainter({required this.color, required this.pointingDown});
+  const _ArrowPainter({
+    required this.color,
+    required this.pointingDown,
+    this.arrowOffset = 0.0,
+  });
 
   final Color color;
   final bool pointingDown;
+
+  /// Signed offset applied to the tip X so it points at the actual target.
+  final double arrowOffset;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
+
+    // Tip X = bubble center minus the horizontal correction applied to the
+    // bubble position. If the bubble was shifted right (+offset), the tip
+    // must move left (-offset) by the same amount to realign with the target.
+    final tipX = (size.width / 2) - arrowOffset;
+    const halfBase = _kArrowSize; // base half-width = arrowSize
+
     final path = Path();
     if (pointingDown) {
+      // Triangle: base at top, tip at bottom.
       path
-        ..moveTo(0, 0)
-        ..lineTo(size.width, 0)
-        ..lineTo(size.width / 2, size.height)
+        ..moveTo(tipX - halfBase, 0)
+        ..lineTo(tipX + halfBase, 0)
+        ..lineTo(tipX, size.height)
         ..close();
     } else {
+      // Triangle: tip at top, base at bottom.
       path
-        ..moveTo(size.width / 2, 0)
-        ..lineTo(size.width, size.height)
-        ..lineTo(0, size.height)
+        ..moveTo(tipX, 0)
+        ..lineTo(tipX + halfBase, size.height)
+        ..lineTo(tipX - halfBase, size.height)
         ..close();
     }
     canvas.drawPath(path, paint);
@@ -304,5 +369,7 @@ class _ArrowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ArrowPainter old) =>
-      old.color != color || old.pointingDown != pointingDown;
+      old.color != color ||
+      old.pointingDown != pointingDown ||
+      old.arrowOffset != arrowOffset;
 }

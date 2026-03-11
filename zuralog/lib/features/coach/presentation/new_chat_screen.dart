@@ -751,7 +751,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
               AppDimens.spaceMd,
-              AppDimens.bottomClearance(context),
+              // ZuralogScaffold(addBottomNavPadding: true) already adds
+              // bottomClearance to the outer body. Only a small visual
+              // breathing-room gap is needed here.
+              AppDimens.spaceSm,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
