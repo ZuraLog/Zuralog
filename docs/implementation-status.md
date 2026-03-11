@@ -1,9 +1,58 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-11 (fix/tooltip-and-input-padding — tooltip overflow clamping, bottomClearance double-counting fix, Coach input bar padding)  
+**Last Updated:** 2026-03-11 (fix/goals-api-endpoints — add /api/v1/goals CRUD endpoints, resolving Goals screen 404 in production)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Goals API — Production 404 Fix (fix/goals-api-endpoints, 2026-03-11)
+
+**Scope:** Backend-only fix. Added the missing `/api/v1/goals` CRUD router that the Flutter Goals screen had been calling but which never existed on the server.  
+**Branch:** `fix/goals-api-endpoints` → merged to `main` (fast-forward, commit `03fe47d`)
+
+**Files changed:**
+- `cloud-brain/alembic/versions/m8h9i0j1k2l3_add_goal_crud_columns.py` — NEW: Alembic migration
+- `cloud-brain/app/api/v1/goal_schemas.py` — NEW: Pydantic request/response schemas
+- `cloud-brain/app/api/v1/goal_routes.py` — NEW: Goals CRUD router
+- `cloud-brain/app/models/user_goal.py` — MODIFIED: 8 new columns, unique constraint removed
+- `cloud-brain/app/main.py` — MODIFIED: router import + registration
+
+**What was fixed:**
+
+**Root cause:** The Flutter app (`progress_repository.dart`) calls `GET /api/v1/goals` to load the Goals screen. No router was mounted at that path on the backend — the only goals-related route was `GET/POST /api/v1/analytics/goals`, which serves analytics summaries in an incompatible schema (flat list, no `id`/`title`/`unit`). FastAPI returned 404 on every call, which surfaced in the app as "Could not load goals / DioException [bad response] status 404".
+
+1. **Database migration** (`m8h9i0j1k2l3`) — Added 8 columns to `user_goals` with metadata-only `ALTER TABLE … ADD COLUMN IF NOT EXISTS` (no table lock on PG 11+): `type`, `title`, `current_value`, `unit`, `start_date`, `deadline`, `is_completed`, `ai_commentary`. Dropped the `uq_user_goal_user_metric` unique constraint to allow multiple goals of the same type. Backfilled existing rows: `title = metric`, `start_date = TO_CHAR(created_at, 'YYYY-MM-DD')`. Migration was applied directly to Supabase via MCP before the code landed.
+
+2. **`UserGoal` model update** — Added the 8 new `Mapped` columns. Removed the `UniqueConstraint` table args declaration to match the dropped DB constraint.
+
+3. **`goal_schemas.py`** — Four Pydantic v2 schemas:
+   - `GoalResponse` — 13 fields matching `Goal.fromJson` in `progress_models.dart` exactly (`id`, `user_id`, `type`, `period`, `title`, `target_value`, `current_value`, `unit`, `start_date`, `deadline`, `is_completed`, `ai_commentary`, `progress_history`)
+   - `GoalListResponse` — wrapper `{"goals": [...]}` matching `GoalList.fromJson`
+   - `GoalCreateRequest` — validated: type enum, period enum, title 1–200 chars, target > 0, unit ≤50 chars, deadline `date.fromisoformat()`
+   - `GoalUpdateRequest` — all fields optional; `deadline` uses `model_fields_set` sentinel to allow clearing
+
+4. **`goal_routes.py`** — Four endpoints:
+   - `GET /api/v1/goals` — returns `GoalListResponse` (always 200, empty list when no goals — never 404); 30/minute rate limit
+   - `POST /api/v1/goals` — creates goal, sets `start_date = date.today()`, `current_value = 0.0`, maps Flutter type slug to analytics `metric`; 10/minute rate limit; returns 201
+   - `PATCH /api/v1/goals/{goal_id}` — partial update; `deadline` cleared when explicitly sent as `null` via `model_fields_set`; 20/minute rate limit
+   - `DELETE /api/v1/goals/{goal_id}` — hard delete; 20/minute rate limit; returns 204
+   - All endpoints: JWT auth required, ownership enforced (`user_id == goal.user_id`), 404 for missing-or-foreign goals (no information leakage)
+
+5. **`main.py`** — `goals_router` imported and registered at `prefix="/api/v1"`, resulting in `/api/v1/goals`.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| New router at `/api/v1/goals`, not adapting analytics endpoint | Analytics endpoint returns a flat list with incompatible field names (no `id`, `title`, `unit`). Adapting it would break analytics consumers and still be missing PATCH/DELETE. Clean separation is correct. |
+| Drop `uq_user_goal_user_metric` constraint | The one-goal-per-metric rule was never enforced at the UI layer and blocked users from creating multiple goals of the same type (e.g., two step-count goals with different periods). |
+| `model_fields_set` for deadline clearing | `body.deadline is not None` can't distinguish "not sent" from "explicitly sent as null" in Pydantic v2. Using `model_fields_set` correctly handles the "clear deadline" use case. |
+| `progress_history` always returns `[]` | Sparkline history requires querying the health data tables with time-series logic (owned by the analytics engine). Returning an empty placeholder is safe — the Flutter model handles it gracefully — and defers the analytics integration to a future task. |
+| Rate limits: 30/10/20/20 per minute | Read (30) is generous for list refresh. Create (10) prevents goal spam. Update/delete (20 each) match journal route precedent. |
+
+**No Flutter changes were required.** The app's repository, models, and screen were already built to the correct API contract.
 
 ---
 
