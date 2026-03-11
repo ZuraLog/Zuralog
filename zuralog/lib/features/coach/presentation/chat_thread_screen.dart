@@ -377,6 +377,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final chatState = ref.watch(coachChatNotifierProvider(widget.conversationId));
     final conversations = ref.watch(coachConversationsProvider).valueOrNull;
 
@@ -521,7 +522,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                 horizontal: AppDimens.spaceMd,
                 vertical: AppDimens.spaceSm,
               ),
-              color: AppColors.cardBackgroundDark,
+              color: colors.cardBackground,
               child: Row(
                 children: [
                   const Icon(
@@ -594,10 +595,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.cardBackgroundDark,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      builder: (sheetCtx) {
+        final sheetColors = AppColorsOf(sheetCtx);
+        return Container(
+        decoration: BoxDecoration(
+          color: sheetColors.cardBackground,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -607,7 +610,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.borderDark,
+                color: sheetColors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -620,7 +623,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                 _showRenameDialog(context, conversationId);
               },
             ),
-            const Divider(height: 1, color: AppColors.borderDark),
+            Divider(height: 1, color: sheetColors.border),
             ListTile(
               leading: const Icon(Icons.archive_outlined, color: AppColors.primary),
               title: Text('Archive', style: AppTextStyles.bodyLarge),
@@ -629,7 +632,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                 _archiveAndPop(context, conversationId);
               },
             ),
-            const Divider(height: 1, color: AppColors.borderDark),
+            Divider(height: 1, color: sheetColors.border),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
                   color: AppColors.statusError),
@@ -645,7 +648,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
-      ),
+      );
+      },
     );
   }
 
@@ -653,8 +657,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final ctrl = TextEditingController();
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColorsOf(dialogCtx).surface,
          title: Text('Rename Conversation', style: AppTextStyles.titleMedium),
         content: TextField(
           controller: ctrl,
@@ -713,12 +717,14 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   void _showDeleteDialog(BuildContext context, String conversationId) {
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
+      builder: (dialogCtx) {
+        final dialogColors = AppColorsOf(dialogCtx);
+        return AlertDialog(
+        backgroundColor: dialogColors.surface,
          title: Text('Delete conversation?', style: AppTextStyles.titleMedium),
         content: Text(
           'This cannot be undone.',
-          style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondaryDark),
+          style: AppTextStyles.bodyLarge.copyWith(color: dialogColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -751,7 +757,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                 style: TextStyle(color: AppColors.statusError)),
           ),
         ],
-      ),
+      );
+      },
     );
   }
 }
@@ -904,6 +911,7 @@ class _StreamingBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
       child: Row(
@@ -930,7 +938,7 @@ class _StreamingBubble extends StatelessWidget {
                 vertical: AppDimens.spaceSm + 2,
               ),
               decoration: BoxDecoration(
-                color: AppColors.aiBubbleDark,
+                color: colors.aiBubble,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppDimens.radiusCard),
                   topRight: Radius.circular(AppDimens.radiusCard),
@@ -948,13 +956,13 @@ class _StreamingBubble extends StatelessWidget {
                           styleSheet: MarkdownStyleSheet.fromTheme(
                             Theme.of(context).copyWith(
                               textTheme: Theme.of(context).textTheme.apply(
-                                    bodyColor: AppColors.textPrimaryDark,
-                                    displayColor: AppColors.textPrimaryDark,
+                                    bodyColor: colors.textPrimary,
+                                    displayColor: colors.textPrimary,
                                   ),
                             ),
                           ).copyWith(
                             p: AppTextStyles.bodyLarge.copyWith(
-                              color: AppColors.textPrimaryDark,
+                              color: colors.textPrimary,
                               height: 1.45,
                             ),
                           ),
@@ -969,7 +977,7 @@ class _StreamingBubble extends StatelessWidget {
                             Text(
                               'Thinking…',
                               style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.textSecondaryDark,
+                                color: colors.textSecondary,
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -1003,6 +1011,7 @@ class _ToolProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1018,7 +1027,7 @@ class _ToolProgressIndicator extends StatelessWidget {
         Text(
           _friendlyName(toolName),
           style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondaryDark,
+            color: colors.textSecondary,
             fontStyle: FontStyle.italic,
           ),
         ),
@@ -1062,7 +1071,8 @@ class _MessageBubble extends StatelessWidget {
     return name.length > 18 ? '${name.substring(0, 15)}…' : name;
   }
 
-  Widget _buildThumbnail(String url) {
+  Widget _buildThumbnail(BuildContext context, String url) {
+    final colors = AppColorsOf(context);
     if (_isImageUrl(url)) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -1077,7 +1087,7 @@ class _MessageBubble extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
+                    color: colors.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -1085,7 +1095,7 @@ class _MessageBubble extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.surfaceDark,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(Icons.broken_image_outlined,
@@ -1098,7 +1108,7 @@ class _MessageBubble extends StatelessWidget {
       width: 80,
       height: 52,
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1129,10 +1139,12 @@ class _MessageBubble extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.cardBackgroundDark,
-          borderRadius: BorderRadius.vertical(
+      builder: (sheetCtx) {
+        final sheetColors = AppColorsOf(sheetCtx);
+        return Container(
+        decoration: BoxDecoration(
+          color: sheetColors.cardBackground,
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppDimens.radiusCard),
           ),
         ),
@@ -1144,7 +1156,7 @@ class _MessageBubble extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.borderDark,
+                color: sheetColors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1167,7 +1179,7 @@ class _MessageBubble extends StatelessWidget {
               },
             ),
             if (onEdit != null) ...[
-              const Divider(height: 1, color: AppColors.borderDark),
+              Divider(height: 1, color: sheetColors.border),
               ListTile(
                 leading: const Icon(Icons.edit_rounded, color: AppColors.primary),
                 title: Text('Edit', style: AppTextStyles.bodyLarge),
@@ -1178,7 +1190,7 @@ class _MessageBubble extends StatelessWidget {
               ),
             ],
             if (onRegenerate != null) ...[
-              const Divider(height: 1, color: AppColors.borderDark),
+              Divider(height: 1, color: sheetColors.border),
               ListTile(
                 leading: const Icon(Icons.refresh_rounded, color: AppColors.primary),
                 title: Text('Regenerate', style: AppTextStyles.bodyLarge),
@@ -1191,12 +1203,14 @@ class _MessageBubble extends StatelessWidget {
             SizedBox(height: MediaQuery.of(sheetCtx).padding.bottom),
           ],
         ),
-      ),
+      );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
       child: Row(
@@ -1230,7 +1244,7 @@ class _MessageBubble extends StatelessWidget {
                     alignment:
                         _isUser ? WrapAlignment.end : WrapAlignment.start,
                     children:
-                        message.attachmentUrls.map(_buildThumbnail).toList(),
+                        message.attachmentUrls.map((url) => _buildThumbnail(context, url)).toList(),
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
                 ],
@@ -1244,7 +1258,7 @@ class _MessageBubble extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: _isUser
                           ? AppColors.userBubble
-                          : AppColors.aiBubbleDark,
+                          : colors.aiBubble,
                       borderRadius: BorderRadius.only(
                         topLeft:
                             const Radius.circular(AppDimens.radiusCard),
@@ -1271,31 +1285,33 @@ class _MessageBubble extends StatelessWidget {
                             styleSheet: MarkdownStyleSheet.fromTheme(
                               Theme.of(context).copyWith(
                                 textTheme: Theme.of(context).textTheme.apply(
-                                      bodyColor: AppColors.textPrimaryDark,
-                                      displayColor: AppColors.textPrimaryDark,
+                                      bodyColor: colors.textPrimary,
+                                      displayColor: colors.textPrimary,
                                     ),
                               ),
                             ).copyWith(
                               p: AppTextStyles.bodyLarge.copyWith(
-                                color: AppColors.textPrimaryDark,
+                                color: colors.textPrimary,
                                 height: 1.45,
                               ),
                               strong: AppTextStyles.bodyLarge.copyWith(
-                                color: AppColors.textPrimaryDark,
+                                color: colors.textPrimary,
                                 fontWeight: FontWeight.w600,
                               ),
                               em: AppTextStyles.bodyLarge.copyWith(
-                                color: AppColors.textPrimaryDark,
+                                color: colors.textPrimary,
                                 fontStyle: FontStyle.italic,
                               ),
                               listBullet: AppTextStyles.bodyLarge.copyWith(
-                                color: AppColors.textPrimaryDark,
+                                color: colors.textPrimary,
                                 height: 1.45,
                               ),
                               code: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.textPrimaryDark,
+                                color: colors.textPrimary,
                                 backgroundColor:
-                                    Colors.white.withValues(alpha: 0.08),
+                                    colors.isDark
+                                        ? Colors.white.withValues(alpha: 0.08)
+                                        : Colors.black.withValues(alpha: 0.06),
                                 fontFamily: 'monospace',
                               ),
                             ),
@@ -1352,6 +1368,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return AnimatedBuilder(
       animation: _anim,
       builder: (context, _) {
@@ -1366,7 +1383,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondaryDark.withValues(alpha: opacity),
+                  color: colors.textSecondary.withValues(alpha: opacity),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -1509,11 +1526,13 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
       }
     });
 
+    final colors = AppColorsOf(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.backgroundDark,
+        color: colors.background,
         border: Border(
-          top: BorderSide(color: AppColors.borderDark, width: 0.5),
+          top: BorderSide(color: colors.border, width: 0.5),
         ),
       ),
       child: Column(
@@ -1561,7 +1580,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.inputBackgroundDark,
+                      color: colors.inputBackground,
                       borderRadius:
                           BorderRadius.circular(AppDimens.radiusInput),
                     ),
@@ -1678,6 +1697,7 @@ class _InputIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final Color bgColor;
     final Color defaultIconColor;
     if (filledColor != null) {
@@ -1687,8 +1707,8 @@ class _InputIcon extends StatelessWidget {
       bgColor = AppColors.primary;
       defaultIconColor = AppColors.primaryButtonText;
     } else {
-      bgColor = AppColors.inputBackgroundDark;
-      defaultIconColor = AppColors.textSecondaryDark;
+      bgColor = colors.inputBackground;
+      defaultIconColor = colors.textSecondary;
     }
 
     return Tooltip(

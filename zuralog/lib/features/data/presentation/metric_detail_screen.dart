@@ -79,6 +79,7 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final timeRangeKey =
         _selectedRange == TimeRange.custom && _customRange != null
             ? 'custom:${_customRange!.start.toIso8601String()}|${_customRange!.end.toIso8601String()}'
@@ -98,8 +99,8 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
         ),
       ),
       body: detailAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: colors.primary),
         ),
         error: (e, _) => Center(
           child: Column(
@@ -111,7 +112,7 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
               Text(
                 'Could not load metric',
                 style:
-                    AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+                    AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
               ),
             ],
           ),
@@ -206,6 +207,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final series = widget.detail.series;
     final cat = widget.detail.category;
     final overrideInt = ref.watch(
@@ -273,7 +275,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
             child: Text(
               'Only one data point available',
               style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondary),
+                  color: colors.textSecondary),
             ),
           ),
         ],
@@ -284,7 +286,7 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
             child: Text(
               'No data for this period',
               style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondary),
+                  color: colors.textSecondary),
             ),
           ),
         ],
@@ -339,14 +341,12 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -394,6 +394,7 @@ class _StatCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final textColor =
         color ?? Theme.of(context).colorScheme.onSurface;
     return Expanded(
@@ -402,7 +403,7 @@ class _StatCell extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary),
+                color: colors.textSecondary),
           ),
           const SizedBox(height: 2),
           Text(
@@ -424,12 +425,11 @@ class _VerticalDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     return Container(
       width: 1,
       height: 36,
-      color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-          .withValues(alpha: 0.5),
+      color: colors.border.withValues(alpha: 0.5),
     );
   }
 }
@@ -453,9 +453,7 @@ class _ChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
     final values = spots.map((s) => s.y).toList();
     final minY = values.reduce((a, b) => a < b ? a : b);
     final maxY = values.reduce((a, b) => a > b ? a : b);
@@ -469,7 +467,7 @@ class _ChartCard extends StatelessWidget {
         AppDimens.spaceSm,
       ),
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(20),
       ),
       child: FadeTransition(
@@ -489,8 +487,7 @@ class _ChartCard extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: ((maxY - minY) / 4).clamp(0.1, 1e9),
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                        .withValues(alpha: 0.4),
+                    color: colors.border.withValues(alpha: 0.4),
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -520,7 +517,7 @@ class _ChartCard extends StatelessWidget {
                 ),
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.surfaceDark,
+                    getTooltipColor: (_) => colors.surface,
                     getTooltipItems: (touchedSpots) => touchedSpots
                         .map((s) => LineTooltipItem(
                               '${s.y.toStringAsFixed(1)} $displayUnit',
@@ -545,7 +542,7 @@ class _ChartCard extends StatelessWidget {
                           FlDotCirclePainter(
                         radius: 3,
                         color: color,
-                        strokeColor: AppColors.backgroundDark,
+                        strokeColor: colors.background,
                         strokeWidth: 1.5,
                       ),
                     ),
@@ -611,7 +608,7 @@ class _AiInsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: IntrinsicHeight(
@@ -619,14 +616,12 @@ class _AiInsightCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 3px left accent bar.
-            Container(width: 3, color: AppColors.primary),
+            Container(width: 3, color: colors.primary),
             // Card body.
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(AppDimens.spaceMd),
-                color: isDark
-                    ? AppColors.cardBackgroundDark
-                    : AppColors.cardBackgroundLight,
+                color: colors.cardBackground,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -672,16 +667,14 @@ class _RawTableToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
 
     return GestureDetector(
       onTap: onToggle,
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: bg,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -711,7 +704,7 @@ class _RawTableToggle extends StatelessWidget {
                      child: Text(
                        'Date',
                        style: AppTextStyles.bodySmall.copyWith(
-                         color: AppColors.textSecondary,
+                         color: colors.textSecondary,
                          fontWeight: FontWeight.w600,
                        ),
                      ),
@@ -722,7 +715,7 @@ class _RawTableToggle extends StatelessWidget {
                        'Value',
                        textAlign: TextAlign.right,
                        style: AppTextStyles.bodySmall.copyWith(
-                         color: AppColors.textSecondary,
+                         color: colors.textSecondary,
                          fontWeight: FontWeight.w600,
                        ),
                      ),
@@ -744,7 +737,7 @@ class _RawTableToggle extends StatelessWidget {
                             child: Text(
                               _formatDate(dp.timestamp),
                              style: AppTextStyles.bodySmall.copyWith(
-                                 color: AppColors.textSecondary,
+                                 color: colors.textSecondary,
                                ),
                              ),
                            ),

@@ -188,18 +188,19 @@ class _TermsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
         ),
         const SizedBox(height: AppDimens.spaceXs),
         Text(
           subtitle,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
       ],
@@ -217,6 +218,7 @@ class _TermsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceLg),
       child: Column(
@@ -224,13 +226,13 @@ class _TermsSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             body,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
               height: 1.6,
             ),
           ),

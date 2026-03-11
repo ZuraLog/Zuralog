@@ -223,6 +223,7 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final state = ref.watch(_notificationStateProvider);
     final notifier = ref.read(_notificationStateProvider.notifier);
     final analytics = ref.read(analyticsServiceProvider);
@@ -277,7 +278,7 @@ class _NotificationSettingsScreenState
             children: [
               _ToggleRow(
                 icon: Icons.notifications_active_rounded,
-                iconColor: AppColors.primary,
+                iconColor: colors.primary,
                 title: 'Smart Reminders',
                 subtitle: 'AI-personalized nudges based on your patterns',
                 value: state.smartRemindersEnabled,
@@ -542,11 +543,12 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -560,11 +562,12 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(left: 68),
       child: Container(
         height: 1,
-        color: AppColors.borderDark.withValues(alpha: 0.5),
+        color: colors.border.withValues(alpha: 0.5),
       ),
     );
   }
@@ -589,6 +592,7 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -605,14 +609,14 @@ class _ToggleRow extends StatelessWidget {
                 Text(
                   title,
                   style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],
@@ -621,9 +625,9 @@ class _ToggleRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.primary,
+            activeThumbColor: colors.primary,
             inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: AppColors.borderDark,
+            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -646,6 +650,7 @@ class _SubToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(
         left: AppDimens.spaceXxl,
@@ -662,14 +667,14 @@ class _SubToggleRow extends StatelessWidget {
                 Text(
                   title,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],
@@ -678,9 +683,9 @@ class _SubToggleRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.primary,
+            activeThumbColor: colors.primary,
             inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: AppColors.borderDark,
+            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -696,6 +701,7 @@ class _FrequencyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -706,7 +712,7 @@ class _FrequencyRow extends StatelessWidget {
         children: [
           Text(
             'Max Reminders Per Day',
-            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Row(
@@ -749,6 +755,7 @@ class _FrequencyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -760,12 +767,12 @@ class _FrequencyChip extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.primary.withValues(alpha: 0.15)
-                : AppColors.surfaceDark,
+                ? colors.primary.withValues(alpha: 0.15)
+                : colors.surface,
             borderRadius: BorderRadius.circular(AppDimens.radiusSm),
             border: Border.all(
               color: selected
-                  ? AppColors.primary.withValues(alpha: 0.6)
+                  ? colors.primary.withValues(alpha: 0.6)
                   : Colors.transparent,
             ),
           ),
@@ -773,7 +780,7 @@ class _FrequencyChip extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: AppTextStyles.bodySmall.copyWith(
-              color: selected ? AppColors.primary : AppColors.textSecondary,
+              color: selected ? colors.primary : colors.textSecondary,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
@@ -800,6 +807,7 @@ class _TimePickerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final formatted = _formatTime(time);
     return GestureDetector(
       onTap: () async {
@@ -831,20 +839,20 @@ class _TimePickerRow extends StatelessWidget {
               child: Text(
                 title,
                 style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
+                color: colors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppDimens.radiusChip),
               ),
               child: Text(
                 formatted,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                   fontWeight: FontWeight.w600,
                 ),
               ),

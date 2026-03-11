@@ -54,13 +54,14 @@ class _PreviewTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Stack(
       children: [
         Container(
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: AppColors.surfaceDark,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(8),
           ),
           child: attachment.type == AttachmentType.image

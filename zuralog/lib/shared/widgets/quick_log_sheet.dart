@@ -181,12 +181,11 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
+    final isDark = colors.isDark;
     final bg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
-    final textPrimary =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textPrimary = colors.textPrimary;
+    final textSecondary = colors.textSecondary;
 
     final unitsSystem = ref.watch(unitsSystemProvider);
     final waterLabel = unitsSystem.waterUnitLabel;
@@ -354,7 +353,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                             side: BorderSide(
                               color: _selectedSymptoms.contains(symptom)
                                   ? AppColors.primary
-                                  : AppColors.borderDark.withValues(alpha: 0.3),
+                                  : colors.border.withValues(alpha: 0.3),
                             ),
                           ),
                       ],
@@ -481,7 +480,7 @@ class _QuickLogSheetState extends ConsumerState<QuickLogSheet> {
                               side: BorderSide(
                                 color: _selectedSymptoms.contains(symptom)
                                     ? AppColors.primary
-                                    : AppColors.borderDark
+                                    : colors.border
                                         .withValues(alpha: 0.3),
                               ),
                             ),

@@ -32,6 +32,7 @@ class NotificationHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final notificationsAsync = ref.watch(notificationsProvider);
 
     return ZuralogScaffold(
@@ -49,8 +50,8 @@ class NotificationHistoryScreen extends ConsumerWidget {
         title: const Text('Notifications'),
       ),
       body: RefreshIndicator(
-        color: AppColors.primary,
-        backgroundColor: AppColors.cardBackgroundDark,
+        color: colors.primary,
+        backgroundColor: colors.cardBackground,
         onRefresh: () async {
           ref.invalidate(notificationsProvider);
           await ref
@@ -109,7 +110,7 @@ class NotificationHistoryScreen extends ConsumerWidget {
                         child: Text(
                           dayKey,
                           style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondaryDark,
+                            color: colors.textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -181,6 +182,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final isRead = widget.item.isRead;
 
     return ZuralogSpringButton(
@@ -197,13 +199,13 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
               if (!isRead)
                 Container(
                   width: 3,
-                  color: AppColors.primary,
+                  color: colors.primary,
                 ),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(AppDimens.spaceMd),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackgroundDark,
+                    color: colors.cardBackground,
                     borderRadius: isRead
                         ? BorderRadius.circular(AppDimens.radiusCard)
                         : const BorderRadius.only(
@@ -226,7 +228,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
                           decoration: BoxDecoration(
                             color: isRead
                                 ? Colors.transparent
-                                : AppColors.primary,
+                                : colors.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -239,8 +241,8 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
                               widget.item.title,
                               style: AppTextStyles.titleMedium.copyWith(
                                 color: isRead
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textPrimaryDark,
+                                    ? colors.textSecondary
+                                    : colors.textPrimary,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -250,7 +252,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
                               Text(
                                 widget.item.body,
                                 style: AppTextStyles.bodyLarge.copyWith(
-                                  color: AppColors.textSecondaryDark,
+                                  color: colors.textSecondary,
                                   fontSize: 14,
                                 ),
                                 maxLines: 3,
@@ -278,7 +280,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
                             Icons.chevron_right_rounded,
                             size: AppDimens.iconSm,
                             // Tinted with primary at 50% — matches insight card.
-                            color: AppColors.primary.withValues(alpha: 0.5),
+                            color: colors.primary.withValues(alpha: 0.5),
                           ),
                         ),
                     ],

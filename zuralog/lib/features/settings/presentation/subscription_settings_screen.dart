@@ -27,6 +27,7 @@ class SubscriptionSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPro = ref.watch(_isProProvider);
+    final colors = AppColorsOf(context);
 
     return ZuralogScaffold(
       body: CustomScrollView(
@@ -46,7 +47,7 @@ class SubscriptionSettingsScreen extends ConsumerWidget {
               title: Text(
                 'Subscription',
                 style:
-                    AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
+                    AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
               ),
             ),
           ),
@@ -114,11 +115,12 @@ class _CurrentPlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -133,7 +135,7 @@ class _CurrentPlanCard extends StatelessWidget {
                 Text(
                   isPro ? 'Zuralog Pro' : 'Zuralog Free',
                   style: AppTextStyles.titleMedium
-                      .copyWith(color: AppColors.textPrimaryDark),
+                      .copyWith(color: colors.textPrimary),
                 ),
               ],
             ),
@@ -182,10 +184,11 @@ class _PlanBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final backgroundColor = isPro
-        ? AppColors.primary.withValues(alpha: 0.2)
-        : AppColors.borderDark.withValues(alpha: 0.6);
-    final textColor = isPro ? AppColors.primary : AppColors.textTertiary;
+        ? colors.primary.withValues(alpha: 0.2)
+        : colors.border.withValues(alpha: 0.6);
+    final textColor = isPro ? colors.primary : AppColors.textTertiary;
     final label = isPro ? 'Pro' : 'Free';
 
     return Container(
@@ -226,6 +229,7 @@ class _FeatureItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       children: [
         Icon(icon, size: AppDimens.iconSm, color: iconColor),
@@ -235,7 +239,7 @@ class _FeatureItem extends StatelessWidget {
           style: AppTextStyles.bodyMedium.copyWith(
             color: dimmed
                 ? AppColors.textTertiary
-                : AppColors.textPrimaryDark,
+                : colors.textPrimary,
           ),
         ),
       ],
@@ -252,11 +256,12 @@ class _UpgradeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -276,7 +281,7 @@ class _UpgradeCard extends StatelessWidget {
                 Text(
                   'Zuralog Pro',
                   style: AppTextStyles.titleMedium
-                      .copyWith(color: AppColors.textPrimaryDark),
+                      .copyWith(color: colors.textPrimary),
                 ),
               ],
             ),
@@ -288,13 +293,13 @@ class _UpgradeCard extends StatelessWidget {
             Text(
               '\$9.99 / month',
               style:
-                  AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
+                  AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
             ),
             const SizedBox(height: AppDimens.spaceXs),
             Text(
               'or \$79.99/year (save 33%)',
               style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textSecondary),
+                  .copyWith(color: colors.textSecondary),
             ),
             const SizedBox(height: AppDimens.spaceMd),
 
@@ -373,11 +378,12 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -393,11 +399,12 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(left: 68),
       child: Container(
         height: 1,
-        color: AppColors.borderDark.withValues(alpha: 0.5),
+        color: colors.border.withValues(alpha: 0.5),
       ),
     );
   }
@@ -434,15 +441,16 @@ class _SectionHeader extends StatelessWidget {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 void _showSnackBar(BuildContext context, String message) {
+  final colors = AppColorsOf(context);
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
         message,
         style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textPrimaryDark,
+          color: colors.textPrimary,
         ),
       ),
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: colors.surface,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),

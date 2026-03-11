@@ -67,7 +67,7 @@ class DataMaturityBanner extends StatelessWidget {
     final secondaryColor =
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final trackColor =
-        isDark ? const Color(0xFF3A3A3C) : AppColors.borderLight;
+        isDark ? AppColors.surfaceDark : AppColors.borderLight;
 
     if (mode == DataMaturityMode.stillBuilding) {
       return _StillBuildingBanner(

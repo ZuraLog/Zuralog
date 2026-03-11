@@ -49,6 +49,7 @@ class DiscoveryStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -71,7 +72,7 @@ class DiscoveryStep extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Where did you hear about Zuralog?',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -101,7 +102,7 @@ class DiscoveryStep extends StatelessWidget {
           Text(
             'This is optional — tap Finish to complete setup.',
             style: AppTextStyles.caption
-                .copyWith(color: AppColors.textSecondary),
+                .copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppDimens.spaceLg),
         ],
@@ -127,6 +128,7 @@ class _SourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return ZSelectableTile(
       isSelected: isSelected,
@@ -143,7 +145,7 @@ class _SourceTile extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? AppColors.primary : AppColors.borderDark,
+                color: isSelected ? AppColors.primary : colors.border,
                 width: isSelected ? 0 : 1.5,
               ),
               color: isSelected ? AppColors.primary : Colors.transparent,
@@ -163,7 +165,7 @@ class _SourceTile extends StatelessWidget {
               style: AppTextStyles.body.copyWith(
                 color: isSelected
                     ? colorScheme.onSurface
-                    : AppColors.textSecondary,
+                    : colors.textSecondary,
                 fontWeight:
                     isSelected ? FontWeight.w600 : FontWeight.normal,
               ),

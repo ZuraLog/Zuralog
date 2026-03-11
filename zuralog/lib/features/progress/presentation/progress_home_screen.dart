@@ -56,6 +56,7 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final asyncData = ref.watch(progressHomeProvider);
 
     return ZuralogScaffold(
@@ -71,7 +72,7 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
       ),
       body: RefreshIndicator(
         color: AppColors.primary,
-        backgroundColor: AppColors.cardBackgroundDark,
+        backgroundColor: colors.cardBackground,
         onRefresh: _onRefresh,
         child: asyncData.when(
           loading: () => const _LoadingState(),
@@ -138,12 +139,13 @@ class _LoadingStateState extends State<_LoadingState>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return AnimatedBuilder(
       animation: _shimmerAnim,
       builder: (context, _) {
         final shimmerColor = Color.lerp(
-          AppColors.surfaceDark,
-          AppColors.cardBackgroundDark,
+          colors.surface,
+          colors.cardBackground,
           _shimmerAnim.value,
         )!;
         return ListView(
@@ -351,12 +353,13 @@ class _GoalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final unitsSystem = ref.watch(unitsSystemProvider);
     return Container(
       width: 160,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -402,7 +405,7 @@ class _GoalCard extends ConsumerWidget {
             '${_formatValue(goal.currentValue)} / '
             '${_formatValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
             style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.textSecondary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -476,6 +479,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceSm,
@@ -484,13 +488,13 @@ class _StatusChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: isCompleted
             ? AppColors.primary.withValues(alpha: 0.15)
-            : AppColors.surfaceDark,
+            : colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
         child: Text(
             isCompleted ? 'Completed' : 'In progress',
             style: AppTextStyles.labelSmall.copyWith(
-              color: isCompleted ? AppColors.primary : AppColors.textSecondary,
+              color: isCompleted ? AppColors.primary : colors.textSecondary,
             ),
           ),
     );
@@ -557,10 +561,11 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
     }
 
     final remaining = 2 - streak.freezeCount - 1;
+    final colors = AppColorsOf(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardBackgroundDark,
+        backgroundColor: colors.cardBackground,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
@@ -569,7 +574,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
           'This will protect your streak if you miss today. '
           'You have $remaining freeze(s) remaining after this.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
         actions: [
@@ -578,7 +583,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
             child: Text(
               'Cancel',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
@@ -636,6 +641,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final streak = widget.streak;
     final canFreeze = streak.freezeCount < 2 && !streak.isFrozen;
     // Full opacity when ≥1 freeze used and not already frozen (2nd freeze still
@@ -651,7 +657,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
       width: 128,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -663,7 +669,7 @@ class _StreakCardState extends ConsumerState<_StreakCard> {
                 child: Text(
                   streak.type.displayName,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -789,6 +795,7 @@ class _MilestoneCelebrationCardState
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: ScaleTransition(
@@ -797,7 +804,7 @@ class _MilestoneCelebrationCardState
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-            color: AppColors.cardBackgroundDark,
+            color: colors.cardBackground,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -854,7 +861,7 @@ class _MilestoneCelebrationCardState
                         'Amazing consistency! You\'ve logged every day '
                         'for ${widget.days} days.',
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
@@ -878,10 +885,11 @@ class _WoWSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -889,10 +897,10 @@ class _WoWSection extends StatelessWidget {
           for (int i = 0; i < summary.metrics.length; i++) ...[
             _WoWMetricRow(metric: summary.metrics[i]),
             if (i < summary.metrics.length - 1)
-              const Divider(
+              Divider(
                 height: 1,
                 thickness: 1,
-                color: AppColors.borderDark,
+                color: colors.border,
                 indent: AppDimens.spaceMd,
                 endIndent: AppDimens.spaceMd,
               ),
@@ -956,6 +964,7 @@ class _DeltaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     if (delta == null) {
       return Container(
         padding: const EdgeInsets.symmetric(
@@ -963,7 +972,7 @@ class _DeltaChip extends StatelessWidget {
           vertical: AppDimens.spaceXs,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surfaceDark,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
         ),
         child: Text(
@@ -1003,6 +1012,7 @@ class _QuickNavRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     void trackAndPush(String label, String path) {
       ref.read(analyticsServiceProvider).capture(
         event: AnalyticsEvents.progressNavTapped,
@@ -1040,7 +1050,7 @@ class _QuickNavRow extends ConsumerWidget {
         vertical: AppDimens.spaceMd,
       ),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Row(
@@ -1064,6 +1074,7 @@ class _QuickNavItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).light();
@@ -1088,7 +1099,7 @@ class _QuickNavItem extends ConsumerWidget {
             Text(
               label,
               style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1162,13 +1173,14 @@ class _AchievementBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final showNewBadge = _isNew;
 
     return Container(
       width: 100,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(

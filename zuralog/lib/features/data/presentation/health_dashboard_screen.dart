@@ -136,6 +136,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required by AutomaticKeepAliveClientMixin.
+    final colors = AppColorsOf(context);
     final scoreAsync = ref.watch(healthScoreProvider);
     final dashAsync = ref.watch(dashboardProvider);
     final layout = ref.watch(dashboardLayoutProvider);
@@ -167,7 +168,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
               onPressed: _toggleEditMode,
               child: Text(
                 'Done',
-                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
+                style: AppTextStyles.bodyLarge.copyWith(color: colors.primary),
               ),
             )
           else
@@ -179,7 +180,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
         ],
       ),
       body: RefreshIndicator(
-        color: AppColors.primary,
+        color: colors.primary,
         onRefresh: () async {
           ref.invalidate(healthScoreProvider);
           ref.invalidate(dashboardProvider);
@@ -259,7 +260,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   _isEditMode ? 'Customize Dashboard' : 'Categories',
                   style: AppTextStyles.titleMedium.copyWith(
                     color: _isEditMode
-                        ? AppColors.primary
+                        ? colors.primary
                         : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -573,12 +574,13 @@ class _ColorPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return SafeArea(
       top: false,
       child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1C1C1E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: colors.elevatedSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(
           AppDimens.spaceMd,
@@ -710,6 +712,7 @@ class _CategoriesEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -727,17 +730,17 @@ class _CategoriesEmptyState extends StatelessWidget {
           child: Container(
           padding: const EdgeInsets.all(AppDimens.spaceMd),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: colors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.20),
+              color: colors.primary.withValues(alpha: 0.20),
             ),
           ),
           child: Row(
             children: [
               ZIconBadge(
                 icon: Icons.cable_rounded,
-                color: AppColors.primary,
+                color: colors.primary,
                 size: 40,
                 iconSize: 20,
               ),
@@ -751,20 +754,20 @@ class _CategoriesEmptyState extends StatelessWidget {
                       style: AppTextStyles.titleMedium,
                     ),
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       'Your categories fill in automatically once you connect a health app.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
             ],
           ),
@@ -790,12 +793,13 @@ class _GhostCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Opacity(
       opacity: 0.45,
       child: IntrinsicHeight(
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.cardBackgroundDark,
+            color: colors.cardBackground,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -826,9 +830,9 @@ class _GhostCategoryCard extends StatelessWidget {
                         children: [
                           Text(
                             item.label,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: AppColors.textSecondary,
+                              color: colors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -862,13 +866,11 @@ class _CardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shimmer =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
     return Container(
       height: 72,
       decoration: BoxDecoration(
-        color: shimmer,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(20),
       ),
     );

@@ -27,6 +27,7 @@ class ScoreBreakdownScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final scoreAsync = ref.watch(healthScoreProvider);
 
     return ZuralogScaffold(
@@ -34,8 +35,8 @@ class ScoreBreakdownScreen extends ConsumerWidget {
         title: Text('Score Breakdown', style: AppTextStyles.displaySmall),
       ),
       body: scoreAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: colors.primary),
         ),
         error: (e, _) => Center(
           child: Padding(
@@ -49,7 +50,7 @@ class ScoreBreakdownScreen extends ConsumerWidget {
                 Text(
                   'Could not load score',
                   style: AppTextStyles.bodyLarge
-                      .copyWith(color: AppColors.textSecondary),
+                      .copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -69,6 +70,7 @@ class _ScoreBreakdownBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ListView(
       padding: EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -86,7 +88,7 @@ class _ScoreBreakdownBody extends StatelessWidget {
               Text(
                 'Your composite health score',
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.textSecondary,
                 ),
               ),
             ],
@@ -102,7 +104,7 @@ class _ScoreBreakdownBody extends StatelessWidget {
           'Each input is normalized to 0–100 based on your 30-day history. '
           'Missing inputs are excluded and weights redistribute proportionally.',
           style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
 
@@ -136,9 +138,7 @@ class _InputRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
     final barColor = input.hasData
         ? HealthScoreWidget.colorForScore(input.subScore)
         : AppColors.textTertiary;
@@ -148,7 +148,7 @@ class _InputRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -203,8 +203,7 @@ class _InputRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: barFraction.clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                  .withValues(alpha: 0.4),
+              backgroundColor: colors.border.withValues(alpha: 0.4),
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
           ),
@@ -227,7 +226,7 @@ class _InputRow extends StatelessWidget {
                   ? '${input.description!.substring(0, 120)}…'
                   : input.description!,
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ],
@@ -244,13 +243,11 @@ class _EmptyInputsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: bg,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -258,10 +255,10 @@ class _EmptyInputsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.info_outline_rounded,
                 size: 16,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Text('Breakdown coming soon', style: AppTextStyles.bodyLarge),
@@ -272,7 +269,7 @@ class _EmptyInputsCard extends StatelessWidget {
             'Score input breakdown will be available once more of your health '
             'data builds up. Keep your integrations connected.',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
         ],
@@ -289,20 +286,18 @@ class _CommentaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 3, color: AppColors.primary),
+            Container(width: 3, color: colors.primary),
             Expanded(
               child: Container(
                 padding: const EdgeInsets.all(AppDimens.spaceMd),
-                color: isDark
-                    ? AppColors.cardBackgroundDark
-                    : AppColors.cardBackgroundLight,
+                color: colors.cardBackground,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

@@ -338,25 +338,28 @@ class _ProgressHeader extends StatelessWidget {
         ),
         const SizedBox(height: AppDimens.spaceSm),
         // Segmented progress track — one filled segment per completed step.
-        Row(
-          children: List.generate(totalSteps, (index) {
-            final isComplete = index <= currentStep;
-            return Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                height: 4,
-                margin: EdgeInsets.only(
-                  right: index < totalSteps - 1 ? AppDimens.spaceXs : 0,
+        Builder(builder: (context) {
+          final colors = AppColorsOf(context);
+          return Row(
+            children: List.generate(totalSteps, (index) {
+              final isComplete = index <= currentStep;
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  height: 4,
+                  margin: EdgeInsets.only(
+                    right: index < totalSteps - 1 ? AppDimens.spaceXs : 0,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    color: isComplete ? AppColors.primary : colors.border,
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(2),
-                  color: isComplete ? AppColors.primary : AppColors.borderLight,
-                ),
-              ),
-            );
-          }),
-        ),
+              );
+            }),
+          );
+        }),
       ],
     );
   }
@@ -549,6 +552,7 @@ class _Step2Birthday extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return SingleChildScrollView(
       child: Column(
@@ -582,7 +586,7 @@ class _Step2Birthday extends StatelessWidget {
                 border: Border.all(
                   color: birthday != null
                       ? AppColors.primary
-                      : AppColors.borderLight,
+                      : colors.border,
                   width: birthday != null ? 2 : 1,
                 ),
                 borderRadius: BorderRadius.circular(AppDimens.radiusInput),
@@ -736,6 +740,7 @@ class _GenderOptionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return InkWell(
       onTap: onTap,
@@ -749,7 +754,7 @@ class _GenderOptionTile extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderLight,
+            color: isSelected ? AppColors.primary : colors.border,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
@@ -767,7 +772,7 @@ class _GenderOptionTile extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.borderLight,
+                  color: isSelected ? AppColors.primary : colors.border,
                   width: 2,
                 ),
               ),

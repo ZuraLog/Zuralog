@@ -76,6 +76,7 @@ class ZSettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     final Widget trailingWidget;
     if (trailing != null) {
@@ -121,7 +122,7 @@ class ZSettingsTile extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                       ),
                     ),
                 ],

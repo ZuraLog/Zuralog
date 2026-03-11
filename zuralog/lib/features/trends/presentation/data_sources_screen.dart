@@ -159,13 +159,14 @@ class _DataSourceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final freshnessColor = _freshnessColor(source.freshness);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppDimens.spaceSm),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -202,7 +203,7 @@ class _DataSourceCard extends ConsumerWidget {
                               ? 'Last synced: ${_lastSyncLabel()}'
                               : 'Not connected',
                           style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondaryDark,
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
@@ -252,7 +253,7 @@ class _DataSourceCard extends ConsumerWidget {
                       child: Text(
                         type,
                         style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ),
@@ -314,7 +315,7 @@ class _IntegrationIcon extends StatelessWidget {
 
   /// Returns [iconData, iconColor] for known integration IDs.
   /// Color is the brand's official color. Falls back to generic hub icon.
-  (IconData, Color) _brandIcon() {
+  (IconData, Color) _brandIcon(Color fallbackColor) {
     switch (integrationId.toLowerCase()) {
       case 'strava':
         return (SimpleIcons.strava, const Color(0xFFFC4C02));
@@ -329,13 +330,14 @@ class _IntegrationIcon extends StatelessWidget {
       case 'google fit':
         return (SimpleIcons.googlefit, const Color(0xFF4285F4));
       default:
-        return (Icons.hub_rounded, AppColors.textSecondaryDark);
+        return (Icons.hub_rounded, fallbackColor);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final (iconData, iconColor) = _brandIcon();
+    final colors = AppColorsOf(context);
+    final (iconData, iconColor) = _brandIcon(colors.textSecondary);
     return Container(
       width: 40,
       height: 40,
@@ -359,6 +361,7 @@ class _EmptySourcesState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -376,7 +379,7 @@ class _EmptySourcesState extends StatelessWidget {
             Text(
               'Connect integrations in Settings to see your data sources here.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),

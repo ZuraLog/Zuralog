@@ -163,6 +163,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
   }
 
   Future<void> _pickDeadline() async {
+    final colors = AppColorsOf(context);
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -175,8 +176,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
             colorScheme: Theme.of(context).colorScheme.copyWith(
                   primary: AppColors.primary,
                   onPrimary: AppColors.primaryButtonText,
-                  surface: AppColors.elevatedSurfaceDark,
-                  onSurface: AppColors.textPrimaryDark,
+                  surface: colors.elevatedSurface,
+                  onSurface: colors.textPrimary,
                 ),
           ),
           child: child!,
@@ -200,11 +201,12 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.elevatedSurfaceDark,
+      decoration: BoxDecoration(
+        color: colors.elevatedSurface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -219,13 +221,13 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
             child: CustomScrollView(
               controller: scrollController,
               slivers: [
-                SliverToBoxAdapter(child: _buildHeader()),
-                SliverToBoxAdapter(child: _buildTypeSection()),
-                SliverToBoxAdapter(child: _buildPeriodSection()),
-                SliverToBoxAdapter(child: _buildTitleField()),
-                SliverToBoxAdapter(child: _buildTargetField()),
-                SliverToBoxAdapter(child: _buildUnitField()),
-                SliverToBoxAdapter(child: _buildDeadlineSection()),
+                SliverToBoxAdapter(child: _buildHeader(colors)),
+                SliverToBoxAdapter(child: _buildTypeSection(colors)),
+                SliverToBoxAdapter(child: _buildPeriodSection(colors)),
+                SliverToBoxAdapter(child: _buildTitleField(colors)),
+                SliverToBoxAdapter(child: _buildTargetField(colors)),
+                SliverToBoxAdapter(child: _buildUnitField(colors)),
+                SliverToBoxAdapter(child: _buildDeadlineSection(colors)),
                 SliverToBoxAdapter(child: _buildSaveButton()),
                 const SliverToBoxAdapter(
                   child: SizedBox(height: AppDimens.spaceXl),
@@ -240,7 +242,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   // ── Header ──────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -257,7 +259,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.borderDark,
+                color: colors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -274,7 +276,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   // ── Goal type picker ─────────────────────────────────────────────────────────
 
-  Widget _buildTypeSection() {
+  Widget _buildTypeSection(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -288,7 +290,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           Text(
             'Goal Type',
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
@@ -314,12 +316,12 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                         });
                       },
                 selectedColor: AppColors.primary,
-                backgroundColor: AppColors.inputBackgroundDark,
-                disabledColor: AppColors.inputBackgroundDark,
+                backgroundColor: colors.inputBackground,
+                disabledColor: colors.inputBackground,
                 labelStyle: AppTextStyles.caption.copyWith(
                   color: selected
                       ? AppColors.primaryButtonText
-                      : AppColors.textSecondary,
+                      : colors.textSecondary,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppDimens.radiusChip),
@@ -336,7 +338,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   // ── Period picker ────────────────────────────────────────────────────────────
 
-  Widget _buildPeriodSection() {
+  Widget _buildPeriodSection(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -350,7 +352,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           Text(
             'Period',
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
@@ -372,13 +374,13 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
                 if (states.contains(WidgetState.selected)) {
                   return AppColors.primary;
                 }
-                return AppColors.inputBackgroundDark;
+                return colors.inputBackground;
               }),
               foregroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
                   return AppColors.primaryButtonText;
                 }
-                return AppColors.textSecondary;
+                return colors.textSecondary;
               }),
               textStyle: WidgetStatePropertyAll(AppTextStyles.caption),
             ),
@@ -390,7 +392,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   // ── Title field ──────────────────────────────────────────────────────────────
 
-  Widget _buildTitleField() {
+  Widget _buildTitleField(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -401,8 +403,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
       child: TextFormField(
         controller: _titleCtrl,
         textCapitalization: TextCapitalization.sentences,
-        style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryDark),
-        decoration: _inputDecoration(
+        style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+        decoration: _inputDecoration(colors,
           label: 'Title',
           hint: 'e.g. Run 5km this week',
         ),
@@ -417,7 +419,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   // ── Target value field ───────────────────────────────────────────────────────
 
-  Widget _buildTargetField() {
+  Widget _buildTargetField(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -431,8 +433,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
         ],
-        style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryDark),
-        decoration: _inputDecoration(
+        style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+        decoration: _inputDecoration(colors,
           label: 'Target Value',
           hint: 'e.g. 10000',
         ),
@@ -448,7 +450,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   // ── Unit field ───────────────────────────────────────────────────────────────
 
-  Widget _buildUnitField() {
+  Widget _buildUnitField(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -458,8 +460,8 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
       ),
       child: TextFormField(
         controller: _unitCtrl,
-        style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryDark),
-        decoration: _inputDecoration(
+        style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+        decoration: _inputDecoration(colors,
           label: 'Unit',
           hint: 'e.g. steps, kg, hrs',
         ),
@@ -475,7 +477,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
 
   // ── Deadline section ─────────────────────────────────────────────────────────
 
-  Widget _buildDeadlineSection() {
+  Widget _buildDeadlineSection(AppColorsOf colors) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -489,7 +491,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
           Text(
             'Deadline',
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceXs),
@@ -632,7 +634,7 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
     }
   }
 
-  InputDecoration _inputDecoration({
+  InputDecoration _inputDecoration(AppColorsOf colors, {
     required String label,
     required String hint,
   }) {
@@ -640,9 +642,9 @@ class _GoalCreateEditSheetState extends ConsumerState<GoalCreateEditSheet> {
       labelText: label,
       hintText: hint,
       filled: true,
-      fillColor: AppColors.inputBackgroundDark,
+      fillColor: colors.inputBackground,
       labelStyle: AppTextStyles.bodyMedium.copyWith(
-        color: AppColors.textSecondary,
+        color: colors.textSecondary,
       ),
       hintStyle: AppTextStyles.bodyMedium.copyWith(
         color: AppColors.textTertiary,

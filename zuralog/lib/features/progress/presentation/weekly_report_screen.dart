@@ -118,6 +118,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final reportAsync = ref.watch(weeklyReportProvider);
 
     return ZuralogScaffold(
@@ -125,9 +126,9 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
         title: 'Weekly Report',
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.share_rounded,
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
             onPressed: _shareCurrentCard,
           ),
@@ -139,7 +140,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
         ),
         error: (err, _) => RefreshIndicator(
           color: AppColors.primary,
-          backgroundColor: AppColors.cardBackgroundDark,
+          backgroundColor: colors.cardBackground,
           onRefresh: _onRefresh,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -162,7 +163,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                       Text(
                         'Failed to load report',
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
@@ -184,7 +185,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
           if (report.cards.isEmpty) {
             return RefreshIndicator(
               color: AppColors.primary,
-              backgroundColor: AppColors.cardBackgroundDark,
+              backgroundColor: colors.cardBackground,
               onRefresh: _onRefresh,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -203,7 +204,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
                         Text(
                           'No report available yet',
                           style: AppTextStyles.titleMedium.copyWith(
-                            color: AppColors.textPrimaryDark,
+                            color: colors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: AppDimens.spaceSm),
@@ -227,7 +228,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
 
           return RefreshIndicator(
             color: AppColors.primary,
-            backgroundColor: AppColors.cardBackgroundDark,
+            backgroundColor: colors.cardBackground,
             onRefresh: _onRefresh,
             child: Column(
               children: [
@@ -327,6 +328,7 @@ class _WeeklyReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final categoryColor = categoryColorFromString(card.gradientCategory);
 
     return Container(
@@ -339,7 +341,7 @@ class _WeeklyReportCard extends StatelessWidget {
           colors: [
             categoryColor.withValues(alpha: 0.85),
             categoryColor.withValues(alpha: 0.35),
-            AppColors.backgroundDark,
+            colors.background,
           ],
           stops: const [0.0, 0.45, 1.0],
         ),

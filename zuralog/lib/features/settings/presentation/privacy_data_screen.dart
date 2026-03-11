@@ -50,6 +50,7 @@ class PrivacyDataScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     // Global persisted privacy preferences.
     final wellnessCheckin = ref.watch(wellnessCheckinCardVisibleProvider);
     final dataMaturityBanner =
@@ -78,7 +79,7 @@ class PrivacyDataScreen extends ConsumerWidget {
               title: Text(
                 'Privacy & Data',
                 style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
             ),
@@ -95,7 +96,7 @@ class PrivacyDataScreen extends ConsumerWidget {
                 child: Text(
                   'Stored context your AI coach uses to personalize insights',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ),
@@ -108,7 +109,7 @@ class PrivacyDataScreen extends ConsumerWidget {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackgroundDark,
+                    color: colors.cardBackground,
                     borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                   ),
                   child: Column(
@@ -162,18 +163,18 @@ class PrivacyDataScreen extends ConsumerWidget {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackgroundDark,
+                    color: colors.cardBackground,
                     borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                   ),
                   child: ZSettingsTile(
                     icon: Icons.delete_sweep_rounded,
                     iconColor: memoryItems.isNotEmpty
-                        ? AppColors.accentDark
+                        ? colors.accent
                         : AppColors.textTertiary,
                     title: 'Clear All Memory',
                     showChevron: false,
                     titleColor: memoryItems.isNotEmpty
-                        ? AppColors.accentDark
+                        ? colors.accent
                         : AppColors.textTertiary,
                     onTap: memoryItems.isNotEmpty
                         ? () => _showClearMemoryDialog(
@@ -219,7 +220,7 @@ class PrivacyDataScreen extends ConsumerWidget {
                   const _Divider(),
                   _ToggleRow(
                     icon: Icons.bar_chart_rounded,
-                    iconColor: AppColors.secondaryDark,
+                    iconColor: colors.secondary,
                     title: 'Analytics',
                     subtitle: 'Helps us improve Zuralog',
                     subtitleExtra: 'Share anonymous usage data',
@@ -238,20 +239,20 @@ class PrivacyDataScreen extends ConsumerWidget {
                 children: [
                   ZSettingsTile(
                     icon: Icons.download_rounded,
-                    iconColor: AppColors.primary,
+                    iconColor: colors.primary,
                     title: 'Export Data',
                     subtitle: 'Coming soon',
                     showChevron: false,
                     trailing: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.secondaryDark.withValues(alpha: 0.15),
+                        color: colors.secondary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
                       ),
                       child: Text(
                         'Soon',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.secondaryDark,
+                          color: colors.secondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -305,14 +306,14 @@ class PrivacyDataScreen extends ConsumerWidget {
                 children: [
                   ZSettingsTile(
                     icon: Icons.shield_outlined,
-                    iconColor: AppColors.primary,
+                    iconColor: colors.primary,
                     title: 'Privacy Policy',
                     onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
                   ),
                   const _Divider(),
                   ZSettingsTile(
                     icon: Icons.description_outlined,
-                    iconColor: AppColors.primary,
+                    iconColor: colors.primary,
                     title: 'Terms of Service',
                     onTap: () => context.pushNamed(RouteNames.settingsTerms),
                   ),
@@ -337,11 +338,12 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -355,11 +357,12 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(left: 68),
       child: Container(
         height: 1,
-        color: AppColors.borderDark.withValues(alpha: 0.5),
+        color: colors.border.withValues(alpha: 0.5),
       ),
     );
   }
@@ -373,6 +376,7 @@ class _MemoryItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -389,7 +393,7 @@ class _MemoryItemRow extends StatelessWidget {
             child: Text(
               text,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textPrimaryDark,
+                color: colors.textPrimary,
               ),
             ),
           ),
@@ -433,6 +437,7 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -449,7 +454,7 @@ class _ToggleRow extends StatelessWidget {
                 Text(
                   title,
                   style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -457,7 +462,7 @@ class _ToggleRow extends StatelessWidget {
                   Text(
                     subtitleExtra!,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 1),
@@ -474,9 +479,9 @@ class _ToggleRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.primary,
+            activeThumbColor: colors.primary,
             inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: AppColors.borderDark,
+            inactiveTrackColor: colors.border,
           ),
         ],
       ),
@@ -488,22 +493,23 @@ Future<void> _showClearMemoryDialog(
   BuildContext context, {
   required VoidCallback onConfirmed,
 }) async {
+  final colors = AppColorsOf(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       title: Text(
         'Clear All Memory?',
-        style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+        style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
       ),
       content: Text(
         'Your AI coach will lose all personalization context. '
         'It will start fresh with generic recommendations.',
         style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textSecondary,
+          color: colors.textSecondary,
         ),
       ),
       actions: [
@@ -512,7 +518,7 @@ Future<void> _showClearMemoryDialog(
           child: Text(
             'Cancel',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
         ),
@@ -521,7 +527,7 @@ Future<void> _showClearMemoryDialog(
           child: Text(
             'Clear All',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.accentDark,
+              color: colors.accent,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -538,16 +544,17 @@ Future<void> _showDeleteDataDialog(
   BuildContext context, {
   required VoidCallback onConfirmed,
 }) async {
+  final colors = AppColorsOf(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       title: Text(
         'Delete All My Data?',
-        style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+        style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -556,7 +563,7 @@ Future<void> _showDeleteDataDialog(
           Text(
             'This action is permanent and cannot be undone.',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.accentDark,
+              color: colors.accent,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -565,7 +572,7 @@ Future<void> _showDeleteDataDialog(
             'All health records, AI memory, preferences, and account data '
             'will be permanently erased. You will be signed out immediately.',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
         ],
@@ -576,7 +583,7 @@ Future<void> _showDeleteDataDialog(
           child: Text(
             'Cancel',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
         ),
@@ -585,7 +592,7 @@ Future<void> _showDeleteDataDialog(
           child: Text(
             'Delete',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.accentDark,
+              color: colors.accent,
               fontWeight: FontWeight.w700,
             ),
           ),

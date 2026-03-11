@@ -83,6 +83,7 @@ class ConnectAppsStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -106,7 +107,7 @@ class ConnectAppsStep extends StatelessWidget {
           Text(
             'Zuralog works best with your existing health apps. '
             'Connect them now or any time from Settings.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -147,7 +148,7 @@ class ConnectAppsStep extends StatelessWidget {
                   child: Text(
                     '45+ apps supported via Apple Health and Google Health Connect.',
                     style: AppTextStyles.caption
-                        .copyWith(color: AppColors.textSecondary),
+                        .copyWith(color: colors.textSecondary),
                   ),
                 ),
               ],
@@ -170,13 +171,14 @@ class _IntegrationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-        border: Border.all(color: AppColors.borderDark),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,7 +207,7 @@ class _IntegrationTile extends StatelessWidget {
               Text(
                 app.description,
                 style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textSecondary),
+                    .copyWith(color: colors.textSecondary),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

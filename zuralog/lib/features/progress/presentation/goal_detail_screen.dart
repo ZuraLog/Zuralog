@@ -73,28 +73,29 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
   }
 
   Future<void> _confirmDelete(BuildContext context, Goal goal) async {
+    final colors = AppColorsOf(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.elevatedSurfaceDark,
+        backgroundColor: colors.elevatedSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         title: Text(
           'Delete Goal?',
-          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
         ),
         content: Text(
           'This will permanently delete "${goal.title}". This action cannot be undone.',
           style:
-              AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: AppTextStyles.titleMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.titleMedium.copyWith(color: colors.textSecondary),
             ),
           ),
           TextButton(
@@ -102,7 +103,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
             child: Text(
               'Delete',
               style:
-                  AppTextStyles.titleMedium.copyWith(color: AppColors.accentDark),
+                  AppTextStyles.titleMedium.copyWith(color: colors.accent),
             ),
           ),
         ],
@@ -131,6 +132,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final goalsAsync = ref.watch(goalsProvider);
     final unitsSystem = ref.watch(unitsSystemProvider);
 
@@ -146,7 +148,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
         body: Center(
           child: Text(
             'Failed to load goal',
-            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
           ),
         ),
       ),
@@ -175,7 +177,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen>
                   Text(
                     'Goal not found',
                     style: AppTextStyles.titleMedium
-                        .copyWith(color: AppColors.textPrimaryDark),
+                        .copyWith(color: colors.textPrimary),
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
                   TextButton(
@@ -266,6 +268,7 @@ class _GoalDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final projected = _projectCompletionDate(goal);
     final hasAiCommentary = goal.aiCommentary != null;
     final showAiCard = hasAiCommentary || projected != null;
@@ -280,7 +283,7 @@ class _GoalDetailView extends StatelessWidget {
             tooltip: 'Edit goal',
           ),
           IconButton(
-            icon: Icon(Icons.delete_rounded, color: AppColors.accentDark),
+            icon: Icon(Icons.delete_rounded, color: colors.accent),
             onPressed: onDelete,
             tooltip: 'Delete goal',
           ),
@@ -295,16 +298,16 @@ class _GoalDetailView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildHeroSection(),
+            _buildHeroSection(colors),
             const SizedBox(height: AppDimens.spaceMd),
             if (goal.progressHistory.isNotEmpty) ...[
-              _buildSparklineCard(),
+              _buildSparklineCard(colors),
               const SizedBox(height: AppDimens.spaceMd),
             ],
-            _buildDetailsCard(projected: projected),
+            _buildDetailsCard(colors, projected: projected),
             if (showAiCard) ...[
               const SizedBox(height: AppDimens.spaceMd),
-              _buildAiCommentaryCard(projected: projected),
+              _buildAiCommentaryCard(colors, projected: projected),
             ],
             const SizedBox(height: AppDimens.spaceXl),
           ],
@@ -315,11 +318,11 @@ class _GoalDetailView extends StatelessWidget {
 
   // ── Hero Section ─────────────────────────────────────────────────────────────
 
-  Widget _buildHeroSection() {
+  Widget _buildHeroSection(AppColorsOf colors) {
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceLg),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -336,14 +339,14 @@ class _GoalDetailView extends StatelessWidget {
                   painter: _RingPainter(
                     progress: progress,
                     strokeWidth: 10,
-                    trackColor: AppColors.borderDark,
+                    trackColor: colors.border,
                     progressColor: AppColors.primary,
                   ),
                   child: Center(
                       child: Text(
                         '${(goal.progressFraction * 100).round()}%',
                         style: AppTextStyles.displaySmall.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                   ),
@@ -356,7 +359,7 @@ class _GoalDetailView extends StatelessWidget {
           Text(
             _fmtValue(goal.currentValue),
             style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
               fontSize: 40,
             ),
           ),
@@ -365,7 +368,7 @@ class _GoalDetailView extends StatelessWidget {
           Text(
             '/ ${_fmtValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
           if (goal.isCompleted) ...[
@@ -406,7 +409,7 @@ class _GoalDetailView extends StatelessWidget {
 
   // ── Sparkline Card ────────────────────────────────────────────────────────────
 
-  Widget _buildSparklineCard() {
+  Widget _buildSparklineCard(AppColorsOf colors) {
     final history = goal.progressHistory;
     final recent = history.length > 14
         ? history.sublist(history.length - 14)
@@ -415,7 +418,7 @@ class _GoalDetailView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -424,7 +427,7 @@ class _GoalDetailView extends StatelessWidget {
           Text(
             'Progress History',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -446,11 +449,11 @@ class _GoalDetailView extends StatelessWidget {
 
   // ── Details Card ─────────────────────────────────────────────────────────────
 
-  Widget _buildDetailsCard({String? projected}) {
+  Widget _buildDetailsCard(AppColorsOf colors, {String? projected}) {
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -459,7 +462,7 @@ class _GoalDetailView extends StatelessWidget {
           Text(
             'Details',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -478,7 +481,7 @@ class _GoalDetailView extends StatelessWidget {
 
   // ── AI Commentary Card ────────────────────────────────────────────────────────
 
-  Widget _buildAiCommentaryCard({String? projected}) {
+  Widget _buildAiCommentaryCard(AppColorsOf colors, {String? projected}) {
     // Build the display text: append projection sentence when available.
     final String displayText;
     if (goal.aiCommentary != null) {
@@ -497,7 +500,7 @@ class _GoalDetailView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Row(
@@ -513,7 +516,7 @@ class _GoalDetailView extends StatelessWidget {
             child: Text(
               displayText,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -534,6 +537,7 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
       child: Row(
@@ -542,13 +546,13 @@ class _DetailRow extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
           Text(
             value,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),

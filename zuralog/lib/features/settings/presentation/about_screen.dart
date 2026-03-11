@@ -21,6 +21,7 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
@@ -39,7 +40,7 @@ class AboutScreen extends StatelessWidget {
               title: Text(
                 'About',
                 style:
-                    AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
+                    AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
               ),
             ),
           ),
@@ -70,7 +71,7 @@ class AboutScreen extends StatelessWidget {
                 const _Divider(),
                 ZSettingsTile(
                   icon: Icons.mail_rounded,
-                  iconColor: AppColors.primary,
+                  iconColor: colors.primary,
                   title: 'Contact Support',
                   subtitle: 'support@zuralog.com',
                   onTap: () => _showSnackBar(context, 'Opening email…'),
@@ -163,6 +164,7 @@ class _AppIdentityHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -172,13 +174,13 @@ class _AppIdentityHero extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.15),
+              color: colors.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.monitor_heart_rounded,
               size: 44,
-              color: AppColors.primary,
+              color: colors.primary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceMd),
@@ -186,7 +188,7 @@ class _AppIdentityHero extends StatelessWidget {
           // App name
           Text(
             'Zuralog',
-            style: AppTextStyles.displayLarge.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.displayLarge.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: AppDimens.spaceXs),
 
@@ -194,7 +196,7 @@ class _AppIdentityHero extends StatelessWidget {
           Text(
             'Version 1.0.0 (Build 42)',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceMd),
@@ -214,27 +216,28 @@ class _WhatsNewChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ZuralogSpringButton(
       onTap: () => _showSnackBar(context, "What's New in 1.0.0"),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.12),
+          color: colors.primary.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.auto_awesome_rounded,
               size: 13,
-              color: AppColors.primary,
+              color: colors.primary,
             ),
             const SizedBox(width: AppDimens.spaceXs),
             Text(
               "What's New",
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.primary,
+                color: colors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -282,11 +285,12 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(children: children),
@@ -302,11 +306,12 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(left: 68),
       child: Container(
         height: 1,
-        color: AppColors.borderDark.withValues(alpha: 0.5),
+        color: colors.border.withValues(alpha: 0.5),
       ),
     );
   }
@@ -315,15 +320,16 @@ class _Divider extends StatelessWidget {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 void _showSnackBar(BuildContext context, String message) {
+  final colors = AppColorsOf(context);
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
         message,
         style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textPrimaryDark,
+          color: colors.textPrimary,
         ),
       ),
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: colors.surface,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),

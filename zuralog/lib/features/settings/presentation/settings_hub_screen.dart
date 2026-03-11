@@ -32,6 +32,7 @@ class SettingsHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     void openSection(String title, String path) {
       ref.read(analyticsServiceProvider).capture(
         event: AnalyticsEvents.settingsSectionOpened,
@@ -57,7 +58,7 @@ class SettingsHubScreen extends ConsumerWidget {
               title: Text(
                 'Settings',
                 style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                 ),
@@ -106,7 +107,7 @@ class SettingsHubScreen extends ConsumerWidget {
                 ),
                 ZSettingsTile(
                   icon: Icons.palette_rounded,
-                  iconColor: AppColors.primaryDark,
+                  iconColor: colors.isDark ? AppColors.primaryDark : AppColors.primaryOnLight,
                   title: 'Appearance',
                   subtitle: 'Theme, haptics, tooltips',
                   onTap: () => openSection('Appearance', RouteNames.settingsAppearancePath),
@@ -213,11 +214,12 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(
@@ -229,7 +231,7 @@ class _SettingsGroup extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 68),
                   child: Container(
                     height: 1,
-                    color: AppColors.borderDark.withValues(alpha: 0.5),
+                    color: colors.border.withValues(alpha: 0.5),
                   ),
                 ),
             ],
