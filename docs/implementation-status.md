@@ -1,9 +1,59 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-11 (feat/empty-state-improvements — empty state UX polish across Today, Data, and Trends tabs)  
+**Last Updated:** 2026-03-11 (fix/remove-mock-data-wire-real-apis — removed kDebugMode mock gates, wired all data fetching to real APIs)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Real Data Wiring — Remove Mock Gates & Wire Live APIs (fix/remove-mock-data-wire-real-apis, 2026-03-11)
+
+**Scope:** Removed all debug-mode mock gates from the Flutter app and wired every feature tab to real backend APIs. The app now always fetches live data in both debug and release builds.  
+**Branch:** `fix/remove-mock-data-wire-real-apis` → merged to main (2026-03-11, fast-forward)  
+**6 commits:** b996af3, 6255719, 6c48f38, 2e863f4, 0ca317b, d9113dd
+
+**Files changed:**
+- `zuralog/lib/features/today/providers/today_providers.dart` — Removed `kDebugMode` guard
+- `zuralog/lib/features/data/providers/data_providers.dart` — Removed `kDebugMode` guard
+- `zuralog/lib/features/coach/providers/coach_providers.dart` — Removed `kDebugMode` guard
+- `zuralog/lib/features/trends/providers/trends_providers.dart` — Removed `kDebugMode` guard
+- `zuralog/lib/features/progress/providers/progress_providers.dart` — Removed `kDebugMode` guard
+- `zuralog/lib/features/analytics/data/analytics_repository.dart` — Removed hardcoded 'mock-user' ID, added `invalidateAll()` method
+- `zuralog/lib/features/integrations/data/oauth_repository.dart` — Added `getProviderStatus()` and `disconnectProvider()` methods
+- `zuralog/lib/features/integrations/domain/integrations_provider.dart` — Wired to real backend `/status` endpoints
+- `zuralog/lib/features/settings/presentation/integrations_screen.dart` — Rewrote to use live server data instead of hardcoded models
+- `zuralog/lib/features/auth/domain/auth_providers.dart` — Added comprehensive `_clearUserState()` logout cleanup
+- `zuralog/test/features/integrations/domain/integrations_notifier_test.dart` — Updated tests
+
+**What was built:**
+
+1. **Removed `kDebugMode` mock gates from all 5 feature tab providers** — Previously, `if (kDebugMode) return MockRepository()` meant debug builds always showed hardcoded fake data instead of hitting the real API. The real repositories with proper API calls existed but were gated behind release-only builds. Now the app always uses real API repositories in both debug and release builds. Mock repositories are preserved in the codebase for test use only.
+
+2. **Removed hardcoded 'mock-user' ID from Analytics Repository** — `analytics_repository.dart` used `const String _mockUserId = 'mock-user'` sent as a query parameter in every analytics API call. The backend ignores this (reads user from JWT), but it was misleading code. Also added `invalidateAll()` method for logout cleanup.
+
+3. **Wired Integrations Hub to real backend status endpoints** — `loadIntegrations()` now fetches real connection status from backend `/status` endpoints for all 5 OAuth providers (Strava, Fitbit, Oura, Polar, Withings) in parallel via `Future.wait`. `disconnect()` now calls backend `DELETE /disconnect` endpoints. Added `getProviderStatus()` and `disconnectProvider()` methods to OAuthRepository.
+
+4. **Rewrote Settings > Integrations screen** — Previously was 100% hardcoded with its own duplicate model classes showing Strava connected, Apple Health connected, Fitbit connecting. Now reads from `integrationsProvider` (live server data), removed all duplicate model classes, connect/disconnect buttons trigger real OAuth flows.
+
+5. **Comprehensive logout cleanup** — New `_clearUserState()` method in `auth_providers.dart` clears: (a) user-specific SharedPreferences keys, (b) all repository in-memory caches via `invalidateAll()`, (c) all Riverpod providers across every tab. Previously, SharedPreferences were never cleared on logout, meaning User A's data would leak to User B on the same device.
+
+6. **Code review fixes** — Fixed OAuth `connect()` prematurely marking integrations as "connected" after just getting the auth URL (before user completed OAuth flow). Now stays in "syncing" state until deep-link callback confirms. Fixed parallel fetch, UTC time comparison, added notificationsProvider to cleanup, added mounted guard on navigator pop.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Device-local vs. server-side integrations | Apple Health and Health Connect are device-local and correctly use SharedPreferences. Server-side OAuth integrations (Strava, Fitbit, Oura, Polar, Withings) query the backend for real connection status. |
+| Mock repositories preserved for tests | Removing the mock implementations entirely would break test fixtures. Keeping them in the codebase but not using them at runtime is the right balance. |
+| Never-error provider pattern preserved | All providers still catch errors and return empty data objects (established in Phase 10.10). The UI never sees error messages — it sees empty states instead. |
+| Logout cleanup at provider layer | Clearing all Riverpod providers in `_clearUserState()` ensures a clean slate for the next user. Clearing SharedPreferences prevents device-local data leakage. Calling `invalidateAll()` on all repositories ensures in-memory caches are flushed. |
+| OAuth stays in "syncing" until callback | Marking a provider as "connected" immediately after getting the auth URL (before the user completes the OAuth flow) is misleading. The state now correctly reflects the actual connection status. |
+
+**Test results:**
+- All 6 commits merged cleanly with zero conflicts
+- No new test failures introduced
+- `flutter analyze`: zero issues
 
 ---
 

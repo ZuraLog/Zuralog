@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-11 (fix/goals-api-endpoints — add /api/v1/goals CRUD endpoints, resolving Goals screen 404 in production)
+**Last Updated:** 2026-03-11 (fix/remove-mock-data-wire-real-apis — removed kDebugMode mock gates, wired all data fetching to real APIs)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -228,7 +228,7 @@
 | P1 | `MockCoachRepository` — seed conversations, quick action prompts | ✅ Done | `coach_repository.dart` — 4 conversations, 4-message thread, 6 suggestions, 6+1 quick actions |
 | P1 | `MockProgressRepository` — seed goals, achievements, journal, weekly report | ✅ Done | `mock_progress_repository.dart`; covers all Progress tab screens |
 | P1 | `MockTrendsRepository` — seed correlations, reports, data source list | ✅ Done | `mock_trends_repository.dart`; covers all Trends tab screens |
-| P1 | Wire all mocks via `kDebugMode` guard in providers | ✅ Done | `if (kDebugMode)` swap in Today/Data/Progress/Trends providers; zero overhead in production |
+| P1 | Wire all mocks via `kDebugMode` guard in providers | ✅ Done | `if (kDebugMode)` swap in Today/Data/Progress/Trends providers; zero overhead in production; **removed in Phase 11** — mocks preserved for tests only, app always uses real APIs |
 | P1 | `Makefile` `run-mock` target + `.vscode/launch.json` config | 🔜 Planned | One-click mock launch in VS Code and terminal |
 
 ---
@@ -402,6 +402,28 @@ Established a centralized shared component library, eliminating duplicated UI co
 | P0 | Never-error provider pattern | ✅ Done | All 4 providers (`healthScoreProvider`, `todayFeedProvider`, `dashboardProvider`, `trendsHomeProvider`) catch all errors and return empty data objects — UI never sees an error branch |
 | P0 | Shared `HealthScoreZeroState` widget | ✅ Done | Extracted to `lib/shared/widgets/health_score_zero_state.dart`; used by TodayFeedScreen card body |
 | P0 | Layout fix — compact zero ring in ScoreTrendHero | ✅ Done | `_CompactScoreZeroState` (48×48 muted ring) replaces full `HealthScoreZeroState` in row slot; prevents row layout break |
+
+---
+
+## Phase 11 — Real Data Wiring (fix/remove-mock-data-wire-real-apis, 2026-03-11)
+
+> **Branch:** `fix/remove-mock-data-wire-real-apis` → merged to main (2026-03-11, fast-forward)
+
+Removed all debug-mode mock gates and wired the entire Flutter app to real backend APIs. The app now always fetches live data in both debug and release builds.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Remove `kDebugMode` mock gates from all 5 feature tab providers | ✅ Done | Today, Data, Coach, Trends, Progress tabs now always use real API repositories. Mock repositories preserved in codebase for test use only. |
+| P0 | Remove hardcoded 'mock-user' ID from Analytics Repository | ✅ Done | Removed misleading `const String _mockUserId = 'mock-user'` query parameter. Backend reads user from JWT. Added `invalidateAll()` method for logout cleanup. |
+| P0 | Wire Integrations Hub to real backend status endpoints | ✅ Done | `loadIntegrations()` fetches real connection status from `/status` endpoints for all 5 OAuth providers (Strava, Fitbit, Oura, Polar, Withings) in parallel. `disconnect()` calls backend `DELETE /disconnect` endpoints. Added `getProviderStatus()` and `disconnectProvider()` to OAuthRepository. |
+| P0 | Rewrite Settings > Integrations screen to use live server data | ✅ Done | Removed 100% hardcoded duplicate model classes. Screen now reads from `integrationsProvider` (live server data). Connect/disconnect buttons trigger real OAuth flows. |
+| P0 | Comprehensive logout cleanup | ✅ Done | New `_clearUserState()` method clears: (a) user-specific SharedPreferences keys, (b) all repository in-memory caches via `invalidateAll()`, (c) all Riverpod providers across every tab. Prevents User A's data from leaking to User B on the same device. |
+| P0 | Code review fixes | ✅ Done | Fixed OAuth `connect()` prematurely marking integrations as "connected" (now stays in "syncing" until deep-link callback confirms). Fixed parallel fetch, UTC time comparison, added notificationsProvider to cleanup, added mounted guard on navigator pop. |
+
+**Key decisions:**
+- Device-local integrations (Apple Health, Health Connect) correctly use SharedPreferences. Server-side OAuth integrations (Strava, Fitbit, Oura, Polar, Withings) query the backend.
+- Mock repositories preserved in the codebase for test use, but no longer used at runtime.
+- The "never-error" provider pattern (established in Phase 10.10) was preserved — providers still catch errors and return empty data.
 
 ---
 
