@@ -36,22 +36,40 @@ final todayRepositoryProvider = Provider<TodayRepositoryInterface>((ref) {
 
 /// Async provider for the current health score and 7-day trend.
 ///
+/// Never puts the UI into an error state. All network / parse failures are
+/// caught and resolved to an empty [HealthScoreData] (score 0, no trend).
+/// The UI distinguishes "no data yet" from "has data" via [HealthScoreData.score]
+/// being 0 and [HealthScoreData.dataDays] being 0 — it never needs to handle
+/// an async error branch.
+///
 /// Invalidate with [ref.invalidate(healthScoreProvider)] to trigger a
 /// fresh fetch (e.g., after a pull-to-refresh).
 final healthScoreProvider = FutureProvider<HealthScoreData>((ref) async {
   final repo = ref.read(todayRepositoryProvider);
-  return repo.getHealthScore();
+  try {
+    return await repo.getHealthScore();
+  } catch (_) {
+    return const HealthScoreData(score: 0, trend: [], dataDays: 0);
+  }
 });
 
 // ── Today Feed ─────────────────────────────────────────────────────────────────
 
 /// Async provider for the aggregated Today feed (insights + quick actions + streak).
 ///
+/// Never puts the UI into an error state. All failures resolve to an empty
+/// [TodayFeedData] so the UI always reaches the [data:] branch and renders
+/// the appropriate empty / zero-data state instead of a connection error.
+///
 /// Invalidate with [ref.invalidate(todayFeedProvider)] to trigger a
 /// fresh fetch (e.g., after a pull-to-refresh or quick-log submission).
 final todayFeedProvider = FutureProvider<TodayFeedData>((ref) async {
   final repo = ref.read(todayRepositoryProvider);
-  return repo.getTodayFeed();
+  try {
+    return await repo.getTodayFeed();
+  } catch (_) {
+    return TodayFeedData(insights: [], quickActions: [], streak: null);
+  }
 });
 
 // ── Insight Detail ────────────────────────────────────────────────────────────

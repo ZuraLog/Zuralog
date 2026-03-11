@@ -53,18 +53,25 @@ class ScoreTrendHero extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Compact score ring
+              // Compact score ring — or compact zero state when no data yet.
               scoreAsync.when(
+                // Provider never errors; safety-net shows compact zero ring.
+                error: (err, stack) => const _CompactScoreZeroState(),
                 loading: () => const SizedBox(
                   width: 48,
                   height: 48,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                error: (e, st) => const SizedBox(width: 48, height: 48),
-                data: (score) => HealthScoreWidget.compact(
-                  score: score.score,
-                  onTap: () => context.push(RouteNames.dataScoreBreakdownPath),
-                ),
+                data: (score) {
+                  if (score.dataDays == 0 && score.score == 0) {
+                    return const _CompactScoreZeroState();
+                  }
+                  return HealthScoreWidget.compact(
+                    score: score.score,
+                    onTap: () =>
+                        context.push(RouteNames.dataScoreBreakdownPath),
+                  );
+                },
               ),
               const SizedBox(width: AppDimens.spaceMd),
               // Title + subtitle
@@ -169,16 +176,7 @@ class ScoreTrendHero extends ConsumerWidget {
               data: (history) {
                 final values = history.trendValues;
                 if (values.length < 2) {
-                  return Center(
-                    child: Text(
-                      'Not enough data for this range',
-                      style: AppTextStyles.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  );
+                  return _ScoreChartEmptyState(isDark: isDark);
                 }
                 return _ScoreSparkline(values: values);
               },
@@ -367,6 +365,69 @@ class _ScoreSparkline extends StatelessWidget {
         ],
       ),
       duration: const Duration(milliseconds: 300),
+    );
+  }
+}
+
+// ── _CompactScoreZeroState ────────────────────────────────────────────────────
+
+/// A 48×48 muted ring shown in the top-row ring slot when there is no score
+/// data yet. Sized to match [HealthScoreWidget.compact] so the row layout
+/// is not disturbed.
+class _CompactScoreZeroState extends StatelessWidget {
+  const _CompactScoreZeroState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.25),
+          width: 5,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.favorite_border_rounded,
+          size: 20,
+          color: AppColors.primary.withValues(alpha: 0.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _ScoreChartEmptyState ─────────────────────────────────────────────────────
+
+/// Shown inside the sparkline area when there's not enough score history yet.
+/// Replaces the bare "Not enough data for this range" text with a compact,
+/// welcoming prompt that tells the user what to expect.
+class _ScoreChartEmptyState extends StatelessWidget {
+  const _ScoreChartEmptyState({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTertiary =
+        isDark ? AppColors.textTertiary : AppColors.textTertiary;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.show_chart_rounded,
+          size: 16,
+          color: AppColors.primary.withValues(alpha: 0.4),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          'Your trend chart will appear here as data builds up.',
+          style: AppTextStyles.caption.copyWith(color: textTertiary),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
