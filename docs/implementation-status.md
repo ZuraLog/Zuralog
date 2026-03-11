@@ -1,9 +1,46 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-11 (fix/goals-api-endpoints — add /api/v1/goals CRUD endpoints, resolving Goals screen 404 in production)  
+**Last Updated:** 2026-03-11 (feat/empty-state-improvements — empty state UX polish across Today, Data, and Trends tabs)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Empty State UX Improvements (feat/empty-state-improvements, 2026-03-11)
+
+**Scope:** Replaced bare error messages and generic empty states across three tabs with welcoming, actionable widgets that guide users toward data entry or app integration.  
+**Branch:** `feat/empty-state-improvements`
+
+**Files changed:**
+- `zuralog/lib/features/today/presentation/today_feed_screen.dart` — `_HealthScoreZeroState`, `_EmptyInsightsCard` improvements
+- `zuralog/lib/features/data/presentation/health_dashboard_screen.dart` — `_CategoriesEmptyState` with preview cards
+- `zuralog/lib/features/data/presentation/score_trend_hero.dart` — `_ScoreChartEmptyState`
+- `zuralog/lib/features/trends/presentation/trends_home_screen.dart` — `_EmptyCorrelationsState` with progress hint
+
+**What was built:**
+
+1. **Today tab — Health Score zero state** — Replaced "Score unavailable / Tap to retry" error display with `_HealthScoreZeroState`: a heart icon, "Your health score awaits" headline, and two tappable action rows. First row: "Log mood & energy" (opens QuickLogSheet). Second row: "Connect a health app" (navigates to Settings > Integrations). Friendly copy explains that the score builds as data accumulates.
+
+2. **Today tab — Insights empty state** — Improved `_EmptyInsightsCard` to show "Insights on the way" with two tappable action rows (same as health score zero state). Removes the generic "no insights yet" message and provides immediate next steps.
+
+3. **Data tab — Score trend chart empty state** — Replaced "Not enough data for this range" bare text with `_ScoreChartEmptyState`: a chart icon + friendly message ("Your trend chart will appear as data builds up"). Maintains visual consistency with the health score zero state.
+
+4. **Data tab — Categories empty state** — Replaced plain "No health data yet" text with `_CategoriesEmptyState`: ghost/dimmed preview cards for 5 categories (Activity, Sleep, Heart, Nutrition, Body) plus a tappable sage-green CTA card "Connect your first app" pointing to Settings > Integrations. The preview cards show the category icon and name in a muted state, giving users a preview of what data will appear once they connect an app.
+
+5. **Trends tab — Correlations empty state** — Improved `_EmptyCorrelationsState` with a 3-icon cluster (Sleep, sparkles, Activity) to visually represent pattern detection. Sharpened copy explains what correlations are. Added `_ProgressHintRow` showing "7 days of data unlocks your first pattern" with a progress indicator, motivating users to log data.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Consistent action rows across Today tab | Both health score and insights empty states use the same two actions (Log / Connect App). Reduces cognitive load — users learn the pattern once. |
+| Ghost preview cards in Categories empty state | Showing dimmed category cards gives users a preview of the data structure without being confusing. They understand what will appear once they connect an app. |
+| 7-day threshold messaging in Trends | Correlations require a minimum data window. Showing "7 days unlocks patterns" sets clear expectations and motivates data entry. |
+| Sage-green CTA in Categories empty state | Matches the app's action color system. The CTA is the primary next step, so it gets the brand color treatment. |
+| Icon clusters for visual interest | Empty states with just text feel cold. Icon clusters (Sleep + sparkles + Activity) make the empty state feel more like part of the app's visual language. |
+
+**`flutter analyze`:** Zero issues.
 
 ---
 
