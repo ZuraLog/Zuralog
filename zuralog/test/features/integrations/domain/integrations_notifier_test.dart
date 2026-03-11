@@ -189,6 +189,11 @@ class _FakeOAuthRepository implements OAuthRepository {
     String userId,
   ) async =>
       false;
+  @override
+  Future<Map<String, dynamic>> getProviderStatus(String provider) async =>
+      {'connected': false};
+  @override
+  Future<bool> disconnectProvider(String provider) async => true;
 }
 
 // ── Helper ─────────────────────────────────────────────────────────────────────

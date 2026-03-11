@@ -1,10 +1,11 @@
 /// Integrations Screen (under Settings).
 ///
-/// Connected / Available / Coming Soon integrations. Rebuild of the existing
-/// Integrations Hub, relocated under Settings. Compact sync status badge
-/// (green/yellow/red dot), last-synced timestamp, OAuth connect flows.
+/// Displays Connected, Available, and Coming Soon integrations. Reads live
+/// data from [integrationsProvider] — the same source the Integrations Hub
+/// uses — so connection status is always real and up-to-date.
 ///
-/// Full implementation: Phase 8, Task 8.6.
+/// Connect and Disconnect actions delegate to [IntegrationsNotifier], which
+/// handles OAuth flows, device-local permissions, and backend API calls.
 library;
 
 import 'package:flutter/material.dart';
@@ -12,144 +13,79 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/integrations/domain/integration_model.dart';
+import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Domain models
+// Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Connection status for a synced integration.
-enum IntegrationStatus { connected, connecting, error }
+/// Maps integration IDs to display icons.
+const Map<String, IconData> _integrationIcons = {
+  'strava': Icons.directions_run_rounded,
+  'apple_health': Icons.favorite_rounded,
+  'fitbit': Icons.watch_rounded,
+  'oura': Icons.ring_volume_rounded,
+  'withings': Icons.monitor_weight_rounded,
+  'polar': Icons.monitor_heart_rounded,
+  'google_health_connect': Icons.health_and_safety_rounded,
+  'garmin': Icons.watch_rounded,
+  'whoop': Icons.monitor_heart_rounded,
+};
 
-/// Target platform for platform-badge display.
-enum IntegrationPlatform { ios, android, both }
+/// Maps integration IDs to icon tint colours.
+const Map<String, Color> _integrationColors = {
+  'strava': AppColors.categoryActivity,
+  'apple_health': AppColors.categoryHeart,
+  'fitbit': AppColors.categoryBody,
+  'oura': AppColors.categorySleep,
+  'withings': AppColors.categoryVitals,
+  'polar': AppColors.categoryHeart,
+  'google_health_connect': AppColors.primary,
+  'garmin': AppColors.categoryVitals,
+  'whoop': AppColors.categoryHeart,
+};
 
-/// Data model for a connected integration.
-class ConnectedIntegration {
-  const ConnectedIntegration({
-    required this.name,
-    required this.icon,
-    required this.iconColor,
-    required this.status,
-    required this.lastSynced,
-    this.platform,
-  });
-
-  final String name;
-  final IconData icon;
-  final Color iconColor;
-  final IntegrationStatus status;
-  final String lastSynced;
-  final IntegrationPlatform? platform;
+/// Formats a [DateTime] as a human-readable relative time string.
+String _formatLastSynced(DateTime? lastSynced) {
+  if (lastSynced == null) return 'Never';
+  final diff = DateTime.now().difference(lastSynced);
+  if (diff.inSeconds < 60) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${lastSynced.month}/${lastSynced.day}/${lastSynced.year}';
 }
-
-/// Data model for an available (not yet connected) integration.
-class AvailableIntegration {
-  const AvailableIntegration({
-    required this.name,
-    required this.icon,
-    required this.iconColor,
-    this.platform,
-  });
-
-  final String name;
-  final IconData icon;
-  final Color iconColor;
-  final IntegrationPlatform? platform;
-}
-
-/// Data model for a coming-soon integration.
-class ComingSoonIntegration {
-  const ComingSoonIntegration({
-    required this.name,
-    required this.icon,
-    required this.iconColor,
-  });
-
-  final String name;
-  final IconData icon;
-  final Color iconColor;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock data
-// ─────────────────────────────────────────────────────────────────────────────
-
-const List<ConnectedIntegration> _connectedIntegrations = [
-  ConnectedIntegration(
-    name: 'Strava',
-    icon: Icons.directions_run_rounded,
-    iconColor: AppColors.categoryActivity,
-    status: IntegrationStatus.connected,
-    lastSynced: '2 min ago',
-  ),
-  ConnectedIntegration(
-    name: 'Apple Health',
-    icon: Icons.favorite_rounded,
-    iconColor: AppColors.categoryHeart,
-    status: IntegrationStatus.connected,
-    lastSynced: 'Just now',
-    platform: IntegrationPlatform.ios,
-  ),
-  ConnectedIntegration(
-    name: 'Fitbit',
-    icon: Icons.watch_rounded,
-    iconColor: AppColors.categoryBody,
-    status: IntegrationStatus.connecting,
-    lastSynced: '1 hour ago',
-  ),
-];
-
-const List<AvailableIntegration> _availableIntegrations = [
-  AvailableIntegration(
-    name: 'Google Fit',
-    icon: Icons.fitness_center_rounded,
-    iconColor: AppColors.categoryActivity,
-    platform: IntegrationPlatform.android,
-  ),
-  AvailableIntegration(
-    name: 'Garmin',
-    icon: Icons.watch_rounded,
-    iconColor: AppColors.categoryVitals,
-  ),
-  AvailableIntegration(
-    name: 'Health Connect',
-    icon: Icons.health_and_safety_rounded,
-    iconColor: AppColors.primary,
-    platform: IntegrationPlatform.android,
-  ),
-];
-
-const List<ComingSoonIntegration> _comingSoonIntegrations = [
-  ComingSoonIntegration(
-    name: 'MyFitnessPal',
-    icon: Icons.restaurant_rounded,
-    iconColor: AppColors.categoryNutrition,
-  ),
-  ComingSoonIntegration(
-    name: 'Oura Ring',
-    icon: Icons.ring_volume_rounded,
-    iconColor: AppColors.categorySleep,
-  ),
-  ComingSoonIntegration(
-    name: 'Whoop',
-    icon: Icons.monitor_heart_rounded,
-    iconColor: AppColors.categoryHeart,
-  ),
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Integrations management screen — displays Connected, Available, and Coming
-/// Soon sections with sync status, platform badges, and OAuth connect flows.
+/// Soon sections with sync status, platform badges, and real connect flows.
 class IntegrationsScreen extends ConsumerWidget {
   /// Creates the [IntegrationsScreen].
   const IntegrationsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final intState = ref.watch(integrationsProvider);
+
+    // Split integrations into three buckets based on their current status.
+    final connected = intState.integrations
+        .where((i) =>
+            i.status == IntegrationStatus.connected ||
+            i.status == IntegrationStatus.syncing ||
+            i.status == IntegrationStatus.error)
+        .toList();
+    final available = intState.integrations
+        .where((i) => i.status == IntegrationStatus.available)
+        .toList();
+    final comingSoon = intState.integrations
+        .where((i) => i.status == IntegrationStatus.comingSoon)
+        .toList();
+
     return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
@@ -172,52 +108,81 @@ class IntegrationsScreen extends ConsumerWidget {
             ),
           ),
 
+          // ── Loading indicator ──────────────────────────────────────────────
+          if (intState.isLoading)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(AppDimens.spaceLg),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+
           // ── Connected section ──────────────────────────────────────────────
-          if (_connectedIntegrations.isNotEmpty) ...[
-            _SectionHeader(label: 'CONNECTED'),
+          if (connected.isNotEmpty) ...[
+            const _SectionHeader(label: 'CONNECTED'),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final integration = _connectedIntegrations[index];
+                  final integration = connected[index];
                   return _ConnectedCard(
-                    key: ValueKey('connected_${integration.name}'),
+                    key: ValueKey('connected_${integration.id}'),
                     integration: integration,
                   );
                 },
-                childCount: _connectedIntegrations.length,
+                childCount: connected.length,
               ),
             ),
           ],
 
           // ── Available section ──────────────────────────────────────────────
-          _SectionHeader(label: 'AVAILABLE'),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final integration = _availableIntegrations[index];
-                return _AvailableCard(
-                  key: ValueKey('available_${integration.name}'),
-                  integration: integration,
-                );
-              },
-              childCount: _availableIntegrations.length,
+          if (available.isNotEmpty) ...[
+            const _SectionHeader(label: 'AVAILABLE'),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final integration = available[index];
+                  return _AvailableCard(
+                    key: ValueKey('available_${integration.id}'),
+                    integration: integration,
+                  );
+                },
+                childCount: available.length,
+              ),
             ),
-          ),
+          ],
 
           // ── Coming soon section ────────────────────────────────────────────
-          _SectionHeader(label: 'COMING SOON'),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final integration = _comingSoonIntegrations[index];
-                return _ComingSoonRow(
-                  key: ValueKey('coming_${integration.name}'),
-                  integration: integration,
-                );
-              },
-              childCount: _comingSoonIntegrations.length,
+          if (comingSoon.isNotEmpty) ...[
+            const _SectionHeader(label: 'COMING SOON'),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final integration = comingSoon[index];
+                  return _ComingSoonRow(
+                    key: ValueKey('coming_${integration.id}'),
+                    integration: integration,
+                  );
+                },
+                childCount: comingSoon.length,
+              ),
             ),
-          ),
+          ],
+
+          // ── Empty state ────────────────────────────────────────────────────
+          if (!intState.isLoading && intState.integrations.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(AppDimens.spaceLg),
+                child: Center(
+                  child: Text(
+                    'No integrations available.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColorsOf(context).textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // ── Bottom breathing room ──────────────────────────────────────────
           const SliverToBoxAdapter(
@@ -265,14 +230,17 @@ class _SectionHeader extends StatelessWidget {
 // Connected integration card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ConnectedCard extends StatelessWidget {
+class _ConnectedCard extends ConsumerWidget {
   const _ConnectedCard({super.key, required this.integration});
 
-  final ConnectedIntegration integration;
+  final IntegrationModel integration;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
+    final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
+    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -283,7 +251,7 @@ class _ConnectedCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          onTap: () => _showConnectedBottomSheet(context, integration),
+          onTap: () => _showConnectedBottomSheet(context, ref),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppDimens.spaceMd,
@@ -292,10 +260,7 @@ class _ConnectedCard extends StatelessWidget {
             child: Row(
               children: [
                 // Icon badge
-                _IntegrationIconBadge(
-                  icon: integration.icon,
-                  iconColor: integration.iconColor,
-                ),
+                _IntegrationIconBadge(icon: icon, iconColor: iconColor),
                 const SizedBox(width: AppDimens.spaceMd),
 
                 // Name + last synced
@@ -311,15 +276,17 @@ class _ConnectedCard extends StatelessWidget {
                               color: colors.textPrimary,
                             ),
                           ),
-                          if (integration.platform != null) ...[
+                          if (integration.compatibility !=
+                              PlatformCompatibility.all) ...[
                             const SizedBox(width: AppDimens.spaceSm),
-                            _PlatformBadge(platform: integration.platform!),
+                            _PlatformBadge(
+                                compatibility: integration.compatibility),
                           ],
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Last synced ${integration.lastSynced}',
+                        'Last synced ${_formatLastSynced(integration.lastSynced)}',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: colors.textSecondary,
                         ),
@@ -339,10 +306,7 @@ class _ConnectedCard extends StatelessWidget {
     );
   }
 
-  void _showConnectedBottomSheet(
-    BuildContext context,
-    ConnectedIntegration integration,
-  ) {
+  void _showConnectedBottomSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColorsOf(context).surface,
@@ -352,7 +316,8 @@ class _ConnectedCard extends StatelessWidget {
           top: Radius.circular(AppDimens.radiusCard),
         ),
       ),
-      builder: (ctx) => _ConnectedBottomSheet(integration: integration),
+      builder: (ctx) =>
+          _ConnectedBottomSheet(integration: integration),
     );
   }
 }
@@ -361,14 +326,17 @@ class _ConnectedCard extends StatelessWidget {
 // Available integration card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _AvailableCard extends StatelessWidget {
+class _AvailableCard extends ConsumerWidget {
   const _AvailableCard({super.key, required this.integration});
 
-  final AvailableIntegration integration;
+  final IntegrationModel integration;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
+    final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
+    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -386,10 +354,7 @@ class _AvailableCard extends StatelessWidget {
         child: Row(
           children: [
             // Icon badge
-            _IntegrationIconBadge(
-              icon: integration.icon,
-              iconColor: integration.iconColor,
-            ),
+            _IntegrationIconBadge(icon: icon, iconColor: iconColor),
             const SizedBox(width: AppDimens.spaceMd),
 
             // Name + platform badge
@@ -402,17 +367,18 @@ class _AvailableCard extends StatelessWidget {
                       color: colors.textPrimary,
                     ),
                   ),
-                  if (integration.platform != null) ...[
+                  if (integration.compatibility !=
+                      PlatformCompatibility.all) ...[
                     const SizedBox(width: AppDimens.spaceSm),
-                    _PlatformBadge(platform: integration.platform!),
+                    _PlatformBadge(compatibility: integration.compatibility),
                   ],
                 ],
               ),
             ),
             const SizedBox(width: AppDimens.spaceSm),
 
-            // Connect button
-            _ConnectButton(integrationName: integration.name),
+            // Connect button — calls the real integration flow
+            _ConnectButton(integration: integration),
           ],
         ),
       ),
@@ -427,11 +393,13 @@ class _AvailableCard extends StatelessWidget {
 class _ComingSoonRow extends StatelessWidget {
   const _ComingSoonRow({super.key, required this.integration});
 
-  final ComingSoonIntegration integration;
+  final IntegrationModel integration;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -452,7 +420,7 @@ class _ComingSoonRow extends StatelessWidget {
             children: [
               // Greyed-out icon badge
               _IntegrationIconBadge(
-                icon: integration.icon,
+                icon: icon,
                 iconColor: AppColors.textTertiary,
               ),
               const SizedBox(width: AppDimens.spaceMd),
@@ -469,7 +437,7 @@ class _ComingSoonRow extends StatelessWidget {
               const SizedBox(width: AppDimens.spaceSm),
 
               // "Coming soon" caption chip
-              _ComingSoonChip(),
+              const _ComingSoonChip(),
             ],
           ),
         ),
@@ -482,7 +450,7 @@ class _ComingSoonRow extends StatelessWidget {
 // Sub-widgets
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// 36×36 icon badge with a subtle tinted background.
+/// 36x36 icon badge with a subtle tinted background.
 class _IntegrationIconBadge extends StatelessWidget {
   const _IntegrationIconBadge({
     required this.icon,
@@ -504,16 +472,16 @@ class _IntegrationIconBadge extends StatelessWidget {
 
 /// Inline platform badge (iOS / Android).
 class _PlatformBadge extends StatelessWidget {
-  const _PlatformBadge({required this.platform});
+  const _PlatformBadge({required this.compatibility});
 
-  final IntegrationPlatform platform;
+  final PlatformCompatibility compatibility;
 
   @override
   Widget build(BuildContext context) {
-    final (icon, label) = switch (platform) {
-      IntegrationPlatform.ios => (Icons.apple, 'iOS only'),
-      IntegrationPlatform.android => (Icons.android, 'Android'),
-      IntegrationPlatform.both => (Icons.devices, 'All'),
+    final (icon, label) = switch (compatibility) {
+      PlatformCompatibility.iosOnly => (Icons.apple, 'iOS only'),
+      PlatformCompatibility.androidOnly => (Icons.android, 'Android'),
+      PlatformCompatibility.all => (Icons.devices, 'All'),
     };
 
     final colors = AppColorsOf(context);
@@ -550,11 +518,10 @@ class _StatusIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final (dotColor, label) = switch (status) {
       IntegrationStatus.connected => (AppColors.statusConnected, 'Connected'),
-      IntegrationStatus.connecting => (
-        AppColors.statusConnecting,
-        'Connecting',
-      ),
+      IntegrationStatus.syncing => (AppColors.statusConnecting, 'Syncing'),
       IntegrationStatus.error => (AppColors.statusError, 'Error'),
+      IntegrationStatus.available => (AppColors.textTertiary, 'Available'),
+      IntegrationStatus.comingSoon => (AppColors.textTertiary, 'Coming soon'),
     };
 
     return Row(
@@ -571,7 +538,8 @@ class _StatusIndicator extends StatelessWidget {
         const SizedBox(width: AppDimens.spaceXs),
         Text(
           label,
-          style: AppTextStyles.bodySmall.copyWith(color: AppColorsOf(context).textSecondary),
+          style: AppTextStyles.bodySmall
+              .copyWith(color: AppColorsOf(context).textSecondary),
         ),
       ],
     );
@@ -579,16 +547,23 @@ class _StatusIndicator extends StatelessWidget {
 }
 
 /// Small "Connect" FilledButton for available integrations.
-class _ConnectButton extends StatelessWidget {
-  const _ConnectButton({required this.integrationName});
+///
+/// Calls [IntegrationsNotifier.connect] with the real integration ID,
+/// triggering the actual OAuth flow or device permission request.
+class _ConnectButton extends ConsumerWidget {
+  const _ConnectButton({required this.integration});
 
-  final String integrationName;
+  final IntegrationModel integration;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Disable the button if the integration isn't compatible with this device.
+    final isCompatible = integration.isCompatibleWithCurrentPlatform;
+
     return FilledButton(
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.primary,
+        backgroundColor:
+            isCompatible ? AppColors.primary : AppColors.textTertiary,
         foregroundColor: AppColors.primaryButtonText,
         minimumSize: const Size(72, 32),
         padding: const EdgeInsets.symmetric(
@@ -602,56 +577,14 @@ class _ConnectButton extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-      onPressed: () => _showConnectDialog(context),
-      child: const Text('Connect'),
-    );
-  }
-
-  void _showConnectDialog(BuildContext context) {
-    final colors = AppColorsOf(context);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        title: Text(
-          'Connect $integrationName?',
-          style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
-        ),
-        content: Text(
-          'This will open the OAuth flow to authorize Zuralog to read your $integrationName data.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.primaryButtonText,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-              ),
-              textStyle: AppTextStyles.bodySmall.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      onPressed: isCompatible
+          ? () => ref
+              .read(integrationsProvider.notifier)
+              .connect(integration.id, context)
+          : null,
+      child: Text(isCompatible
+          ? 'Connect'
+          : (integration.incompatibilityNote ?? 'Unavailable')),
     );
   }
 }
@@ -684,130 +617,132 @@ class _ComingSoonChip extends StatelessWidget {
 // Connected integration bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ConnectedBottomSheet extends StatelessWidget {
+class _ConnectedBottomSheet extends ConsumerWidget {
   const _ConnectedBottomSheet({required this.integration});
 
-  final ConnectedIntegration integration;
+  final IntegrationModel integration;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
+    final icon = _integrationIcons[integration.id] ?? Icons.extension_rounded;
+    final iconColor = _integrationColors[integration.id] ?? AppColors.primary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
         vertical: AppDimens.spaceLg,
       ),
       child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
                 color: colors.border,
                 borderRadius: BorderRadius.circular(2),
-                ),
               ),
             ),
-            const SizedBox(height: AppDimens.spaceLg),
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
 
-            // Header row
-            Row(
-              children: [
-                _IntegrationIconBadge(
-                  icon: integration.icon,
-                  iconColor: integration.iconColor,
-                ),
-                const SizedBox(width: AppDimens.spaceMd),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        integration.name,
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: colors.textPrimary,
-                        ),
+          // Header row
+          Row(
+            children: [
+              _IntegrationIconBadge(icon: icon, iconColor: iconColor),
+              const SizedBox(width: AppDimens.spaceMd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      integration.name,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: colors.textPrimary,
                       ),
-                      const SizedBox(height: 2),
-                      _StatusIndicator(status: integration.status),
-                    ],
+                    ),
+                    const SizedBox(height: 2),
+                    _StatusIndicator(status: integration.status),
+                  ],
+                ),
+              ),
+              if (integration.compatibility != PlatformCompatibility.all)
+                _PlatformBadge(compatibility: integration.compatibility),
+            ],
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
+
+          // Sync details
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppDimens.spaceMd),
+            decoration: BoxDecoration(
+              color: colors.cardBackground,
+              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SYNC DETAILS',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.textTertiary,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (integration.platform != null)
-                  _PlatformBadge(platform: integration.platform!),
+                const SizedBox(height: AppDimens.spaceSm),
+                _SyncDetailRow(
+                  label: 'Last synced',
+                  value: _formatLastSynced(integration.lastSynced),
+                ),
+                const SizedBox(height: AppDimens.spaceXs),
+                _SyncDetailRow(
+                  label: 'Status',
+                  value: switch (integration.status) {
+                    IntegrationStatus.connected => 'Active',
+                    IntegrationStatus.syncing => 'Syncing...',
+                    IntegrationStatus.error => 'Error - tap to retry',
+                    IntegrationStatus.available => 'Disconnected',
+                    IntegrationStatus.comingSoon => 'Coming soon',
+                  },
+                ),
               ],
             ),
-            const SizedBox(height: AppDimens.spaceLg),
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
 
-            // Sync details
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppDimens.spaceMd),
-              decoration: BoxDecoration(
-                color: colors.cardBackground,
-                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SYNC DETAILS',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.textTertiary,
-                      letterSpacing: 0.8,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.spaceSm),
-                  _SyncDetailRow(
-                    label: 'Last synced',
-                    value: integration.lastSynced,
-                  ),
-                  const SizedBox(height: AppDimens.spaceXs),
-                  _SyncDetailRow(
-                    label: 'Status',
-                    value: switch (integration.status) {
-                      IntegrationStatus.connected => 'Active',
-                      IntegrationStatus.connecting => 'Syncing…',
-                      IntegrationStatus.error => 'Error — tap to retry',
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceLg),
-
-            // Disconnect action
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppDimens.spaceMd,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                  ),
+          // Disconnect action — calls the real disconnect method
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppDimens.spaceMd,
                 ),
-                onPressed: () => _confirmDisconnect(context),
-                child: Text(
-                  'Disconnect',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: colors.accent,
-                  ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                ),
+              ),
+              onPressed: () => _confirmDisconnect(context, ref),
+              child: Text(
+                'Disconnect',
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: colors.accent,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 
-  void _confirmDisconnect(BuildContext context) {
+  void _confirmDisconnect(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     showDialog<void>(
       context: context,
@@ -838,6 +773,10 @@ class _ConnectedBottomSheet extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
+              // Actually disconnect via the real provider.
+              ref
+                  .read(integrationsProvider.notifier)
+                  .disconnect(integration.id);
               Navigator.of(ctx).pop();
               Navigator.of(context).pop();
             },
