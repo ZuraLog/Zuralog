@@ -10,7 +10,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── AboutScreen ───────────────────────────────────────────────────────────────
 
@@ -60,28 +60,28 @@ class AboutScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: _SettingsGroup(
               children: [
-                _TapRow(
+                ZSettingsTile(
                   icon: Icons.help_rounded,
                   iconColor: AppColors.categoryBody,
                   title: 'Help Center',
                   subtitle: 'FAQs, guides, and tutorials',
-                  onTap: (ctx) => _showSnackBar(ctx, 'Opening Help Center'),
+                  onTap: () => _showSnackBar(context, 'Opening Help Center'),
                 ),
                 const _Divider(),
-                _TapRow(
+                ZSettingsTile(
                   icon: Icons.mail_rounded,
                   iconColor: AppColors.primary,
                   title: 'Contact Support',
                   subtitle: 'support@zuralog.com',
-                  onTap: (ctx) => _showSnackBar(ctx, 'Opening email…'),
+                  onTap: () => _showSnackBar(context, 'Opening email…'),
                 ),
                 const _Divider(),
-                _TapRow(
+                ZSettingsTile(
                   icon: Icons.people_rounded,
                   iconColor: AppColors.categorySleep,
                   title: 'Community',
                   subtitle: 'Join the Zuralog community',
-                  onTap: (ctx) => _showSnackBar(ctx, 'Opening community…'),
+                  onTap: () => _showSnackBar(context, 'Opening community…'),
                 ),
               ],
             ),
@@ -92,26 +92,26 @@ class AboutScreen extends StatelessWidget {
           SliverToBoxAdapter(
             child: _SettingsGroup(
               children: [
-                _TapRow(
+                ZSettingsTile(
                   icon: Icons.policy_rounded,
                   iconColor: AppColors.categoryVitals,
                   title: 'Privacy Policy',
-                  onTap: (ctx) => ctx.pushNamed(RouteNames.settingsPrivacyPolicy),
+                  onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
                 ),
                 const _Divider(),
-                _TapRow(
+                ZSettingsTile(
                   icon: Icons.description_rounded,
                   iconColor: AppColors.categoryWellness,
                   title: 'Terms of Service',
-                  onTap: (ctx) => ctx.pushNamed(RouteNames.settingsTerms),
+                  onTap: () => context.pushNamed(RouteNames.settingsTerms),
                 ),
                 const _Divider(),
-                _TapRow(
+                ZSettingsTile(
                   icon: Icons.gavel_rounded,
                   iconColor: AppColors.textTertiary,
                   title: 'Open-Source Licenses',
-                  onTap: (ctx) => showLicensePage(
-                    context: ctx,
+                  onTap: () => showLicensePage(
+                    context: context,
                     applicationName: 'Zuralog',
                     applicationVersion: '1.0.0',
                   ),
@@ -209,32 +209,17 @@ class _AppIdentityHero extends StatelessWidget {
 
 // ── _WhatsNewChip ──────────────────────────────────────────────────────────────
 
-class _WhatsNewChip extends StatefulWidget {
+class _WhatsNewChip extends StatelessWidget {
   const _WhatsNewChip();
 
   @override
-  State<_WhatsNewChip> createState() => _WhatsNewChipState();
-}
-
-class _WhatsNewChipState extends State<_WhatsNewChip> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        _showSnackBar(context, "What's New in 1.0.0");
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+    return ZuralogSpringButton(
+      onTap: () => _showSnackBar(context, "What's New in 1.0.0"),
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: _pressed
-              ? AppColors.primary.withValues(alpha: 0.25)
-              : AppColors.primary.withValues(alpha: 0.12),
+          color: AppColors.primary.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
         ),
         child: Row(
@@ -322,98 +307,6 @@ class _Divider extends StatelessWidget {
       child: Container(
         height: 1,
         color: AppColors.borderDark.withValues(alpha: 0.5),
-      ),
-    );
-  }
-}
-
-// ── _TapRow ────────────────────────────────────────────────────────────────────
-
-class _TapRow extends StatefulWidget {
-  const _TapRow({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String? subtitle;
-  final void Function(BuildContext context) onTap;
-
-  @override
-  State<_TapRow> createState() => _TapRowState();
-}
-
-class _TapRowState extends State<_TapRow> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap(context);
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        decoration: BoxDecoration(
-          color: _pressed
-              ? AppColors.borderDark.withValues(alpha: 0.3)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: widget.iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(widget.icon, size: 20, color: widget.iconColor),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.title,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.textPrimaryDark,
-                    ),
-                  ),
-                  if (widget.subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.subtitle!,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: AppDimens.iconMd,
-              color: AppColors.textTertiary,
-            ),
-          ],
-        ),
       ),
     );
   }

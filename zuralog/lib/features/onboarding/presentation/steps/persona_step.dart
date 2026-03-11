@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Persona Model ─────────────────────────────────────────────────────────────
 
@@ -188,99 +188,77 @@ class _PersonaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return ZuralogSpringButton(
+    return ZSelectableTile(
+      isSelected: isSelected,
       onTap: onTap,
+      showCheckIndicator: false,
       scaleTarget: 0.97,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.07)
-              : colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-          border: Border.all(
-            // Sage Green border on selection; subtle dark border otherwise.
-            color: isSelected ? AppColors.primary : AppColors.borderDark,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── 4px left accent bar ─────────────────────────────────
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 4,
-                  color: isSelected
-                      ? persona.accentColor
-                      : persona.accentColor.withValues(alpha: 0.25),
-                ),
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── 4px left accent bar ─────────────────────────────────
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 4,
+                color: isSelected
+                    ? persona.accentColor
+                    : persona.accentColor.withValues(alpha: 0.25),
+              ),
 
-                // ── Card content ────────────────────────────────────────
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppDimens.spaceMd),
-                    child: Row(
-                      children: [
-                        // Emoji icon in a circle.
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? persona.accentColor.withValues(alpha: 0.15)
-                                : colorScheme.onSurface.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
+              // ── Card content ────────────────────────────────────────
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDimens.spaceMd),
+                  child: Row(
+                    children: [
+                      // Emoji icon in a circle.
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? persona.accentColor.withValues(alpha: 0.15)
+                              : colorScheme.onSurface.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            persona.emoji,
+                            style: AppTextStyles.body.copyWith(fontSize: 22),
                           ),
-                          child: Center(
-                            child: Text(
-                              persona.emoji,
-                              style: AppTextStyles.body.copyWith(fontSize: 22),
+                        ),
+                      ),
+                      const SizedBox(width: AppDimens.spaceMd),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              persona.title,
+                              style: AppTextStyles.h3.copyWith(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : colorScheme.onSurface,
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 2),
+                            Text(
+                              persona.description,
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: AppDimens.spaceMd),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                persona.title,
-                                style: AppTextStyles.h3.copyWith(
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                persona.description,
-                                style: AppTextStyles.bodyMedium
-                                    .copyWith(color: AppColors.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Selection check.
-                        AnimatedOpacity(
-                          opacity: isSelected ? 1 : 0,
-                          duration: const Duration(milliseconds: 200),
-                          child: const Icon(
-                            Icons.check_circle_rounded,
-                            color: AppColors.primary,
-                            size: AppDimens.iconMd,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

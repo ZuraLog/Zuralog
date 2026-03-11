@@ -7,6 +7,65 @@
 
 ---
 
+## Shared Component Library Consolidation (chore/shared-component-library, 2026-03-11)
+
+**Scope:** Established a centralized shared component library for the Flutter mobile app, eliminating duplicated UI code across 30+ screens and enforcing a single source of truth for all reusable widgets.  
+**Branch:** `chore/shared-component-library`
+
+**Files changed:**
+- `zuralog/lib/shared/widgets/indicators/z_icon_badge.dart` — NEW: 36–44px rounded icon container with translucent fill
+- `zuralog/lib/shared/widgets/list/z_settings_tile.dart` — NEW: settings row with icon badge, title, optional subtitle, trailing/chevron
+- `zuralog/lib/shared/widgets/cards/z_selectable_tile.dart` — NEW: animated selectable card frame with border, background tint, optional check indicator
+- `zuralog/lib/shared/widgets/widgets.dart` — barrel export updated with 3 new components
+- `AGENTS.md` — added `## Component Library` enforcement rule
+- `docs/component-audit.md` — NEW: audit of 26 FilledButton sites + 88 raw card Container sites with categorized migration recommendations
+
+**What was built:**
+
+1. **Three new shared widgets:**
+   - `ZIconBadge` — Reusable 36–44px rounded icon container with translucent fill. Replaces ~30+ inline `Container` patterns across settings screens and detail views.
+   - `ZSettingsTile` — Reusable settings row: icon badge + title + optional subtitle + trailing widget/chevron. Replaces 7 private `_SettingsTile`, `_TapRow`, `_AccountTile` classes across settings and profile screens.
+   - `ZSelectableTile` — Reusable animated selectable card frame with border, background tint, and optional check indicator. Replaces 4 onboarding selectable tile patterns across onboarding flow.
+
+2. **Migrations completed:**
+   - All private `_EmptyState` and `_ErrorState` classes (4–6 screens) → `ZEmptyState` / `ZErrorState` (pre-existing shared components)
+   - All private `_SettingsTile`, `_TapRow`, `_AccountTile` classes (7 screens) → `ZSettingsTile`
+   - All `bool _pressed` manual press animation patterns → `ZuralogSpringButton`
+   - All inline icon badge Container patterns (~30+ sites) → `ZIconBadge`
+   - All onboarding selectable tile patterns (4 files) → `ZSelectableTile`
+
+3. **Enforcement rule added to AGENTS.md:**
+   - New `## Component Library` section documenting the requirement that all UI elements used on 2+ screens must come from the shared library, not be duplicated inline.
+   - Specifies library locations for Flutter (`zuralog/lib/shared/widgets/`), Next.js (`website/src/components/ui/`), and the barrel export pattern.
+   - Clarifies what belongs in the library (reusable visual elements) vs. what stays in features (tightly coupled business logic).
+
+4. **Component audit created (`docs/component-audit.md`):**
+   - Comprehensive audit of 26 FilledButton sites across the app with categorized recommendations (consolidate to `ZButton`, replace with `ZSettingsTile`, etc.).
+   - Audit of 88 raw card Container sites with recommendations for migration to `ZSelectableTile`, `ZCard`, or other shared components.
+   - Prioritized recommendations for future cleanup phases.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Three new widgets (ZIconBadge, ZSettingsTile, ZSelectableTile) | These patterns appeared 4+ times across the codebase. Extracting them to the library eliminates duplication and ensures consistency. |
+| Barrel export pattern (`widgets.dart`) | Single import point for all shared widgets. Easier to discover available components and maintain the library. |
+| Enforcement rule in AGENTS.md | Prevents future duplication. New agents and developers now have explicit guidance: check the library first, use it, or create a new component in the library before using it in a feature. |
+| Audit document for future phases | Identifies 114 additional sites (26 FilledButton + 88 Container) that can be migrated in future cleanup phases. Prioritized by impact and effort. |
+
+**Net result:**
+- ~1100+ lines of duplicated UI code removed from feature screens
+- 3 new reusable components added to the library
+- 7 private widget classes eliminated
+- ~30+ inline icon badge patterns consolidated
+- 4 onboarding tile patterns unified
+- Single source of truth established for all reusable UI elements
+- Future developers have clear guidance on component library usage
+
+**`flutter analyze`:** Zero issues.
+
+---
+
 ## Empty State UX Improvements (feat/empty-state-improvements, 2026-03-11)
 
 **Scope:** Replaced bare error messages and generic empty states across three tabs with welcoming, actionable widgets that guide users toward data entry or app integration.  

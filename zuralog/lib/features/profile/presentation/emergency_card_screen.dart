@@ -21,7 +21,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/profile/domain/emergency_card_models.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 export 'package:zuralog/features/profile/domain/emergency_card_models.dart'
     show EmergencyCardData, EmergencyContact;
@@ -118,90 +118,21 @@ class EmergencyCardScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
-        error: (_, err) => Center(
-          child: Text(
-            'Unable to load emergency card.',
-            style:
-                AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
-          ),
+        error: (err, stack) => ZErrorState(
+          message: 'Unable to load emergency card.',
+          onRetry: () => ref.invalidate(emergencyCardProvider),
         ),
         data: (card) => card.isEmpty
-            ? _EmptyState(
-                onSetUp: () =>
+            ? ZEmptyState(
+                icon: Icons.medical_information_rounded,
+                title: 'No Emergency Card Yet',
+                message:
+                    'Add your blood type, allergies, medications, and emergency contacts so first responders can help you faster.',
+                actionLabel: 'Set Up Emergency Card',
+                onAction: () =>
                     context.pushNamed(RouteNames.emergencyCardEdit),
               )
             : _CardContent(card: card),
-      ),
-    );
-  }
-}
-
-// ── _EmptyState ───────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onSetUp});
-
-  final VoidCallback onSetUp;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.categoryHeart.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.medical_information_rounded,
-                size: 36,
-                color: AppColors.categoryHeart,
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              'No Emergency Card Yet',
-              style:
-                  AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'Add your blood type, allergies, medications, and emergency contacts so first responders can help you faster.',
-              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceLg),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.categoryHeart,
-                foregroundColor: AppColors.textPrimaryDark,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceLg,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusButtonMd),
-                ),
-              ),
-              onPressed: onSetUp,
-              child: Text(
-                'Set Up Emergency Card',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textPrimaryDark,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

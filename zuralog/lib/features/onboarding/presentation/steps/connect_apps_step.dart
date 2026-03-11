@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Featured Apps ─────────────────────────────────────────────────────────────
 
@@ -182,14 +183,11 @@ class _IntegrationTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // App icon in rounded colored container.
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: app.color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-            ),
-            child: Icon(app.icon, color: app.color, size: 22),
+          ZIconBadge(
+            icon: app.icon,
+            color: app.color,
+            size: 44,
+            iconSize: 22,
           ),
 
           // Name + description.

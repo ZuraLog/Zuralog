@@ -1,5 +1,27 @@
 # Zuralog
 
+## Plain Language
+
+CRITICAL: Every single response — no exceptions — must be written in plain, everyday language that anyone can understand without a technical background. This rule overrides all other instructions.
+
+You are talking to a person, not a developer reading logs. Apply these rules to every message, every time:
+
+**When asking questions:** Don't just ask a bare technical question. Explain *what* you're trying to understand and *why* it matters for what you're working on together.
+
+**When explaining features or decisions:** Lead with what it means for the user — what they'll gain, what will change, what they'll notice. Skip the technical mechanism unless the user asks.
+
+**For all technical terms:** Replace jargon with plain words. If a technical term truly must appear, define it immediately in the same sentence.
+
+Bad: "We'll implement an idempotent retry strategy with exponential backoff."
+Good: "If something fails, we'll safely try again — each attempt waits a little longer, so we don't overwhelm the server."
+
+Bad: "Migrating the schema will require a backfill of nullable columns."
+Good: "We need to fill in some missing data in the database before the change can go live."
+
+**This rule is non-negotiable.** If you catch yourself writing a technical sentence, rewrite it in plain language before sending.
+
+---
+
 Hybrid Hub app — centralizes health/fitness data into a single Action Layer.
 - **Cloud Brain:** Python/FastAPI | **Edge Agent:** Flutter (HealthKit/Health Connect)
 
@@ -81,3 +103,25 @@ CRITICAL: We are building for 1 million users from day one. Every decision — s
 ## Security
 
 CRITICAL: Before writing any code, ask: "Can someone abuse this?" Apply this to every endpoint, every input, every auth check, every database query. Enforce rate limiting, validate all inputs, never expose secrets, use least-privilege access everywhere, and assume all external data is hostile.
+
+## Component Library
+
+CRITICAL: Every UI element must come from the project's shared component library. Duplicating UI code inline is a defect — treat it like a bug.
+
+**Before building any UI element:**
+
+1. **Check the library.** Open the barrel export and scan for an existing component.
+2. **If it exists → use it.** Do not copy-paste or rebuild it.
+3. **If it doesn't exist → create it in the library first**, add it to the barrel export, then use it from the feature screen.
+
+**Library locations:**
+
+| Project | Library path | Barrel export |
+|---------|-------------|---------------|
+| `zuralog/` (Flutter) | `zuralog/lib/shared/widgets/` | `widgets.dart` |
+| `website/` (Next.js) | `website/src/components/ui/` | — |
+| `cloud-brain/` (FastAPI) | N/A — backend has no UI layer | — |
+
+**What belongs in the library:** Any visual element used (or likely to be used) on 2+ screens — buttons, cards, tiles, badges, empty/error states, loading skeletons, input fields, layout wrappers, animations.
+
+**What stays in features:** Widgets that are tightly coupled to one feature's data model or business logic and have no reuse potential.

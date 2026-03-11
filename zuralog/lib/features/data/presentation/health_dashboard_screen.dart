@@ -27,9 +27,8 @@ import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/category_card.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/score_trend_hero.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── HealthDashboardScreen ─────────────────────────────────────────────────────
 
@@ -736,18 +735,11 @@ class _CategoriesEmptyState extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                ),
-                child: const Icon(
-                  Icons.cable_rounded,
-                  size: 20,
-                  color: AppColors.primary,
-                ),
+              ZIconBadge(
+                icon: Icons.cable_rounded,
+                color: AppColors.primary,
+                size: 40,
+                iconSize: 20,
               ),
               const SizedBox(width: AppDimens.spaceMd),
               Expanded(

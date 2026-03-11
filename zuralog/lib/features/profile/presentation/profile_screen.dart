@@ -15,7 +15,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Local state ───────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ class ProfileScreen extends ConsumerWidget {
             child: Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              child: _EmergencyCardBanner(),
+              child: const _EmergencyCardBanner(),
             ),
           ),
 
@@ -426,55 +426,35 @@ class _TierBadge extends StatelessWidget {
 
 // ── _EmergencyCardBanner ───────────────────────────────────────────────────────
 
-class _EmergencyCardBanner extends StatefulWidget {
-  @override
-  State<_EmergencyCardBanner> createState() => _EmergencyCardBannerState();
-}
-
-class _EmergencyCardBannerState extends State<_EmergencyCardBanner> {
-  bool _pressed = false;
+class _EmergencyCardBanner extends StatelessWidget {
+  const _EmergencyCardBanner();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        context.pushNamed(RouteNames.emergencyCard);
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+    return ZuralogSpringButton(
+      onTap: () => context.pushNamed(RouteNames.emergencyCard),
+      child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: _pressed
-              ? AppColors.categoryHeart.withValues(alpha: 0.18)
-              : AppColors.categoryHeart.withValues(alpha: 0.12),
+          color: AppColors.categoryHeart.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           border:
               Border.all(color: AppColors.categoryHeart.withValues(alpha: 0.35)),
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.categoryHeart.withValues(alpha: 0.20),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: const Icon(
-                Icons.medical_information_rounded,
-                size: 24,
-                color: AppColors.categoryHeart,
-              ),
+            const ZIconBadge(
+              icon: Icons.medical_information_rounded,
+              color: AppColors.categoryHeart,
+              size: 44,
+              iconSize: 24,
             ),
             const SizedBox(width: AppDimens.spaceMd),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                    Text(
+                  Text(
                     'Emergency Health Card',
                     style: AppTextStyles.titleMedium.copyWith(
                       color: AppColors.textPrimaryDark,
@@ -517,7 +497,7 @@ class _AccountGroup extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _TapRow(
+          ZSettingsTile(
             icon: Icons.settings_rounded,
             iconColor: AppColors.textSecondary,
             title: 'Settings',
@@ -525,7 +505,7 @@ class _AccountGroup extends StatelessWidget {
             onTap: () => context.pushNamed(RouteNames.settings),
           ),
           const _Divider(),
-          _TapRow(
+          ZSettingsTile(
             icon: Icons.workspace_premium_rounded,
             iconColor: AppColors.categoryMobility,
             title: 'Subscription',
@@ -533,7 +513,7 @@ class _AccountGroup extends StatelessWidget {
             onTap: () => context.pushNamed(RouteNames.settingsSubscription),
           ),
           const _Divider(),
-          _TapRow(
+          ZSettingsTile(
             icon: Icons.person_rounded,
             iconColor: AppColors.categoryBody,
             title: 'Account Settings',
@@ -674,92 +654,4 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _TapRow extends StatefulWidget {
-  const _TapRow({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.onTap,
-    this.subtitle,
-  });
 
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String? subtitle;
-  final VoidCallback onTap;
-
-  @override
-  State<_TapRow> createState() => _TapRowState();
-}
-
-class _TapRowState extends State<_TapRow> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        decoration: BoxDecoration(
-          color: _pressed
-              ? AppColors.borderDark.withValues(alpha: 0.3)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: widget.iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(widget.icon, size: 20, color: widget.iconColor),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    widget.title,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.textPrimaryDark,
-                    ),
-                  ),
-                  if (widget.subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      widget.subtitle!,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: AppDimens.iconMd,
-              color: AppColors.textTertiary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

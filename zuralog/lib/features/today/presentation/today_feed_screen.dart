@@ -25,11 +25,10 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/health_score_zero_state.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
 import 'package:zuralog/shared/widgets/streak_badge.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── TodayFeedScreen ───────────────────────────────────────────────────────────
 
@@ -406,45 +405,31 @@ class _SectionHeader extends StatelessWidget {
 
 // ── _InsightCard ──────────────────────────────────────────────────────────────
 
-class _InsightCard extends ConsumerStatefulWidget {
+class _InsightCard extends ConsumerWidget {
   const _InsightCard({required this.insight, required this.onTap});
 
   final InsightCard insight;
   final VoidCallback onTap;
 
   @override
-  ConsumerState<_InsightCard> createState() => _InsightCardState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categoryColor = categoryColorFromString(insight.category);
+    final isUnread = !insight.isRead;
 
-class _InsightCardState extends ConsumerState<_InsightCard> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final categoryColor = categoryColorFromString(widget.insight.category);
-    final isUnread = !widget.insight.isRead;
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
+    return ZuralogSpringButton(
+      onTap: () {
         ref.read(analyticsServiceProvider).capture(
           event: AnalyticsEvents.insightCardTapped,
           properties: {
-            'insight_id': widget.insight.id,
-            'insight_type': widget.insight.type.name,
-            'category': widget.insight.category,
-            'is_unread': !widget.insight.isRead,
+            'insight_id': insight.id,
+            'insight_type': insight.type.name,
+            'category': insight.category,
+            'is_unread': !insight.isRead,
           },
         );
-        widget.onTap();
+        onTap();
       },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: ClipRRect(
+      child: ClipRRect(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           child: Stack(
             children: [
@@ -497,19 +482,11 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                           ),
                         ),
                       // Category color icon badge.
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: categoryColor.withValues(alpha: 0.15),
-                          borderRadius:
-                              BorderRadius.circular(AppDimens.radiusSm),
-                        ),
-                        child: Icon(
-                          _insightIcon(widget.insight.type),
-                          size: AppDimens.iconMd,
-                          color: categoryColor,
-                        ),
+                      ZIconBadge(
+                        icon: _insightIcon(insight.type),
+                        color: categoryColor,
+                        size: 40,
+                        iconSize: AppDimens.iconMd,
                       ),
                       const SizedBox(width: AppDimens.spaceMd),
                       Expanded(
@@ -529,22 +506,22 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                                   ),
                                   const SizedBox(width: AppDimens.spaceXs),
                                 ],
-                                Expanded(
-                                   child: Text(
-                                     widget.insight.title,
-                                     style: AppTextStyles.titleMedium.copyWith(
-                                       color: AppColors.textPrimaryDark,
-                                     ),
-                                     maxLines: 2,
-                                     overflow: TextOverflow.ellipsis,
-                                   ),
-                                ),
+                                 Expanded(
+                                    child: Text(
+                                      insight.title,
+                                      style: AppTextStyles.titleMedium.copyWith(
+                                        color: AppColors.textPrimaryDark,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.insight.summary,
-                              style: AppTextStyles.bodyMedium.copyWith(
+                               insight.summary,
+                               style: AppTextStyles.bodyMedium.copyWith(
                                 color: AppColors.textSecondary,
                               ),
                               maxLines: 3,
@@ -565,18 +542,18 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
                                       AppDimens.radiusChip,
                                     ),
                                   ),
-                                   child: Text(
-                                     widget.insight.category,
-                                     style: AppTextStyles.labelSmall.copyWith(
+                                    child: Text(
+                                      insight.category,
+                                      style: AppTextStyles.labelSmall.copyWith(
                                        color: categoryColor,
                                        fontWeight: FontWeight.w600,
                                      ),
                                    ),
                                 ),
                                 const Spacer(),
-                                if (widget.insight.createdAt != null)
-                                   Text(
-                                     _relativeTime(widget.insight.createdAt!),
+                                 if (insight.createdAt != null)
+                                    Text(
+                                      _relativeTime(insight.createdAt!),
                                      style: AppTextStyles.labelSmall.copyWith(
                                        color: AppColors.textTertiary,
                                      ),
@@ -600,90 +577,66 @@ class _InsightCardState extends ConsumerState<_InsightCard> {
             ],
           ),
         ),
-      ),
     );
   }
 }
 
 // ── _QuickActionCard ──────────────────────────────────────────────────────────
 
-class _QuickActionCard extends StatefulWidget {
+class _QuickActionCard extends StatelessWidget {
   const _QuickActionCard({required this.action, required this.onTap});
 
   final QuickAction action;
   final VoidCallback onTap;
 
   @override
-  State<_QuickActionCard> createState() => _QuickActionCardState();
-}
-
-class _QuickActionCardState extends State<_QuickActionCard> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: Container(
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackgroundDark,
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-            border: Border.all(color: AppColors.borderDark),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                ),
-                child: const Icon(
-                  Icons.bolt_rounded,
-                  size: AppDimens.iconMd,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: AppDimens.spaceMd),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+    return ZuralogSpringButton(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackgroundDark,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          border: Border.all(color: AppColors.borderDark),
+        ),
+        child: Row(
+          children: [
+            ZIconBadge(
+              icon: Icons.bolt_rounded,
+              color: AppColors.primary,
+              size: 40,
+              iconSize: AppDimens.iconMd,
+            ),
+            const SizedBox(width: AppDimens.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    action.title,
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColors.textPrimaryDark,
+                    ),
+                  ),
+                  if (action.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      widget.action.title,
-                      style: AppTextStyles.titleMedium.copyWith(
-                        color: AppColors.textPrimaryDark,
+                      action.subtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                    if (widget.action.subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.action.subtitle,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: AppDimens.iconMd,
-                color: AppColors.primary.withValues(alpha: 0.5),
-              ),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: AppDimens.iconMd,
+              color: AppColors.primary.withValues(alpha: 0.5),
+            ),
+          ],
         ),
       ),
     );
@@ -693,32 +646,17 @@ class _QuickActionCardState extends State<_QuickActionCard> {
 // ── _WellnessCheckinCard ──────────────────────────────────────────────────────
 
 /// Inline wellness check-in card — launches QuickLogSheet on tap.
-class _WellnessCheckinCard extends ConsumerStatefulWidget {
+class _WellnessCheckinCard extends ConsumerWidget {
   const _WellnessCheckinCard();
 
   @override
-  ConsumerState<_WellnessCheckinCard> createState() =>
-      _WellnessCheckinCardState();
-}
-
-class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ZuralogSpringButton(
+      onTap: () {
         ref.read(hapticServiceProvider).light();
         _showQuickLog(context, ref);
       },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: ClipRRect(
+      child: ClipRRect(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           child: Stack(
             children: [
@@ -750,20 +688,11 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color:
-                            AppColors.categoryWellness.withValues(alpha: 0.15),
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusSm),
-                      ),
-                      child: const Icon(
-                        Icons.self_improvement_rounded,
-                        size: AppDimens.iconMd,
-                        color: AppColors.categoryWellness,
-                      ),
+                    ZIconBadge(
+                      icon: Icons.self_improvement_rounded,
+                      color: AppColors.categoryWellness,
+                      size: 40,
+                      iconSize: AppDimens.iconMd,
                     ),
                     const SizedBox(width: AppDimens.spaceMd),
                     Expanded(
@@ -797,7 +726,6 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -823,18 +751,11 @@ class _EmptyInsightsCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
-                  ),
-                  child: Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 24,
-                    color: AppColors.primary,
-                  ),
+                ZIconBadge(
+                  icon: Icons.lightbulb_outline_rounded,
+                  color: AppColors.primary,
+                  size: 44,
+                  iconSize: 24,
                 ),
                 const SizedBox(width: AppDimens.spaceMd),
                 Expanded(
@@ -881,7 +802,7 @@ class _EmptyInsightsCard extends ConsumerWidget {
   }
 }
 
-class _InsightActionRow extends StatefulWidget {
+class _InsightActionRow extends StatelessWidget {
   const _InsightActionRow({
     required this.icon,
     required this.color,
@@ -895,54 +816,37 @@ class _InsightActionRow extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_InsightActionRow> createState() => _InsightActionRowState();
-}
-
-class _InsightActionRowState extends State<_InsightActionRow> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimens.spaceMd,
-            vertical: AppDimens.spaceSm,
-          ),
-          decoration: BoxDecoration(
-            color: widget.color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
-          ),
-          child: Row(
-            children: [
-              Icon(widget.icon, size: 16, color: widget.color),
-              const SizedBox(width: AppDimens.spaceSm),
-              Expanded(
-                child: Text(
-                  widget.label,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: widget.color,
-                    fontWeight: FontWeight.w600,
-                  ),
+    return ZuralogSpringButton(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceSm,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: AppDimens.spaceSm),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: widget.color.withValues(alpha: 0.6),
-              ),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: color.withValues(alpha: 0.6),
+            ),
+          ],
         ),
       ),
     );

@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain models
@@ -491,14 +491,10 @@ class _IntegrationIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-      ),
-      child: Icon(icon, size: 18, color: iconColor),
+    return ZIconBadge(
+      icon: icon,
+      color: iconColor,
+      iconSize: 18,
     );
   }
 }

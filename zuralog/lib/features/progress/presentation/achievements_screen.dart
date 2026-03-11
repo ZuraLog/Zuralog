@@ -16,8 +16,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── AchievementsScreen ────────────────────────────────────────────────────────
 
@@ -452,20 +451,12 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Icon
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isUnlocked
-                      ? categoryColor.withValues(alpha: 0.15)
-                      : AppColors.borderDark,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusSm + 2),
-                ),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: isUnlocked ? categoryColor : AppColors.textTertiary,
-                ),
+              ZIconBadge(
+                icon: icon,
+                color: isUnlocked ? categoryColor : AppColors.textTertiary,
+                size: 44,
+                iconSize: 24,
+                borderRadius: AppDimens.radiusSm + 2,
               ),
               const SizedBox(height: AppDimens.spaceSm),
               // Title
