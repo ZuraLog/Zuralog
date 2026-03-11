@@ -36,9 +36,21 @@ final progressRepositoryProvider = Provider<ProgressRepositoryInterface>((ref) {
 ///
 /// Invalidate with [ref.invalidate(progressHomeProvider)] after a
 /// pull-to-refresh or after mutating goals/streaks.
+///
+/// Uses the never-error pattern: catches all exceptions and returns
+/// empty data so the UI always reaches the `data:` branch.
 final progressHomeProvider = FutureProvider<ProgressHomeData>((ref) async {
   final repo = ref.read(progressRepositoryProvider);
-  return repo.getProgressHome();
+  try {
+    return await repo.getProgressHome();
+  } catch (_) {
+    return const ProgressHomeData(
+      goals: [],
+      streaks: [],
+      wow: WoWSummary(weekLabel: '', metrics: []),
+      recentAchievements: [],
+    );
+  }
 });
 
 // ── Goals ─────────────────────────────────────────────────────────────────────
@@ -46,9 +58,16 @@ final progressHomeProvider = FutureProvider<ProgressHomeData>((ref) async {
 /// Async provider for the full list of user goals.
 ///
 /// Invalidate with [ref.invalidate(goalsProvider)] after any CRUD operation.
+///
+/// Uses the never-error pattern: catches all exceptions and returns
+/// an empty list so the UI always reaches the `data:` branch.
 final goalsProvider = FutureProvider<GoalList>((ref) async {
   final repo = ref.read(progressRepositoryProvider);
-  return repo.getGoals();
+  try {
+    return await repo.getGoals();
+  } catch (_) {
+    return const GoalList(goals: []);
+  }
 });
 
 /// Transient state: the ID of the goal currently being viewed/edited.
@@ -63,9 +82,16 @@ final selectedGoalIdProvider = StateProvider<String?>((ref) => null);
 ///
 /// Invalidate with [ref.invalidate(achievementsProvider)] after a
 /// pull-to-refresh.
+///
+/// Uses the never-error pattern: catches all exceptions and returns
+/// an empty list so the UI always reaches the `data:` branch.
 final achievementsProvider = FutureProvider<AchievementList>((ref) async {
   final repo = ref.read(progressRepositoryProvider);
-  return repo.getAchievements();
+  try {
+    return await repo.getAchievements();
+  } catch (_) {
+    return const AchievementList(achievements: []);
+  }
 });
 
 // ── Weekly Report ─────────────────────────────────────────────────────────────
@@ -74,9 +100,21 @@ final achievementsProvider = FutureProvider<AchievementList>((ref) async {
 ///
 /// Invalidate with [ref.invalidate(weeklyReportProvider)] after a
 /// pull-to-refresh.
+///
+/// Uses the never-error pattern: catches all exceptions and returns
+/// an empty report so the UI always reaches the `data:` branch.
 final weeklyReportProvider = FutureProvider<WeeklyReport>((ref) async {
   final repo = ref.read(progressRepositoryProvider);
-  return repo.getWeeklyReport();
+  try {
+    return await repo.getWeeklyReport();
+  } catch (_) {
+    return const WeeklyReport(
+      id: '',
+      periodStart: '',
+      periodEnd: '',
+      cards: [],
+    );
+  }
 });
 
 // ── Journal ───────────────────────────────────────────────────────────────────
@@ -85,7 +123,14 @@ final weeklyReportProvider = FutureProvider<WeeklyReport>((ref) async {
 ///
 /// Invalidate with [ref.invalidate(journalProvider)] after creating,
 /// editing, or deleting an entry.
+///
+/// Uses the never-error pattern: catches all exceptions and returns
+/// an empty page so the UI always reaches the `data:` branch.
 final journalProvider = FutureProvider<JournalPage>((ref) async {
   final repo = ref.read(progressRepositoryProvider);
-  return repo.getJournal();
+  try {
+    return await repo.getJournal();
+  } catch (_) {
+    return const JournalPage(entries: [], hasMore: false);
+  }
 });

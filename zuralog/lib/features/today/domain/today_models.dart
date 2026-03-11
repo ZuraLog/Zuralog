@@ -106,7 +106,7 @@ class HealthScoreData {
     }
     final rawInputs = json['inputs'] as List<dynamic>? ?? [];
     return HealthScoreData(
-      score: (json['score'] as num).toInt(),
+      score: (json['score'] as num?)?.toInt() ?? 0,
       trend: trend,
       commentary: json['commentary'] as String?,
       dataDays: (json['data_days'] as num?)?.toInt() ?? 0,
