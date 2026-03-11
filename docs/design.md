@@ -905,8 +905,9 @@ Light mode is a first-class theme. It mirrors dark mode's information density bu
 
 **Rules:**
 - Category colors are identical in both themes and require no `Light`/`Dark` suffix.
-- `AppColors.primary` (Sage Green `#CFE1B9`) is the same in both modes. In light mode, `AppColors.primaryOnLight` (`#344E41`) is used instead for WCAG AA contrast.
+- `AppColors.primary` (Sage Green `#CFE1B9`) is the same in both modes. In light mode, `AppColors.primaryOnLight` (`#354E42`) is used instead for WCAG AA contrast.
 - Widget files must never use raw hex — always reference `AppColors.*` constants.
+- Prefer `AppColorsOf(context).propertyName` over manual `isDark ? dark : light` branching. The `AppColorsOf` class resolves the correct light/dark token automatically based on the current theme brightness.
 
 ---
 
