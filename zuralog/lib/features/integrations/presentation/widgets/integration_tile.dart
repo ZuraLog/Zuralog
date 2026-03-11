@@ -157,7 +157,7 @@ class _StatusControl extends ConsumerWidget {
       case IntegrationStatus.error:
         return Icon(
           Icons.error_outline_rounded,
-          color: AppColors.accentLight,
+          color: AppColorsOf(context).accent,
           size: AppDimens.iconMd,
         );
 
@@ -304,7 +304,7 @@ class _SoonBadge extends StatelessWidget {
       child: Text(
         'Soon',
         style: AppTextStyles.caption.copyWith(
-          color: AppColors.textSecondary,
+          color: AppColorsOf(context).textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -345,7 +345,7 @@ class _IncompatibleBadge extends StatelessWidget {
       child: Text(
         label,
         style: AppTextStyles.caption.copyWith(
-          color: AppColors.textSecondary,
+          color: AppColorsOf(context).textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
