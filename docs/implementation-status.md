@@ -1,9 +1,95 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX polish; inactivity timeout + scroll-to-bottom button)  
+**Last Updated:** 2026-03-11 (Phase 10.8 — Flutter Layout Refactor: centralized theme, ZuralogScaffold, 33 screens migrated, 10 bugs fixed)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Flutter Layout Refactor (feat/flutter-layout-refactor, 2026-03-11)
+
+**Scope:** Centralized theme system, layout shell, shared component library, and migration of all 33 feature screens to eliminate hardcoded backgrounds, inconsistent SafeArea, and duplicated components.  
+**Branch:** `feat/flutter-layout-refactor`  
+**Key commits:** `95a32c4`, `0cffef3`, `cbb8db4`, `c2743d5`, `6d5d9f6`, `684d391`, `9b1c218`, `22fdfb1`, `33e2448`, `164555d`, `9c646f9`, `de27da5`, `e0aa0f4`, `5b1d753`, `c56e6c4`, `bcb5f35`
+
+**Files changed:**
+- **Theme & Colors:** `zuralog/lib/core/theme/app_colors.dart`, `app_text_styles.dart`, `app_theme.dart`
+- **Shared Components (12 new):** `zuralog/lib/shared/widgets/zuralog_scaffold.dart`, `zfade_slide_in.dart`, `zloading_skeleton.dart`, `zbutton.dart`, `zempty_state.dart`, `zerror_state.dart`, `zavatar.dart`, `zbadge.dart`, `zdivider.dart`, `zuralog_app_bar.dart` (updated), `category_colors.dart`
+- **Feature Screens (33 migrated across 8 batches):** Today (3), Data (5), Coach (4), Progress (11), Trends (4), Settings (11), Profile (1), Auth/Onboarding (2)
+- **Layout Shell:** `zuralog/lib/core/widgets/app_shell.dart` (frosted nav bar updated)
+
+**What was built:**
+
+1. **New color palette** — Dark mode: `#2D2D2D` (brand charcoal, warmer than OLED black); Light mode: `#FAFAF5` (brand cream). Matches website design system. Updated `docs/design.md` to reflect new palette.
+
+2. **Typography expansion** — `AppTextStyles` expanded from 7 to 11 styles: `displayLarge`, `displayMedium`, `headlineLarge`, `headlineMedium`, `titleLarge`, `titleMedium`, `bodyLarge`, `bodyMedium`, `labelLarge`, `labelMedium`, `labelSmall`. Old names (`heading1`, `heading2`, `body`, `caption`) kept as deprecated forwarding aliases to zero screen-level migration breakage.
+
+3. **ZuralogScaffold layout shell** — New `ZuralogScaffold` widget eliminates per-screen SafeArea and background color errors permanently. Accepts `body`, optional `appBar`, optional `floatingActionButton`, and `useSafeArea` (default true). Full-bleed screens (welcome, onboarding slideshow) set `useSafeArea: false` to preserve manual inset control for gradient/hero screens.
+
+4. **ZuralogAppBar theme-aware fix** — Previously hardcoded dark background. Now reads `Theme.of(context).brightness` and applies correct background color for both light and dark modes.
+
+5. **Shared component library (12 new):**
+   - `ZFadeSlideIn` — Fade + slide animation (replaces 2 private copies)
+   - `ZLoadingSkeleton` — Shimmer skeleton box (replaces 2 private copies)
+   - `ZButton` — Unified button component with variants (primary, secondary, tertiary)
+   - `ZEmptyState` — Standardized empty state with icon, title, subtitle
+   - `ZErrorState` — Standardized error state with retry action
+   - `ZAvatar` — User avatar with initials fallback
+   - `ZBadge` — Status badge component
+   - `ZDivider` — Theme-aware divider
+   - `categoryColorFromString(String slug)` — Centralized category color utility (replaces 8+ private copies)
+
+6. **Fixed 10 bugs:**
+   - OLED-black-off-brand background (dark mode now `#2D2D2D`)
+   - Hardcoded AppBar dark background (now theme-aware)
+   - ~58 screens with hardcoded `backgroundColor: AppColors.backgroundDark` (now use `ZuralogScaffold`)
+   - No layout shell (created `ZuralogScaffold`)
+   - Inconsistent SafeArea across screens (centralized in `ZuralogScaffold`)
+   - Tooltip clipping on onboarding (fixed boundary detection and auto-flip)
+   - 8+ copies of `_categoryColor()` (consolidated to `categoryColorFromString()`)
+   - 2 copies of `_FadeSlideIn` (consolidated to `ZFadeSlideIn`)
+   - 2 copies of `_SkeletonBox` (consolidated to `ZLoadingSkeleton`)
+   - Content clipped behind BottomNavBar on 5 screens (fixed via `ZuralogScaffold` padding)
+
+7. **Screen migration (33 screens across 8 batches):**
+   - **Batch 1 (Today):** `today_feed_screen.dart`, `insight_detail_screen.dart`, `notification_history_screen.dart`
+   - **Batch 2 (Data):** `health_dashboard_screen.dart`, `category_detail_screen.dart`, `metric_detail_screen.dart`, `time_range_selector.dart`, `data_sources_screen.dart`
+   - **Batch 3 (Coach):** `new_chat_screen.dart`, `chat_thread_screen.dart`, `conversation_drawer.dart`, `quick_actions_sheet.dart`
+   - **Batch 4 (Progress):** `progress_home_screen.dart`, `goals_screen.dart`, `goal_detail_screen.dart`, `goal_create_edit_sheet.dart`, `achievements_screen.dart`, `weekly_report_screen.dart`, `journal_screen.dart`, `streak_card.dart`, `milestone_celebration_card.dart`, `achievement_card.dart`, `goal_card.dart`
+   - **Batch 5 (Trends):** `trends_home_screen.dart`, `correlations_screen.dart`, `reports_screen.dart`, `data_sources_screen.dart`
+   - **Batch 6 (Settings ×11):** `settings_hub_screen.dart`, `account_settings_screen.dart`, `notification_settings_screen.dart`, `appearance_settings_screen.dart`, `coach_settings_screen.dart`, `integrations_settings_screen.dart`, `privacy_data_settings_screen.dart`, `subscription_settings_screen.dart`, `about_settings_screen.dart`, `profile_screen.dart`, `emergency_card_screen.dart`
+   - **Batch 7 (Profile):** `profile_screen.dart`
+   - **Batch 8 (Auth/Onboarding):** `onboarding_flow_screen.dart`, `auth_screens.dart`
+
+8. **AppShell frosted nav bar update** — Updated to use theme colors instead of hardcoded values.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| ZuralogScaffold as layout shell | Eliminates per-screen SafeArea and background errors permanently. Single source of truth for layout insets and background color. |
+| `useSafeArea: false` for full-bleed screens | Welcome and onboarding slideshow need full-bleed gradients/hero images. Manual inset control via `Padding` is preserved for these screens. |
+| Deprecated style names kept as forwarding aliases | Zero screen-level migration breakage. Old code continues to work; new code uses new names. Aliases can be removed in a future cleanup phase. |
+| Dark mode `#2D2D2D` instead of `#000000` | Brand charcoal matches website design system. Warmer than OLED black, reducing eye strain in dark mode. |
+| `textSecondary` replaced with `colorScheme.onSurfaceVariant` | Correct WCAG AA contrast in both light and dark modes. Material 3 design system alignment. |
+| Centralized `categoryColorFromString()` | Single source of truth for category colors. Eliminates 8+ private copies scattered across screens. Easier to maintain and update. |
+
+**Test results:**
+- `flutter analyze`: zero issues
+- `flutter test`: 267 passing, 16 pre-existing failures unchanged
+
+**Metrics:**
+- New files created: 12 (shared components + category_colors.dart)
+- Files modified: ~47 (screens + widgets + theme files)
+- Screens with hardcoded scaffold background: 0 (was ~58)
+- Screens missing SafeArea: 0 (was inconsistent)
+- Screens with clipped bottom content: 0 (was 5)
+- Shared `categoryColor` utility copies: 1 (was 8+)
+- `ZFadeSlideIn` copies: 1 (was 2)
+- `ZLoadingSkeleton` copies: 1 (was 2)
+- Shared component library size: 12 new components (was 0)
+- Typography styles: 11 (was 7, with 7 deprecated forwarding aliases)
 
 ---
 

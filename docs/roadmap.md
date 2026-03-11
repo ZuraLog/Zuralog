@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-10 (Phase 10.7 — Coach chat UX: thinking state, inactivity timeout, smart auto-scroll + scroll-to-bottom button, regenerate in long-press)
+**Last Updated:** 2026-03-11 (Phase 10.8 — Flutter Layout Refactor: centralized theme, ZuralogScaffold, 33 screens migrated, 10 bugs fixed)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -334,6 +334,19 @@ End-to-end fix making the Coach tab's AI chat work against the production backen
 | P0 | Inactivity timeout — surface error when connection goes silent | ✅ Done | 10-minute inactivity timer in `CoachChatNotifier`; resets on every server event (token/tool/complete/error); fires only if connection is completely silent; matches OpenAI SDK default |
 | P0 | Smart auto-scroll — follow bottom, pause when scrolled up | ✅ Done | 80 px threshold; pauses on user scroll-up; floating scroll-to-bottom arrow button (sage green) fades in when user scrolls up; tapping it scrolls back down and clears the flag |
 | P1 | Regenerate moved to long-press sheet | ✅ Done | Standalone button removed; long-press last AI message → Copy + Regenerate |
+
+---
+
+## Phase 10.8 — Flutter Layout Refactor (`feat/flutter-layout-refactor`)
+
+> **Branch:** `feat/flutter-layout-refactor` — completed 2026-03-11
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Phase 1: Foundation — color palette, typography, shared component library | ✅ Done | New dark #2D2D2D bg, light #FAFAF5 bg; 11 typography styles (was 7, 7 deprecated with forwarding); 12 new shared components |
+| P0 | Phase 2: Layout shell — AppBar fix, AppShell update, tooltip boundary detection | ✅ Done | ZuralogScaffold created; ZuralogAppBar now theme-aware; frosted nav bar uses theme colors; tooltip auto-flip |
+| P0 | Phase 3A–3H: Migrate all 33 screens to ZuralogScaffold | ✅ Done | Today, Data, Coach, Progress, Trends, Settings ×11, Profile, Auth/Onboarding — all migrated |
+| P0 | Phase 4: Cleanup — remove private duplicates, verify zero regressions | ✅ Done | All private _categoryColor(String), _FadeSlideIn, _SkeletonBox copies confirmed removed; flutter analyze: zero issues; 267 tests passing |
 
 ---
 
