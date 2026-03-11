@@ -104,7 +104,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         child: asyncGoals.when(
           loading: () => const _LoadingState(),
           error: (err, _) => ZErrorState(
-            message: err.toString(),
+            message: 'Something went wrong. Please try again.',
             onRetry: () => ref.invalidate(goalsProvider),
           ),
           data: (goalList) {
