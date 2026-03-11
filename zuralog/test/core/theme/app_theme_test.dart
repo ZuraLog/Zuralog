@@ -26,7 +26,7 @@ void main() {
       expect(light.scaffoldBackgroundColor, AppColors.backgroundLight);
     });
 
-    test('primary color is primaryOnLight (Deep Forest #344E41)', () {
+    test('primary color is primaryOnLight (Deep Forest #354E42)', () {
       // Light mode uses primaryOnLight for WCAG AA contrast on light surfaces.
       // Sage Green (#CFE1B9) is too pale on white backgrounds.
       expect(light.colorScheme.primary, AppColors.primaryOnLight);
