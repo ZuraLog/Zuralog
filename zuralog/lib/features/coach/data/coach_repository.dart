@@ -5,6 +5,7 @@
 /// real-time streaming, and the [MockCoachRepository] stub for tests.
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 
 // ── Stream Events ─────────────────────────────────────────────────────────────
@@ -260,28 +261,28 @@ final class MockCoachRepository implements CoachRepository {
         id: 'qa1',
         title: 'Log Sleep',
         subtitle: 'Tell me how you slept last night',
-        icon: 0xe3ab,
+        icon: IconData(0xe3ab, fontFamily: 'MaterialIcons'),
         prompt: 'I want to log my sleep from last night.',
       ),
       QuickAction(
         id: 'qa2',
         title: 'Log Workout',
         subtitle: 'Describe your training session',
-        icon: 0xe3b2,
+        icon: IconData(0xe3b2, fontFamily: 'MaterialIcons'),
         prompt: 'I want to log a workout I just completed.',
       ),
       QuickAction(
         id: 'qa3',
         title: 'Log Mood',
         subtitle: 'How are you feeling right now?',
-        icon: 0xe5c8,
+        icon: IconData(0xe5c8, fontFamily: 'MaterialIcons'),
         prompt: 'I want to log my current mood and energy level.',
       ),
       QuickAction(
         id: 'qa4',
         title: 'Weekly Check-in',
         subtitle: 'Review your week with me',
-        icon: 0xe5d0,
+        icon: IconData(0xe5d0, fontFamily: 'MaterialIcons'),
         prompt: 'Let\'s do a weekly health check-in and review my progress.',
       ),
     ];

@@ -4,7 +4,7 @@
 /// conversations, messages, prompt suggestions, quick actions.
 library;
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 // ── Conversation ──────────────────────────────────────────────────────────────
 
@@ -208,8 +208,8 @@ class QuickAction {
   /// Descriptive subtitle (e.g., "Tell me how you slept last night").
   final String subtitle;
 
-  /// Material icon code point for the action icon.
-  final int icon;
+  /// Material icon to display for this action.
+  final IconData icon;
 
   /// The pre-filled chat prompt that is auto-sent when the action is tapped.
   final String prompt;
