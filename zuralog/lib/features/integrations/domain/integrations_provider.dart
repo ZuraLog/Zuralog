@@ -549,6 +549,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
             '[IntegrationsNotifier] Backend disconnect failed for '
             '$integrationId: $e\n$st',
           );
+          return false;
         }),
       );
     }
