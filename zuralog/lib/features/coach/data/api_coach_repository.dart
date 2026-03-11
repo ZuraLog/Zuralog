@@ -15,6 +15,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
@@ -25,46 +26,49 @@ import 'package:zuralog/features/coach/domain/coach_models.dart';
 // ── Icon name → Material code point mapping ───────────────────────────────────
 
 /// Maps Material icon name strings (as returned by the backend) to their
-/// corresponding code points for use with [IconData].
+/// corresponding [IconData] values.
 ///
 /// The backend returns string names (e.g. ``"bedtime"``); the Flutter
-/// [QuickAction] model stores int code points. Unknown names fall back to
+/// [QuickAction] model stores [IconData]. Unknown names fall back to
 /// [_kDefaultIcon].
-const _kDefaultIcon = 0xe8b6; // Icons.help_outline_rounded
+///
+/// Every value is a compile-time constant so Flutter can tree-shake unused
+/// Material Icons glyphs during release builds.
+const _kDefaultIcon = IconData(0xe8b6, fontFamily: 'MaterialIcons');
 
-const Map<String, int> _kIconMap = {
-  'wb_sunny': 0xe430,
-  'bedtime': 0xe3ab,
-  'nights_stay': 0xf1b1,
-  'hotel': 0xe3a5,
-  'flag': 0xe153,
-  'water_drop': 0xf09e,
-  'sentiment_satisfied': 0xe24d,
-  'sentiment_very_satisfied': 0xe24e,
-  'directions_run': 0xe0a8,
-  'fitness_center': 0xe3b2,
-  'track_changes': 0xe3a3,
-  'restaurant': 0xe56c,
-  'calendar_today': 0xe0a7,
-  'insights': 0xf09c,
-  'emoji_events': 0xea23,
-  'summarize': 0xf071,
-  'help_outline': 0xe8b6,
-  'mood': 0xe5c8,
-  'check_circle': 0xe5d0,
-  'edit_note': 0xf0e7,
-  'monitor_heart': 0xf5c7,
-  'self_improvement': 0xea78,
-  'local_fire_department': 0xef55,
-  'bar_chart': 0xe0b6,
-  'trending_up': 0xe3f8,
-  'timer': 0xe425,
-  'psychology': 0xea4a,
-  'medication': 0xf8ff,
-  'scale': 0xf065,
+const Map<String, IconData> _kIconMap = {
+  'wb_sunny': IconData(0xe430, fontFamily: 'MaterialIcons'),
+  'bedtime': IconData(0xe3ab, fontFamily: 'MaterialIcons'),
+  'nights_stay': IconData(0xf1b1, fontFamily: 'MaterialIcons'),
+  'hotel': IconData(0xe3a5, fontFamily: 'MaterialIcons'),
+  'flag': IconData(0xe153, fontFamily: 'MaterialIcons'),
+  'water_drop': IconData(0xf09e, fontFamily: 'MaterialIcons'),
+  'sentiment_satisfied': IconData(0xe24d, fontFamily: 'MaterialIcons'),
+  'sentiment_very_satisfied': IconData(0xe24e, fontFamily: 'MaterialIcons'),
+  'directions_run': IconData(0xe0a8, fontFamily: 'MaterialIcons'),
+  'fitness_center': IconData(0xe3b2, fontFamily: 'MaterialIcons'),
+  'track_changes': IconData(0xe3a3, fontFamily: 'MaterialIcons'),
+  'restaurant': IconData(0xe56c, fontFamily: 'MaterialIcons'),
+  'calendar_today': IconData(0xe0a7, fontFamily: 'MaterialIcons'),
+  'insights': IconData(0xf09c, fontFamily: 'MaterialIcons'),
+  'emoji_events': IconData(0xea23, fontFamily: 'MaterialIcons'),
+  'summarize': IconData(0xf071, fontFamily: 'MaterialIcons'),
+  'help_outline': IconData(0xe8b6, fontFamily: 'MaterialIcons'),
+  'mood': IconData(0xe5c8, fontFamily: 'MaterialIcons'),
+  'check_circle': IconData(0xe5d0, fontFamily: 'MaterialIcons'),
+  'edit_note': IconData(0xf0e7, fontFamily: 'MaterialIcons'),
+  'monitor_heart': IconData(0xf5c7, fontFamily: 'MaterialIcons'),
+  'self_improvement': IconData(0xea78, fontFamily: 'MaterialIcons'),
+  'local_fire_department': IconData(0xef55, fontFamily: 'MaterialIcons'),
+  'bar_chart': IconData(0xe0b6, fontFamily: 'MaterialIcons'),
+  'trending_up': IconData(0xe3f8, fontFamily: 'MaterialIcons'),
+  'timer': IconData(0xe425, fontFamily: 'MaterialIcons'),
+  'psychology': IconData(0xea4a, fontFamily: 'MaterialIcons'),
+  'medication': IconData(0xf8ff, fontFamily: 'MaterialIcons'),
+  'scale': IconData(0xf065, fontFamily: 'MaterialIcons'),
 };
 
-int _resolveIcon(String? iconName) {
+IconData _resolveIcon(String? iconName) {
   if (iconName == null) return _kDefaultIcon;
   return _kIconMap[iconName] ?? _kDefaultIcon;
 }

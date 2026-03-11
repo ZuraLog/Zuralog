@@ -1565,7 +1565,7 @@ class _QuickActionTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Icon(
-              IconData(action.icon, fontFamily: 'MaterialIcons'),
+              action.icon,
               size: 24,
               color: AppColors.primary,
             ),
