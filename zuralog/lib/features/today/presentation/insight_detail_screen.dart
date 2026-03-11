@@ -30,6 +30,7 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── InsightDetailScreen ───────────────────────────────────────────────────────
 
@@ -176,20 +177,11 @@ class _DetailBody extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: categoryColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(
-                                AppDimens.radiusSm,
-                              ),
-                            ),
-                            child: Icon(
-                              _insightIcon(detail.type),
-                              size: 24,
-                              color: categoryColor,
-                            ),
+                          ZIconBadge(
+                            icon: _insightIcon(detail.type),
+                            color: categoryColor,
+                            size: 48,
+                            iconSize: 24,
                           ),
                           const SizedBox(width: AppDimens.spaceMd),
                           Expanded(
@@ -449,35 +441,18 @@ class _DetailBody extends ConsumerWidget {
 
 // ── _PressScaleButton ─────────────────────────────────────────────────────────
 
-/// Wraps any widget with a 0.96× press-scale effect.
-class _PressScaleButton extends StatefulWidget {
+/// Wraps any widget with a spring press-scale effect.
+class _PressScaleButton extends StatelessWidget {
   const _PressScaleButton({required this.child, required this.onPressed});
 
   final Widget child;
   final VoidCallback onPressed;
 
   @override
-  State<_PressScaleButton> createState() => _PressScaleButtonState();
-}
-
-class _PressScaleButtonState extends State<_PressScaleButton> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onPressed();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.96 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: widget.child,
-      ),
+    return ZuralogSpringButton(
+      onTap: onPressed,
+      child: child,
     );
   }
 }

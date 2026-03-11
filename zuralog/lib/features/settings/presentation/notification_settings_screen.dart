@@ -28,6 +28,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -597,15 +598,7 @@ class _ToggleRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: Icon(icon, size: 20, color: iconColor),
-          ),
+          ZIconBadge(icon: icon, color: iconColor),
           const SizedBox(width: AppDimens.spaceMd),
           Expanded(
             child: Column(
@@ -834,15 +827,7 @@ class _TimePickerRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(icon, size: 20, color: iconColor),
-            ),
+            ZIconBadge(icon: icon, color: iconColor),
             const SizedBox(width: AppDimens.spaceMd),
             Expanded(
               child: Text(

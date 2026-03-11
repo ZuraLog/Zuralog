@@ -209,32 +209,17 @@ class _AppIdentityHero extends StatelessWidget {
 
 // ── _WhatsNewChip ──────────────────────────────────────────────────────────────
 
-class _WhatsNewChip extends StatefulWidget {
+class _WhatsNewChip extends StatelessWidget {
   const _WhatsNewChip();
 
   @override
-  State<_WhatsNewChip> createState() => _WhatsNewChipState();
-}
-
-class _WhatsNewChipState extends State<_WhatsNewChip> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        _showSnackBar(context, "What's New in 1.0.0");
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+    return ZuralogSpringButton(
+      onTap: () => _showSnackBar(context, "What's New in 1.0.0"),
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: _pressed
-              ? AppColors.primary.withValues(alpha: 0.25)
-              : AppColors.primary.withValues(alpha: 0.12),
+          color: AppColors.primary.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
         ),
         child: Row(

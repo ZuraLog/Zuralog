@@ -165,8 +165,6 @@ class _NotificationRow extends ConsumerStatefulWidget {
 }
 
 class _NotificationRowState extends ConsumerState<_NotificationRow> {
-  bool _pressed = false;
-
   @override
   void initState() {
     super.initState();
@@ -185,19 +183,12 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
   Widget build(BuildContext context) {
     final isRead = widget.item.isRead;
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
+    return ZuralogSpringButton(
+      onTap: () {
         ref.read(hapticServiceProvider).light();
         widget.onTap();
       },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        child: ClipRRect(
+      child: ClipRRect(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -297,7 +288,6 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
             ],
           ),
         ),
-      ),
     );
   }
 }

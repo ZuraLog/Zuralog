@@ -426,30 +426,15 @@ class _TierBadge extends StatelessWidget {
 
 // ── _EmergencyCardBanner ───────────────────────────────────────────────────────
 
-class _EmergencyCardBanner extends StatefulWidget {
-  @override
-  State<_EmergencyCardBanner> createState() => _EmergencyCardBannerState();
-}
-
-class _EmergencyCardBannerState extends State<_EmergencyCardBanner> {
-  bool _pressed = false;
-
+class _EmergencyCardBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        context.pushNamed(RouteNames.emergencyCard);
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+    return ZuralogSpringButton(
+      onTap: () => context.pushNamed(RouteNames.emergencyCard),
+      child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: _pressed
-              ? AppColors.categoryHeart.withValues(alpha: 0.18)
-              : AppColors.categoryHeart.withValues(alpha: 0.12),
+          color: AppColors.categoryHeart.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           border:
               Border.all(color: AppColors.categoryHeart.withValues(alpha: 0.35)),
@@ -474,7 +459,7 @@ class _EmergencyCardBannerState extends State<_EmergencyCardBanner> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                    Text(
+                  Text(
                     'Emergency Health Card',
                     style: AppTextStyles.titleMedium.copyWith(
                       color: AppColors.textPrimaryDark,
