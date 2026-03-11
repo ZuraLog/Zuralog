@@ -254,16 +254,6 @@ class _PersonaCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // Selection check.
-                      AnimatedOpacity(
-                        opacity: isSelected ? 1 : 0,
-                        duration: const Duration(milliseconds: 200),
-                        child: const Icon(
-                          Icons.check_circle_rounded,
-                          color: AppColors.primary,
-                          size: AppDimens.iconMd,
-                        ),
-                      ),
                     ],
                   ),
                 ),
