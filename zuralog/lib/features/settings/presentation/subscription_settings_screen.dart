@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
 
@@ -27,13 +28,11 @@ class SubscriptionSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isPro = ref.watch(_isProProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title app bar ─────────────────────────────────────────────
           SliverAppBar(
-            backgroundColor: AppColors.backgroundDark,
             expandedHeight: 100,
             pinned: true,
             elevation: 0,
@@ -47,7 +46,7 @@ class SubscriptionSettingsScreen extends ConsumerWidget {
               title: Text(
                 'Subscription',
                 style:
-                    AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+                    AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
               ),
             ),
           ),
@@ -133,7 +132,7 @@ class _CurrentPlanCard extends StatelessWidget {
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(
                   isPro ? 'Zuralog Pro' : 'Zuralog Free',
-                  style: AppTextStyles.h3
+                  style: AppTextStyles.titleMedium
                       .copyWith(color: AppColors.textPrimaryDark),
                 ),
               ],
@@ -164,7 +163,7 @@ class _CurrentPlanCard extends StatelessWidget {
             // Renewal info
             Text(
               'Free forever \u2014 no credit card required',
-              style: AppTextStyles.caption
+              style: AppTextStyles.bodySmall
                   .copyWith(color: AppColors.textTertiary),
             ),
           ],
@@ -200,7 +199,7 @@ class _PlanBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.caption.copyWith(
+        style: AppTextStyles.bodySmall.copyWith(
           color: textColor,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.4,
@@ -283,7 +282,7 @@ class _UpgradeCard extends StatelessWidget {
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(
                   'Zuralog Pro',
-                  style: AppTextStyles.h3
+                  style: AppTextStyles.titleMedium
                       .copyWith(color: AppColors.textPrimaryDark),
                 ),
               ],
@@ -296,12 +295,12 @@ class _UpgradeCard extends StatelessWidget {
             Text(
               '\$9.99 / month',
               style:
-                  AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+                  AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
             ),
             const SizedBox(height: AppDimens.spaceXs),
             Text(
               'or \$79.99/year (save 33%)',
-              style: AppTextStyles.caption
+              style: AppTextStyles.bodySmall
                   .copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppDimens.spaceMd),
@@ -350,7 +349,7 @@ class _UpgradeCard extends StatelessWidget {
                 ),
                 child: Text(
                   'Upgrade to Pro',
-                  style: AppTextStyles.h3
+                  style: AppTextStyles.titleMedium
                       .copyWith(color: AppColors.primaryButtonText),
                 ),
               ),
@@ -361,7 +360,7 @@ class _UpgradeCard extends StatelessWidget {
             Center(
               child: Text(
                 'Cancel anytime',
-                style: AppTextStyles.caption
+                style: AppTextStyles.bodySmall
                     .copyWith(color: AppColors.textTertiary),
               ),
             ),
@@ -471,13 +470,13 @@ class _TapRowState extends State<_TapRow> {
                 children: [
                   Text(
                     widget.title,
-                    style: AppTextStyles.body
+                    style: AppTextStyles.bodyLarge
                         .copyWith(color: AppColors.textPrimaryDark),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.subtitle,
-                    style: AppTextStyles.caption
+                    style: AppTextStyles.bodySmall
                         .copyWith(color: AppColors.textSecondary),
                   ),
                 ],
@@ -513,7 +512,7 @@ class _SectionHeader extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.labelXs.copyWith(
+        style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,

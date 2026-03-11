@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── TermsOfServiceScreen ───────────────────────────────────────────────────────
 
@@ -20,17 +22,8 @@ class TermsOfServiceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'Terms of Service',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
-        ),
-      ),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(title: 'Terms of Service'),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -200,7 +193,7 @@ class _TermsHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
         ),
         const SizedBox(height: AppDimens.spaceXs),
         Text(
@@ -231,7 +224,7 @@ class _TermsSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
@@ -257,7 +250,7 @@ class _TermsFooter extends StatelessWidget {
     return Center(
       child: Text(
         '© 2026 Zuralog, Inc. All rights reserved.',
-        style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
         textAlign: TextAlign.center,
       ),
     );

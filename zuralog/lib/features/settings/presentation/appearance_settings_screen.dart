@@ -27,6 +27,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/theme/theme_provider.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip_provider.dart';
 
 // ── AppearanceSettingsScreen ───────────────────────────────────────────────────
@@ -51,15 +52,12 @@ class AppearanceSettingsScreen extends ConsumerWidget {
         ref.watch(tooltipsEnabledProvider).valueOrNull ?? true;
 
     final cs = Theme.of(context).colorScheme;
-    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
 
-    return Scaffold(
-      backgroundColor: scaffoldBg,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title app bar ───────────────────────────────────────────
           SliverAppBar(
-            backgroundColor: scaffoldBg,
             expandedHeight: 100,
             pinned: true,
             elevation: 0,
@@ -72,7 +70,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
               collapseMode: CollapseMode.parallax,
               title: Text(
                 'Appearance',
-                style: AppTextStyles.h2.copyWith(color: cs.onSurface),
+                style: AppTextStyles.displaySmall.copyWith(color: cs.onSurface),
               ),
             ),
           ),
@@ -236,12 +234,12 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.body.copyWith(color: cs.onSurface),
+                  style: AppTextStyles.bodyLarge.copyWith(color: cs.onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: AppTextStyles.caption
+                  style: AppTextStyles.bodySmall
                       .copyWith(color: AppColors.textSecondary),
                 ),
               ],
@@ -318,12 +316,12 @@ class _TapRowState extends State<_TapRow> {
                 children: [
                   Text(
                     widget.title,
-                    style: AppTextStyles.body.copyWith(color: cs.onSurface),
+                    style: AppTextStyles.bodyLarge.copyWith(color: cs.onSurface),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.subtitle,
-                    style: AppTextStyles.caption
+                    style: AppTextStyles.bodySmall
                         .copyWith(color: AppColors.textSecondary),
                   ),
                 ],
@@ -441,7 +439,7 @@ class _ThemeOptionCard extends StatelessWidget {
               const SizedBox(height: AppDimens.spaceXs),
               Text(
                 label,
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: selected ? cs.primary : AppColors.textSecondary,
                   fontWeight:
                       selected ? FontWeight.w600 : FontWeight.w400,

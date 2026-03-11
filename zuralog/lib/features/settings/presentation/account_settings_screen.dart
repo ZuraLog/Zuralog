@@ -13,6 +13,8 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -27,17 +29,8 @@ class AccountSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'Account',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
-        ),
-      ),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(title: 'Account'),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
         children: [
@@ -196,7 +189,7 @@ class _ProfileSummaryCard extends StatelessWidget {
             child: Center(
               child: Text(
                 'U',
-                style: AppTextStyles.h2.copyWith(
+                style: AppTextStyles.displaySmall.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
                 ),
@@ -210,14 +203,14 @@ class _ProfileSummaryCard extends StatelessWidget {
               children: [
                 Text(
                   'User',
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.textPrimaryDark,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'user@example.com',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -336,12 +329,12 @@ class _AccountTileState extends State<_AccountTile> {
                 children: [
                   Text(
                     widget.title,
-                    style: AppTextStyles.body.copyWith(color: titleColor),
+                    style: AppTextStyles.bodyLarge.copyWith(color: titleColor),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.subtitle,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -357,7 +350,7 @@ class _AccountTileState extends State<_AccountTile> {
                 ),
                 child: Text(
                   widget.trailingLabel!,
-                  style: AppTextStyles.labelXs.copyWith(
+                  style: AppTextStyles.labelSmall.copyWith(
                     color: widget.trailingColor,
                     fontWeight: FontWeight.w600,
                   ),
@@ -415,7 +408,7 @@ class _UnitsTile extends ConsumerWidget {
               children: [
                 Text(
                   'Units',
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.bodyLarge.copyWith(
                     color: AppColors.textPrimaryDark,
                   ),
                 ),
@@ -424,7 +417,7 @@ class _UnitsTile extends ConsumerWidget {
                   current == UnitsSystem.metric
                       ? 'Metric (km, kg, °C)'
                       : 'Imperial (mi, lb, °F)',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -529,7 +522,7 @@ class _Segment extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTextStyles.labelXs.copyWith(
+          style: AppTextStyles.labelSmall.copyWith(
             color: selected ? AppColors.primary : AppColors.textSecondary,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
@@ -601,7 +594,7 @@ class _GoalsEditorSheet extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: Text(
               'Health Goals',
-              style: AppTextStyles.h2.copyWith(
+              style: AppTextStyles.displaySmall.copyWith(
                 color: AppColors.textPrimaryDark,
               ),
             ),
@@ -671,7 +664,7 @@ class _GoalsEditorSheet extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               label,
-                              style: AppTextStyles.caption.copyWith(
+                              style: AppTextStyles.bodySmall.copyWith(
                                 color: isSelected
                                     ? AppColors.primary
                                     : AppColors.textSecondary,
@@ -707,7 +700,7 @@ class _GoalsEditorSheet extends ConsumerWidget {
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   'Save Goals',
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.primaryButtonText,
                   ),
                 ),
@@ -761,7 +754,7 @@ void _showLinkAppleSheet(BuildContext context) {
           const SizedBox(height: AppDimens.spaceMd),
           Text(
             'Link Apple ID',
-            style: AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
@@ -784,7 +777,7 @@ void _showLinkAppleSheet(BuildContext context) {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Continue with Apple',
-                style: AppTextStyles.h3.copyWith(color: AppColors.primaryButtonText),
+                style: AppTextStyles.titleMedium.copyWith(color: AppColors.primaryButtonText),
               ),
             ),
           ),
@@ -825,17 +818,17 @@ void _showSimpleFormSheet(
             Text(
               title,
               style:
-                  AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+                  AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
             ),
             const SizedBox(height: AppDimens.spaceMd),
             TextField(
               autofocus: true,
               keyboardType: keyboardType,
               obscureText: obscureText,
-              style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryDark),
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimaryDark),
               decoration: InputDecoration(
                 labelText: fieldLabel,
-                labelStyle: AppTextStyles.caption
+                labelStyle: AppTextStyles.bodySmall
                     .copyWith(color: AppColors.textSecondary),
                 filled: true,
                 fillColor: AppColors.surfaceDark,
@@ -862,7 +855,7 @@ void _showSimpleFormSheet(
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   actionLabel,
-                  style: AppTextStyles.h3
+                  style: AppTextStyles.titleMedium
                       .copyWith(color: AppColors.primaryButtonText),
                 ),
               ),
@@ -886,7 +879,7 @@ void _showDeleteAccountDialog(BuildContext context) {
       ),
       title: Text(
         'Delete Account?',
-        style: AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+        style: AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
       ),
       content: Text(
         'This will permanently delete all your health data, conversations, '
@@ -898,7 +891,7 @@ void _showDeleteAccountDialog(BuildContext context) {
           onPressed: () => Navigator.pop(context),
           child: Text(
             'Cancel',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
           ),
         ),
         TextButton(
@@ -919,7 +912,7 @@ void _showDeleteAccountDialog(BuildContext context) {
           },
           child: Text(
             'Delete',
-            style: AppTextStyles.body.copyWith(
+            style: AppTextStyles.bodyLarge.copyWith(
               color: AppColors.statusError,
               fontWeight: FontWeight.w600,
             ),

@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── PrivacyPolicyScreen ────────────────────────────────────────────────────────
 
@@ -20,17 +22,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'Privacy Policy',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
-        ),
-      ),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(title: 'Privacy Policy'),
       body: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
@@ -172,7 +165,7 @@ class _PolicyHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
         ),
         const SizedBox(height: AppDimens.spaceXs),
         Text(
@@ -203,7 +196,7 @@ class _PolicySection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
@@ -229,7 +222,7 @@ class _PolicyFooter extends StatelessWidget {
     return Center(
       child: Text(
         '© 2026 Zuralog, Inc. All rights reserved.',
-        style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
         textAlign: TextAlign.center,
       ),
     );

@@ -21,6 +21,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 // ── Persona Data Model ────────────────────────────────────────────────────────
 
@@ -159,20 +160,17 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
     final selectedSuggestedPrompts = prefs?.suggestedPromptsEnabled ?? true;
     final selectedVoiceInput = prefs?.voiceInputEnabled ?? true;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title header ─────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 100,
             pinned: true,
-            backgroundColor: AppColors.backgroundDark,
-            surfaceTintColor: AppColors.backgroundDark,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 'Coach',
-                style: AppTextStyles.h2.copyWith(
+                style: AppTextStyles.displaySmall.copyWith(
                   color: AppColors.textPrimaryDark,
                 ),
               ),
@@ -199,7 +197,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   // Section label
                   Text(
                     'AI PERSONA',
-                    style: AppTextStyles.labelXs.copyWith(
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.textTertiary,
                       letterSpacing: 0.8,
                       fontWeight: FontWeight.w600,
@@ -265,7 +263,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   // Section label
                   Text(
                     'PROACTIVITY',
-                    style: AppTextStyles.labelXs.copyWith(
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.textTertiary,
                       letterSpacing: 0.8,
                       fontWeight: FontWeight.w600,
@@ -317,7 +315,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   // Section label
                   Text(
                     'RESPONSE LENGTH',
-                    style: AppTextStyles.labelXs.copyWith(
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.textTertiary,
                       letterSpacing: 0.8,
                       fontWeight: FontWeight.w600,
@@ -360,7 +358,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
               ),
               child: Text(
                 'PREFERENCES',
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                   color: AppColors.textTertiary,
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w600,
@@ -381,7 +379,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                     SwitchListTile(
                       title: Text(
                         'Suggested Prompts',
-                        style: AppTextStyles.h3.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       ),
@@ -411,7 +409,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                     SwitchListTile(
                       title: Text(
                         'Voice Input',
-                        style: AppTextStyles.h3.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       ),
@@ -548,7 +546,7 @@ class _PersonaCard extends StatelessWidget {
                     children: [
                       Text(
                         persona.label,
-                        style: AppTextStyles.h3.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       ),
@@ -675,7 +673,7 @@ class _ProactivityChip extends StatelessWidget {
             child: Center(
               child: Text(
                 option.label,
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: isSelected
                       ? AppColors.primaryButtonText
                       : AppColors.textSecondaryDark,
@@ -717,7 +715,7 @@ class _SaveButton extends StatelessWidget {
         ),
         child: Text(
           'Save Preferences',
-          style: AppTextStyles.h3.copyWith(
+          style: AppTextStyles.titleMedium.copyWith(
             color: AppColors.primaryButtonText,
           ),
         ),

@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain models
@@ -149,16 +150,13 @@ class IntegrationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title app bar ────────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 100,
             pinned: true,
-            backgroundColor: AppColors.backgroundDark,
-            surfaceTintColor: AppColors.backgroundDark,
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,
               titlePadding: const EdgeInsets.only(
@@ -167,7 +165,7 @@ class IntegrationsScreen extends ConsumerWidget {
               ),
               title: Text(
                 'Integrations',
-                style: AppTextStyles.h2.copyWith(
+                style: AppTextStyles.displaySmall.copyWith(
                   color: AppColors.textPrimaryDark,
                 ),
               ),
@@ -252,7 +250,7 @@ class _SectionHeader extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTextStyles.labelXs.copyWith(
+          style: AppTextStyles.labelSmall.copyWith(
             color: AppColors.textTertiary,
             letterSpacing: 0.8,
             fontWeight: FontWeight.w600,
@@ -308,7 +306,7 @@ class _ConnectedCard extends StatelessWidget {
                         children: [
                           Text(
                             integration.name,
-                            style: AppTextStyles.h3.copyWith(
+                            style: AppTextStyles.titleMedium.copyWith(
                               color: AppColors.textPrimaryDark,
                             ),
                           ),
@@ -321,7 +319,7 @@ class _ConnectedCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'Last synced ${integration.lastSynced}',
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -397,7 +395,7 @@ class _AvailableCard extends StatelessWidget {
                 children: [
                   Text(
                     integration.name,
-                    style: AppTextStyles.h3.copyWith(
+                    style: AppTextStyles.titleMedium.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
@@ -459,7 +457,7 @@ class _ComingSoonRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   integration.name,
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.textPrimaryDark,
                   ),
                 ),
@@ -531,7 +529,7 @@ class _PlatformBadge extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             label,
-            style: AppTextStyles.labelXs.copyWith(
+            style: AppTextStyles.labelSmall.copyWith(
               color: AppColors.textTertiary,
             ),
           ),
@@ -572,7 +570,7 @@ class _StatusIndicator extends StatelessWidget {
         const SizedBox(width: AppDimens.spaceXs),
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
       ],
     );
@@ -599,7 +597,7 @@ class _ConnectButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
         ),
-        textStyle: AppTextStyles.caption.copyWith(
+        textStyle: AppTextStyles.bodySmall.copyWith(
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -618,7 +616,7 @@ class _ConnectButton extends StatelessWidget {
         ),
         title: Text(
           'Connect $integrationName?',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
         ),
         content: Text(
           'This will open the OAuth flow to authorize Zuralog to read your $integrationName data.',
@@ -631,7 +629,7 @@ class _ConnectButton extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
               'Cancel',
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
@@ -643,7 +641,7 @@ class _ConnectButton extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
               ),
-              textStyle: AppTextStyles.caption.copyWith(
+              textStyle: AppTextStyles.bodySmall.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -670,7 +668,7 @@ class _ComingSoonChip extends StatelessWidget {
       ),
       child: Text(
         'Coming soon',
-        style: AppTextStyles.labelXs.copyWith(
+        style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.textTertiary,
           fontWeight: FontWeight.w600,
         ),
@@ -727,7 +725,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
                     children: [
                       Text(
                         integration.name,
-                        style: AppTextStyles.h3.copyWith(
+                        style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.textPrimaryDark,
                         ),
                       ),
@@ -755,7 +753,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
                 children: [
                   Text(
                     'SYNC DETAILS',
-                    style: AppTextStyles.labelXs.copyWith(
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: AppColors.textTertiary,
                       letterSpacing: 0.8,
                       fontWeight: FontWeight.w600,
@@ -795,7 +793,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
                 onPressed: () => _confirmDisconnect(context),
                 child: Text(
                   'Disconnect',
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.accentDark,
                   ),
                 ),
@@ -817,7 +815,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
         ),
         title: Text(
           'Disconnect ${integration.name}?',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
         ),
         content: Text(
           'Your historical data will be retained. You can reconnect at any time.',
@@ -830,7 +828,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
               'Cancel',
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
@@ -842,7 +840,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
             },
             child: Text(
               'Disconnect',
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.accentDark,
                 fontWeight: FontWeight.w600,
               ),

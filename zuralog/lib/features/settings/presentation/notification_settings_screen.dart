@@ -27,6 +27,8 @@ import 'package:zuralog/core/analytics/feature_flag_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
@@ -231,17 +233,8 @@ class _NotificationSettingsScreenState
           properties: {'setting': setting, 'enabled': enabled},
         );
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'Notifications',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
-        ),
-      ),
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(title: 'Notifications'),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
         children: [
@@ -533,7 +526,7 @@ class _SectionLabel extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: AppTextStyles.labelXs.copyWith(
+        style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
@@ -620,14 +613,14 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.bodyLarge.copyWith(
                     color: AppColors.textPrimaryDark,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -684,7 +677,7 @@ class _SubToggleRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -722,7 +715,7 @@ class _FrequencyRow extends StatelessWidget {
         children: [
           Text(
             'Max Reminders Per Day',
-            style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimaryDark),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Row(
@@ -788,7 +781,7 @@ class _FrequencyChip extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: selected ? AppColors.primary : AppColors.textSecondary,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
@@ -854,7 +847,7 @@ class _TimePickerRow extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textPrimaryDark,
                 ),
               ),
@@ -867,7 +860,7 @@ class _TimePickerRow extends StatelessWidget {
               ),
               child: Text(
                 formatted,
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w600,
                 ),

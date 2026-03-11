@@ -17,6 +17,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 /// Settings Hub — the top-level settings navigation screen.
 ///
@@ -39,13 +40,11 @@ class SettingsHubScreen extends ConsumerWidget {
       context.push(path);
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title app bar ──────────────────────────────────────────
           SliverAppBar(
-            backgroundColor: AppColors.backgroundDark,
             elevation: 0,
             scrolledUnderElevation: 0,
             pinned: true,
@@ -57,7 +56,7 @@ class SettingsHubScreen extends ConsumerWidget {
               ),
               title: Text(
                 'Settings',
-                style: AppTextStyles.h2.copyWith(
+                style: AppTextStyles.displaySmall.copyWith(
                   color: AppColors.textPrimaryDark,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
@@ -193,7 +192,7 @@ class _SectionHeader extends StatelessWidget {
         ),
         child: Text(
           title.toUpperCase(),
-          style: AppTextStyles.labelXs.copyWith(
+          style: AppTextStyles.labelSmall.copyWith(
             color: AppColors.textTertiary,
             letterSpacing: 0.8,
             fontWeight: FontWeight.w600,
@@ -308,14 +307,14 @@ class _SettingsTileState extends State<_SettingsTile> {
                 children: [
                   Text(
                     widget.title,
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.subtitle,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),

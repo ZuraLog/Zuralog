@@ -25,6 +25,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
 
@@ -59,15 +60,13 @@ class PrivacyDataScreen extends ConsumerWidget {
     final memoryItems = ref.watch(_memoryItemsProvider);
     final memoryNotifier = ref.read(_memoryItemsProvider.notifier);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title header ───────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 100,
             pinned: true,
-            backgroundColor: AppColors.backgroundDark,
             scrolledUnderElevation: 0,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
@@ -78,7 +77,7 @@ class PrivacyDataScreen extends ConsumerWidget {
               ),
               title: Text(
                 'Privacy & Data',
-                style: AppTextStyles.h2.copyWith(
+                style: AppTextStyles.displaySmall.copyWith(
                   color: AppColors.textPrimaryDark,
                 ),
               ),
@@ -390,7 +389,7 @@ class _ClearMemoryRow extends StatelessWidget {
         ),
         title: Text(
           'Clear All Memory?',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
         ),
         content: Text(
           'Your AI coach will lose all personalization context. '
@@ -404,7 +403,7 @@ class _ClearMemoryRow extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
@@ -413,7 +412,7 @@ class _ClearMemoryRow extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               'Clear All',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.accentDark,
                 fontWeight: FontWeight.w600,
               ),
@@ -458,7 +457,7 @@ class _ClearMemoryRow extends StatelessWidget {
             const SizedBox(width: AppDimens.spaceMd),
             Text(
               'Clear All Memory',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: enabled ? AppColors.accentDark : AppColors.textTertiary,
                 fontWeight: FontWeight.w500,
               ),
@@ -514,7 +513,7 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.bodyLarge.copyWith(
                     color: AppColors.textPrimaryDark,
                   ),
                 ),
@@ -522,7 +521,7 @@ class _ToggleRow extends StatelessWidget {
                 if (subtitleExtra != null) ...[
                   Text(
                     subtitleExtra!,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -530,7 +529,7 @@ class _ToggleRow extends StatelessWidget {
                 ],
                 Text(
                   subtitle,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textTertiary,
                   ),
                 ),
@@ -586,14 +585,14 @@ class _ExportDataRow extends StatelessWidget {
                 children: [
                   Text(
                     'Export Data',
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Coming soon',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -608,7 +607,7 @@ class _ExportDataRow extends StatelessWidget {
               ),
               child: Text(
                 'Soon',
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.secondaryDark,
                   fontWeight: FontWeight.w600,
                 ),
@@ -636,7 +635,7 @@ class _DeleteDataRow extends StatelessWidget {
         ),
         title: Text(
           'Delete All My Data?',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -644,7 +643,7 @@ class _DeleteDataRow extends StatelessWidget {
           children: [
             Text(
               'This action is permanent and cannot be undone.',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.accentDark,
                 fontWeight: FontWeight.w600,
               ),
@@ -664,7 +663,7 @@ class _DeleteDataRow extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.textSecondary,
               ),
             ),
@@ -673,7 +672,7 @@ class _DeleteDataRow extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               'Delete',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.accentDark,
                 fontWeight: FontWeight.w700,
               ),
@@ -718,14 +717,14 @@ class _DeleteDataRow extends StatelessWidget {
                 children: [
                   Text(
                     'Delete All My Data',
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.accentDark,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Permanently removes all health data',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -781,7 +780,7 @@ class _TapRow extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textPrimaryDark,
                 ),
               ),

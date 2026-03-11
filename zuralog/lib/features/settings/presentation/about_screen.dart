@@ -10,6 +10,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 // ── AboutScreen ───────────────────────────────────────────────────────────────
 
@@ -20,13 +21,11 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title app bar ─────────────────────────────────────────────
           SliverAppBar(
-            backgroundColor: AppColors.backgroundDark,
             expandedHeight: 100,
             pinned: true,
             elevation: 0,
@@ -40,7 +39,7 @@ class AboutScreen extends StatelessWidget {
               title: Text(
                 'About',
                 style:
-                    AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+                    AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
               ),
             ),
           ),
@@ -135,7 +134,7 @@ class AboutScreen extends StatelessWidget {
                   Text(
                     'Made with ❤️ for your health journey',
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textTertiary,
                     ),
                   ),
@@ -143,7 +142,7 @@ class AboutScreen extends StatelessWidget {
                   Text(
                     '© 2026 Zuralog. All rights reserved.',
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textTertiary,
                     ),
                   ),
@@ -187,14 +186,14 @@ class _AppIdentityHero extends StatelessWidget {
           // App name
           Text(
             'Zuralog',
-            style: AppTextStyles.h1.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.displayLarge.copyWith(color: AppColors.textPrimaryDark),
           ),
           const SizedBox(height: AppDimens.spaceXs),
 
           // Version string
           Text(
             'Version 1.0.0 (Build 42)',
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
@@ -249,7 +248,7 @@ class _WhatsNewChipState extends State<_WhatsNewChip> {
             const SizedBox(width: AppDimens.spaceXs),
             Text(
               "What's New",
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
@@ -279,7 +278,7 @@ class _SectionHeader extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.labelXs.copyWith(
+        style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
@@ -392,7 +391,7 @@ class _TapRowState extends State<_TapRow> {
                 children: [
                   Text(
                     widget.title,
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
@@ -400,7 +399,7 @@ class _TapRowState extends State<_TapRow> {
                     const SizedBox(height: 2),
                     Text(
                       widget.subtitle!,
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),
                     ),
