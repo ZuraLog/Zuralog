@@ -22,8 +22,7 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── ProgressHomeScreen ────────────────────────────────────────────────────────
 
@@ -76,7 +75,7 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
         onRefresh: _onRefresh,
         child: asyncData.when(
           loading: () => const _LoadingState(),
-          error: (error, _) => _ErrorState(
+          error: (error, _) => ZErrorState(
             message: 'Something went wrong. Please try again.',
             onRetry: () => ref.invalidate(progressHomeProvider),
           ),
@@ -85,8 +84,12 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
                 data.goals.isEmpty && data.streaks.isEmpty;
 
             if (isEmpty) {
-              return _EmptyState(
-                onSetGoal: () => context.push(RouteNames.goalsPath),
+              return ZEmptyState(
+                icon: Icons.flag_rounded,
+                title: 'Start your journey',
+                message: "Set a goal and I'll track your streaks and progress.",
+                actionLabel: 'Set First Goal',
+                onAction: () => context.push(RouteNames.goalsPath),
               );
             }
 
@@ -205,131 +208,6 @@ class _LoadingStateState extends State<_LoadingState>
           ],
         );
       },
-    );
-  }
-}
-
-// ── _ErrorState ───────────────────────────────────────────────────────────────
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: AppDimens.bottomClearance(context),
-      ),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.spaceLg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                size: 48,
-                color: AppColors.statusError,
-              ),
-              const SizedBox(height: AppDimens.spaceMd),
-              Text(
-                'Could not load progress',
-                style: AppTextStyles.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                message,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: AppDimens.spaceLg),
-              FilledButton(
-                onPressed: onRetry,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryButtonText,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusButton),
-                  ),
-                ),
-                child: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── _EmptyState ───────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onSetGoal});
-
-  final VoidCallback onSetGoal;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: AppDimens.bottomClearance(context),
-      ),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.spaceXl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.flag_rounded,
-                size: 64,
-                color: AppColors.primary.withValues(alpha: 0.6),
-              ),
-              const SizedBox(height: AppDimens.spaceMd),
-              Text('Start your journey', style: AppTextStyles.displaySmall),
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                'Set a goal and I\'ll track your streaks and progress.',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppDimens.spaceLg),
-              FilledButton(
-                onPressed: onSetGoal,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryButtonText,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceLg,
-                    vertical: AppDimens.spaceMd,
-                  ),
-                ),
-                child: Text(
-                  'Set First Goal',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: AppColors.primaryButtonText,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -18,9 +18,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
-import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── NotificationHistoryScreen ─────────────────────────────────────────────────
 
@@ -69,7 +67,11 @@ class NotificationHistoryScreen extends ConsumerWidget {
         child: notificationsAsync.when(
           data: (page) {
             if (page.items.isEmpty) {
-              return const _EmptyState();
+              return const ZEmptyState(
+                icon: Icons.notifications_none_rounded,
+                title: 'No notifications yet',
+                message: "You're all caught up.",
+              );
             }
             final grouped = _groupByDay(page.items);
             final dayKeys = grouped.keys.toList();
@@ -140,7 +142,8 @@ class NotificationHistoryScreen extends ConsumerWidget {
             );
           },
           loading: () => const _LoadingList(),
-          error: (e, _) => _ErrorState(
+          error: (e, _) => ZErrorState(
+            message: 'Could not load notifications',
             onRetry: () => ref.invalidate(notificationsProvider),
           ),
         ),
@@ -299,41 +302,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
   }
 }
 
-// ── Empty / Loading / Error states ───────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.notifications_none_rounded,
-            size: 56,
-            color: AppColors.textTertiary.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            'No notifications yet',
-            style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.textSecondaryDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "You're all caught up.",
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textTertiary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── Loading state ─────────────────────────────────────────────────────────────
 
 class _LoadingList extends StatelessWidget {
   const _LoadingList();
@@ -346,41 +315,6 @@ class _LoadingList extends StatelessWidget {
       itemBuilder: (_, i) => const Padding(
         padding: EdgeInsets.only(bottom: AppDimens.spaceSm),
         child: ZLoadingSkeleton(width: double.infinity, height: 72),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 48,
-            color: AppColors.textTertiary,
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            'Could not load notifications',
-            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textSecondaryDark),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          TextButton(
-            onPressed: onRetry,
-            child: Text(
-              'Retry',
-              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
-            ),
-          ),
-        ],
       ),
     );
   }

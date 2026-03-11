@@ -20,8 +20,7 @@ import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── GoalsScreen ───────────────────────────────────────────────────────────────
 
@@ -104,14 +103,20 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
         onRefresh: _onRefresh,
         child: asyncGoals.when(
           loading: () => const _LoadingState(),
-          error: (err, _) => _ErrorState(
+          error: (err, _) => ZErrorState(
             message: err.toString(),
             onRetry: () => ref.invalidate(goalsProvider),
           ),
           data: (goalList) {
             final goals = goalList.goals;
             if (goals.isEmpty) {
-              return _EmptyState(onAddGoal: _openCreateSheet);
+              return ZEmptyState(
+                icon: Icons.flag_rounded,
+                title: 'No goals yet',
+                message: "Create your first goal and I'll track your progress.",
+                actionLabel: 'Add your first goal',
+                onAction: _openCreateSheet,
+              );
             }
             return _GoalsList(
               goals: goals,
@@ -151,120 +156,6 @@ class _LoadingState extends StatelessWidget {
       child: CircularProgressIndicator(
         color: AppColors.primary,
         strokeWidth: 2.5,
-      ),
-    );
-  }
-}
-
-// ── _ErrorState ───────────────────────────────────────────────────────────────
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              size: 48,
-              color: AppColors.statusError,
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-              Text(
-                'Could not load goals',
-                style: AppTextStyles.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              message,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: AppDimens.spaceLg),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.primaryButtonText,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-                ),
-              ),
-              child: const Text('Try Again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── _EmptyState ───────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onAddGoal});
-
-  final VoidCallback onAddGoal;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceXl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.flag_rounded,
-              size: 64,
-              color: AppColors.primary.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text('No goals yet', style: AppTextStyles.displaySmall),
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                'Create your first goal and I\'ll track your progress.',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceLg),
-            FilledButton(
-              onPressed: onAddGoal,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.primaryButtonText,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceLg,
-                  vertical: AppDimens.spaceMd,
-                ),
-              ),
-              child: Text(
-                'Add your first goal',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.primaryButtonText,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
