@@ -23,6 +23,7 @@ import 'package:zuralog/features/data/domain/score_history_models.dart';
 import 'package:zuralog/features/data/providers/score_history_provider.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
+import 'package:zuralog/shared/widgets/health_score_zero_state.dart';
 
 // ── ScoreTrendHero ────────────────────────────────────────────────────────────
 
@@ -53,18 +54,25 @@ class ScoreTrendHero extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Compact score ring
+              // Compact score ring — or zero state when no data yet.
               scoreAsync.when(
+                // Provider never errors; safety-net shows zero state.
+                error: (err, stack) => const HealthScoreZeroState(),
                 loading: () => const SizedBox(
                   width: 48,
                   height: 48,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                error: (e, st) => const SizedBox(width: 48, height: 48),
-                data: (score) => HealthScoreWidget.compact(
-                  score: score.score,
-                  onTap: () => context.push(RouteNames.dataScoreBreakdownPath),
-                ),
+                data: (score) {
+                  if (score.dataDays == 0 && score.score == 0) {
+                    return const HealthScoreZeroState();
+                  }
+                  return HealthScoreWidget.compact(
+                    score: score.score,
+                    onTap: () =>
+                        context.push(RouteNames.dataScoreBreakdownPath),
+                  );
+                },
               ),
               const SizedBox(width: AppDimens.spaceMd),
               // Title + subtitle

@@ -53,11 +53,17 @@ class TrendsHomeScreen extends ConsumerWidget {
               "I'll surface correlations you'd never find on your own.",
         ),
       ),
+      // Provider never errors — safety-net error branch shows the empty state
+      // rather than any connection error message.
       body: trendsAsync.when(
-        loading: () => const _TrendsLoadingSkeleton(),
-        error: (e, _) => _TrendsErrorState(
-          onRetry: () => ref.invalidate(trendsHomeProvider),
+        error: (err, stack) => _TrendsHomeBody(
+          data: const TrendsHomeData(
+            correlationHighlights: [],
+            timePeriods: [],
+            hasEnoughData: false,
+          ),
         ),
+        loading: () => const _TrendsLoadingSkeleton(),
         data: (data) => _TrendsHomeBody(data: data),
       ),
     );
@@ -964,56 +970,4 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
   }
 }
 
-// ── Error State ───────────────────────────────────────────────────────────────
 
-class _TrendsErrorState extends StatelessWidget {
-  const _TrendsErrorState({required this.onRetry});
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: AppDimens.bottomClearance(context),
-      ),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.spaceLg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.wifi_off_rounded,
-                size: 40,
-                color: AppColors.textTertiary,
-              ),
-              const SizedBox(height: AppDimens.spaceMd),
-              Text('Could not load trends', style: AppTextStyles.titleMedium),
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                'Check your connection and try again.',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondaryDark,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppDimens.spaceLg),
-              FilledButton(
-                onPressed: onRetry,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryButtonText,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusButtonMd),
-                  ),
-                ),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

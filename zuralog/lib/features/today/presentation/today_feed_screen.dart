@@ -24,6 +24,7 @@ import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
+import 'package:zuralog/shared/widgets/health_score_zero_state.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
@@ -172,7 +173,21 @@ class TodayFeedScreen extends ConsumerWidget {
             ),
 
             // ── AI Insight cards ────────────────────────────────────────────
+            // Provider never errors — only loading and data branches needed.
             ...feedAsync.when(
+              // Safety net: provider catches all errors and returns empty data,
+              // so this branch should never be reached in practice.
+              error: (err, stack) => [const _EmptyInsightsCard()],
+              loading: () => [
+                const SizedBox(
+                  height: 120,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
               data: (feed) {
                 if (feed.insights.isEmpty) {
                   return [const _EmptyInsightsCard()];
@@ -196,25 +211,6 @@ class TodayFeedScreen extends ConsumerWidget {
                   ),
                 ).toList();
               },
-              loading: () => [
-                const SizedBox(
-                  height: 120,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-              error: (e, _) => [
-                Padding(
-                  padding: const EdgeInsets.all(AppDimens.spaceMd),
-                  child: _ErrorCard(
-                    message: 'Could not load insights.',
-                    onRetry: () => ref.invalidate(todayFeedProvider),
-                  ),
-                ),
-              ],
             ),
 
             // ── Section: Quick Actions ──────────────────────────────────────
@@ -333,87 +329,37 @@ class _HealthScoreHero extends ConsumerWidget {
               border: Border.all(color: AppColors.borderDark),
             ),
             child: scoreAsync.when(
-              data: (data) => Column(
-                children: [
-                  HealthScoreWidget.hero(
-                    score: data.score,
-                    trend: data.trend.isNotEmpty ? data.trend : null,
-                    commentary: data.commentary,
-                    onTap: () {
-                      ref.read(hapticServiceProvider).light();
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.healthScoreTapped,
-                      );
-                      context.go(RouteNames.dataPath);
-                    },
-                  ),
-                ],
-              ),
+              // Provider never errors — this branch is a safety net only.
+              error: (err, stack) => const HealthScoreZeroState(),
               loading: () => const SizedBox(
                 height: 120,
                 child: Center(
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
               ),
-              error: (_, st) => const _HealthScoreZeroState(),
+              data: (data) {
+                // No data yet — welcome the user instead of showing a 0 ring.
+                if (data.dataDays == 0 && data.score == 0) {
+                  return const HealthScoreZeroState();
+                }
+                return Column(
+                  children: [
+                    HealthScoreWidget.hero(
+                      score: data.score,
+                      trend: data.trend.isNotEmpty ? data.trend : null,
+                      commentary: data.commentary,
+                      onTap: () {
+                        ref.read(hapticServiceProvider).light();
+                        ref.read(analyticsServiceProvider).capture(
+                          event: AnalyticsEvents.healthScoreTapped,
+                        );
+                        context.go(RouteNames.dataPath);
+                      },
+                    ),
+                  ],
+                );
+              },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── _HealthScoreZeroState ──────────────────────────────────────────────────────
-
-/// Shown inside the Health Score hero when there is no score yet —
-/// i.e. a brand-new user with zero logged data.
-///
-/// Welcoming, not alarming. Explains what the score is and invites the
-/// user to start logging.
-class _HealthScoreZeroState extends StatelessWidget {
-  const _HealthScoreZeroState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
-      child: Column(
-        children: [
-          // Placeholder ring — muted, not error-red.
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.25),
-                width: 6,
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.favorite_border_rounded,
-                size: 28,
-                color: AppColors.primary.withValues(alpha: 0.6),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            'Your health score awaits',
-            style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.textPrimaryDark,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppDimens.spaceXs),
-          Text(
-            'Log your first data point or connect an\napp to see your daily score.',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1003,72 +949,7 @@ class _InsightActionRowState extends State<_InsightActionRow> {
   }
 }
 
-// ── _ErrorCard ────────────────────────────────────────────────────────────────
 
-class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: AppColors.borderDark),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.statusError.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: Icon(
-              Icons.wifi_off_rounded,
-              size: 18,
-              color: AppColors.statusError.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: onRetry,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-              ),
-              child: Text(
-                'Retry',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

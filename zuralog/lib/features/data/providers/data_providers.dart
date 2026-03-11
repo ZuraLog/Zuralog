@@ -35,10 +35,18 @@ final dataRepositoryProvider = Provider<DataRepositoryInterface>((ref) {
 
 /// Async provider for the aggregated Health Dashboard data.
 ///
+/// Never puts the UI into an error state. All failures resolve to an empty
+/// [DashboardData] so the dashboard always reaches the [data:] branch and
+/// renders the appropriate empty state instead of a connection error.
+///
 /// Invalidate with [ref.invalidate(dashboardProvider)] after a pull-to-refresh.
 final dashboardProvider = FutureProvider<DashboardData>((ref) async {
   final repo = ref.watch(dataRepositoryProvider);
-  return repo.getDashboard();
+  try {
+    return await repo.getDashboard();
+  } catch (_) {
+    return const DashboardData(categories: [], visibleOrder: []);
+  }
 });
 
 // ── Category Detail ───────────────────────────────────────────────────────────

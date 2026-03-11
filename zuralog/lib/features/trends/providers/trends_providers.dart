@@ -41,11 +41,23 @@ final trendsRepositoryProvider = Provider<TrendsRepositoryInterface>((ref) {
 
 /// Async provider for the aggregated Trends Home screen data.
 ///
+/// Never puts the UI into an error state. All failures resolve to an empty
+/// [TrendsHomeData] so the screen always reaches the [data:] branch and
+/// renders the appropriate empty state instead of a connection error.
+///
 /// Invalidate with [ref.invalidate(trendsHomeProvider)] after a
 /// pull-to-refresh.
 final trendsHomeProvider = FutureProvider<TrendsHomeData>((ref) async {
   final repo = ref.read(trendsRepositoryProvider);
-  return repo.getTrendsHome();
+  try {
+    return await repo.getTrendsHome();
+  } catch (_) {
+    return const TrendsHomeData(
+      correlationHighlights: [],
+      timePeriods: [],
+      hasEnoughData: false,
+    );
+  }
 });
 
 // ── Available Metrics ─────────────────────────────────────────────────────────

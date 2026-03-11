@@ -268,7 +268,20 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
             ),
 
             // ── Category cards ───────────────────────────────────────────────
+            // Provider never errors — safety-net error branch falls through
+            // to empty data, same as a zero-data response.
             dashAsync.when(
+              error: (err, stack) => SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
+                    AppDimens.spaceMd,
+                    AppDimens.bottomClearance(context),
+                  ),
+                  child: const _CategoriesEmptyState(),
+                ),
+              ),
               loading: () => SliverMainAxisGroup(
                 slivers: [
                   SliverList(
@@ -289,35 +302,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                     ),
                   ),
                 ],
-              ),
-              error: (e, st) => SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: AppDimens.bottomClearance(context),
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppDimens.spaceLg),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.cloud_off_rounded,
-                            size: 40,
-                            color: AppColors.textTertiary,
-                          ),
-                          const SizedBox(height: AppDimens.spaceSm),
-                           Text(
-                             'Could not load data',
-                             style: AppTextStyles.bodyLarge.copyWith(
-                               color: AppColors.textSecondary,
-                             ),
-                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ),
               data: (dashboard) {
                 // Build ordered visible list from layout.
