@@ -9,6 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
+/// Vertical padding for the tile row — intentionally off-grid (not 8 or 16)
+/// to match the visual rhythm of platform settings lists.
+const double _kVerticalPadding = 14.0;
+
 /// A settings-style list tile with an icon badge, title, optional subtitle,
 /// and optional trailing widget or chevron.
 ///
@@ -88,10 +92,11 @@ class ZSettingsTile extends StatelessWidget {
 
     return ZuralogSpringButton(
       onTap: onTap,
+      disabled: onTap == null,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
-          vertical: 14,
+          vertical: _kVerticalPadding,
         ),
         child: Row(
           children: [
