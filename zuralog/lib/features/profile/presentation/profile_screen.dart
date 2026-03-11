@@ -11,9 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -210,12 +208,13 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final profile = ref.watch(_profileStateProvider);
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceLg),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -244,17 +243,17 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceDark,
+                  color: colors.surface,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.backgroundDark,
+                    color: colors.background,
                     width: 2,
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.camera_alt_rounded,
                   size: 14,
-                  color: AppColors.textSecondaryDark,
+                  color: colors.textSecondary,
                 ),
               ),
             ],
@@ -278,7 +277,7 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
                   Text(
                     profile.displayName,
                     style: AppTextStyles.displaySmall.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(width: AppDimens.spaceXs),
@@ -297,7 +296,7 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
           Text(
             profile.email,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
           ),
 
@@ -338,13 +337,14 @@ class _NameEditRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       children: [
         Expanded(
           child: TextField(
             controller: controller,
             autofocus: true,
-            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
             cursorColor: AppColors.primary,
             decoration: InputDecoration(
               isDense: true,
@@ -353,7 +353,7 @@ class _NameEditRow extends StatelessWidget {
                 vertical: AppDimens.spaceSm,
               ),
               filled: true,
-              fillColor: AppColors.inputBackgroundDark,
+              fillColor: colors.inputBackground,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppDimens.radiusInput),
                 borderSide: BorderSide.none,
@@ -386,35 +386,37 @@ class _TierBadge extends StatelessWidget {
 
   final String tier;
 
-  Color get _color {
+  Color _color(AppColorsOf colors) {
     switch (tier) {
       case 'Pro':
         return AppColors.primary;
       case 'Premium':
         return AppColors.categoryMobility;
       default:
-        return AppColors.textSecondary;
+        return colors.textSecondary;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final tierColor = _color(colors);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.15),
+        color: tierColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-        border: Border.all(color: _color.withValues(alpha: 0.35)),
+        border: Border.all(color: tierColor.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.star_rounded, size: 11, color: _color),
+          Icon(Icons.star_rounded, size: 11, color: tierColor),
           const SizedBox(width: 3),
           Text(
             tier,
             style: AppTextStyles.bodySmall.copyWith(
-              color: _color,
+              color: tierColor,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -431,6 +433,7 @@ class _EmergencyCardBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ZuralogSpringButton(
       onTap: () => context.pushNamed(RouteNames.emergencyCard),
       child: Container(
@@ -457,14 +460,14 @@ class _EmergencyCardBanner extends StatelessWidget {
                   Text(
                     'Emergency Health Card',
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Blood type, allergies, medications & emergency contacts',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ],
@@ -490,16 +493,17 @@ class _AccountGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
         children: [
           ZSettingsTile(
             icon: Icons.settings_rounded,
-            iconColor: AppColors.textSecondary,
+            iconColor: colors.textSecondary,
             title: 'Settings',
             subtitle: 'Notifications, appearance, coach & more',
             onTap: () => context.pushNamed(RouteNames.settings),
@@ -533,10 +537,11 @@ class _ActivityStatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: const Row(
@@ -561,6 +566,7 @@ class _StatColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       children: [
         Text(
@@ -571,7 +577,7 @@ class _StatColumn extends StatelessWidget {
         Text(
           label,
           style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
       ],
@@ -584,10 +590,11 @@ class _StatDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       height: 36,
       width: 1,
-      color: AppColors.borderDark.withValues(alpha: 0.5),
+      color: colors.border.withValues(alpha: 0.5),
     );
   }
 }
@@ -597,12 +604,13 @@ class _StatDivider extends StatelessWidget {
 class _SignOutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.accentDark,
-          side: BorderSide(color: AppColors.accentDark.withValues(alpha: 0.5)),
+          foregroundColor: colors.accent,
+          side: BorderSide(color: colors.accent.withValues(alpha: 0.5)),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
@@ -614,10 +622,10 @@ class _SignOutButton extends StatelessWidget {
               content: Text(
                 'Sign out',
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
-              backgroundColor: AppColors.surfaceDark,
+              backgroundColor: colors.surface,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppDimens.radiusSm),
@@ -628,7 +636,7 @@ class _SignOutButton extends StatelessWidget {
         child: Text(
           'Sign Out',
           style: AppTextStyles.bodyLarge.copyWith(
-            color: AppColors.accentDark,
+            color: colors.accent,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -644,11 +652,12 @@ class _Divider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.only(left: 68),
       child: Container(
         height: 1,
-        color: AppColors.borderDark.withValues(alpha: 0.5),
+        color: colors.border.withValues(alpha: 0.5),
       ),
     );
   }

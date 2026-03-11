@@ -17,9 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/profile/domain/emergency_card_models.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -269,10 +267,11 @@ class _BloodTypeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Row(
@@ -310,7 +309,7 @@ class _BloodTypeCard extends StatelessWidget {
               Text(
                 bloodType,
                 style: AppTextStyles.displayLarge.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
             ],
@@ -340,10 +339,11 @@ class _MedicalSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -391,6 +391,7 @@ class _MedTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -401,7 +402,7 @@ class _MedTag extends StatelessWidget {
       child: Text(
         label,
         style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textPrimaryDark,
+          color: colors.textPrimary,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -418,9 +419,10 @@ class _ContactsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -463,7 +465,7 @@ class _ContactsSection extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 68),
                     child: Container(
                       height: 1,
-                      color: AppColors.borderDark.withValues(alpha: 0.5),
+                      color: colors.border.withValues(alpha: 0.5),
                     ),
                   ),
               ],
@@ -491,6 +493,7 @@ class _ContactRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: contact.phone.isNotEmpty ? _call : null,
       child: Padding(
@@ -524,14 +527,14 @@ class _ContactRow extends StatelessWidget {
                   Text(
                     contact.name,
                     style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     contact.relationship,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ],

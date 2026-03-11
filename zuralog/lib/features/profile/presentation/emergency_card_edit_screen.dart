@@ -10,9 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/profile/domain/emergency_card_models.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 import 'emergency_card_screen.dart' show emergencyCardProvider;
@@ -90,15 +88,16 @@ class _EmergencyCardEditScreenState
           ),
         );
 
+    final colors = AppColorsOf(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           'Emergency card saved',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colors.textPrimary,
           ),
         ),
-        backgroundColor: AppColors.surfaceDark,
+        backgroundColor: colors.surface,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusSm),
@@ -257,6 +256,7 @@ class _BloodTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Wrap(
       spacing: AppDimens.spaceSm,
       runSpacing: AppDimens.spaceSm,
@@ -270,20 +270,20 @@ class _BloodTypeSelector extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? AppColors.categoryHeart
-                  : AppColors.cardBackgroundDark,
+                  : colors.cardBackground,
               borderRadius: BorderRadius.circular(AppDimens.radiusInput),
               border: Border.all(
                 color: isSelected
                     ? AppColors.categoryHeart
-                    : AppColors.borderDark,
+                    : colors.border,
               ),
             ),
             child: Text(
               type,
               style: AppTextStyles.bodyLarge.copyWith(
                 color: isSelected
-                    ? AppColors.backgroundDark
-                    : AppColors.textPrimaryDark,
+                    ? colors.background
+                    : colors.textPrimary,
                 fontWeight:
                     isSelected ? FontWeight.w700 : FontWeight.w400,
               ),
@@ -316,10 +316,11 @@ class _TagEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -347,7 +348,7 @@ class _TagEditor extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                   cursorColor: AppColors.primary,
                   decoration: InputDecoration(
@@ -361,7 +362,7 @@ class _TagEditor extends StatelessWidget {
                       vertical: AppDimens.spaceSm,
                     ),
                     filled: true,
-                    fillColor: AppColors.inputBackgroundDark,
+                    fillColor: colors.inputBackground,
                     border: OutlineInputBorder(
                       borderRadius:
                           BorderRadius.circular(AppDimens.radiusInput),
@@ -402,6 +403,7 @@ class _RemovableTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.only(left: 12, right: 6, top: 5, bottom: 5),
       decoration: BoxDecoration(
@@ -415,7 +417,7 @@ class _RemovableTag extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -484,10 +486,11 @@ class _ContactEditorState extends State<_ContactEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -517,7 +520,7 @@ class _ContactEditorState extends State<_ContactEditor> {
               Text(
                 'Contact ${widget.index + 1}',
                 style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -571,12 +574,13 @@ class _ContactField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       onChanged: onChanged,
       style: AppTextStyles.bodyMedium.copyWith(
-        color: AppColors.textPrimaryDark,
+        color: colors.textPrimary,
       ),
       cursorColor: AppColors.primary,
       decoration: InputDecoration(
@@ -590,7 +594,7 @@ class _ContactField extends StatelessWidget {
           vertical: AppDimens.spaceSm,
         ),
         filled: true,
-        fillColor: AppColors.inputBackgroundDark,
+        fillColor: colors.inputBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusInput),
           borderSide: BorderSide.none,
