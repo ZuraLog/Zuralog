@@ -18,11 +18,9 @@
 /// - [dataSourcesProvider]              — async data sources list
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
-import 'package:zuralog/features/trends/data/mock_trends_repository.dart';
 import 'package:zuralog/features/trends/data/trends_repository.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 
@@ -30,10 +28,9 @@ import 'package:zuralog/features/trends/domain/trends_models.dart';
 
 /// Singleton [TrendsRepositoryInterface] wired to the shared [apiClientProvider].
 ///
-/// In debug builds, returns [MockTrendsRepository] so every Trends screen
-/// renders correctly without a live backend connection.
+/// Always uses the real [TrendsRepository] backed by the Cloud Brain API.
+/// Mock repositories are available for unit tests via provider overrides.
 final trendsRepositoryProvider = Provider<TrendsRepositoryInterface>((ref) {
-  if (kDebugMode) return const MockTrendsRepository();
   return TrendsRepository(apiClient: ref.read(apiClientProvider));
 });
 

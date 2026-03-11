@@ -15,7 +15,6 @@ library;
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
@@ -29,11 +28,9 @@ import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 /// Provides the live [ApiCoachRepository].
 ///
-/// In debug builds (`kDebugMode`) a [MockCoachRepository] is returned so the
-/// Coach tab works without a running backend.
+/// Always uses the real [ApiCoachRepository] backed by the Cloud Brain API.
 /// Override in tests with [MockCoachRepository].
 final coachRepositoryProvider = Provider<CoachRepository>((ref) {
-  if (kDebugMode) return const MockCoachRepository();
   return ApiCoachRepository(
     apiClient: ref.watch(apiClientProvider),
     secureStorage: ref.watch(secureStorageProvider),

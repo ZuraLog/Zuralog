@@ -12,22 +12,20 @@
 /// - [dashboardLayoutProvider]      — mutable dashboard card order/visibility
 library;
 
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/data/data/data_repository.dart';
-import 'package:zuralog/features/data/data/mock_data_repository.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
 /// Singleton [DataRepositoryInterface] wired to the shared [apiClientProvider].
 ///
-/// In debug builds (`kDebugMode`) a [MockDataRepository] is returned so the
-/// Data tab renders correctly without a running backend.
+/// Always uses the real [DataRepository] backed by the Cloud Brain API.
+/// Mock repositories are available for unit tests via provider overrides.
 final dataRepositoryProvider = Provider<DataRepositoryInterface>((ref) {
-  if (kDebugMode) return const MockDataRepository();
   return DataRepository(apiClient: ref.read(apiClientProvider));
 });
 

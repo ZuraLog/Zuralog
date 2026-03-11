@@ -13,11 +13,9 @@
 /// - [todayBannerSessionDismissed]    — whether the "still building" banner was dismissed this session
 library;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
-import 'package:zuralog/features/today/data/mock_today_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
@@ -25,10 +23,9 @@ import 'package:zuralog/features/today/domain/today_models.dart';
 
 /// Singleton [TodayRepositoryInterface] wired to the shared [apiClientProvider].
 ///
-/// In debug builds (`kDebugMode`) a [MockTodayRepository] is returned so the
-/// Today tab renders correctly without a running backend.
+/// Always uses the real [TodayRepository] backed by the Cloud Brain API.
+/// Mock repositories are available for unit tests via provider overrides.
 final todayRepositoryProvider = Provider<TodayRepositoryInterface>((ref) {
-  if (kDebugMode) return const MockTodayRepository();
   return TodayRepository(apiClient: ref.read(apiClientProvider));
 });
 

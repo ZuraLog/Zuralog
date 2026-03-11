@@ -19,9 +19,6 @@ import 'package:zuralog/features/analytics/domain/daily_summary.dart';
 import 'package:zuralog/features/analytics/domain/weekly_trends.dart';
 import 'package:zuralog/features/analytics/domain/dashboard_insight.dart';
 
-/// Placeholder user ID used until authentication is fully wired.
-const String _mockUserId = 'mock-user';
-
 /// Repository for fetching analytics data from the Cloud Brain.
 ///
 /// All public methods throw [DioException] on network errors unless a
@@ -66,7 +63,7 @@ class AnalyticsRepository {
     try {
       final response = await _apiClient.get(
         '/api/v1/analytics/daily-summary',
-        queryParameters: {'user_id': _mockUserId, 'date_str': dateStr},
+        queryParameters: {'date_str': dateStr},
       );
 
       final summary = DailySummary.fromJson(
@@ -97,7 +94,6 @@ class AnalyticsRepository {
   Future<WeeklyTrends> getWeeklyTrends() async {
     final response = await _apiClient.get(
       '/api/v1/analytics/weekly-trends',
-      queryParameters: {'user_id': _mockUserId},
     );
 
     return WeeklyTrends.fromJson(response.data as Map<String, dynamic>);
@@ -115,10 +111,16 @@ class AnalyticsRepository {
   Future<DashboardInsight> getDashboardInsight() async {
     final response = await _apiClient.get(
       '/api/v1/analytics/dashboard-insight',
-      queryParameters: {'user_id': _mockUserId},
     );
 
     return DashboardInsight.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Clears all in-memory caches.
+  ///
+  /// Called on logout so the next user session starts fresh.
+  void invalidateAll() {
+    _dailySummaryCache.clear();
   }
 
   /// Formats a [DateTime] as an ISO-8601 date string (`YYYY-MM-DD`).
