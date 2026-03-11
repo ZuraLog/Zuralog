@@ -17,6 +17,7 @@ export 'indicators/status_indicator.dart';
 export 'indicators/z_icon_badge.dart';
 export 'inputs/app_text_field.dart';
 export 'layout/section_header.dart';
+export 'list/z_settings_tile.dart';
 export 'layout/zuralog_scaffold.dart';
 export 'loading/z_loading_skeleton.dart';
 export 'profile_side_panel.dart';
