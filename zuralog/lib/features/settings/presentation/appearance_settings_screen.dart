@@ -211,6 +211,7 @@ class _ToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -232,7 +233,7 @@ class _ToggleRow extends StatelessWidget {
                 Text(
                   subtitle,
                   style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary),
+                      .copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -311,6 +312,7 @@ class _ThemeOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -348,7 +350,7 @@ class _ThemeOptionCard extends StatelessWidget {
               Text(
                 label,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: selected ? cs.primary : AppColors.textSecondary,
+                  color: selected ? cs.primary : colors.textSecondary,
                   fontWeight:
                       selected ? FontWeight.w600 : FontWeight.w400,
                 ),

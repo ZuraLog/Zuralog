@@ -54,6 +54,7 @@ class UserHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final email = ref.watch(userEmailProvider);
     final profile = ref.watch(userProfileProvider);
 
@@ -99,7 +100,7 @@ class UserHeader extends ConsumerWidget {
                   Text(
                     email,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -109,7 +110,7 @@ class UserHeader extends ConsumerWidget {
                 Text(
                   memberSince,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],
@@ -150,6 +151,7 @@ class _AvatarWithBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final badgeBackground =
         isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
@@ -198,7 +200,7 @@ class _AvatarWithBadge extends StatelessWidget {
                 child: Icon(
                   Icons.camera_alt_rounded,
                   size: _kBadgeSize * 0.55,
-                  color: AppColors.textSecondary,
+                  color: colors.textSecondary,
                 ),
               ),
             ),
