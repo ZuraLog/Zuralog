@@ -29,9 +29,9 @@ abstract final class AppColors {
   /// Deep Forest Green — Primary color for light mode only.
   ///
   /// Sage Green (#CFE1B9) has insufficient contrast (~1.4:1) on white
-  /// backgrounds. Deep Forest (#344E41) passes WCAG AA on white while
+  /// backgrounds. Deep Forest (#354E42) passes WCAG AA on white while
   /// remaining on-brand. Used as [ColorScheme.primary] in light theme.
-  static const Color primaryOnLight = Color(0xFF344E41);
+  static const Color primaryOnLight = Color(0xFF354E42);
 
   /// Sage Dark — Pressed states on primary elements.
   static const Color primaryDark = Color(0xFFA8C68A);
@@ -243,4 +243,54 @@ abstract final class AppColors {
 
   /// Shimmer highlight color — light mode (20% black overlay on light surface).
   static const Color shimmerHighlightLight = Color(0x33000000);
+}
+
+/// Brightness-aware color resolver.
+///
+/// Usage:
+/// ```dart
+/// final colors = AppColorsOf(context);
+/// Container(color: colors.cardBackground);
+/// ```
+///
+/// Prefer this over manual `isDark ? dark : light` branching.
+class AppColorsOf {
+  AppColorsOf(BuildContext context)
+      : _isDark = Theme.of(context).brightness == Brightness.dark;
+
+  final bool _isDark;
+
+  // ── Brand ──────────────────────────────────────────────────────────────
+  Color get primary => _isDark ? AppColors.primary : AppColors.primaryOnLight;
+  Color get secondary => _isDark ? AppColors.secondaryDark : AppColors.secondaryLight;
+  Color get accent => _isDark ? AppColors.accentDark : AppColors.accentLight;
+
+  // ── Backgrounds ────────────────────────────────────────────────────────
+  Color get background => _isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+
+  // ── Surfaces ───────────────────────────────────────────────────────────
+  Color get surface => _isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+  Color get cardBackground => _isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+  Color get elevatedSurface => _isDark ? AppColors.elevatedSurfaceDark : AppColors.elevatedSurfaceLight;
+  Color get inputBackground => _isDark ? AppColors.inputBackgroundDark : AppColors.inputBackgroundLight;
+
+  // ── Text ───────────────────────────────────────────────────────────────
+  Color get textPrimary => _isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+  Color get textSecondary => _isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
+  // ── Borders ────────────────────────────────────────────────────────────
+  Color get border => _isDark ? AppColors.borderDark : AppColors.borderLight;
+
+  // ── Chat ───────────────────────────────────────────────────────────────
+  Color get aiBubble => _isDark ? AppColors.aiBubbleDark : AppColors.aiBubbleLight;
+
+  // ── Buttons ────────────────────────────────────────────────────────────
+  Color get secondaryButton => _isDark ? AppColors.secondaryButtonDark : AppColors.secondaryButtonLight;
+
+  // ── Shimmer ────────────────────────────────────────────────────────────
+  Color get shimmerBase => _isDark ? AppColors.shimmerBase : AppColors.shimmerBaseLight;
+  Color get shimmerHighlight => _isDark ? AppColors.shimmerHighlight : AppColors.shimmerHighlightLight;
+
+  // ── Convenience ────────────────────────────────────────────────────────
+  bool get isDark => _isDark;
 }
