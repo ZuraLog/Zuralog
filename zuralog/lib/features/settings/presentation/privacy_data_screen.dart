@@ -25,7 +25,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
 
@@ -160,14 +160,33 @@ class PrivacyDataScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
                 ),
-                child: _ClearMemoryRow(
-                  enabled: memoryItems.isNotEmpty,
-                  onConfirmed: () {
-                    memoryNotifier.state = [];
-                    ref.read(analyticsServiceProvider).capture(
-                      event: AnalyticsEvents.allMemoriesCleared,
-                    );
-                  },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackgroundDark,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                  ),
+                  child: ZSettingsTile(
+                    icon: Icons.delete_sweep_rounded,
+                    iconColor: memoryItems.isNotEmpty
+                        ? AppColors.accentDark
+                        : AppColors.textTertiary,
+                    title: 'Clear All Memory',
+                    showChevron: false,
+                    titleColor: memoryItems.isNotEmpty
+                        ? AppColors.accentDark
+                        : AppColors.textTertiary,
+                    onTap: memoryItems.isNotEmpty
+                        ? () => _showClearMemoryDialog(
+                            context,
+                            onConfirmed: () {
+                              memoryNotifier.state = [];
+                              ref.read(analyticsServiceProvider).capture(
+                                event: AnalyticsEvents.allMemoriesCleared,
+                              );
+                            },
+                          )
+                        : null,
+                  ),
                 ),
               ),
 
@@ -217,7 +236,26 @@ class PrivacyDataScreen extends ConsumerWidget {
               const SettingsSectionLabel('Data'),
               _SettingsCard(
                 children: [
-                  _ExportDataRow(
+                  ZSettingsTile(
+                    icon: Icons.download_rounded,
+                    iconColor: AppColors.primary,
+                    title: 'Export Data',
+                    subtitle: 'Coming soon',
+                    showChevron: false,
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryDark.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                      ),
+                      child: Text(
+                        'Soon',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.secondaryDark,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                     onTap: () {
                       ref.read(analyticsServiceProvider).capture(
                         event: AnalyticsEvents.dataExportRequested,
@@ -231,24 +269,32 @@ class PrivacyDataScreen extends ConsumerWidget {
                     },
                   ),
                   const _Divider(),
-                  _DeleteDataRow(
-                    onConfirmed: () {
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.accountDeleteRequested,
-                      );
-                      // TODO(phase9): Wire to Supabase delete-all-data API endpoint.
-                      // Do not show a success message until the API call succeeds.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Data deletion is not yet available. '
-                            'Contact support@zuralog.com to request erasure.',
+                  ZSettingsTile(
+                    icon: Icons.delete_forever_rounded,
+                    iconColor: AppColors.accentDark,
+                    title: 'Delete All My Data',
+                    subtitle: 'Permanently removes all health data',
+                    titleColor: AppColors.accentDark,
+                    onTap: () => _showDeleteDataDialog(
+                      context,
+                      onConfirmed: () {
+                        ref.read(analyticsServiceProvider).capture(
+                          event: AnalyticsEvents.accountDeleteRequested,
+                        );
+                        // TODO(phase9): Wire to Supabase delete-all-data API endpoint.
+                        // Do not show a success message until the API call succeeds.
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Data deletion is not yet available. '
+                              'Contact support@zuralog.com to request erasure.',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            duration: Duration(seconds: 6),
                           ),
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 6),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -257,14 +303,14 @@ class PrivacyDataScreen extends ConsumerWidget {
               const SettingsSectionLabel('Legal'),
               _SettingsCard(
                 children: [
-                  _TapRow(
+                  ZSettingsTile(
                     icon: Icons.shield_outlined,
                     iconColor: AppColors.primary,
                     title: 'Privacy Policy',
                     onTap: () => context.pushNamed(RouteNames.settingsPrivacyPolicy),
                   ),
                   const _Divider(),
-                  _TapRow(
+                  ZSettingsTile(
                     icon: Icons.description_outlined,
                     iconColor: AppColors.primary,
                     title: 'Terms of Service',
@@ -373,101 +419,7 @@ class _MemoryItemRow extends StatelessWidget {
   }
 }
 
-class _ClearMemoryRow extends StatelessWidget {
-  const _ClearMemoryRow({required this.enabled, required this.onConfirmed});
 
-  final bool enabled;
-  final VoidCallback onConfirmed;
-
-  Future<void> _showConfirmDialog(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        title: Text(
-          'Clear All Memory?',
-          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
-        ),
-        content: Text(
-          'Your AI coach will lose all personalization context. '
-          'It will start fresh with generic recommendations.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'Clear All',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.accentDark,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      onConfirmed();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _PressableRow(
-      onTap: enabled ? () => _showConfirmDialog(context) : null,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.accentDark.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(
-                Icons.delete_sweep_rounded,
-                size: 20,
-                color: enabled ? AppColors.accentDark : AppColors.textTertiary,
-              ),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Text(
-              'Clear All Memory',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: enabled ? AppColors.accentDark : AppColors.textTertiary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
@@ -549,290 +501,116 @@ class _ToggleRow extends StatelessWidget {
   }
 }
 
-class _ExportDataRow extends StatelessWidget {
-  const _ExportDataRow({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _PressableRow(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 12,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: const Icon(
-                Icons.download_rounded,
-                size: 20,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Export Data',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.textPrimaryDark,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Coming soon',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.secondaryDark.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-              ),
-              child: Text(
-                'Soon',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.secondaryDark,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+Future<void> _showClearMemoryDialog(
+  BuildContext context, {
+  required VoidCallback onConfirmed,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surfaceDark,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      title: Text(
+        'Clear All Memory?',
+        style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+      ),
+      content: Text(
+        'Your AI coach will lose all personalization context. '
+        'It will start fresh with generic recommendations.',
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textSecondary,
         ),
       ),
-    );
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text(
+            'Cancel',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(
+            'Clear All',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.accentDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) {
+    onConfirmed();
   }
 }
 
-class _DeleteDataRow extends StatelessWidget {
-  const _DeleteDataRow({required this.onConfirmed});
-
-  final VoidCallback onConfirmed;
-
-  Future<void> _showConfirmDialog(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        title: Text(
-          'Delete All My Data?',
-          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This action is permanent and cannot be undone.',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.accentDark,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'All health records, AI memory, preferences, and account data '
-              'will be permanently erased. You will be signed out immediately.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.textSecondary,
-              ),
+Future<void> _showDeleteDataDialog(
+  BuildContext context, {
+  required VoidCallback onConfirmed,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surfaceDark,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      title: Text(
+        'Delete All My Data?',
+        style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'This action is permanent and cannot be undone.',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.accentDark,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'Delete',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.accentDark,
-                fontWeight: FontWeight.w700,
-              ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'All health records, AI memory, preferences, and account data '
+            'will be permanently erased. You will be signed out immediately.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ],
       ),
-    );
-    if (confirmed == true) {
-      onConfirmed();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _PressableRow(
-      onTap: () => _showConfirmDialog(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 12,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text(
+            'Cancel',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.accentDark.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: const Icon(
-                Icons.delete_forever_rounded,
-                size: 20,
-                color: AppColors.accentDark,
-              ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(
+            'Delete',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.accentDark,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Delete All My Data',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.accentDark,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Permanently removes all health data',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: AppColors.textTertiary,
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _TapRow extends StatelessWidget {
-  const _TapRow({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _PressableRow(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(icon, size: 20, color: iconColor),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textPrimaryDark,
-                ),
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: AppColors.textTertiary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Generic pressable wrapper — AnimatedContainer with 100ms press feedback.
-class _PressableRow extends StatefulWidget {
-  const _PressableRow({required this.child, required this.onTap});
-
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  State<_PressableRow> createState() => _PressableRowState();
-}
-
-class _PressableRowState extends State<_PressableRow> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: widget.onTap != null
-          ? (_) => setState(() => _pressed = true)
-          : null,
-      onTapUp: widget.onTap != null
-          ? (_) {
-              setState(() => _pressed = false);
-              widget.onTap!();
-            }
-          : null,
-      onTapCancel: widget.onTap != null
-          ? () => setState(() => _pressed = false)
-          : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        color: _pressed
-            ? AppColors.borderDark.withValues(alpha: 0.3)
-            : Colors.transparent,
-        child: widget.child,
-      ),
-    );
+      ],
+    ),
+  );
+  if (confirmed == true) {
+    onConfirmed();
   }
 }

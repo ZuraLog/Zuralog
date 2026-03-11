@@ -13,8 +13,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -47,14 +46,14 @@ class AccountSettingsScreen extends ConsumerWidget {
           const SettingsSectionLabel('Credentials'),
           _SettingsGroup(
             tiles: [
-              _AccountTile(
+              ZSettingsTile(
                 icon: Icons.email_rounded,
                 iconColor: AppColors.categorySleep,
                 title: 'Email',
                 subtitle: 'user@example.com',
                 onTap: () => _showChangeEmailSheet(context),
               ),
-              _AccountTile(
+              ZSettingsTile(
                 icon: Icons.lock_outline_rounded,
                 iconColor: AppColors.categoryVitals,
                 title: 'Change Password',
@@ -68,23 +67,49 @@ class AccountSettingsScreen extends ConsumerWidget {
           const SettingsSectionLabel('Linked Accounts'),
           _SettingsGroup(
             tiles: [
-              _AccountTile(
+              ZSettingsTile(
                 icon: Icons.g_mobiledata_rounded,
                 iconColor: AppColors.googleBlue,
                 title: 'Google',
                 subtitle: 'Linked',
                 onTap: () {},
-                trailingLabel: 'Linked',
-                trailingColor: AppColors.statusConnected,
+                showChevron: false,
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.statusConnected.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                  ),
+                  child: Text(
+                    'Linked',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.statusConnected,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
-              _AccountTile(
+              ZSettingsTile(
                 icon: Icons.apple_rounded,
                 iconColor: AppColors.textPrimaryDark,
                 title: 'Apple',
                 subtitle: 'Not linked',
                 onTap: () => _showLinkAppleSheet(context),
-                trailingLabel: 'Link',
-                trailingColor: AppColors.primary,
+                showChevron: false,
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                  ),
+                  child: Text(
+                    'Link',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -93,7 +118,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           const SettingsSectionLabel('Health Goals'),
           _SettingsGroup(
             tiles: [
-              _AccountTile(
+              ZSettingsTile(
                 icon: Icons.track_changes_rounded,
                 iconColor: AppColors.categoryActivity,
                 title: 'My Goals',
@@ -120,7 +145,7 @@ class AccountSettingsScreen extends ConsumerWidget {
           const SettingsSectionLabel('Medical'),
           _SettingsGroup(
             tiles: [
-              _AccountTile(
+              ZSettingsTile(
                 icon: Icons.emergency_rounded,
                 iconColor: AppColors.categoryHeart,
                 title: 'Emergency Health Card',
@@ -142,16 +167,17 @@ class AccountSettingsScreen extends ConsumerWidget {
                   color: AppColors.statusError.withValues(alpha: 0.25),
                 ),
               ),
-              child: _AccountTile(
+              child: ZSettingsTile(
                 icon: Icons.delete_forever_rounded,
                 iconColor: AppColors.statusError,
                 title: 'Delete Account',
                 subtitle: 'Permanently remove all your data',
+                titleColor: AppColors.statusError,
+                showChevron: false,
                 onTap: () {
                   ref.read(hapticServiceProvider).warning();
                   _showDeleteAccountDialog(context);
                 },
-                destructive: true,
               ),
             ),
           ),
@@ -228,7 +254,7 @@ class _ProfileSummaryCard extends StatelessWidget {
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({required this.tiles});
 
-  final List<_AccountTile> tiles;
+  final List<ZSettingsTile> tiles;
 
   @override
   Widget build(BuildContext context) {
@@ -252,116 +278,6 @@ class _SettingsGroup extends StatelessWidget {
                   ),
                 ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── _AccountTile ──────────────────────────────────────────────────────────────
-
-class _AccountTile extends StatefulWidget {
-  const _AccountTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.trailingLabel,
-    this.trailingColor,
-    this.destructive = false,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final String? trailingLabel;
-  final Color? trailingColor;
-  final bool destructive;
-
-  @override
-  State<_AccountTile> createState() => _AccountTileState();
-}
-
-class _AccountTileState extends State<_AccountTile> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final titleColor = widget.destructive
-        ? AppColors.statusError
-        : AppColors.textPrimaryDark;
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        color: _pressed
-            ? AppColors.borderDark.withValues(alpha: 0.3)
-            : Colors.transparent,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: widget.iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(widget.icon, size: 20, color: widget.iconColor),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    style: AppTextStyles.bodyLarge.copyWith(color: titleColor),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.trailingLabel != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: widget.trailingColor!.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-                ),
-                child: Text(
-                  widget.trailingLabel!,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: widget.trailingColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              )
-            else if (!widget.destructive)
-              Icon(
-                Icons.chevron_right_rounded,
-                size: AppDimens.iconMd,
-                color: AppColors.textTertiary,
-              ),
           ],
         ),
       ),

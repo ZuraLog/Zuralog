@@ -17,7 +17,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// Settings Hub — the top-level settings navigation screen.
 ///
@@ -72,14 +72,14 @@ class SettingsHubScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: _SettingsGroup(
               tiles: [
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.person_rounded,
                   iconColor: AppColors.categoryWellness,
                   title: 'Account',
                   subtitle: 'Email, password, linked accounts',
                   onTap: () => openSection('Account', RouteNames.settingsAccountPath),
                 ),
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.workspace_premium_rounded,
                   iconColor: AppColors.categoryNutrition,
                   title: 'Subscription',
@@ -96,7 +96,7 @@ class SettingsHubScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: _SettingsGroup(
               tiles: [
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.notifications_rounded,
                   iconColor: AppColors.categoryHeart,
                   title: 'Notifications',
@@ -104,14 +104,14 @@ class SettingsHubScreen extends ConsumerWidget {
                   onTap: () =>
                       openSection('Notifications', RouteNames.settingsNotificationsPath),
                 ),
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.palette_rounded,
                   iconColor: AppColors.primaryDark,
                   title: 'Appearance',
                   subtitle: 'Theme, haptics, tooltips',
                   onTap: () => openSection('Appearance', RouteNames.settingsAppearancePath),
                 ),
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.psychology_rounded,
                   iconColor: AppColors.categorySleep,
                   title: 'Coach',
@@ -128,7 +128,7 @@ class SettingsHubScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: _SettingsGroup(
               tiles: [
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.extension_rounded,
                   iconColor: AppColors.categoryActivity,
                   title: 'Integrations',
@@ -136,7 +136,7 @@ class SettingsHubScreen extends ConsumerWidget {
                   onTap: () =>
                       openSection('Integrations', RouteNames.settingsIntegrationsPath),
                 ),
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.lock_rounded,
                   iconColor: AppColors.categoryVitals,
                   title: 'Privacy & Data',
@@ -153,7 +153,7 @@ class SettingsHubScreen extends ConsumerWidget {
           SliverToBoxAdapter(
             child: _SettingsGroup(
               tiles: [
-                _SettingsTile(
+                ZSettingsTile(
                   icon: Icons.info_rounded,
                   iconColor: AppColors.categoryBody,
                   title: 'About Zuralog',
@@ -209,7 +209,7 @@ class _SectionHeader extends StatelessWidget {
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({required this.tiles});
 
-  final List<_SettingsTile> tiles;
+  final List<ZSettingsTile> tiles;
 
   @override
   Widget build(BuildContext context) {
@@ -240,96 +240,4 @@ class _SettingsGroup extends StatelessWidget {
   }
 }
 
-// ── _SettingsTile ─────────────────────────────────────────────────────────────
 
-/// Premium settings tile — icon badge, title, subtitle, tap animation, chevron.
-class _SettingsTile extends StatefulWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  State<_SettingsTile> createState() => _SettingsTileState();
-}
-
-class _SettingsTileState extends State<_SettingsTile> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        color: _pressed
-            ? AppColors.borderDark.withValues(alpha: 0.3)
-            : Colors.transparent,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            // Color icon badge.
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: widget.iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(
-                widget.icon,
-                size: 20,
-                color: widget.iconColor,
-              ),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            // Title + subtitle.
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.textPrimaryDark,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Trailing chevron.
-            Icon(
-              Icons.chevron_right_rounded,
-              size: AppDimens.iconMd,
-              color: AppColors.textTertiary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

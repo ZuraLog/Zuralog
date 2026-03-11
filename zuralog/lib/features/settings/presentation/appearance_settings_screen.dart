@@ -27,7 +27,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/theme/theme_provider.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip_provider.dart';
 
 // ── AppearanceSettingsScreen ───────────────────────────────────────────────────
@@ -128,7 +128,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                         .setEnabled(!v),
                   ),
                   const _Divider(),
-                  _TapRow(
+                  ZSettingsTile(
                     icon: Icons.refresh_rounded,
                     iconColor: AppColors.categoryWellness,
                     title: 'Reset Onboarding Tooltips',
@@ -250,90 +250,6 @@ class _ToggleRow extends StatelessWidget {
             onChanged: onChanged,
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── _TapRow ────────────────────────────────────────────────────────────────────
-
-class _TapRow extends StatefulWidget {
-  const _TapRow({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  State<_TapRow> createState() => _TapRowState();
-}
-
-class _TapRowState extends State<_TapRow> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        color: _pressed
-            ? cs.onSurface.withValues(alpha: 0.08)
-            : Colors.transparent,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: widget.iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(widget.icon, size: 20, color: widget.iconColor),
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    style: AppTextStyles.bodyLarge.copyWith(color: cs.onSurface),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: AppDimens.iconMd,
-              color: AppColors.textTertiary,
-            ),
-          ],
-        ),
       ),
     );
   }
