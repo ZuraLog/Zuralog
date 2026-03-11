@@ -23,7 +23,6 @@ import 'package:zuralog/features/data/domain/score_history_models.dart';
 import 'package:zuralog/features/data/providers/score_history_provider.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
-import 'package:zuralog/shared/widgets/health_score_zero_state.dart';
 
 // ── ScoreTrendHero ────────────────────────────────────────────────────────────
 
@@ -54,10 +53,10 @@ class ScoreTrendHero extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Compact score ring — or zero state when no data yet.
+              // Compact score ring — or compact zero state when no data yet.
               scoreAsync.when(
-                // Provider never errors; safety-net shows zero state.
-                error: (err, stack) => const HealthScoreZeroState(),
+                // Provider never errors; safety-net shows compact zero ring.
+                error: (err, stack) => const _CompactScoreZeroState(),
                 loading: () => const SizedBox(
                   width: 48,
                   height: 48,
@@ -65,7 +64,7 @@ class ScoreTrendHero extends ConsumerWidget {
                 ),
                 data: (score) {
                   if (score.dataDays == 0 && score.score == 0) {
-                    return const HealthScoreZeroState();
+                    return const _CompactScoreZeroState();
                   }
                   return HealthScoreWidget.compact(
                     score: score.score,
@@ -366,6 +365,37 @@ class _ScoreSparkline extends StatelessWidget {
         ],
       ),
       duration: const Duration(milliseconds: 300),
+    );
+  }
+}
+
+// ── _CompactScoreZeroState ────────────────────────────────────────────────────
+
+/// A 48×48 muted ring shown in the top-row ring slot when there is no score
+/// data yet. Sized to match [HealthScoreWidget.compact] so the row layout
+/// is not disturbed.
+class _CompactScoreZeroState extends StatelessWidget {
+  const _CompactScoreZeroState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.25),
+          width: 5,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.favorite_border_rounded,
+          size: 20,
+          color: AppColors.primary.withValues(alpha: 0.5),
+        ),
+      ),
     );
   }
 }
