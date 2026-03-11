@@ -19,11 +19,19 @@ import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
+import 'package:zuralog/features/analytics/domain/analytics_providers.dart';
 import 'package:zuralog/features/auth/data/auth_repository.dart';
 import 'package:zuralog/features/auth/domain/auth_state.dart';
 import 'package:zuralog/features/auth/domain/social_auth_credentials.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
+import 'package:zuralog/features/coach/providers/coach_providers.dart';
+import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/providers/data_providers.dart';
+import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/features/trends/providers/trends_providers.dart';
 
 // ── Onboarding Flag ───────────────────────────────────────────────────────────
 
@@ -254,10 +262,11 @@ class AuthStateNotifier extends Notifier<AuthState> {
 
   /// Logs out the current user.
   ///
-  /// Always transitions to [AuthState.unauthenticated] and clears the
-  /// stored email from [userEmailProvider]. Also clears the cached
-  /// [userProfileProvider] state and all Progress tab in-memory caches
-  /// to prevent sensitive health data from persisting after logout.
+  /// Always transitions to [AuthState.unauthenticated] and clears ALL
+  /// user-specific state: tokens, profile, email, SharedPreferences keys,
+  /// repository in-memory caches, and Riverpod provider data. This prevents
+  /// any health data from leaking if a different user logs in on the same
+  /// device.
   Future<void> logout() async {
     // Analytics: reset identity before clearing auth state (fire-and-forget).
     ref.read(analyticsServiceProvider).reset();
@@ -266,9 +275,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
     await _authRepository.logout();
     ref.read(userEmailProvider.notifier).state = '';
     ref.read(userProfileProvider.notifier).clear();
-    // Clear all Progress tab in-memory caches so sensitive health data does
-    // not persist for the next user session.
-    ref.read(progressRepositoryProvider).invalidateAll();
+    await _clearUserState();
     state = AuthState.unauthenticated;
   }
 
@@ -277,17 +284,99 @@ class AuthStateNotifier extends Notifier<AuthState> {
   ///
   /// Called by [ApiClient.onUnauthenticated] when both the access token and
   /// refresh token are expired and cannot be recovered. Clears the local
-  /// profile, email state, and Progress tab caches so the router redirects
-  /// to the login screen without leaking stale health data.
+  /// profile, email state, and all user-specific caches so the router
+  /// redirects to the login screen without leaking stale health data.
   void forceLogout() {
     // Analytics: reset identity on force logout (fire-and-forget).
     ref.read(analyticsServiceProvider).reset();
     SentryBreadcrumbs.authEvent(event: 'force_logout');
     ref.read(userEmailProvider.notifier).state = '';
     ref.read(userProfileProvider.notifier).clear();
-    // Clear all Progress tab in-memory caches.
-    ref.read(progressRepositoryProvider).invalidateAll();
+    // forceLogout is synchronous — fire-and-forget the async cleanup.
+    // The critical thing is transitioning to unauthenticated immediately.
+    _clearUserState();
     state = AuthState.unauthenticated;
+  }
+
+  /// Clears all user-specific cached data so the next login starts fresh.
+  ///
+  /// Covers three layers:
+  /// 1. SharedPreferences keys that store per-user data (not device prefs).
+  /// 2. In-memory TTL caches inside repository singletons.
+  /// 3. Riverpod provider state (forces re-fetch on next access).
+  Future<void> _clearUserState() async {
+    // ── 1. SharedPreferences: clear user-specific keys ────────────────────
+    final prefs = await SharedPreferences.getInstance();
+
+    // Integration connection states (e.g. integration_connected_strava).
+    for (final key in prefs.getKeys().toList()) {
+      if (key.startsWith('integration_connected_')) {
+        await prefs.remove(key);
+      }
+    }
+
+    // User preferences cache (full JSON blob from the server).
+    await prefs.remove('user_preferences_cache');
+
+    // Sync timestamps.
+    await prefs.remove('last_sync_timestamp');
+    await prefs.remove('sync_in_progress');
+
+    // Analytics first-action flags (should fire per user, not per device).
+    await prefs.remove('analytics_first_quick_log');
+    await prefs.remove('analytics_first_insight_viewed');
+    await prefs.remove('analytics_first_goal_created');
+
+    // Dismissed trend suggestions.
+    await prefs.remove('dismissed_correlation_suggestions');
+
+    // ── 2. Repository in-memory caches ────────────────────────────────────
+    ref.read(todayRepositoryProvider).invalidateFeedCache();
+    ref.read(dataRepositoryProvider).invalidateAll();
+    ref.read(progressRepositoryProvider).invalidateAll();
+    ref.read(trendsRepositoryProvider).invalidateAll();
+    ref.read(analyticsRepositoryProvider).invalidateAll();
+
+    // ── 3. Riverpod providers: invalidate so next access re-fetches ───────
+
+    // Today tab.
+    ref.invalidate(healthScoreProvider);
+    ref.invalidate(todayFeedProvider);
+
+    // Data tab.
+    ref.invalidate(dashboardProvider);
+    ref.invalidate(dashboardLayoutLoaderProvider);
+    ref.read(dashboardLayoutProvider.notifier).state =
+        DashboardLayout.defaultLayout;
+
+    // Coach tab.
+    ref.invalidate(coachConversationsProvider);
+    ref.invalidate(coachPromptSuggestionsProvider);
+    ref.invalidate(coachQuickActionsProvider);
+
+    // Trends tab.
+    ref.invalidate(trendsHomeProvider);
+    ref.invalidate(availableMetricsProvider);
+    ref.invalidate(reportsProvider);
+    ref.invalidate(dataSourcesProvider);
+
+    // Progress tab.
+    ref.invalidate(progressHomeProvider);
+    ref.invalidate(goalsProvider);
+    ref.invalidate(achievementsProvider);
+    ref.invalidate(weeklyReportProvider);
+    ref.invalidate(journalProvider);
+
+    // Analytics.
+    ref.invalidate(dailySummaryProvider);
+    ref.invalidate(weeklyTrendsProvider);
+    ref.invalidate(dashboardInsightProvider);
+
+    // Settings / Preferences.
+    ref.invalidate(userPreferencesProvider);
+
+    // Integrations.
+    ref.invalidate(integrationsProvider);
   }
 }
 
