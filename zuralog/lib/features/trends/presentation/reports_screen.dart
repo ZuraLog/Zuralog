@@ -131,6 +131,7 @@ class _ReportCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).light();
@@ -139,7 +140,7 @@ class _ReportCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Row(
@@ -169,7 +170,7 @@ class _ReportCard extends ConsumerWidget {
                   Text(
                     '${_formatDate(report.periodStart)} – ${_formatDate(report.periodEnd)}',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondaryDark,
+                      color: colors.textSecondary,
                     ),
                   ),
                   if (report.categorySummaries.isNotEmpty) ...[
@@ -253,14 +254,14 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
     }
   }
 
-  Color _trendColor(String direction) {
+  Color _trendColor(String direction, AppColorsOf colors) {
     switch (direction) {
       case 'up':
         return AppColors.categoryActivity;
       case 'down':
-        return AppColors.accentDark;
+        return colors.accent;
       default:
-        return AppColors.textSecondaryDark;
+        return colors.textSecondary;
     }
   }
 
@@ -297,6 +298,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final report = widget.report;
 
     return DraggableScrollableSheet(
@@ -314,7 +316,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.borderDark,
+                  color: colors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -331,7 +333,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                   // PDF export — deferred (pdf package not in pubspec)
                   IconButton(
                     icon: const Icon(Icons.picture_as_pdf_rounded),
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                     tooltip: 'Export PDF (coming soon)',
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -352,7 +354,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                             ),
                           )
                         : const Icon(Icons.share_rounded),
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                     tooltip: 'Share as image',
                     onPressed: _isSharing ? null : _shareAsImage,
                   ),
@@ -368,7 +370,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                 child: Screenshot(
                   controller: _screenshotController,
                   child: ColoredBox(
-                    color: AppColors.backgroundDark,
+                    color: colors.background,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppDimens.spaceMd),
@@ -404,7 +406,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                           runSpacing: AppDimens.spaceSm,
                           children: report.trendDirections.map((t) {
                             final icon = _trendIcon(t.direction);
-                            final color = _trendColor(t.direction);
+                            final color = _trendColor(t.direction, colors);
                             return Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: AppDimens.spaceSm,
@@ -444,7 +446,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                               padding:
                                   const EdgeInsets.all(AppDimens.spaceMd),
                               decoration: BoxDecoration(
-                                color: AppColors.cardBackgroundDark,
+                                color: colors.cardBackground,
                                 borderRadius: BorderRadius.circular(
                                     AppDimens.radiusCard),
                               ),
@@ -464,7 +466,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                                           style: AppTextStyles.bodyMedium
                                               .copyWith(
                                             color:
-                                                AppColors.textSecondaryDark,
+                                                colors.textSecondary,
                                           ),
                                         ),
                                       ],
@@ -517,7 +519,7 @@ class _ReportDetailSheetState extends State<_ReportDetailSheet> {
                                   child: Text(
                                     entry.value,
                                     style: AppTextStyles.bodyMedium.copyWith(
-                                      color: AppColors.textPrimaryDark,
+                                      color: colors.textPrimary,
                                     ),
                                   ),
                                 ),
@@ -550,18 +552,19 @@ class _GoalAdherenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final pct = (goal.achievedPercent * 100).round();
     final color = pct >= 80
         ? AppColors.categoryActivity
         : pct >= 50
             ? AppColors.healthScoreAmber
-            : AppColors.accentDark;
+            : colors.accent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppDimens.spaceSm),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -584,7 +587,7 @@ class _GoalAdherenceRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: goal.achievedPercent,
               minHeight: 4,
-              backgroundColor: AppColors.borderDark,
+              backgroundColor: colors.border,
               color: color,
             ),
           ),
@@ -614,6 +617,7 @@ class _CategorySummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final delta = summary.deltaVsPrior;
     final isPositive = delta >= 0;
 
@@ -621,7 +625,7 @@ class _CategorySummaryRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppDimens.spaceSm),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Row(
@@ -645,7 +649,7 @@ class _CategorySummaryRow extends StatelessWidget {
                   Text(
                     '${summary.keyMetric}: ${summary.keyMetricValue}',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryDark,
+                      color: colors.textSecondary,
                     ),
                   ),
               ],
@@ -663,7 +667,7 @@ class _CategorySummaryRow extends StatelessWidget {
                 style: AppTextStyles.labelSmall.copyWith(
                   color: isPositive
                       ? AppColors.categoryActivity
-                      : AppColors.accentDark,
+                      : colors.accent,
                 ),
               ),
             ],
@@ -697,6 +701,7 @@ class _EmptyReportsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -714,7 +719,7 @@ class _EmptyReportsState extends StatelessWidget {
             Text(
               'Your first monthly report will be generated after 30 days of data collection.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),

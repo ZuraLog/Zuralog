@@ -304,11 +304,12 @@ class _TimePeriodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final scoreColor = _scoreColor(period.overallScore);
     return Container(
       width: 160,
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -321,7 +322,7 @@ class _TimePeriodCard extends StatelessWidget {
                 child: Text(
                   period.label,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -362,7 +363,7 @@ class _TimePeriodCard extends StatelessWidget {
                       Text(
                         '${h.value} ${h.unit}'.trim(),
                         style: AppTextStyles.labelSmall.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -409,6 +410,7 @@ class _CorrelationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final accentColor = _parseHex(highlight.categoryColorHex);
     final coeffAbs = highlight.coefficient.abs();
 
@@ -427,7 +429,7 @@ class _CorrelationCard extends ConsumerWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -444,7 +446,7 @@ class _CorrelationCard extends ConsumerWidget {
                       Text(
                         '${highlight.metricA}  ×  ${highlight.metricB}',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: colors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -473,7 +475,7 @@ class _CorrelationCard extends ConsumerWidget {
               child: LinearProgressIndicator(
                 value: coeffAbs,
                 minHeight: 3,
-                backgroundColor: AppColors.borderDark,
+                backgroundColor: colors.border,
                 color: accentColor,
               ),
             ),
@@ -483,7 +485,7 @@ class _CorrelationCard extends ConsumerWidget {
             Text(
               highlight.body,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -624,6 +626,7 @@ class _QuickNavButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).light();
@@ -639,7 +642,7 @@ class _QuickNavButton extends ConsumerWidget {
           horizontal: AppDimens.spaceSm,
         ),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(
@@ -650,7 +653,7 @@ class _QuickNavButton extends ConsumerWidget {
             Text(
               item.label,
               style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
             ),
           ],
@@ -667,6 +670,7 @@ class _EmptyCorrelationsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -677,7 +681,7 @@ class _EmptyCorrelationsState extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceLg),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(
@@ -714,7 +718,7 @@ class _EmptyCorrelationsState extends StatelessWidget {
             Text(
               'Keep logging for 7+ days and Zuralog will surface hidden connections — like how your sleep affects your workouts.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -767,6 +771,7 @@ class _ProgressHintRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       children: [
         Icon(
@@ -779,7 +784,7 @@ class _ProgressHintRow extends StatelessWidget {
           child: Text(
             label,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
           ),
         ),
@@ -797,6 +802,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd,
@@ -813,7 +819,7 @@ class _SectionHeader extends StatelessWidget {
             Text(
               subtitle!,
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
             ),
           ],
@@ -838,9 +844,10 @@ class _CorrelationSuggestionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       padding: const EdgeInsets.fromLTRB(
@@ -871,7 +878,7 @@ class _CorrelationSuggestionCard extends ConsumerWidget {
                   suggestion.metricNeeded,
                   style: AppTextStyles.bodySmall.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -880,7 +887,7 @@ class _CorrelationSuggestionCard extends ConsumerWidget {
                 Text(
                   suggestion.description,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

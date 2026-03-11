@@ -233,11 +233,12 @@ class _MetricPickerButton extends ConsumerWidget {
   }
 
   void _showPicker(BuildContext context) {
+    final colors = AppColorsOf(context);
     final available = metrics.where((m) => m.id != excludeId).toList();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppDimens.radiusCard),
@@ -256,6 +257,7 @@ class _MetricPickerButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final selectedLabel = _selectedLabel();
     return GestureDetector(
       onTap: () {
@@ -268,7 +270,7 @@ class _MetricPickerButton extends ConsumerWidget {
           vertical: AppDimens.spaceMd,
         ),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           border: selectedId != null
               ? Border.all(
@@ -294,8 +296,8 @@ class _MetricPickerButton extends ConsumerWidget {
                     selectedLabel ?? 'Tap to select',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: selectedLabel != null
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textSecondaryDark,
+                          ? colors.textPrimary
+                          : colors.textSecondary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -328,6 +330,7 @@ class _MetricPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.6,
@@ -347,7 +350,7 @@ class _MetricPickerSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.borderDark,
+                  color: colors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -383,7 +386,7 @@ class _MetricPickerSheet extends StatelessWidget {
                         subtitle: Text(
                           m.unit,
                           style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textSecondaryDark,
+                            color: colors.textSecondary,
                           ),
                         ),
                         trailing: m.id == selectedId
@@ -434,20 +437,30 @@ class _TimeRangeSelectorState extends ConsumerState<_TimeRangeSelector> {
   }
 
   Future<void> _handleCustomRange() async {
+    final colors = AppColorsOf(context);
     final picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now(),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppColors.primary,
-            onPrimary: Colors.black,
-            surface: Color(0xFF1C1C1E),
+      builder: (context, child) {
+        final isDark = colors.isDark;
+        return Theme(
+          data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.black,
+                    surface: Color(0xFF1C1C1E),
+                  )
+                : ColorScheme.light(
+                    primary: AppColors.primaryOnLight,
+                    onPrimary: Colors.white,
+                    surface: AppColors.backgroundLight,
+                  ),
           ),
-        ),
-        child: child!,
-      ),
+          child: child!,
+        );
+      },
     );
     // Guard: widget may have been disposed while the picker was open.
     if (!mounted) return;
@@ -513,6 +526,7 @@ class _RangeChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).selectionTick();
@@ -526,7 +540,7 @@ class _RangeChip extends ConsumerWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withValues(alpha: 0.15)
-              : AppColors.cardBackgroundDark,
+              : colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
           border: isSelected
               ? Border.all(
@@ -538,7 +552,7 @@ class _RangeChip extends ConsumerWidget {
           style: AppTextStyles.bodySmall.copyWith(
             color: isSelected
                 ? AppColors.primary
-                : AppColors.textSecondaryDark,
+                : colors.textSecondary,
             fontWeight:
                 isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
@@ -556,13 +570,14 @@ class _LagSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Lag Offset',
           style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondaryDark,
+            color: colors.textSecondary,
           ),
         ),
         const SizedBox(height: AppDimens.spaceSm),
@@ -639,19 +654,20 @@ class _ChartTabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.cardBackgroundDark,
+          color: selected ? AppColors.primary : colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusChip),
         ),
         child: Text(
           label,
           style: AppTextStyles.bodySmall.copyWith(
-            color: selected ? Colors.black : AppColors.textSecondaryDark,
+            color: selected ? Colors.black : colors.textSecondary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -718,11 +734,12 @@ class _DataMaturityGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: AppDimens.spaceLg),
       padding: const EdgeInsets.all(AppDimens.spaceLg),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -742,7 +759,7 @@ class _DataMaturityGate extends StatelessWidget {
           Text(
             'Correlations need at least 7 days of data. Keep logging and check back soon.',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -758,20 +775,21 @@ class _CoefficientSummaryCard extends StatelessWidget {
   const _CoefficientSummaryCard({required this.analysis});
   final CorrelationAnalysis analysis;
 
-  Color _coeffColor(double coeff) {
+  Color _coeffColor(double coeff, AppColorsOf colors) {
     final abs = coeff.abs();
     if (abs >= 0.7) return AppColors.categoryActivity;
     if (abs >= 0.4) return AppColors.healthScoreAmber;
-    return AppColors.textSecondaryDark;
+    return colors.textSecondary;
   }
 
   @override
   Widget build(BuildContext context) {
-    final coeffColor = _coeffColor(analysis.coefficient);
+    final colors = AppColorsOf(context);
+    final coeffColor = _coeffColor(analysis.coefficient, colors);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Row(
@@ -804,7 +822,7 @@ class _CoefficientSummaryCard extends StatelessWidget {
                 Text(
                   '${analysis.metricA.label} × ${analysis.metricB.label}',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondaryDark,
+                    color: colors.textSecondary,
                   ),
                 ),
                 if (analysis.lagDays > 0) ...[
@@ -851,6 +869,7 @@ class _ScatterPlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final points = analysis.scatterPoints;
     if (points.isEmpty) return const SizedBox.shrink();
 
@@ -896,7 +915,7 @@ class _ScatterPlotCard extends StatelessWidget {
       height: 260,
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Stack(
@@ -913,11 +932,11 @@ class _ScatterPlotCard extends StatelessWidget {
                 show: true,
                 drawVerticalLine: true,
                 getDrawingHorizontalLine: (_) => FlLine(
-                  color: AppColors.borderDark,
+                  color: colors.border,
                   strokeWidth: 0.5,
                 ),
                 getDrawingVerticalLine: (_) => FlLine(
-                  color: AppColors.borderDark,
+                  color: colors.border,
                   strokeWidth: 0.5,
                 ),
               ),
@@ -1041,6 +1060,7 @@ class _OverlayChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final points = analysis.scatterPoints;
     // Need at least 2 points for a meaningful time-series overlay.
     if (points.length < 2) return const _DataMaturityGate();
@@ -1068,7 +1088,7 @@ class _OverlayChartCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -1083,7 +1103,7 @@ class _OverlayChartCard extends StatelessWidget {
               Text(
                 analysis.metricA.label,
                 style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textSecondaryDark),
+                    color: colors.textSecondary),
               ),
               const SizedBox(width: AppDimens.spaceMd),
               _LegendDot(color: AppColors.categoryHeart, dashed: true),
@@ -1091,7 +1111,7 @@ class _OverlayChartCard extends StatelessWidget {
               Text(
                 analysis.metricB.label,
                 style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textSecondaryDark),
+                    color: colors.textSecondary),
               ),
             ],
           ),
@@ -1104,7 +1124,7 @@ class _OverlayChartCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (_) => FlLine(
-                    color: AppColors.borderDark,
+                    color: colors.border,
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -1196,10 +1216,11 @@ class _AiAnnotationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         border: Border.all(
           color: AppColors.primary.withValues(alpha: 0.2),
@@ -1215,7 +1236,7 @@ class _AiAnnotationCard extends StatelessWidget {
             child: Text(
               annotation,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textPrimaryDark,
+                color: colors.textPrimary,
               ),
             ),
           ),
@@ -1232,10 +1253,11 @@ class _PickerPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceLg),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -1255,7 +1277,7 @@ class _PickerPrompt extends StatelessWidget {
           Text(
             'Choose a Metric A and Metric B above to explore the correlation between them.',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1287,6 +1309,7 @@ class _AnalysisErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceLg),
       child: Column(
@@ -1294,7 +1317,7 @@ class _AnalysisErrorState extends StatelessWidget {
           Text(
             'Could not load analysis.',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceMd),
