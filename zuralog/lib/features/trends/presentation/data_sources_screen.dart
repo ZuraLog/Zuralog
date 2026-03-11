@@ -75,7 +75,12 @@ class _DataSourcesList extends ConsumerWidget {
       },
       color: AppColors.primary,
       child: ListView(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        padding: EdgeInsets.fromLTRB(
+          AppDimens.spaceMd,
+          AppDimens.spaceMd,
+          AppDimens.spaceMd,
+          AppDimens.bottomClearance(context),
+        ),
         children: [
           if (connected.isNotEmpty) ...[
             _SectionLabel(label: 'Connected'),
