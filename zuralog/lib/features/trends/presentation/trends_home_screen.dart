@@ -662,9 +662,11 @@ class _EmptyCorrelationsState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceLg,
-        vertical: AppDimens.spaceLg,
+      padding: const EdgeInsets.fromLTRB(
+        AppDimens.spaceMd,
+        AppDimens.spaceSm,
+        AppDimens.spaceMd,
+        AppDimens.spaceSm,
       ),
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -673,11 +675,28 @@ class _EmptyCorrelationsState extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(
-              Icons.auto_awesome_rounded,
-              size: 40,
-              color: AppColors.primary.withValues(alpha: 0.7),
+            // Icon cluster hinting at multiple data connections
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _CorrelationDot(
+                  icon: Icons.bedtime_rounded,
+                  color: AppColors.categorySleep,
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                _CorrelationDot(
+                  icon: Icons.auto_awesome_rounded,
+                  color: AppColors.primary,
+                  size: 52,
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                _CorrelationDot(
+                  icon: Icons.directions_run_rounded,
+                  color: AppColors.categoryActivity,
+                ),
+              ],
             ),
             const SizedBox(height: AppDimens.spaceMd),
             Text(
@@ -687,15 +706,78 @@ class _EmptyCorrelationsState extends StatelessWidget {
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Text(
-              'Keep logging your health data for 7+ days and Zuralog will start surfacing hidden connections — like how your sleep affects your workouts.',
+              'Keep logging for 7+ days and Zuralog will surface hidden connections — like how your sleep affects your workouts.',
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textSecondaryDark,
               ),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: AppDimens.spaceMd),
+            // Progress hint row showing what's needed
+            _ProgressHintRow(
+              icon: Icons.calendar_today_rounded,
+              label: '7 days of data unlocks your first pattern',
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CorrelationDot extends StatelessWidget {
+  const _CorrelationDot({
+    required this.icon,
+    required this.color,
+    this.size = 40,
+  });
+
+  final IconData icon;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        icon,
+        size: size * 0.48,
+        color: color.withValues(alpha: 0.8),
+      ),
+    );
+  }
+}
+
+class _ProgressHintRow extends StatelessWidget {
+  const _ProgressHintRow({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: AppColors.primary.withValues(alpha: 0.7),
+        ),
+        const SizedBox(width: AppDimens.spaceSm),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondaryDark,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

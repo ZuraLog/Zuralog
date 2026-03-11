@@ -355,71 +355,65 @@ class _HealthScoreHero extends ConsumerWidget {
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
               ),
-              error: (_, st) => GestureDetector(
-                onTap: () => ref.invalidate(healthScoreProvider),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppDimens.spaceSm,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Small placeholder ring with dash.
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color:
-                                AppColors.textTertiary.withValues(alpha: 0.3),
-                            width: 4,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '—',
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppDimens.spaceMd),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Score unavailable',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.refresh_rounded,
-                                size: 12,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: AppDimens.spaceXs),
-                              Text(
-                                'Tap to retry',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+              error: (_, st) => const _HealthScoreZeroState(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _HealthScoreZeroState ──────────────────────────────────────────────────────
+
+/// Shown inside the Health Score hero when there is no score yet —
+/// i.e. a brand-new user with zero logged data.
+///
+/// Welcoming, not alarming. Explains what the score is and invites the
+/// user to start logging.
+class _HealthScoreZeroState extends StatelessWidget {
+  const _HealthScoreZeroState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+      child: Column(
+        children: [
+          // Placeholder ring — muted, not error-red.
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.25),
+                width: 6,
               ),
             ),
+            child: Center(
+              child: Icon(
+                Icons.favorite_border_rounded,
+                size: 28,
+                color: AppColors.primary.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          Text(
+            'Your health score awaits',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.textPrimaryDark,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimens.spaceXs),
+          Text(
+            'Log your first data point or connect an\napp to see your daily score.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -864,55 +858,145 @@ class _WellnessCheckinCardState extends ConsumerState<_WellnessCheckinCard> {
 
 // ── _EmptyInsightsCard ────────────────────────────────────────────────────────
 
-class _EmptyInsightsCard extends StatelessWidget {
+class _EmptyInsightsCard extends ConsumerWidget {
   const _EmptyInsightsCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceLg,
-          vertical: AppDimens.spaceXl,
-        ),
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
         decoration: BoxDecoration(
           color: AppColors.cardBackgroundDark,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           border: Border.all(color: AppColors.borderDark),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
-                borderRadius:
-                    BorderRadius.circular(AppDimens.radiusSm + 4),
-              ),
-              child: Icon(
-                Icons.lightbulb_outline_rounded,
-                size: 28,
-                color: AppColors.primary.withValues(alpha: 0.7),
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
+                  ),
+                  child: Icon(
+                    Icons.lightbulb_outline_rounded,
+                    size: 24,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceMd),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Insights on the way',
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: AppColors.textPrimaryDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Your AI coach is ready — start logging to unlock personalized observations.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              'No insights yet',
-              style: AppTextStyles.titleMedium.copyWith(
-                color: AppColors.textPrimaryDark,
-              ),
+            // Two action prompts
+            _InsightActionRow(
+              icon: Icons.self_improvement_rounded,
+              color: AppColors.categoryWellness,
+              label: 'Log today\'s mood & energy',
+              onTap: () => _showQuickLog(context, ref),
             ),
-            const SizedBox(height: AppDimens.spaceXs),
-            Text(
-              'Keep logging data to unlock\nAI-powered health insights.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
+            const SizedBox(height: AppDimens.spaceSm),
+            _InsightActionRow(
+              icon: Icons.cable_rounded,
+              color: AppColors.categoryActivity,
+              label: 'Connect a health app',
+              onTap: () => context.push(RouteNames.settingsIntegrationsPath),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InsightActionRow extends StatefulWidget {
+  const _InsightActionRow({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_InsightActionRow> createState() => _InsightActionRowState();
+}
+
+class _InsightActionRowState extends State<_InsightActionRow> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceMd,
+            vertical: AppDimens.spaceSm,
+          ),
+          decoration: BoxDecoration(
+            color: widget.color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
+          ),
+          child: Row(
+            children: [
+              Icon(widget.icon, size: 16, color: widget.color),
+              const SizedBox(width: AppDimens.spaceSm),
+              Expanded(
+                child: Text(
+                  widget.label,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: widget.color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: widget.color.withValues(alpha: 0.6),
+              ),
+            ],
+          ),
         ),
       ),
     );

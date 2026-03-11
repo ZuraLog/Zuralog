@@ -169,16 +169,7 @@ class ScoreTrendHero extends ConsumerWidget {
               data: (history) {
                 final values = history.trendValues;
                 if (values.length < 2) {
-                  return Center(
-                    child: Text(
-                      'Not enough data for this range',
-                      style: AppTextStyles.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  );
+                  return _ScoreChartEmptyState(isDark: isDark);
                 }
                 return _ScoreSparkline(values: values);
               },
@@ -367,6 +358,38 @@ class _ScoreSparkline extends StatelessWidget {
         ],
       ),
       duration: const Duration(milliseconds: 300),
+    );
+  }
+}
+
+// ── _ScoreChartEmptyState ─────────────────────────────────────────────────────
+
+/// Shown inside the sparkline area when there's not enough score history yet.
+/// Replaces the bare "Not enough data for this range" text with a compact,
+/// welcoming prompt that tells the user what to expect.
+class _ScoreChartEmptyState extends StatelessWidget {
+  const _ScoreChartEmptyState({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTertiary =
+        isDark ? AppColors.textTertiary : AppColors.textTertiary;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.show_chart_rounded,
+          size: 16,
+          color: AppColors.primary.withValues(alpha: 0.4),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          'Your trend chart will appear here as data builds up.',
+          style: AppTextStyles.caption.copyWith(color: textTertiary),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

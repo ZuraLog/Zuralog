@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/haptics/haptic.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -342,21 +343,13 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 if (items.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: AppDimens.bottomClearance(context),
+                      padding: EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        AppDimens.spaceSm,
+                        AppDimens.spaceMd,
+                        AppDimens.bottomClearance(context),
                       ),
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppDimens.spaceLg),
-                          child: Text(
-                            'No health data yet.\nConnect an integration to get started.',
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                           ),
-                        ),
-                      ),
+                      child: const _CategoriesEmptyState(),
                     ),
                   );
                 }
@@ -695,6 +688,193 @@ class _ColorPickerSheet extends StatelessWidget {
         ],
       ),
     ),
+    );
+  }
+}
+
+// ── _CategoriesEmptyState ─────────────────────────────────────────────────────
+
+/// Shown when the dashboard has no category data yet — typically for a
+/// brand-new user who hasn't connected any integrations.
+///
+/// Welcoming and action-oriented: guides the user toward connecting an app
+/// or logging their first data point manually.
+class _CategoriesEmptyState extends StatelessWidget {
+  const _CategoriesEmptyState();
+
+  static const _categories = [
+    _CategoryPreviewItem(
+      label: 'Activity',
+      color: AppColors.categoryActivity,
+    ),
+    _CategoryPreviewItem(
+      label: 'Sleep',
+      color: AppColors.categorySleep,
+    ),
+    _CategoryPreviewItem(
+      label: 'Heart',
+      color: AppColors.categoryHeart,
+    ),
+    _CategoryPreviewItem(
+      label: 'Nutrition',
+      color: AppColors.categoryNutrition,
+    ),
+    _CategoryPreviewItem(
+      label: 'Body',
+      color: AppColors.categoryBody,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Preview cards — ghost/dimmed to show what's coming
+        ..._categories.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
+            child: _GhostCategoryCard(item: item),
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+        // Call-to-action card
+        GestureDetector(
+          onTap: () => context.push(RouteNames.settingsIntegrationsPath),
+          child: Container(
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.20),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.cable_rounded,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Connect your first app',
+                      style: AppTextStyles.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Your categories fill in automatically once you connect a health app.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+        ),
+      ],
+    );
+  }
+}
+
+@immutable
+class _CategoryPreviewItem {
+  const _CategoryPreviewItem({required this.label, required this.color});
+  final String label;
+  final Color color;
+}
+
+/// A dimmed, ghost version of a category card — shows the placeholder layout
+/// that will be filled once the user has real data.
+class _GhostCategoryCard extends StatelessWidget {
+  const _GhostCategoryCard({required this.item});
+  final _CategoryPreviewItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.45,
+      child: IntrinsicHeight(
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBackgroundDark,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Category color accent stripe
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: item.color,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceSm + 2,
+                  ),
+                  child: Row(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            item.label,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 28,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: AppColors.textTertiary
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
