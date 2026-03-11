@@ -362,6 +362,23 @@ End-to-end fix making the Coach tab's AI chat work against the production backen
 
 ---
 
+## Phase 10.10 — Empty State & Zero-Data UX (`feat/empty-state-improvements`)
+
+> **Branch:** `feat/empty-state-improvements` — merged to main 2026-03-11
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Today tab — Health Score zero state | ✅ Done | Muted ring + heart icon + "Your health score awaits" headline + two tappable action rows (Log mood/energy → QuickLogSheet; Connect app → Settings > Integrations) |
+| P0 | Today tab — Insights empty state | ✅ Done | `_EmptyInsightsCard` with "Insights on the way" copy and same two action rows |
+| P0 | Data tab — Score trend chart empty state | ✅ Done | `_ScoreChartEmptyState` with chart icon + friendly message inside sparkline area |
+| P0 | Data tab — Categories empty state | ✅ Done | Ghost preview cards for 5 categories + sage-green "Connect your first app" CTA → Settings > Integrations |
+| P0 | Trends tab — Correlations empty state | ✅ Done | 3-icon cluster + `_ProgressHintRow` ("7 days of data unlocks your first pattern") |
+| P0 | Never-error provider pattern | ✅ Done | All 4 providers (`healthScoreProvider`, `todayFeedProvider`, `dashboardProvider`, `trendsHomeProvider`) catch all errors and return empty data objects — UI never sees an error branch |
+| P0 | Shared `HealthScoreZeroState` widget | ✅ Done | Extracted to `lib/shared/widgets/health_score_zero_state.dart`; used by TodayFeedScreen card body |
+| P0 | Layout fix — compact zero ring in ScoreTrendHero | ✅ Done | `_CompactScoreZeroState` (48×48 muted ring) replaces full `HealthScoreZeroState` in row slot; prevents row layout break |
+
+---
+
 ## Website
 
 | Priority | Task | Status | Notes |
