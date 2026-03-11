@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Goal Model ─────────────────────────────────────────────────────────────────
 
@@ -196,42 +196,29 @@ class _GoalTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = isSelected ? goal.color : AppColors.borderDark;
 
-    return ZuralogSpringButton(
+    return ZSelectableTile(
+      isSelected: isSelected,
       onTap: onTap,
+      selectedColor: goal.color,
+      showCheckIndicator: false,
       scaleTarget: 0.96,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? goal.color.withValues(alpha: 0.10)
-              : colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-          border: Border.all(
-            color: accentColor,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(goal.emoji, style: AppTextStyles.body.copyWith(fontSize: 24)),
-            Text(
-              goal.label,
-              style: AppTextStyles.caption.copyWith(
-                color: isSelected ? goal.color : colorScheme.onSurface,
-                fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.w500,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(goal.emoji, style: AppTextStyles.body.copyWith(fontSize: 24)),
+          Text(
+            goal.label,
+            style: AppTextStyles.caption.copyWith(
+              color: isSelected ? goal.color : colorScheme.onSurface,
+              fontWeight:
+                  isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
-          ],
-        ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

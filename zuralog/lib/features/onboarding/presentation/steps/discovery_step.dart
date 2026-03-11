@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/shared/widgets/buttons/spring_button.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Discovery Sources ─────────────────────────────────────────────────────────
 
@@ -128,64 +128,48 @@ class _SourceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return ZuralogSpringButton(
+    return ZSelectableTile(
+      isSelected: isSelected,
       onTap: onTap,
+      showCheckIndicator: false,
       scaleTarget: 0.98,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceMd,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.borderDark,
-            width: isSelected ? 1.5 : 1,
+      child: Row(
+        children: [
+          // Custom radio indicator.
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? AppColors.primary : AppColors.borderDark,
+                width: isSelected ? 0 : 1.5,
+              ),
+              color: isSelected ? AppColors.primary : Colors.transparent,
+            ),
+            child: isSelected
+                ? const Icon(
+                    Icons.check_rounded,
+                    color: AppColors.primaryButtonText,
+                    size: 14,
+                  )
+                : null,
           ),
-        ),
-        child: Row(
-          children: [
-            // Custom radio indicator.
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.borderDark,
-                  width: isSelected ? 0 : 1.5,
-                ),
-                color: isSelected ? AppColors.primary : Colors.transparent,
-              ),
-              child: isSelected
-                  ? const Icon(
-                      Icons.check_rounded,
-                      color: AppColors.primaryButtonText,
-                      size: 14,
-                    )
-                  : null,
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Text(
-                label,
-                style: AppTextStyles.body.copyWith(
-                  color: isSelected
-                      ? colorScheme.onSurface
-                      : AppColors.textSecondary,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
+          const SizedBox(width: AppDimens.spaceMd),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.body.copyWith(
+                color: isSelected
+                    ? colorScheme.onSurface
+                    : AppColors.textSecondary,
+                fontWeight:
+                    isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

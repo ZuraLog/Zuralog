@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Fitness Level Model ────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ class FitnessLevelStep extends StatelessWidget {
 /// Full-width selection tile for a fitness level option.
 ///
 /// Selected state: [AppColors.primary] at 8% tint + 1.5px border.
-/// Spring scale: 1.0 → 1.01 on selection (via TweenAnimationBuilder).
+/// Press scale is handled by [ZSelectableTile] via [ZuralogSpringButton].
 class _FitnessLevelTile extends StatelessWidget {
   const _FitnessLevelTile({
     required this.level,
@@ -151,92 +152,58 @@ class _FitnessLevelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 1.0, end: isSelected ? 1.01 : 1.0),
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
-      builder: (context, scale, child) => Transform.scale(
-        scale: scale,
-        child: child,
-      ),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.08)
-                : colorScheme.surface,
-            borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-            border: Border.all(
+    return ZSelectableTile(
+      isSelected: isSelected,
+      onTap: onTap,
+      showCheckIndicator: true,
+      scaleTarget: 0.97,
+      child: Row(
+        children: [
+          // Icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : colorScheme.onSurface.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            ),
+            child: Icon(
+              level.icon,
+              size: 22,
               color: isSelected
                   ? AppColors.primary
-                  : colorScheme.outline.withValues(alpha: 0.4),
-              width: isSelected ? 1.5 : 1,
+                  : colorScheme.onSurfaceVariant,
             ),
           ),
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
-          child: Row(
-            children: [
-              // Icon
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.15)
-                      : colorScheme.onSurface.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(AppDimens.shapeSm),
-                ),
-                child: Icon(
-                  level.icon,
-                  size: 22,
-                  color: isSelected
-                      ? AppColors.primary
-                      : colorScheme.onSurfaceVariant,
-                ),
-              ),
 
-              const SizedBox(width: AppDimens.spaceMd),
+          const SizedBox(width: AppDimens.spaceMd),
 
-              // Title + subtitle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      level.title,
-                      style: AppTextStyles.h3.copyWith(
-                        color: isSelected
-                            ? AppColors.primary
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      level.subtitle,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+          // Title + subtitle
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  level.title,
+                  style: AppTextStyles.h3.copyWith(
+                    color: isSelected
+                        ? AppColors.primary
+                        : colorScheme.onSurface,
+                  ),
                 ),
-              ),
-
-              // Selection indicator
-              AnimatedOpacity(
-                opacity: isSelected ? 1 : 0,
-                duration: const Duration(milliseconds: 150),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.primary,
-                  size: AppDimens.iconMd,
+                const SizedBox(height: 2),
+                Text(
+                  level.subtitle,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
