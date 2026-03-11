@@ -35,6 +35,7 @@ from app.api.v1.chat import router as chat_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.emergency_card_routes import router as emergency_card_router
+from app.api.v1.goal_routes import router as goals_router
 from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
 from app.api.v1.health_ingest import router as health_ingest_router
@@ -346,6 +347,7 @@ app.include_router(emergency_card_router, prefix="/api/v1")  # Phase 2.14 — em
 app.include_router(notification_router, prefix="/api/v1")  # Phase 2.15 — notification centre
 app.include_router(report_router, prefix="/api/v1")  # Phase 2.18 — health reports
 app.include_router(attachments_router, prefix="/api/v1")  # Phase 2.22 — chat file attachments
+app.include_router(goals_router, prefix="/api/v1")  # Phase 3 — goals CRUD
 app.include_router(progress_router, prefix="/api/v1")  # Phase 3 — progress home
 app.include_router(trends_router, prefix="/api/v1")  # Phase 3 — trends home
 

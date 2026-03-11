@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Float, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -49,8 +49,8 @@ class UserGoal(Base):
     a given ``period``.  The analytics engine compares actual data against
     active goals to generate progress reports and recommendations.
 
-    A user may have at most **one active goal per metric** (enforced by a
-    unique constraint on ``(user_id, metric)``).
+    Users may have multiple goals (including multiple goals of the same
+    type/metric).
 
     Attributes:
         id: UUID primary key (auto-generated).
@@ -61,10 +61,18 @@ class UserGoal(Base):
         period: Time horizon for the goal (daily, weekly, or long-term).
         is_active: Whether the goal is currently active (default ``True``).
         created_at: Row creation timestamp (server-side default).
+        type: Goal type slug used by the Flutter client
+            (e.g. 'step_count', 'weight_target', 'custom').
+        title: Short user-facing goal title.
+        current_value: Latest recorded progress toward the goal.
+        unit: Measurement unit label (e.g. 'steps', 'kg', 'hrs').
+        start_date: ISO-8601 date when the goal was started.
+        deadline: Optional ISO-8601 deadline date.
+        is_completed: Whether the goal has been achieved.
+        ai_commentary: Optional AI-generated motivational text.
     """
 
     __tablename__ = "user_goals"
-    __table_args__ = (UniqueConstraint("user_id", "metric", name="uq_user_goal_user_metric"),)
 
     id: Mapped[str] = mapped_column(
         String,
@@ -83,3 +91,13 @@ class UserGoal(Base):
         DateTime(timezone=True),
         server_default=func.now(),
     )
+
+    # ── CRUD columns (added for Flutter Goals screen) ─────────────────────
+    type: Mapped[str] = mapped_column(String, default="custom")
+    title: Mapped[str] = mapped_column(String, default="")
+    current_value: Mapped[float] = mapped_column(Float, default=0.0)
+    unit: Mapped[str] = mapped_column(String, default="")
+    start_date: Mapped[str] = mapped_column(String, default="")
+    deadline: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_commentary: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
