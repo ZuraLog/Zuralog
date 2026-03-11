@@ -132,17 +132,21 @@ abstract final class AppDimens {
 
   /// Bottom clearance for content inside tabs.
   ///
-  /// The app shell uses `extendBody: true` so tab content scrolls behind the
-  /// 80 px frosted navigation bar. Content must clear the visible bar height
-  /// PLUS the system safe-area inset (home indicator on iPhone, ~34 px).
+  /// [AppShell] uses `extendBody: true` on its [Scaffold], which causes
+  /// Flutter to automatically inject the frosted nav bar's rendered height
+  /// into [MediaQuery.padding.bottom] for all children of the body. This
+  /// means [MediaQuery.padding.bottom] already equals:
   ///
   /// ```
-  ///   bottomNavHeight (80)  +  system safe-area (e.g. 34)  =  ~114 px
+  ///   nav bar height  +  system safe-area (home indicator, gesture bar, etc.)
   /// ```
   ///
-  /// Use this instead of hardcoded constants wherever the last content element
-  /// of a tab (or any screen rendered inside the shell) needs bottom breathing
-  /// room so it is not obscured by the frosted nav bar.
+  /// We therefore return [MediaQuery.padding.bottom] directly — adding
+  /// [bottomNavHeight] on top would double-count the nav bar and produce a
+  /// visible ~80 px dead-space gap above the frosted nav bar on every tab.
+  ///
+  /// Use this wherever content inside the shell needs bottom breathing room
+  /// so it is not obscured by the frosted nav bar.
   static double bottomClearance(BuildContext context) =>
-      bottomNavHeight + MediaQuery.of(context).padding.bottom;
+      MediaQuery.of(context).padding.bottom;
 }

@@ -2,21 +2,36 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
 
 /// The standard layout shell for all Zuralog screens.
 ///
 /// Enforces:
 /// - Theme-aware scaffold background (never hardcoded)
 /// - SafeArea wrapping body only (not the whole scaffold)
-/// - Automatic bottom clearance for screens inside the nav shell
+///
+/// ## Bottom clearance for tab screens
+///
+/// [AppShell] uses `extendBody: true` on its [Scaffold]. Flutter therefore
+/// automatically injects the frosted nav bar's rendered height into
+/// [MediaQuery.padding.bottom] for all children of the body. This means:
+///
+/// - **Scrollable bodies** ([ListView], [CustomScrollView], etc.): padding is
+///   applied either automatically (when no explicit `padding` is set on the
+///   scroll view) or via [AppDimens.bottomClearance] in the explicit padding.
+/// - **Non-scrollable bodies** (e.g. a [Column] with a pinned input bar):
+///   add a [SizedBox] at the bottom whose height is
+///   `MediaQuery.of(context).padding.bottom` to push content clear of the nav bar.
+///
+/// The [addBottomNavPadding] parameter is **deprecated** and is now a no-op.
+/// Bottom clearance is handled by Flutter's `extendBody` MediaQuery injection
+/// combined with each body's own scroll padding or explicit [SizedBox]. Setting
+/// it had been causing a double-counted ~80 px dead-space gap on every tab.
 ///
 /// Usage inside bottom nav shell:
 /// ```dart
 /// ZuralogScaffold(
 ///   appBar: ZuralogAppBar(title: 'Goals'),
-///   addBottomNavPadding: true,
-///   body: ListView(...),
+///   body: ListView(...),  // auto-pads from MediaQuery.padding.bottom
 /// )
 /// ```
 class ZuralogScaffold extends StatelessWidget {
@@ -26,6 +41,11 @@ class ZuralogScaffold extends StatelessWidget {
     this.appBar,
     this.bottomNavigationBar,
     this.floatingActionButton,
+    @Deprecated(
+      'addBottomNavPadding is a no-op. '
+      'Bottom clearance is handled automatically by Flutter\'s extendBody '
+      'MediaQuery injection. Remove this parameter from call sites.',
+    )
     this.addBottomNavPadding = false,
     this.resizeToAvoidBottomInset = true,
     this.extendBody = false,
@@ -47,8 +67,14 @@ class ZuralogScaffold extends StatelessWidget {
   /// Optional floating action button.
   final Widget? floatingActionButton;
 
-  /// When true, adds [AppDimens.bottomClearance] padding below the body.
-  /// Set to true for all screens hosted inside the bottom nav shell.
+  /// Deprecated — no-op. Bottom clearance is handled by Flutter's extendBody
+  /// MediaQuery injection. See class documentation for the correct pattern.
+  // ignore: deprecated_member_use_from_same_package
+  @Deprecated(
+    'addBottomNavPadding is a no-op. '
+    'Bottom clearance is handled automatically by Flutter\'s extendBody '
+    'MediaQuery injection. Remove this parameter from call sites.',
+  )
   final bool addBottomNavPadding;
 
   /// Whether to resize the body when the keyboard appears. Defaults to true.
@@ -78,20 +104,17 @@ class ZuralogScaffold extends StatelessWidget {
       content = Padding(padding: bodyPadding!, child: content);
     }
 
-    // Apply bottom nav clearance padding.
-    if (addBottomNavPadding) {
-      content = Padding(
-        padding: EdgeInsets.only(bottom: AppDimens.bottomClearance(context)),
-        child: content,
-      );
-    }
+    // NOTE: addBottomNavPadding is intentionally NOT applied here.
+    // AppShell.Scaffold(extendBody: true) injects the nav bar height into
+    // MediaQuery.padding.bottom automatically. Applying an additional Padding
+    // here caused a double-counted ~80 px dead-space gap on every tab screen.
 
     // Wrap in SafeArea if required.
     if (useSafeArea) {
       final effectiveTop = safeAreaTop ?? (appBar == null);
       content = SafeArea(
         top: effectiveTop,
-        bottom: false, // Bottom clearance is handled explicitly above.
+        bottom: false, // Bottom clearance is owned by the body's scroll view.
         child: content,
       );
     }

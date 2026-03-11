@@ -174,7 +174,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     final suggestedPromptsEnabled = ref.watch(suggestedPromptsEnabledProvider);
 
     return ZuralogScaffold(
-      addBottomNavPadding: true,
       appBar: ZuralogAppBar(
         title: 'Coach',
         leading: IconButton(
@@ -221,6 +220,11 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             onSend: ({rawAttachments = const []}) =>
                 _sendMessage(rawAttachments: rawAttachments),
           ),
+          // Push the input bar above the frosted nav bar.
+          // AppShell(extendBody: true) injects the nav bar height into
+          // MediaQuery.padding.bottom — this SizedBox consumes exactly that
+          // inset so the Column doesn't underlap the nav bar.
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),
     );
@@ -751,9 +755,9 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
               AppDimens.spaceMd,
               AppDimens.spaceSm,
               AppDimens.spaceMd,
-              // ZuralogScaffold(addBottomNavPadding: true) already adds
-              // bottomClearance to the outer body. Only a small visual
-              // breathing-room gap is needed here.
+              // Small visual breathing room between the input row and the
+              // bottom of the container. Nav bar clearance is handled by the
+              // SizedBox added after _ChatInputBar in the parent Column.
               AppDimens.spaceSm,
             ),
             child: Row(
