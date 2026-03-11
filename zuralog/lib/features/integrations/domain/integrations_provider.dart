@@ -253,17 +253,17 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
     state = state.copyWith(integrations: merged, isLoading: false);
 
     // 4. Fetch real status from the server for OAuth-based providers.
-    //    All calls run in parallel for speed.
+    //    All calls run in parallel via Future.wait for speed.
     try {
-      final statusFutures = <String, Future<Map<String, dynamic>>>{};
-      for (final provider in OAuthRepository.serverProviders) {
-        statusFutures[provider] = _oauthRepository.getProviderStatus(provider);
-      }
+      final providers = OAuthRepository.serverProviders.toList();
+      final futures = providers.map(
+        (p) => _oauthRepository.getProviderStatus(p),
+      );
+      final values = await Future.wait(futures);
 
-      final results = <String, Map<String, dynamic>>{};
-      for (final entry in statusFutures.entries) {
-        results[entry.key] = await entry.value;
-      }
+      final results = <String, Map<String, dynamic>>{
+        for (var i = 0; i < providers.length; i++) providers[i]: values[i],
+      };
 
       // 5. Merge server results into the integration list.
       merged = state.integrations.map((integration) {
@@ -340,12 +340,9 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           final url = await _oauthRepository.getStravaAuthUrl();
           if (!context.mounted) break;
           if (url != null) {
-            // URL obtained — deep-link handler will call handleStravaCallback.
-            _setStatus(integrationId, IntegrationStatus.connected);
-            _analytics?.capture(
-              event: 'integration_connected',
-              properties: {'provider': integrationId},
-            );
+            // URL obtained — status stays as syncing until the deep-link
+            // handler calls handleStravaCallback and confirms the exchange.
+            // loadIntegrations() will also correct the status from the server.
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Strava connection.');
@@ -354,12 +351,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           final url = await _oauthRepository.getFitbitAuthUrl();
           if (!context.mounted) break;
           if (url != null) {
-            // URL obtained — deep-link handler will call handleFitbitCallback.
-            _setStatus(integrationId, IntegrationStatus.connected);
-            _analytics?.capture(
-              event: 'integration_connected',
-              properties: {'provider': integrationId},
-            );
+            // URL obtained — status stays as syncing until deep-link callback.
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Fitbit connection.');
@@ -368,12 +360,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           final url = await _oauthRepository.getOuraAuthUrl();
           if (!context.mounted) break;
           if (url != null) {
-            // URL obtained — deep-link handler will call handleOuraCallback.
-            _setStatus(integrationId, IntegrationStatus.connected);
-            _analytics?.capture(
-              event: 'integration_connected',
-              properties: {'provider': integrationId},
-            );
+            // URL obtained — status stays as syncing until deep-link callback.
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Oura Ring connection.');
@@ -382,13 +369,8 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           final url = await _oauthRepository.getWithingsAuthUrl();
           if (!context.mounted) break;
           if (url != null) {
-            // URL obtained — Withings redirects browser back via server-side
-            // callback; deep-link handler handles zuralog://oauth/withings?success=true.
-            _setStatus(integrationId, IntegrationStatus.connected);
-            _analytics?.capture(
-              event: 'integration_connected',
-              properties: {'provider': integrationId},
-            );
+            // URL obtained — Withings uses a server-side callback. Status stays
+            // as syncing until zuralog://oauth/withings?success=true deep-link.
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Withings connection.');
@@ -397,12 +379,7 @@ class IntegrationsNotifier extends StateNotifier<IntegrationsState> {
           final url = await _oauthRepository.getPolarAuthUrl();
           if (!context.mounted) break;
           if (url != null) {
-            // URL obtained — deep-link handler will call handlePolarCallback.
-            _setStatus(integrationId, IntegrationStatus.connected);
-            _analytics?.capture(
-              event: 'integration_connected',
-              properties: {'provider': integrationId},
-            );
+            // URL obtained — status stays as syncing until deep-link callback.
           } else {
             _setStatus(integrationId, IntegrationStatus.available);
             _showSnackBar(context, 'Could not start Polar connection.');

@@ -342,6 +342,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
     // Today tab.
     ref.invalidate(healthScoreProvider);
     ref.invalidate(todayFeedProvider);
+    ref.invalidate(notificationsProvider);
 
     // Data tab.
     ref.invalidate(dashboardProvider);

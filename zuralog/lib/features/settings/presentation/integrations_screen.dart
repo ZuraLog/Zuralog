@@ -48,9 +48,12 @@ const Map<String, Color> _integrationColors = {
 };
 
 /// Formats a [DateTime] as a human-readable relative time string.
+///
+/// Compares in UTC to avoid timezone-mismatch issues when the server
+/// returns UTC timestamps parsed via [DateTime.tryParse].
 String _formatLastSynced(DateTime? lastSynced) {
   if (lastSynced == null) return 'Never';
-  final diff = DateTime.now().difference(lastSynced);
+  final diff = DateTime.now().toUtc().difference(lastSynced.toUtc());
   if (diff.inSeconds < 60) return 'Just now';
   if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
   if (diff.inHours < 24) return '${diff.inHours}h ago';
@@ -778,7 +781,7 @@ class _ConnectedBottomSheet extends ConsumerWidget {
                   .read(integrationsProvider.notifier)
                   .disconnect(integration.id);
               Navigator.of(ctx).pop();
-              Navigator.of(context).pop();
+              if (context.mounted) Navigator.of(context).pop();
             },
             child: Text(
               'Disconnect',
