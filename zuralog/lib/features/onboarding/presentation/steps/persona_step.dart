@@ -82,6 +82,7 @@ class PersonaStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -104,7 +105,7 @@ class PersonaStep extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Pick the coaching style that resonates with you.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -137,13 +138,13 @@ class PersonaStep extends StatelessWidget {
           Text(
             'How often should your AI coach reach out?',
             style: AppTextStyles.bodyMedium
-                .copyWith(color: AppColors.textSecondary),
+                .copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: AppDimens.spaceMd),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: AppColors.primary,
-              inactiveTrackColor: AppColors.borderDark,
+              inactiveTrackColor: colors.border,
               thumbColor: AppColors.primary,
               overlayColor: AppColors.primary.withValues(alpha: 0.1),
               trackHeight: 4,
@@ -187,6 +188,7 @@ class _PersonaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return ZSelectableTile(
       isSelected: isSelected,
@@ -249,7 +251,7 @@ class _PersonaCard extends StatelessWidget {
                             Text(
                               persona.description,
                               style: AppTextStyles.bodyMedium
-                                  .copyWith(color: AppColors.textSecondary),
+                                  .copyWith(color: colors.textSecondary),
                             ),
                           ],
                         ),

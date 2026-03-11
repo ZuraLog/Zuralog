@@ -116,6 +116,7 @@ class GoalsStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -138,7 +139,7 @@ class GoalsStep extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Select all that apply. You can change these later.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -170,7 +171,7 @@ class GoalsStep extends StatelessWidget {
             Text(
               'You can skip this — tap Next to continue.',
               style: AppTextStyles.caption
-                  .copyWith(color: AppColors.textSecondary),
+                  .copyWith(color: colors.textSecondary),
             ),
           const SizedBox(height: AppDimens.spaceLg),
         ],

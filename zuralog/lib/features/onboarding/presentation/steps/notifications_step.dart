@@ -69,6 +69,7 @@ class NotificationsStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
@@ -92,7 +93,7 @@ class NotificationsStep extends StatelessWidget {
           Text(
             'Customise how Zuralog keeps you informed. '
             'You can change these any time in Settings.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -198,6 +199,7 @@ class _NotificationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = AppColorsOf(context);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -209,7 +211,7 @@ class _NotificationRow extends StatelessWidget {
         border: Border.all(
           color: isEnabled
               ? iconColor.withValues(alpha: 0.30)
-              : AppColors.borderDark,
+              : colors.border,
         ),
       ),
       child: ClipRRect(
@@ -259,7 +261,7 @@ class _NotificationRow extends StatelessWidget {
                             Text(
                               description,
                               style: AppTextStyles.bodyMedium
-                                  .copyWith(color: AppColors.textSecondary),
+                                  .copyWith(color: colors.textSecondary),
                             ),
                             if (trailing != null) ...[
                               const SizedBox(height: AppDimens.spaceSm),

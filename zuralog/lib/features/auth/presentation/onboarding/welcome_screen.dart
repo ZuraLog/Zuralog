@@ -277,6 +277,8 @@ class _AuthActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -321,8 +323,8 @@ class _AuthActions extends StatelessWidget {
               onPressed: isLoading ? null : onGoogle,
               style: OutlinedButton.styleFrom(
                 foregroundColor: colorScheme.onSurface,
-                side: const BorderSide(
-                  color: AppColors.borderDark,
+                side: BorderSide(
+                  color: colors.border,
                   width: 1.5,
                 ),
                 minimumSize: const Size(double.infinity, 56),
