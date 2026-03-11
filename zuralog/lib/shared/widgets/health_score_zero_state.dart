@@ -31,6 +31,8 @@ class HealthScoreZeroState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
       child: Column(
@@ -60,7 +62,7 @@ class HealthScoreZeroState extends StatelessWidget {
           Text(
             'Your health score awaits',
             style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -68,7 +70,7 @@ class HealthScoreZeroState extends StatelessWidget {
           Text(
             'Log your first data point or connect an\napp to see your daily score.',
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
