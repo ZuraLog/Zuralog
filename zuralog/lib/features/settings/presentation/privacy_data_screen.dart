@@ -271,10 +271,10 @@ class PrivacyDataScreen extends ConsumerWidget {
                   const _Divider(),
                   ZSettingsTile(
                     icon: Icons.delete_forever_rounded,
-                    iconColor: AppColors.accentDark,
+                    iconColor: AppColors.statusError,
                     title: 'Delete All My Data',
                     subtitle: 'Permanently removes all health data',
-                    titleColor: AppColors.accentDark,
+                    titleColor: AppColors.statusError,
                     onTap: () => _showDeleteDataDialog(
                       context,
                       onConfirmed: () {
