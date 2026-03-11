@@ -218,15 +218,7 @@ class _ToggleRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: Icon(icon, size: 20, color: iconColor),
-          ),
+          ZIconBadge(icon: icon, color: iconColor),
           const SizedBox(width: AppDimens.spaceMd),
           Expanded(
             child: Column(

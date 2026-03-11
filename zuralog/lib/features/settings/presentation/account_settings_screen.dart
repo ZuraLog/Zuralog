@@ -303,18 +303,9 @@ class _UnitsTile extends ConsumerWidget {
       child: Row(
         children: [
           // Icon badge.
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.categoryActivity.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: const Icon(
-              Icons.straighten_rounded,
-              size: 20,
-              color: AppColors.categoryActivity,
-            ),
+          const ZIconBadge(
+            icon: Icons.straighten_rounded,
+            color: AppColors.categoryActivity,
           ),
           const SizedBox(width: AppDimens.spaceMd),
           // Label.

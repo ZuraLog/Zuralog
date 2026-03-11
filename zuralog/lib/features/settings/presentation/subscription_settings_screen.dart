@@ -266,18 +266,11 @@ class _UpgradeCard extends StatelessWidget {
             // Header row: icon + title
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.categoryNutrition.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                  ),
-                  child: const Icon(
-                    Icons.workspace_premium_rounded,
-                    size: 22,
-                    color: AppColors.categoryNutrition,
-                  ),
+                const ZIconBadge(
+                  icon: Icons.workspace_premium_rounded,
+                  color: AppColors.categoryNutrition,
+                  size: 40,
+                  iconSize: 22,
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(

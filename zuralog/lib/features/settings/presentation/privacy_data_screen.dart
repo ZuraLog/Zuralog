@@ -380,18 +380,9 @@ class _MemoryItemRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.categorySleep.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: const Icon(
-              Icons.memory_rounded,
-              size: 20,
-              color: AppColors.categorySleep,
-            ),
+          const ZIconBadge(
+            icon: Icons.memory_rounded,
+            color: AppColors.categorySleep,
           ),
           const SizedBox(width: AppDimens.spaceMd),
           Expanded(
@@ -449,15 +440,7 @@ class _ToggleRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: Icon(icon, size: 20, color: iconColor),
-          ),
+          ZIconBadge(icon: icon, color: iconColor),
           const SizedBox(width: AppDimens.spaceMd),
           Expanded(
             child: Column(
