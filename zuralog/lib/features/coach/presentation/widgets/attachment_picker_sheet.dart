@@ -26,11 +26,12 @@ class AttachmentPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
       child: Column(
@@ -42,9 +43,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                // No exact token for 0xFF48484A; closest semantic is borderDark (0xFF38383A).
-                // ignore: avoid_hardcoded_color_token
-                color: const Color(0xFF48484A),
+                color: colors.elevatedSurface,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -140,6 +139,7 @@ class _PickerOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -158,7 +158,7 @@ class _PickerOption extends StatelessWidget {
           Text(
             label,
             style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
           ),
         ],

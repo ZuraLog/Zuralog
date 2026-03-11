@@ -293,6 +293,7 @@ class _CoachEmptyStateState extends State<_CoachEmptyState>
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final grouped = _groupByCategory(widget.suggestions);
 
     return FadeTransition(
@@ -324,7 +325,7 @@ class _CoachEmptyStateState extends State<_CoachEmptyState>
             const SizedBox(height: AppDimens.spaceSm),
             Text(
               'Ask me anything. I have full context from\nyour connected apps and health history.',
-              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceXl),
@@ -532,6 +533,7 @@ class _SuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final borderColor = categoryColorFromString(
       suggestion.category?.trim().toLowerCase() ?? 'other',
     );
@@ -541,9 +543,9 @@ class _SuggestionCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          border: Border.all(color: AppColors.borderDark, width: 1),
+          border: Border.all(color: colors.border, width: 1),
         ),
         clipBehavior: Clip.hardEdge,
         child: IntrinsicHeight(
@@ -562,7 +564,7 @@ class _SuggestionCard extends StatelessWidget {
                    child: Text(
                      suggestion.text,
                      style: AppTextStyles.bodyLarge.copyWith(
-                       color: AppColors.textSecondary,
+                       color: colors.textSecondary,
                      ),
                    ),
                 ),
@@ -617,6 +619,8 @@ class _IntegrationContextBannerState
       namesLabel = '$first2 +$remaining more';
     }
 
+    final colors = AppColorsOf(context);
+
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -627,7 +631,7 @@ class _IntegrationContextBannerState
         vertical: AppDimens.spaceSm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -638,7 +642,7 @@ class _IntegrationContextBannerState
             child: Text(
               'AI has access to: $namesLabel',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -734,11 +738,13 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
       }
     });
 
+    final colors = AppColorsOf(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.backgroundDark,
+        color: colors.background,
         border: Border(
-          top: BorderSide(color: AppColors.borderDark, width: 0.5),
+          top: BorderSide(color: colors.border, width: 0.5),
         ),
       ),
       child: Column(
@@ -795,7 +801,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.inputBackgroundDark,
+                      color: colors.inputBackground,
                       borderRadius:
                           BorderRadius.circular(AppDimens.radiusInput),
                     ),
@@ -901,6 +907,7 @@ class _InputIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -909,7 +916,7 @@ class _InputIconButton extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: filled ? AppColors.primary : AppColors.inputBackgroundDark,
+            color: filled ? AppColors.primary : colors.inputBackground,
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -918,7 +925,7 @@ class _InputIconButton extends StatelessWidget {
             color: activeColor ??
                 (filled
                     ? AppColors.primaryButtonText
-                    : AppColors.textSecondaryDark),
+                    : colors.textSecondary),
           ),
         ),
       ),
@@ -973,9 +980,10 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
       maxChildSize: 0.92,
       expand: false,
       builder: (ctx, scrollController) {
+        final colors = AppColorsOf(ctx);
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.cardBackgroundDark,
+            color: colors.cardBackground,
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppDimens.radiusCard),
             ),
@@ -989,7 +997,7 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.borderDark,
+                    color: colors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1039,7 +1047,7 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                         ),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: AppColors.inputBackgroundDark,
+                            color: colors.inputBackground,
                             borderRadius:
                                 BorderRadius.circular(AppDimens.radiusInput),
                           ),
@@ -1079,7 +1087,7 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                       )
                     : const SizedBox.shrink(),
               ),
-              const Divider(height: 1, color: AppColors.borderDark),
+              Divider(height: 1, color: colors.border),
               // List
               Expanded(
                 child: conversationsAsync.when(
@@ -1170,10 +1178,10 @@ class _ConversationDrawerState extends ConsumerState<_ConversationDrawer> {
                         vertical: AppDimens.spaceSm,
                       ),
                       itemCount: filtered.length,
-                      separatorBuilder: (context, _) => const Divider(
+                      separatorBuilder: (context, _) => Divider(
                         height: 1,
                         indent: AppDimens.spaceMd,
-                        color: AppColors.borderDark,
+                        color: colors.border,
                       ),
                       itemBuilder: (_, i) => _ConversationTile(
                         conversation: filtered[i],
@@ -1219,10 +1227,11 @@ class _ConversationTile extends ConsumerWidget {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
+        final colors = AppColorsOf(sheetContext);
         return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.cardBackgroundDark,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1232,7 +1241,7 @@ class _ConversationTile extends ConsumerWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.borderDark,
+                  color: colors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1248,7 +1257,7 @@ class _ConversationTile extends ConsumerWidget {
                   _archiveConversation(context, ref);
                 },
               ),
-              const Divider(height: 1, color: AppColors.borderDark),
+              Divider(height: 1, color: colors.border),
               ListTile(
                 leading: const Icon(
                   Icons.delete_outline_rounded,
@@ -1298,13 +1307,15 @@ class _ConversationTile extends ConsumerWidget {
   void _showDeleteConfirmation(BuildContext context, WidgetRef ref) {
     showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
+      builder: (dialogCtx) {
+        final colors = AppColorsOf(dialogCtx);
+        return AlertDialog(
+        backgroundColor: colors.surface,
          title: Text('Delete conversation?', style: AppTextStyles.titleMedium),
         content: Text(
           'This cannot be undone.',
           style: AppTextStyles.bodyLarge.copyWith(
-            color: AppColors.textSecondaryDark,
+            color: colors.textSecondary,
           ),
         ),
         actions: [
@@ -1323,7 +1334,8 @@ class _ConversationTile extends ConsumerWidget {
             ),
           ),
         ],
-      ),
+      );
+      },
     );
   }
 
@@ -1347,6 +1359,7 @@ class _ConversationTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onLongPress: () => _showActionsSheet(context, ref),
       child: InkWell(
@@ -1403,7 +1416,7 @@ class _ConversationTile extends ConsumerWidget {
                       Text(
                         conversation.preview!,
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                          color: colors.textSecondary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -1437,9 +1450,10 @@ class _QuickActionsSheet extends ConsumerWidget {
       maxChildSize: 0.8,
       expand: false,
       builder: (ctx, scrollController) {
+        final colors = AppColorsOf(ctx);
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.cardBackgroundDark,
+            color: colors.cardBackground,
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppDimens.radiusCard),
             ),
@@ -1452,7 +1466,7 @@ class _QuickActionsSheet extends ConsumerWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.borderDark,
+                    color: colors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1469,7 +1483,7 @@ class _QuickActionsSheet extends ConsumerWidget {
                    child: Text('Quick Actions', style: AppTextStyles.titleMedium),
                 ),
               ),
-              const Divider(height: 1, color: AppColors.borderDark),
+              Divider(height: 1, color: colors.border),
               Expanded(
                 child: actionsAsync.when(
                   loading: () => const Center(
@@ -1537,12 +1551,13 @@ class _QuickActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: AppColors.surfaceDark,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(
@@ -1589,6 +1604,7 @@ class _QuickLogTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).light();
@@ -1609,7 +1625,7 @@ class _QuickLogTile extends ConsumerWidget {
                 ScaffoldMessenger.of(outerContext).showSnackBar(
                   SnackBar(
                     content: const Text('Health data logged!'),
-                    backgroundColor: AppColors.surfaceDark,
+                    backgroundColor: colors.surface,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
@@ -1626,7 +1642,7 @@ class _QuickLogTile extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: AppColors.surfaceDark,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           border: Border.all(
             color: AppColors.categoryActivity.withValues(alpha: 0.3),
