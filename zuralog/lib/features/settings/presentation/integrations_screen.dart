@@ -166,7 +166,7 @@ class IntegrationsScreen extends ConsumerWidget {
               title: Text(
                 'Integrations',
                 style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: AppColorsOf(context).textPrimary,
                 ),
               ),
             ),
@@ -272,13 +272,14 @@ class _ConnectedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
         vertical: AppDimens.spaceXs,
       ),
       child: Material(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -307,7 +308,7 @@ class _ConnectedCard extends StatelessWidget {
                           Text(
                             integration.name,
                             style: AppTextStyles.titleMedium.copyWith(
-                              color: AppColors.textPrimaryDark,
+                              color: colors.textPrimary,
                             ),
                           ),
                           if (integration.platform != null) ...[
@@ -320,7 +321,7 @@ class _ConnectedCard extends StatelessWidget {
                       Text(
                         'Last synced ${integration.lastSynced}',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
@@ -344,7 +345,7 @@ class _ConnectedCard extends StatelessWidget {
   ) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: AppColorsOf(context).surface,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -367,6 +368,7 @@ class _AvailableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -374,7 +376,7 @@ class _AvailableCard extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.symmetric(
@@ -397,7 +399,7 @@ class _AvailableCard extends StatelessWidget {
                   Text(
                     integration.name,
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                     ),
                   ),
                   if (integration.platform != null) ...[
@@ -429,6 +431,7 @@ class _ComingSoonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -438,7 +441,7 @@ class _ComingSoonRow extends StatelessWidget {
         opacity: 0.5,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.cardBackgroundDark,
+            color: colors.cardBackground,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           ),
           padding: const EdgeInsets.symmetric(
@@ -459,7 +462,7 @@ class _ComingSoonRow extends StatelessWidget {
                 child: Text(
                   integration.name,
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
               ),
@@ -513,10 +516,11 @@ class _PlatformBadge extends StatelessWidget {
       IntegrationPlatform.both => (Icons.devices, 'All'),
     };
 
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       child: Row(
@@ -567,7 +571,7 @@ class _StatusIndicator extends StatelessWidget {
         const SizedBox(width: AppDimens.spaceXs),
         Text(
           label,
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+          style: AppTextStyles.bodySmall.copyWith(color: AppColorsOf(context).textSecondary),
         ),
       ],
     );
@@ -604,21 +608,22 @@ class _ConnectButton extends StatelessWidget {
   }
 
   void _showConnectDialog(BuildContext context) {
+    final colors = AppColorsOf(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
+        backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         title: Text(
           'Connect $integrationName?',
-          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
         ),
         content: Text(
           'This will open the OAuth flow to authorize Zuralog to read your $integrationName data.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
         actions: [
@@ -627,7 +632,7 @@ class _ConnectButton extends StatelessWidget {
             child: Text(
               'Cancel',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
@@ -657,10 +662,11 @@ class _ComingSoonChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       child: Text(
@@ -685,6 +691,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimens.spaceMd,
@@ -700,8 +707,8 @@ class _ConnectedBottomSheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.borderDark,
-                  borderRadius: BorderRadius.circular(2),
+                color: colors.border,
+                borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
@@ -722,7 +729,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
                       Text(
                         integration.name,
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -741,7 +748,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppDimens.spaceMd),
               decoration: BoxDecoration(
-                color: AppColors.cardBackgroundDark,
+                color: colors.cardBackground,
                 borderRadius: BorderRadius.circular(AppDimens.radiusCard),
               ),
               child: Column(
@@ -790,7 +797,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
                 child: Text(
                   'Disconnect',
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: AppColors.accentDark,
+                    color: colors.accent,
                   ),
                 ),
               ),
@@ -801,21 +808,22 @@ class _ConnectedBottomSheet extends StatelessWidget {
   }
 
   void _confirmDisconnect(BuildContext context) {
+    final colors = AppColorsOf(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
+        backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         title: Text(
           'Disconnect ${integration.name}?',
-          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
         ),
         content: Text(
           'Your historical data will be retained. You can reconnect at any time.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
         actions: [
@@ -824,7 +832,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
             child: Text(
               'Cancel',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
@@ -836,7 +844,7 @@ class _ConnectedBottomSheet extends StatelessWidget {
             child: Text(
               'Disconnect',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.accentDark,
+                color: colors.accent,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -856,19 +864,20 @@ class _SyncDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
         Text(
           value,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colors.textPrimary,
             fontWeight: FontWeight.w500,
           ),
         ),

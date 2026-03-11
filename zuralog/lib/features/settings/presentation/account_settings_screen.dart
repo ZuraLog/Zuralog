@@ -28,6 +28,7 @@ class AccountSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: 'Account'),
       body: ListView(
@@ -91,7 +92,7 @@ class AccountSettingsScreen extends ConsumerWidget {
               ),
               ZSettingsTile(
                 icon: Icons.apple_rounded,
-                iconColor: AppColors.textPrimaryDark,
+                iconColor: colors.textPrimary,
                 title: 'Apple',
                 subtitle: 'Not linked',
                 onTap: () => _showLinkAppleSheet(context),
@@ -134,7 +135,7 @@ class AccountSettingsScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.cardBackgroundDark,
+                color: colors.cardBackground,
                 borderRadius: BorderRadius.circular(AppDimens.radiusCard),
               ),
               child: const _UnitsTile(),
@@ -196,10 +197,11 @@ class _ProfileSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Row(
@@ -209,14 +211,14 @@ class _ProfileSummaryCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.15),
+              color: colors.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 'U',
                 style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColors.primary,
+                  color: colors.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -230,14 +232,14 @@ class _ProfileSummaryCard extends StatelessWidget {
                 Text(
                   'User',
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'user@example.com',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],
@@ -258,11 +260,12 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Column(
@@ -274,7 +277,7 @@ class _SettingsGroup extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 68),
                   child: Container(
                     height: 1,
-                    color: AppColors.borderDark.withValues(alpha: 0.5),
+                    color: colors.border.withValues(alpha: 0.5),
                   ),
                 ),
             ],
@@ -293,6 +296,7 @@ class _UnitsTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final current = ref.watch(unitsSystemProvider);
 
     return Padding(
@@ -316,7 +320,7 @@ class _UnitsTile extends ConsumerWidget {
                 Text(
                   'Units',
                   style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -325,7 +329,7 @@ class _UnitsTile extends ConsumerWidget {
                       ? 'Metric (km, kg, °C)'
                       : 'Imperial (mi, lb, °F)',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                 ),
               ],
@@ -348,10 +352,11 @@ class _UnitsSegmentedButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return Container(
       height: 32,
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),
       ),
       child: Row(
@@ -407,6 +412,7 @@ class _Segment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final radius = BorderRadius.horizontal(
       left: isLeft ? const Radius.circular(AppDimens.radiusSm) : Radius.zero,
       right: isLeft ? Radius.zero : const Radius.circular(AppDimens.radiusSm),
@@ -418,19 +424,19 @@ class _Segment extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.primary.withValues(alpha: 0.18)
+              ? colors.primary.withValues(alpha: 0.18)
               : Colors.transparent,
           borderRadius: radius,
           border: selected
               ? Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.55),
+                  color: colors.primary.withValues(alpha: 0.55),
                 )
               : null,
         ),
         child: Text(
           label,
           style: AppTextStyles.labelSmall.copyWith(
-            color: selected ? AppColors.primary : AppColors.textSecondary,
+            color: selected ? colors.primary : colors.textSecondary,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
@@ -474,12 +480,13 @@ class _GoalsEditorSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(_selectedGoalsProvider);
 
+    final colors = AppColorsOf(context);
     return Container(
       margin: EdgeInsets.only(
         top: MediaQuery.of(context).size.height * 0.3,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
@@ -492,7 +499,7 @@ class _GoalsEditorSheet extends ConsumerWidget {
               height: 4,
               margin: const EdgeInsets.only(top: 12, bottom: AppDimens.spaceLg),
               decoration: BoxDecoration(
-                color: AppColors.borderDark,
+                color: colors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -502,7 +509,7 @@ class _GoalsEditorSheet extends ConsumerWidget {
             child: Text(
               'Health Goals',
               style: AppTextStyles.displaySmall.copyWith(
-                color: AppColors.textPrimaryDark,
+                color: colors.textPrimary,
               ),
             ),
           ),
@@ -512,7 +519,7 @@ class _GoalsEditorSheet extends ConsumerWidget {
             child: Text(
               'Select all that apply',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
@@ -545,12 +552,12 @@ class _GoalsEditorSheet extends ConsumerWidget {
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primary.withValues(alpha: 0.15)
-                            : AppColors.surfaceDark,
+                            ? colors.primary.withValues(alpha: 0.15)
+                            : colors.surface,
                         borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                         border: Border.all(
                           color: isSelected
-                              ? AppColors.primary.withValues(alpha: 0.6)
+                              ? colors.primary.withValues(alpha: 0.6)
                               : Colors.transparent,
                         ),
                       ),
@@ -564,7 +571,7 @@ class _GoalsEditorSheet extends ConsumerWidget {
                             icon,
                             size: 18,
                             color: isSelected
-                                ? AppColors.primary
+                                ? colors.primary
                                 : AppColors.textTertiary,
                           ),
                           const SizedBox(width: AppDimens.spaceXs),
@@ -573,8 +580,8 @@ class _GoalsEditorSheet extends ConsumerWidget {
                               label,
                               style: AppTextStyles.bodySmall.copyWith(
                                 color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
+                                    ? colors.primary
+                                    : colors.textSecondary,
                                 fontWeight: isSelected
                                     ? FontWeight.w600
                                     : FontWeight.w400,
@@ -647,26 +654,28 @@ void _showLinkAppleSheet(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
-    builder: (_) => Container(
+    builder: (sheetCtx) {
+      final colors = AppColorsOf(sheetCtx);
+      return Container(
       margin: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(28),
       ),
       padding: const EdgeInsets.all(AppDimens.spaceLg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.apple_rounded, size: 48, color: AppColors.textPrimaryDark),
+          Icon(Icons.apple_rounded, size: 48, color: colors.textPrimary),
           const SizedBox(height: AppDimens.spaceMd),
           Text(
             'Link Apple ID',
-            style: AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Connect your Apple ID for one-tap sign in across devices.',
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppDimens.spaceLg),
@@ -691,7 +700,8 @@ void _showLinkAppleSheet(BuildContext context) {
           const SizedBox(height: AppDimens.spaceSm),
         ],
       ),
-    ),
+    );
+    },
   );
 }
 
@@ -707,14 +717,16 @@ void _showSimpleFormSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => Padding(
+    builder: (sheetCtx) {
+      final colors = AppColorsOf(sheetCtx);
+      return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(28),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -725,20 +737,20 @@ void _showSimpleFormSheet(
             Text(
               title,
               style:
-                  AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
+                  AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
             ),
             const SizedBox(height: AppDimens.spaceMd),
             TextField(
               autofocus: true,
               keyboardType: keyboardType,
               obscureText: obscureText,
-              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textPrimaryDark),
+              style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
               decoration: InputDecoration(
                 labelText: fieldLabel,
                 labelStyle: AppTextStyles.bodySmall
-                    .copyWith(color: AppColors.textSecondary),
+                    .copyWith(color: colors.textSecondary),
                 filled: true,
-                fillColor: AppColors.surfaceDark,
+                fillColor: colors.surface,
                 border: OutlineInputBorder(
                   borderRadius:
                       BorderRadius.circular(AppDimens.radiusInput),
@@ -770,35 +782,37 @@ void _showSimpleFormSheet(
           ],
         ),
       ),
-    ),
+    );
+    },
   );
 }
 
 // ── Delete account dialog ─────────────────────────────────────────────────────
 
 void _showDeleteAccountDialog(BuildContext context) {
+  final colors = AppColorsOf(context);
   showDialog<void>(
     context: context,
     builder: (_) => AlertDialog(
-      backgroundColor: AppColors.cardBackgroundDark,
+      backgroundColor: colors.cardBackground,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       title: Text(
         'Delete Account?',
-        style: AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
+        style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
       ),
       content: Text(
         'This will permanently delete all your health data, conversations, '
         'and insights. This action cannot be undone.',
-        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+        style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
             'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
           ),
         ),
         TextButton(

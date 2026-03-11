@@ -149,6 +149,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     // Read from global preferences — fall back to safe defaults while loading.
     final prefs = ref.watch(userPreferencesProvider).valueOrNull;
     final selectedPersona =
@@ -171,7 +172,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
               title: Text(
                 'Coach',
                 style: AppTextStyles.displaySmall.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
               titlePadding: const EdgeInsetsDirectional.only(
@@ -208,7 +209,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   Text(
                     'Choose how your AI coach communicates',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryDark,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ],
@@ -274,7 +275,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   Text(
                     'How often the coach proactively shares insights',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryDark,
+                      color: colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppDimens.spaceMd),
@@ -326,7 +327,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                   Text(
                     'How detailed AI responses should be',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryDark,
+                      color: colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppDimens.spaceMd),
@@ -371,7 +372,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
             sliver: SliverToBoxAdapter(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.cardBackgroundDark,
+                  color: colors.cardBackground,
                   borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                 ),
                 child: Column(
@@ -380,13 +381,13 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                       title: Text(
                         'Suggested Prompts',
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
                         'Show prompt chips in new conversations',
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: colors.textSecondary,
                         ),
                       ),
                       value: selectedSuggestedPrompts,
@@ -394,8 +395,8 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                           ref.read(userPreferencesProvider.notifier).mutate(
                                 (p) => p.copyWith(suggestedPromptsEnabled: v),
                               ),
-                      activeThumbColor: AppColors.primary,
-                      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                      activeThumbColor: colors.primary,
+                      activeTrackColor: colors.primary.withValues(alpha: 0.5),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.spaceMd,
                         vertical: AppDimens.spaceXs,
@@ -403,20 +404,20 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                     ),
                     Divider(
                       height: 1,
-                      color: AppColors.borderDark,
+                      color: colors.border,
                       indent: AppDimens.spaceMd,
                     ),
                     SwitchListTile(
                       title: Text(
                         'Voice Input',
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
                         'Enable hold-to-talk microphone button',
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: colors.textSecondary,
                         ),
                       ),
                       value: selectedVoiceInput,
@@ -424,8 +425,8 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                           ref.read(userPreferencesProvider.notifier).mutate(
                                 (p) => p.copyWith(voiceInputEnabled: v),
                               ),
-                      activeThumbColor: AppColors.primary,
-                      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                      activeThumbColor: colors.primary,
+                      activeTrackColor: colors.primary.withValues(alpha: 0.5),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.spaceMd,
                         vertical: AppDimens.spaceXs,
@@ -456,7 +457,7 @@ class _CoachSettingsScreenState extends ConsumerState<CoachSettingsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text('Preferences saved'),
-                        backgroundColor: AppColors.surfaceDark,
+                        backgroundColor: colors.surface,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
                           borderRadius:
@@ -500,14 +501,15 @@ class _PersonaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         border: isActive
-            ? Border.all(color: AppColors.primary, width: 1.5)
+            ? Border.all(color: colors.primary, width: 1.5)
             : null,
       ),
       child: Material(
@@ -516,8 +518,8 @@ class _PersonaCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          splashColor: AppColors.primary.withValues(alpha: 0.08),
-          highlightColor: AppColors.primary.withValues(alpha: 0.04),
+          splashColor: colors.primary.withValues(alpha: 0.08),
+          highlightColor: colors.primary.withValues(alpha: 0.04),
           child: Padding(
             padding: const EdgeInsets.all(AppDimens.spaceMd),
             child: Row(
@@ -540,14 +542,14 @@ class _PersonaCard extends StatelessWidget {
                       Text(
                         persona.label,
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceXs),
                       Text(
                         persona.description,
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
@@ -563,7 +565,7 @@ class _PersonaCard extends StatelessWidget {
                       ? Icon(
                           Icons.check_circle_rounded,
                           key: const ValueKey(true),
-                          color: AppColors.primary,
+                          color: colors.primary,
                           size: AppDimens.iconMd,
                         )
                       : Icon(
@@ -648,11 +650,12 @@ class _ProactivityChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary : AppColors.surfaceDark,
+        color: isSelected ? colors.primary : colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
       ),
       child: Material(
@@ -669,7 +672,7 @@ class _ProactivityChip extends StatelessWidget {
                 style: AppTextStyles.bodySmall.copyWith(
                   color: isSelected
                       ? AppColors.primaryButtonText
-                      : AppColors.textSecondaryDark,
+                      : colors.textSecondary,
                   fontWeight:
                       isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
