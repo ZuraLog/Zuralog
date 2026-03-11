@@ -118,12 +118,9 @@ class EmergencyCardScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
-        error: (_, err) => Center(
-          child: Text(
-            'Unable to load emergency card.',
-            style:
-                AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
-          ),
+        error: (err, stack) => ZErrorState(
+          message: 'Unable to load emergency card.',
+          onRetry: () => ref.invalidate(emergencyCardProvider),
         ),
         data: (card) => card.isEmpty
             ? ZEmptyState(
