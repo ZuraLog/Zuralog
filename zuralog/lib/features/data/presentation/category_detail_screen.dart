@@ -48,6 +48,7 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final cat = _category;
     final overrideInt = ref.watch(
       dashboardLayoutProvider
@@ -125,18 +126,18 @@ class _CategoryDetailScreenState extends ConsumerState<CategoryDetailScreen> {
                     Text(
                       'Could not load ${cat.displayName}',
                     style: AppTextStyles.bodyLarge.copyWith(
-                          color: AppColors.textSecondary),
+                          color: colors.textSecondary),
                      ),
                    ],
                  ),
                ),
                data: (detail) {
                  if (detail.metrics.isEmpty) {
-                   return Center(
+                    return Center(
                      child: Text(
                        'No metrics for ${cat.displayName} yet.',
                        style: AppTextStyles.bodyLarge.copyWith(
-                           color: AppColors.textSecondary),
+                           color: colors.textSecondary),
                      ),
                    );
                 }
@@ -238,9 +239,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg =
-        isDark ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight;
+    final colors = AppColorsOf(context);
     final series = widget.series;
     final color = widget.color;
 
@@ -255,7 +254,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
         onTap: widget.onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: bg,
+            color: colors.cardBackground,
             borderRadius: BorderRadius.circular(20),
           ),
           padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -289,7 +288,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
                                    TextSpan(
                                      text: ' ${widget.displayUnit}',
                                      style: AppTextStyles.bodySmall.copyWith(
-                                       color: AppColors.textSecondary,
+                                       color: colors.textSecondary,
                                      ),
                                    ),
                               ],
@@ -337,7 +336,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
   }
 
   Widget _buildChart(BuildContext context, List<FlSpot> spots, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     final values = spots.map((s) => s.y).toList();
     final minY = values.reduce((a, b) => a < b ? a : b);
     final maxY = values.reduce((a, b) => a > b ? a : b);
@@ -352,8 +351,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
           drawVerticalLine: false,
           horizontalInterval: ((maxY - minY) / 3).clamp(0.1, 1e9),
           getDrawingHorizontalLine: (value) => FlLine(
-            color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                .withValues(alpha: 0.5),
+            color: colors.border.withValues(alpha: 0.5),
             strokeWidth: 0.5,
           ),
         ),
@@ -374,7 +372,7 @@ class _MetricChartCardState extends State<_MetricChartCard>
         ),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => AppColors.surfaceDark,
+            getTooltipColor: (_) => colors.surface,
             getTooltipItems: (spots) => spots
                 .map((s) => LineTooltipItem(
                       '${s.y.toStringAsFixed(1)} ${widget.displayUnit}',
@@ -468,15 +466,13 @@ class _MetricCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
       child: Container(
         height: 140,
         decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.cardBackgroundDark
-              : AppColors.cardBackgroundLight,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(20),
         ),
       ),
