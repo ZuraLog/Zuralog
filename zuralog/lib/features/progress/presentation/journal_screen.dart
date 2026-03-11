@@ -121,6 +121,7 @@ class JournalScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final journalAsync = ref.watch(journalProvider);
 
     return ZuralogScaffold(
@@ -128,9 +129,9 @@ class JournalScreen extends ConsumerWidget {
         title: 'Journal',
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.add_rounded,
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
             onPressed: () => _openNewEntry(context, ref),
           ),
@@ -142,7 +143,7 @@ class JournalScreen extends ConsumerWidget {
         ),
         error: (err, _) => RefreshIndicator(
           color: AppColors.primary,
-          backgroundColor: AppColors.cardBackgroundDark,
+          backgroundColor: colors.cardBackground,
           onRefresh: () => _refresh(ref),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -165,7 +166,7 @@ class JournalScreen extends ConsumerWidget {
                       Text(
                         'Failed to load journal',
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
@@ -187,7 +188,7 @@ class JournalScreen extends ConsumerWidget {
           if (page.entries.isEmpty) {
             return RefreshIndicator(
               color: AppColors.primary,
-              backgroundColor: AppColors.cardBackgroundDark,
+              backgroundColor: colors.cardBackground,
               onRefresh: () => _refresh(ref),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -206,7 +207,7 @@ class JournalScreen extends ConsumerWidget {
                           Text(
                             'No entries yet',
                             style: AppTextStyles.titleMedium.copyWith(
-                              color: AppColors.textPrimaryDark,
+                              color: colors.textPrimary,
                             ),
                           ),
                         const SizedBox(height: AppDimens.spaceSm),
@@ -240,7 +241,7 @@ class JournalScreen extends ConsumerWidget {
 
           return RefreshIndicator(
             color: AppColors.primary,
-            backgroundColor: AppColors.cardBackgroundDark,
+            backgroundColor: colors.cardBackground,
             onRefresh: () => _refresh(ref),
             child: ListView.builder(
               padding: EdgeInsets.only(
@@ -338,11 +339,12 @@ class _EntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -356,14 +358,14 @@ class _EntryCard extends StatelessWidget {
                   child: Text(
                     _shortDate(entry.date),
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                     ),
                   ),
                 ),
                 Text(
                   '${_moodEmoji(entry.mood)} ${entry.mood}',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
               ],
@@ -397,10 +399,10 @@ class _EntryCard extends StatelessWidget {
                         label: Text(
                           tag,
                           style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.textSecondaryDark,
+                            color: colors.textSecondary,
                           ),
                         ),
-                        backgroundColor: AppColors.surfaceDark,
+                        backgroundColor: colors.surface,
                         padding: EdgeInsets.zero,
                         materialTapTargetSize:
                             MaterialTapTargetSize.shrinkWrap,
@@ -418,7 +420,7 @@ class _EntryCard extends StatelessWidget {
               Text(
                 entry.notes,
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondaryDark,
+                  color: colors.textSecondary,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

@@ -40,13 +40,14 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final achievementsAsync = ref.watch(achievementsProvider);
 
     return ZuralogScaffold(
       appBar: const ZuralogAppBar(title: 'Achievements'),
       body: RefreshIndicator(
         color: AppColors.primary,
-        backgroundColor: AppColors.cardBackgroundDark,
+        backgroundColor: colors.cardBackground,
         onRefresh: _refresh,
         child: achievementsAsync.when(
           loading: () => const Center(
@@ -69,7 +70,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                       Text(
                         'Failed to load achievements',
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textSecondary,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
@@ -98,14 +99,14 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
                           Text(
                             'No achievements yet',
                             style: AppTextStyles.titleMedium.copyWith(
-                              color: AppColors.textPrimaryDark,
+                              color: colors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: AppDimens.spaceSm),
                           Text(
                             'Keep logging your health data to earn badges.',
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
+                              color: colors.textSecondary,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -162,6 +163,7 @@ class _CategoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final unlockedCount = achievements.where((a) => a.isUnlocked).length;
     final total = achievements.length;
 
@@ -169,7 +171,7 @@ class _CategoryHeader extends StatelessWidget {
       children: [
         Text(
           category.displayName,
-          style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
         ),
         const Spacer(),
         Container(
@@ -178,13 +180,13 @@ class _CategoryHeader extends StatelessWidget {
             vertical: AppDimens.spaceXs,
           ),
           decoration: BoxDecoration(
-            color: AppColors.elevatedSurfaceDark,
+            color: colors.elevatedSurface,
             borderRadius: BorderRadius.circular(AppDimens.radiusChip),
           ),
           child: Text(
             '$unlockedCount / $total',
             style:
-                AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
           ),
         ),
       ],
@@ -333,7 +335,8 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
 
   /// Builds a thin progress bar + label for locked achievements that have
   /// partial progress data.
-  Widget _buildLockedProgress(Achievement achievement) {
+  Widget _buildLockedProgress(BuildContext context, Achievement achievement) {
+    final colors = AppColorsOf(context);
     final current = achievement.progressCurrent!;
     final total = achievement.progressTotal!;
     final label =
@@ -354,7 +357,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
                   height: 3,
                   width: maxWidth,
                   decoration: BoxDecoration(
-                    color: AppColors.borderDark,
+                    color: colors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -391,6 +394,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
 
     if (!_isNew) {
       return _buildCard(
+        context: context,
         isUnlocked: isUnlocked,
         categoryColor: categoryColor,
         icon: icon,
@@ -405,6 +409,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
         return Transform.scale(
           scale: _scaleAnimation.value,
           child: _buildCard(
+            context: context,
             isUnlocked: isUnlocked,
             categoryColor: categoryColor,
             icon: icon,
@@ -417,12 +422,14 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
   }
 
   Widget _buildCard({
+    required BuildContext context,
     required bool isUnlocked,
     required Color categoryColor,
     required IconData icon,
     required double scale,
     required double glowOpacity,
   }) {
+    final colors = AppColorsOf(context);
     final achievement = widget.achievement;
 
     return GestureDetector(
@@ -432,9 +439,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
         child: Container(
           padding: const EdgeInsets.all(AppDimens.spaceMd),
           decoration: BoxDecoration(
-            color: isUnlocked
-                ? AppColors.cardBackgroundDark
-                : AppColors.cardBackgroundDark,
+            color: colors.cardBackground,
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             boxShadow: isUnlocked && glowOpacity > 0
                 ? [
@@ -464,7 +469,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
                 achievement.title,
                 style: AppTextStyles.bodySmall.copyWith(
                   color: isUnlocked
-                      ? AppColors.textPrimaryDark
+                      ? colors.textPrimary
                       : AppColors.textTertiary,
                   fontWeight: FontWeight.w700,
                 ),
@@ -476,7 +481,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
               Text(
                 achievement.description,
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: colors.textSecondary,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -495,7 +500,7 @@ class _AchievementBadgeCardState extends ConsumerState<_AchievementBadgeCard>
                   achievement.progressCurrent != null &&
                   achievement.progressTotal != null &&
                   achievement.progressTotal! > 0)
-                _buildLockedProgress(achievement)
+                _buildLockedProgress(context, achievement)
               else
                 Text(
                   'Locked',

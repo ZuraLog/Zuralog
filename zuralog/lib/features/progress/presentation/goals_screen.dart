@@ -82,6 +82,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final asyncGoals = ref.watch(goalsProvider);
 
     return ZuralogScaffold(
@@ -99,7 +100,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
       ),
       body: RefreshIndicator(
         color: AppColors.primary,
-        backgroundColor: AppColors.cardBackgroundDark,
+        backgroundColor: colors.cardBackground,
         onRefresh: _onRefresh,
         child: asyncGoals.when(
           loading: () => const _LoadingState(),
@@ -206,15 +207,16 @@ class _GoalsList extends StatelessWidget {
   }
 
   Future<bool?> _confirmDelete(BuildContext context) {
+    final colors = AppColorsOf(context);
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.elevatedSurfaceDark,
+        backgroundColor: colors.elevatedSurface,
         title: Text('Delete goal?', style: AppTextStyles.titleMedium),
         content: Text(
           'This action cannot be undone.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: colors.textSecondary,
           ),
         ),
         actions: [
@@ -223,7 +225,7 @@ class _GoalsList extends StatelessWidget {
             child: Text(
               'Cancel',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
             ),
           ),
@@ -278,6 +280,7 @@ class _GoalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final unitsSystem = ref.watch(unitsSystemProvider);
     return GestureDetector(
       onTap: onTap,
@@ -285,7 +288,7 @@ class _GoalCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         ),
         child: Row(
@@ -320,7 +323,7 @@ class _GoalCard extends ConsumerWidget {
                   Text(
                     goal.type.displayName,
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppDimens.spaceSm),
@@ -329,7 +332,7 @@ class _GoalCard extends ConsumerWidget {
                     '${_fmtValue(goal.currentValue)} / '
                     '${_fmtValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -339,7 +342,7 @@ class _GoalCard extends ConsumerWidget {
                     Text(
                       goal.aiCommentary!,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 2,

@@ -118,6 +118,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
   // ── Actions ────────────────────────────────────────────────────────────────
 
   Future<void> _pickDate() async {
+    final colors = AppColorsOf(context);
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -128,8 +129,8 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
           colorScheme: Theme.of(context).colorScheme.copyWith(
                 primary: AppColors.primary,
                 onPrimary: AppColors.primaryButtonText,
-                surface: AppColors.surfaceDark,
-                onSurface: AppColors.textPrimaryDark,
+                surface: colors.surface,
+                onSurface: colors.textPrimary,
               ),
         ),
         child: child!,
@@ -187,18 +188,19 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
   }
 
   Future<void> _delete() async {
+    final colors = AppColorsOf(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
+        backgroundColor: colors.surface,
         title: Text(
           'Delete Entry',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+          style: AppTextStyles.h3.copyWith(color: colors.textPrimary),
         ),
         content: Text(
           'This entry will be permanently deleted.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondaryDark,
+            color: colors.textSecondary,
           ),
         ),
         actions: [
@@ -255,11 +257,12 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceDark,
+      decoration: BoxDecoration(
+        color: colors.surface,
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppDimens.radiusCard),
         ),
@@ -284,7 +287,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: AppDimens.spaceMd),
                   decoration: BoxDecoration(
-                    color: AppColors.borderDark,
+                    color: colors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -294,7 +297,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
               Text(
                 _isEditing ? 'Edit Entry' : 'New Entry',
                 style: AppTextStyles.h2.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
               const SizedBox(height: AppDimens.spaceLg),
@@ -311,7 +314,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                 title: Text(
                   _displayDate(_selectedDate),
                   style: AppTextStyles.body.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
                 onTap: _pickDate,
@@ -364,7 +367,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                   Text(
                     'Track sleep quality',
                     style: AppTextStyles.h3.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                     ),
                   ),
                   Switch(
@@ -399,7 +402,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                 minLines: 3,
                 maxLines: 8,
                 style: AppTextStyles.body.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
                 decoration: InputDecoration(
                   hintText: 'How was your day?',
@@ -407,7 +410,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                     color: AppColors.textTertiary,
                   ),
                   filled: true,
-                  fillColor: AppColors.inputBackgroundDark,
+                  fillColor: colors.inputBackground,
                   border: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(AppDimens.radiusInput),
@@ -446,7 +449,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                         style: AppTextStyles.caption.copyWith(
                           color: selected
                               ? AppColors.primaryButtonText
-                              : AppColors.textSecondaryDark,
+                              : colors.textSecondary,
                         ),
                       ),
                       selected: selected,
@@ -457,7 +460,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                           _selectedTags.remove(tag);
                         }
                       }),
-                      backgroundColor: AppColors.surfaceDark,
+                      backgroundColor: colors.surface,
                       selectedColor: AppColors.primary,
                       checkmarkColor: AppColors.primaryButtonText,
                       side: BorderSide.none,
@@ -502,7 +505,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                     child: TextField(
                       controller: _customTagController,
                       style: AppTextStyles.body.copyWith(
-                        color: AppColors.textPrimaryDark,
+                        color: colors.textPrimary,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Add custom tag…',
@@ -510,7 +513,7 @@ class _JournalEntrySheetState extends ConsumerState<JournalEntrySheet> {
                           color: AppColors.textTertiary,
                         ),
                         filled: true,
-                        fillColor: AppColors.inputBackgroundDark,
+                        fillColor: colors.inputBackground,
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppDimens.spaceMd,
@@ -631,9 +634,10 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Text(
       text,
-      style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+      style: AppTextStyles.h3.copyWith(color: colors.textPrimary),
     );
   }
 }
@@ -657,6 +661,7 @@ class _SliderField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -666,13 +671,13 @@ class _SliderField extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.h3.copyWith(
-                color: AppColors.textPrimaryDark,
+                color: colors.textPrimary,
               ),
             ),
             Text(
               '$emoji ${value.round()}',
               style: AppTextStyles.body.copyWith(
-                color: AppColors.textPrimaryDark,
+                color: colors.textPrimary,
               ),
             ),
           ],
