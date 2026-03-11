@@ -362,6 +362,32 @@ End-to-end fix making the Coach tab's AI chat work against the production backen
 
 ---
 
+## Phase 10.9.5 — Shared Component Library Consolidation (`chore/shared-component-library`)
+
+> **Branch:** `chore/shared-component-library` — completed 2026-03-11
+
+Established a centralized shared component library, eliminating duplicated UI code across 30+ screens and enforcing a single source of truth for all reusable widgets.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Create `ZIconBadge` widget (36–44px rounded icon container) | ✅ Done | Replaces ~30+ inline Container patterns across settings and detail screens |
+| P0 | Create `ZSettingsTile` widget (settings row: icon + title + subtitle + trailing) | ✅ Done | Replaces 7 private `_SettingsTile`, `_TapRow`, `_AccountTile` classes across 7 screens |
+| P0 | Create `ZSelectableTile` widget (animated selectable card frame) | ✅ Done | Replaces 4 onboarding selectable tile patterns across onboarding flow |
+| P0 | Migrate all private `_EmptyState`/`_ErrorState` classes to shared components | ✅ Done | 4–6 screens migrated to `ZEmptyState` / `ZErrorState` |
+| P0 | Migrate all `bool _pressed` manual animations to `ZuralogSpringButton` | ✅ Done | Eliminates manual press state management across multiple screens |
+| P0 | Add Component Library enforcement rule to AGENTS.md | ✅ Done | New `## Component Library` section with library locations, barrel export pattern, and reusability guidelines |
+| P1 | Create `docs/component-audit.md` with migration recommendations | ✅ Done | Audit of 26 FilledButton sites + 88 raw card Container sites with categorized recommendations for future phases |
+
+**Net result:**
+- ~1100+ lines of duplicated UI code removed
+- 3 new reusable components added to library
+- 7 private widget classes eliminated
+- ~30+ inline icon badge patterns consolidated
+- 4 onboarding tile patterns unified
+- Single source of truth established for all reusable UI elements
+
+---
+
 ## Phase 10.10 — Empty State & Zero-Data UX (`feat/empty-state-improvements`)
 
 > **Branch:** `feat/empty-state-improvements` — merged to main 2026-03-11
