@@ -121,7 +121,7 @@ class ProfileScreen extends ConsumerWidget {
             child: Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              child: _EmergencyCardBanner(),
+              child: const _EmergencyCardBanner(),
             ),
           ),
 
@@ -427,6 +427,8 @@ class _TierBadge extends StatelessWidget {
 // ── _EmergencyCardBanner ───────────────────────────────────────────────────────
 
 class _EmergencyCardBanner extends StatelessWidget {
+  const _EmergencyCardBanner();
+
   @override
   Widget build(BuildContext context) {
     return ZuralogSpringButton(
@@ -441,18 +443,11 @@ class _EmergencyCardBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.categoryHeart.withValues(alpha: 0.20),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: const Icon(
-                Icons.medical_information_rounded,
-                size: 24,
-                color: AppColors.categoryHeart,
-              ),
+            const ZIconBadge(
+              icon: Icons.medical_information_rounded,
+              color: AppColors.categoryHeart,
+              size: 44,
+              iconSize: 24,
             ),
             const SizedBox(width: AppDimens.spaceMd),
             Expanded(

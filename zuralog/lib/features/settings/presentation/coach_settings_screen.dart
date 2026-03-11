@@ -21,7 +21,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Persona Data Model ────────────────────────────────────────────────────────
 
@@ -523,18 +523,11 @@ class _PersonaCard extends StatelessWidget {
             child: Row(
               children: [
                 // Icon container
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: persona.iconColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                  ),
-                  child: Icon(
-                    persona.icon,
-                    color: persona.iconColor,
-                    size: AppDimens.iconMd,
-                  ),
+                ZIconBadge(
+                  icon: persona.icon,
+                  color: persona.iconColor,
+                  size: 44,
+                  iconSize: AppDimens.iconMd,
                 ),
 
                 const SizedBox(width: AppDimens.spaceMd),

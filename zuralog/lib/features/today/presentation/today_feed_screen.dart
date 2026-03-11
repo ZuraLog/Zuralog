@@ -751,18 +751,11 @@ class _EmptyInsightsCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
-                  ),
-                  child: Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 24,
-                    color: AppColors.primary,
-                  ),
+                ZIconBadge(
+                  icon: Icons.lightbulb_outline_rounded,
+                  color: AppColors.primary,
+                  size: 44,
+                  iconSize: 24,
                 ),
                 const SizedBox(width: AppDimens.spaceMd),
                 Expanded(
