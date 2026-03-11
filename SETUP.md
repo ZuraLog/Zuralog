@@ -26,6 +26,7 @@ make run              # Android emulator  (debug, local backend)
 make run-ios          # iOS Simulator     (debug, local backend)
 make run-device       # Physical device   (set DEVICE_IP in cloud-brain/.env first)
 make run-prod         # Android emulator  (release, api.zuralog.com)
+make reinstall-prod   # Uninstall old APK first, then run-prod — use when the app won't update cleanly
 ```
 
 **Terminal 3 — Website** (run from `website/`, only if working on the marketing site)
@@ -454,6 +455,7 @@ flutter devices
 |---|---|---|---|
 | `make run` | `--debug` | local (`10.0.2.2:8001`) | **Standard dev — Android emulator, local backend** |
 | `make run-prod` | `--release` | `api.zuralog.com` | Verify prod behaviour on Android emulator |
+| `make reinstall-prod` | `--release` | `api.zuralog.com` | **Uninstalls old APK first, then installs fresh** — use when the app won't update cleanly (e.g. after signing changes or stale cache) |
 | `make run-ios` | `--debug` | local (`localhost:8001`) | iOS Simulator, backend running locally |
 | `make run-ios-prod` | `--release` | `api.zuralog.com` | Verify prod behaviour on iOS Simulator |
 | `make run-device` | `--debug` | local (`DEVICE_IP:8001`) | Physical device, backend running locally |
@@ -820,6 +822,7 @@ make build-prod-ios
 | List connected devices | `flutter devices` |
 | **Android emulator — dev (local backend)** | `make run` |
 | **Android emulator — prod (api.zuralog.com)** | `make run-prod` |
+| **Android emulator — prod, fresh install** | `make reinstall-prod` |
 | **iOS Simulator — dev (local backend)** | `make run-ios` |
 | **iOS Simulator — prod (api.zuralog.com)** | `make run-ios-prod` |
 | **Physical device — dev (set DEVICE_IP in .env first)** | `make run-device` |
