@@ -87,7 +87,7 @@ class ZSettingsTile extends StatelessWidget {
     }
 
     return ZuralogSpringButton(
-      onTap: onTap ?? () {},
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimens.spaceMd,
