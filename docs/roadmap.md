@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-11 (Phase 10.8 — Flutter Layout Refactor: centralized theme, ZuralogScaffold, 33 screens migrated, 10 bugs fixed)
+**Last Updated:** 2026-03-11 (fix/tooltip-and-input-padding — tooltip overflow clamping, bottomClearance double-counting fix, Coach input bar padding)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -347,6 +347,18 @@ End-to-end fix making the Coach tab's AI chat work against the production backen
 | P0 | Phase 2: Layout shell — AppBar fix, AppShell update, tooltip boundary detection | ✅ Done | ZuralogScaffold created; ZuralogAppBar now theme-aware; frosted nav bar uses theme colors; tooltip auto-flip |
 | P0 | Phase 3A–3H: Migrate all 33 screens to ZuralogScaffold | ✅ Done | Today, Data, Coach, Progress, Trends, Settings ×11, Profile, Auth/Onboarding — all migrated |
 | P0 | Phase 4: Cleanup — remove private duplicates, verify zero regressions | ✅ Done | All private _categoryColor(String), _FadeSlideIn, _SkeletonBox copies confirmed removed; flutter analyze: zero issues; 267 tests passing |
+
+---
+
+## Phase 10.9 — Layout Bug Fixes Post-Refactor (`fix/tooltip-and-input-padding`)
+
+> **Branch:** `fix/tooltip-and-input-padding` — completed 2026-03-11
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Tooltip horizontal overflow clamping | ✅ Done | 240px bubble clamped to 16px margins on left/right edges; arrow offset refactored to CustomPainter canvas parameter; `_kHorizontalMargin` and `_kTooltipHeightEstimate` promoted to file-level constants |
+| P0 | Coach input bar double bottom padding | ✅ Done | `_ChatInputBar` internal `Padding.bottom` changed from `AppDimens.bottomClearance()` (~184px) to `AppDimens.spaceSm` (8px); outer `ZuralogScaffold` padding now handles all bottom nav clearance |
+| P0 | ~80px dead-space gap on all 5 tab screens (bottomClearance double-counting) | ✅ Done | `bottomClearance()` formula corrected: removed `bottomNavHeight` (was double-counted by `extendBody: true`); `addBottomNavPadding` parameter deprecated; non-scrollable screens use explicit `SizedBox(height: MediaQuery.padding.bottom)` |
 
 ---
 

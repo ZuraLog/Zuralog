@@ -1,9 +1,52 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-11 (Phase 10.8 — Flutter Layout Refactor: centralized theme, ZuralogScaffold, 33 screens migrated, 10 bugs fixed)  
+**Last Updated:** 2026-03-11 (fix/tooltip-and-input-padding — tooltip overflow clamping, bottomClearance double-counting fix, Coach input bar padding)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Layout Bug Fixes Post-Refactor (fix/tooltip-and-input-padding, 2026-03-11)
+
+**Scope:** Three separate layout bugs discovered after the Flutter Layout Refactor (Phase 10.8) were merged. All fixed in a single branch with 4 commits.  
+**Branch:** `fix/tooltip-and-input-padding`  
+**Key commits:** `d51806a`, `6549855`
+
+**Files changed:**
+- `zuralog/lib/shared/widgets/onboarding_tooltip.dart` — Horizontal clamping + arrow offset refactor
+- `zuralog/lib/features/coach/presentation/new_chat_screen.dart` — Input bar padding fix + SizedBox bottom push
+- `zuralog/lib/core/theme/app_dimens.dart` — `bottomClearance()` formula corrected
+- `zuralog/lib/shared/widgets/layout/zuralog_scaffold.dart` — `addBottomNavPadding` deprecated and made no-op
+
+**What was fixed:**
+
+1. **Tooltip horizontal overflow clamping (Commit `d51806a`, partial)**
+   - **Root cause:** The 240px tooltip bubble could overflow the screen edges on narrow devices (e.g., iPhone SE) when the target widget was near the left or right edge.
+   - **Fix:** Added horizontal clamping to `_showOverlay()` with 16px left/right margins. Refactored `_ArrowPainter` to draw on a full bubble-width canvas with an `arrowOffset` parameter. The arrow tip counter-shifts by `-capturedHorizontalOffset` so it continues pointing at the target widget after the bubble is clamped.
+   - **Constants promoted:** `_kHorizontalMargin = 16.0` and `_kTooltipHeightEstimate = 80.0` to file-level for reusability.
+
+2. **Coach screen input bar double bottom padding (Commit `d51806a`, partial)**
+   - **Root cause:** The `_ChatInputBar` had `Padding.bottom: AppDimens.bottomClearance(context)` (~184px), but `ZuralogScaffold(addBottomNavPadding: true)` was already adding `bottomClearance` to the outer body, resulting in ~240px of blank purple space below the input field.
+   - **Fix:** Changed `_ChatInputBar` internal `Padding.bottom` from `AppDimens.bottomClearance(context)` to `AppDimens.spaceSm` (8px). The outer scaffold padding now handles all bottom nav clearance.
+
+3. **~80px dead-space gap on all 5 tab screens (Commit `6549855`)**
+   - **Root cause:** `AppDimens.bottomClearance()` was calculating `bottomNavHeight (80) + MediaQuery.padding.bottom`, but `AppShell.Scaffold(extendBody: true)` automatically injects the nav bar height into `MediaQuery.padding.bottom`. This double-counted the nav bar height, producing ~80px of dead space on every tab screen.
+   - **Fix:** 
+     - `app_dimens.dart`: Changed `bottomClearance()` formula from `bottomNavHeight + MediaQuery.of(context).padding.bottom` to just `MediaQuery.of(context).padding.bottom`.
+     - `zuralog_scaffold.dart`: Marked `addBottomNavPadding` parameter `@Deprecated` and made it a no-op. Removed the outer `Padding(bottom: bottomClearance)` block. Added comprehensive doc comment explaining the correct pattern.
+     - `new_chat_screen.dart`: Removed deprecated `addBottomNavPadding: true`. Added `SizedBox(height: MediaQuery.of(context).padding.bottom)` as last child of Column body (non-scrollable screen needs explicit bottom push). Updated stale comment in `_ChatInputBar`.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Arrow offset applied to CustomPainter canvas, not Transform.translate | Applying the offset inside the painter ensures the arrow is drawn at the correct position relative to the clamped bubble. Using Transform would shift the entire painter output, including the bubble itself, which is incorrect. The painter receives the offset as a parameter and uses it to position the arrow tip. |
+| `bottomClearance()` removes `bottomNavHeight` from formula | `AppShell.Scaffold(extendBody: true)` already injects nav bar height into `MediaQuery.padding.bottom`. Removing the explicit `bottomNavHeight` addition prevents double-counting. The corrected formula is just `MediaQuery.padding.bottom`. |
+| Non-scrollable screens use explicit `SizedBox`, scrollable screens use corrected formula | Non-scrollable screens (like Coach's Column layout) need an explicit `SizedBox(height: MediaQuery.of(context).padding.bottom)` at the bottom to push content above the nav bar. Scrollable screens (ListView, CustomScrollView with explicit padding) automatically benefit from the corrected `bottomClearance()` formula without needing an explicit spacer. |
+
+**Test results:**
+- `flutter analyze`: zero issues
 
 ---
 
