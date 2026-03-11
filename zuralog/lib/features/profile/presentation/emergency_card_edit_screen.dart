@@ -14,6 +14,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/profile/domain/emergency_card_models.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'emergency_card_screen.dart' show emergencyCardProvider;
 
 // ── EmergencyCardEditScreen ───────────────────────────────────────────────────
@@ -130,22 +131,17 @@ class _EmergencyCardEditScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
-          'Edit Emergency Card',
-          style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
-        ),
+        title: const Text('Edit Emergency Card'),
         actions: [
           TextButton(
             onPressed: _save,
             child: Text(
               'Save',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
@@ -231,7 +227,7 @@ class _EmergencyCardEditScreenState
               onPressed: _save,
               child: Text(
                 'Save Emergency Card',
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.primaryButtonText,
                   fontWeight: FontWeight.w600,
                 ),
@@ -284,7 +280,7 @@ class _BloodTypeSelector extends StatelessWidget {
             ),
             child: Text(
               type,
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: isSelected
                     ? AppColors.backgroundDark
                     : AppColors.textPrimaryDark,
@@ -519,7 +515,7 @@ class _ContactEditorState extends State<_ContactEditor> {
                 child: Center(
                   child: Text(
                     '${widget.index + 1}',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.categoryActivity,
                       fontWeight: FontWeight.w700,
                     ),
@@ -529,7 +525,7 @@ class _ContactEditorState extends State<_ContactEditor> {
               const SizedBox(width: AppDimens.spaceSm),
               Text(
                 'Contact ${widget.index + 1}',
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
@@ -594,7 +590,7 @@ class _ContactField extends StatelessWidget {
       cursorColor: AppColors.primary,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: AppTextStyles.caption.copyWith(
+        labelStyle: AppTextStyles.bodySmall.copyWith(
           color: AppColors.textTertiary,
         ),
         isDense: true,
@@ -633,7 +629,7 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(0, AppDimens.spaceLg, 0, AppDimens.spaceSm),
       child: Text(
         label.toUpperCase(),
-        style: AppTextStyles.labelXs.copyWith(
+        style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,

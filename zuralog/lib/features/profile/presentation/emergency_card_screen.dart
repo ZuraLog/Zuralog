@@ -21,6 +21,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/profile/domain/emergency_card_models.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 export 'package:zuralog/features/profile/domain/emergency_card_models.dart'
     show EmergencyCardData, EmergencyContact;
@@ -86,32 +87,26 @@ class EmergencyCardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cardAsync = ref.watch(emergencyCardProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundDark,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(
+            Icon(
               Icons.medical_information_rounded,
               color: AppColors.categoryHeart,
               size: 22,
             ),
-            const SizedBox(width: AppDimens.spaceSm),
-            Text(
-              'Emergency Card',
-              style:
-                  AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
-            ),
+            SizedBox(width: AppDimens.spaceSm),
+            Text('Emergency Card'),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.edit_rounded,
-              color: AppColors.textPrimaryDark,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             tooltip: 'Edit',
             onPressed: () => context.pushNamed(RouteNames.emergencyCardEdit),
@@ -127,7 +122,7 @@ class EmergencyCardScreen extends ConsumerWidget {
           child: Text(
             'Unable to load emergency card.',
             style:
-                AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
           ),
         ),
         data: (card) => card.isEmpty
@@ -173,13 +168,13 @@ class _EmptyState extends StatelessWidget {
             Text(
               'No Emergency Card Yet',
               style:
-                  AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+                  AppTextStyles.displaySmall.copyWith(color: AppColors.textPrimaryDark),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Text(
               'Add your blood type, allergies, medications, and emergency contacts so first responders can help you faster.',
-              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppDimens.spaceLg),
@@ -199,7 +194,7 @@ class _EmptyState extends StatelessWidget {
               onPressed: onSetUp,
               child: Text(
                 'Set Up Emergency Card',
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textPrimaryDark,
                   fontWeight: FontWeight.w600,
                 ),
@@ -282,7 +277,7 @@ class _CardContent extends StatelessWidget {
           Center(
             child: Text(
               'Last updated: ${_formatUpdatedAt(card.updatedAt!)}',
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textTertiary,
               ),
             ),
@@ -321,7 +316,7 @@ class _SosBanner extends StatelessWidget {
           Expanded(
             child: Text(
               'FOR EMERGENCY USE — Show this screen to first responders',
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.categoryHeart,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
@@ -361,7 +356,7 @@ class _BloodTypeCard extends StatelessWidget {
             child: Center(
               child: Text(
                 bloodType,
-                style: AppTextStyles.h1.copyWith(
+                style: AppTextStyles.displayLarge.copyWith(
                   color: AppColors.categoryHeart,
                   fontSize: 26,
                 ),
@@ -374,7 +369,7 @@ class _BloodTypeCard extends StatelessWidget {
             children: [
               Text(
                 'Blood Type',
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                   color: AppColors.textTertiary,
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w600,
@@ -383,7 +378,7 @@ class _BloodTypeCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 bloodType,
-                style: AppTextStyles.h1.copyWith(
+                style: AppTextStyles.displayLarge.copyWith(
                   color: AppColors.textPrimaryDark,
                 ),
               ),
@@ -430,7 +425,7 @@ class _MedicalSection extends StatelessWidget {
               const SizedBox(width: AppDimens.spaceSm),
               Text(
                 title.toUpperCase(),
-                style: AppTextStyles.labelXs.copyWith(
+                style: AppTextStyles.labelSmall.copyWith(
                   color: AppColors.textTertiary,
                   letterSpacing: 0.8,
                   fontWeight: FontWeight.w600,
@@ -517,7 +512,7 @@ class _ContactsSection extends StatelessWidget {
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(
                   'EMERGENCY CONTACTS',
-                  style: AppTextStyles.labelXs.copyWith(
+                  style: AppTextStyles.labelSmall.copyWith(
                     color: AppColors.textTertiary,
                     letterSpacing: 0.8,
                     fontWeight: FontWeight.w600,
@@ -584,7 +579,7 @@ class _ContactRow extends StatelessWidget {
               child: Center(
                 child: Text(
                   contact.name.isNotEmpty ? contact.name[0] : '?',
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: AppColors.categoryActivity,
                   ),
                 ),
@@ -597,14 +592,14 @@ class _ContactRow extends StatelessWidget {
                 children: [
                   Text(
                     contact.name,
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textPrimaryDark,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     contact.relationship,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),

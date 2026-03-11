@@ -15,6 +15,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 
 // ── Local state ───────────────────────────────────────────────────────────────
 
@@ -68,22 +69,20 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(_profileStateProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
       body: CustomScrollView(
         slivers: [
           // ── Large-title app bar with gear icon ──────────────────────────
           SliverAppBar(
-            backgroundColor: AppColors.backgroundDark,
             expandedHeight: 100,
             pinned: true,
             elevation: 0,
             scrolledUnderElevation: 0,
             actions: [
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.settings_rounded,
-                  color: AppColors.textPrimaryDark,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 tooltip: 'Settings',
                 onPressed: () => context.pushNamed(RouteNames.settings),
@@ -98,8 +97,7 @@ class ProfileScreen extends ConsumerWidget {
               collapseMode: CollapseMode.parallax,
               title: Text(
                 'Profile',
-                style:
-                    AppTextStyles.h2.copyWith(color: AppColors.textPrimaryDark),
+                style: AppTextStyles.displaySmall,
               ),
             ),
           ),
@@ -236,7 +234,7 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
                 child: Center(
                   child: Text(
                     'AR',
-                    style: AppTextStyles.h1.copyWith(
+                    style: AppTextStyles.displayLarge.copyWith(
                       color: AppColors.primary,
                     ),
                   ),
@@ -279,7 +277,7 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
                 children: [
                   Text(
                     profile.displayName,
-                    style: AppTextStyles.h2.copyWith(
+                    style: AppTextStyles.displaySmall.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
@@ -312,10 +310,10 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
               _TierBadge(tier: profile.tier),
               const SizedBox(width: AppDimens.spaceSm),
               Text(
-                'Member since ${profile.memberSince}',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textTertiary,
-                ),
+                  'Member since ${profile.memberSince}',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
               ),
             ],
           ),
@@ -346,7 +344,7 @@ class _NameEditRow extends StatelessWidget {
           child: TextField(
             controller: controller,
             autofocus: true,
-            style: AppTextStyles.h3.copyWith(color: AppColors.textPrimaryDark),
+            style: AppTextStyles.titleMedium.copyWith(color: AppColors.textPrimaryDark),
             cursorColor: AppColors.primary,
             decoration: InputDecoration(
               isDense: true,
@@ -415,7 +413,7 @@ class _TierBadge extends StatelessWidget {
           const SizedBox(width: 3),
           Text(
             tier,
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: _color,
               fontWeight: FontWeight.w700,
             ),
@@ -476,16 +474,16 @@ class _EmergencyCardBannerState extends State<_EmergencyCardBanner> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                    Text(
                     'Emergency Health Card',
-                    style: AppTextStyles.h3.copyWith(
+                    style: AppTextStyles.titleMedium.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Blood type, allergies, medications & emergency contacts',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -587,12 +585,12 @@ class _StatColumn extends StatelessWidget {
       children: [
         Text(
           value,
-          style: AppTextStyles.h2.copyWith(color: AppColors.primary),
+          style: AppTextStyles.displaySmall.copyWith(color: AppColors.primary),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: AppTextStyles.caption.copyWith(
+          style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.textSecondary,
           ),
         ),
@@ -649,7 +647,7 @@ class _SignOutButton extends StatelessWidget {
         },
         child: Text(
           'Sign Out',
-          style: AppTextStyles.body.copyWith(
+          style: AppTextStyles.bodyLarge.copyWith(
             color: AppColors.accentDark,
             fontWeight: FontWeight.w600,
           ),
@@ -738,7 +736,7 @@ class _TapRowState extends State<_TapRow> {
                 children: [
                   Text(
                     widget.title,
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textPrimaryDark,
                     ),
                   ),
@@ -746,7 +744,7 @@ class _TapRowState extends State<_TapRow> {
                     const SizedBox(height: 2),
                     Text(
                       widget.subtitle!,
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),
                     ),
