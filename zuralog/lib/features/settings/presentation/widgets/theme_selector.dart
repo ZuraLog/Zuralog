@@ -147,7 +147,7 @@ class _ThemePill extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               fontWeight: _isSelected ? FontWeight.w600 : FontWeight.w400,
               color: _isSelected
                   ? AppColors.primaryButtonText

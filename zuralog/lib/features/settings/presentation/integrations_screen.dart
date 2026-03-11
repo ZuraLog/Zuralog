@@ -345,6 +345,7 @@ class _ConnectedCard extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.surfaceDark,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppDimens.radiusCard),
@@ -688,13 +689,12 @@ class _ConnectedBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceLg,
-        ),
-        child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceLg,
+      ),
+      child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -801,7 +801,6 @@ class _ConnectedBottomSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 

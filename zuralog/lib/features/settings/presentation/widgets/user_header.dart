@@ -87,7 +87,7 @@ class UserHeader extends ConsumerWidget {
                 // Display name (primary identity)
                 Text(
                   displayName,
-                  style: AppTextStyles.h3.copyWith(
+                  style: AppTextStyles.titleMedium.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
@@ -98,7 +98,7 @@ class UserHeader extends ConsumerWidget {
                 if (email.isNotEmpty)
                   Text(
                     email,
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                     maxLines: 1,
@@ -108,7 +108,7 @@ class UserHeader extends ConsumerWidget {
                 // Membership date
                 Text(
                   memberSince,
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
                 ),
@@ -167,7 +167,7 @@ class _AvatarWithBadge extends StatelessWidget {
               backgroundColor: AppColors.primary.withValues(alpha: 0.85),
               child: Text(
                 initial,
-                style: AppTextStyles.h2.copyWith(
+                style: AppTextStyles.displaySmall.copyWith(
                   color: AppColors.primaryButtonText,
                   fontWeight: FontWeight.w700,
                 ),

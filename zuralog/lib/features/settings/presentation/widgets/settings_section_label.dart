@@ -28,7 +28,7 @@ class SettingsSectionLabel extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: AppTextStyles.labelXs.copyWith(
+        style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.textTertiary,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
