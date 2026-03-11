@@ -135,6 +135,7 @@ class _DetailBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final categoryColor = categoryColorFromString(detail.category);
 
     return CustomScrollView(
@@ -214,14 +215,14 @@ class _DetailBody extends ConsumerWidget {
                       Text(
                         detail.title,
                         style: AppTextStyles.displayLarge.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
                       Text(
                         detail.summary,
                         style: AppTextStyles.bodyLarge.copyWith(
-                          color: AppColors.textSecondaryDark,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
@@ -264,7 +265,7 @@ class _DetailBody extends ConsumerWidget {
               child: Text(
                 'AI Analysis',
                 style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colors.textPrimary,
                 ),
               ),
             ),
@@ -295,7 +296,7 @@ class _DetailBody extends ConsumerWidget {
                       child: Container(
                         padding: const EdgeInsets.all(AppDimens.spaceMd),
                         decoration: BoxDecoration(
-                          color: AppColors.cardBackgroundDark,
+                          color: colors.cardBackground,
                           borderRadius: BorderRadius.circular(
                             AppDimens.radiusCard,
                           ),
@@ -309,13 +310,13 @@ class _DetailBody extends ConsumerWidget {
                                   Icons.psychology_outlined,
                                   size: AppDimens.iconMd,
                                   color:
-                                      AppColors.primary.withValues(alpha: 0.8),
+                                      colors.primary.withValues(alpha: 0.8),
                                 ),
                                 const SizedBox(width: AppDimens.spaceSm),
                                  Text(
                                    'Reasoning',
                                    style: AppTextStyles.bodySmall.copyWith(
-                                     color: AppColors.textSecondaryDark,
+                                     color: colors.textSecondary,
                                      fontWeight: FontWeight.w600,
                                    ),
                                  ),
@@ -327,7 +328,7 @@ class _DetailBody extends ConsumerWidget {
                                    ? detail.reasoning
                                    : 'This insight was generated from your recent health data.',
                                style: AppTextStyles.bodyLarge.copyWith(
-                                 color: AppColors.textPrimaryDark,
+                                 color: colors.textPrimary,
                                  height: 1.55,
                                ),
                              ),
@@ -357,7 +358,7 @@ class _DetailBody extends ConsumerWidget {
                 child: Text(
                   'Data Sources',
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: colors.textPrimary,
                   ),
                 ),
               ),
@@ -417,9 +418,9 @@ class _DetailBody extends ConsumerWidget {
                   ),
                   label: const Text('Discuss with Coach'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: colors.primary,
                     foregroundColor: AppColors.primaryButtonText,
-                    disabledBackgroundColor: AppColors.primary,
+                    disabledBackgroundColor: colors.primary,
                     disabledForegroundColor: AppColors.primaryButtonText,
                     minimumSize: const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(
@@ -468,13 +469,14 @@ class _InsightChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final points = detail.dataPoints;
     final maxY = points.map((p) => p.value).reduce(math.max) * 1.2;
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: AppColors.cardBackgroundDark,
+        color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       child: Column(
@@ -484,7 +486,7 @@ class _InsightChart extends StatelessWidget {
             Text(
               detail.chartTitle!,
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colors.textSecondary,
               ),
             ),
             const SizedBox(height: AppDimens.spaceMd),
@@ -499,7 +501,7 @@ class _InsightChart extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: maxY / 4,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: AppColors.borderDark.withValues(alpha: 0.3),
+                    color: colors.border.withValues(alpha: 0.3),
                     strokeWidth: 1,
                   ),
                 ),
@@ -559,13 +561,13 @@ class _InsightChart extends StatelessWidget {
                 ],
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.surfaceDark,
+                    getTooltipColor: (_) => colors.surface,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final unit = detail.chartUnit ?? '';
                       return BarTooltipItem(
                         '${rod.toY.toStringAsFixed(1)} $unit',
                         AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       );
                     },
@@ -599,10 +601,11 @@ class _SourceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(AppDimens.radiusChip),
       ),
       child: Row(
@@ -611,13 +614,13 @@ class _SourceChip extends StatelessWidget {
           Icon(
             _sourceIcon(source.iconName),
             size: 14,
-            color: AppColors.textSecondaryDark,
+            color: colors.textSecondary,
           ),
           const SizedBox(width: 6),
           Text(
             source.name,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
           ),
         ],
@@ -664,6 +667,7 @@ class _DetailError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -677,7 +681,7 @@ class _DetailError extends StatelessWidget {
           Text(
             'Could not load insight',
             style: AppTextStyles.titleMedium.copyWith(
-              color: AppColors.textSecondaryDark,
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
@@ -685,7 +689,7 @@ class _DetailError extends StatelessWidget {
             onPressed: onRetry,
             child: Text(
               'Try again',
-              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
+              style: AppTextStyles.bodyLarge.copyWith(color: colors.primary),
             ),
           ),
         ],

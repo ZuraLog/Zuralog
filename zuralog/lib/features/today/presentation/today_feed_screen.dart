@@ -42,6 +42,7 @@ class TodayFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
     final bannerDismissed = ref.watch(dataMaturityBannerDismissedProvider);
@@ -87,8 +88,8 @@ class TodayFeedScreen extends ConsumerWidget {
         ],
       ),
       body: RefreshIndicator(
-        color: AppColors.primary,
-        backgroundColor: AppColors.cardBackgroundDark,
+        color: colors.primary,
+        backgroundColor: colors.cardBackground,
         onRefresh: () async {
           ref.read(todayRepositoryProvider).invalidateFeedCache();
           ref.invalidate(healthScoreProvider);
@@ -178,11 +179,11 @@ class TodayFeedScreen extends ConsumerWidget {
               // so this branch should never be reached in practice.
               error: (err, stack) => [const _EmptyInsightsCard()],
               loading: () => [
-                const SizedBox(
+                SizedBox(
                   height: 120,
                   child: Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.primary,
+                      color: colors.primary,
                     ),
                   ),
                 ),
@@ -294,6 +295,7 @@ class _HealthScoreHero extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       child: Stack(
@@ -323,17 +325,17 @@ class _HealthScoreHero extends ConsumerWidget {
               horizontal: AppDimens.spaceMd,
             ),
             decoration: BoxDecoration(
-              color: AppColors.cardBackgroundDark,
+              color: colors.cardBackground,
               borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              border: Border.all(color: AppColors.borderDark),
+              border: Border.all(color: colors.border),
             ),
             child: scoreAsync.when(
               // Provider never errors — this branch is a safety net only.
               error: (err, stack) => const HealthScoreZeroState(),
-              loading: () => const SizedBox(
+              loading: () => SizedBox(
                 height: 120,
                 child: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
+                  child: CircularProgressIndicator(color: colors.primary),
                 ),
               ),
               data: (data) {
@@ -376,6 +378,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -385,7 +388,7 @@ class _SectionHeader extends StatelessWidget {
           height: 18,
           margin: const EdgeInsets.only(right: AppDimens.spaceSm),
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: colors.primary,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -393,7 +396,7 @@ class _SectionHeader extends StatelessWidget {
           child: Text(
             title,
             style: AppTextStyles.displaySmall.copyWith(
-              color: AppColors.textPrimaryDark,
+              color: colors.textPrimary,
             ),
           ),
         ),
@@ -413,6 +416,7 @@ class _InsightCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     final categoryColor = categoryColorFromString(insight.category);
     final isUnread = !insight.isRead;
 
@@ -455,12 +459,12 @@ class _InsightCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(AppDimens.spaceMd),
                 decoration: BoxDecoration(
-                  color: AppColors.cardBackgroundDark,
+                  color: colors.cardBackground,
                   borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                   border: Border.all(
                     color: isUnread
                         ? categoryColor.withValues(alpha: 0.20)
-                        : AppColors.borderDark,
+                        : colors.border,
                   ),
                 ),
                 child: IntrinsicHeight(
@@ -507,10 +511,10 @@ class _InsightCard extends ConsumerWidget {
                                   const SizedBox(width: AppDimens.spaceXs),
                                 ],
                                  Expanded(
-                                    child: Text(
+                                     child: Text(
                                       insight.title,
                                       style: AppTextStyles.titleMedium.copyWith(
-                                        color: AppColors.textPrimaryDark,
+                                        color: colors.textPrimary,
                                       ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
@@ -522,7 +526,7 @@ class _InsightCard extends ConsumerWidget {
                             Text(
                                insight.summary,
                                style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
+                                color: colors.textSecondary,
                               ),
                               maxLines: 3,
                               overflow: TextOverflow.ellipsis,
@@ -562,7 +566,7 @@ class _InsightCard extends ConsumerWidget {
                                 Icon(
                                   Icons.chevron_right_rounded,
                                   size: AppDimens.iconSm,
-                                  color: AppColors.primary
+                                  color: colors.primary
                                       .withValues(alpha: 0.5),
                                 ),
                               ],
@@ -591,20 +595,21 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return ZuralogSpringButton(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          border: Border.all(color: AppColors.borderDark),
+          border: Border.all(color: colors.border),
         ),
         child: Row(
           children: [
             ZIconBadge(
               icon: Icons.bolt_rounded,
-              color: AppColors.primary,
+              color: colors.primary,
               size: 40,
               iconSize: AppDimens.iconMd,
             ),
@@ -616,7 +621,7 @@ class _QuickActionCard extends StatelessWidget {
                   Text(
                     action.title,
                     style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.textPrimaryDark,
+                      color: colors.textPrimary,
                     ),
                   ),
                   if (action.subtitle.isNotEmpty) ...[
@@ -624,7 +629,7 @@ class _QuickActionCard extends StatelessWidget {
                     Text(
                       action.subtitle,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: colors.textSecondary,
                       ),
                     ),
                   ],
@@ -634,7 +639,7 @@ class _QuickActionCard extends StatelessWidget {
             Icon(
               Icons.chevron_right_rounded,
               size: AppDimens.iconMd,
-              color: AppColors.primary.withValues(alpha: 0.5),
+              color: colors.primary.withValues(alpha: 0.5),
             ),
           ],
         ),
@@ -651,6 +656,7 @@ class _WellnessCheckinCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return ZuralogSpringButton(
       onTap: () {
         ref.read(hapticServiceProvider).light();
@@ -680,7 +686,7 @@ class _WellnessCheckinCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(AppDimens.spaceMd),
                 decoration: BoxDecoration(
-                  color: AppColors.cardBackgroundDark,
+                  color: colors.cardBackground,
                   borderRadius: BorderRadius.circular(AppDimens.radiusCard),
                   border: Border.all(
                     color: AppColors.categoryWellness.withValues(alpha: 0.15),
@@ -702,14 +708,14 @@ class _WellnessCheckinCard extends ConsumerWidget {
                            Text(
                             'Wellness check-in',
                             style: AppTextStyles.titleMedium.copyWith(
-                              color: AppColors.textPrimaryDark,
+                              color: colors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Log mood, energy, and water intake',
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ],
@@ -737,14 +743,15 @@ class _EmptyInsightsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorsOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
         padding: const EdgeInsets.all(AppDimens.spaceLg),
         decoration: BoxDecoration(
-          color: AppColors.cardBackgroundDark,
+          color: colors.cardBackground,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          border: Border.all(color: AppColors.borderDark),
+          border: Border.all(color: colors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -753,7 +760,7 @@ class _EmptyInsightsCard extends ConsumerWidget {
               children: [
                 ZIconBadge(
                   icon: Icons.lightbulb_outline_rounded,
-                  color: AppColors.primary,
+                  color: colors.primary,
                   size: 44,
                   iconSize: 24,
                 ),
@@ -765,14 +772,14 @@ class _EmptyInsightsCard extends ConsumerWidget {
                       Text(
                         'Insights on the way',
                         style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.textPrimaryDark,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Your AI coach is ready — start logging to unlock personalized observations.',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
