@@ -375,10 +375,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
+    return ZuralogScaffold(
+      body: Column(
           children: [
             // ── Top bar: back button + step dots + skip ────────────────
             _OnboardingTopBar(
@@ -409,7 +407,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
               ),
           ],
         ),
-      ),
     );
   }
 }
@@ -465,13 +462,13 @@ class _OnboardingTopBar extends StatelessWidget {
           ),
 
           SizedBox(
-            width: AppDimens.touchTargetMin + 16,
+            width: AppDimens.touchTargetMin + AppDimens.spaceMd,
             height: AppDimens.touchTargetMin,
             child: (onSkip != null && currentPage > 0)
                 ? TextButton(
                     onPressed: onSkip,
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
+                      foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       padding: const EdgeInsets.symmetric(

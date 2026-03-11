@@ -46,11 +46,10 @@ const List<String> _genderOptions = [
 DateTime get _birthdayFirst => DateTime(DateTime.now().year - 100, 1, 1);
 
 /// Latest selectable birthday (13 years ago — minimum age).
-DateTime get _birthdayLast => DateTime(
-  DateTime.now().year - 13,
-  DateTime.now().month,
-  DateTime.now().day,
-);
+DateTime get _birthdayLast {
+  final now = DateTime.now();
+  return DateTime(now.year - 13, now.month, now.day);
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -236,7 +235,7 @@ class _ProfileQuestionnaireScreenState
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return ZuralogScaffold(
       appBar: AppBar(
         // Show back button only after step 1.
         leading: _currentStep > 0
@@ -253,10 +252,9 @@ class _ProfileQuestionnaireScreenState
         ),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.spaceLg),
-          child: Column(
+      body: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Progress indicator ───────────────────────────────────────
@@ -283,7 +281,6 @@ class _ProfileQuestionnaireScreenState
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -334,8 +331,8 @@ class _ProgressHeader extends StatelessWidget {
       children: [
         Text(
           'Step ${currentStep + 1} of $totalSteps',
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textSecondary,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -457,15 +454,15 @@ class _Step1Name extends StatelessWidget {
             // ── Heading ──────────────────────────────────────────────────
             Text(
               'What should we call you?',
-              style: AppTextStyles.h2.copyWith(
+              style: AppTextStyles.displaySmall.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Text(
               'Help us personalise your AI experience.',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textSecondary,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
 
@@ -501,8 +498,8 @@ class _Step1Name extends StatelessWidget {
 
             Text(
               'The nickname is how your AI coach will address you in conversations.',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondary,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -560,12 +557,14 @@ class _Step2Birthday extends StatelessWidget {
           // ── Heading ──────────────────────────────────────────────────
           Text(
             'When were you born?',
-            style: AppTextStyles.h2.copyWith(color: colorScheme.onSurface),
+            style: AppTextStyles.displaySmall.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Used to personalise health recommendations. Optional.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -595,7 +594,7 @@ class _Step2Birthday extends StatelessWidget {
                     Icons.cake_outlined,
                     color: birthday != null
                         ? AppColors.primary
-                        : AppColors.textSecondary,
+                        : colorScheme.onSurfaceVariant,
                     size: AppDimens.iconMd,
                   ),
                   const SizedBox(width: AppDimens.spaceMd),
@@ -604,16 +603,16 @@ class _Step2Birthday extends StatelessWidget {
                       birthday != null
                           ? _formatDate(birthday!)
                           : 'Select your birthday',
-                      style: AppTextStyles.body.copyWith(
+                      style: AppTextStyles.bodyLarge.copyWith(
                         color: birthday != null
                             ? colorScheme.onSurface
-                            : AppColors.textSecondary,
+                            : colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
                   Icon(
                     Icons.chevron_right_rounded,
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                     size: AppDimens.iconMd,
                   ),
                 ],
@@ -625,8 +624,8 @@ class _Step2Birthday extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceMd),
             Text(
               "You can skip this step — tap Next to continue.",
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondary,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -666,12 +665,14 @@ class _Step3Gender extends StatelessWidget {
           // ── Heading ──────────────────────────────────────────────────
           Text(
             'How do you identify?',
-            style: AppTextStyles.h2.copyWith(color: colorScheme.onSurface),
+            style: AppTextStyles.displaySmall.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Helps tailor health insights. Optional.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -699,8 +700,8 @@ class _Step3Gender extends StatelessWidget {
             const SizedBox(height: AppDimens.spaceMd),
             Text(
               "You can skip this — tap Finish to complete setup.",
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondary,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -786,10 +787,10 @@ class _GenderOptionTile extends StatelessWidget {
             const SizedBox(width: AppDimens.spaceMd),
             Text(
               label,
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: isSelected
                     ? colorScheme.onSurface
-                    : AppColors.textSecondary,
+                    : colorScheme.onSurfaceVariant,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

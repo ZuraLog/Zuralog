@@ -160,10 +160,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
-        child: Column(
+    return ZuralogScaffold(
+      body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // ── Custom top bar (not AppBar) ────────────────────────────
@@ -184,10 +182,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               ],
               indicatorColor: AppColors.primary,
               indicatorWeight: 2,
-              labelStyle: AppTextStyles.h3,
+              labelStyle: AppTextStyles.titleMedium,
               unselectedLabelStyle: AppTextStyles.bodyMedium,
               labelColor: colorScheme.onSurface,
-              unselectedLabelColor: AppColors.textSecondary,
+              unselectedLabelColor: colorScheme.onSurfaceVariant,
               dividerColor: Colors.transparent,
             ),
 
@@ -231,7 +229,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -263,7 +260,7 @@ class _TopBar extends StatelessWidget {
             child: Center(
               child: Text(
                 'Zuralog',
-                style: AppTextStyles.h3.copyWith(color: AppColors.primary),
+                style: AppTextStyles.titleMedium.copyWith(color: AppColors.primary),
               ),
             ),
           ),
@@ -313,14 +310,14 @@ class _LoginForm extends StatelessWidget {
           children: [
             const SizedBox(height: AppDimens.spaceLg),
 
-            Text('Welcome back.', style: AppTextStyles.h1),
+            Text('Welcome back.', style: AppTextStyles.displayLarge),
 
             const SizedBox(height: AppDimens.spaceSm),
 
             Text(
               'Sign in to continue.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
 
@@ -368,12 +365,12 @@ class _LoginForm extends StatelessWidget {
                     horizontal: AppDimens.spaceSm,
                     vertical: AppDimens.spaceXs,
                   ),
-                  foregroundColor: AppColors.textSecondary,
+                  foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 child: Text(
                   'Forgot password?',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -410,7 +407,7 @@ class _LoginForm extends StatelessWidget {
                   Text(
                     "Don't have an account? ",
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   TextButton(
@@ -479,14 +476,14 @@ class _RegisterForm extends StatelessWidget {
           children: [
             const SizedBox(height: AppDimens.spaceLg),
 
-            Text('Create account.', style: AppTextStyles.h1),
+            Text('Create account.', style: AppTextStyles.displayLarge),
 
             const SizedBox(height: AppDimens.spaceSm),
 
             Text(
               'Start your health journey.',
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
 
@@ -550,7 +547,7 @@ class _RegisterForm extends StatelessWidget {
                   Text(
                     'Already have an account? ',
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   TextButton(

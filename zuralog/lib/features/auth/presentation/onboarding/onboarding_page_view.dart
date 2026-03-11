@@ -135,8 +135,8 @@ class _OnboardingPageViewState extends ConsumerState<OnboardingPageView> {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final imageHeight = screenHeight * 0.58;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
+      useSafeArea: false,
       body: Column(
         children: [
           // ── Hero image area — top 58% ──────────────────────────────────
@@ -287,7 +287,7 @@ class _BottomPanel extends StatelessWidget {
               child: TextButton(
                 onPressed: onSkip,
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
+                  foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: const EdgeInsets.symmetric(
@@ -298,7 +298,7 @@ class _BottomPanel extends StatelessWidget {
                 child: Text(
                   'Skip',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -311,7 +311,7 @@ class _BottomPanel extends StatelessWidget {
           // Headline
           Text(
             currentSlide.headline,
-            style: AppTextStyles.h1.copyWith(color: Colors.white),
+            style: AppTextStyles.displayLarge.copyWith(color: Colors.white),
           ),
 
           const SizedBox(height: AppDimens.spaceSm),
@@ -320,7 +320,7 @@ class _BottomPanel extends StatelessWidget {
           Text(
             currentSlide.body,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
 
@@ -353,7 +353,7 @@ class _BottomPanel extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppDimens.shapePill),
                       ),
-                      textStyle: AppTextStyles.h3,
+                      textStyle: AppTextStyles.titleMedium,
                     ),
                     child: Text(isLastPage ? 'Get Started' : 'Next'),
                   ),
@@ -372,7 +372,7 @@ class _BottomPanel extends StatelessWidget {
 /// Animated pill dot indicators for the onboarding slideshow.
 ///
 /// Active dot: 20×6px pill in slide accent color.
-/// Inactive dot: 6×6px circle in [AppColors.borderDark].
+/// Inactive dot: 6×6px circle in theme [ColorScheme.outline].
 /// Width morphs using [AnimatedContainer] with [Curves.easeOutCubic].
 class _SlideDots extends StatelessWidget {
   const _SlideDots({
@@ -401,7 +401,7 @@ class _SlideDots extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
             color: isActive
                 ? slides[currentPage].accentColor
-                : AppColors.borderDark,
+                : Theme.of(context).colorScheme.outline,
           ),
         );
       }),

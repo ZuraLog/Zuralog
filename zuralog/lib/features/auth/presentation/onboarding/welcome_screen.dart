@@ -124,8 +124,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
+    return ZuralogScaffold(
+      useSafeArea: false,
       body: Stack(
         children: [
           // ── Radial bloom background — Sage Green at top-center ────────
@@ -201,14 +201,14 @@ class _BrandArea extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // Logo card — 96×96px, shapeLg, primary fill with glow shadow
-        _LogoCard(),
+        const _LogoCard(),
 
         const SizedBox(height: AppDimens.spaceLg),
 
         // App name
         Text(
           'Zuralog',
-          style: AppTextStyles.h1.copyWith(color: Colors.white),
+          style: AppTextStyles.displayLarge.copyWith(color: Colors.white),
         ),
 
         const SizedBox(height: AppDimens.spaceSm),
@@ -217,7 +217,7 @@ class _BrandArea extends StatelessWidget {
         Text(
           'Better health,\ntogether.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           textAlign: TextAlign.center,
         ),
@@ -228,6 +228,8 @@ class _BrandArea extends StatelessWidget {
 
 /// 96×96px logo card with Sage Green fill and brand glow shadow.
 class _LogoCard extends StatelessWidget {
+  const _LogoCard();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -293,7 +295,7 @@ class _AuthActions extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppDimens.shapePill),
                 ),
-                textStyle: AppTextStyles.h3,
+                textStyle: AppTextStyles.titleMedium,
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -327,14 +329,14 @@ class _AuthActions extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppDimens.shapePill),
                 ),
-                textStyle: AppTextStyles.h3,
+                textStyle: AppTextStyles.titleMedium,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'G',
-                    style: AppTextStyles.h3.copyWith(
+                    style: AppTextStyles.titleMedium.copyWith(
                       color: AppColors.googleBlue,
                       fontWeight: FontWeight.w700,
                     ),
@@ -342,7 +344,7 @@ class _AuthActions extends StatelessWidget {
                   const SizedBox(width: AppDimens.spaceSm),
                   Text(
                     'Continue with Google',
-                    style: AppTextStyles.h3.copyWith(
+                    style: AppTextStyles.titleMedium.copyWith(
                       color: colorScheme.onSurface,
                     ),
                   ),
@@ -373,7 +375,7 @@ class _AuthActions extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppDimens.shapePill),
                 ),
-                textStyle: AppTextStyles.h3,
+                textStyle: AppTextStyles.titleMedium,
               ),
               child: const Text('Log in with Email'),
             ),
@@ -402,8 +404,8 @@ class _OrDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
           child: Text(
             'or',
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textSecondary,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -414,41 +416,65 @@ class _OrDivider extends StatelessWidget {
 }
 
 /// Legal footer with tappable Terms of Service and Privacy Policy links.
-class _LegalFooter extends StatelessWidget {
+class _LegalFooter extends StatefulWidget {
   const _LegalFooter();
+
+  @override
+  State<_LegalFooter> createState() => _LegalFooterState();
+}
+
+class _LegalFooterState extends State<_LegalFooter> {
+  late final TapGestureRecognizer _tosRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tosRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        // TODO(dev): Open Terms of Service URL via url_launcher.
+      };
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        // TODO(dev): Open Privacy Policy URL via url_launcher.
+      };
+  }
+
+  @override
+  void dispose() {
+    _tosRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
-        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+        style: AppTextStyles.bodySmall.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         children: [
           const TextSpan(text: 'By continuing, you agree to our '),
           TextSpan(
             text: 'Terms of Service',
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.primary,
               decoration: TextDecoration.underline,
               decorationColor: AppColors.primary,
             ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                // TODO(dev): Open Terms of Service URL via url_launcher.
-              },
+            recognizer: _tosRecognizer,
           ),
           const TextSpan(text: '\nand '),
           TextSpan(
             text: 'Privacy Policy',
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.primary,
               decoration: TextDecoration.underline,
               decorationColor: AppColors.primary,
             ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                // TODO(dev): Open Privacy Policy URL via url_launcher.
-              },
+            recognizer: _privacyRecognizer,
           ),
           const TextSpan(text: '.'),
         ],
