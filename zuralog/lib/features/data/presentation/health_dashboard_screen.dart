@@ -27,10 +27,8 @@ import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/category_card.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/score_trend_hero.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
-import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── HealthDashboardScreen ─────────────────────────────────────────────────────
 

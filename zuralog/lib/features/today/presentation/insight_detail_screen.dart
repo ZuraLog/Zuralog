@@ -27,9 +27,6 @@ import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/animations/z_fade_slide_in.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
-import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── InsightDetailScreen ───────────────────────────────────────────────────────
