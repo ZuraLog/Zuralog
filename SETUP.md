@@ -776,9 +776,16 @@ For the full step-by-step guide including domain setup, Celery services, and Str
 # Build Android App Bundle pointing at production API
 make build-prod
 
+# Build a release APK you can sideload directly onto your phone
+make build-apk-prod
+
 # Build iOS IPA pointing at production API
 make build-prod-ios
 ```
+
+> **`make build-prod` vs `make build-apk-prod`:**
+> - `build-prod` (alias for `build-appbundle`) produces an `.aab` file — required for Play Store submission but can only be installed via Google Play or Firebase App Distribution.
+> - `build-apk-prod` produces an `.apk` file — install directly on your phone via USB (`adb install`) or by sending it to your phone and tapping it. Enable **"Install from unknown sources"** on your phone when prompted. Output is at `zuralog/build/app/outputs/flutter-apk/app-release.apk`.
 
 ### Key differences from local dev
 
@@ -828,7 +835,8 @@ make build-prod-ios
 | **Physical device — dev (set DEVICE_IP in .env first)** | `make run-device` |
 | **Physical device — prod (api.zuralog.com)** | `make run-device-prod` |
 | Build debug APK | `make build-apk` |
-| Build release App Bundle (prod) | `make build-appbundle` |
+| Build release App Bundle (prod) | `make build-appbundle` or `make build-prod` |
+| Build release APK for sideloading (prod) | `make build-apk-prod` |
 | Build release IPA (prod) | `make build-prod-ios` |
 
 > All `make` targets automatically inject `GOOGLE_WEB_CLIENT_ID`, `SENTRY_DSN`, and `POSTHOG_API_KEY` from `cloud-brain/.env`. Never use bare `flutter run` if Google Sign-In needs to work.
@@ -1088,6 +1096,33 @@ adb devices
 ```
 
 On a typical developer machine (8–16 GB RAM) expect 60–120 seconds from emulator launch to `device` state. Slow disk I/O (spinning HDD) can push this to 3–5 minutes.
+
+### `make build-prod` fails with "Release app bundle failed to strip debug symbols" or lint file-lock error
+
+Two things can cause this on Windows:
+
+**1. Android command-line tools not installed (causes the "strip debug symbols" error):**
+
+The Android SDK command-line tools (`sdkmanager`, `lint`, etc.) must be installed separately. To install them:
+
+1. Open Android Studio → Settings (`Ctrl+Alt+S`) → Languages & Frameworks → Android SDK → **SDK Tools** tab
+2. Check **"Android SDK Command-line Tools (latest)"** → click **Apply/OK**
+3. Then run `flutter doctor --android-licenses` in Git Bash and press `y` for each prompt
+
+Verify with `flutter doctor` — the Android toolchain section should show all green checkmarks.
+
+**2. Lint file-lock crash (`:purchases_ui_flutter:lintVitalAnalyzeRelease` fails):**
+
+On Windows, Gradle can hold an Android lint cache jar file open across parallel build workers, causing the next task that tries to clean the cache to fail. This is fixed in the project's Gradle configuration (`zuralog/android/build.gradle.kts` and `zuralog/android/app/build.gradle.kts`) by disabling lint on release builds — `flutter analyze` is the real quality gate for Dart code.
+
+If you somehow see this error again after a hard crash, kill any lingering Java processes first:
+
+```bash
+# Windows (Git Bash)
+taskkill //F //IM java.exe 2>/dev/null; true
+# Then retry:
+make build-prod
+```
 
 ### Google Sign-In works in debug but fails after a Play Store release
 The Android OAuth client in Google Cloud Console is registered with the **debug keystore SHA-1** (`3F:E9:FF:6A:41:D9:E0:45:94:77:BC:6C:D0:A0:E7:33:A2:DE:A2:55`). Release builds are signed with a completely different keystore, so Google will reject sign-in attempts from a release APK/AAB.

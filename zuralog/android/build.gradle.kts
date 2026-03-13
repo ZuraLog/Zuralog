@@ -20,6 +20,19 @@ subprojects {
                 apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_1_9)
             }
         }
+
+        // Disable lint on release builds for all plugin library subprojects.
+        // Fixes a Windows file-lock crash in :purchases_ui_flutter:lintVitalAnalyzeRelease
+        // where AGP's Compose lint cache jar is held open by a parallel Gradle worker process.
+        // Plugin lint results don't affect our app quality — our real quality gate is
+        // `flutter analyze` on the Dart layer.
+        plugins.withId("com.android.library") {
+            extensions.configure<com.android.build.gradle.LibraryExtension> {
+                lint {
+                    checkReleaseBuilds = false
+                }
+            }
+        }
     }
 }
 

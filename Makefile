@@ -59,7 +59,7 @@ ADB    := $(shell ls "$$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe" 2>/dev/
 
 .PHONY: run run-mock run-prod run-ios run-ios-prod run-device run-device-prod \
         uninstall reinstall reinstall-prod \
-        analyze test build-apk build-appbundle build-prod build-prod-ios
+        analyze test build-apk build-appbundle build-prod build-apk-prod build-prod-ios
 
 # ---------------------------------------------------------------------------
 # Android Emulator — DEBUG (local backend, mock data active via kDebugMode)
@@ -204,7 +204,9 @@ build-apk:
 		--dart-define=APP_ENV=development
 
 ## Build a release App Bundle for Play Store submission (production backend)
+## flutter clean runs first to prevent Windows file-lock errors in the lint cache.
 build-appbundle:
+	cd zuralog && flutter clean
 	cd zuralog && flutter build appbundle --release \
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
@@ -214,6 +216,19 @@ build-appbundle:
 
 ## Alias for build-appbundle (backwards compatibility)
 build-prod: build-appbundle
+
+## Build a release APK for sideloading directly onto a device (production backend).
+## Output: zuralog/build/app/outputs/flutter-apk/app-release.apk
+## Install via: adb install zuralog/build/app/outputs/flutter-apk/app-release.apk
+## Or send the file to your phone and tap to install (enable "Install from unknown sources" first).
+build-apk-prod:
+	cd zuralog && flutter clean
+	cd zuralog && flutter build apk --release \
+		--dart-define=BASE_URL=https://api.zuralog.com \
+		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
+		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
+		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
+		--dart-define=APP_ENV=production
 
 ## Build a release IPA for App Store submission (production backend)
 build-prod-ios:

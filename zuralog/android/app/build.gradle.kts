@@ -49,6 +49,14 @@ android {
             useLegacyPackaging = true
         }
     }
+
+    // Disable lint on release builds.
+    // Prevents Windows file-lock crashes in lintVitalAnalyze* tasks where AGP's
+    // Compose lint cache jars are held open by parallel Gradle worker processes.
+    // Our real quality gate for Dart/Flutter code is `flutter analyze` (zero-warning policy).
+    lint {
+        checkReleaseBuilds = false
+    }
 }
 
 flutter {
