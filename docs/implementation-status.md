@@ -1,9 +1,63 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-13 (fix/health-score-cache — Health Score backend fixed, demo account now displays score correctly)  
+**Last Updated:** 2026-03-13 (fix/progress-tab-set-first-goal — Progress tab "Set First Goal" flow and /progress/home data wiring complete)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Progress Tab — "Set First Goal" Flow & /progress/home Data Wiring (fix/progress-tab-set-first-goal, 2026-03-13)
+
+**Scope:** Fixed the Progress tab's empty state flow and wired the backend `/progress/home` endpoint to return real data from the database instead of hardcoded empty responses.  
+**Branch:** `fix/progress-tab-set-first-goal`
+
+**What was fixed:**
+
+### Problem
+
+1. **"Set First Goal" button was broken** — The button on the Progress Home empty state navigated to the Goals list screen, which was also empty. Users had to navigate twice (empty state → Goals list → create goal form) instead of going directly to the goal creation form.
+
+2. **Progress Home always showed empty state** — The backend `GET /api/v1/progress/home` endpoint returned hardcoded empty data (`{"goals": [], "streaks": []}`), even when users had created goals and streaks. The endpoint never queried the actual `user_goals` and `user_streaks` database tables.
+
+### Files Changed
+
+- `cloud-brain/app/api/v1/progress_routes.py` — `GET /api/v1/progress/home` now queries real database tables
+- `zuralog/lib/features/progress/presentation/progress_home_screen.dart` — "Set First Goal" button opens goal creation form directly
+
+### What was built
+
+1. **Backend `/api/v1/progress/home` endpoint wired to real data** — 
+   - Queries `user_goals` table and returns up to 20 goals (capped for home summary)
+   - Queries `user_streaks` table and returns all streaks (max 4 per user)
+   - Response shaped to match Flutter's `ProgressHomeData.fromJson` contract exactly
+   - Rate limited at 30/minute
+   - Returns empty lists when user has no goals/streaks (never 404)
+
+2. **Backend `GET /api/v1/progress/weekly-report` rate limiting** — 
+   - Previously unprotected; now rate limited at 10/minute
+
+3. **Flutter "Set First Goal" button UX improvement** —
+   - Button now opens `GoalCreateEditSheet` as a modal bottom sheet directly
+   - Skips the intermediate Goals list screen
+   - After user saves a goal, `progressHomeProvider` is automatically invalidated
+   - Home screen transitions from empty state to showing the newly created goal
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Cap goals at 20 for home summary | Home screen is a glanceable overview, not a full list. 20 goals is more than any user will realistically have. Prevents N+1 queries on large datasets. |
+| Return all streaks (max 4 per user) | Streaks are lightweight and users rarely have more than 4 active streaks. Returning all is safe. |
+| Direct goal creation from empty state | Users want to create a goal immediately when they see "Set First Goal". Navigating to an intermediate list screen adds friction. Direct sheet is faster. |
+| Invalidate provider after goal save | Ensures the home screen immediately reflects the new goal without requiring a manual refresh. Seamless UX. |
+| Rate limit at 30/minute for home, 10/minute for weekly report | Home endpoint is called on every tab switch; 30/minute is reasonable. Weekly report is less frequent; 10/minute is sufficient. |
+
+**Result:**
+- Progress Home now displays real goals and streaks from the database
+- "Set First Goal" button provides a direct, frictionless path to goal creation
+- After creating a goal, the home screen immediately shows the new goal without requiring a refresh
+- Both endpoints are rate-limited to prevent abuse
 
 ---
 
