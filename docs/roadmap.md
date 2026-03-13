@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-13 (fix/pre-tester-cleanup — backend endpoints added, Flutter bugs fixed, app ready for testing)
+**Last Updated:** 2026-03-13 (fix/health-score-cache — Health Score backend fixed, demo account now displays score correctly)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -127,6 +127,17 @@
 | P1 | Correlation analysis engine | ✅ Done | |
 | P1 | Analytics API endpoints | ✅ Done | |
 | P2 | Pinecone vector store for long-term context | ✅ Done | PineconeMemoryStore with per-user namespace; graceful InMemoryStore fallback when unconfigured |
+
+### Phase 1.12 — Health Score Calculation & Caching
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Health Score calculation engine (weighted sub-scores) | ✅ Done | Combines sleep, HRV, resting HR, activity, consistency, step count; normalized to 0-100 via 30-day percentile |
+| P0 | `GET /api/v1/health-score` endpoint | ✅ Done | Cache-first strategy; returns score, trend, AI commentary, data_days; rate limited 30/minute |
+| P0 | Health Score caching table + Celery daily refresh | ✅ Done | `health_scores` table stores daily scores; Celery Beat task recalculates at 2 AM UTC daily |
+| P0 | 7-day history query optimization | ✅ Done | Single cached query (was 28 N+1 queries); returns trend sparkline data |
+| P0 | Consistency history query optimization | ✅ Done | Single cached query (was 30 N+1 queries); returns bedtime regularity data |
+| P0 | Demo account seed data (30 days) | ✅ Done | Seeded with realistic health data; sub_score keys corrected to match backend schema |
 
 ---
 

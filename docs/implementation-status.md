@@ -1,9 +1,53 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-13 (fix/pre-tester-cleanup — backend endpoints added, Flutter bugs fixed, app ready for testing)  
+**Last Updated:** 2026-03-13 (fix/health-score-cache — Health Score backend fixed, demo account now displays score correctly)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Health Score Cache & Performance Fix (fix/health-score-cache, 2026-03-13)
+
+**Scope:** Fixed critical bugs in the Health Score feature that prevented it from displaying on the Today Tab and Data Tab for accounts with seeded data. The feature was implemented but broken due to cache misses, missing response fields, and N+1 database queries.  
+**Branch:** `fix/health-score-cache` (not yet merged to main)
+
+**What was fixed:**
+
+### Root Causes
+
+1. **Cache bypass in `GET /api/v1/health-score`** — The endpoint was ignoring the `health_scores` cache table and always recomputing live. Seed data ages out after the day it was seeded, so live recomputation failed for demo accounts with historical data.
+
+2. **Missing `data_days` field in null response** — When the endpoint returned a null response (due to cache miss), it had no `data_days` field. Flutter's fallback logic interpreted this as "no data" and showed "Your health score awaits" even for accounts with 30 days of seeded data.
+
+3. **N+1 query in `get_7_day_history()`** — The method issued 28 separate database queries per request (one per day × 4 sub-scores). Now uses a single cached query.
+
+4. **N+1 loop in `_build_consistency_history()`** — The method fired 30 database queries per request (one per day). Now uses a single query.
+
+5. **Mismatched sub_score keys in seed script** — The seed data had incorrect sub_score keys that didn't match the backend's expected field names.
+
+### Files Changed
+
+- `cloud-brain/app/api/v1/health_score_routes.py` — Implemented cache-first strategy: check `health_scores` table first, only recompute if missing. Added rate limiter (30/minute). Ensured null response includes `data_days: 0` sentinel.
+
+- `cloud-brain/app/services/health_score.py` — Rewrote `get_7_day_history()` and `_build_consistency_history()` to use single cached queries instead of N+1 loops. Reduced query count from 28 to 1 for history, 30 to 1 for consistency.
+
+- `cloud-brain/scripts/seed_demo_data.py` — Corrected sub_score keys to match backend field names.
+
+### Key Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Cache-first strategy in `GET /api/v1/health-score` | Seed data ages out after the day it was seeded. Live recomputation fails for historical data. Checking the cache table first ensures demo accounts display their seeded scores. |
+| Ensure null response includes `data_days: 0` | Flutter's fallback logic gates on `data_days == 0`. Without this field, the app can't distinguish "no data" from "data loading". |
+| Single cached query instead of N+1 | Reduces query count from 28 to 1 for 7-day history, 30 to 1 for consistency. Massive performance improvement for accounts with long data history. |
+| Rate limiter on health score endpoint | Prevents abuse. 30/minute is generous for typical user refresh patterns. |
+
+**Result:**
+- Health Score now displays correctly on Today Tab and Data Tab for demo account (demo-full@zuralog.dev)
+- 28 database queries per request → 1 query (7-day history)
+- 30 database queries per request → 1 query (consistency history)
+- Null response now includes correct sentinel values for Flutter fallback logic
 
 ---
 
