@@ -51,24 +51,30 @@ def _goal_to_dict(goal: UserGoal) -> dict:
     Returns a plain dict rather than a Pydantic model because this is used
     inside a nested list in the progress home response.
 
+    Both ``type`` and ``period`` use an ``.value`` guard so the correct
+    string slug is returned regardless of whether SQLAlchemy materialises
+    the column as a raw string or as the Python enum object (behaviour can
+    differ between driver versions).
+
     Args:
         goal: The ORM instance to serialise.
 
     Returns:
         Dict matching the Flutter ``Goal.fromJson`` contract.
     """
-    period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)
+    type_str = goal.type.value if hasattr(goal.type, "value") else str(goal.type)  # type: ignore[union-attr]
+    period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)  # type: ignore[union-attr]
     return {
         "id": str(goal.id),
         "user_id": str(goal.user_id),
-        "type": goal.type,
+        "type": type_str,
         "period": period_str,
         "title": goal.title,
         "target_value": float(goal.target_value or 0.0),
         "current_value": float(goal.current_value or 0.0),
-        "unit": goal.unit,
-        "start_date": goal.start_date,
-        "deadline": goal.deadline,
+        "unit": goal.unit or "",
+        "start_date": str(goal.start_date) if goal.start_date else "",
+        "deadline": str(goal.deadline) if goal.deadline else None,
         "is_completed": goal.is_completed,
         "ai_commentary": goal.ai_commentary,
         "progress_history": [],  # placeholder — analytics engine wired in a future phase
@@ -79,9 +85,18 @@ def _streak_to_dict(streak: UserStreak) -> dict:
     """Serialise a UserStreak ORM instance to the Flutter UserStreak.fromJson shape.
 
     Key field mappings:
-      - DB ``streak_type``         → Flutter ``type``
+      - DB ``streak_type``           → Flutter ``type``
+      - DB ``last_activity_date``    → Flutter ``last_activity_date`` (None → "")
       - DB ``freeze_used_this_week`` → Flutter ``is_frozen``
-      - DB ``last_activity_date`` None → Flutter ``""``
+
+    NOTE: ``is_frozen`` is mapped from ``freeze_used_this_week`` as a
+    best-current-approximation. These are semantically different: the DB
+    field tracks whether the weekly free-freeze quota has been spent,
+    while Flutter's ``is_frozen`` should track whether a freeze is
+    *currently active* (i.e. protecting a streak right now). A dedicated
+    ``is_frozen`` column should be added to ``user_streaks`` when the
+    streak-freeze flow is fully implemented, at which point this mapping
+    should be updated to use that column instead.
 
     Args:
         streak: The ORM instance to serialise.
@@ -161,7 +176,9 @@ async def progress_home(
 
 
 @router.get("/weekly-report")
+@limiter.limit("10/minute")
 async def progress_weekly_report(
+    request: Request,
     user_id: str = Depends(get_authenticated_user_id),
 ) -> dict:
     """Return the latest weekly progress report.
@@ -170,6 +187,7 @@ async def progress_weekly_report(
     (driven by Celery weekly tasks) will be wired in a future phase.
 
     Args:
+        request: FastAPI request object (required by the rate limiter).
         user_id: Authenticated user ID from JWT.
 
     Returns:
