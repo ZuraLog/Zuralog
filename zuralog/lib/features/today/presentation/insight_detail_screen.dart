@@ -58,7 +58,7 @@ class _InsightDetailScreenState extends ConsumerState<InsightDetailScreen> {
       ref
           .read(todayRepositoryProvider)
           .markInsightRead(widget.insightId)
-          .catchError((_) {});
+          .catchError((Object e, StackTrace _) {});
     });
   }
 

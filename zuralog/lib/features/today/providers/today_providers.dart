@@ -89,7 +89,16 @@ final insightDetailProvider =
 /// the read state.
 final notificationsProvider = FutureProvider<NotificationPage>((ref) async {
   final repo = ref.read(todayRepositoryProvider);
-  return repo.getNotifications(page: 1);
+  try {
+    return await repo.getNotifications(page: 1);
+  } catch (_) {
+    return const NotificationPage(
+      items: [],
+      totalCount: 0,
+      page: 1,
+      hasMore: false,
+    );
+  }
 });
 
 // ── Data Maturity Banner ───────────────────────────────────────────────────────

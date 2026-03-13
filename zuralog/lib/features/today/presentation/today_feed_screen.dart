@@ -97,11 +97,11 @@ class TodayFeedScreen extends ConsumerWidget {
           await Future.wait([
             ref
                 .read(healthScoreProvider.future)
-                .catchError((Object _) => HealthScoreData(score: 0, trend: [])),
+                .catchError((Object e, StackTrace _) => HealthScoreData(score: 0, trend: [])),
             ref
                 .read(todayFeedProvider.future)
                 .catchError(
-                  (Object _) => TodayFeedData(
+                  (Object e, StackTrace _) => TodayFeedData(
                     insights: [],
                     quickActions: [],
                     streak: null,

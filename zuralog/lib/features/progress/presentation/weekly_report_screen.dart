@@ -87,7 +87,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
     ref.invalidate(weeklyReportProvider);
     // Wait for the new value to settle before dismissing the indicator.
     await ref.read(weeklyReportProvider.future).catchError(
-          (_) => const WeeklyReport(
+          (Object e, StackTrace _) => const WeeklyReport(
             id: '',
             periodStart: '',
             periodEnd: '',

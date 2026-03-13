@@ -52,3 +52,26 @@ async def progress_home(
         },
         "recent_achievements": [],
     }
+
+
+@router.get("/weekly-report")
+async def progress_weekly_report(
+    user_id: str = Depends(get_authenticated_user_id),
+) -> dict:
+    """Return the latest weekly progress report.
+
+    Currently returns an empty scaffold. Full report generation
+    (driven by Celery weekly tasks) will be wired in a future phase.
+
+    Args:
+        user_id: Authenticated user ID from JWT.
+
+    Returns:
+        dict matching the WeeklyReport model shape.
+    """
+    return {
+        "id": "",
+        "period_start": "",
+        "period_end": "",
+        "cards": [],
+    }

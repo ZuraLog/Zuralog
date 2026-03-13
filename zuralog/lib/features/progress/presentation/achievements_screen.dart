@@ -35,7 +35,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     // Wait for the new future to settle before completing the refresh indicator
     await ref
         .read(achievementsProvider.future)
-        .catchError((_) => const AchievementList(achievements: []));
+        .catchError((Object e, StackTrace _) => const AchievementList(achievements: []));
   }
 
   @override

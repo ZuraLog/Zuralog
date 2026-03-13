@@ -63,8 +63,12 @@ final trendsHomeProvider = FutureProvider<TrendsHomeData>((ref) async {
 ///
 /// Long-lived cache — metrics rarely change. Invalidate on pull-to-refresh.
 final availableMetricsProvider = FutureProvider<AvailableMetricList>((ref) async {
-  final repo = ref.read(trendsRepositoryProvider);
-  return repo.getAvailableMetrics();
+  try {
+    final repo = ref.read(trendsRepositoryProvider);
+    return await repo.getAvailableMetrics();
+  } catch (_) {
+    return AvailableMetricList(metrics: []);
+  }
 });
 
 // ── Correlations Explorer Transient State ─────────────────────────────────────
@@ -151,8 +155,12 @@ final correlationAnalysisProvider =
 ///
 /// Invalidate with [ref.invalidate(reportsProvider)] after a pull-to-refresh.
 final reportsProvider = FutureProvider<ReportList>((ref) async {
-  final repo = ref.read(trendsRepositoryProvider);
-  return repo.getReports();
+  try {
+    final repo = ref.read(trendsRepositoryProvider);
+    return await repo.getReports();
+  } catch (_) {
+    return ReportList(reports: [], hasMore: false);
+  }
 });
 
 // ── Data Sources ──────────────────────────────────────────────────────────────
@@ -161,6 +169,10 @@ final reportsProvider = FutureProvider<ReportList>((ref) async {
 ///
 /// Invalidate with [ref.invalidate(dataSourcesProvider)] after pull-to-refresh.
 final dataSourcesProvider = FutureProvider<DataSourceList>((ref) async {
-  final repo = ref.read(trendsRepositoryProvider);
-  return repo.getDataSources();
+  try {
+    final repo = ref.read(trendsRepositoryProvider);
+    return await repo.getDataSources();
+  } catch (_) {
+    return DataSourceList(sources: []);
+  }
 });

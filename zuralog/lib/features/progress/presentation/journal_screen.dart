@@ -91,7 +91,7 @@ class JournalScreen extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(journalProvider);
     await ref.read(journalProvider.future).catchError(
-          (_) => const JournalPage(entries: [], hasMore: false),
+          (Object e, StackTrace _) => const JournalPage(entries: [], hasMore: false),
         );
   }
 

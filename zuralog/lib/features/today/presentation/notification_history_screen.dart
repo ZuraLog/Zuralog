@@ -57,7 +57,7 @@ class NotificationHistoryScreen extends ConsumerWidget {
           await ref
               .read(notificationsProvider.future)
               .catchError(
-                (_) => const NotificationPage(
+                (Object e, StackTrace _) => const NotificationPage(
                   items: [],
                   totalCount: 0,
                   page: 1,
@@ -175,7 +175,7 @@ class _NotificationRowState extends ConsumerState<_NotificationRow> {
         ref
             .read(todayRepositoryProvider)
             .markNotificationRead(widget.item.id)
-            .catchError((_) {});
+            .catchError((Object e, StackTrace _) {});
       });
     }
   }

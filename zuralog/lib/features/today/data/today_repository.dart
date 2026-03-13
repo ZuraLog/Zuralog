@@ -177,7 +177,7 @@ class TodayRepository implements TodayRepositoryInterface {
   Future<List<QuickAction>> _fetchQuickActions() async {
     try {
       final response = await _api.get('/api/v1/quick-actions');
-      final list = response.data['items'] as List<dynamic>? ?? [];
+      final list = response.data['actions'] as List<dynamic>? ?? [];
       return list
           .map((e) => QuickAction.fromJson(e as Map<String, dynamic>))
           .toList();
