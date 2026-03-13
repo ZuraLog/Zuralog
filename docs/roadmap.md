@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-11 (fix/remove-mock-data-wire-real-apis — removed kDebugMode mock gates, wired all data fetching to real APIs)
+**Last Updated:** 2026-03-13 (fix/pre-tester-cleanup — backend endpoints added, Flutter bugs fixed, app ready for testing)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -402,6 +402,35 @@ Established a centralized shared component library, eliminating duplicated UI co
 | P0 | Never-error provider pattern | ✅ Done | All 4 providers (`healthScoreProvider`, `todayFeedProvider`, `dashboardProvider`, `trendsHomeProvider`) catch all errors and return empty data objects — UI never sees an error branch |
 | P0 | Shared `HealthScoreZeroState` widget | ✅ Done | Extracted to `lib/shared/widgets/health_score_zero_state.dart`; used by TodayFeedScreen card body |
 | P0 | Layout fix — compact zero ring in ScoreTrendHero | ✅ Done | `_CompactScoreZeroState` (48×48 muted ring) replaces full `HealthScoreZeroState` in row slot; prevents row layout break |
+
+---
+
+## Phase 11.5 — Pre-Tester Stability & Bug Audit (fix/pre-tester-cleanup, 2026-03-13)
+
+> **Branch:** `fix/pre-tester-cleanup` → merged to main (2026-03-13)
+
+Comprehensive bug audit and fix pass across backend and Flutter. All tabs now query correctly, no crashes on network failures, zero `flutter analyze` issues. App is stable and ready for pre-tester onboarding.
+
+### Backend Fixes
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Add `GET /api/v1/trends/metrics` endpoint | ✅ Done | Returns available metrics for trend analysis |
+| P0 | Add `GET /api/v1/trends/correlations` endpoint | ✅ Done | Returns correlation data for Trends tab |
+| P0 | Add `GET /api/v1/progress/weekly-report` endpoint | ✅ Done | Returns weekly report data for Progress tab |
+| P0 | Create `GET /api/v1/data-sources` endpoint (new route file) | ✅ Done | New route file + registered in main.py |
+
+### Flutter Fixes
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Fix Today tab quick actions JSON key (`items` → `actions`) | ✅ Done | Quick actions now appear correctly on Today screen |
+| P0 | Add error-safe fallback to 6 providers | ✅ Done | `notificationsProvider`, `coachPromptSuggestionsProvider`, `coachQuickActionsProvider`, `availableMetricsProvider`, `reportsProvider`, `dataSourcesProvider` |
+| P0 | Fix 8 crash sites in pull-to-refresh handlers | ✅ Done | Dart `catchError` signature corrected; app no longer crashes on network failures |
+| P0 | Fix raw error message in journal screen error state | ✅ Done | Users no longer see raw error text |
+| P0 | Fix explicit `dataDays: 0` in health score fallback | ✅ Done | Prevents incorrect banner appearing after failed refresh |
+
+**Result:** All tabs query correctly, zero crashes on network failures, `flutter analyze` reports zero issues. App is stable and ready for pre-tester onboarding.
 
 ---
 

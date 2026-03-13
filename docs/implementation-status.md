@@ -1,9 +1,54 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-11 (fix/remove-mock-data-wire-real-apis — removed kDebugMode mock gates, wired all data fetching to real APIs)  
+**Last Updated:** 2026-03-13 (fix/pre-tester-cleanup — backend endpoints added, Flutter bugs fixed, app ready for testing)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Pre-Tester Stability & Bug Audit (fix/pre-tester-cleanup, 2026-03-13)
+
+**Scope:** Comprehensive bug audit and fix pass across backend and Flutter. All tabs now query correctly, no crashes on network failures, zero `flutter analyze` issues. App is stable and ready for pre-tester onboarding.  
+**Branch:** `fix/pre-tester-cleanup` → merged to main (2026-03-13)
+
+**What was built:**
+
+### Backend Fixes
+
+1. **Added `GET /api/v1/trends/metrics` endpoint** — Returns available metrics for trend analysis. Wired to Trends tab metric selection.
+
+2. **Added `GET /api/v1/trends/correlations` endpoint** — Returns correlation data for Trends tab. Enables correlation analysis and pattern detection.
+
+3. **Added `GET /api/v1/progress/weekly-report` endpoint** — Returns weekly report data for Progress tab. Supports the Weekly Report screen.
+
+4. **Created `GET /api/v1/data-sources` endpoint** — New route file + registered in main.py. Provides data source list for the Data Sources screen.
+
+### Flutter Fixes
+
+1. **Fixed Today tab quick actions JSON key** — Quick actions were reading the wrong JSON key (`items` instead of `actions`). Now quick actions appear correctly on the Today screen.
+
+2. **Added error-safe fallback to 6 providers** — Added try/catch error handling to: `notificationsProvider`, `coachPromptSuggestionsProvider`, `coachQuickActionsProvider`, `availableMetricsProvider`, `reportsProvider`, `dataSourcesProvider`. Prevents crashes when these endpoints are unavailable.
+
+3. **Fixed 8 crash sites in pull-to-refresh handlers** — Dart `catchError` signature was incorrect across 8 pull-to-refresh handlers. The app would crash on any network failure during refresh. All signatures corrected; app now handles network failures gracefully.
+
+4. **Fixed raw error message in journal screen error state** — Journal screen was showing raw error text to users. Now displays a friendly error message.
+
+5. **Fixed explicit `dataDays: 0` in health score fallback** — Health score fallback was setting `dataDays: 0` explicitly, which caused an incorrect "data maturity" banner to appear after a failed refresh. Fallback now uses correct sentinel values.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Error-safe fallback pattern across all providers | Prevents the app from crashing when any single endpoint is unavailable. Users see empty states instead of crashes. |
+| Fix pull-to-refresh signatures instead of wrapping in try/catch | The root cause was incorrect Dart syntax. Fixing the syntax is the correct solution, not adding defensive error handling. |
+| Friendly error messages instead of raw exceptions | Users should never see raw error text. All error states now show user-friendly copy. |
+
+**Result:**
+- All tabs query correctly and display data
+- Zero crashes on network failures
+- `flutter analyze` reports zero issues
+- App is stable and ready for pre-tester onboarding
 
 ---
 
