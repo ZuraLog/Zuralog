@@ -20,6 +20,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -90,7 +91,14 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
                 title: 'Start your journey',
                 message: "Set a goal and I'll track your streaks and progress.",
                 actionLabel: 'Set First Goal',
-                onAction: () => context.push(RouteNames.goalsPath),
+                onAction: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const GoalCreateEditSheet(),
+                  );
+                },
               );
             }
 
