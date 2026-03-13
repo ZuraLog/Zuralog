@@ -6,6 +6,7 @@ Each sub-score is the user's percentile rank within their own 30-day
 history so the score is personal and improves as more data accumulates.
 """
 
+import json
 import logging
 import math
 import statistics
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.daily_metrics import DailyHealthMetrics
 from app.models.health_data import SleepRecord, UnifiedActivity
+from app.models.health_score_cache import HealthScoreCache
 
 logger = logging.getLogger(__name__)
 
@@ -161,9 +163,7 @@ class HealthScoreCalculator:
         if today_daily and today_daily.get("resting_heart_rate") is not None:
             hr_values = [r["resting_heart_rate"] for r in daily_history if r.get("resting_heart_rate") is not None]
             if hr_values:
-                sub_scores["resting_hr"] = self._percentile_rank_inverted(
-                    today_daily["resting_heart_rate"], hr_values
-                )
+                sub_scores["resting_hr"] = self._percentile_rank_inverted(today_daily["resting_heart_rate"], hr_values)
                 contributing.append("resting_hr")
 
         # activity — active calories vs 30-day baseline
@@ -240,8 +240,14 @@ class HealthScoreCalculator:
     ) -> list[dict]:
         """Return the health score for each of the last 7 days.
 
-        Calculates the score for each day independently.  Days with
-        insufficient data are included with ``score: None``.
+        Cache-first: reads all 7 days from ``health_scores`` in a single
+        query.  Falls back to live calculation only for dates missing from
+        cache.  Days with insufficient data are included with
+        ``score: None``.
+
+        This replaces the previous implementation that called
+        ``calculate()`` 7 times (28 DB queries) with a strategy that
+        requires at most 1 query on a fully warm cache.
 
         Args:
             user_id: The user to compute history for.
@@ -252,27 +258,62 @@ class HealthScoreCalculator:
             keys, ordered from oldest to most recent.
         """
         today = datetime.now(tz=timezone.utc).date()
-        history: list[dict] = []
+        seven_days_ago = today - timedelta(days=6)
 
-        for days_ago in range(6, -1, -1):
-            target = today - timedelta(days=days_ago)
-            result = await self.calculate(user_id, db, target_date=target)
-            if result is not None:
-                history.append(
-                    {
-                        "date": target.isoformat(),
-                        "score": result.score,
-                        "sub_scores": result.sub_scores,
-                    }
+        # ── 1. Read the full window from cache (1 query) ──────────────────
+        stmt = (
+            select(HealthScoreCache)
+            .where(
+                and_(
+                    HealthScoreCache.user_id == user_id,
+                    HealthScoreCache.score_date >= seven_days_ago.isoformat(),
+                    HealthScoreCache.score_date <= today.isoformat(),
                 )
+            )
+            .order_by(HealthScoreCache.score_date.asc())
+        )
+        result = await db.execute(stmt)
+        cached_rows = result.scalars().all()
+
+        # ── 2. Build a date → cached entry lookup ─────────────────────────
+        cached_by_date: dict[str, dict] = {}
+        for row in cached_rows:
+            try:
+                sub_scores = json.loads(row.sub_scores_json) if row.sub_scores_json else {}
+            except (json.JSONDecodeError, TypeError):
+                sub_scores = {}
+            cached_by_date[row.score_date] = {
+                "date": row.score_date,
+                "score": row.score,
+                "sub_scores": sub_scores,
+            }
+
+        # ── 3. Build the full ordered list, filling gaps via live calc ────
+        history: list[dict] = []
+        for days_ago_offset in range(6, -1, -1):
+            target = today - timedelta(days=days_ago_offset)
+            target_str = target.isoformat()
+
+            if target_str in cached_by_date:
+                history.append(cached_by_date[target_str])
             else:
-                history.append(
-                    {
-                        "date": target.isoformat(),
-                        "score": None,
-                        "sub_scores": {},
-                    }
-                )
+                live = await self.calculate(user_id, db, target_date=target)
+                if live is not None:
+                    history.append(
+                        {
+                            "date": target_str,
+                            "score": live.score,
+                            "sub_scores": live.sub_scores,
+                        }
+                    )
+                else:
+                    history.append(
+                        {
+                            "date": target_str,
+                            "score": None,
+                            "sub_scores": {},
+                        }
+                    )
 
         return history
 
@@ -464,6 +505,10 @@ class HealthScoreCalculator:
 
         Used to rank today's consistency against recent history.
 
+        Fetches the full 37-day sleep window in a single query, then computes
+        all rolling 7-day stddevs in Python — replacing the previous
+        implementation that issued up to 30 separate database queries.
+
         Args:
             db: Async database session.
             user_id: User to query.
@@ -472,12 +517,35 @@ class HealthScoreCalculator:
         Returns:
             List of stddev values (one per rolling window with ≥3 records).
         """
+        # Fetch the full 37-day window once (30 rolling windows × 7-day span,
+        # anchored 1 day before target so we don't overlap today's window).
+        window_start = (target_date - timedelta(days=36)).isoformat()
+        window_end = (target_date - timedelta(days=1)).isoformat()
+
+        stmt = select(SleepRecord.date).where(
+            and_(
+                SleepRecord.user_id == user_id,
+                SleepRecord.date >= window_start,
+                SleepRecord.date <= window_end,
+            )
+        )
+        result = await db.execute(stmt)
+        all_dates: set[str] = {row[0] for row in result.fetchall()}
+
+        # Compute rolling 7-day stddev for each of the 30 historical windows.
         stddevs: list[float] = []
         for offset in range(1, 31):
             past_date = target_date - timedelta(days=offset)
-            stddev = await self._compute_sleep_consistency(db, user_id, past_date)
-            if stddev is not None:
-                stddevs.append(stddev)
+            window_start_d = past_date - timedelta(days=6)
+            dates_in_window = [d for d in all_dates if window_start_d.isoformat() <= d <= past_date.isoformat()]
+            if len(dates_in_window) < 3:
+                continue
+            ordinals = [date.fromisoformat(d).toordinal() for d in dates_in_window]
+            try:
+                stddevs.append(statistics.stdev(ordinals))
+            except statistics.StatisticsError:
+                pass
+
         return stddevs
 
     # ------------------------------------------------------------------
