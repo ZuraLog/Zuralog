@@ -171,7 +171,7 @@ class JournalScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
                       Text(
-                        err.toString(),
+                        'Something went wrong. Pull down to try again.',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textTertiary,
                         ),
