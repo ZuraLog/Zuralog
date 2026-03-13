@@ -28,6 +28,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "sentry-sdk[fastapi,celery,sqlalchemy,httpx]>=2.19.0",
     "posthog>=3.7.0",
+    "psycopg2-binary>=2.9.11",
 ]
 
 [project.optional-dependencies]
