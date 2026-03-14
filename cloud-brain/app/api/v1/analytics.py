@@ -9,11 +9,17 @@ All endpoints delegate computation to the AnalyticsService facade,
 which composes the pure-logic analytics modules with database access.
 """
 
+import asyncio
+import logging
 import uuid
-from datetime import date
+from collections.abc import Callable
+from datetime import date, timedelta
+
+logger = logging.getLogger(__name__)
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.analytics_service import AnalyticsService
@@ -34,9 +40,119 @@ from app.api.v1.analytics_schemas import (
     WeeklyTrendsResponse,
 )
 from app.api.v1.deps import get_authenticated_user_id
-from app.database import get_db
+from app.database import async_session, get_db
 from app.models.user_goal import GoalPeriod, UserGoal
 from app.services.cache_service import cached
+
+
+# ── Module-level formatting helpers ──────────────────────────────────────────
+
+
+def _delta(recent: list[float], prior: list[float]) -> float | None:
+    if not recent or not prior:
+        return None
+    avg_r = sum(recent) / len(recent)
+    avg_p = sum(prior) / len(prior)
+    if avg_p == 0:
+        return None
+    return round(((avg_r - avg_p) / avg_p) * 100, 1)
+
+
+def _trend(rows: list[tuple[str, float]], days: int = 7) -> list[float] | None:
+    """Build trend list from (date_str, value) rows for the last `days` days."""
+    if not rows:
+        return None
+    vals = [v for _, v in rows[-days:]]
+    return vals if len(vals) >= 2 else None
+
+
+def _fmt_steps(v: float) -> str:
+    return f"{int(v):,}"
+
+
+def _fmt_hours(v: float) -> str:
+    h = int(v)
+    m = round((v - h) * 60)
+    return f"{h}h {m:02d}m"
+
+
+# ── Per-category parallel fetch helpers ──────────────────────────────────────
+
+# Order of categories in dashboard_summary — must match the asyncio.gather call order.
+_CATEGORY_ORDER: list[str] = ["activity", "sleep", "heart", "body", "vitals", "nutrition", "wellness", "mobility"]
+
+# Allowlist of permitted (table, column) pairs — prevents SQL injection
+_ALLOWED_CATEGORY_QUERIES: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("daily_health_metrics", "steps"),
+        ("sleep_records", "hours"),
+        ("daily_health_metrics", "resting_heart_rate"),
+        ("weight_measurements", "weight_kg"),
+        ("daily_health_metrics", "oxygen_saturation"),
+        ("nutrition_entries", "calories"),
+        ("daily_health_metrics", "hrv_ms"),
+        ("daily_health_metrics", "flights_climbed"),
+    }
+)
+
+
+async def _fetch_category_data(
+    user_id: str,
+    day14_ago_iso: str,
+    day7_ago_iso: str,
+    *,
+    category: str,
+    table: str,
+    column: str,
+    unit: str | None,
+    fmt: Callable[[float], str],
+) -> "CategorySummaryItem":
+    """Fetch 14-day history for one health category and return a summary card.
+
+    Args:
+        user_id: Authenticated user ID.
+        day14_ago_iso: ISO date string for 14 days ago.
+        day7_ago_iso: ISO date string for 7 days ago.
+        category: Category name (e.g. "activity").
+        table: Database table name — must be in _ALLOWED_CATEGORY_QUERIES.
+        column: Column name to query — must be in _ALLOWED_CATEGORY_QUERIES.
+        unit: Unit label for the primary value (e.g. "steps", "bpm RHR"). None for sleep.
+        fmt: Callable that formats the primary float value into a display string.
+
+    Returns:
+        CategorySummaryItem with data if rows exist, has_data=False otherwise.
+
+    Raises:
+        ValueError: If (table, column) pair is not in the allowlist.
+    """
+    if (table, column) not in _ALLOWED_CATEGORY_QUERIES:
+        raise ValueError(
+            f"Query against ({table!r}, {column!r}) is not permitted. Add it to _ALLOWED_CATEGORY_QUERIES to enable it."
+        )
+    async with async_session() as db:
+        result = await db.execute(
+            sql_text(
+                f"SELECT date, {column} FROM {table} "  # noqa: S608  (table/column are allowlisted above)
+                f"WHERE user_id = :uid AND date >= :d14 AND {column} IS NOT NULL "
+                "ORDER BY date"
+            ),
+            {"uid": user_id, "d14": day14_ago_iso},
+        )
+        rows = [(r[0], float(r[1])) for r in result.fetchall()]
+    recent_rows = [(d, v) for d, v in rows if d >= day7_ago_iso]
+    prior_rows = [(d, v) for d, v in rows if d < day7_ago_iso]
+    if recent_rows:
+        primary = recent_rows[-1][1]
+        return CategorySummaryItem(
+            category=category,
+            primary_value=fmt(primary),
+            unit=unit,
+            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+            trend=_trend(recent_rows),
+            last_updated=recent_rows[-1][0],
+            has_data=True,
+        )
+    return CategorySummaryItem(category=category, has_data=False)
 
 
 async def _set_sentry_module() -> None:
@@ -328,290 +444,124 @@ async def dashboard_insight(
 async def dashboard_summary(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
-    db: AsyncSession = Depends(get_db),
 ) -> DashboardSummaryResponse:
     """Return aggregated dashboard data for the Data tab Health Dashboard.
 
-    Queries the last 14 days of health data across all category tables
-    and returns category summaries with sparkline trends and deltas.
+    Runs all 8 category queries concurrently via asyncio.gather — each
+    helper opens its own session so sessions are never shared across tasks.
 
     Args:
         request: Incoming FastAPI request.
         user_id: Authenticated user ID from JWT.
-        db: Async database session.
 
     Returns:
         DashboardSummaryResponse with category summaries and visible order.
     """
-    from datetime import timedelta
-    from sqlalchemy import text as sql_text
-
     today = date.today()
-    day14_ago = today - timedelta(days=14)
-    day7_ago = today - timedelta(days=7)
+    day14_ago_iso = (today - timedelta(days=14)).isoformat()
+    day7_ago_iso = (today - timedelta(days=7)).isoformat()
 
-    def _delta(recent: list[float], prior: list[float]) -> float | None:
-        if not recent or not prior:
-            return None
-        avg_r = sum(recent) / len(recent)
-        avg_p = sum(prior) / len(prior)
-        if avg_p == 0:
-            return None
-        return round(((avg_r - avg_p) / avg_p) * 100, 1)
-
-    def _trend(rows: list[tuple[str, float]], days: int = 7) -> list[float] | None:
-        """Build trend list from (date_str, value) rows for the last `days` days."""
-        if not rows:
-            return None
-        vals = [v for _, v in rows[-days:]]
-        return vals if len(vals) >= 2 else None
-
-    def _fmt_steps(v: float) -> str:
-        return f"{int(v):,}"
-
-    def _fmt_hours(v: float) -> str:
-        h = int(v)
-        m = round((v - h) * 60)
-        return f"{h}h {m:02d}m"
+    raw_results = await asyncio.gather(
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="activity",
+            table="daily_health_metrics",
+            column="steps",
+            unit="steps",
+            fmt=_fmt_steps,
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="sleep",
+            table="sleep_records",
+            column="hours",
+            unit=None,
+            fmt=_fmt_hours,
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="heart",
+            table="daily_health_metrics",
+            column="resting_heart_rate",
+            unit="bpm RHR",
+            fmt=lambda v: str(int(v)),
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="body",
+            table="weight_measurements",
+            column="weight_kg",
+            unit="kg",
+            fmt=lambda v: f"{v:.1f}",
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="vitals",
+            table="daily_health_metrics",
+            column="oxygen_saturation",
+            unit="SpO₂",
+            fmt=lambda v: f"{v:.0f}%",
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="nutrition",
+            table="nutrition_entries",
+            column="calories",
+            unit="kcal",
+            fmt=lambda v: f"{int(v):,}",
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="wellness",
+            table="daily_health_metrics",
+            column="hrv_ms",
+            unit="ms HRV",
+            fmt=lambda v: f"{v:.0f}",
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="mobility",
+            table="daily_health_metrics",
+            column="flights_climbed",
+            unit="flights",
+            fmt=lambda v: str(int(v)),
+        ),
+        return_exceptions=True,
+    )
 
     categories: list[CategorySummaryItem] = []
-    visible_order: list[str] = []
-
-    # ── Activity ──────────────────────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, steps FROM daily_health_metrics "
-            "WHERE user_id = :uid AND date >= :d14 AND steps IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="activity",
-                primary_value=_fmt_steps(primary),
-                unit="steps",
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
+    for category_name, result in zip(_CATEGORY_ORDER, raw_results):
+        if isinstance(result, Exception):
+            logger.warning(
+                "dashboard_summary: failed to fetch %s data for user %s: %s",
+                category_name,
+                user_id,
+                result,
             )
-        )
-        visible_order.append("activity")
-    else:
-        categories.append(CategorySummaryItem(category="activity", has_data=False))
-
-    # ── Sleep ─────────────────────────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, hours FROM sleep_records "
-            "WHERE user_id = :uid AND date >= :d14 AND hours IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="sleep",
-                primary_value=_fmt_hours(primary),
-                unit=None,
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
-            )
-        )
-        visible_order.append("sleep")
-    else:
-        categories.append(CategorySummaryItem(category="sleep", has_data=False))
-
-    # ── Heart ─────────────────────────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, resting_heart_rate FROM daily_health_metrics "
-            "WHERE user_id = :uid AND date >= :d14 AND resting_heart_rate IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="heart",
-                primary_value=str(int(primary)),
-                unit="bpm RHR",
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
-            )
-        )
-        visible_order.append("heart")
-    else:
-        categories.append(CategorySummaryItem(category="heart", has_data=False))
-
-    # ── Body (Weight) ─────────────────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, weight_kg FROM weight_measurements "
-            "WHERE user_id = :uid AND date >= :d14 AND weight_kg IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="body",
-                primary_value=f"{primary:.1f}",
-                unit="kg",
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
-            )
-        )
-        visible_order.append("body")
-    else:
-        categories.append(CategorySummaryItem(category="body", has_data=False))
-
-    # ── Vitals (SpO2) ─────────────────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, oxygen_saturation FROM daily_health_metrics "
-            "WHERE user_id = :uid AND date >= :d14 AND oxygen_saturation IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="vitals",
-                primary_value=f"{primary:.0f}%",
-                unit="SpO₂",
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
-            )
-        )
-        visible_order.append("vitals")
-    else:
-        categories.append(CategorySummaryItem(category="vitals", has_data=False))
-
-    # ── Nutrition ─────────────────────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, calories FROM nutrition_entries "
-            "WHERE user_id = :uid AND date >= :d14 AND calories IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="nutrition",
-                primary_value=f"{int(primary):,}",
-                unit="kcal",
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
-            )
-        )
-        visible_order.append("nutrition")
-    else:
-        categories.append(CategorySummaryItem(category="nutrition", has_data=False))
-
-    # ── Wellness (HRV) ────────────────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, hrv_ms FROM daily_health_metrics "
-            "WHERE user_id = :uid AND date >= :d14 AND hrv_ms IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="wellness",
-                primary_value=f"{primary:.0f}",
-                unit="ms HRV",
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
-            )
-        )
-        visible_order.append("wellness")
-    else:
-        categories.append(CategorySummaryItem(category="wellness", has_data=False))
-
-    # ── Mobility (flights climbed) ────────────────────────────────────────────
-    result = await db.execute(
-        sql_text(
-            "SELECT date, flights_climbed FROM daily_health_metrics "
-            "WHERE user_id = :uid AND date >= :d14 AND flights_climbed IS NOT NULL "
-            "ORDER BY date"
-        ),
-        {"uid": user_id, "d14": day14_ago.isoformat()},
-    )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago.isoformat()]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
-    if recent_rows:
-        primary = recent_rows[-1][1]
-        categories.append(
-            CategorySummaryItem(
-                category="mobility",
-                primary_value=str(int(primary)),
-                unit="flights",
-                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-                trend=_trend(recent_rows),
-                last_updated=recent_rows[-1][0],
-                has_data=True,
-            )
-        )
-        visible_order.append("mobility")
-    else:
-        categories.append(CategorySummaryItem(category="mobility", has_data=False))
-
+            categories.append(CategorySummaryItem(category=category_name, has_data=False))
+        else:
+            categories.append(result)  # type: ignore[arg-type]  # narrowed by isinstance check above
     # ── Cycle & Environment — no data tables yet ──────────────────────────────
     categories.append(CategorySummaryItem(category="cycle", has_data=False))
     categories.append(CategorySummaryItem(category="environment", has_data=False))
+
+    visible_order = [c.category for c in categories if c.has_data]
 
     return DashboardSummaryResponse(categories=categories, visible_order=visible_order)
 
@@ -643,9 +593,6 @@ async def category_detail(
     Raises:
         HTTPException: 400 if category is not recognised.
     """
-    from datetime import timedelta
-    from sqlalchemy import text as sql_text
-
     # HIGH-04: normalise category slug before any branching
     category = category.lower().strip()
 
