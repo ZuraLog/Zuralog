@@ -91,6 +91,34 @@ def _scalars_result(rows: list) -> MagicMock:
     return result
 
 
+def _scalars_result_unique(rows: list) -> MagicMock:
+    """Wrap rows in a mock result that supports .scalars().unique().all().
+
+    Used for selectinload queries which call .unique() before .all()
+    to deduplicate parent rows that appear multiple times due to joins.
+    """
+    unique_mock = MagicMock()
+    unique_mock.all.return_value = rows
+    scalars = MagicMock()
+    scalars.unique.return_value = unique_mock
+    scalars.all.return_value = rows  # fallback for .scalars().all() calls
+    result = MagicMock()
+    result.scalars.return_value = scalars
+    return result
+
+
+def _row_result(rows: list) -> MagicMock:
+    """Wrap tuple rows for SELECT (Conversation, subq1, subq2) results.
+
+    The rewritten list_conversations uses a single SELECT with two correlated
+    subqueries. The result rows are (Conversation, message_count, preview_snippet)
+    tuples, accessed via result.all() — NOT result.scalars().all().
+    """
+    result = MagicMock()
+    result.all.return_value = rows
+    return result
+
+
 def _scalar_one_or_none_result(value) -> MagicMock:
     """Wrap a single value in a mock execute-result object."""
     result = MagicMock()
@@ -145,13 +173,11 @@ def test_list_conversations(client, mock_auth_service, mock_db):
     mock_auth_service.get_user.return_value = _USER_A
 
     conv = _make_conversation("conv-1", "user-a", "My Chat")
-    msg = _make_message("msg-1", "conv-1", "user", "Hello there, how are you?")
 
     _mock_db_execute_sequence(
         mock_db,
         [
-            _scalars_result([conv]),   # conversations query
-            _scalars_result([msg]),    # messages query for conv-1
+            _row_result([(conv, 1, "Hello there, how are you?")]),  # one query with correlated subqueries
         ],
     )
 
@@ -175,13 +201,11 @@ def test_list_conversations_preview_truncated(client, mock_auth_service, mock_db
 
     long_content = "A" * 150
     conv = _make_conversation("conv-1", "user-a", "Long")
-    msg = _make_message("msg-1", "conv-1", "assistant", long_content)
 
     _mock_db_execute_sequence(
         mock_db,
         [
-            _scalars_result([conv]),
-            _scalars_result([msg]),
+            _row_result([(conv, 1, long_content)]),  # one query with correlated subqueries
         ],
     )
 
@@ -207,7 +231,7 @@ def test_list_conversations_excludes_other_users(client, mock_auth_service, mock
     # conversations are never returned by a correctly filtered query).
     _mock_db_execute_sequence(
         mock_db,
-        [_scalars_result([])],
+        [_row_result([])],
     )
 
     response = client.get(
@@ -223,7 +247,7 @@ def test_list_conversations_empty(client, mock_auth_service, mock_db):
     """List endpoint returns empty list when user has no conversations."""
     mock_auth_service.get_user.return_value = _USER_A
 
-    _mock_db_execute_sequence(mock_db, [_scalars_result([])])
+    _mock_db_execute_sequence(mock_db, [_row_result([])])
 
     response = client.get(
         "/api/v1/chat/conversations",

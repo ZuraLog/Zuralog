@@ -39,7 +39,8 @@ from fastapi import (
 )
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.context_manager.memory_store import MemoryStore
@@ -525,16 +526,15 @@ async def get_chat_history(
             Conversation.user_id == user_id,
             Conversation.deleted_at.is_(None),
         )
+        .options(selectinload(Conversation.messages))
         .order_by(Conversation.updated_at.desc(), Conversation.created_at.desc())
     )
-    conversations = result.scalars().all()
+    conversations = result.scalars().unique().all()
 
     history = []
     for conv in conversations:
-        msg_result = await db.execute(
-            select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at.asc())
-        )
-        messages = msg_result.scalars().all()
+        # messages are already loaded via selectinload — no extra DB query
+        messages = sorted(conv.messages, key=lambda m: m.created_at)
 
         msg_dicts = []
         for msg in messages:
@@ -590,34 +590,43 @@ async def list_conversations(
     user = await auth_service.get_user(credentials.credentials)
     user_id = user.get("id", "unknown")
 
-    stmt = select(Conversation).where(
+    # Correlated subquery: count of messages per conversation
+    msg_count_subq = (
+        select(func.count(Message.id))
+        .where(Message.conversation_id == Conversation.id)
+        .correlate(Conversation)
+        .scalar_subquery()
+        .label("message_count")
+    )
+
+    # Correlated subquery: content of the most recent message (preview)
+    last_msg_subq = (
+        select(Message.content)
+        .where(Message.conversation_id == Conversation.id)
+        .correlate(Conversation)
+        .order_by(Message.created_at.desc())
+        .limit(1)
+        .scalar_subquery()
+        .label("preview_snippet")
+    )
+
+    stmt = select(Conversation, msg_count_subq, last_msg_subq).where(
         Conversation.user_id == user_id,
         Conversation.deleted_at.is_(None),
     )
     if not include_archived:
         stmt = stmt.where(Conversation.archived.is_(False))
-
     stmt = stmt.order_by(
         Conversation.updated_at.desc(),
         Conversation.created_at.desc(),
     )
 
     result = await db.execute(stmt)
-    conversations = result.scalars().all()
+    rows = result.all()
 
     output = []
-    for conv in conversations:
-        msg_result = await db.execute(
-            select(Message).where(Message.conversation_id == conv.id).order_by(Message.created_at.desc())
-        )
-        messages = msg_result.scalars().all()
-
-        message_count = len(messages)
-        preview_snippet: str | None = None
-        if messages:
-            last_body = messages[0].content or ""
-            preview_snippet = last_body[:100]
-
+    for conv, message_count, preview_raw in rows:
+        preview_snippet: str | None = preview_raw[:100] if preview_raw else None
         created = conv.created_at
         updated = conv.updated_at or conv.created_at
         output.append(

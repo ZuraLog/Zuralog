@@ -229,8 +229,11 @@ def test_chat_history_empty(client, mock_auth_service, mock_db):
         "email": "test@example.com",
     }
 
-    # Mock the DB query to return empty scalars
+    # Mock the DB query to return empty scalars (supports .scalars().unique().all())
+    mock_unique = MagicMock()
+    mock_unique.all.return_value = []
     mock_scalars = MagicMock()
+    mock_scalars.unique.return_value = mock_unique
     mock_scalars.all.return_value = []
     mock_result = MagicMock()
     mock_result.scalars.return_value = mock_scalars
