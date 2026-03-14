@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/constants/app_constants.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -147,10 +148,10 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final accountAge = userProfile?.createdAt != null
         ? DateTime.now().difference(userProfile!.createdAt!).inDays
         : 0;
-    final dataBannerMode = accountAge >= 7
+    final dataBannerMode = accountAge >= kMinDataDaysForMaturity
         ? DataMaturityMode.stillBuilding
         : DataMaturityMode.progress;
-    final showDataBanner = dataDays < 7 && !layout.bannerDismissed;
+    final showDataBanner = dataDays < kMinDataDaysForMaturity && !layout.bannerDismissed;
 
     return ZuralogScaffold(
       addBottomNavPadding: true,
@@ -213,7 +214,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   ),
                   child: DataMaturityBanner(
                     daysWithData: dataDays,
-                    targetDays: 7,
+                    targetDays: kMinDataDaysForMaturity,
                     mode: dataBannerMode,
                     onDismiss: () {
                       final updated = layout.copyWith(bannerDismissed: true);
