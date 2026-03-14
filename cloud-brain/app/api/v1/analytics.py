@@ -183,6 +183,7 @@ async def metric_trend(
     return TrendResponse(**result)
 
 
+@limiter.limit("60/minute")
 @router.get("/goals", response_model=list[GoalProgressResponse])
 @cached(prefix="analytics.goals", ttl=300, key_params=["user_id"])
 async def get_goals(
@@ -206,6 +207,7 @@ async def get_goals(
     return [GoalProgressResponse(**r) for r in results]
 
 
+@limiter.limit("30/minute")
 @router.post("/goals", response_model=GoalProgressResponse, status_code=201)
 async def create_or_update_goal(
     request: Request,

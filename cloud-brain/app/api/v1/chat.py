@@ -665,8 +665,10 @@ async def list_conversations(
     return output
 
 
+@limiter.limit("60/minute")
 @router.get("/conversations/{conversation_id}/messages")
 async def get_conversation_messages(
+    request: Request,
     conversation_id: str,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
@@ -745,8 +747,10 @@ class ConversationUpdateRequest(BaseModel):
     archived: bool | None = None
 
 
+@limiter.limit("30/minute")
 @router.patch("/conversations/{conversation_id}")
 async def update_conversation(
+    request: Request,
     conversation_id: str,
     body: ConversationUpdateRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -810,8 +814,10 @@ async def update_conversation(
     }
 
 
+@limiter.limit("30/minute")
 @router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_conversation(
+    request: Request,
     conversation_id: str,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
