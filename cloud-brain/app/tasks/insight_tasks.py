@@ -33,6 +33,7 @@ from sqlalchemy import and_, func, or_, select, text as sa_text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.analytics.insight_generator import InsightGenerator
+from app.constants import MIN_DATA_DAYS_FOR_MATURITY
 from app.database import worker_async_session as async_session
 from app.models.daily_metrics import DailyHealthMetrics
 from app.models.insight import Insight
@@ -53,9 +54,6 @@ _PRIORITY_BY_HOUR: dict[tuple[int, int], list[tuple[str, int]]] = {
     (12, 18): [("nutrition_summary", 1), ("activity_progress", 2), ("goal_nudge", 3)],
     (18, 24): [("sleep_analysis", 2), ("activity_progress", 3), ("goal_nudge", 4)],
 }
-
-# Minimum number of days of data before we consider the user "mature"
-_MIN_DATA_DAYS_FOR_MATURITY = 7
 
 
 def _get_time_of_day_priorities(hour: int) -> list[tuple[str, int]]:
@@ -93,7 +91,7 @@ def generate_insights_for_user(user_id: str) -> dict:
       cards bubble to the top (e.g. sleep analysis in the early morning,
       nutrition in the afternoon).
     - **Data maturity**: If the user has fewer than
-      ``_MIN_DATA_DAYS_FOR_MATURITY`` days of health metric records, a
+      ``MIN_DATA_DAYS_FOR_MATURITY`` days of health metric records, a
       ``welcome`` insight is injected first to inform them that the AI is
       still building a baseline.
 
@@ -117,7 +115,7 @@ def generate_insights_for_user(user_id: str) -> dict:
             result = await db.execute(distinct_days_stmt)
             distinct_day_count: int = result.scalar_one() or 0
 
-            is_mature = distinct_day_count >= _MIN_DATA_DAYS_FOR_MATURITY
+            is_mature = distinct_day_count >= MIN_DATA_DAYS_FOR_MATURITY
 
             logger.debug(
                 "generate_insights_for_user: user='%s' distinct_days=%d mature=%s",
@@ -152,7 +150,7 @@ def generate_insights_for_user(user_id: str) -> dict:
             # 4. Inject welcome / building card for immature accounts
             # ------------------------------------------------------------------
             if not is_mature:
-                days_remaining = max(0, _MIN_DATA_DAYS_FOR_MATURITY - distinct_day_count)
+                days_remaining = max(0, MIN_DATA_DAYS_FOR_MATURITY - distinct_day_count)
                 welcome_values = dict(
                     id=str(uuid.uuid4()),
                     user_id=user_id,

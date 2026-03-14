@@ -1,9 +1,202 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-15 (fix/backend-performance-cleanup — Batch 8 complete: parallelized analytics, consolidated auth deps, dependency cleanup)  
+**Last Updated:** 2026-03-15 (Batches 9 & 10 complete: Flutter package pinning, SharedPreferences centralization, magic number extraction, ORM migration, smoke test rewrite, doc fixes)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Architectural Debt Cleanup — Batch 10 (fix/low-priority-cleanup, 2026-03-15)
+
+**Scope:** Magic number extraction, ORM migration, smoke test rewrite, and documentation fixes.  
+**Branch:** `fix/low-priority-cleanup` → merged to main (2026-03-15)
+
+**What was built:**
+
+### DEBT-012: Magic Number `7` Extracted to Named Constants
+
+The data maturity threshold (minimum days of health data required before showing insights) was hardcoded as the literal `7` in multiple files across both backend and frontend.
+
+**Implementation:**
+- Created `MIN_DATA_DAYS_FOR_MATURITY = 7` constant in `cloud-brain/app/constants.py`
+- Created `kMinDataDaysForMaturity = 7` constant in `zuralog/lib/core/constants/app_constants.dart`
+- Replaced all raw `7` comparisons in:
+  - `cloud-brain/app/services/data_maturity.py`
+  - `cloud-brain/app/services/insight_tasks.py`
+  - `zuralog/lib/features/health/health_dashboard_screen.dart`
+  - `zuralog/lib/features/today/today_feed_screen.dart`
+
+**Result:**
+- Single source of truth for the maturity threshold
+- Easy to adjust the threshold globally if needed
+- Code is self-documenting — `MIN_DATA_DAYS_FOR_MATURITY` is clearer than the literal `7`
+
+### DEBT-022: Raw SQL Replaced with ORM Query
+
+The `users.py` `get_preferences` handler was using raw SQL to fetch user preferences.
+
+**Implementation:**
+- Replaced raw `text("SELECT coach_persona, subscription_tier FROM users WHERE id = :uid")` with ORM query:
+  ```python
+  select(User.coach_persona, User.subscription_tier).where(User.id == user_id)
+  ```
+- Maintains the same performance (single query) while being type-safe and maintainable
+
+**Result:**
+- Type-safe query construction
+- Easier to refactor if the schema changes
+- Consistent with the rest of the codebase (most queries use ORM)
+
+### DEBT-027: Smoke Test Rewritten
+
+The `widget_test.dart` smoke test was only verifying that the app builds and shows a Scaffold widget — a very weak test.
+
+**Implementation:**
+- Rewrote to verify meaningful app behavior on cold start:
+  - If user is not authenticated: verify auth gate (welcome screen buttons) are visible
+  - If user is authenticated: verify main shell nav labels (Today, Data, Coach, Progress, Trends) are visible
+- Test now exercises the auth flow and navigation setup, not just widget existence
+
+**Result:**
+- Smoke test now catches real regressions (auth gate broken, nav labels missing)
+- More confidence that the app's core flow works
+
+### DEBT-030: Documentation Fix — Path Correction
+
+Fixed incorrect path reference in `docs/architecture.md`.
+
+**Implementation:**
+- Changed `features/dashboard/` → `features/data/` (the actual folder name)
+
+**Result:**
+- Documentation now matches the actual codebase structure
+
+### DEBT-031: Documentation Fix — Test File Count
+
+Updated test file count in `docs/architecture.md` to reflect current state.
+
+**Implementation:**
+- Changed from `61` to `109` test files
+
+**Result:**
+- Documentation accurately reflects the test coverage
+
+### DEBT-032: Documentation Fix — Conversation Drawer Type
+
+Fixed incorrect UI component type description in `docs/screens.md`.
+
+**Implementation:**
+- Changed from "Drawer overlay" to "Modal bottom sheet (`DraggableScrollableSheet` via `showModalBottomSheet`)"
+
+**Result:**
+- Documentation now accurately describes the UI implementation
+
+### DEBT-043: Verify Milestone Celebration Card Cleanup
+
+Verified that the `_MilestoneCelebrationCardState.dispose()` method already properly calls `_pulseCtrl.dispose()`.
+
+**Implementation:**
+- Code review confirmed no changes needed — cleanup was already in place
+
+**Result:**
+- No action required; debt item closed as already-complete
+
+---
+
+## Architectural Debt Cleanup — Batch 9 (fix/flutter-medium-priority, 2026-03-15)
+
+**Scope:** Flutter package management, SharedPreferences centralization, and fire-and-forget async cleanup.  
+**Branch:** `fix/flutter-medium-priority` → merged to main (2026-03-15)
+
+**What was built:**
+
+### DEBT-034: Flutter Package Versions Pinned
+
+The `pubspec.yaml` file had 19 packages with `any` version constraints, which can cause non-reproducible builds if a new version is released.
+
+**Implementation:**
+- Changed all 19 package constraints from `any` to `^<version>` caret constraints
+- Caret constraints allow patch updates (e.g., `^1.2.3` allows `1.2.4` but not `1.3.0`)
+- Ensures reproducible builds while still allowing safe patch updates
+
+**Packages updated:**
+- All 19 packages in `pubspec.yaml` now have explicit version constraints
+
+**Result:**
+- Reproducible builds — same `pubspec.lock` across all environments
+- Prevents unexpected breaking changes from new major/minor versions
+- Patch updates still allowed for security fixes
+
+### DEBT-017: Central SharedPreferences Provider Created
+
+The app was calling `SharedPreferences.getInstance()` in multiple places, often in fire-and-forget async chains. This made it hard to test and led to race conditions.
+
+**Implementation:**
+- Created `zuralog/lib/core/storage/prefs_service.dart` with a Riverpod provider:
+  ```dart
+  final prefsProvider = Provider<SharedPreferences>((ref) {
+    // Initialized in main.dart
+  });
+  ```
+- Wired the provider in `main.dart` during app initialization
+- All widgets now access SharedPreferences synchronously via `ref.read(prefsProvider)`
+
+**Result:**
+- Single source of truth for SharedPreferences access
+- Synchronous access eliminates fire-and-forget async chains
+- Easier to mock in tests
+- Consistent pattern across the app
+
+### DEBT-041: Fire-and-Forget Async Removed from Today Feed Screen
+
+The `today_feed_screen.dart` was calling `SharedPreferences.getInstance().then(...)` in a fire-and-forget pattern, which could cause race conditions if the screen was disposed before the async operation completed.
+
+**Implementation:**
+- Replaced `SharedPreferences.getInstance().then(...)` with synchronous `ref.read(prefsProvider)`
+- Removed the fire-and-forget async chain
+
+**Result:**
+- No more race conditions
+- Simpler, more readable code
+
+### DEBT-042: Fire-and-Forget Async Removed from Trends Home Screen
+
+The `trends_home_screen.dart` `_persistDismissals` method was calling `SharedPreferences.getInstance().then(...)` in a fire-and-forget pattern.
+
+**Implementation:**
+- Replaced `SharedPreferences.getInstance().then(...)` with synchronous `ref.read(prefsProvider)`
+- Wrapped the async write operation with `unawaited()` to explicitly mark it as intentionally not awaited
+- The write happens in the background without blocking the UI
+
+**Result:**
+- No more implicit fire-and-forget async chains
+- Explicit `unawaited()` makes the intent clear to future readers
+- No race conditions
+
+### DEBT-019: Hardcoded Goals Removed from Account Settings
+
+The `account_settings_screen.dart` had a local `_selectedGoalsProvider` with hardcoded goals `{0, 2}` that never reflected the user's actual goals.
+
+**Implementation:**
+- Deleted the hardcoded `_selectedGoalsProvider`
+- Added `_GoalsTile` widget that reads the real API-backed `goalsProvider`
+- Tapping the tile navigates to `GoalsScreen` for full CRUD operations
+- Goals are now fetched from the backend and displayed accurately
+
+**Result:**
+- Settings screen now shows real user goals instead of hardcoded placeholders
+- Users can manage their goals directly from the settings screen
+- Consistent with the rest of the app's data-driven approach
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Caret constraints (`^<version>`) instead of exact pinning | Allows patch updates for security fixes while preventing breaking changes. Exact pinning would require manual updates for every patch release. |
+| Riverpod provider for SharedPreferences | Centralizes access, makes testing easier, and eliminates fire-and-forget async chains. Synchronous access is safe because SharedPreferences is already initialized at app startup. |
+| Explicit `unawaited()` for background writes | Makes the intent clear to future readers. Without it, a linter would flag the fire-and-forget as a potential bug. |
+| Real `goalsProvider` instead of hardcoded | Settings should reflect actual user data, not placeholders. Navigating to `GoalsScreen` for CRUD is consistent with the app's navigation model. |
 
 ---
 

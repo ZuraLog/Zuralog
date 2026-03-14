@@ -71,10 +71,7 @@ async def get_preferences(
     request.state.user_id = user_id
     sentry_sdk.set_user({"id": user_id})
 
-    result = await db.execute(
-        text("SELECT coach_persona, subscription_tier FROM users WHERE id = :uid"),
-        {"uid": user_id},
-    )
+    result = await db.execute(select(User.coach_persona, User.subscription_tier).where(User.id == user_id))
     row = result.mappings().first()
 
     if row is None:

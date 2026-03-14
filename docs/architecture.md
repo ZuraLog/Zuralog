@@ -139,7 +139,7 @@ cloud-brain/
 │   └── tasks/               # Celery task definitions
 │
 ├── alembic/                 # Database migrations
-├── tests/                   # pytest test suite (61 files)
+├── tests/                   # pytest test suite (109 files)
 ├── Dockerfile               # Production container
 ├── docker-compose.yml       # Local dev (Postgres + Redis)
 ├── pyproject.toml           # Dependencies + tool config
@@ -216,7 +216,7 @@ zuralog/lib/
 ├── features/           # Feature modules
 │   ├── auth/           # Login, signup, onboarding, OAuth callback
 │   ├── chat/           # AI chat UI, input bar, streaming messages
-│   ├── dashboard/      # Health summary cards, insight widgets
+│   ├── data/           # Health summary cards, insight widgets
 │   ├── integrations/   # Integrations Hub, OAuth flows
 │   ├── settings/       # Profile, preferences, data export
 │   ├── subscription/   # RevenueCat paywall, subscription status

@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/constants/app_constants.dart';
 import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic_providers.dart';
@@ -54,14 +55,14 @@ class TodayFeedScreen extends ConsumerWidget {
     final accountAge = profile?.createdAt != null
         ? DateTime.now().difference(profile!.createdAt!).inDays
         : 0;
-    final accountMature = accountAge >= 7;
+    final accountMature = accountAge >= kMinDataDaysForMaturity;
     final bannerMode = accountMature
         ? DataMaturityMode.stillBuilding
         : DataMaturityMode.progress;
     final wellnessCardVisible = ref.watch(wellnessCheckinCardVisibleProvider);
     final sessionDismissed = ref.watch(todayBannerSessionDismissed);
     final prefsAsync = ref.watch(userPreferencesProvider);
-    final showBanner = dataDays < 7 &&
+    final showBanner = dataDays < kMinDataDaysForMaturity &&
         !bannerDismissed &&
         !prefsAsync.isLoading && // Don't show banner while prefs loading — avoids silent dismiss drop
         (bannerMode == DataMaturityMode.progress || !sessionDismissed);
@@ -138,7 +139,7 @@ class TodayFeedScreen extends ConsumerWidget {
                 ),
                 child: DataMaturityBanner(
                   daysWithData: dataDays,
-                  targetDays: 7,
+                  targetDays: kMinDataDaysForMaturity,
                   mode: bannerMode,
                   onDismiss: bannerMode == DataMaturityMode.progress
                       ? persistBannerDismissed

@@ -19,6 +19,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants import MIN_DATA_DAYS_FOR_MATURITY
 from app.models.daily_metrics import DailyHealthMetrics
 
 logger = logging.getLogger(__name__)
@@ -84,15 +85,11 @@ class DataMaturityService:
             - ``features``: Feature gate dict from :meth:`get_feature_gates`.
         """
         try:
-            stmt = select(
-                func.count(DailyHealthMetrics.date.distinct())
-            ).where(DailyHealthMetrics.user_id == user_id)
+            stmt = select(func.count(DailyHealthMetrics.date.distinct())).where(DailyHealthMetrics.user_id == user_id)
             result = await db.execute(stmt)
             days: int = result.scalar_one() or 0
         except Exception:
-            logger.exception(
-                "data_maturity: failed to count days for user=%s", user_id
-            )
+            logger.exception("data_maturity: failed to count days for user=%s", user_id)
             days = 0
 
         level_info = self._classify(days)
@@ -134,9 +131,9 @@ class DataMaturityService:
             Dict mapping feature name to bool availability flag.
         """
         return {
-            "correlations": days >= 7,
+            "correlations": days >= MIN_DATA_DAYS_FOR_MATURITY,
             "anomaly_detection": days >= 14,
-            "health_score_footnote": days < 7,
+            "health_score_footnote": days < MIN_DATA_DAYS_FOR_MATURITY,
             "full_insights": days >= 14,
         }
 
