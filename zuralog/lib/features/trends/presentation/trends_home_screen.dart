@@ -11,14 +11,14 @@
 ///   - Quick-nav row → Correlations, Reports, Data Sources
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:zuralog/core/analytics/analytics_events.dart';
+import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -110,9 +110,9 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
   /// namespacing by user ID is required.
   Future<void> _loadDismissals() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = ref.read(prefsProvider);
       final raw = prefs.getString(_kDismissedKey);
-      if (raw != null && mounted) {
+      if (raw != null) {
         final stored = (jsonDecode(raw) as List<dynamic>)
             .whereType<String>()
             .toSet();
@@ -122,7 +122,7 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
             widget.data.suggestionCards.map((s) => s.id).toSet();
         final validIds = stored.intersection(currentIds);
         if (validIds.isNotEmpty) {
-          setState(() => _dismissedSuggestions.addAll(validIds));
+          if (mounted) setState(() => _dismissedSuggestions.addAll(validIds));
           // Re-persist the pruned set to keep storage clean.
           await prefs.setString(
             _kDismissedKey,
@@ -140,14 +140,13 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
 
   /// Persists the current [_dismissedSuggestions] set to SharedPreferences.
   ///
-  /// Fire-and-forget: called without `await` so [setState] is not blocked.
-  Future<void> _persistDismissals() async {
+  /// Synchronous via [prefsProvider] — no Future, no disposed-widget risk.
+  void _persistDismissals() {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
+      unawaited(ref.read(prefsProvider).setString(
         _kDismissedKey,
         jsonEncode(_dismissedSuggestions.toList()),
-      );
+      ));
     } catch (_) {
       // Write failures are non-fatal — the in-memory set remains correct.
     }
