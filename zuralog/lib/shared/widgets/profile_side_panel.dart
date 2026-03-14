@@ -132,81 +132,86 @@ class ProfileSidePanelWidget extends ConsumerWidget {
 
             const SizedBox(height: AppDimens.spaceSm),
 
-            // ── Navigation Links ─────────────────────────────────────────
-            _NavItem(
-              icon: Icons.person_outline_rounded,
-              label: 'Account',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsAccountPath);
-              },
+            // ── Navigation Links (scrollable) ────────────────────────────
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _NavItem(
+                    icon: Icons.person_outline_rounded,
+                    label: 'Account',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsAccountPath);
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.notifications_none_rounded,
+                    label: 'Notifications',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsNotificationsPath);
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.palette_outlined,
+                    label: 'Appearance',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsAppearancePath);
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.psychology_outlined,
+                    label: 'Coach',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsCoachPath);
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.link_rounded,
+                    label: 'Integrations',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsIntegrationsPath);
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.shield_outlined,
+                    label: 'Privacy & Data',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsPrivacyPath);
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.star_outline_rounded,
+                    label: 'Subscription',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsSubscriptionPath);
+                    },
+                  ),
+                  _NavItem(
+                    icon: Icons.info_outline_rounded,
+                    label: 'About',
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      onClose();
+                      context.push(RouteNames.settingsAboutPath);
+                    },
+                  ),
+                ],
+              ),
             ),
-            _NavItem(
-              icon: Icons.notifications_none_rounded,
-              label: 'Notifications',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsNotificationsPath);
-              },
-            ),
-            _NavItem(
-              icon: Icons.palette_outlined,
-              label: 'Appearance',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsAppearancePath);
-              },
-            ),
-            _NavItem(
-              icon: Icons.psychology_outlined,
-              label: 'Coach',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsCoachPath);
-              },
-            ),
-            _NavItem(
-              icon: Icons.link_rounded,
-              label: 'Integrations',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsIntegrationsPath);
-              },
-            ),
-            _NavItem(
-              icon: Icons.shield_outlined,
-              label: 'Privacy & Data',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsPrivacyPath);
-              },
-            ),
-            _NavItem(
-              icon: Icons.star_outline_rounded,
-              label: 'Subscription',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsSubscriptionPath);
-              },
-            ),
-            _NavItem(
-              icon: Icons.info_outline_rounded,
-              label: 'About',
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onClose();
-                context.push(RouteNames.settingsAboutPath);
-              },
-            ),
-
-            const Spacer(),
 
             // ── Divider ──────────────────────────────────────────────────
             Divider(
