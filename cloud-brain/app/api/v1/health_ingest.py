@@ -12,7 +12,7 @@ or background sync triggers.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, Request
@@ -158,7 +158,9 @@ async def ingest_health_data(
                 row.start_time = datetime.fromisoformat(normalized["start_time"])
         else:
             start_dt = (
-                datetime.fromisoformat(normalized["start_time"]) if normalized.get("start_time") else datetime.utcnow()
+                datetime.fromisoformat(normalized["start_time"])
+                if normalized.get("start_time")
+                else datetime.now(timezone.utc)
             )
             db.add(
                 UnifiedActivity(

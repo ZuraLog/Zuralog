@@ -26,9 +26,11 @@ Architecture notes
 
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, text as sa_text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.analytics.insight_generator import InsightGenerator
 from app.database import worker_async_session as async_session
@@ -144,14 +146,15 @@ def generate_insights_for_user(user_id: str) -> dict:
                 trends={},
             )
 
-            insights_created: list[Insight] = []
+            insights_created: list[dict] = []
 
             # ------------------------------------------------------------------
             # 4. Inject welcome / building card for immature accounts
             # ------------------------------------------------------------------
             if not is_mature:
                 days_remaining = max(0, _MIN_DATA_DAYS_FOR_MATURITY - distinct_day_count)
-                welcome_insight = Insight(
+                welcome_values = dict(
+                    id=str(uuid.uuid4()),
                     user_id=user_id,
                     type="welcome",
                     title="Building your health baseline",
@@ -167,8 +170,24 @@ def generate_insights_for_user(user_id: str) -> dict:
                     reasoning=None,
                     priority=1,
                 )
-                db.add(welcome_insight)
-                insights_created.append(welcome_insight)
+                welcome_stmt = (
+                    pg_insert(Insight)
+                    .values(**welcome_values)
+                    .on_conflict_do_update(
+                        constraint="uq_insights_user_type_day",
+                        set_={
+                            "title": pg_insert(Insight).excluded.title,
+                            "body": pg_insert(Insight).excluded.body,
+                            "data": pg_insert(Insight).excluded.data,
+                            "reasoning": pg_insert(Insight).excluded.reasoning,
+                            "priority": pg_insert(Insight).excluded.priority,
+                            "updated_at": func.now(),
+                        },
+                        where=Insight.dismissed_at.is_(None),
+                    )
+                )
+                await db.execute(welcome_stmt)
+                insights_created.append(welcome_values)
 
             # ------------------------------------------------------------------
             # 5. Create time-of-day contextual insight cards
@@ -179,7 +198,8 @@ def generate_insights_for_user(user_id: str) -> dict:
                     dashboard_text=dashboard_text,
                     hour=current_hour,
                 )
-                card = Insight(
+                card_values = dict(
+                    id=str(uuid.uuid4()),
                     user_id=user_id,
                     type=insight_type,
                     title=card_title,
@@ -191,8 +211,24 @@ def generate_insights_for_user(user_id: str) -> dict:
                     reasoning=None,
                     priority=base_priority if is_mature else base_priority + 1,
                 )
-                db.add(card)
-                insights_created.append(card)
+                card_stmt = (
+                    pg_insert(Insight)
+                    .values(**card_values)
+                    .on_conflict_do_update(
+                        constraint="uq_insights_user_type_day",
+                        set_={
+                            "title": pg_insert(Insight).excluded.title,
+                            "body": pg_insert(Insight).excluded.body,
+                            "data": pg_insert(Insight).excluded.data,
+                            "reasoning": pg_insert(Insight).excluded.reasoning,
+                            "priority": pg_insert(Insight).excluded.priority,
+                            "updated_at": func.now(),
+                        },
+                        where=Insight.dismissed_at.is_(None),
+                    )
+                )
+                await db.execute(card_stmt)
+                insights_created.append(card_values)
 
             await db.commit()
 

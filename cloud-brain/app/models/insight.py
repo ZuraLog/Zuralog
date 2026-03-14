@@ -130,3 +130,8 @@ class Insight(Base):
         nullable=True,
         comment="Set when the client sends PATCH action=dismiss. Hides card from GET.",
     )
+    updated_at: Mapped[str | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Set on upsert when an existing insight is refreshed",
+    )
