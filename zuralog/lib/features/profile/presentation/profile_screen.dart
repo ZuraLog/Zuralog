@@ -78,6 +78,7 @@ class ProfileScreen extends ConsumerWidget {
       email: email,
       memberSince: memberSince,
       tier: tier,
+      isEditingName: ref.watch(_profileStateProvider).isEditingName,
     );
 
     return ZuralogScaffold(
