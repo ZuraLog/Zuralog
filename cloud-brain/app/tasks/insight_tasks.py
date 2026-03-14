@@ -18,10 +18,10 @@ Architecture notes
 ------------------
 - All tasks run in the synchronous Celery worker process.
 - Async DB access is bridged via ``asyncio.run(_run())``.
-- The task is designed to be idempotent: duplicate calls for the same user
-  on the same day will simply add more insight rows (each has a UUID PK).
-  The GET endpoint's ``created_at`` filter lets the client request only
-  today's cards if desired.
+- The task is idempotent: duplicate calls for the same user on the same day
+  upsert existing insight rows rather than inserting new duplicates.  A
+  unique database constraint on (user_id, type, date) enforces this at the
+  data layer.
 """
 
 import asyncio
@@ -101,7 +101,7 @@ def generate_insights_for_user(user_id: str) -> dict:
         user_id: Zuralog user ID to generate insights for.
 
     Returns:
-        A summary dict with ``"user_id"``, ``"insights_created"``, and
+        A summary dict with ``"user_id"``, ``"insights_upserted"``, and
         ``"status"`` for Celery task result inspection.
     """
     logger.info("generate_insights_for_user: starting for user '%s'", user_id)
@@ -146,7 +146,7 @@ def generate_insights_for_user(user_id: str) -> dict:
                 trends={},
             )
 
-            insights_created: list[dict] = []
+            insights_upserted: list[dict] = []
 
             # ------------------------------------------------------------------
             # 4. Inject welcome / building card for immature accounts
@@ -184,7 +184,7 @@ def generate_insights_for_user(user_id: str) -> dict:
                     where=Insight.dismissed_at.is_(None),
                 )
                 await db.execute(welcome_stmt)
-                insights_created.append(welcome_values)
+                insights_upserted.append(welcome_values)
 
             # ------------------------------------------------------------------
             # 5. Create time-of-day contextual insight cards
@@ -222,20 +222,20 @@ def generate_insights_for_user(user_id: str) -> dict:
                     where=Insight.dismissed_at.is_(None),
                 )
                 await db.execute(card_stmt)
-                insights_created.append(card_values)
+                insights_upserted.append(card_values)
 
             await db.commit()
 
-            count = len(insights_created)
+            count = len(insights_upserted)
             logger.info(
-                "generate_insights_for_user: created %d insight(s) for user '%s'",
+                "generate_insights_for_user: upserted %d insight(s) for user '%s'",
                 count,
                 user_id,
             )
 
             return {
                 "user_id": user_id,
-                "insights_created": count,
+                "insights_upserted": count,
                 "status": "ok",
             }
 

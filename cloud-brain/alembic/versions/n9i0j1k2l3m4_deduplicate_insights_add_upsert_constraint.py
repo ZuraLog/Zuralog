@@ -67,6 +67,14 @@ def upgrade() -> None:
         CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_insights_user_type_day
             ON insights (user_id, type, (created_at::date))
     """)
+    # Promote the index to a named constraint so SQLAlchemy's
+    # on_conflict_do_update(constraint=...) can reference it by name.
+    op.execute("BEGIN")
+    op.execute("""
+        ALTER TABLE insights
+            ADD CONSTRAINT uq_insights_user_type_day
+            UNIQUE USING INDEX uq_insights_user_type_day
+    """)
 
     # ------------------------------------------------------------------
     # Step 4: Enable RLS and add per-user policies (conditional on auth schema)
@@ -75,11 +83,21 @@ def upgrade() -> None:
     op.execute("""
         DO $$ BEGIN
             IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'auth') THEN
+                -- Service role (backend / Celery) bypass: unrestricted access
+                EXECUTE '
+                    CREATE POLICY insights_service_role_all ON insights
+                        FOR ALL
+                        TO service_role
+                        USING (true)
+                        WITH CHECK (true)
+                ';
+                -- Users can read their own non-dismissed insights
                 EXECUTE '
                     CREATE POLICY insights_select_own ON insights
                         FOR SELECT
                         USING (auth.uid()::text = user_id)
                 ';
+                -- Users can update their own insights (read/dismiss actions)
                 EXECUTE '
                     CREATE POLICY insights_update_own ON insights
                         FOR UPDATE
@@ -92,8 +110,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute("DROP POLICY IF EXISTS insights_service_role_all ON insights")
     op.execute("DROP POLICY IF EXISTS insights_select_own ON insights")
     op.execute("DROP POLICY IF EXISTS insights_update_own ON insights")
     op.execute("ALTER TABLE insights DISABLE ROW LEVEL SECURITY")
+    # DROP INDEX CONCURRENTLY cannot run inside a transaction.
+    op.execute("COMMIT")
+    op.execute("ALTER TABLE insights DROP CONSTRAINT IF EXISTS uq_insights_user_type_day")
     op.execute("DROP INDEX CONCURRENTLY IF EXISTS uq_insights_user_type_day")
+    op.execute("BEGIN")
     op.drop_column("insights", "updated_at")
