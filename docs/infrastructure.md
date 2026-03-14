@@ -206,6 +206,8 @@ See `cloud-brain/RAILWAY_ENV_VARS.md` for the complete list of all env vars requ
 | Auth | `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_WEB_CLIENT_SECRET` |
 | Strava | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_WEBHOOK_VERIFY_TOKEN` |
 | Fitbit | `FITBIT_CLIENT_ID`, `FITBIT_CLIENT_SECRET`, `FITBIT_WEBHOOK_VERIFY_CODE`, `FITBIT_WEBHOOK_SUBSCRIBER_ID` |
+| Withings | `WITHINGS_CLIENT_ID`, `WITHINGS_CLIENT_SECRET`, `WITHINGS_REDIRECT_URI`, `WITHINGS_API_BASE_URL` (**required** when `WITHINGS_CLIENT_ID` is set — no default; set to your API domain e.g. `https://api.zuralog.com`), `WITHINGS_WEBHOOK_SECRET` |
+| Polar | `POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET`, `POLAR_REDIRECT_URI`, `POLAR_API_BASE_URL` (**required** when `POLAR_CLIENT_ID` is set — no default; set to your API domain e.g. `https://api.zuralog.com`), `POLAR_WEBHOOK_SIGNATURE_KEY` |
 | Notifications | `FCM_CREDENTIALS_PATH` or `FIREBASE_CREDENTIALS_JSON` |
 | Subscriptions | `REVENUECAT_WEBHOOK_SECRET`, `REVENUECAT_API_KEY` |
 | Monitoring | `SENTRY_DSN` |

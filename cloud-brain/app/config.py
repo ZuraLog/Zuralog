@@ -87,8 +87,8 @@ class Settings(BaseSettings):
     withings_client_secret: str = ""  # WITHINGS_CLIENT_SECRET
     withings_redirect_uri: str = ""  # WITHINGS_REDIRECT_URI
     # Base URL of the Cloud Brain API (used to construct webhook callback URLs).
-    # Defaults to production; override in staging/local via WITHINGS_API_BASE_URL.
-    withings_api_base_url: str = "https://api.zuralog.com"  # WITHINGS_API_BASE_URL
+    # Must be explicitly set when WITHINGS_CLIENT_ID is configured — no default.
+    withings_api_base_url: str = ""  # WITHINGS_API_BASE_URL — must be set when WITHINGS_CLIENT_ID is configured
     # Shared secret appended as ?token=... to the Withings webhook callback URL.
     # Withings does not sign webhook payloads with HMAC; this query-param secret
     # is the standard defence against unauthenticated webhook spoofing.
@@ -99,13 +99,13 @@ class Settings(BaseSettings):
     polar_redirect_uri: str = "zuralog://oauth/polar"  # POLAR_REDIRECT_URI
     polar_webhook_signature_key: str = ""  # POLAR_WEBHOOK_SIGNATURE_KEY
     # Base URL of the Cloud Brain API used to construct the Polar webhook callback URL.
-    # Defaults to production; override in staging/local via POLAR_API_BASE_URL.
-    polar_api_base_url: str = "https://api.zuralog.com"  # POLAR_API_BASE_URL
+    # Must be explicitly set when POLAR_CLIENT_ID is configured — no default.
+    polar_api_base_url: str = ""  # POLAR_API_BASE_URL — must be set when POLAR_CLIENT_ID is configured
     app_env: str = "production"
     app_debug: bool = False
     # Sentry
     sentry_dsn: str = ""
-    sentry_traces_sample_rate: float = 1.0
+    sentry_traces_sample_rate: float = 0.1  # SENTRY_TRACES_SAMPLE_RATE — default 10% for production
     sentry_profiles_sample_rate: float = 0.25
     # Cache TTL defaults (seconds)
     cache_ttl_short: int = 300  # 5 minutes — analytics, preferences
@@ -116,12 +116,22 @@ class Settings(BaseSettings):
     posthog_host: str = "https://us.i.posthog.com"
 
     @model_validator(mode="after")
-    def validate_withings_config(self) -> "Settings":
-        """Fail fast if Withings credentials are configured but redirect URI is missing."""
-        if self.withings_client_id and not self.withings_redirect_uri:
+    def _validate_integration_config(self) -> "Settings":
+        """Fail fast if any integration credential is set but a required companion value is missing."""
+        if self.withings_client_id and not self.withings_redirect_uri.strip():
             raise ValueError(
                 "WITHINGS_REDIRECT_URI must be set when WITHINGS_CLIENT_ID is provided. "
                 "Set it to https://<your-api-domain>/api/v1/integrations/withings/callback"
+            )
+        if self.withings_client_id and not self.withings_api_base_url.strip():
+            raise ValueError(
+                "WITHINGS_API_BASE_URL must be set when WITHINGS_CLIENT_ID is configured. "
+                "Without this, webhook registrations will point at the wrong host."
+            )
+        if self.polar_client_id and not self.polar_api_base_url.strip():
+            raise ValueError(
+                "POLAR_API_BASE_URL must be set when POLAR_CLIENT_ID is configured. "
+                "Without this, webhook registrations will point at the wrong host."
             )
         return self
 
