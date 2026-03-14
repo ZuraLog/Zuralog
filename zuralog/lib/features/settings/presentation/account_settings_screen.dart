@@ -15,8 +15,10 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── AccountSettingsScreen ─────────────────────────────────────────────────────
@@ -118,17 +120,7 @@ class AccountSettingsScreen extends ConsumerWidget {
 
           // ── Goals ───────────────────────────────────────────────────────
           const SettingsSectionLabel('Health Goals'),
-          _SettingsGroup(
-            tiles: [
-              ZSettingsTile(
-                icon: Icons.track_changes_rounded,
-                iconColor: AppColors.categoryActivity,
-                title: 'My Goals',
-                subtitle: 'Edit your health goals',
-                onTap: () => _showGoalsEditor(context),
-              ),
-            ],
-          ),
+          _GoalsTile(),
 
           // ── Preferences ─────────────────────────────────────────────────
           const SettingsSectionLabel('Preferences'),
@@ -454,184 +446,48 @@ class _Segment extends StatelessWidget {
   }
 }
 
-// ── Goals editor bottom sheet ─────────────────────────────────────────────────
+// ── _GoalsTile ────────────────────────────────────────────────────────────────
 
-/// 8 predefined health goals for multi-select.
-const _kGoals = [
-  ('Lose Weight', Icons.monitor_weight_outlined),
-  ('Build Muscle', Icons.fitness_center_rounded),
-  ('Sleep Better', Icons.bedtime_rounded),
-  ('Reduce Stress', Icons.self_improvement_rounded),
-  ('Improve Endurance', Icons.directions_run_rounded),
-  ('Eat Healthier', Icons.restaurant_rounded),
-  ('Track Vitals', Icons.favorite_rounded),
-  ('Stay Consistent', Icons.emoji_events_rounded),
-];
-
-/// File-scoped provider — persists goal selections across sheet dismissals.
-/// TODO(phase9): Replace with a proper goals repository backed by Supabase.
-final _selectedGoalsProvider =
-    StateProvider<Set<int>>((_) => const {0, 2});
-
-void _showGoalsEditor(BuildContext context) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => const _GoalsEditorSheet(),
-  );
-}
-
-class _GoalsEditorSheet extends ConsumerWidget {
-  const _GoalsEditorSheet();
+/// Settings tile for "My Goals" — shows the live goal count from [goalsProvider]
+/// and navigates to the full Goals screen (backed by the real API) on tap.
+///
+/// Replaces the old local-only [_selectedGoalsProvider] / [_GoalsEditorSheet]
+/// that stored goal selections in memory and never persisted them (DEBT-019).
+class _GoalsTile extends ConsumerWidget {
+  const _GoalsTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(_selectedGoalsProvider);
-
     final colors = AppColorsOf(context);
-    return Container(
-      margin: EdgeInsets.only(
-        top: MediaQuery.of(context).size.height * 0.3,
-      ),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle.
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: AppDimens.spaceLg),
-              decoration: BoxDecoration(
-                color: colors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-            child: Text(
-              'Health Goals',
-              style: AppTextStyles.displaySmall.copyWith(
-                color: colors.textPrimary,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-            child: Text(
-              'Select all that apply',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: AppDimens.spaceSm,
-                  crossAxisSpacing: AppDimens.spaceSm,
-                  childAspectRatio: 2.8,
-                ),
-                itemCount: _kGoals.length,
-                itemBuilder: (context, index) {
-                  final (label, icon) = _kGoals[index];
-                  final isSelected = selected.contains(index);
-                  return GestureDetector(
-                    onTap: () {
-                      final next = Set<int>.from(selected);
-                      if (isSelected) {
-                        next.remove(index);
-                      } else {
-                        next.add(index);
-                      }
-                      ref.read(_selectedGoalsProvider.notifier).state = next;
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? colors.primary.withValues(alpha: 0.15)
-                            : colors.surface,
-                        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-                        border: Border.all(
-                          color: isSelected
-                              ? colors.primary.withValues(alpha: 0.6)
-                              : Colors.transparent,
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceSm,
-                        vertical: AppDimens.spaceXs,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            icon,
-                            size: 18,
-                            color: isSelected
-                                ? colors.primary
-                                : AppColors.textTertiary,
-                          ),
-                          const SizedBox(width: AppDimens.spaceXs),
-                          Expanded(
-                            child: Text(
-                              label,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: isSelected
-                                    ? colors.primary
-                                    : colors.textSecondary,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppDimens.spaceMd),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryButtonText,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusButtonMd),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Save Goals',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: AppColors.primaryButtonText,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-        ],
+    final asyncGoals = ref.watch(goalsProvider);
+
+    final subtitle = asyncGoals.when(
+      data: (list) {
+        final count = list.goals.length;
+        if (count == 0) return 'No goals yet — tap to add one';
+        return count == 1 ? '1 active goal' : '$count active goals';
+      },
+      loading: () => 'Loading…',
+      error: (err, stack) {
+        Sentry.captureException(err, stackTrace: stack);
+        return 'Could not load goals';
+      },
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
+        child: ZSettingsTile(
+          icon: Icons.track_changes_rounded,
+          iconColor: AppColors.categoryActivity,
+          title: 'My Goals',
+          subtitle: subtitle,
+          onTap: () => context.push(RouteNames.goalsPath),
+        ),
       ),
     );
   }

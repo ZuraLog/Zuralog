@@ -10,6 +10,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -17,6 +18,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:zuralog/app.dart';
 import 'package:zuralog/core/monitoring/sentry_riverpod_observer.dart';
 import 'package:zuralog/core/network/fcm_service.dart';
+import 'package:zuralog/core/storage/prefs_service.dart';
 
 /// RevenueCat public API key (dev key by default).
 ///
@@ -87,9 +89,14 @@ Future<void> _initAndRun() async {
     }
   }
 
+  final prefs = await SharedPreferences.getInstance();
+
   runApp(
     ProviderScope(
       observers: [SentryRiverpodObserver()],
+      overrides: [
+        prefsProvider.overrideWithValue(prefs),
+      ],
       child: const ZuralogApp(),
     ),
   );

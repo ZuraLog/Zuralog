@@ -11,15 +11,15 @@ dependencies:
     sdk: flutter
 
   # State Management
-  flutter_riverpod: any
-  riverpod_annotation: any
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
 
   # Navigation
-  go_router: any
+  go_router: ^17.1.0
 
   # Networking
   dio: ^5.9.1
-  web_socket_channel: any
+  web_socket_channel: ^3.0.3
 
   # Error Monitoring & Crash Reporting
   sentry_flutter: ^8.13.0
@@ -29,25 +29,25 @@ dependencies:
   posthog_flutter: ^4.7.0
 
   # Local Storage
-  drift: any
+  drift: ^2.28.2
   sqlite3_flutter_libs: ^0.5.0
-  flutter_secure_storage: any
-  path_provider: any
+  flutter_secure_storage: ^10.0.0
+  path_provider: ^2.1.5
 
   # Lightweight key-value storage (sync status timestamps)
-  shared_preferences: any
+  shared_preferences: ^2.5.4
 
   # Utilities
-  url_launcher: any
-  app_links: any  # Deep link / custom URL scheme interception (Phase 1.6)
+  url_launcher: ^6.3.2
+  app_links: ^7.0.0  # Deep link / custom URL scheme interception (Phase 1.6)
   cupertino_icons: ^1.0.8
 
   # Voice Input (Phase STT)
   speech_to_text: ^7.3.0          # On-device speech recognition (free, offline)
 
   # Push Notifications (Phase 1.9)
-  firebase_core: any
-  firebase_messaging: any
+  firebase_core: ^4.4.0
+  firebase_messaging: ^16.1.1
 
   # Subscription & Monetization (Phase 1.13)
   purchases_flutter: ^8.0.0
@@ -59,8 +59,8 @@ dependencies:
   image_picker: ^1.1.2            # Camera / photo library picker
 
   # Phase 2.2 — Screen Implementation
-  flutter_markdown_plus: any   # Markdown rendering for AI chat responses (Phase 2.2.2)
-  fl_chart: any           # Sparkline and trend charts for Dashboard (Phase 2.2.3)
+  flutter_markdown_plus: ^1.0.7   # Markdown rendering for AI chat responses (Phase 2.2.2)
+  fl_chart: ^1.1.1           # Sparkline and trend charts for Dashboard (Phase 2.2.3)
 
   # Social OAuth Sign-In (Phase social-oauth)
   google_sign_in: ^6.2.2          # Native Google Sign In (iOS + Android)
@@ -68,7 +68,7 @@ dependencies:
   crypto: ^3.0.6                  # SHA-256 nonce hashing for Apple Sign In
 
   # App metadata (version, build number) — used by AnalyticsInitializer
-  package_info_plus: any
+  package_info_plus: ^9.0.0
 
   # Share-as-image (Weekly Report)
   screenshot: ^3.0.0
@@ -88,10 +88,10 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   build_runner: ^2.5.4
-  riverpod_generator: any
-  drift_dev: any
-  plugin_platform_interface: any
-  url_launcher_platform_interface: any
+  riverpod_generator: ^2.6.4
+  drift_dev: ^2.28.0
+  plugin_platform_interface: ^2.1.8
+  url_launcher_platform_interface: ^2.3.2
   mockito: ^5.4.6
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.3
