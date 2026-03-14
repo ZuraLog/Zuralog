@@ -465,6 +465,12 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
     try {
       final repo = ref.read(authRepositoryProvider);
       state = await repo.fetchProfile();
+      // Sync email back for social-login users whose email was not available
+      // at login time. The profile fetch includes the email from the backend.
+      final fetchedEmail = state?.email ?? '';
+      if (fetchedEmail.isNotEmpty && ref.read(userEmailProvider).isEmpty) {
+        ref.read(userEmailProvider.notifier).state = fetchedEmail;
+      }
     } catch (e, st) {
       Sentry.captureException(e, stackTrace: st);
       debugPrint('[UserProfileNotifier.load] Profile fetch failed: $e\n$st');
