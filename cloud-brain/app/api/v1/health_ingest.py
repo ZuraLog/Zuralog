@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.normalizer import DataNormalizer
 from app.api.v1.auth import _get_auth_service
+from app.limiter import limiter
 from app.api.v1.health_ingest_schemas import (
     HealthIngestRequest,
     HealthIngestResponse,
@@ -75,6 +76,7 @@ security = HTTPBearer()
 _normalizer = DataNormalizer()
 
 
+@limiter.limit("30/minute")
 @router.post("/ingest", response_model=HealthIngestResponse)
 async def ingest_health_data(
     request: Request,
@@ -363,36 +365,28 @@ async def ingest_health_data(
             recalculate_health_score.delay(user_id)
             logger.debug("Enqueued recalculate_health_score for user=%s", user_id)
         except Exception:
-            logger.warning(
-                "Failed to enqueue recalculate_health_score for user=%s", user_id, exc_info=True
-            )
+            logger.warning("Failed to enqueue recalculate_health_score for user=%s", user_id, exc_info=True)
 
     if check_anomalies_for_user is not None:
         try:
             check_anomalies_for_user.delay(user_id)
             logger.debug("Enqueued check_anomalies_for_user for user=%s", user_id)
         except Exception:
-            logger.warning(
-                "Failed to enqueue check_anomalies_for_user for user=%s", user_id, exc_info=True
-            )
+            logger.warning("Failed to enqueue check_anomalies_for_user for user=%s", user_id, exc_info=True)
 
     if generate_insights_for_user is not None:
         try:
             generate_insights_for_user.delay(user_id)
             logger.debug("Enqueued generate_insights_for_user for user=%s", user_id)
         except Exception:
-            logger.warning(
-                "Failed to enqueue generate_insights_for_user for user=%s", user_id, exc_info=True
-            )
+            logger.warning("Failed to enqueue generate_insights_for_user for user=%s", user_id, exc_info=True)
 
     if check_user_events is not None:
         try:
             check_user_events.delay(user_id)
             logger.debug("Enqueued check_user_events for user=%s", user_id)
         except Exception:
-            logger.warning(
-                "Failed to enqueue check_user_events for user=%s", user_id, exc_info=True
-            )
+            logger.warning("Failed to enqueue check_user_events for user=%s", user_id, exc_info=True)
 
     return HealthIngestResponse(
         success=True,

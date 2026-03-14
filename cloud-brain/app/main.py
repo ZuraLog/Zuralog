@@ -147,6 +147,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # --- Startup ---
     print(f"Zuralog Cloud Brain starting in {settings.app_env} mode")
 
+    if settings.app_env == "production" and settings.allowed_origins.strip() == "*":
+        logger.warning(
+            "SECURITY WARNING: CORS allowed_origins is '*' in production. "
+            "Set the ALLOWED_ORIGINS environment variable to your specific domains."
+        )
+
     # HTTP client (shared across services)
     http_client = httpx.AsyncClient(timeout=30.0)
     app.state.auth_service = AuthService(client=http_client)

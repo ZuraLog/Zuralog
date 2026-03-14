@@ -10,9 +10,10 @@ empty/onboarding state. Full computation will be wired in a future phase.
 """
 
 import sentry_sdk
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.api.v1.deps import get_authenticated_user_id
+from app.limiter import limiter
 
 
 async def _set_sentry_module() -> None:
@@ -27,8 +28,10 @@ router = APIRouter(
 )
 
 
+@limiter.limit("60/minute")
 @router.get("/home")
 async def trends_home(
+    request: Request,
     user_id: str = Depends(get_authenticated_user_id),
 ) -> dict:
     """Return aggregated Trends Home data.
@@ -50,8 +53,10 @@ async def trends_home(
     }
 
 
+@limiter.limit("60/minute")
 @router.get("/metrics")
 async def trends_metrics(
+    request: Request,
     user_id: str = Depends(get_authenticated_user_id),
 ) -> dict:
     """Return available metrics for the correlation explorer picker.
@@ -69,8 +74,10 @@ async def trends_metrics(
     return {"metrics": []}
 
 
+@limiter.limit("30/minute")
 @router.get("/correlations")
 async def trends_correlations(
+    request: Request,
     metric_a: str,
     metric_b: str,
     lag_days: int = 0,

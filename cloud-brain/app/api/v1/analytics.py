@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.analytics_service import AnalyticsService
+from app.limiter import limiter
 from app.api.v1.analytics_schemas import (
     CategoryDetailResponse,
     CategorySummaryItem,
@@ -320,6 +321,7 @@ async def dashboard_insight(
     )
 
 
+@limiter.limit("60/minute")
 @router.get("/dashboard-summary", response_model=DashboardSummaryResponse)
 async def dashboard_summary(
     request: Request,
@@ -387,15 +389,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="activity",
-            primary_value=_fmt_steps(primary),
-            unit="steps",
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="activity",
+                primary_value=_fmt_steps(primary),
+                unit="steps",
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("activity")
     else:
         categories.append(CategorySummaryItem(category="activity", has_data=False))
@@ -414,15 +418,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="sleep",
-            primary_value=_fmt_hours(primary),
-            unit=None,
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="sleep",
+                primary_value=_fmt_hours(primary),
+                unit=None,
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("sleep")
     else:
         categories.append(CategorySummaryItem(category="sleep", has_data=False))
@@ -441,15 +447,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="heart",
-            primary_value=str(int(primary)),
-            unit="bpm RHR",
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="heart",
+                primary_value=str(int(primary)),
+                unit="bpm RHR",
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("heart")
     else:
         categories.append(CategorySummaryItem(category="heart", has_data=False))
@@ -468,15 +476,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="body",
-            primary_value=f"{primary:.1f}",
-            unit="kg",
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="body",
+                primary_value=f"{primary:.1f}",
+                unit="kg",
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("body")
     else:
         categories.append(CategorySummaryItem(category="body", has_data=False))
@@ -495,15 +505,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="vitals",
-            primary_value=f"{primary:.0f}%",
-            unit="SpO₂",
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="vitals",
+                primary_value=f"{primary:.0f}%",
+                unit="SpO₂",
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("vitals")
     else:
         categories.append(CategorySummaryItem(category="vitals", has_data=False))
@@ -522,15 +534,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="nutrition",
-            primary_value=f"{int(primary):,}",
-            unit="kcal",
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="nutrition",
+                primary_value=f"{int(primary):,}",
+                unit="kcal",
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("nutrition")
     else:
         categories.append(CategorySummaryItem(category="nutrition", has_data=False))
@@ -549,15 +563,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="wellness",
-            primary_value=f"{primary:.0f}",
-            unit="ms HRV",
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="wellness",
+                primary_value=f"{primary:.0f}",
+                unit="ms HRV",
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("wellness")
     else:
         categories.append(CategorySummaryItem(category="wellness", has_data=False))
@@ -576,15 +592,17 @@ async def dashboard_summary(
     prior_rows = [(d, v) for d, v in rows if d < day7_ago.isoformat()]
     if recent_rows:
         primary = recent_rows[-1][1]
-        categories.append(CategorySummaryItem(
-            category="mobility",
-            primary_value=str(int(primary)),
-            unit="flights",
-            delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
-            trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
-            has_data=True,
-        ))
+        categories.append(
+            CategorySummaryItem(
+                category="mobility",
+                primary_value=str(int(primary)),
+                unit="flights",
+                delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
+                trend=_trend(recent_rows),
+                last_updated=recent_rows[-1][0],
+                has_data=True,
+            )
+        )
         visible_order.append("mobility")
     else:
         categories.append(CategorySummaryItem(category="mobility", has_data=False))
@@ -642,19 +660,36 @@ async def category_detail(
     since = (date.today() - timedelta(days=days)).isoformat()
 
     # HIGH-01: allowlists for dynamic SQL identifiers
-    ALLOWED_COLUMNS: frozenset[str] = frozenset({
-        "steps", "active_calories", "distance_meters",
-        "resting_heart_rate", "hrv_ms", "heart_rate_avg",
-        "body_fat_percentage", "oxygen_saturation", "respiratory_rate",
-        "vo2_max", "flights_climbed",
-        "hours", "quality_score",
-        "weight_kg",
-        "calories", "protein_grams", "carbs_grams", "fat_grams",
-    })
-    ALLOWED_TABLES: frozenset[str] = frozenset({
-        "daily_health_metrics", "sleep_records", "weight_measurements",
-        "nutrition_entries",
-    })
+    ALLOWED_COLUMNS: frozenset[str] = frozenset(
+        {
+            "steps",
+            "active_calories",
+            "distance_meters",
+            "resting_heart_rate",
+            "hrv_ms",
+            "heart_rate_avg",
+            "body_fat_percentage",
+            "oxygen_saturation",
+            "respiratory_rate",
+            "vo2_max",
+            "flights_climbed",
+            "hours",
+            "quality_score",
+            "weight_kg",
+            "calories",
+            "protein_grams",
+            "carbs_grams",
+            "fat_grams",
+        }
+    )
+    ALLOWED_TABLES: frozenset[str] = frozenset(
+        {
+            "daily_health_metrics",
+            "sleep_records",
+            "weight_measurements",
+            "nutrition_entries",
+        }
+    )
 
     def _make_series(
         metric_id: str,
@@ -673,8 +708,8 @@ async def category_detail(
         pts = [MetricDataPointItem(timestamp=d, value=v) for d, v in rows]
         values = [v for _, v in rows]
         avg = round(sum(values) / len(values), 2) if values else None
-        recent = values[-min(7, len(values)):]
-        prior = values[-min(14, len(values)):-min(7, len(values))]
+        recent = values[-min(7, len(values)) :]
+        prior = values[-min(14, len(values)) : -min(7, len(values))]
         delta = None
         if recent and prior:
             avg_r = sum(recent) / len(recent)
@@ -703,9 +738,11 @@ async def category_detail(
         ]:
             assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
-                sql_text(f"SELECT date, {col} FROM daily_health_metrics "
-                         "WHERE user_id = :uid AND date >= :since AND "
-                         f"{col} IS NOT NULL ORDER BY date"),
+                sql_text(
+                    f"SELECT date, {col} FROM daily_health_metrics "
+                    "WHERE user_id = :uid AND date >= :since AND "
+                    f"{col} IS NOT NULL ORDER BY date"
+                ),
                 {"uid": user_id, "since": since},
             )
             rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -714,16 +751,20 @@ async def category_detail(
 
     elif category == "sleep":
         result = await db.execute(
-            sql_text("SELECT date, hours FROM sleep_records "
-                     "WHERE user_id = :uid AND date >= :since AND hours IS NOT NULL ORDER BY date"),
+            sql_text(
+                "SELECT date, hours FROM sleep_records "
+                "WHERE user_id = :uid AND date >= :since AND hours IS NOT NULL ORDER BY date"
+            ),
             {"uid": user_id, "since": since},
         )
         rows = [(r[0], float(r[1])) for r in result.fetchall()]
         if rows:
             metrics.append(_make_series("sleep_duration", "Sleep Duration", "hours", rows))
         result = await db.execute(
-            sql_text("SELECT date, quality_score FROM sleep_records "
-                     "WHERE user_id = :uid AND date >= :since AND quality_score IS NOT NULL ORDER BY date"),
+            sql_text(
+                "SELECT date, quality_score FROM sleep_records "
+                "WHERE user_id = :uid AND date >= :since AND quality_score IS NOT NULL ORDER BY date"
+            ),
             {"uid": user_id, "since": since},
         )
         rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -738,9 +779,11 @@ async def category_detail(
         ]:
             assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
-                sql_text(f"SELECT date, {col} FROM daily_health_metrics "
-                         "WHERE user_id = :uid AND date >= :since AND "
-                         f"{col} IS NOT NULL ORDER BY date"),
+                sql_text(
+                    f"SELECT date, {col} FROM daily_health_metrics "
+                    "WHERE user_id = :uid AND date >= :since AND "
+                    f"{col} IS NOT NULL ORDER BY date"
+                ),
                 {"uid": user_id, "since": since},
             )
             rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -749,16 +792,20 @@ async def category_detail(
 
     elif category == "body":
         result = await db.execute(
-            sql_text("SELECT date, weight_kg FROM weight_measurements "
-                     "WHERE user_id = :uid AND date >= :since AND weight_kg IS NOT NULL ORDER BY date"),
+            sql_text(
+                "SELECT date, weight_kg FROM weight_measurements "
+                "WHERE user_id = :uid AND date >= :since AND weight_kg IS NOT NULL ORDER BY date"
+            ),
             {"uid": user_id, "since": since},
         )
         rows = [(r[0], float(r[1])) for r in result.fetchall()]
         if rows:
             metrics.append(_make_series("weight", "Weight", "kg", rows))
         result = await db.execute(
-            sql_text("SELECT date, body_fat_percentage FROM daily_health_metrics "
-                     "WHERE user_id = :uid AND date >= :since AND body_fat_percentage IS NOT NULL ORDER BY date"),
+            sql_text(
+                "SELECT date, body_fat_percentage FROM daily_health_metrics "
+                "WHERE user_id = :uid AND date >= :since AND body_fat_percentage IS NOT NULL ORDER BY date"
+            ),
             {"uid": user_id, "since": since},
         )
         rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -772,9 +819,11 @@ async def category_detail(
         ]:
             assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
-                sql_text(f"SELECT date, {col} FROM daily_health_metrics "
-                         "WHERE user_id = :uid AND date >= :since AND "
-                         f"{col} IS NOT NULL ORDER BY date"),
+                sql_text(
+                    f"SELECT date, {col} FROM daily_health_metrics "
+                    "WHERE user_id = :uid AND date >= :since AND "
+                    f"{col} IS NOT NULL ORDER BY date"
+                ),
                 {"uid": user_id, "since": since},
             )
             rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -790,9 +839,11 @@ async def category_detail(
         ]:
             assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
-                sql_text(f"SELECT date, {col} FROM nutrition_entries "
-                         "WHERE user_id = :uid AND date >= :since AND "
-                         f"{col} IS NOT NULL ORDER BY date"),
+                sql_text(
+                    f"SELECT date, {col} FROM nutrition_entries "
+                    "WHERE user_id = :uid AND date >= :since AND "
+                    f"{col} IS NOT NULL ORDER BY date"
+                ),
                 {"uid": user_id, "since": since},
             )
             rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -806,9 +857,11 @@ async def category_detail(
         ]:
             assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
             result = await db.execute(
-                sql_text(f"SELECT date, {col} FROM daily_health_metrics "
-                         "WHERE user_id = :uid AND date >= :since AND "
-                         f"{col} IS NOT NULL ORDER BY date"),
+                sql_text(
+                    f"SELECT date, {col} FROM daily_health_metrics "
+                    "WHERE user_id = :uid AND date >= :since AND "
+                    f"{col} IS NOT NULL ORDER BY date"
+                ),
                 {"uid": user_id, "since": since},
             )
             rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -817,8 +870,10 @@ async def category_detail(
 
     elif category == "mobility":
         result = await db.execute(
-            sql_text("SELECT date, flights_climbed FROM daily_health_metrics "
-                     "WHERE user_id = :uid AND date >= :since AND flights_climbed IS NOT NULL ORDER BY date"),
+            sql_text(
+                "SELECT date, flights_climbed FROM daily_health_metrics "
+                "WHERE user_id = :uid AND date >= :since AND flights_climbed IS NOT NULL ORDER BY date"
+            ),
             {"uid": user_id, "since": since},
         )
         rows = [(r[0], float(r[1])) for r in result.fetchall()]
@@ -881,40 +936,85 @@ async def metric_detail(
     since = (date.today() - timedelta(days=days)).isoformat()
 
     # HIGH-01: allowlists for dynamic SQL identifiers
-    ALLOWED_COLUMNS: frozenset[str] = frozenset({
-        "steps", "active_calories", "distance_meters",
-        "resting_heart_rate", "hrv_ms", "heart_rate_avg",
-        "body_fat_percentage", "oxygen_saturation", "respiratory_rate",
-        "vo2_max", "flights_climbed",
-        "hours", "quality_score",
-        "weight_kg",
-        "calories", "protein_grams", "carbs_grams", "fat_grams",
-    })
-    ALLOWED_TABLES: frozenset[str] = frozenset({
-        "daily_health_metrics", "sleep_records", "weight_measurements",
-        "nutrition_entries",
-    })
+    ALLOWED_COLUMNS: frozenset[str] = frozenset(
+        {
+            "steps",
+            "active_calories",
+            "distance_meters",
+            "resting_heart_rate",
+            "hrv_ms",
+            "heart_rate_avg",
+            "body_fat_percentage",
+            "oxygen_saturation",
+            "respiratory_rate",
+            "vo2_max",
+            "flights_climbed",
+            "hours",
+            "quality_score",
+            "weight_kg",
+            "calories",
+            "protein_grams",
+            "carbs_grams",
+            "fat_grams",
+        }
+    )
+    ALLOWED_TABLES: frozenset[str] = frozenset(
+        {
+            "daily_health_metrics",
+            "sleep_records",
+            "weight_measurements",
+            "nutrition_entries",
+        }
+    )
 
     # Map metric_id → (table, column, display_name, unit, source, category)
     METRIC_MAP: dict[str, tuple[str, str, str, str, str, str]] = {
-        "steps":              ("daily_health_metrics", "steps", "Steps", "steps", "apple_health", "activity"),
-        "active_calories":    ("daily_health_metrics", "active_calories", "Active Calories", "kcal", "apple_health", "activity"),
-        "distance":           ("daily_health_metrics", "distance_meters", "Distance", "m", "apple_health", "activity"),
-        "sleep_duration":     ("sleep_records", "hours", "Sleep Duration", "hours", "apple_health", "sleep"),
-        "sleep_quality":      ("sleep_records", "quality_score", "Sleep Quality", "score", "apple_health", "sleep"),
-        "heart_rate_resting": ("daily_health_metrics", "resting_heart_rate", "Resting Heart Rate", "bpm", "apple_health", "heart"),
-        "hrv":                ("daily_health_metrics", "hrv_ms", "Heart Rate Variability", "ms", "apple_health", "heart"),
-        "heart_rate_avg":     ("daily_health_metrics", "heart_rate_avg", "Avg Heart Rate", "bpm", "apple_health", "heart"),
-        "weight":             ("weight_measurements", "weight_kg", "Weight", "kg", "apple_health", "body"),
-        "body_fat":           ("daily_health_metrics", "body_fat_percentage", "Body Fat", "%", "apple_health", "body"),
-        "spo2":               ("daily_health_metrics", "oxygen_saturation", "Blood Oxygen", "%", "apple_health", "vitals"),
-        "respiratory_rate":   ("daily_health_metrics", "respiratory_rate", "Respiratory Rate", "brpm", "apple_health", "vitals"),
-        "calories":           ("nutrition_entries", "calories", "Calories", "kcal", "apple_health", "nutrition"),
-        "protein":            ("nutrition_entries", "protein_grams", "Protein", "g", "apple_health", "nutrition"),
-        "carbs":              ("nutrition_entries", "carbs_grams", "Carbohydrates", "g", "apple_health", "nutrition"),
-        "fat":                ("nutrition_entries", "fat_grams", "Fat", "g", "apple_health", "nutrition"),
-        "vo2max":             ("daily_health_metrics", "vo2_max", "VO₂ Max", "ml/kg/min", "apple_health", "wellness"),
-        "flights_climbed":    ("daily_health_metrics", "flights_climbed", "Flights Climbed", "flights", "apple_health", "mobility"),
+        "steps": ("daily_health_metrics", "steps", "Steps", "steps", "apple_health", "activity"),
+        "active_calories": (
+            "daily_health_metrics",
+            "active_calories",
+            "Active Calories",
+            "kcal",
+            "apple_health",
+            "activity",
+        ),
+        "distance": ("daily_health_metrics", "distance_meters", "Distance", "m", "apple_health", "activity"),
+        "sleep_duration": ("sleep_records", "hours", "Sleep Duration", "hours", "apple_health", "sleep"),
+        "sleep_quality": ("sleep_records", "quality_score", "Sleep Quality", "score", "apple_health", "sleep"),
+        "heart_rate_resting": (
+            "daily_health_metrics",
+            "resting_heart_rate",
+            "Resting Heart Rate",
+            "bpm",
+            "apple_health",
+            "heart",
+        ),
+        "hrv": ("daily_health_metrics", "hrv_ms", "Heart Rate Variability", "ms", "apple_health", "heart"),
+        "heart_rate_avg": ("daily_health_metrics", "heart_rate_avg", "Avg Heart Rate", "bpm", "apple_health", "heart"),
+        "weight": ("weight_measurements", "weight_kg", "Weight", "kg", "apple_health", "body"),
+        "body_fat": ("daily_health_metrics", "body_fat_percentage", "Body Fat", "%", "apple_health", "body"),
+        "spo2": ("daily_health_metrics", "oxygen_saturation", "Blood Oxygen", "%", "apple_health", "vitals"),
+        "respiratory_rate": (
+            "daily_health_metrics",
+            "respiratory_rate",
+            "Respiratory Rate",
+            "brpm",
+            "apple_health",
+            "vitals",
+        ),
+        "calories": ("nutrition_entries", "calories", "Calories", "kcal", "apple_health", "nutrition"),
+        "protein": ("nutrition_entries", "protein_grams", "Protein", "g", "apple_health", "nutrition"),
+        "carbs": ("nutrition_entries", "carbs_grams", "Carbohydrates", "g", "apple_health", "nutrition"),
+        "fat": ("nutrition_entries", "fat_grams", "Fat", "g", "apple_health", "nutrition"),
+        "vo2max": ("daily_health_metrics", "vo2_max", "VO₂ Max", "ml/kg/min", "apple_health", "wellness"),
+        "flights_climbed": (
+            "daily_health_metrics",
+            "flights_climbed",
+            "Flights Climbed",
+            "flights",
+            "apple_health",
+            "mobility",
+        ),
     }
 
     if metric_id not in METRIC_MAP:
@@ -955,8 +1055,8 @@ async def metric_detail(
     current = values[-1]
     current_str = f"{current:,.1f}" if current != int(current) else f"{int(current):,}"
 
-    recent = values[-min(7, len(values)):]
-    prior = values[-min(14, len(values)):-min(7, len(values))]
+    recent = values[-min(7, len(values)) :]
+    prior = values[-min(14, len(values)) : -min(7, len(values))]
     delta = None
     if recent and prior:
         avg_r = sum(recent) / len(recent)

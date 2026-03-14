@@ -111,6 +111,19 @@ async def strava_webhook_event(request: Request, event: StravaWebhookEvent) -> d
         event.owner_id,
     )
 
+    # Reject events whose subscription_id does not match ours.
+    # Strava does not sign payloads with HMAC, but every webhook event
+    # includes the subscription_id that was issued when we registered.
+    # A mismatch means the event was forged or meant for a different app.
+    if settings.strava_webhook_subscription_id and event.subscription_id != settings.strava_webhook_subscription_id:
+        logger.warning(
+            "Strava webhook rejected: subscription_id mismatch (received=%s, expected=%d)",
+            event.subscription_id,
+            settings.strava_webhook_subscription_id,
+        )
+        # Return 200 to prevent Strava from retrying infinitely.
+        return {"received": True}
+
     # Only dispatch sync tasks for activity objects.
     # "athlete" object_type events are profile deauthorisation notices;
     # we log them but take no further action.

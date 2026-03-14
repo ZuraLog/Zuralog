@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
+from app.limiter import limiter
 from app.services.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ router = APIRouter(
 )
 
 
+@limiter.limit("30/minute")
 @router.post("/revenuecat")
 async def revenuecat_webhook(
     request: Request,

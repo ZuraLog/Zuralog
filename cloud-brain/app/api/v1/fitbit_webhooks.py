@@ -17,6 +17,7 @@ Fitbit's push model differs from Strava:
   status back to Fitbit; always swallow and log.
 """
 
+import hmac
 import logging
 
 import sentry_sdk
@@ -79,7 +80,7 @@ async def fitbit_webhook_verification(request: Request) -> Response:
     verify_code = request.query_params.get("verify", "")
     expected = settings.fitbit_webhook_verify_code
 
-    if verify_code == expected:
+    if hmac.compare_digest(verify_code.encode(), expected.encode()):
         logger.info("Fitbit webhook subscriber verified successfully")
         return Response(status_code=204)
 

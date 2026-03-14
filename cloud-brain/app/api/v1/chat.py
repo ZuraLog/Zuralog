@@ -49,6 +49,7 @@ from app.agent.mcp_client import MCPClient
 from app.agent.orchestrator import Orchestrator
 from app.api.deps import check_rate_limit
 from app.database import async_session, get_db
+from app.limiter import limiter
 from app.models.conversation import Conversation, Message
 from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
@@ -492,8 +493,10 @@ async def websocket_chat(
 # ---------------------------------------------------------------------------
 
 
+@limiter.limit("60/minute")
 @router.get("/history")
 async def get_chat_history(
+    request: Request,
     limit: int = Query(default=20, ge=1, le=100, description="Maximum number of conversations to return"),
     offset: int = Query(default=0, ge=0, description="Number of conversations to skip"),
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -569,8 +572,10 @@ async def get_chat_history(
     return history
 
 
+@limiter.limit("60/minute")
 @router.get("/conversations")
 async def list_conversations(
+    request: Request,
     include_archived: bool = Query(default=False),
     limit: int = Query(default=20, ge=1, le=100, description="Maximum number of conversations to return"),
     offset: int = Query(default=0, ge=0, description="Number of conversations to skip"),

@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     # Use "*" for development; lock down for production.
     allowed_origins: str = "*"
     strava_webhook_verify_token: str = ""
+    strava_webhook_subscription_id: int = 0  # STRAVA_WEBHOOK_SUBSCRIPTION_ID — set after first webhook registration
     # Fitbit OAuth 2.0
     fitbit_client_id: str = ""
     fitbit_client_secret: str = ""
