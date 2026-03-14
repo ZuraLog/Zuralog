@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-14 (fix/data-integrity-insights-ingest — Batch 5 complete: deduplicate insights, fix datetime deprecation)
+**Last Updated:** 2026-03-15 (fix/backend-performance-cleanup — Batch 8 complete: parallelized analytics, consolidated auth deps, dependency cleanup)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -493,6 +493,25 @@ Completed all data integrity and deprecation fixes for the insights feature and 
 |----------|------|--------|-------|
 | P0 | DEBT-049: Duplicate insight rows fixed | ✅ Done | Added unique constraint on `insights(user_id, type, created_at::date)`. Updated `generate_insights_for_user` Celery task to use `INSERT ... ON CONFLICT DO UPDATE` (upsert) instead of bare `db.add()`. Added missing Row Level Security to insights table. |
 | P0 | DEBT-018: `datetime.utcnow()` deprecation fixed | ✅ Done | Replaced `datetime.utcnow()` with `datetime.now(timezone.utc)` in `health_ingest.py`. Confirmed zero remaining `utcnow()` calls across entire backend. |
+
+---
+
+## Architectural Debt Cleanup — Batch 8 (2026-03-15)
+
+> **Branch:** `fix/backend-performance-cleanup` → merged to main (2026-03-15)
+
+Completed performance optimization, security hardening, and dependency cleanup across the backend. Parallelized slow analytics queries, consolidated auth dependencies, and removed unused code.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | DEBT-008: Sentry traces sampling reduced | ✅ Done | Changed `sentry_traces_sample_rate` default from 1.0 to 0.1 in `cloud-brain/app/config.py`. Reduces Sentry quota usage by 90% while maintaining visibility into errors. |
+| P0 | DEBT-007: Integration API base URL validation | ✅ Done | Changed `withings_api_base_url` and `polar_api_base_url` defaults from `"https://api.zuralog.com"` to `""`. Added `_validate_integration_config` Pydantic validator that fails fast at startup if client IDs are set without corresponding URLs. Prevents silent failures in production. |
+| P0 | DEBT-020 + DEBT-048: Dashboard analytics parallelized | ✅ Done | Replaced 8 sequential database queries in `dashboard_summary` with `asyncio.gather()` + generic `_fetch_category_data` helper. Added SQL injection allowlist. Decorated with `@cached` for response caching. Implemented `return_exceptions=True` for graceful category-level degradation. |
+| P0 | DEBT-013 + DEBT-014: Auth dependencies consolidated | ✅ Done | Consolidated `_get_auth_service` and `get_authenticated_user_id` into `cloud-brain/app/api/deps.py` as single source of truth. Deleted `cloud-brain/app/api/v1/deps.py`. Updated all 25+ route files and 14 test files to import from canonical location. |
+| P0 | DEBT-006: Removed permanent sync stub | ✅ Done | Deleted `sync_all_users_task` permanent stub from `cloud-brain/app/services/sync_scheduler.py`. Cleans up dead code. |
+| P0 | DEBT-033: Dependency cleanup | ✅ Done | Moved `psycopg2-binary` from production to dev dependencies in `cloud-brain/pyproject.toml`. Removed `[dependency-groups]` block (consolidated into `[project.optional-dependencies]`). Reduces production image size. |
+| P0 | Security: Replaced assert guards with HTTPException | ✅ Done | Replaced `assert` statements with explicit `HTTPException` in `analytics.py`. Prevents assertion failures from crashing the server in production. |
+| P0 | Security: Added metric field pattern constraint | ✅ Done | Added `metric` field pattern constraint (`^[a-z_]{1,64}$`) in `analytics_schemas.py`. Prevents injection attacks via metric names. |
 
 ---
 

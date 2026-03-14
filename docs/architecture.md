@@ -398,6 +398,18 @@ Rationale: Full Docker creates 10–50× file I/O overhead on Windows (WSL2 moun
 - Row Level Security (RLS) in Postgres enforces data isolation per user
 - Supabase token refreshed client-side by Flutter
 
+### ADR 006: Consolidated Auth Dependencies (Batch 8, 2026-03-15)
+
+**Decision:** All FastAPI auth dependencies live in a single canonical location: `cloud-brain/app/api/deps.py`.
+
+**Rationale:** Previously, auth dependencies were split across `cloud-brain/app/api/deps.py` and `cloud-brain/app/api/v1/deps.py`. This created confusion about which file was the source of truth and made it easy to accidentally import from the wrong location. Consolidating to a single file ensures:
+- Single source of truth for auth logic
+- Easier to maintain and extend auth in the future
+- No accidental imports from stale locations
+- Clear separation: `app/api/deps.py` for shared dependencies, `app/api/v1/` for v1-specific routes
+
+**Implementation:** Consolidated `_get_auth_service` and `get_authenticated_user_id` into `app/api/deps.py`. Deleted `app/api/v1/deps.py`. Updated all 25+ route files and 14 test files to import from the canonical location.
+
 ---
 
 ## 7. Security Model
