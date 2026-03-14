@@ -494,6 +494,8 @@ async def websocket_chat(
 
 @router.get("/history")
 async def get_chat_history(
+    limit: int = Query(default=20, ge=1, le=100, description="Maximum number of conversations to return"),
+    offset: int = Query(default=0, ge=0, description="Number of conversations to skip"),
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     storage_service: StorageService = Depends(_get_storage_service),
@@ -501,11 +503,14 @@ async def get_chat_history(
 ) -> list[dict]:
     """Retrieve chat history for the authenticated user.
 
-    Returns all non-deleted conversations and their messages, ordered by
-    most recent conversation first, messages chronologically.
-    Attachment signed URLs are refreshed on each request.
+    Returns non-deleted conversations and their messages, ordered by most recent
+    conversation first, messages chronologically. Supports pagination via
+    ``limit`` (max 100, default 20) and ``offset``. Attachment signed URLs are
+    refreshed on each request.
 
     Args:
+        limit: Maximum number of conversations to return (1–100).
+        offset: Number of conversations to skip (for pagination).
         credentials: Bearer token from the Authorization header.
         auth_service: Injected auth service for token validation.
         storage_service: Injected storage service for signed URLs.
@@ -528,6 +533,8 @@ async def get_chat_history(
         )
         .options(selectinload(Conversation.messages))
         .order_by(Conversation.updated_at.desc(), Conversation.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     conversations = result.scalars().unique().all()
 
@@ -565,6 +572,8 @@ async def get_chat_history(
 @router.get("/conversations")
 async def list_conversations(
     include_archived: bool = Query(default=False),
+    limit: int = Query(default=20, ge=1, le=100, description="Maximum number of conversations to return"),
+    offset: int = Query(default=0, ge=0, description="Number of conversations to skip"),
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     db: AsyncSession = Depends(get_db),
@@ -573,10 +582,13 @@ async def list_conversations(
 
     Returns non-deleted conversations ordered newest (by last activity) first.
     Each entry includes a message count and a preview snippet (the last message,
-    truncated to 100 characters).
+    truncated to 100 characters). Supports pagination via ``limit`` (max 100,
+    default 20) and ``offset``.
 
     Args:
         include_archived: When True, include archived conversations.
+        limit: Maximum number of conversations to return (1–100).
+        offset: Number of conversations to skip (for pagination).
         credentials: Bearer token from the Authorization header.
         auth_service: Injected auth service for token validation.
         db: Injected async database session.
@@ -616,9 +628,13 @@ async def list_conversations(
     )
     if not include_archived:
         stmt = stmt.where(Conversation.archived.is_(False))
-    stmt = stmt.order_by(
-        Conversation.updated_at.desc(),
-        Conversation.created_at.desc(),
+    stmt = (
+        stmt.order_by(
+            Conversation.updated_at.desc(),
+            Conversation.created_at.desc(),
+        )
+        .limit(limit)
+        .offset(offset)
     )
 
     result = await db.execute(stmt)

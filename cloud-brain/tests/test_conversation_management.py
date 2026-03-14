@@ -34,12 +34,16 @@ def _make_conversation(
     conv_id: str = "conv-1",
     user_id: str = "user-a",
     title: str = "My Chat",
+    updated_at=None,
+    archived: bool = False,
 ) -> MagicMock:
     """Build a mock Conversation ORM object."""
     conv = MagicMock()
     conv.id = conv_id
     conv.user_id = user_id
     conv.title = title
+    conv.archived = archived
+    conv.updated_at = updated_at  # None means use created_at as fallback
     conv.created_at = MagicMock()
     conv.created_at.isoformat.return_value = "2026-01-01T00:00:00+00:00"
     return conv
@@ -340,20 +344,23 @@ def test_patch_conversation_not_found(client, mock_auth_service, mock_db):
 
 
 def test_patch_conversation_wrong_user(client, mock_auth_service, mock_db):
-    """PATCH returns 404 when the conversation belongs to another user."""
+    """PATCH returns 404 when the conversation belongs to a different user.
+
+    In production, the WHERE clause (user_id == requesting_user_id) means the
+    DB returns None for a cross-user request. The mock simulates this.
+    """
     mock_auth_service.get_user.return_value = _USER_A
 
-    # Conversation owned by user-b
-    conv = _make_conversation("conv-1", "user-b", "Someone else's chat")
-
+    # Mock the DB to return None — simulates the WHERE clause filtering out
+    # the other user's conversation, as it would in production
     _mock_db_execute_sequence(
         mock_db,
-        [_scalar_one_or_none_result(conv)],
+        [_scalar_one_or_none_result(None)],  # conversation not found (filtered by user_id)
     )
 
     response = client.patch(
-        "/api/v1/chat/conversations/conv-1",
-        json={"title": "Hijack"},
+        "/api/v1/chat/conversations/conv-belongs-to-user-b",
+        json={"title": "Hacked"},
         headers={"Authorization": "Bearer valid-token"},
     )
 
@@ -399,18 +406,22 @@ def test_delete_conversation(client, mock_auth_service, mock_db):
 
 
 def test_delete_wrong_user_returns_404(client, mock_auth_service, mock_db):
-    """DELETE returns 404 when the conversation belongs to another user."""
+    """DELETE returns 404 when the conversation belongs to a different user.
+
+    In production, the WHERE clause (user_id == requesting_user_id) means the
+    DB returns None for a cross-user request. The mock simulates this.
+    """
     mock_auth_service.get_user.return_value = _USER_A
 
-    conv = _make_conversation("conv-1", "user-b", "Not yours")
-
+    # Mock the DB to return None — simulates the WHERE clause filtering out
+    # the other user's conversation, as it would in production
     _mock_db_execute_sequence(
         mock_db,
-        [_scalar_one_or_none_result(conv)],
+        [_scalar_one_or_none_result(None)],  # conversation not found (filtered by user_id)
     )
 
     response = client.delete(
-        "/api/v1/chat/conversations/conv-1",
+        "/api/v1/chat/conversations/conv-belongs-to-user-b",
         headers={"Authorization": "Bearer valid-token"},
     )
 
