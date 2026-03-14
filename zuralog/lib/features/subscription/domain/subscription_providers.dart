@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -163,4 +164,12 @@ final subscriptionProvider =
 /// Convenience provider: whether the current user has Pro access.
 final isPremiumProvider = Provider<bool>((ref) {
   return ref.watch(subscriptionProvider).isPremium;
+});
+
+/// Fetches the current RevenueCat offerings to display live prices.
+///
+/// Returns null while loading or if RC is unavailable.
+final offeringsProvider = FutureProvider<Offerings?>((ref) async {
+  final repo = ref.watch(subscriptionRepositoryProvider);
+  return repo.getOfferings();
 });

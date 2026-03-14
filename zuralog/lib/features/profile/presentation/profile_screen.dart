@@ -12,7 +12,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
+import 'package:zuralog/features/subscription/domain/subscription_state.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Local state ───────────────────────────────────────────────────────────────
@@ -65,7 +68,20 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(_profileStateProvider);
+    final email = ref.watch(userEmailProvider);
+    final userProfile = ref.watch(userProfileProvider);
+    final subState = ref.watch(subscriptionProvider);
+    final displayName = userProfile?.aiName ?? userProfile?.displayName ?? '';
+    final tier = subState.tier == SubscriptionTier.pro ? 'Pro' : 'Free';
+    final memberSince = userProfile?.createdAt != null
+        ? userProfile!.createdAt!.year.toString()
+        : '';
+    final profileState = _ProfileState(
+      displayName: displayName,
+      email: email,
+      memberSince: memberSince,
+      tier: tier,
+    );
 
     return ZuralogScaffold(
       body: CustomScrollView(
@@ -109,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
                 AppDimens.spaceMd,
                 0,
               ),
-              child: _IdentityCard(profile: profile),
+              child: _IdentityCard(profile: profileState),
             ),
           ),
 
@@ -129,7 +145,7 @@ class ProfileScreen extends ConsumerWidget {
             child: Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              child: _AccountGroup(tier: profile.tier),
+              child: _AccountGroup(tier: tier),
             ),
           ),
 
@@ -210,6 +226,14 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final profile = ref.watch(_profileStateProvider);
+    final email = ref.watch(userEmailProvider);
+    final userProfile = ref.watch(userProfileProvider);
+    final resolvedName = userProfile?.aiName ?? userProfile?.displayName ?? '';
+    final avatarInitial = resolvedName.isNotEmpty
+        ? resolvedName[0].toUpperCase()
+        : email.isNotEmpty
+            ? email[0].toUpperCase()
+            : '?';
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceLg),
@@ -232,7 +256,7 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
                 ),
                 child: Center(
                   child: Text(
-                    'AR',
+                    avatarInitial,
                     style: AppTextStyles.displayLarge.copyWith(
                       color: AppColors.primary,
                     ),

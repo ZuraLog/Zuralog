@@ -14,6 +14,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -51,7 +52,7 @@ class AccountSettingsScreen extends ConsumerWidget {
                 icon: Icons.email_rounded,
                 iconColor: AppColors.categorySleep,
                 title: 'Email',
-                subtitle: 'user@example.com',
+                subtitle: ref.watch(userEmailProvider),
                 onTap: () => _showChangeEmailSheet(context),
               ),
               ZSettingsTile(
@@ -192,12 +193,20 @@ class AccountSettingsScreen extends ConsumerWidget {
 
 // ── _ProfileSummaryCard ───────────────────────────────────────────────────────
 
-class _ProfileSummaryCard extends StatelessWidget {
+class _ProfileSummaryCard extends ConsumerWidget {
   const _ProfileSummaryCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
+    final email = ref.watch(userEmailProvider);
+    final profile = ref.watch(userProfileProvider);
+    final displayName = profile?.aiName ?? profile?.displayName ?? '';
+    final avatarInitial = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : email.isNotEmpty
+            ? email[0].toUpperCase()
+            : 'U';
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
@@ -216,7 +225,7 @@ class _ProfileSummaryCard extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                'U',
+                avatarInitial,
                 style: AppTextStyles.displaySmall.copyWith(
                   color: colors.primary,
                   fontWeight: FontWeight.w700,
@@ -230,14 +239,14 @@ class _ProfileSummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'User',
+                  displayName,
                   style: AppTextStyles.titleMedium.copyWith(
                     color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'user@example.com',
+                  email,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: colors.textSecondary,
                   ),

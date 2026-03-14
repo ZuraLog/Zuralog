@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/subscription/domain/subscription_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── Local providers ────────────────────────────────────────────────────────────
@@ -249,14 +250,21 @@ class _FeatureItem extends StatelessWidget {
 
 // ── _UpgradeCard ───────────────────────────────────────────────────────────────
 
-class _UpgradeCard extends StatelessWidget {
+class _UpgradeCard extends ConsumerWidget {
   const _UpgradeCard({required this.onUpgradeTap});
 
   final VoidCallback onUpgradeTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
+    final offeringsAsync = ref.watch(offeringsProvider);
+    final offerings = offeringsAsync.valueOrNull;
+    final current = offerings?.current;
+    final monthlyPackage = current?.monthly;
+    final annualPackage = current?.annual;
+    final monthlyPrice = monthlyPackage?.storeProduct.priceString ?? r'$9.99';
+    final annualPrice = annualPackage?.storeProduct.priceString ?? r'$79.99';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
       child: Container(
@@ -287,17 +295,16 @@ class _UpgradeCard extends StatelessWidget {
             ),
             const SizedBox(height: AppDimens.spaceMd),
 
-            // Price
-            // TODO(phase9): Replace with RevenueCat product pricing fetched
-            // at runtime — prices vary by locale, currency, and promotions.
+            // Price — fetched from RevenueCat at runtime; falls back to
+            // locale-neutral defaults when RC is unavailable.
             Text(
-              '\$9.99 / month',
+              '$monthlyPrice / month',
               style:
                   AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
             ),
             const SizedBox(height: AppDimens.spaceXs),
             Text(
-              'or \$79.99/year (save 33%)',
+              'or $annualPrice/year (save 33%)',
               style: AppTextStyles.bodySmall
                   .copyWith(color: colors.textSecondary),
             ),
