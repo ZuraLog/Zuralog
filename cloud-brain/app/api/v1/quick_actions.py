@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 
 logger = logging.getLogger(__name__)

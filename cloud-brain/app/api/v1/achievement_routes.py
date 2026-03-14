@@ -17,7 +17,7 @@ import sentry_sdk
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 from app.database import async_session
 from app.services.achievement_tracker import AchievementTracker
 

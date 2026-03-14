@@ -13,7 +13,7 @@ will be wired in a future phase.
 import sentry_sdk
 from fastapi import APIRouter, Depends
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 
 
 async def _set_sentry_module() -> None:

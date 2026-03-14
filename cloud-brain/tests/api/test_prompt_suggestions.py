@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.main import app
 

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from app.api.v1.auth import _get_auth_service
+from app.api.deps import _get_auth_service
 from app.limiter import limiter
 from app.services.auth_service import AuthService
 

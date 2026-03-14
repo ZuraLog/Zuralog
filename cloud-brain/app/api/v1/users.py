@@ -18,7 +18,7 @@ from app.api.v1.schemas import UpdateProfileRequest, UserProfileResponse
 from app.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import _get_auth_service, get_authenticated_user_id
 from app.services.cache_service import CacheService, cached
 
 logger = logging.getLogger(__name__)
@@ -46,18 +46,6 @@ class UpdatePreferencesRequest(BaseModel):
     """
 
     coach_persona: str | None = None
-
-
-def _get_auth_service(request: Request) -> AuthService:
-    """Retrieve the shared AuthService from app state.
-
-    Args:
-        request: The incoming FastAPI request.
-
-    Returns:
-        The shared AuthService instance.
-    """
-    return request.app.state.auth_service
 
 
 @router.get("/me/preferences")

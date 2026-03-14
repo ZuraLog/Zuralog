@@ -2,6 +2,9 @@
 Zuralog Cloud Brain — Shared API Dependencies.
 
 FastAPI dependencies for authentication, authorization, and rate limiting.
+``get_authenticated_user_id`` is the canonical dependency for extracting a
+verified user ID — use it in route handlers and as the key source for
+the ``@cached`` decorator's ``key_params``.
 """
 
 import logging
@@ -32,6 +35,30 @@ def _get_auth_service(request: Request) -> AuthService:
         The shared AuthService instance.
     """
     return request.app.state.auth_service
+
+
+async def get_authenticated_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+) -> str:
+    """Extract and verify user_id from the JWT token.
+
+    Returns the user_id as a string, making it available as a
+    keyword argument for the @cached decorator's key_params.
+    """
+    user = await auth_service.get_user(credentials.credentials)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    user_id = user.get("id", "")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    return user_id
 
 
 async def get_current_user(

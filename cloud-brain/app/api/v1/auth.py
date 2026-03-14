@@ -21,6 +21,7 @@ from app.api.v1.schemas import (
     RegisterRequest,
     SocialAuthRequest,
 )
+from app.api.deps import _get_auth_service
 from app.database import get_db
 from app.limiter import limiter
 from app.services.auth_service import AuthService
@@ -44,22 +45,6 @@ router = APIRouter(
     dependencies=[Depends(_set_sentry_module)],
 )
 security = HTTPBearer()
-
-
-def _get_auth_service(request: Request) -> AuthService:
-    """FastAPI dependency that retrieves the shared AuthService.
-
-    The AuthService is stored in `app.state` during the lifespan
-    context manager, ensuring the httpx client is properly pooled
-    and shut down.
-
-    Args:
-        request: The incoming FastAPI request.
-
-    Returns:
-        The shared AuthService instance.
-    """
-    return request.app.state.auth_service
 
 
 @router.post("/register", response_model=AuthResponse)

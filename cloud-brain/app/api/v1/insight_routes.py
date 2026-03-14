@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.models.insight import Insight
 

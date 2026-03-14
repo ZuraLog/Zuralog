@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.models.user_streak import UserStreak
 from app.services.streak_tracker import StreakTracker, _VALID_STREAK_TYPES

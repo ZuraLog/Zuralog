@@ -39,7 +39,7 @@ from app.api.v1.analytics_schemas import (
     UserGoalRequest,
     WeeklyTrendsResponse,
 )
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 from app.database import async_session, get_db
 from app.models.user_goal import GoalPeriod, UserGoal
 from app.services.cache_service import cached

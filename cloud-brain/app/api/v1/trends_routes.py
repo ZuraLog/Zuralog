@@ -12,7 +12,7 @@ empty/onboarding state. Full computation will be wired in a future phase.
 import sentry_sdk
 from fastapi import APIRouter, Depends, Request
 
-from app.api.v1.deps import get_authenticated_user_id
+from app.api.deps import get_authenticated_user_id
 from app.limiter import limiter
 
 

@@ -47,7 +47,7 @@ from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.orchestrator import Orchestrator
-from app.api.deps import check_rate_limit
+from app.api.deps import _get_auth_service, check_rate_limit
 from app.database import async_session, get_db
 from app.limiter import limiter
 from app.models.conversation import Conversation, Message
@@ -70,11 +70,6 @@ router = APIRouter(
     dependencies=[Depends(_set_sentry_module)],
 )
 security = HTTPBearer()
-
-
-def _get_auth_service(request: Request) -> AuthService:
-    """FastAPI dependency that retrieves the shared AuthService."""
-    return request.app.state.auth_service
 
 
 def _get_storage_service(request: Request) -> StorageService:
