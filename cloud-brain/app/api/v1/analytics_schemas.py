@@ -168,6 +168,8 @@ class UserGoalRequest(BaseModel):
 
     metric: str = Field(
         ...,
+        max_length=64,
+        pattern=r"^[a-z_]{1,64}$",
         description="Metric name (e.g., 'steps', 'calories_consumed')",
     )
     target_value: float = Field(
@@ -184,6 +186,7 @@ class UserGoalRequest(BaseModel):
 
 # ── Data Tab schemas ──────────────────────────────────────────────────────────
 
+
 class CategorySummaryItem(BaseModel):
     """Summary for a single health category card on the dashboard.
 
@@ -196,6 +199,7 @@ class CategorySummaryItem(BaseModel):
         last_updated: ISO-8601 date string of most recent data point.
         has_data: True when real data exists for this category.
     """
+
     category: str
     primary_value: str = "—"
     unit: str | None = None
@@ -212,6 +216,7 @@ class DashboardSummaryResponse(BaseModel):
         categories: List of all category summaries (up to 10).
         visible_order: Ordered list of category slugs with real data.
     """
+
     categories: list[CategorySummaryItem] = []
     visible_order: list[str] = []
 
@@ -223,6 +228,7 @@ class MetricDataPointItem(BaseModel):
         timestamp: ISO-8601 date string (YYYY-MM-DD).
         value: Numeric metric value.
     """
+
     timestamp: str
     value: float
 
@@ -240,6 +246,7 @@ class MetricSeriesItem(BaseModel):
         delta_percent: Week-over-week percentage change.
         average: Mean over the selected time range.
     """
+
     metric_id: str
     display_name: str
     unit: str = ""
@@ -258,6 +265,7 @@ class CategoryDetailResponse(BaseModel):
         metrics: All metrics within this category with time-series data.
         time_range: The selected time range key (e.g. '7D').
     """
+
     category: str
     metrics: list[MetricSeriesItem] = []
     time_range: str = "7D"
@@ -271,6 +279,7 @@ class MetricDetailResponse(BaseModel):
         category: Parent category slug.
         ai_insight: Optional AI commentary for this metric.
     """
+
     series: MetricSeriesItem
     category: str
     ai_insight: str | None = None

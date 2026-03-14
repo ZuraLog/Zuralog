@@ -13,6 +13,7 @@ import asyncio
 import logging
 import uuid
 from collections.abc import Callable
+from typing import cast
 from datetime import date, timedelta
 
 logger = logging.getLogger(__name__)
@@ -80,6 +81,39 @@ def _fmt_hours(v: float) -> str:
 
 # Order of categories in dashboard_summary — must match the asyncio.gather call order.
 _CATEGORY_ORDER: list[str] = ["activity", "sleep", "heart", "body", "vitals", "nutrition", "wellness", "mobility"]
+
+# ── category_detail and metric_detail dynamic SQL allowlists ─────────────────
+# Shared by both endpoints — add new columns/tables here only.
+ALLOWED_COLUMNS: frozenset[str] = frozenset(
+    {
+        "steps",
+        "active_calories",
+        "distance_meters",
+        "resting_heart_rate",
+        "hrv_ms",
+        "heart_rate_avg",
+        "body_fat_percentage",
+        "oxygen_saturation",
+        "respiratory_rate",
+        "vo2_max",
+        "flights_climbed",
+        "hours",
+        "quality_score",
+        "weight_kg",
+        "calories",
+        "protein_grams",
+        "carbs_grams",
+        "fat_grams",
+    }
+)
+ALLOWED_TABLES: frozenset[str] = frozenset(
+    {
+        "daily_health_metrics",
+        "sleep_records",
+        "weight_measurements",
+        "nutrition_entries",
+    }
+)
 
 # Allowlist of permitted (table, column) pairs — prevents SQL injection
 _ALLOWED_CATEGORY_QUERIES: frozenset[tuple[str, str]] = frozenset(
@@ -439,6 +473,7 @@ async def dashboard_insight(
     )
 
 
+@cached(prefix="analytics.dashboard_summary", ttl=300, key_params=["user_id"])
 @limiter.limit("60/minute")
 @router.get("/dashboard-summary", response_model=DashboardSummaryResponse)
 async def dashboard_summary(
@@ -556,7 +591,7 @@ async def dashboard_summary(
             )
             categories.append(CategorySummaryItem(category=category_name, has_data=False))
         else:
-            categories.append(result)  # type: ignore[arg-type]  # narrowed by isinstance check above
+            categories.append(cast(CategorySummaryItem, result))
     # ── Cycle & Environment — no data tables yet ──────────────────────────────
     categories.append(CategorySummaryItem(category="cycle", has_data=False))
     categories.append(CategorySummaryItem(category="environment", has_data=False))
@@ -608,38 +643,6 @@ async def category_detail(
     days = days_map[time_range.upper()]
     since = (date.today() - timedelta(days=days)).isoformat()
 
-    # HIGH-01: allowlists for dynamic SQL identifiers
-    ALLOWED_COLUMNS: frozenset[str] = frozenset(
-        {
-            "steps",
-            "active_calories",
-            "distance_meters",
-            "resting_heart_rate",
-            "hrv_ms",
-            "heart_rate_avg",
-            "body_fat_percentage",
-            "oxygen_saturation",
-            "respiratory_rate",
-            "vo2_max",
-            "flights_climbed",
-            "hours",
-            "quality_score",
-            "weight_kg",
-            "calories",
-            "protein_grams",
-            "carbs_grams",
-            "fat_grams",
-        }
-    )
-    ALLOWED_TABLES: frozenset[str] = frozenset(
-        {
-            "daily_health_metrics",
-            "sleep_records",
-            "weight_measurements",
-            "nutrition_entries",
-        }
-    )
-
     def _make_series(
         metric_id: str,
         display_name: str,
@@ -685,7 +688,11 @@ async def category_detail(
             ("active_calories", "active_calories", "Active Calories", "kcal"),
             ("distance_meters", "distance", "Distance", "m"),
         ]:
-            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
+            if col not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown column: {col!r}",
+                )
             result = await db.execute(
                 sql_text(
                     f"SELECT date, {col} FROM daily_health_metrics "
@@ -726,7 +733,11 @@ async def category_detail(
             ("hrv_ms", "hrv", "Heart Rate Variability", "ms"),
             ("heart_rate_avg", "heart_rate_avg", "Avg Heart Rate", "bpm"),
         ]:
-            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
+            if col not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown column: {col!r}",
+                )
             result = await db.execute(
                 sql_text(
                     f"SELECT date, {col} FROM daily_health_metrics "
@@ -766,7 +777,11 @@ async def category_detail(
             ("oxygen_saturation", "spo2", "Blood Oxygen", "%"),
             ("respiratory_rate", "respiratory_rate", "Respiratory Rate", "brpm"),
         ]:
-            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
+            if col not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown column: {col!r}",
+                )
             result = await db.execute(
                 sql_text(
                     f"SELECT date, {col} FROM daily_health_metrics "
@@ -786,7 +801,11 @@ async def category_detail(
             ("carbs_grams", "carbs", "Carbohydrates", "g"),
             ("fat_grams", "fat", "Fat", "g"),
         ]:
-            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
+            if col not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown column: {col!r}",
+                )
             result = await db.execute(
                 sql_text(
                     f"SELECT date, {col} FROM nutrition_entries "
@@ -804,7 +823,11 @@ async def category_detail(
             ("hrv_ms", "hrv", "HRV", "ms"),
             ("vo2_max", "vo2max", "VO₂ Max", "ml/kg/min"),
         ]:
-            assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
+            if col not in ALLOWED_COLUMNS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown column: {col!r}",
+                )
             result = await db.execute(
                 sql_text(
                     f"SELECT date, {col} FROM daily_health_metrics "
@@ -884,38 +907,6 @@ async def metric_detail(
     days = days_map[time_range.upper()]
     since = (date.today() - timedelta(days=days)).isoformat()
 
-    # HIGH-01: allowlists for dynamic SQL identifiers
-    ALLOWED_COLUMNS: frozenset[str] = frozenset(
-        {
-            "steps",
-            "active_calories",
-            "distance_meters",
-            "resting_heart_rate",
-            "hrv_ms",
-            "heart_rate_avg",
-            "body_fat_percentage",
-            "oxygen_saturation",
-            "respiratory_rate",
-            "vo2_max",
-            "flights_climbed",
-            "hours",
-            "quality_score",
-            "weight_kg",
-            "calories",
-            "protein_grams",
-            "carbs_grams",
-            "fat_grams",
-        }
-    )
-    ALLOWED_TABLES: frozenset[str] = frozenset(
-        {
-            "daily_health_metrics",
-            "sleep_records",
-            "weight_measurements",
-            "nutrition_entries",
-        }
-    )
-
     # Map metric_id → (table, column, display_name, unit, source, category)
     METRIC_MAP: dict[str, tuple[str, str, str, str, str, str]] = {
         "steps": ("daily_health_metrics", "steps", "Steps", "steps", "apple_health", "activity"),
@@ -972,8 +963,16 @@ async def metric_detail(
     table, col, display_name, unit, source, category = METRIC_MAP[metric_id]
 
     # HIGH-01: guard dynamic identifiers against the allowlists
-    assert col in ALLOWED_COLUMNS, f"Blocked unsafe column: {col}"
-    assert table in ALLOWED_TABLES, f"Blocked unsafe table: {table}"
+    if col not in ALLOWED_COLUMNS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown column: {col!r}",
+        )
+    if table not in ALLOWED_TABLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown table: {table!r}",
+        )
 
     result = await db.execute(
         sql_text(
