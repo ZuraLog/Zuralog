@@ -23,9 +23,6 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 @immutable
 class _ProfileState {
   const _ProfileState({
-    // TODO(auth): Wire displayName, email, memberSince, and tier to the
-    // authenticated user provider from core/di/ once the auth layer is
-    // connected (Phase 9). These defaults are empty placeholders only.
     this.displayName = '',
     this.email = '',
     this.memberSince = '',
@@ -233,7 +230,7 @@ class _IdentityCardState extends ConsumerState<_IdentityCard> {
         ? resolvedName[0].toUpperCase()
         : email.isNotEmpty
             ? email[0].toUpperCase()
-            : '?';
+            : 'U';
 
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceLg),
