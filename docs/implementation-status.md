@@ -1,9 +1,74 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-13 (fix/progress-tab-set-first-goal — Progress tab "Set First Goal" flow and /progress/home data wiring complete)  
+**Last Updated:** 2026-03-14 (fix/security-rate-limiting-webhooks — Batch 3 complete: rate limiting, Strava/Fitbit webhook security, CORS warning)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Architectural Debt Cleanup — Batch 3 (fix/security-rate-limiting-webhooks, 2026-03-14)
+
+**Scope:** Added missing rate limiting to 12 previously unprotected endpoints, fixed Strava webhook subscription ID verification gap, fixed Fitbit webhook timing-attack vulnerability, and added CORS production warning.  
+**Branch:** `fix/security-rate-limiting-webhooks` → merged to main (2026-03-14)
+
+**What was built:**
+
+### DEBT-016: Rate Limiting on Unprotected Endpoints
+
+Added `@limiter.limit()` decorators to 12 endpoints that were previously unprotected:
+
+1. **Health ingest** — `POST /api/v1/health/ingest` (30/minute)
+2. **Chat history** — `GET /api/v1/chat/history` (60/minute)
+3. **Chat conversations** — `GET /api/v1/chat/conversations` (60/minute)
+4. **Analytics dashboard** — `GET /api/v1/analytics/dashboard-summary` (60/minute)
+5. **Trends home** — `GET /api/v1/trends/home` (60/minute)
+6. **Trends metrics** — `GET /api/v1/trends/metrics` (60/minute)
+7. **Trends correlations** — `GET /api/v1/trends/correlations` (30/minute)
+8. **RevenueCat webhook** — `GET/POST /api/v1/webhooks/revenucat` (30/minute)
+
+**Key decision:** Rate limiter key function upgraded from IP-based to per-user (JWT `sub` claim) for authenticated endpoints. Webhook endpoints (RevenueCat) fall back to IP-based limiting since they don't carry user credentials.
+
+### DEBT-037: Strava Webhook Subscription ID Verification
+
+Strava does not HMAC-sign webhook payloads, but every event includes a `subscription_id` field. Added verification to reject events whose `subscription_id` does not match the one issued when we registered the webhook.
+
+**Implementation:**
+- Added `strava_webhook_subscription_id: int = 0` config field
+- Added check in `POST /webhooks/strava` handler: if `subscription_id` mismatch, log warning and return 200 (prevents Strava from retrying)
+- Backward compatible — check skipped when `STRAVA_WEBHOOK_SUBSCRIPTION_ID` env var is not set (default 0)
+
+### DEBT-038: Fitbit Webhook Verification Timing Vulnerability
+
+Fitbit webhook verification was using `==` string comparison to check the verification code. This is vulnerable to timing side-channel attacks where an attacker can measure response time to infer the correct code byte-by-byte.
+
+**Fix:** Replaced `==` with `hmac.compare_digest()`, which performs constant-time comparison.
+
+### DEBT-040: CORS Wildcard Production Warning
+
+Added startup warning when `ALLOWED_ORIGINS=*` is set in production. The app logs a `WARNING` level message at startup if this misconfiguration is detected, prompting operators to set specific domains.
+
+### Bonus: Remove Secret Token from Logs
+
+Removed `strava_webhook_verify_token` that was being printed to logs when webhook validation failed. This secret should never appear in logs.
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Per-user rate limiting for authenticated endpoints | Prevents one user from consuming the quota for all users. IP-based limiting is insufficient at scale. |
+| IP-based fallback for webhook endpoints | Webhooks don't carry user credentials. IP-based limiting is the only option. |
+| Return 200 on Strava subscription_id mismatch | Returning 4xx would cause Strava to retry infinitely. Returning 200 silently drops the forged event. |
+| Backward compatible Strava check | Setting `STRAVA_WEBHOOK_SUBSCRIPTION_ID=0` (the default) skips the check. Existing deployments continue to work until the env var is explicitly set. |
+| Constant-time comparison for Fitbit | `hmac.compare_digest` is the standard library solution for timing-safe comparison. |
+| Startup warning for CORS wildcard | Operators may not realize `ALLOWED_ORIGINS=*` is set. A warning at startup makes the misconfiguration visible. |
+
+**Result:**
+- All 12 previously unprotected endpoints now have rate limiting
+- Strava webhook events are verified against the registered subscription ID
+- Fitbit webhook verification is timing-attack resistant
+- Production deployments with wildcard CORS get a startup warning
+- No secrets appear in logs
 
 ---
 

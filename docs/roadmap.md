@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-13 (fix/health-score-cache — Health Score backend fixed, demo account now displays score correctly)
+**Last Updated:** 2026-03-14 (fix/security-rate-limiting-webhooks — Batch 3 complete: rate limiting, Strava/Fitbit webhook security, CORS warning)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -464,6 +464,22 @@ Removed all debug-mode mock gates and wired the entire Flutter app to real backe
 - Device-local integrations (Apple Health, Health Connect) correctly use SharedPreferences. Server-side OAuth integrations (Strava, Fitbit, Oura, Polar, Withings) query the backend.
 - Mock repositories preserved in the codebase for test use, but no longer used at runtime.
 - The "never-error" provider pattern (established in Phase 10.10) was preserved — providers still catch errors and return empty data.
+
+---
+
+## Architectural Debt Cleanup — Batch 3 (2026-03-14)
+
+> **Branch:** `fix/security-rate-limiting-webhooks` → merged to main (2026-03-14)
+
+Completed all security and rate-limiting fixes for unprotected endpoints and webhook verification vulnerabilities.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | DEBT-016: Add rate limits to 12 unprotected endpoints | ✅ Done | Health ingest, chat history/conversations, analytics dashboard, trends home/metrics/correlations, RevenueCat webhook. Rate limiter upgraded from IP-based to per-user (JWT sub claim) for authenticated endpoints, with IP fallback for webhook endpoints. |
+| P0 | DEBT-037: Add Strava webhook subscription_id verification | ✅ Done | Events with mismatched subscription ID rejected (returns 200 to prevent Strava retries). Backward compatible — check skipped when `STRAVA_WEBHOOK_SUBSCRIPTION_ID` env var not set. |
+| P0 | DEBT-038: Fix Fitbit webhook verification timing vulnerability | ✅ Done | Replaced `==` string comparison with `hmac.compare_digest` to prevent timing side-channel attacks. |
+| P0 | DEBT-040: Add CORS wildcard production warning | ✅ Done | App logs `WARNING` at startup if `ALLOWED_ORIGINS=*` is set in production. |
+| P0 | Bonus: Remove secret token from logs | ✅ Done | Removed `strava_webhook_verify_token` that was being printed to logs on validation mismatch. |
 
 ---
 
