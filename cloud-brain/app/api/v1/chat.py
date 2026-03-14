@@ -798,19 +798,32 @@ async def update_conversation(
         conv.title = body.title
 
     if body.archived is not None:
-        conv.archived = body.archived
+        try:
+            conv.archived = body.archived
+        except AttributeError:
+            logger.warning(
+                "update_conversation: 'archived' attribute missing on conversation %s — skipping",
+                conversation_id,
+            )
 
     await db.commit()
     await db.refresh(conv)
 
     created = conv.created_at
-    updated = conv.updated_at or conv.created_at
+    try:
+        updated = conv.updated_at or conv.created_at
+    except AttributeError:
+        updated = conv.created_at
+    try:
+        archived = conv.archived
+    except AttributeError:
+        archived = None
     return {
         "id": conv.id,
         "title": conv.title,
         "created_at": created.isoformat() if hasattr(created, "isoformat") else str(created),
         "updated_at": updated.isoformat() if hasattr(updated, "isoformat") else str(updated),
-        "archived": conv.archived,
+        "archived": archived,
     }
 
 
@@ -859,6 +872,20 @@ async def delete_conversation(
             detail="Conversation not found",
         )
 
-    conv.deleted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+    try:
+        conv.deleted_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+    except AttributeError:
+        # Fallback: soft-delete via archived flag when deleted_at column is absent.
+        logger.warning(
+            "delete_conversation: 'deleted_at' attribute missing on conversation %s — falling back to archived=True",
+            conversation_id,
+        )
+        try:
+            conv.archived = True
+        except AttributeError:
+            logger.warning(
+                "delete_conversation: 'archived' attribute also missing on conversation %s — no soft-delete applied",
+                conversation_id,
+            )
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

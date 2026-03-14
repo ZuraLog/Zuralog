@@ -488,16 +488,23 @@ def test_delete_conversation_fallback_to_archived(client, mock_auth_service, moc
     """DELETE falls back to archived=True when model lacks 'deleted_at'."""
     mock_auth_service.get_user.return_value = _USER_A
 
-    conv = _make_conversation("conv-1", "user-a", "Fallback")
-    conv.archived = False  # has archived but not deleted_at
+    # Use a real object (not MagicMock) so __setattr__ behaves predictably.
+    # We want setting deleted_at to raise AttributeError but archived to succeed.
+    class _ConvNoDeletedAt:
+        id = "conv-1"
+        user_id = "user-a"
+        title = "Fallback"
+        archived = False
+        created_at = MagicMock()
+        updated_at = None
 
-    # Make setting deleted_at raise AttributeError, archived assignment succeed
-    def _setattr(name, value):
-        if name == "deleted_at":
-            raise AttributeError("no deleted_at")
-        object.__setattr__(conv, name, value)
+        def __setattr__(self, name: str, value: object) -> None:
+            if name == "deleted_at":
+                raise AttributeError("no deleted_at")
+            object.__setattr__(self, name, value)
 
-    type(conv).__setattr__ = _setattr  # noqa: PLC2801
+    conv = _ConvNoDeletedAt()
+    conv.created_at.isoformat.return_value = "2026-01-01T00:00:00+00:00"
 
     _mock_db_execute_sequence(
         mock_db,
