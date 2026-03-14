@@ -95,5 +95,5 @@ def downgrade() -> None:
     op.execute("DROP POLICY IF EXISTS insights_select_own ON insights")
     op.execute("DROP POLICY IF EXISTS insights_update_own ON insights")
     op.execute("ALTER TABLE insights DISABLE ROW LEVEL SECURITY")
-    op.execute("DROP INDEX IF EXISTS uq_insights_user_type_day")
+    op.execute("DROP INDEX CONCURRENTLY IF EXISTS uq_insights_user_type_day")
     op.drop_column("insights", "updated_at")
