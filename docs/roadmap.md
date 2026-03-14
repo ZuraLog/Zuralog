@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-14 (fix/security-rate-limiting-webhooks — Batch 3 complete: rate limiting, Strava/Fitbit webhook security, CORS warning)
+**Last Updated:** 2026-03-14 (fix/data-integrity-insights-ingest — Batch 5 complete: deduplicate insights, fix datetime deprecation)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -480,6 +480,19 @@ Completed all security and rate-limiting fixes for unprotected endpoints and web
 | P0 | DEBT-038: Fix Fitbit webhook verification timing vulnerability | ✅ Done | Replaced `==` string comparison with `hmac.compare_digest` to prevent timing side-channel attacks. |
 | P0 | DEBT-040: Add CORS wildcard production warning | ✅ Done | App logs `WARNING` at startup if `ALLOWED_ORIGINS=*` is set in production. |
 | P0 | Bonus: Remove secret token from logs | ✅ Done | Removed `strava_webhook_verify_token` that was being printed to logs on validation mismatch. |
+
+---
+
+## Architectural Debt Cleanup — Batch 5 (2026-03-14)
+
+> **Branch:** `fix/data-integrity-insights-ingest` → merged to main (2026-03-14)
+
+Completed all data integrity and deprecation fixes for the insights feature and health ingest pipeline.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | DEBT-049: Duplicate insight rows fixed | ✅ Done | Added unique constraint on `insights(user_id, type, created_at::date)`. Updated `generate_insights_for_user` Celery task to use `INSERT ... ON CONFLICT DO UPDATE` (upsert) instead of bare `db.add()`. Added missing Row Level Security to insights table. |
+| P0 | DEBT-018: `datetime.utcnow()` deprecation fixed | ✅ Done | Replaced `datetime.utcnow()` with `datetime.now(timezone.utc)` in `health_ingest.py`. Confirmed zero remaining `utcnow()` calls across entire backend. |
 
 ---
 

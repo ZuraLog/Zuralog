@@ -1,9 +1,55 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-14 (fix/security-rate-limiting-webhooks — Batch 3 complete: rate limiting, Strava/Fitbit webhook security, CORS warning)  
+**Last Updated:** 2026-03-14 (fix/data-integrity-insights-ingest — Batch 5 complete: deduplicate insights, fix datetime deprecation)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Architectural Debt Cleanup — Batch 5 (fix/data-integrity-insights-ingest, 2026-03-14)
+
+**Scope:** Fixed duplicate insight rows that accumulate on repeat health syncs, and fixed the deprecated `datetime.utcnow()` call in the health ingest pipeline.  
+**Branch:** `fix/data-integrity-insights-ingest` → merged to main (2026-03-14)
+
+**What was built:**
+
+### DEBT-049: Duplicate Insight Rows Fixed
+
+The `generate_insights_for_user` Celery task was inserting new `Insight` rows every time it ran for a user, with no unique constraint on `(user_id, insight_type, date)`. A user whose health data synced 10 times in a day would get 10 copies of each insight card in their feed.
+
+**Implementation:**
+- Added a unique database constraint on `insights(user_id, type, created_at::date)` preventing duplicate insight cards per user per day
+- Added `updated_at` column to the insights table for tracking when insights were last refreshed
+- Updated `generate_insights_for_user` Celery task to use `INSERT ... ON CONFLICT DO UPDATE` (upsert) instead of bare `db.add()` — re-runs now refresh existing cards instead of creating duplicates
+- Added missing Row Level Security to the `insights` table with per-user SELECT/UPDATE policies and a service_role bypass
+- Migration file: `cloud-brain/alembic/versions/n9i0j1k2l3m4_deduplicate_insights_add_upsert_constraint.py`
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Unique constraint on `(user_id, type, created_at::date)` | Prevents duplicate insight cards per user per day. Using `created_at::date` (not a separate date column) keeps the constraint simple and avoids timezone issues. |
+| Upsert instead of insert-or-ignore | When the task re-runs for the same user on the same day, the existing insight should be refreshed with new content, not silently ignored. `ON CONFLICT DO UPDATE` achieves this. |
+| Added `updated_at` column | Tracks when insights were last refreshed. Useful for cache invalidation and debugging. |
+| Row Level Security on insights table | Prevents users from querying other users' insights. Aligns with the security model applied to all other user-scoped tables. |
+
+**Result:**
+- Duplicate insight rows no longer accumulate on repeat health syncs
+- Insight cards refresh in place instead of multiplying
+- Insights table now has proper access control via RLS
+
+### DEBT-018: `datetime.utcnow()` Deprecation Fixed
+
+Python 3.12 deprecated `datetime.utcnow()` in favor of `datetime.now(timezone.utc)`.
+
+**Implementation:**
+- Replaced `datetime.utcnow()` with `datetime.now(timezone.utc)` in `cloud-brain/app/api/v1/health_ingest.py`
+- Confirmed zero remaining `utcnow()` calls across the entire backend via grep
+
+**Result:**
+- No deprecation warnings when running on Python 3.12+
+- Code is forward-compatible with future Python versions
 
 ---
 
