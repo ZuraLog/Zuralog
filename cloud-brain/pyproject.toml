@@ -28,7 +28,6 @@ dependencies = [
     "python-multipart>=0.0.9",
     "sentry-sdk[fastapi,celery,sqlalchemy,httpx]>=2.19.0",
     "posthog>=3.7.0",
-    "psycopg2-binary>=2.9.11",
 ]
 
 [project.optional-dependencies]
@@ -37,6 +36,8 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "ruff>=0.8.0",
     "httpx>=0.28.0",
+    "aiosqlite>=0.22.1",
+    "psycopg2-binary>=2.9.11",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -53,7 +54,4 @@ select = ["E", "F", "I", "W"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
-[dependency-groups]
-dev = [
-    "aiosqlite>=0.22.1",
-]
+

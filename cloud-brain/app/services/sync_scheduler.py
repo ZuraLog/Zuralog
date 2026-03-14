@@ -5,8 +5,7 @@ Implements periodic background tasks to pull data from cloud
 integrations (Strava, Fitbit, Oura) without user intervention.
 
 Architecture:
-- Celery Beat triggers `sync_all_users_task` every 15 minutes.
-- The master task iterates active users and dispatches per-user sync.
+- Celery Beat triggers per-user sync tasks on a schedule.
 - Each per-user sync respects API rate limits and concurrency.
 - Sync status is updated on the Integration model throughout.
 
@@ -477,22 +476,6 @@ def sync_strava_activity_task(
     return asyncio.run(_run())
 
 
-@celery_app.task(name="app.services.sync_scheduler.sync_all_users_task")
-def sync_all_users_task() -> dict[str, Any]:
-    """Master task: iterate active users and sync their data.
-
-    Called by Celery Beat every 15 minutes. Dispatches per-user
-    sync as sub-tasks for concurrency.
-
-    Returns:
-        A dict with the number of users processed.
-    """
-    # TODO(phase-1.10): Query DB for users with active integrations
-    # For each user, dispatch sync_user_task.delay(user_id)
-    logger.info("Running scheduled sync for all active users")
-    return {"users_processed": 0}
-
-
 @celery_app.task(name="app.services.sync_scheduler.refresh_tokens_task")
 def refresh_tokens_task() -> dict[str, Any]:
     """Refresh OAuth tokens that are about to expire.
@@ -520,9 +503,3 @@ def refresh_tokens_task() -> dict[str, Any]:
             return {"tokens_refreshed": result["refreshed"]}
 
     return asyncio.run(_run())
-
-
-# NOTE: sync_fitbit_collection_task has been moved to app.tasks.fitbit_sync.
-# The webhook handler (app.api.v1.fitbit_webhooks) now imports directly from
-# that module. This stub is intentionally removed to avoid duplicate task
-# registration under conflicting names.
