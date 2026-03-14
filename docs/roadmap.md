@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-15 (fix/backend-performance-cleanup — Batch 8 complete: parallelized analytics, consolidated auth deps, dependency cleanup)
+**Last Updated:** 2026-03-15 (Batches 9 & 10 complete: Flutter package pinning, SharedPreferences centralization, magic number extraction, ORM migration, smoke test rewrite, doc fixes)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -512,6 +512,40 @@ Completed performance optimization, security hardening, and dependency cleanup a
 | P0 | DEBT-033: Dependency cleanup | ✅ Done | Moved `psycopg2-binary` from production to dev dependencies in `cloud-brain/pyproject.toml`. Removed `[dependency-groups]` block (consolidated into `[project.optional-dependencies]`). Reduces production image size. |
 | P0 | Security: Replaced assert guards with HTTPException | ✅ Done | Replaced `assert` statements with explicit `HTTPException` in `analytics.py`. Prevents assertion failures from crashing the server in production. |
 | P0 | Security: Added metric field pattern constraint | ✅ Done | Added `metric` field pattern constraint (`^[a-z_]{1,64}$`) in `analytics_schemas.py`. Prevents injection attacks via metric names. |
+
+---
+
+## Architectural Debt Cleanup — Batch 9 (fix/flutter-medium-priority, 2026-03-15)
+
+> **Branch:** `fix/flutter-medium-priority` → merged to main (2026-03-15)
+
+Completed Flutter package management, SharedPreferences centralization, and fire-and-forget async cleanup.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | DEBT-034: Pin all Flutter package versions in pubspec.yaml | ✅ Done | 19 packages: `any` → `^<version>` caret constraints for reproducible builds |
+| P0 | DEBT-017: Create central `prefsProvider` (SharedPreferences) | ✅ Done | `zuralog/lib/core/storage/prefs_service.dart` — Riverpod provider wired in `main.dart`; all widgets access SharedPreferences synchronously |
+| P0 | DEBT-041: Fix fire-and-forget in `today_feed_screen.dart` | ✅ Done | Replaced `SharedPreferences.getInstance().then(...)` with synchronous `ref.read(prefsProvider)` |
+| P0 | DEBT-042: Fix fire-and-forget in `trends_home_screen.dart` | ✅ Done | Replaced `SharedPreferences.getInstance().then(...)` in `_persistDismissals` with `ref.read(prefsProvider)` + `unawaited()` |
+| P0 | DEBT-019: Remove hardcoded goals from `account_settings_screen.dart` | ✅ Done | Deleted local-only `_selectedGoalsProvider` with hardcoded `{0, 2}`. Added `_GoalsTile` that reads real `goalsProvider` and navigates to `GoalsScreen` for full CRUD |
+
+---
+
+## Architectural Debt Cleanup — Batch 10 (fix/low-priority-cleanup, 2026-03-15)
+
+> **Branch:** `fix/low-priority-cleanup` → merged to main (2026-03-15)
+
+Completed magic number extraction, ORM migration, smoke test rewrite, and documentation fixes.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | DEBT-012: Extract magic number `7` (data maturity threshold) to named constants | ✅ Done | `MIN_DATA_DAYS_FOR_MATURITY` in `cloud-brain/app/constants.py` and `kMinDataDaysForMaturity` in `zuralog/lib/core/constants/app_constants.dart`; all raw `7` comparisons replaced |
+| P0 | DEBT-022: Replace raw SQL with ORM query in `users.py` | ✅ Done | `get_preferences` handler: raw `text("SELECT coach_persona, subscription_tier FROM users WHERE id = :uid")` → `select(User.coach_persona, User.subscription_tier).where(User.id == user_id)` |
+| P0 | DEBT-027: Rewrite `widget_test.dart` smoke test | ✅ Done | Now verifies auth gate (welcome screen buttons) or main shell nav labels on cold start, not just Scaffold existence |
+| P0 | DEBT-030: Fix `docs/architecture.md` — path correction | ✅ Done | `features/dashboard/` → `features/data/` |
+| P0 | DEBT-031: Fix `docs/architecture.md` — test file count | ✅ Done | Updated from `61` to `109` |
+| P0 | DEBT-032: Fix `docs/screens.md` — Conversation Drawer type | ✅ Done | Corrected from "Drawer overlay" to "Modal bottom sheet (`DraggableScrollableSheet` via `showModalBottomSheet`)" |
+| P0 | DEBT-043: Verify `_MilestoneCelebrationCardState.dispose()` | ✅ Done | Confirmed `_pulseCtrl.dispose()` already called — no change needed |
 
 ---
 
