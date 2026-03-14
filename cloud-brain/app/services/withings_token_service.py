@@ -250,7 +250,9 @@ class WithingsTokenService:
         if not integration:
             return False
 
-        # TODO: Unsubscribe webhooks via Notify - Revoke before deactivating
+        # Revoke the active webhook subscription so Withings stops firing events.
+        # Non-blocking error-wise: if the API call fails, disconnect continues.
+        await self.unsubscribe_webhooks(user_id=user_id, db=db)
 
         integration.is_active = False
         integration.access_token = None
@@ -259,3 +261,63 @@ class WithingsTokenService:
         integration.sync_error = None
         await db.commit()
         return True
+
+    async def unsubscribe_webhooks(self, user_id: str, db: AsyncSession) -> bool:
+        """Revoke all active Withings webhook subscriptions for a user.
+
+        Calls the Withings Notify - Revoke endpoint. Silently succeeds if
+        the token is invalid or already expired — a failure here must never
+        block the user from disconnecting.
+
+        Args:
+            user_id: The Zuralog user ID whose subscriptions to revoke.
+            db: Async database session.
+
+        Returns:
+            True if revocation succeeded, False if it failed (non-blocking).
+        """
+        try:
+            token = await self.get_access_token(db, user_id)
+            if not token:
+                logger.info(
+                    "Withings unsubscribe skipped for user %s: no valid token",
+                    user_id,
+                )
+                return False
+
+            # Mirrors how withings_sync.py builds the callback URL
+            base = settings.withings_api_base_url.rstrip("/")
+            callback_url = f"{base}/api/v1/webhooks/withings"
+            if getattr(settings, "withings_webhook_secret", None):
+                callback_url = f"{callback_url}?token={settings.withings_webhook_secret}"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://wbsapi.withings.net/notify",
+                    data={
+                        "action": "revoke",
+                        "callbackurl": callback_url,
+                    },
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+            if response.status_code == 200:
+                body = response.json()
+                if body.get("status") == 0:
+                    logger.info("Withings webhook subscription revoked for user %s", user_id)
+                    return True
+                else:
+                    logger.warning(
+                        "Withings revoke API error status=%s for user %s",
+                        body.get("status"),
+                        user_id,
+                    )
+                    return False
+            else:
+                logger.warning(
+                    "Withings revoke returned HTTP %d for user %s",
+                    response.status_code,
+                    user_id,
+                )
+                return False
+        except Exception:
+            logger.exception("Failed to revoke Withings webhook for user %s (non-fatal)", user_id)
+            return False

@@ -85,7 +85,10 @@ async def trigger_write(
     user_data = await auth_service.get_user(credentials.credentials)
     user_id = user_data["id"]
 
-    # Look up the user's registered device token
+    # device_tokens is keyed by authenticated user_id (from the verified JWT).
+    # A user can only trigger writes to their own registered device — ownership
+    # is implicit in the dict key, not a separate DB lookup.
+    # This endpoint is blocked in production (app_env check above).
     device_tokens = getattr(request.app.state, "device_tokens", {})
     device_info = device_tokens.get(user_id)
 

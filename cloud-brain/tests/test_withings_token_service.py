@@ -307,7 +307,8 @@ class TestRefreshAccessToken:
 
 class TestDisconnect:
     @pytest.mark.asyncio
-    async def test_disconnect_deactivates(self, service, mock_db):
+    @patch.object(WithingsTokenService, "unsubscribe_webhooks")
+    async def test_disconnect_deactivates(self, mock_unsubscribe, service, mock_db):
         integration = MagicMock()
         integration.access_token = "token"
         integration.is_active = True
@@ -316,13 +317,14 @@ class TestDisconnect:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = integration
         mock_db.execute.return_value = mock_result
+        mock_unsubscribe.return_value = True
 
         result = await service.disconnect(mock_db, "user_uuid")
 
         assert result is True
         assert integration.is_active is False
-        assert integration.access_token == ""
-        assert integration.refresh_token == ""
+        assert integration.access_token is None
+        assert integration.refresh_token is None
         mock_db.commit.assert_called_once()
 
     @pytest.mark.asyncio
@@ -332,4 +334,107 @@ class TestDisconnect:
         mock_db.execute.return_value = mock_result
 
         result = await service.disconnect(mock_db, "user_uuid")
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch.object(WithingsTokenService, "unsubscribe_webhooks")
+    async def test_disconnect_calls_unsubscribe(self, mock_unsubscribe, service, mock_db):
+        """disconnect() calls unsubscribe_webhooks before deactivating."""
+        integration = MagicMock()
+        integration.is_active = True
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = integration
+        mock_db.execute.return_value = mock_result
+        mock_unsubscribe.return_value = True
+
+        await service.disconnect(mock_db, "user_uuid")
+
+        mock_unsubscribe.assert_called_once_with(user_id="user_uuid", db=mock_db)
+
+
+class TestUnsubscribeWebhooks:
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.post")
+    @patch.object(WithingsTokenService, "get_access_token")
+    async def test_revoke_success(self, mock_get_token, mock_post, service, mock_db):
+        """Returns True and logs when Withings revoke returns 200."""
+        mock_get_token.return_value = "valid_access_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": 0}
+        mock_post.return_value = mock_response
+
+        with patch("app.services.withings_token_service.settings") as mock_settings:
+            mock_settings.withings_api_base_url = "https://api.zuralog.com"
+            mock_settings.withings_webhook_secret = None
+            result = await service.unsubscribe_webhooks("user_abc", mock_db)
+
+        assert result is True
+        mock_post.assert_called_once()
+        call_kwargs = mock_post.call_args
+        assert call_kwargs.kwargs["data"]["action"] == "revoke"
+        assert call_kwargs.kwargs["headers"]["Authorization"] == "Bearer valid_access_token"
+        assert "api.zuralog.com" in call_kwargs.kwargs["data"]["callbackurl"]
+
+    @pytest.mark.asyncio
+    @patch.object(WithingsTokenService, "get_access_token")
+    async def test_no_token_returns_false(self, mock_get_token, service, mock_db):
+        """Returns False without making HTTP call when no token available."""
+        mock_get_token.return_value = None
+
+        result = await service.unsubscribe_webhooks("user_abc", mock_db)
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.post")
+    @patch.object(WithingsTokenService, "get_access_token")
+    async def test_http_error_returns_false(self, mock_get_token, mock_post, service, mock_db):
+        """Returns False (does not raise) when HTTP call fails."""
+        mock_get_token.return_value = "valid_token"
+        mock_post.side_effect = Exception("Network error")
+
+        with patch("app.services.withings_token_service.settings") as mock_settings:
+            mock_settings.withings_api_base_url = "https://api.zuralog.com"
+            mock_settings.withings_webhook_secret = None
+            result = await service.unsubscribe_webhooks("user_abc", mock_db)
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.post")
+    @patch.object(WithingsTokenService, "get_access_token")
+    async def test_non_200_response_returns_false(self, mock_get_token, mock_post, service, mock_db):
+        """Returns False when Withings returns a non-200 status."""
+        mock_get_token.return_value = "valid_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 503
+        mock_post.return_value = mock_response
+
+        with patch("app.services.withings_token_service.settings") as mock_settings:
+            mock_settings.withings_api_base_url = "https://api.zuralog.com"
+            mock_settings.withings_webhook_secret = None
+            result = await service.unsubscribe_webhooks("user_abc", mock_db)
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    @patch("httpx.AsyncClient.post")
+    @patch.object(WithingsTokenService, "get_access_token")
+    async def test_withings_api_body_error_returns_false(self, mock_get_token, mock_post, service, mock_db):
+        """Returns False when Withings returns HTTP 200 but body status != 0."""
+        mock_get_token.return_value = "valid_token"
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": 293, "error": "Invalid params"}
+        mock_post.return_value = mock_response
+
+        with patch("app.services.withings_token_service.settings") as mock_settings:
+            mock_settings.withings_api_base_url = "https://api.zuralog.com"
+            mock_settings.withings_webhook_secret = None
+            result = await service.unsubscribe_webhooks("user_abc", mock_db)
+
         assert result is False
