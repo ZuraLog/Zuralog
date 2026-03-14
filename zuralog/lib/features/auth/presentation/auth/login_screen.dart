@@ -3,7 +3,7 @@
 /// A clean, focused email/password login form. Validates inputs before
 /// submission, shows inline validation errors, and displays a SnackBar on
 /// [AuthFailure]. On [AuthSuccess] the GoRouter auth guard automatically
-/// redirects to [dashboardPath].
+/// redirects to [RouteNames.todayPath].
 ///
 /// **Widget type:** [ConsumerStatefulWidget] — needs Riverpod [ref] and
 /// local [TextEditingController] + form-state management.

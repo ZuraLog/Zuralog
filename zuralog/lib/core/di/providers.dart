@@ -10,7 +10,6 @@ import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/health/health_bridge.dart';
 import 'package:zuralog/core/network/api_client.dart';
 import 'package:zuralog/core/network/fcm_service.dart';
-import 'package:zuralog/core/network/ws_client.dart';
 import 'package:zuralog/core/storage/secure_storage.dart';
 import 'package:zuralog/core/storage/local_db.dart';
 import 'package:zuralog/core/storage/sync_status_store.dart';
@@ -37,11 +36,6 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(
     onUnauthenticated: () => ref.read(authStateProvider.notifier).forceLogout(),
   );
-});
-
-/// Provides a singleton [WsClient] for WebSocket communication.
-final wsClientProvider = Provider<WsClient>((ref) {
-  return WsClient();
 });
 
 /// Provides a singleton [SecureStorage] for encrypted key-value storage.

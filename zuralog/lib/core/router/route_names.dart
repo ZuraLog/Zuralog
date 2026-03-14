@@ -301,14 +301,6 @@ abstract final class RouteNames {
   /// Path for the design system catalog screen.
   static const String debugCatalogPath = '/debug/catalog';
 
-  // ── Legacy aliases (kept for backward compatibility during migration) ──────
-
-  /// Legacy name for dashboard tab — use [today] for new code.
-  static const String dashboard = 'dashboard';
-
-  /// Legacy path for dashboard — routes to [todayPath] in the new shell.
-  static const String dashboardPath = '/dashboard';
-
   // ── Unauthenticated Route Set ─────────────────────────────────────────────
 
   /// Set of paths that are accessible without authentication.

@@ -3,7 +3,7 @@
 /// A clean, focused email/password registration form. Validates inputs before
 /// submission, shows inline validation errors, and displays a SnackBar on
 /// [AuthFailure]. On [AuthSuccess] the GoRouter auth guard automatically
-/// redirects to [dashboardPath].
+/// redirects to [RouteNames.todayPath].
 ///
 /// Mirrors the structure and behaviour of [LoginScreen] — any changes to
 /// validation logic or UX should be kept in sync between both screens.

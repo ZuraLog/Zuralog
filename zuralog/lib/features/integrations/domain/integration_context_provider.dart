@@ -6,7 +6,7 @@
 ///
 /// Lifecycle:
 ///   - Set when the user taps a no-data metric/card on the dashboard.
-///   - Read and displayed by [IntegrationsHubScreen] as a top banner.
+///   - Read and displayed by [IntegrationsScreen] as a top banner.
 ///   - Cleared either manually (dismiss button) or automatically after 10 s.
 library;
 

@@ -1,8 +1,8 @@
 /// Integrations Screen (under Settings).
 ///
 /// Displays Connected, Available, and Coming Soon integrations. Reads live
-/// data from [integrationsProvider] — the same source the Integrations Hub
-/// uses — so connection status is always real and up-to-date.
+/// data from [integrationsProvider], so connection status is always
+/// real and up-to-date.
 ///
 /// Connect and Disconnect actions delegate to [IntegrationsNotifier], which
 /// handles OAuth flows, device-local permissions, and backend API calls.
