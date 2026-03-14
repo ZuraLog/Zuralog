@@ -111,7 +111,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Your journey to better health starts here.'),
+        find.text('Better health,\ntogether.'),
         findsOneWidget,
       );
     });

@@ -6,9 +6,11 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
 
 // ── Harness ───────────────────────────────────────────────────────────────────
@@ -62,7 +64,15 @@ Widget _buildHarness() {
     ],
   );
 
-  return MaterialApp.router(routerConfig: router);
+  // SettingsHubScreen calls ref.read(analyticsServiceProvider) on tile tap,
+  // so it must be wrapped in a ProviderScope. AnalyticsService.enabled is false
+  // in kDebugMode (test environment), so no real events are emitted.
+  return ProviderScope(
+    overrides: [
+      analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
 }
 
 class _Stub extends StatelessWidget {

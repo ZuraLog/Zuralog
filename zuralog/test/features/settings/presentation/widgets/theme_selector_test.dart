@@ -8,20 +8,63 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/theme_provider.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/theme_selector.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
+
+// ── Stub ──────────────────────────────────────────────────────────────────────
+
+/// Stub [UserPreferencesNotifier] that returns default preferences without
+/// making any network calls. Overrides [save], [mutate], and [refresh] to
+/// update state locally, preventing real API timers that would cause
+/// `!timersPending` failures during `pumpAndSettle`.
+class _StubPreferencesNotifier extends UserPreferencesNotifier {
+  @override
+  Future<UserPreferencesModel> build() async {
+    return const UserPreferencesModel(id: 'test', userId: 'test');
+  }
+
+  @override
+  Future<void> save(UserPreferencesModel updated) async {
+    state = AsyncData(updated);
+  }
+
+  @override
+  Future<void> mutate(
+      UserPreferencesModel Function(UserPreferencesModel) fn) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(fn(current));
+  }
+
+  @override
+  Future<void> refresh() async {}
+}
 
 // ── Harness ───────────────────────────────────────────────────────────────────
 
-/// Renders [ThemeSelector] inside a minimal [ProviderScope] + [MaterialApp].
+/// Renders [ThemeSelector] inside a minimal [UncontrolledProviderScope] +
+/// [MaterialApp].
 ///
 /// An optional [container] can be passed to access provider state after
-/// pump for post-tap assertions.
+/// pump for post-tap assertions. Containers passed in (or created by default)
+/// include overrides for [userPreferencesProvider] and
+/// [analyticsServiceProvider] to prevent real network calls and timers.
 Widget _buildHarness({ProviderContainer? container}) {
   return UncontrolledProviderScope(
-    container: container ?? ProviderContainer(),
+    container: container ??
+        ProviderContainer(
+          overrides: [
+            userPreferencesProvider
+                .overrideWith(() => _StubPreferencesNotifier()),
+            analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+          ],
+        ),
     child: MaterialApp(
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
@@ -38,14 +81,16 @@ Widget _buildHarness({ProviderContainer? container}) {
 void main() {
   group('ThemeSelector', () {
     testWidgets('renders without throwing', (tester) async {
+      SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(_buildHarness());
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('renders all three mode pills', (tester) async {
+      SharedPreferences.setMockInitialValues({});
       await tester.pumpWidget(_buildHarness());
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('System'), findsOneWidget);
       expect(find.text('Light'), findsOneWidget);
       expect(find.text('Dark'), findsOneWidget);
@@ -53,61 +98,90 @@ void main() {
 
     testWidgets('tapping "Dark" updates themeModeProvider to ThemeMode.dark',
         (tester) async {
-      final container = ProviderContainer();
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          userPreferencesProvider
+              .overrideWith(() => _StubPreferencesNotifier()),
+          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+        ],
+      );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(_buildHarness(container: container));
-      await tester.pump();
+      // pumpAndSettle lets the AsyncNotifier resolve from SharedPreferences.
+      await tester.pumpAndSettle();
 
-      // Initial value should be system.
-      expect(container.read(themeModeProvider), ThemeMode.system);
+      // themeModeProvider is an AsyncNotifierProvider — read the resolved value.
+      // Initial value should be system (SharedPreferences empty → default).
+      expect(container.read(themeModeProvider).valueOrNull, ThemeMode.system);
 
-      // Tap the Dark pill.
       await tester.tap(find.text('Dark'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(container.read(themeModeProvider), ThemeMode.dark);
+      expect(container.read(themeModeProvider).valueOrNull, ThemeMode.dark);
     });
 
     testWidgets('tapping "Light" updates themeModeProvider to ThemeMode.light',
         (tester) async {
-      final container = ProviderContainer();
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          userPreferencesProvider
+              .overrideWith(() => _StubPreferencesNotifier()),
+          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+        ],
+      );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(_buildHarness(container: container));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Light'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(container.read(themeModeProvider), ThemeMode.light);
+      expect(container.read(themeModeProvider).valueOrNull, ThemeMode.light);
     });
 
     testWidgets('tapping "System" keeps themeModeProvider as ThemeMode.system',
         (tester) async {
-      final container = ProviderContainer();
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          userPreferencesProvider
+              .overrideWith(() => _StubPreferencesNotifier()),
+          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+        ],
+      );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(_buildHarness(container: container));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // Tap Dark first, then switch back to System.
       await tester.tap(find.text('Dark'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('System'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(container.read(themeModeProvider), ThemeMode.system);
+      expect(container.read(themeModeProvider).valueOrNull, ThemeMode.system);
     });
 
     testWidgets(
         'selected pill (System) has non-transparent background (visual treatment)',
         (tester) async {
-      final container = ProviderContainer();
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          userPreferencesProvider
+              .overrideWith(() => _StubPreferencesNotifier()),
+          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+        ],
+      );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(_buildHarness(container: container));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       // The selected pill (System by default) should be rendered with the
       // primary color background. Verify by checking the AnimatedContainer
@@ -123,8 +197,7 @@ void main() {
       );
       expect(containerFinder, findsOneWidget);
 
-      final animContainer =
-          tester.widget<AnimatedContainer>(containerFinder);
+      final animContainer = tester.widget<AnimatedContainer>(containerFinder);
       final decoration = animContainer.decoration as BoxDecoration?;
       expect(decoration?.color, AppColors.primary);
     });

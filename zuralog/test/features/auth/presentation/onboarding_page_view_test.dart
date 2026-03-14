@@ -94,16 +94,29 @@ Widget _buildHarness({required List<String> navigatedRoutes}) {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
+  // OnboardingPageView is a full-bleed layout that requires a realistic phone
+  // viewport. The headless test surface defaults to 800×600 which is too small
+  // and causes a RenderFlex overflow that breaks every test in this file.
+  // setSurfaceSize is async and must be awaited. The tearDown resets the size
+  // after each test so other test files are unaffected.
+  Future<void> setPhoneViewport(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  }
+
   group('OnboardingPageView rendering', () {
-    testWidgets('renders first page headline "Connect Everything"',
+    testWidgets('renders first page headline "Your health, complete."',
         (tester) async {
+      await setPhoneViewport(tester);
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      expect(find.text('Connect Everything'), findsOneWidget);
+      // The headline is a multi-line string rendered as-is.
+      expect(find.text('Your health,\ncomplete.'), findsOneWidget);
     });
 
     testWidgets('renders "Skip" link', (tester) async {
+      await setPhoneViewport(tester);
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
@@ -111,23 +124,27 @@ void main() {
     });
 
     testWidgets('renders "Next" button on first page', (tester) async {
+      await setPhoneViewport(tester);
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(ElevatedButton, 'Next'), findsOneWidget);
+      // The CTA uses FilledButton (not ElevatedButton) per the design system.
+      expect(find.widgetWithText(FilledButton, 'Next'), findsOneWidget);
     });
 
-    testWidgets('renders two page-dot indicators', (tester) async {
+    testWidgets('renders three page-dot indicators', (tester) async {
+      await setPhoneViewport(tester);
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      // Two AnimatedContainers are used as dot indicators — one per page.
-      expect(find.byType(AnimatedContainer), findsNWidgets(2));
+      // Three AnimatedContainers are used as dot indicators — one per slide.
+      expect(find.byType(AnimatedContainer), findsNWidgets(3));
     });
   });
 
   group('OnboardingPageView navigation', () {
     testWidgets('tapping "Skip" navigates to /welcome', (tester) async {
+      await setPhoneViewport(tester);
       final navigatedRoutes = <String>[];
       await tester.pumpWidget(_buildHarness(navigatedRoutes: navigatedRoutes));
       await tester.pumpAndSettle();
@@ -141,27 +158,31 @@ void main() {
     testWidgets(
         'tapping "Next" on first page advances to second page headline',
         (tester) async {
+      await setPhoneViewport(tester);
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Next'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Next'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Intelligence, Not Data'), findsOneWidget);
+      expect(find.text('AI that\ngets you.'), findsOneWidget);
     });
 
     testWidgets(
         '"Next" button label changes to "Get Started" on last page',
         (tester) async {
+      await setPhoneViewport(tester);
       await tester.pumpWidget(_buildHarness(navigatedRoutes: []));
       await tester.pumpAndSettle();
 
-      // Advance to last page.
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Next'));
+      // Advance through the first two pages to reach the last page.
+      await tester.tap(find.widgetWithText(FilledButton, 'Next'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Next'));
       await tester.pumpAndSettle();
 
       expect(
-        find.widgetWithText(ElevatedButton, 'Get Started'),
+        find.widgetWithText(FilledButton, 'Get Started'),
         findsOneWidget,
       );
     });
@@ -169,16 +190,19 @@ void main() {
     testWidgets(
         'tapping "Get Started" on last page navigates to /welcome',
         (tester) async {
+      await setPhoneViewport(tester);
       final navigatedRoutes = <String>[];
       await tester.pumpWidget(_buildHarness(navigatedRoutes: navigatedRoutes));
       await tester.pumpAndSettle();
 
-      // Advance to last page.
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Next'));
+      // Advance through slides to the last page.
+      await tester.tap(find.widgetWithText(FilledButton, 'Next'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Next'));
       await tester.pumpAndSettle();
 
       // Tap the final CTA.
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Get Started'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Get Started'));
       await tester.pumpAndSettle();
 
       expect(navigatedRoutes, contains('welcome'));
