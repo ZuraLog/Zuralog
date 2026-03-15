@@ -59,7 +59,7 @@ The app's front door. A curated, AI-driven daily briefing. The user reads; the a
 
 | Screen | Type | Purpose |
 |--------|------|---------|
-| **Today Feed** | Tab root | Vertical scroll of curated cards ordered by relevance. **Health Score hero widget** at the very top (ring/gauge, 120pt, animated fill, score number + label). **Data Maturity indicator banner** shown during first 30 days of use — "Zuralog works best with at least a week of data" with a progress bar and dismissible once 30 days pass. Morning briefing summary below the hero, AI insight cards (proactive observations from background sync), **Wellness Check-in card** (daily prompt for mood/energy/stress/pain/notes — dismissible per day), quick-action shortcuts, and a compact "your day so far" progress indicator (calories, steps, active minutes). **Streak counter badge** (flame icon + number + freeze shield) shown inline with goals section. **Common Correlation Suggestion cards** when the AI detects a relationship forming between two metrics (e.g., "Track stress to unlock a sleep correlation"). **Quick Log entry point** — a persistent floating button or card shortcut that opens the Quick Log Bottom Sheet. Cards are time-aware: morning shows sleep recap + day plan, afternoon shows calories + activity progress, evening shows day summary + wind-down suggestions, night shows minimal UI with Health Score and critical anomaly alerts only. |
+| **Today Feed** | Tab root | Vertical scroll of curated cards ordered by relevance. **Health Score hero widget** at the very top (ring/gauge, 120pt, animated fill, score number + label). **Data Maturity indicator banner** shown during first 30 days of use — "Zuralog works best with at least a week of data" with a progress bar and dismissible once 30 days pass. **Log Ring widget** (circular completion ring, 120pt, watching `logRingProvider`) positioned side-by-side with Health Score. **Snapshot Cards row** (horizontally scrollable, hidden until user logs anything) showing compact metric snapshots (today's value for one metric per card). **Daily Goals card** (shows "Set a daily goal →" until goals are configured). AI insight cards (proactive observations from background sync), **Wellness Check-in card** (daily prompt for mood/energy/stress/pain/notes — dismissible per day), and a compact "your day so far" progress indicator (calories, steps, active minutes). **Streak counter badge** (flame icon + number + freeze shield) shown inline with goals section. **Common Correlation Suggestion cards** when the AI detects a relationship forming between two metrics (e.g., "Track stress to unlock a sleep correlation"). **Quick Log entry point** — a persistent floating button or card shortcut that opens the Quick Log Bottom Sheet. Cards are time-aware: morning shows sleep recap + day plan, afternoon shows calories + activity progress, evening shows day summary + wind-down suggestions, night shows minimal UI with Health Score and critical anomaly alerts only. |
 | **Insight Detail** | Pushed | Full-screen explanation of a single AI insight. Shows the data behind the observation (charts, numbers, source integrations), the AI's reasoning, and a "Discuss with Coach" action that opens a pre-filled chat thread for follow-up. |
 | **Notification History** | Pushed (bell icon) | Scrollable list of all past push notifications grouped by day. Tapping a notification deep-links to the relevant insight or metric. Accessible from a bell icon in the Today header. |
 | **Quick Log Bottom Sheet** | Bottom sheet (global) | Manual health entry for metrics not captured by integrations. A grid of metric tiles: Water (increment counter), Mood (emoji scale 1–5), Energy (slider 1–10), Stress (slider 1–10), Pain (body area selector + intensity 1–10), and Notes (free text). Accessible from Today Feed quick log button, Coach tab lightning bolt, or "Log manually" intent in the AI conversation. Tapping a tile opens its inline input; a submit bar at the bottom saves all selected entries at once and emits a `quick_log_submitted` PostHog event. |
@@ -137,6 +137,30 @@ The analytical tab. Where Progress is emotional, Trends is intellectual. This is
 | **Emergency Health Card Edit** | Emergency Health Card > Edit button | Edit form for all medical info fields: blood type dropdown, allergies (add/remove chips), medications (add/remove with dosage field), emergency contacts (add/remove with name + phone), and a free-text medical notes field. Changes save immediately. |
 | **Privacy Policy** | Link from Privacy & Data | Full GDPR/CCPA privacy policy. |
 | **Terms of Service** | Link from Privacy & Data | Full terms of service. |
+
+---
+
+## 4. Shared Component Library
+
+**Location:** `zuralog/lib/shared/widgets/` (barrel export: `widgets.dart`)
+
+The following reusable components are available across all screens:
+
+| Component | File | Purpose | Added |
+|-----------|------|---------|-------|
+| `SectionHeader` | `headers/section_header.dart` | Section title with optional trailing widget slot and left accent bar | Phase 10.9.5 |
+| `ZInsightCard` | `cards/z_insight_card.dart` | Reusable AI insight card (extracted from Today screen) | Part 1 |
+| `ZEmptyInsightsState` | `states/z_empty_insights_state.dart` | Empty insights state with two CTA callbacks | Part 1 |
+| `ZLogRingWidget` | `health/z_log_ring_widget.dart` | Circular log completion ring watching `logRingProvider` | Part 1 |
+| `ZSnapshotCard` | `cards/z_snapshot_card.dart` | Compact metric snapshot card (today's value for one metric) | Part 1 |
+| `ZDailyGoalsCard` | `cards/z_daily_goals_card.dart` | Daily goals progress card with setup prompt | Part 1 |
+| `ZIconBadge` | `badges/z_icon_badge.dart` | 36–44px rounded icon container | Phase 10.9.5 |
+| `ZSettingsTile` | `tiles/z_settings_tile.dart` | Settings row: icon + title + subtitle + trailing | Phase 10.9.5 |
+| `ZSelectableTile` | `tiles/z_selectable_tile.dart` | Animated selectable card frame | Phase 10.9.5 |
+| `ZEmptyState` | `states/z_empty_state.dart` | Generic empty state with icon, headline, and CTA | Phase 10.9.5 |
+| `ZErrorState` | `states/z_error_state.dart` | Generic error state with retry button | Phase 10.9.5 |
+| `ZuralogSpringButton` | `buttons/zuralog_spring_button.dart` | Spring-animated button with press state | Phase 10.9.5 |
+| `HealthScoreZeroState` | `health_score_zero_state.dart` | Zero-data state for Health Score with action rows | Phase 10.10 |
 
 ---
 
