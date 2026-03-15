@@ -277,6 +277,7 @@ class AppColorsOf {
   // ── Text ───────────────────────────────────────────────────────────────
   Color get textPrimary => _isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
   Color get textSecondary => _isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+  Color get textTertiary => AppColors.textTertiary;
 
   // ── Borders ────────────────────────────────────────────────────────────
   Color get border => _isDark ? AppColors.borderDark : AppColors.borderLight;

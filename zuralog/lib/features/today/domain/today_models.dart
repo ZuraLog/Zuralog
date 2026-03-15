@@ -10,9 +10,8 @@
 /// - [InsightDetail]     — full detail view with charts + AI reasoning
 /// - [InsightDataPoint]  — single chart data point inside [InsightDetail]
 /// - [InsightSource]     — integration that contributed to an insight
-/// - [QuickAction]       — contextual action tile
 /// - [StreakData]        — current streak count + freeze status
-/// - [TodayFeedData]     — aggregated feed payload (insights + actions + streak)
+/// - [TodayFeedData]     — aggregated feed payload (insights + streak)
 /// - [NotificationItem]  — single notification row
 /// - [NotificationPage]  — paginated notification history
 library;
@@ -328,46 +327,6 @@ class InsightDetail {
   }
 }
 
-// ── QuickAction ───────────────────────────────────────────────────────────────
-
-/// A contextual action card shown in the Today feed.
-class QuickAction {
-  /// Creates a [QuickAction].
-  const QuickAction({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.actionType,
-    this.route,
-  });
-
-  /// Unique identifier.
-  final String id;
-
-  /// Short action label.
-  final String title;
-
-  /// Supporting text describing the action.
-  final String subtitle;
-
-  /// Machine-readable action type (e.g. `log_workout`, `open_coach`).
-  final String actionType;
-
-  /// Optional deep-link route to navigate to.
-  final String? route;
-
-  /// Deserializes from a JSON map.
-  factory QuickAction.fromJson(Map<String, dynamic> json) {
-    return QuickAction(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      subtitle: json['subtitle'] as String? ?? '',
-      actionType: json['action_type'] as String? ?? 'generic',
-      route: json['route'] as String?,
-    );
-  }
-}
-
 // ── StreakData ────────────────────────────────────────────────────────────────
 
 /// Current streak data returned by `GET /api/v1/streaks`.
@@ -405,15 +364,11 @@ class TodayFeedData {
   /// Creates a [TodayFeedData].
   const TodayFeedData({
     required this.insights,
-    required this.quickActions,
     required this.streak,
   });
 
   /// AI insight cards, ordered by priority.
   final List<InsightCard> insights;
-
-  /// Contextual quick action tiles.
-  final List<QuickAction> quickActions;
 
   /// Current streak — may be null if the request failed.
   final StreakData? streak;

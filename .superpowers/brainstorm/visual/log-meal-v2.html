@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 3rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.3rem; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; margin-bottom: 1.75rem; }
+    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+    /* Phone */
+    .phone-wrap { background: var(--bg-tertiary); border-radius: 16px; padding: 1.25rem; display: flex; justify-content: center; }
+    .phone { width: 155px; background: #1a1a1a; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #2a2a2a; }
+    .phone-notch { height: 16px; background: #111; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+    .phone-notch-dot { width: 32px; height: 6px; background: #222; border-radius: 3px; }
+    .phone-screen { flex: 1; background: #0d0d0d; display: flex; flex-direction: column; overflow: hidden; }
+    .fs-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 4px; flex-shrink: 0; }
+    .fs-back { font-size: 8px; color: #4ade80; }
+    .fs-title { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.9); }
+    .fs-body { flex: 1; padding: 4px 8px 6px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+    .section-lbl { font-size: 6.5px; color: rgba(255,255,255,0.35); margin-bottom: 3px; }
+    .optional-badge { font-size: 5.5px; color: rgba(255,255,255,0.22); font-style: italic; margin-left: 3px; }
+    /* Toggle row */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border-radius: 7px; padding: 4px 7px; }
+    .toggle-label { font-size: 6.5px; color: rgba(255,255,255,0.5); }
+    .toggle-track { width: 24px; height: 13px; border-radius: 7px; position: relative; transition: background 0.2s; }
+    .toggle-track.off { background: rgba(255,255,255,0.1); }
+    .toggle-track.on { background: #16a34a; }
+    .toggle-thumb { width: 10px; height: 10px; background: #fff; border-radius: 50%; position: absolute; top: 1.5px; transition: left 0.2s; }
+    .toggle-thumb.off { left: 1.5px; }
+    .toggle-thumb.on { left: 12.5px; }
+    /* Meal type chips */
+    .type-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .tchip { font-size: 6.5px; padding: 2px 7px; border-radius: 8px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+    .tchip.active { background: rgba(74,222,128,0.18); color: #4ade80; }
+    /* Calorie input */
+    .cal-big { font-size: 26px; font-weight: 700; color: #fff; text-align: center; line-height: 1; margin: 4px 0 2px; }
+    .cal-unit-lbl { font-size: 7px; color: rgba(255,255,255,0.3); text-align: center; margin-bottom: 4px; }
+    .cal-presets { display: flex; gap: 3px; }
+    .cal-chip { flex: 1; font-size: 6px; padding: 2px 3px; border-radius: 6px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35); text-align: center; }
+    .cal-chip.active { background: rgba(74,222,128,0.15); color: #4ade80; }
+    /* Full form fields */
+    .desc-field { background: rgba(255,255,255,0.06); border-radius: 6px; padding: 5px 7px; font-size: 7px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+    .cal-row-inline { display: flex; align-items: center; gap: 4px; }
+    .cal-input-sm { flex: 1; background: rgba(255,255,255,0.07); border-radius: 5px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; }
+    .cal-unit-sm { font-size: 6.5px; color: rgba(255,255,255,0.3); }
+    .feel-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .fchip { font-size: 6.5px; padding: 2px 6px; border-radius: 8px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35); }
+    .fchip.active { background: rgba(74,222,128,0.15); color: #4ade80; }
+    .tag-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .tag-chip { font-size: 6.5px; padding: 2px 6px; border-radius: 8px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35); }
+    .tag-chip.active { background: rgba(74,222,128,0.15); color: #4ade80; }
+    .note-field { background: rgba(255,255,255,0.05); border-radius: 5px; height: 13px; display: flex; align-items: center; padding: 0 5px; font-size: 6.5px; color: rgba(255,255,255,0.22); }
+    .sync-banner { background: rgba(74,222,128,0.07); border: 1px solid rgba(74,222,128,0.2); border-radius: 5px; padding: 3px 5px; font-size: 6px; color: rgba(255,255,255,0.4); line-height: 1.4; }
+    .fs-save { background: #16a34a; border-radius: 7px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; color: #fff; font-weight: 700; margin: 2px 8px 8px; flex-shrink: 0; }
+    /* Description */
+    .desc { background: var(--bg-secondary); border-radius: 14px; padding: 1.1rem 1.2rem; }
+    .desc h3 { margin-bottom: 0.5rem; }
+    .desc ul { margin-left: 1rem; font-size: 0.82rem; color: var(--text-secondary); }
+    .desc ul li { margin-bottom: 0.4rem; line-height: 1.5; }
+    .desc ul li strong { color: var(--text-primary); }
+    .tag { display: inline-block; font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; font-weight: 500; margin-left: 0.25rem; }
+    .tag-opt { background: rgba(156,163,175,0.2); color: #6b7280; }
+    .tag-mem { background: rgba(10,132,255,0.12); color: var(--accent); }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0.25rem 0 1.5rem; }
+    .info-box { background: var(--bg-secondary); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--text-secondary); margin-top: 1rem; }
+    .info-box strong { color: var(--text-primary); }
+    .screen-label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 0.6rem; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Log Detail: 🍽️ Meal + Calories Toggle (Updated)</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>🍽️ Meal — Quick vs Full Mode</h2>
+      <p class="subtitle">One tile in the grid. A toggle at the top switches between Quick Calorie Entry and the full Meal log. The app remembers which mode you prefer — so after the first use, it opens in your mode automatically.</p>
+
+      <div class="split">
+
+        <!-- Quick mode -->
+        <div>
+          <div class="screen-label">Quick mode — "I just want to log calories"</div>
+          <div class="phone-wrap">
+            <div class="phone" style="height:230px;">
+              <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+              <div class="phone-screen">
+                <div class="fs-bar">
+                  <div class="fs-back">‹ Back</div>
+                  <div class="fs-title">🍽️ Meal</div>
+                </div>
+                <div class="fs-body">
+                  <!-- Toggle ON (quick mode) -->
+                  <div class="toggle-row">
+                    <div class="toggle-label">⚡ Quick calorie entry</div>
+                    <div class="toggle-track on"><div class="toggle-thumb on"></div></div>
+                  </div>
+                  <!-- Meal type -->
+                  <div>
+                    <div class="section-lbl">Meal type</div>
+                    <div class="type-chips">
+                      <div class="tchip active">Lunch</div>
+                      <div class="tchip">Breakfast</div>
+                      <div class="tchip">Dinner</div>
+                      <div class="tchip">Snack</div>
+                    </div>
+                  </div>
+                  <!-- Big calorie input -->
+                  <div class="cal-big">620</div>
+                  <div class="cal-unit-lbl">kcal · tap to edit</div>
+                  <div class="cal-presets">
+                    <div class="cal-chip">~200</div>
+                    <div class="cal-chip">~400</div>
+                    <div class="cal-chip active">~600</div>
+                    <div class="cal-chip">~800</div>
+                    <div class="cal-chip">~1000</div>
+                  </div>
+                </div>
+                <div class="fs-save">Save</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full mode -->
+        <div>
+          <div class="screen-label">Full mode — "I want to describe what I ate"</div>
+          <div class="phone-wrap">
+            <div class="phone" style="height:330px;">
+              <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+              <div class="phone-screen">
+                <div class="fs-bar">
+                  <div class="fs-back">‹ Back</div>
+                  <div class="fs-title">🍽️ Meal</div>
+                </div>
+                <div class="fs-body">
+                  <!-- Toggle OFF (full mode) -->
+                  <div class="toggle-row">
+                    <div class="toggle-label">⚡ Quick calorie entry</div>
+                    <div class="toggle-track off"><div class="toggle-thumb off"></div></div>
+                  </div>
+                  <!-- Sync banner -->
+                  <div class="sync-banner">✓ MyFitnessPal connected — calories will sync automatically after saving.</div>
+                  <!-- Meal type -->
+                  <div>
+                    <div class="section-lbl">Meal type</div>
+                    <div class="type-chips">
+                      <div class="tchip active">Lunch</div>
+                      <div class="tchip">Breakfast</div>
+                      <div class="tchip">Dinner</div>
+                      <div class="tchip">Snack</div>
+                      <div class="tchip">Pre-workout</div>
+                    </div>
+                  </div>
+                  <!-- Description -->
+                  <div>
+                    <div class="section-lbl">What did you eat?</div>
+                    <div class="desc-field">Chicken salad with avocado and olive oil</div>
+                  </div>
+                  <!-- Calories inline -->
+                  <div>
+                    <div class="section-lbl">Rough calories <span class="optional-badge">(optional)</span></div>
+                    <div class="cal-row-inline">
+                      <div class="cal-input-sm">620</div>
+                      <div class="cal-unit-sm">kcal</div>
+                      <div class="cal-chip active" style="flex:none;padding:2px 6px;">~600</div>
+                      <div class="cal-chip" style="flex:none;padding:2px 6px;">~800</div>
+                    </div>
+                  </div>
+                  <!-- Feel -->
+                  <div>
+                    <div class="section-lbl">How did it make you feel? <span class="optional-badge">(optional)</span></div>
+                    <div class="feel-chips">
+                      <div class="fchip active">Energised</div>
+                      <div class="fchip">Satisfied</div>
+                      <div class="fchip">Heavy</div>
+                      <div class="fchip">Bloated</div>
+                    </div>
+                  </div>
+                  <!-- Tags -->
+                  <div>
+                    <div class="section-lbl">Tags <span class="optional-badge">(optional)</span></div>
+                    <div class="tag-chips">
+                      <div class="tag-chip active">High protein</div>
+                      <div class="tag-chip">Healthy</div>
+                      <div class="tag-chip">Takeaway</div>
+                      <div class="tag-chip">Cheat meal</div>
+                    </div>
+                  </div>
+                  <div class="note-field">Notes… <span class="optional-badge">(optional)</span></div>
+                </div>
+                <div class="fs-save">Save Meal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="desc">
+        <h3>How the toggle works</h3>
+        <ul>
+          <li><strong>Quick mode ON</strong> — Screen collapses to just meal type + a big calorie input with preset buttons. Two taps and done. Perfect for snacks, fast food, anything where the user just wants a number.</li>
+          <li><strong>Quick mode OFF</strong> — Full meal log with description, rough calories, how it made you feel, tags, and notes. Richer context for the AI.</li>
+          <li><strong>App remembers your preference</strong> — After the first use, the screen opens in whichever mode you last used. <span class="tag tag-mem">remembered</span> A power user who always does full mode never sees the toggle flipped on. A calorie-only user never has to flip it off again.</li>
+          <li><strong>MyFitnessPal connected?</strong> — In full mode, a banner shows that calories will sync automatically. The calories field becomes optional — the sync handles it. In quick mode, the banner appears below the meal type as a soft note.</li>
+          <li><strong>Same data model underneath</strong> — Both modes save a meal entry. Quick mode just has fewer fields filled in. The Today snapshot, AI insights, and Health Score treat them identically.</li>
+          <li><strong>Calories field is always optional in full mode</strong> — Clearly labelled. Users who describe their meals but don't track calories don't have to enter a number. <span class="tag tag-opt">optional</span></li>
+        </ul>
+      </div>
+
+      <div class="info-box">
+        <strong>Why this is the right design:</strong> It gives every type of user exactly what they need without asking them to compromise. The calorie-only user gets a frictionless 2-tap experience. The meal journaler gets full context. The MyFitnessPal user gets automatic sync. And none of them have to see a cluttered grid with two "food" tiles. One tile. One screen. One toggle.
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span>Review Meal v2 with toggle — confirm in terminal and we'll wrap up the full design</span>
+  </div>
+</body>
+</html>

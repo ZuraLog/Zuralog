@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15); --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 3rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    .selected-text { color: var(--accent); font-weight: 500; }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.3rem; }
+    h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .pair { margin-bottom: 2rem; }
+    .pair-title { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 600px) { .options { grid-template-columns: 1fr; } }
+    .option { background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 14px; padding: 1rem 1.1rem; cursor: pointer; transition: all 0.15s ease; }
+    .option:hover { border-color: var(--accent); }
+    .option.selected { border-color: var(--selected-border); background: var(--selected-bg); }
+    .option-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .option-icon { font-size: 1.3rem; }
+    .option h3 { font-size: 0.88rem; }
+    .option p { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; }
+    .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.6rem; }
+    .pro, .con { border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.73rem; }
+    .pro { background: rgba(52,199,89,0.08); color: #15803d; }
+    .con { background: rgba(239,68,68,0.08); color: #b91c1c; }
+    .pro::before { content: '✓ '; font-weight: 700; }
+    .con::before { content: '✗ '; font-weight: 700; }
+    .rec-badge { display: inline-block; font-size: 0.65rem; padding: 2px 7px; border-radius: 8px; background: rgba(10,132,255,0.12); color: var(--accent); font-weight: 600; margin-left: 0.4rem; vertical-align: middle; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+    /* Grid preview */
+    .grid-preview { background: #111; border-radius: 14px; padding: 1rem; margin-top: 1.25rem; }
+    .grid-preview-title { font-size: 0.7rem; color: rgba(255,255,255,0.35); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .mock-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .mock-cell { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .mock-cell.merged { background: rgba(10,132,255,0.1); border: 1.5px solid rgba(10,132,255,0.3); }
+    .mock-cell.coming { background: rgba(255,255,255,0.02); border: 1.5px dashed rgba(255,255,255,0.1); opacity: 0.5; }
+    .mock-icon { font-size: 1.2rem; }
+    .mock-label { font-size: 0.6rem; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.3; }
+    .mock-label.merged { color: rgba(10,132,255,0.9); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Grid Overlap Decisions</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>Two decisions to make</h2>
+      <p class="subtitle">Should Calories merge into Meal? Should Steps merge into Run/Cardio? Pick your preference for each — they are independent decisions.</p>
+
+      <!-- CALORIES vs MEAL -->
+      <div class="pair">
+        <div class="pair-title">Decision 1 — 🔥 Calories &amp; 🍽️ Meal</div>
+        <div class="options">
+
+          <div class="option" data-choice="cal-merge" onclick="toggleSelect(this, 'cal')">
+            <div class="option-head">
+              <div class="option-icon">🍽️</div>
+              <h3>Merge — Calories lives inside Meal <span class="rec-badge">Recommended</span></h3>
+            </div>
+            <p>Remove the standalone Calories tile. Calories becomes an optional field inside the Meal log. Users who want just a number get a quick preset row. Users who want full context get the description + feel fields too.</p>
+            <div class="pros-cons">
+              <div class="pro">One tile, one intent — "I ate something"</div>
+              <div class="pro">Less clutter in the grid</div>
+              <div class="pro">Calories from MyFitnessPal auto-fill anyway</div>
+              <div class="con">Slightly more steps for pure calorie-only users</div>
+            </div>
+          </div>
+
+          <div class="option" data-choice="cal-separate" onclick="toggleSelect(this, 'cal')">
+            <div class="option-head">
+              <div class="option-icon">🔥</div>
+              <h3>Keep separate — Calories stays its own tile</h3>
+            </div>
+            <p>Calories is a fast inline entry — one tap, type a number, done. Meal is the full description log. Two different speeds for two different users.</p>
+            <div class="pros-cons">
+              <div class="pro">Ultra-fast for pure calorie trackers</div>
+              <div class="pro">Clear separation of intent</div>
+              <div class="con">Two tiles for what feels like "food"</div>
+              <div class="con">Confusing to new users — which one do I tap?</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- STEPS vs RUN -->
+      <div class="pair">
+        <div class="pair-title">Decision 2 — 👟 Steps &amp; 🏃 Run / Cardio</div>
+        <div class="options">
+
+          <div class="option" data-choice="steps-separate" onclick="toggleSelect(this, 'steps')">
+            <div class="option-head">
+              <div class="option-icon">👟 🏃</div>
+              <h3>Keep separate — Steps and Run stay their own tiles <span class="rec-badge">Recommended</span></h3>
+            </div>
+            <p>Steps is a passive background number — most users never tap it because Apple Health / Fitbit auto-syncs it. Run is an intentional cardio session with distance, effort, and Strava. They are fundamentally different things.</p>
+            <div class="pros-cons">
+              <div class="pro">Steps = passive metric, Run = active session</div>
+              <div class="pro">Runners get the right form without extra taps</div>
+              <div class="pro">Step-only users aren't overwhelmed by run fields</div>
+              <div class="con">Two movement tiles in the grid</div>
+            </div>
+          </div>
+
+          <div class="option" data-choice="steps-merge" onclick="toggleSelect(this, 'steps')">
+            <div class="option-head">
+              <div class="option-icon">🏃</div>
+              <h3>Merge — Steps folds into Run / Cardio</h3>
+            </div>
+            <p>One "Movement" tile that opens a screen with two options: log a step count, or log a run/cardio session. Cleaner grid, one entry point for all movement.</p>
+            <div class="pros-cons">
+              <div class="pro">Fewer tiles, cleaner grid</div>
+              <div class="pro">"Movement" is a coherent concept</div>
+              <div class="con">Extra tap for step-only users</div>
+              <div class="con">Steps is almost always auto-synced — adding a tap to something automatic feels like regression</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Final grid preview -->
+      <div>
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Resulting grid — with recommended choices applied</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:1rem;">Calories merged into Meal (10 tiles) · Steps and Run kept separate (11 tiles). Workout is Coming Soon.</div>
+        <div class="grid-preview">
+          <div class="grid-preview-title">Log grid — what do you want to log?</div>
+          <div class="mock-grid">
+            <div class="mock-cell"><div class="mock-icon">😊</div><div class="mock-label">Mood · Energy · Stress</div></div>
+            <div class="mock-cell"><div class="mock-icon">💧</div><div class="mock-label">Water</div></div>
+            <div class="mock-cell"><div class="mock-icon">😴</div><div class="mock-label">Sleep</div></div>
+            <div class="mock-cell"><div class="mock-icon">⚖️</div><div class="mock-label">Weight</div></div>
+            <div class="mock-cell"><div class="mock-icon">👟</div><div class="mock-label">Steps</div></div>
+            <div class="mock-cell"><div class="mock-icon">🏃</div><div class="mock-label">Run / Cardio</div></div>
+            <div class="mock-cell merged"><div class="mock-icon">🍽️</div><div class="mock-label merged">Meal + Calories</div></div>
+            <div class="mock-cell"><div class="mock-icon">💊</div><div class="mock-label">Supplements / Meds</div></div>
+            <div class="mock-cell"><div class="mock-icon">🩹</div><div class="mock-label">Symptom</div></div>
+            <div class="mock-cell coming"><div class="mock-icon">🏋️</div><div class="mock-label">Workout · Soon</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span id="indicator-text">Pick your preference for each decision — then tell me in the terminal</span>
+  </div>
+  <script>
+    const selections = {};
+    function toggleSelect(el, group) {
+      document.querySelectorAll(`[data-choice^="${group}"]`).forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      selections[group] = el.querySelector('h3').textContent.trim();
+      const all = Object.values(selections);
+      const bar = document.getElementById('indicator-text');
+      bar.innerHTML = all.length ? 'Selected: <span class="selected-text">' + all.join(' · ') + '</span> — confirm in terminal' : 'Pick your preference for each decision — then tell me in the terminal';
+    }
+  </script>
+</body>
+</html>

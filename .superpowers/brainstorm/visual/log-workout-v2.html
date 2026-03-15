@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15); --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 3rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.3rem; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; margin-bottom: 1.5rem; }
+    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+    /* Phone */
+    .phone-wrap { background: var(--bg-tertiary); border-radius: 16px; padding: 1.25rem; display: flex; justify-content: center; }
+    .phone { width: 155px; height: 300px; background: #1a1a1a; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #2a2a2a; }
+    .phone-notch { height: 16px; background: #111; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+    .phone-notch-dot { width: 32px; height: 6px; background: #222; border-radius: 3px; }
+    .phone-screen { flex: 1; background: #0d0d0d; display: flex; flex-direction: column; overflow: hidden; }
+    .fs-bar { display: flex; align-items: center; gap: 5px; padding: 6px 8px 4px; flex-shrink: 0; }
+    .fs-back { font-size: 8px; color: #34d399; }
+    .fs-title { font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,0.9); }
+    .fs-body { flex: 1; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+    .section-lbl { font-size: 6.5px; color: rgba(255,255,255,0.35); margin-bottom: 3px; }
+    .optional-badge { font-size: 5.5px; color: rgba(255,255,255,0.22); font-style: italic; margin-left: 3px; }
+
+    /* Mode selector — the two big buttons */
+    .mode-title { font-size: 8px; color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 6px; }
+    .mode-btns { display: flex; flex-direction: column; gap: 5px; }
+    .mode-btn { border-radius: 8px; padding: 7px 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .mode-btn.primary { background: rgba(52,211,153,0.15); border: 1.5px solid rgba(52,211,153,0.4); }
+    .mode-btn.coming-soon { background: rgba(255,255,255,0.03); border: 1.5px dashed rgba(255,255,255,0.12); }
+    .mode-icon { font-size: 16px; flex-shrink: 0; }
+    .mode-text { flex: 1; }
+    .mode-name { font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.85); }
+    .mode-name.dim { color: rgba(255,255,255,0.35); }
+    .mode-sub { font-size: 6px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+    .coming-badge { font-size: 5.5px; background: rgba(251,146,60,0.2); color: #fb923c; border-radius: 4px; padding: 1px 4px; display: inline-block; margin-top: 2px; }
+
+    /* Log previous form */
+    .type-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .tchip { font-size: 6.5px; padding: 2px 7px; border-radius: 8px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+    .tchip.active { background: rgba(52,211,153,0.2); color: #34d399; }
+    .two-col { display: flex; gap: 5px; }
+    .field-block { flex: 1; }
+    .field-lbl { font-size: 6px; color: rgba(255,255,255,0.3); margin-bottom: 2px; }
+    .field-val { background: rgba(255,255,255,0.07); border-radius: 6px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #fff; }
+    .intensity-dots { display: flex; gap: 3px; justify-content: center; align-items: center; height: 18px; }
+    .idot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+    .idot.filled { background: #34d399; }
+    .exercise-item { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 4px 6px; display: flex; justify-content: space-between; align-items: center; }
+    .ex-name { font-size: 7px; color: rgba(255,255,255,0.7); font-weight: 600; }
+    .ex-sets { font-size: 6.5px; color: rgba(255,255,255,0.35); }
+    .add-ex { background: rgba(52,211,153,0.08); border: 1px dashed rgba(52,211,153,0.25); border-radius: 6px; height: 14px; display: flex; align-items: center; justify-content: center; font-size: 6.5px; color: rgba(52,211,153,0.5); }
+    .emoji-feel { display: flex; justify-content: space-between; }
+    .ef { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .ef span { font-size: 12px; opacity: 0.3; }
+    .ef span.a { opacity: 1; }
+    .ef p { font-size: 5px; color: rgba(255,255,255,0.2); }
+    .ef p.a { color: rgba(255,255,255,0.55); }
+    .note-field { background: rgba(255,255,255,0.05); border-radius: 5px; height: 14px; display: flex; align-items: center; padding: 0 5px; font-size: 6.5px; color: rgba(255,255,255,0.22); }
+    .fs-save { background: #059669; border-radius: 7px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; color: #fff; font-weight: 700; margin: 4px 8px 8px; flex-shrink: 0; }
+
+    /* Live session mockup */
+    .live-timer { text-align: center; padding: 8px 0 4px; }
+    .live-time { font-size: 28px; font-weight: 700; color: #34d399; letter-spacing: 1px; }
+    .live-label { font-size: 7px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+    .live-ex-item { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 5px 6px; }
+    .live-ex-name { font-size: 7.5px; font-weight: 700; color: rgba(255,255,255,0.85); margin-bottom: 3px; }
+    .live-sets { display: flex; gap: 3px; flex-wrap: wrap; }
+    .live-set { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 6px; font-weight: 700; }
+    .live-set.done { background: rgba(52,211,153,0.25); color: #34d399; }
+    .live-set.active { background: #059669; color: #fff; }
+    .live-set.empty { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.25); }
+    .live-add-ex { background: rgba(52,211,153,0.08); border: 1px dashed rgba(52,211,153,0.25); border-radius: 6px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 6.5px; color: rgba(52,211,153,0.5); }
+    .live-finish { background: #dc2626; border-radius: 7px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; color: #fff; font-weight: 700; margin: 4px 8px 8px; flex-shrink: 0; }
+    .rest-banner { background: rgba(251,146,60,0.15); border-radius: 6px; padding: 3px 6px; font-size: 6.5px; color: #fb923c; text-align: center; }
+
+    /* Description cards */
+    .desc { background: var(--bg-secondary); border-radius: 14px; padding: 1.1rem 1.2rem; }
+    .desc h3 { margin-bottom: 0.6rem; }
+    .desc ul { margin-left: 1rem; font-size: 0.82rem; color: var(--text-secondary); }
+    .desc ul li { margin-bottom: 0.35rem; }
+    .desc ul li strong { color: var(--text-primary); }
+    .tag { display: inline-block; font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; font-weight: 500; margin-left: 0.25rem; }
+    .tag-opt { background: rgba(156,163,175,0.2); color: #6b7280; }
+    .tag-soon { background: rgba(251,146,60,0.15); color: #d97706; }
+    .tag-auto { background: rgba(52,199,89,0.15); color: #16a34a; }
+    .info-box { background: var(--bg-secondary); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--text-secondary); margin-top: 1rem; }
+    .info-box strong { color: var(--text-primary); }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Log Detail: 🏋️ Workout (Updated)</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>🏋️ Workout — Two Modes</h2>
+      <p class="subtitle">When the user taps Workout, they first see a mode picker — log a past workout, or start a live session. The live session mode is shown as "Coming Soon" for now.</p>
+
+      <div class="split">
+
+        <!-- Left: Mode picker screen -->
+        <div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.75rem;font-weight:600;">Step 1 — Mode picker (what user sees first)</p>
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+              <div class="phone-screen">
+                <div class="fs-bar">
+                  <div class="fs-back">‹ Back</div>
+                  <div class="fs-title">🏋️ Workout</div>
+                </div>
+                <div class="fs-body">
+                  <div class="mode-title">How do you want to log?</div>
+                  <div class="mode-btns">
+                    <div class="mode-btn primary">
+                      <div class="mode-icon">📋</div>
+                      <div class="mode-text">
+                        <div class="mode-name">Log a past workout</div>
+                        <div class="mode-sub">Already finished? Add what you did.</div>
+                      </div>
+                    </div>
+                    <div class="mode-btn coming-soon">
+                      <div class="mode-icon" style="opacity:0.4;">▶️</div>
+                      <div class="mode-text">
+                        <div class="mode-name dim">Start live session</div>
+                        <div class="mode-sub">Track sets & reps as you go with a running timer.</div>
+                        <div class="coming-badge">Coming Soon</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>
+                  <div style="font-size:6px;color:rgba(255,255,255,0.2);text-align:center;line-height:1.5;">Live session tracking — with timer, rest countdown,<br/>exercise library & set-by-set logging — is coming soon.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Log past workout form -->
+        <div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.75rem;font-weight:600;">Step 2 — Log past workout (current build)</p>
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+              <div class="phone-screen">
+                <div class="fs-bar">
+                  <div class="fs-back">‹ Mode</div>
+                  <div class="fs-title">📋 Past Workout</div>
+                </div>
+                <div class="fs-body">
+                  <div>
+                    <div class="section-lbl">Type</div>
+                    <div class="type-chips">
+                      <div class="tchip active">Weights</div>
+                      <div class="tchip">Cardio</div>
+                      <div class="tchip">HIIT</div>
+                      <div class="tchip">Yoga</div>
+                      <div class="tchip">Class</div>
+                      <div class="tchip">Other</div>
+                    </div>
+                  </div>
+                  <div class="two-col">
+                    <div class="field-block">
+                      <div class="field-lbl">Duration</div>
+                      <div class="field-val">60 min</div>
+                    </div>
+                    <div class="field-block">
+                      <div class="field-lbl">Intensity <span class="optional-badge">(opt.)</span></div>
+                      <div class="intensity-dots">
+                        <div class="idot filled"></div><div class="idot filled"></div>
+                        <div class="idot filled"></div><div class="idot filled"></div>
+                        <div class="idot"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="section-lbl">Exercises <span class="optional-badge">(optional)</span></div>
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                      <div class="exercise-item">
+                        <div class="ex-name">Bench Press</div>
+                        <div class="ex-sets">4×8 · 80kg</div>
+                      </div>
+                      <div class="exercise-item">
+                        <div class="ex-name">Squat</div>
+                        <div class="ex-sets">3×10 · 100kg</div>
+                      </div>
+                      <div class="add-ex">+ Add exercise</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="section-lbl">How did it feel? <span class="optional-badge">(optional)</span></div>
+                    <div class="emoji-feel">
+                      <div class="ef"><span>😩</span><p>Rough</p></div>
+                      <div class="ef"><span>😐</span><p>OK</p></div>
+                      <div class="ef"><span class="a">💪</span><p class="a">Solid</p></div>
+                      <div class="ef"><span>🔥</span><p>Beast</p></div>
+                    </div>
+                  </div>
+                  <div class="note-field">Notes… <span class="optional-badge">(optional)</span></div>
+                </div>
+                <div class="fs-save">Save Workout</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <hr class="divider">
+
+      <!-- Live session preview — coming soon -->
+      <p style="font-size:0.85rem;font-weight:600;margin-bottom:1rem;">Live Session Mode — Coming Soon (reference design)</p>
+      <div class="split">
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+            <div class="phone-screen">
+              <div class="fs-bar">
+                <div class="fs-back" style="color:#dc2626;">■ End</div>
+                <div class="fs-title" style="color:#34d399;">● Live Session</div>
+              </div>
+              <div class="fs-body">
+                <div class="live-timer">
+                  <div class="live-time">0:42:17</div>
+                  <div class="live-label">session in progress</div>
+                </div>
+                <div class="rest-banner">Rest timer: 0:48 remaining</div>
+                <div class="live-ex-item">
+                  <div class="live-ex-name">Bench Press</div>
+                  <div class="live-sets">
+                    <div class="live-set done">8<br/><span style="font-size:5px;">80kg</span></div>
+                    <div class="live-set done">8<br/><span style="font-size:5px;">80kg</span></div>
+                    <div class="live-set done">7<br/><span style="font-size:5px;">82.5kg</span></div>
+                    <div class="live-set active">+</div>
+                    <div class="live-set empty">·</div>
+                  </div>
+                </div>
+                <div class="live-ex-item" style="opacity:0.5;">
+                  <div class="live-ex-name">Squat</div>
+                  <div class="live-sets">
+                    <div class="live-set empty">·</div>
+                    <div class="live-set empty">·</div>
+                    <div class="live-set empty">·</div>
+                  </div>
+                </div>
+                <div class="live-add-ex">+ Add next exercise</div>
+              </div>
+              <div class="live-finish">Finish Session</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="desc">
+          <h3>Live Session — What it does <span class="tag tag-soon">Coming Soon</span></h3>
+          <ul>
+            <li><strong>Running timer</strong> — counts up from 0:00 the moment you start. Persists in the background if you close the app.</li>
+            <li><strong>Exercise library</strong> — search from 5,000+ exercises with muscle group filters. Add them one by one as you work through your session.</li>
+            <li><strong>Set-by-set logging</strong> — tap each set as you complete it. Log reps and weight inline. Previous set's values pre-fill the next set.</li>
+            <li><strong>Rest timer</strong> — automatic countdown between sets. Configurable per exercise.</li>
+            <li><strong>Finish session</strong> — saves the full session log, total duration, volume, and exercises. Feeds into the AI and Progress tab.</li>
+            <li>This is a significant standalone feature — similar scope to building a mini Lyfta inside Zuralog. Planned for a future sprint.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <strong>Why "Coming Soon" and not hidden?</strong> Showing the live session button (greyed out, with a "Coming Soon" badge) does two things: it tells gym users the feature is on the roadmap so they don't feel the app is missing it, and it creates genuine anticipation. When it ships, the mode picker already exists — we just enable the button.
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span>Review Workout v2 — confirm in the terminal, then we move to Run/Cardio</span>
+  </div>
+</body>
+</html>

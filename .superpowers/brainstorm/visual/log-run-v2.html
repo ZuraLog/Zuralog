@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15); --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 3rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.3rem; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .split { display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem; align-items: start; margin-bottom: 2rem; }
+    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+    /* Phone */
+    .phone-wrap { background: var(--bg-tertiary); border-radius: 16px; padding: 1.25rem; display: flex; justify-content: center; }
+    .phone { width: 155px; height: 300px; background: #1a1a1a; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #2a2a2a; }
+    .phone-notch { height: 16px; background: #111; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+    .phone-notch-dot { width: 32px; height: 6px; background: #222; border-radius: 3px; }
+    .phone-screen { flex: 1; background: #0d0d0d; display: flex; flex-direction: column; overflow: hidden; }
+    .fs-bar { display: flex; align-items: center; gap: 5px; padding: 6px 8px 4px; flex-shrink: 0; }
+    .fs-back { font-size: 8px; color: #f97316; }
+    .fs-title { font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,0.9); }
+    .fs-body { flex: 1; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+    .section-lbl { font-size: 6.5px; color: rgba(255,255,255,0.35); margin-bottom: 3px; }
+    .optional-badge { font-size: 5.5px; color: rgba(255,255,255,0.22); font-style: italic; margin-left: 3px; }
+    /* Mode title */
+    .mode-title { font-size: 8px; color: rgba(255,255,255,0.45); text-align: center; margin-bottom: 2px; }
+    /* Mode buttons */
+    .mode-btns { display: flex; flex-direction: column; gap: 5px; }
+    .mode-btn { border-radius: 9px; padding: 8px 8px; display: flex; align-items: center; gap: 7px; }
+    .mode-btn.strava { background: rgba(252,76,2,0.12); border: 1.5px solid rgba(252,76,2,0.35); }
+    .mode-btn.manual { background: rgba(249,115,22,0.1); border: 1.5px solid rgba(249,115,22,0.3); }
+    .mode-btn.coming { background: rgba(255,255,255,0.02); border: 1.5px dashed rgba(255,255,255,0.1); }
+    .mode-icon { font-size: 17px; flex-shrink: 0; }
+    .mode-icon.dim { opacity: 0.3; }
+    .mode-text { flex: 1; }
+    .mode-name { font-size: 8px; font-weight: 700; }
+    .mode-name.strava-col { color: #fc4c02; }
+    .mode-name.manual-col { color: #f97316; }
+    .mode-name.dim { color: rgba(255,255,255,0.3); }
+    .mode-sub { font-size: 6px; color: rgba(255,255,255,0.28); margin-top: 1px; line-height: 1.4; }
+    .mode-arrow { font-size: 9px; color: rgba(255,255,255,0.2); }
+    .mode-arrow.strava-col { color: #fc4c02; }
+    .mode-arrow.manual-col { color: #f97316; }
+    .coming-badge { font-size: 5.5px; background: rgba(251,146,60,0.18); color: #fb923c; border-radius: 4px; padding: 1px 4px; display: inline-block; margin-top: 2px; }
+    .strava-not-connected { background: rgba(252,76,2,0.07); border: 1px solid rgba(252,76,2,0.2); border-radius: 6px; padding: 4px 6px; font-size: 6px; color: rgba(255,255,255,0.35); margin-top: 2px; line-height: 1.5; }
+    /* Manual form */
+    .type-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .tchip { font-size: 6.5px; padding: 2px 7px; border-radius: 8px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+    .tchip.active { background: rgba(249,115,22,0.2); color: #f97316; }
+    .stats-row { display: flex; gap: 4px; }
+    .stat-block { flex: 1; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 4px 5px; }
+    .stat-lbl { font-size: 5.5px; color: rgba(255,255,255,0.3); margin-bottom: 2px; }
+    .stat-val { font-size: 10px; font-weight: 700; color: #fff; }
+    .stat-unit { font-size: 5.5px; color: rgba(255,255,255,0.3); }
+    .stat-auto { font-size: 5px; color: rgba(249,115,22,0.6); }
+    .unit-toggle { display: flex; gap: 3px; margin-bottom: 4px; }
+    .unit-btn { flex: 1; height: 13px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 6.5px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); }
+    .unit-btn.active { background: rgba(249,115,22,0.2); color: #f97316; }
+    .note-field { background: rgba(255,255,255,0.05); border-radius: 5px; height: 14px; display: flex; align-items: center; padding: 0 5px; font-size: 6.5px; color: rgba(255,255,255,0.22); }
+    .effort-faces { display: flex; justify-content: space-between; }
+    .eface { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .eface span { font-size: 13px; opacity: 0.3; }
+    .eface span.active { opacity: 1; }
+    .eface p { font-size: 5px; color: rgba(255,255,255,0.2); }
+    .eface p.active { color: rgba(255,255,255,0.55); }
+    .fs-save { background: #ea580c; border-radius: 7px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; color: #fff; font-weight: 700; margin: 4px 8px 8px; flex-shrink: 0; }
+    /* Description */
+    .desc { background: var(--bg-secondary); border-radius: 14px; padding: 1.1rem 1.2rem; }
+    .desc ul { margin-left: 1rem; font-size: 0.82rem; color: var(--text-secondary); }
+    .desc ul li { margin-bottom: 0.4rem; }
+    .desc ul li strong { color: var(--text-primary); }
+    .tag { display: inline-block; font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; font-weight: 500; margin-left: 0.25rem; }
+    .tag-opt { background: rgba(156,163,175,0.2); color: #6b7280; }
+    .tag-soon { background: rgba(251,146,60,0.15); color: #d97706; }
+    .tag-primary { background: rgba(252,76,2,0.12); color: #fc4c02; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+    .info-box { background: var(--bg-secondary); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--text-secondary); margin-top: 1rem; }
+    .info-box strong { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Log Detail: 🏃 Run / Cardio (Updated)</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>🏃 Run / Cardio — Three Modes</h2>
+      <p class="subtitle">Zuralog doesn't compete with Strava — it complements it. The primary recommendation is always to use Strava. Manual logging is the lightweight fallback. Live recording is coming later.</p>
+
+      <!-- Mode picker + description -->
+      <div class="split">
+        <div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.75rem;font-weight:600;">Mode picker — what the user sees first</p>
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+              <div class="phone-screen">
+                <div class="fs-bar">
+                  <div class="fs-back">‹ Back</div>
+                  <div class="fs-title">🏃 Run / Cardio</div>
+                </div>
+                <div class="fs-body">
+                  <div class="mode-title">How do you want to log?</div>
+                  <div class="mode-btns">
+
+                    <!-- Strava -->
+                    <div class="mode-btn strava">
+                      <div class="mode-icon">🟠</div>
+                      <div class="mode-text">
+                        <div class="mode-name strava-col">Open Strava</div>
+                        <div class="mode-sub">Record your run with Strava. It syncs back to Zuralog automatically.</div>
+                      </div>
+                      <div class="mode-arrow strava-col">›</div>
+                    </div>
+
+                    <!-- Manual -->
+                    <div class="mode-btn manual">
+                      <div class="mode-icon">📋</div>
+                      <div class="mode-text">
+                        <div class="mode-name manual-col">Log a past run</div>
+                        <div class="mode-sub">Already finished? Add distance, time, and type manually.</div>
+                      </div>
+                      <div class="mode-arrow manual-col">›</div>
+                    </div>
+
+                    <!-- Coming soon -->
+                    <div class="mode-btn coming">
+                      <div class="mode-icon dim">▶️</div>
+                      <div class="mode-text">
+                        <div class="mode-name dim">Record live session</div>
+                        <div class="mode-sub">GPS tracking, live stats, without leaving Zuralog.</div>
+                        <div class="coming-badge">Coming Soon</div>
+                      </div>
+                    </div>
+
+                  </div>
+                  <div class="strava-not-connected">💡 Not connected to Strava? Go to Settings → Integrations to link your account. Your past runs will also sync in.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="desc">
+          <h3>Three modes — the thinking behind each</h3>
+          <ul>
+            <li>
+              <strong>Open Strava</strong> <span class="tag tag-primary">Recommended</span><br/>
+              Deep-links directly into the Strava app to start a run. When the run is done and saved in Strava, it syncs back to Zuralog automatically via the Strava integration. If Strava is not connected yet, this button takes the user to the Integrations settings screen to link their account. Zuralog gets all the rich data — distance, pace, heart rate, route, splits — without building any of that itself.
+            </li>
+            <li>
+              <strong>Log a past run</strong> — simple manual form. Activity type, distance, duration. Pace auto-calculated. Optional effort rating and notes. For treadmill sessions, runs done without a phone, or users who don't use Strava. Intentionally kept simple — no conditions chips, no factors. Just the essentials.
+            </li>
+            <li>
+              <strong>Record live session</strong> <span class="tag tag-soon">Coming Soon</span> — in-app GPS recording with live stats. A significant future feature. Shown greyed out so users know it's coming.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Manual form -->
+      <div class="split">
+        <div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.75rem;font-weight:600;">Manual past run — simple form</p>
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+              <div class="phone-screen">
+                <div class="fs-bar">
+                  <div class="fs-back">‹ Mode</div>
+                  <div class="fs-title">📋 Past Run</div>
+                </div>
+                <div class="fs-body">
+                  <div>
+                    <div class="section-lbl">Activity type</div>
+                    <div class="type-chips">
+                      <div class="tchip active">Run</div>
+                      <div class="tchip">Walk</div>
+                      <div class="tchip">Cycle</div>
+                      <div class="tchip">Swim</div>
+                      <div class="tchip">Hike</div>
+                      <div class="tchip">Other</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="unit-toggle">
+                      <div class="unit-btn active">km</div>
+                      <div class="unit-btn">mi</div>
+                    </div>
+                    <div class="stats-row">
+                      <div class="stat-block">
+                        <div class="stat-lbl">Distance</div>
+                        <div class="stat-val">8.4</div>
+                        <div class="stat-unit">km</div>
+                      </div>
+                      <div class="stat-block">
+                        <div class="stat-lbl">Duration</div>
+                        <div class="stat-val">42:18</div>
+                        <div class="stat-unit">mm:ss</div>
+                      </div>
+                      <div class="stat-block">
+                        <div class="stat-lbl">Pace</div>
+                        <div class="stat-val">5:02</div>
+                        <div class="stat-auto">auto</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="section-lbl">Effort <span class="optional-badge">(optional)</span></div>
+                    <div class="effort-faces">
+                      <div class="eface"><span>😌</span><p>Easy</p></div>
+                      <div class="eface"><span>😤</span><p>Steady</p></div>
+                      <div class="eface"><span class="active">🔥</span><p class="active">Hard</p></div>
+                      <div class="eface"><span>💀</span><p>Max</p></div>
+                    </div>
+                  </div>
+                  <div class="note-field">Notes… <span class="optional-badge">(optional)</span></div>
+                </div>
+                <div class="fs-save">Save Run</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="desc">
+          <h3>Manual form — kept deliberately simple</h3>
+          <ul>
+            <li><strong>Activity type</strong> — Run, Walk, Cycle, Swim, Hike, Other. Required.</li>
+            <li><strong>Distance</strong> — km or miles. Required.</li>
+            <li><strong>Duration</strong> — mm:ss. Required.</li>
+            <li><strong>Pace</strong> — auto-calculated from distance ÷ duration. Never an input field. <span class="tag tag-opt" style="background:rgba(52,199,89,0.15);color:#16a34a;">auto</span></li>
+            <li><strong>Effort</strong> — Easy / Steady / Hard / Max. <span class="tag tag-opt">optional</span></li>
+            <li><strong>Notes</strong> — free text. <span class="tag tag-opt">optional</span></li>
+            <li>That's it. No conditions, no splits, no heart rate. Those come in via Strava. This form is for the user who just wants to record that they ran 5km this morning.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <strong>The Strava relationship:</strong> When Strava is connected, runs logged there appear automatically in Zuralog's Today feed and feed into the Health Score and AI insights. The "Open Strava" button just makes the flow explicit — tap here, go record your run, come back and it's already here. No duplicate entry, no friction.
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span>Review Run/Cardio v2 — confirm in terminal, then we move to Meal</span>
+  </div>
+</body>
+</html>

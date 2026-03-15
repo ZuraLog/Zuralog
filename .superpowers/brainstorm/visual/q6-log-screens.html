@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --text-tertiary: #aeaeb2; --accent: #0071e3; --selected-bg: #e8f4fd;
+      --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --text-tertiary: #636366; --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15);
+        --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 2rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    .selected-text { color: var(--accent); font-weight: 500; }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.4rem; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .options { display: flex; flex-direction: column; gap: 0.75rem; }
+    .option { background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 14px; padding: 1rem 1.25rem; cursor: pointer; transition: all 0.15s ease; display: flex; align-items: flex-start; gap: 1rem; }
+    .option:hover { border-color: var(--accent); }
+    .option.selected { background: var(--selected-bg); border-color: var(--selected-border); }
+    .option .letter { background: var(--bg-tertiary); color: var(--text-secondary); width: 1.75rem; height: 1.75rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; flex-shrink: 0; margin-top: 0.1rem; }
+    .option.selected .letter { background: var(--accent); color: white; }
+    .option .content p { color: var(--text-secondary); font-size: 0.82rem; margin-top: 0.2rem; }
+    .example-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+    .ex-chip { font-size: 0.72rem; background: var(--bg-tertiary); border-radius: 20px; padding: 0.2rem 0.6rem; color: var(--text-secondary); }
+    .section-title { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin: 1.5rem 0 0.6rem; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Zuralog Today Tab</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>Question 6 of several</h2>
+      <p class="subtitle">When you tap a log type in the bottom sheet grid — say "Workout" — what happens next? This affects how fast and how rich the experience feels. There's a trade-off between speed and detail.</p>
+
+      <div class="options">
+
+        <div class="option" data-choice="inline" onclick="toggleSelect(this)">
+          <div class="letter">A</div>
+          <div class="content">
+            <h3>Inline — sheet expands in place</h3>
+            <p>Tapping a type expands the same bottom sheet to show that type's fields. No new screen. Fast, feels native. Grid animates out, fields animate in. Tap back to return to the grid.</p>
+            <div class="example-row">
+              <span class="ex-chip">Grid → tap Workout → fields slide in → Submit → done</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="option" data-choice="newsheet" onclick="toggleSelect(this)">
+          <div class="letter">B</div>
+          <div class="content">
+            <h3>New sheet — each type opens its own bottom sheet</h3>
+            <p>Tapping a type closes the grid and opens a dedicated sheet for that type. Each log type can have a fully custom layout. Slightly more steps but maximum flexibility per type.</p>
+            <div class="example-row">
+              <span class="ex-chip">Grid sheet closes → Workout sheet opens → Submit → done</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="option" data-choice="fullscreen" onclick="toggleSelect(this)">
+          <div class="letter">C</div>
+          <div class="content">
+            <h3>Full screen — each type gets a dedicated page</h3>
+            <p>Tapping opens a full-screen log entry page. Most room for detail — great for Workout or Run where you want sets, reps, distance, pace. Heavier feel, but richer experience.</p>
+            <div class="example-row">
+              <span class="ex-chip">Grid → tap Workout → full screen page → Save → back to Today</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+          <div class="letter">D</div>
+          <div class="content">
+            <h3>Hybrid — simple types stay in sheet, complex get full screen</h3>
+            <p>Quick things like Water, Mood, Weight stay in an inline sheet (one tap, one value, done). Complex things like Workout, Run, Meal open a full screen. Best of both worlds.</p>
+            <div class="example-row">
+              <span class="ex-chip">💧 Water → inline +1 glass → done in 1 tap</span>
+              <span class="ex-chip">🏋️ Workout → full screen with sets/reps/duration</span>
+              <span class="ex-chip">😊 Mood → inline slider → done in 2 taps</span>
+              <span class="ex-chip">🏃 Run → full screen with distance/pace/map</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="section-title">For reference — your 12 log types by complexity</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.8rem;">
+        <div style="background:var(--bg-secondary);border-radius:10px;padding:0.75rem;">
+          <div style="color:var(--success);font-weight:600;margin-bottom:0.4rem;font-size:0.75rem;">SIMPLE (1–2 values)</div>
+          <div style="color:var(--text-secondary);line-height:1.8;">💧 Water · ⚖️ Weight<br/>😊 Mood · ⚡ Energy · 😤 Stress<br/>👟 Steps · 🔥 Calories</div>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:10px;padding:0.75rem;">
+          <div style="color:#f59e0b;font-weight:600;margin-bottom:0.4rem;font-size:0.75rem;">COMPLEX (multiple fields)</div>
+          <div style="color:var(--text-secondary);line-height:1.8;">🏋️ Workout · 🏃 Run/Cardio<br/>😴 Sleep · 🍽️ Meal<br/>💊 Supplements · 🩹 Symptom</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span id="indicator-text">Pick your preferred approach — then confirm in the terminal</span>
+  </div>
+
+  <script>
+    function toggleSelect(el) {
+      document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      const title = el.querySelector('h3').textContent;
+      document.getElementById('indicator-text').innerHTML = 'Selected: <span class="selected-text">' + title + '</span> — confirm in the terminal';
+    }
+  </script>
+</body>
+</html>

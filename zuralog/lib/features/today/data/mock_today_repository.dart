@@ -43,7 +43,6 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     await Future<void>.delayed(_delay);
     return TodayFeedData(
       insights: _mockInsights(),
-      quickActions: _mockQuickActions(),
       streak: const StreakData(
         currentStreak: 7,
         isFrozen: false,
@@ -185,32 +184,6 @@ final class MockTodayRepository implements TodayRepositoryInterface {
         isRead: true,
         priorityScore: 0.74,
         createdAt: now.subtract(const Duration(days: 1)),
-      ),
-    ];
-  }
-
-  List<QuickAction> _mockQuickActions() {
-    return const [
-      QuickAction(
-        id: 'qa1',
-        title: 'Log water intake',
-        subtitle: 'You\'re 3 glasses behind your daily target',
-        actionType: 'log_water',
-        route: null,
-      ),
-      QuickAction(
-        id: 'qa2',
-        title: 'Log mood',
-        subtitle: 'How are you feeling right now?',
-        actionType: 'log_mood',
-        route: null,
-      ),
-      QuickAction(
-        id: 'qa3',
-        title: 'Log meal',
-        subtitle: 'Track what you just ate',
-        actionType: 'log_meal',
-        route: null,
       ),
     ];
   }
