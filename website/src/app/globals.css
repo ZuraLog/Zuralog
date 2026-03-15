@@ -216,7 +216,7 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Legal pages — prose typography
+   Legal pages — prose typography & section styling
 ───────────────────────────────────────────────────────────── */
 .prose-legal {
   color: #2D2D2D;
@@ -224,13 +224,42 @@ body {
   line-height: 1.75;
 }
 
+/* Gradient divider above each h2 (CSS-only, no DOM mutation) */
 .prose-legal h2 {
   font-size: 1.125rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: #1A1A1A;
-  margin-top: 2.5rem;
+  margin-top: 2.25rem;
   margin-bottom: 0.75rem;
+  padding-top: 1.75rem;
+  padding-left: 0.875rem;
+  position: relative;
+  scroll-margin-top: 6rem;
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(to right, transparent, rgba(207, 225, 185, 0.4), rgba(212, 242, 145, 0.3), transparent) 1;
+}
+
+/* No divider above the very first h2 */
+.prose-legal h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  border-image: none;
+}
+
+/* Sage-lime accent dot before each h2 */
+.prose-legal h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #CFE1B9, #D4F291);
+  box-shadow: 0 0 6px rgba(212, 242, 145, 0.6);
 }
 
 .prose-legal h3 {
@@ -247,26 +276,172 @@ body {
 }
 
 .prose-legal ul {
-  list-style: disc;
-  padding-left: 1.5rem;
+  list-style: none;
+  padding-left: 1.25rem;
   margin-bottom: 1rem;
   color: rgba(0, 0, 0, 0.55);
 }
 
 .prose-legal ul li {
   margin-bottom: 0.375rem;
+  position: relative;
+  padding-left: 0.75rem;
+}
+
+/* Custom bullet — small sage dot */
+.prose-legal ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #CFE1B9;
+}
+
+/* Nested lists (service provider sub-lists) */
+.prose-legal ul ul {
+  margin-top: 0.375rem;
+  margin-bottom: 0.375rem;
+  padding-left: 1rem;
+}
+
+.prose-legal ul ul li::before {
+  width: 3px;
+  height: 3px;
+  background-color: #D4F291;
+  opacity: 0.6;
 }
 
 .prose-legal a {
   color: #2D2D2D;
   text-decoration: underline;
-  text-decoration-color: rgba(0, 0, 0, 0.2);
+  text-decoration-color: rgba(207, 225, 185, 0.6);
   text-underline-offset: 3px;
-  transition: text-decoration-color 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .prose-legal a:hover {
-  text-decoration-color: #CFE1B9;
+  text-decoration-color: #D4F291;
+  color: #1A1A1A;
+}
+
+.prose-legal strong {
+  color: #1A1A1A;
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Legal pages — section highlight flash (anchor link / keyboard nav)
+───────────────────────────────────────────────────────────── */
+@keyframes legalHighlight {
+  0%   { background-color: rgba(232, 245, 168, 0.35); }
+  100% { background-color: transparent; }
+}
+
+.legal-highlight {
+  animation: legalHighlight 1.5s ease-out forwards;
+  border-radius: 6px;
+  margin-left: -6px;
+  padding-left: 6px;
+  margin-right: -6px;
+  padding-right: 6px;
+}
+
+/* TOC sidebar scroll — thin scrollbar only when needed */
+.legal-toc-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(207, 225, 185, 0.3) transparent;
+}
+.legal-toc-scroll::-webkit-scrollbar {
+  display: block;
+  width: 3px;
+}
+.legal-toc-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.legal-toc-scroll::-webkit-scrollbar-thumb {
+  background: rgba(207, 225, 185, 0.4);
+  border-radius: 3px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Legal pages — print-friendly styles
+───────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide non-essential UI */
+  .legal-progress,
+  .legal-bg,
+  .legal-back-to-top,
+  .legal-toc-sidebar,
+  .legal-toc-mobile,
+  .legal-mobile-sticky,
+  .legal-feedback,
+  .legal-cross-nav,
+  .legal-breadcrumb,
+  .legal-toolbar,
+  nav,
+  footer {
+    display: none !important;
+  }
+
+  /* Remove glassmorphic card styling */
+  .legal-card {
+    background: none !important;
+    backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Reset background */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Full-width prose */
+  main {
+    padding-top: 0 !important;
+  }
+
+  /* Ensure links show their URLs */
+  .prose-legal a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+    font-weight: normal;
+  }
+
+  /* Keep section dividers but make them solid */
+  .prose-legal h2 {
+    border-image: none !important;
+    border-top-color: #ccc !important;
+    page-break-after: avoid;
+  }
+
+  /* Avoid orphan headings */
+  .prose-legal h2,
+  .prose-legal h3 {
+    page-break-after: avoid;
+  }
+
+  .prose-legal p,
+  .prose-legal ul {
+    page-break-inside: avoid;
+  }
+
+  /* Hide gradient divider */
+  .legal-divider {
+    background: #ccc !important;
+  }
+
+  /* Hide animated badge pulse */
+  .legal-badge .animate-pulse {
+    animation: none !important;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
