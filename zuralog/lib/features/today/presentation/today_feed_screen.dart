@@ -1,34 +1,29 @@
 /// Today Feed — Tab 0 root screen.
 ///
-/// Curated daily briefing: Health Score hero, AI insight cards, wellness
-/// check-in, contextual quick actions, and streak badge.
+/// Curated daily briefing: Health Score hero paired with the Log Ring,
+/// AI insight cards, snapshot row, daily goals, and streak badge.
 library;
-
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
-import 'package:zuralog/core/constants/app_constants.dart';
-import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/constants/app_constants.dart';
 import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/health_score_zero_state.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
 import 'package:zuralog/shared/widgets/streak_badge.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -36,8 +31,8 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 
 /// Today Feed screen — the curated daily briefing.
 ///
-/// Displays the Health Score hero, data maturity banner, AI insight cards,
-/// contextual quick actions, streak badge, and wellness check-in card.
+/// Displays the Health Score hero paired with the Log Ring, data maturity
+/// banner, snapshot row, daily goals, AI insight cards, and streak badge.
 class TodayFeedScreen extends ConsumerWidget {
   /// Creates the [TodayFeedScreen].
   const TodayFeedScreen({super.key});
@@ -59,7 +54,6 @@ class TodayFeedScreen extends ConsumerWidget {
     final bannerMode = accountMature
         ? DataMaturityMode.stillBuilding
         : DataMaturityMode.progress;
-    final wellnessCardVisible = ref.watch(wellnessCheckinCardVisibleProvider);
     final sessionDismissed = ref.watch(todayBannerSessionDismissed);
     final prefsAsync = ref.watch(userPreferencesProvider);
     final showBanner = dataDays < kMinDataDaysForMaturity &&
@@ -96,25 +90,37 @@ class TodayFeedScreen extends ConsumerWidget {
           ref.read(todayRepositoryProvider).invalidateFeedCache();
           ref.invalidate(healthScoreProvider);
           ref.invalidate(todayFeedProvider);
+          ref.invalidate(todayLogSummaryProvider);
+          ref.invalidate(userLoggedTypesProvider);
+          // logRingProvider and snapshotProvider are derived — explicitly
+          // invalidating their dependencies above causes them to recompute.
+          // Also invalidate directly per spec requirement.
+          ref.invalidate(logRingProvider);
+          ref.invalidate(snapshotProvider);
           await Future.wait([
             ref
                 .read(healthScoreProvider.future)
-                .catchError((Object e, StackTrace _) => HealthScoreData(score: 0, trend: [], dataDays: 0)),
+                .catchError(
+                  (Object e, StackTrace _) =>
+                      const HealthScoreData(score: 0, trend: [], dataDays: 0),
+                ),
             ref
                 .read(todayFeedProvider.future)
                 .catchError(
-                  (Object e, StackTrace _) => TodayFeedData(
-                    insights: [],
-                    quickActions: [],
-                    streak: null,
-                  ),
+                  (Object e, StackTrace _) =>
+                      TodayFeedData(insights: [], streak: null),
+                ),
+            ref
+                .read(todayLogSummaryProvider.future)
+                .catchError(
+                  (Object e, StackTrace _) => TodayLogSummary.empty,
                 ),
           ]);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            // ── Health Score hero ───────────────────────────────────────────
+            // ── Health Score + Log Ring (side by side) ───────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppDimens.spaceMd,
@@ -122,16 +128,35 @@ class TodayFeedScreen extends ConsumerWidget {
                 AppDimens.spaceMd,
                 AppDimens.spaceMd,
               ),
-              child: OnboardingTooltip(
-                screenKey: 'today_feed',
-                tooltipKey: 'health_score',
-                message: 'This is your daily health score — a composite of '
-                    'all your health data from the last 24 hours.',
-                child: _HealthScoreHero(scoreAsync: scoreAsync),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Health Score hero — left half.
+                    Flexible(
+                      child: OnboardingTooltip(
+                        screenKey: 'today_feed',
+                        tooltipKey: 'health_score',
+                        message: 'This is your daily health score — a composite of '
+                            'all your health data from the last 24 hours.',
+                        child: _HealthScoreHero(scoreAsync: scoreAsync),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.spaceSm),
+                    // Log Ring — right half.
+                    Flexible(
+                      child: ZLogRingWidget(
+                        onTap: () {
+                          // TODO(Part 2): Open ZLogGridSheet when FAB system is built.
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
-            // ── Data Maturity banner ────────────────────────────────────────
+            // ── Data Maturity banner ─────────────────────────────────────────
             if (showBanner)
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -153,7 +178,7 @@ class TodayFeedScreen extends ConsumerWidget {
                 ),
               ),
 
-            // ── Section: Time-of-day greeting + streak ──────────────────────
+            // ── Greeting + Streak ────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppDimens.spaceMd,
@@ -161,7 +186,7 @@ class TodayFeedScreen extends ConsumerWidget {
                 AppDimens.spaceMd,
                 AppDimens.spaceSm,
               ),
-              child: _SectionHeader(
+              child: SectionHeader(
                 title: _timeOfDayGreeting(profile?.aiName),
                 trailing: feedAsync.whenOrNull(
                   data: (feed) => feed.streak != null
@@ -174,25 +199,71 @@ class TodayFeedScreen extends ConsumerWidget {
               ),
             ),
 
-            // ── AI Insight cards ────────────────────────────────────────────
+            // ── Snapshot Cards (horizontally scrollable row) ─────────────────
+            _SnapshotRow(
+              onCardTap: () {
+                // TODO(Part 2): Open ZLogGridSheet when FAB system is built.
+              },
+            ),
+
+            const SizedBox(height: AppDimens.spaceMd),
+
+            // ── Daily Goals ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+              ),
+              child: ZDailyGoalsCard(
+                goals: const [], // MVP stub — Part 4 wires real goals data.
+                onSetupTap: () {
+                  // TODO(Part 4): Route to goals settings screen.
+                },
+              ),
+            ),
+
+            const SizedBox(height: AppDimens.spaceLg),
+
+            // ── Section: AI Insights ─────────────────────────────────────────
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                0,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: SectionHeader(title: 'AI Insights'),
+            ),
+
             // Provider never errors — only loading and data branches needed.
             ...feedAsync.when(
-              // Safety net: provider catches all errors and returns empty data,
-              // so this branch should never be reached in practice.
-              error: (err, stack) => [const _EmptyInsightsCard()],
+              error: (err, stack) => [
+                ZEmptyInsightsState(
+                  onLogTap: () {
+                    // TODO(Part 2): Open ZLogGridSheet.
+                  },
+                  onConnectTap: () =>
+                      context.pushNamed(RouteNames.settingsIntegrations),
+                ),
+              ],
               loading: () => [
                 SizedBox(
                   height: 120,
                   child: Center(
-                    child: CircularProgressIndicator(
-                      color: colors.primary,
-                    ),
+                    child: CircularProgressIndicator(color: colors.primary),
                   ),
                 ),
               ],
               data: (feed) {
                 if (feed.insights.isEmpty) {
-                  return [const _EmptyInsightsCard()];
+                  return [
+                    ZEmptyInsightsState(
+                      onLogTap: () {
+                        // TODO(Part 2): Open ZLogGridSheet.
+                      },
+                      onConnectTap: () =>
+                          context.pushNamed(RouteNames.settingsIntegrations),
+                    ),
+                  ];
                 }
                 return feed.insights.map(
                   (insight) => Padding(
@@ -200,10 +271,19 @@ class TodayFeedScreen extends ConsumerWidget {
                       horizontal: AppDimens.spaceMd,
                       vertical: AppDimens.spaceXs,
                     ),
-                    child: _InsightCard(
+                    child: ZInsightCard(
                       insight: insight,
                       onTap: () {
                         ref.read(hapticServiceProvider).light();
+                        ref.read(analyticsServiceProvider).capture(
+                          event: AnalyticsEvents.insightCardTapped,
+                          properties: {
+                            'insight_id': insight.id,
+                            'insight_type': insight.type.name,
+                            'category': insight.category,
+                            'is_unread': !insight.isRead,
+                          },
+                        );
                         context.pushNamed(
                           RouteNames.insightDetail,
                           pathParameters: {'id': insight.id},
@@ -215,72 +295,8 @@ class TodayFeedScreen extends ConsumerWidget {
               },
             ),
 
-            // ── Section: Quick Actions ──────────────────────────────────────
-            if (feedAsync.hasValue &&
-                feedAsync.value!.quickActions.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: _SectionHeader(title: 'Quick Actions'),
-              ),
-              ...feedAsync.value!.quickActions.map((action) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceXs,
-                  ),
-                  child: _QuickActionCard(
-                    action: action,
-                    onTap: () {
-                      ref.read(hapticServiceProvider).light();
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.quickActionTapped,
-                        properties: {
-                          'title': action.title,
-                          'action_type': action.actionType,
-                        },
-                      );
-                      switch (action.actionType) {
-                        case 'log_water':
-                          _showQuickLog(context, ref,
-                              initialMetric: 'water');
-                        case 'log_mood':
-                          _showQuickLog(context, ref,
-                              initialMetric: 'mood');
-                        case 'log_meal':
-                        case 'log_nutrition':
-                          _showQuickLog(context, ref);
-                        case 'log_energy':
-                          _showQuickLog(context, ref,
-                              initialMetric: 'energy');
-                        case 'log_stress':
-                          _showQuickLog(context, ref,
-                              initialMetric: 'stress');
-                        default:
-                          final route = action.route;
-                          if (route != null) context.go(route);
-                      }
-                    },
-                  ),
-                );
-              }),
-            ],
-
-            // ── Wellness Check-in card ──────────────────────────────────────
-            if (wellnessCardVisible)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceLg,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                ),
-                child: _WellnessCheckinCard(),
-              ),
+            // Bottom padding so last card clears the FAB (added in Part 2).
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -370,499 +386,45 @@ class _HealthScoreHero extends ConsumerWidget {
   }
 }
 
-// ── _SectionHeader ────────────────────────────────────────────────────────────
+// ── _SnapshotRow ──────────────────────────────────────────────────────────────
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.trailing});
+/// Horizontally scrollable row of today's metric snapshot cards.
+///
+/// Hidden when the user has never logged anything (empty provider list).
+class _SnapshotRow extends ConsumerWidget {
+  const _SnapshotRow({required this.onCardTap});
 
-  final String title;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Editorial left accent bar — 3×18px sage green.
-        Container(
-          width: 3,
-          height: 18,
-          margin: const EdgeInsets.only(right: AppDimens.spaceSm),
-          decoration: BoxDecoration(
-            color: colors.primary,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            title,
-            style: AppTextStyles.displaySmall.copyWith(
-              color: colors.textPrimary,
-            ),
-          ),
-        ),
-        ?trailing,
-      ],
-    );
-  }
-}
-
-// ── _InsightCard ──────────────────────────────────────────────────────────────
-
-class _InsightCard extends ConsumerWidget {
-  const _InsightCard({required this.insight, required this.onTap});
-
-  final InsightCard insight;
-  final VoidCallback onTap;
+  final VoidCallback onCardTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    final categoryColor = categoryColorFromString(insight.category);
-    final isUnread = !insight.isRead;
+    final snapshotAsync = ref.watch(snapshotProvider);
 
-    return ZuralogSpringButton(
-      onTap: () {
-        ref.read(analyticsServiceProvider).capture(
-          event: AnalyticsEvents.insightCardTapped,
-          properties: {
-            'insight_id': insight.id,
-            'insight_type': insight.type.name,
-            'category': insight.category,
-            'is_unread': !insight.isRead,
-          },
+    return snapshotAsync.when(
+      loading: () => const SizedBox(height: 110),
+      error: (e, st) => const SizedBox.shrink(),
+      data: (cards) {
+        if (cards.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+            ),
+            itemCount: cards.length,
+            separatorBuilder: (context, index) =>
+                const SizedBox(width: AppDimens.spaceSm),
+            itemBuilder: (context, i) => ZSnapshotCard(
+              data: cards[i],
+              onTap: onCardTap,
+            ),
+          ),
         );
-        onTap();
       },
-      child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          child: Stack(
-            children: [
-              // Category-color radial glow (unread only) — top-right.
-              if (isUnread)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: const Alignment(0.9, -0.9),
-                          radius: 0.7,
-                          colors: [
-                            categoryColor.withValues(alpha: 0.08),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              // Card body.
-              Container(
-                padding: const EdgeInsets.all(AppDimens.spaceMd),
-                decoration: BoxDecoration(
-                  color: colors.cardBackground,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                  border: Border.all(
-                    color: isUnread
-                        ? categoryColor.withValues(alpha: 0.20)
-                        : colors.border,
-                  ),
-                ),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left accent bar for unread — 3px category-colored stripe.
-                      if (isUnread)
-                        Container(
-                          width: 3,
-                          height: double.infinity,
-                          constraints:
-                              const BoxConstraints(minHeight: 60),
-                          margin: const EdgeInsets.only(
-                              right: AppDimens.spaceSm),
-                          decoration: BoxDecoration(
-                            color: categoryColor,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      // Category color icon badge.
-                      ZIconBadge(
-                        icon: _insightIcon(insight.type),
-                        color: categoryColor,
-                        size: 40,
-                        iconSize: AppDimens.iconMd,
-                      ),
-                      const SizedBox(width: AppDimens.spaceMd),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                if (isUnread) ...[
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: categoryColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppDimens.spaceXs),
-                                ],
-                                 Expanded(
-                                     child: Text(
-                                      insight.title,
-                                      style: AppTextStyles.titleMedium.copyWith(
-                                        color: colors.textPrimary,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                               insight.summary,
-                               style: AppTextStyles.bodyMedium.copyWith(
-                                color: colors.textSecondary,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: AppDimens.spaceSm),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: categoryColor
-                                        .withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(
-                                      AppDimens.radiusChip,
-                                    ),
-                                  ),
-                                    child: Text(
-                                      insight.category,
-                                      style: AppTextStyles.labelSmall.copyWith(
-                                       color: categoryColor,
-                                       fontWeight: FontWeight.w600,
-                                     ),
-                                   ),
-                                ),
-                                const Spacer(),
-                                 if (insight.createdAt != null)
-                                    Text(
-                                      _relativeTime(insight.createdAt!),
-                                     style: AppTextStyles.labelSmall.copyWith(
-                                       color: AppColors.textTertiary,
-                                     ),
-                                   ),
-                                const SizedBox(width: AppDimens.spaceXs),
-                                Icon(
-                                  Icons.chevron_right_rounded,
-                                  size: AppDimens.iconSm,
-                                  color: colors.primary
-                                      .withValues(alpha: 0.5),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
     );
   }
 }
-
-// ── _QuickActionCard ──────────────────────────────────────────────────────────
-
-class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({required this.action, required this.onTap});
-
-  final QuickAction action;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return ZuralogSpringButton(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          border: Border.all(color: colors.border),
-        ),
-        child: Row(
-          children: [
-            ZIconBadge(
-              icon: Icons.bolt_rounded,
-              color: colors.primary,
-              size: 40,
-              iconSize: AppDimens.iconMd,
-            ),
-            const SizedBox(width: AppDimens.spaceMd),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    action.title,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                  if (action.subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      action.subtitle,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: AppDimens.iconMd,
-              color: colors.primary.withValues(alpha: 0.5),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── _WellnessCheckinCard ──────────────────────────────────────────────────────
-
-/// Inline wellness check-in card — launches QuickLogSheet on tap.
-class _WellnessCheckinCard extends ConsumerWidget {
-  const _WellnessCheckinCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return ZuralogSpringButton(
-      onTap: () {
-        ref.read(hapticServiceProvider).light();
-        _showQuickLog(context, ref);
-      },
-      child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          child: Stack(
-            children: [
-              // Wellness-color radial glow — top-right corner.
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: const Alignment(0.9, -0.9),
-                        radius: 0.8,
-                        colors: [
-                          AppColors.categoryWellness.withValues(alpha: 0.08),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(AppDimens.spaceMd),
-                decoration: BoxDecoration(
-                  color: colors.cardBackground,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                  border: Border.all(
-                    color: AppColors.categoryWellness.withValues(alpha: 0.15),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    ZIconBadge(
-                      icon: Icons.self_improvement_rounded,
-                      color: AppColors.categoryWellness,
-                      size: 40,
-                      iconSize: AppDimens.iconMd,
-                    ),
-                    const SizedBox(width: AppDimens.spaceMd),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                           Text(
-                            'Wellness check-in',
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Log mood, energy, and water intake',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.add_circle_outline_rounded,
-                      size: AppDimens.iconMd,
-                      color: AppColors.categoryWellness,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-    );
-  }
-}
-
-// ── _EmptyInsightsCard ────────────────────────────────────────────────────────
-
-class _EmptyInsightsCard extends ConsumerWidget {
-  const _EmptyInsightsCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          border: Border.all(color: colors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                ZIconBadge(
-                  icon: Icons.lightbulb_outline_rounded,
-                  color: colors.primary,
-                  size: 44,
-                  iconSize: 24,
-                ),
-                const SizedBox(width: AppDimens.spaceMd),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Insights on the way',
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Your AI coach is ready — start logging to unlock personalized observations.',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            // Two action prompts
-            _InsightActionRow(
-              icon: Icons.self_improvement_rounded,
-              color: AppColors.categoryWellness,
-              label: 'Log today\'s mood & energy',
-              onTap: () => _showQuickLog(context, ref),
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            _InsightActionRow(
-              icon: Icons.cable_rounded,
-              color: AppColors.categoryActivity,
-              label: 'Connect a health app',
-              onTap: () => context.push(RouteNames.settingsIntegrationsPath),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InsightActionRow extends StatelessWidget {
-  const _InsightActionRow({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ZuralogSpringButton(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceSm,
-        ),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppDimens.radiusSm + 4),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: AppDimens.spaceSm),
-            Expanded(
-              child: Text(
-                label,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 16,
-              color: color.withValues(alpha: 0.6),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -884,102 +446,4 @@ String _timeOfDayGreeting([String? name]) {
   }
   if (name != null && name.isNotEmpty) return '$base, $name';
   return base;
-}
-
-/// Returns a human-readable relative time string (e.g. "2h ago").
-String _relativeTime(DateTime dt) {
-  final diff = DateTime.now().difference(dt);
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  return '${diff.inDays}d ago';
-}
-
-/// Returns an icon for the given [InsightType].
-IconData _insightIcon(InsightType type) {
-  switch (type) {
-    case InsightType.anomaly:
-      return Icons.warning_amber_rounded;
-    case InsightType.correlation:
-      return Icons.compare_arrows_rounded;
-    case InsightType.trend:
-      return Icons.trending_up_rounded;
-    case InsightType.recommendation:
-      return Icons.tips_and_updates_rounded;
-    case InsightType.achievement:
-      return Icons.emoji_events_rounded;
-    case InsightType.unknown:
-      return Icons.lightbulb_outline_rounded;
-  }
-}
-
-/// Shows the QuickLogSheet bottom sheet and handles submission.
-void _showQuickLog(
-  BuildContext context,
-  WidgetRef ref, {
-  String? initialMetric,
-}) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.25,
-      maxChildSize: 0.95,
-      expand: false,
-      snap: true,
-      snapSizes: const [0.75, 0.95],
-      shouldCloseOnMinExtent: true,
-      builder: (_, scrollController) => Consumer(
-        builder: (ctx, r, _) {
-          final isLoading = r.watch(quickLogLoadingProvider);
-          return QuickLogSheet(
-            isLoading: isLoading,
-            initialMetric: initialMetric,
-            scrollController: scrollController,
-            onSubmit: (data) async {
-              r.read(quickLogLoadingProvider.notifier).state = true;
-              try {
-                await r.read(todayRepositoryProvider).submitQuickLog({
-                  'mood': data.mood,
-                  'energy': data.energy,
-                  'stress': data.stress,
-                  'water_glasses': data.waterGlasses,
-                  'notes': data.notes,
-                  'symptoms': data.symptoms,
-                });
-                r.read(hapticServiceProvider).success();
-                r.read(analyticsServiceProvider).capture(
-                  event: AnalyticsEvents.quickLogSubmitted,
-                  properties: {
-                    'has_mood': data.mood > 0,
-                    'has_energy': data.energy > 0,
-                    'has_stress': data.stress > 0,
-                    'water_glasses': data.waterGlasses,
-                    'has_notes': data.notes.isNotEmpty,
-                    'symptoms_count': data.symptoms.length,
-                  },
-                );
-                // First-use guard — synchronous via prefsProvider.
-                final prefs = r.read(prefsProvider);
-                if (prefs.getBool('analytics_first_quick_log') != true) {
-                  unawaited(prefs.setBool('analytics_first_quick_log', true));
-                  r.read(analyticsServiceProvider).capture(
-                    event: AnalyticsEvents.firstQuickLog,
-                  );
-                }
-                r.invalidate(todayFeedProvider);
-                r.invalidate(healthScoreProvider);
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              } catch (_) {
-                r.read(hapticServiceProvider).warning();
-              } finally {
-                r.read(quickLogLoadingProvider.notifier).state = false;
-              }
-            },
-          );
-        },
-      ),
-    ),
-  );
 }
