@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15); --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 3rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.3rem; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .log-card { background: var(--bg-secondary); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+    .log-card-label { padding: 0.85rem 1rem 1rem; }
+    .log-card-label h3 { font-size: 0.88rem; margin-bottom: 0.3rem; }
+    .log-card-label ul { margin-left: 1rem; font-size: 0.78rem; color: var(--text-secondary); }
+    .log-card-label ul li { margin-bottom: 0.2rem; }
+    .tag { display: inline-block; font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; font-weight: 500; margin-left: 0.3rem; }
+    .tag-auto { background: rgba(52,199,89,0.15); color: #16a34a; }
+    .tag-manual { background: rgba(251,146,60,0.15); color: #d97706; }
+    /* Phone */
+    .phone-wrap { background: var(--bg-tertiary); padding: 1rem; display: flex; justify-content: center; }
+    .phone { width: 140px; height: 185px; background: #1a1a1a; border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #2a2a2a; }
+    .phone-screen { flex: 1; background: #0d0d0d; display: flex; flex-direction: column; justify-content: flex-end; }
+    .sheet { border-radius: 14px 14px 0 0; padding: 8px 10px 10px; background: #1c1c1e; }
+    .handle { width: 24px; height: 3px; border-radius: 2px; margin: 0 auto 7px; background: rgba(255,255,255,0.18); }
+    .sh-title { font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.85); margin-bottom: 6px; }
+    .big-num { font-size: 28px; font-weight: 700; color: #fff; text-align: center; line-height: 1; }
+    .num-unit { font-size: 8px; color: rgba(255,255,255,0.35); text-align: center; margin-bottom: 5px; }
+    .num-context { font-size: 6.5px; color: rgba(255,255,255,0.25); text-align: center; margin-bottom: 6px; }
+    .presets { display: flex; gap: 3px; margin-bottom: 6px; }
+    .preset-chip { flex: 1; background: rgba(255,255,255,0.06); border-radius: 6px; height: 14px; display: flex; align-items: center; justify-content: center; font-size: 6.5px; color: rgba(255,255,255,0.4); }
+    .preset-chip.active { background: rgba(16,185,129,0.2); color: #10b981; }
+    .save-btn { border-radius: 7px; height: 17px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; font-weight: 700; color: #fff; }
+    .auto-note { background: rgba(52,199,89,0.08); border: 1px solid rgba(52,199,89,0.2); border-radius: 6px; padding: 4px 6px; font-size: 6.5px; color: rgba(255,255,255,0.45); margin-bottom: 6px; line-height: 1.4; }
+    .unit-toggle { display: flex; gap: 3px; margin-bottom: 5px; }
+    .unit-btn { flex: 1; height: 14px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 7px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.35); }
+    .unit-btn.active { background: rgba(239,68,68,0.2); color: #f87171; }
+    .info-box { background: var(--bg-secondary); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--text-secondary); }
+    .info-box strong { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Log Detail: 👟 Steps · ⚖️ Weight · 🔥 Calories</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>👟 Steps &nbsp;·&nbsp; ⚖️ Weight &nbsp;·&nbsp; 🔥 Calories</h2>
+      <p class="subtitle">These are all single-number logs. Each has its own nuance — here's how each one should work and what context to show alongside it.</p>
+
+      <div class="cols">
+
+        <!-- Steps -->
+        <div class="log-card">
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="sheet">
+                  <div class="handle"></div>
+                  <div class="sh-title">👟 Steps</div>
+                  <div class="auto-note">✓ Apple Health synced 6,200 steps today — you can override below</div>
+                  <div class="big-num">8,500</div>
+                  <div class="num-unit">steps today</div>
+                  <div class="num-context">Goal: 10,000 · 85% done</div>
+                  <div class="save-btn" style="background:#10b981;">Save</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="log-card-label">
+            <h3>👟 Steps</h3>
+            <ul>
+              <li>If Apple Health / Health Connect is connected, today's step count is pre-filled <span class="tag tag-auto">auto-synced</span></li>
+              <li>User can still manually override — useful if wearing a separate tracker</li>
+              <li>Shows progress toward daily goal</li>
+              <li>If no integration connected, shows a numeric input with keyboard <span class="tag tag-manual">manual</span></li>
+              <li>No presets needed — steps are always a specific number</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Weight -->
+        <div class="log-card">
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="sheet">
+                  <div class="handle"></div>
+                  <div class="sh-title">⚖️ Weight</div>
+                  <div class="unit-toggle">
+                    <div class="unit-btn">kg</div>
+                    <div class="unit-btn active">lbs</div>
+                  </div>
+                  <div class="big-num">163</div>
+                  <div class="num-unit">lbs &nbsp;·&nbsp; last logged: yesterday 162 lbs</div>
+                  <div class="num-context">+1 lb from yesterday</div>
+                  <div style="height:4px;"></div>
+                  <div class="save-btn" style="background:#8b5cf6;">Save</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="log-card-label">
+            <h3>⚖️ Weight</h3>
+            <ul>
+              <li>kg / lbs toggle — remembers preference</li>
+              <li>Pre-fills with last logged value so you just nudge it up or down</li>
+              <li>Shows delta from yesterday ("−0.5 kg from yesterday") for quick context</li>
+              <li>Numeric keyboard input — no presets, weight is always specific</li>
+              <li>Optional: time of day note (morning weight is most consistent)</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Calories -->
+        <div class="log-card">
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="sheet">
+                  <div class="handle"></div>
+                  <div class="sh-title">🔥 Calories</div>
+                  <div class="big-num">1,840</div>
+                  <div class="num-unit">kcal today</div>
+                  <div class="num-context">Goal: 2,200 kcal · 360 remaining</div>
+                  <div class="presets">
+                    <div class="preset-chip">+200</div>
+                    <div class="preset-chip active">+400</div>
+                    <div class="preset-chip">+600</div>
+                    <div class="preset-chip">+800</div>
+                  </div>
+                  <div class="save-btn" style="background:#ef4444;">Add</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="log-card-label">
+            <h3>🔥 Calories</h3>
+            <ul>
+              <li>Additive — each log adds to the running daily total (unlike weight which replaces)</li>
+              <li>Quick preset buttons: +200, +400, +600, +800 kcal — for rough estimates</li>
+              <li>Custom amount field for precision</li>
+              <li>Shows remaining vs. daily goal</li>
+              <li>Note: this is a rough tracker — not a full nutrition log (that's what Meal is for)</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="info-box">
+        <strong>Note on Steps:</strong> Most users with Apple Health or Fitbit connected won't need to log steps manually — it syncs automatically. The manual log is a fallback for users without integrations or those using a standalone tracker not yet supported. We should surface a gentle nudge to connect an integration if steps are always being entered manually.
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span>Review these — tell me any changes in the terminal, then we'll move on to the complex logs</span>
+  </div>
+</body>
+</html>

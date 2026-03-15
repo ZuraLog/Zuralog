@@ -59,6 +59,7 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = AppColorsOf(context);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -69,7 +70,7 @@ class SectionHeader extends StatelessWidget {
           height: 18,
           margin: const EdgeInsets.only(right: AppDimens.spaceSm),
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: colors.primary,
             borderRadius: BorderRadius.circular(2),
           ),
         ),

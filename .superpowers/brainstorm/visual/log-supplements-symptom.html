@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15); --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 3rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.3rem; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 0.75rem; font-size: 0.9rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem; align-items: start; margin-bottom: 2rem; }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+    .phone-wrap { background: var(--bg-tertiary); border-radius: 16px; padding: 1.25rem; display: flex; justify-content: center; }
+    .phone { width: 155px; background: #1a1a1a; border-radius: 26px; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #2a2a2a; }
+    .phone-notch { height: 16px; background: #111; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+    .phone-notch-dot { width: 32px; height: 6px; background: #222; border-radius: 3px; }
+    .phone-screen { flex: 1; background: #0d0d0d; display: flex; flex-direction: column; overflow: hidden; }
+    .fs-bar { display: flex; align-items: center; gap: 5px; padding: 6px 8px 4px; flex-shrink: 0; }
+    .fs-back { font-size: 8px; }
+    .fs-title { font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,0.9); }
+    .fs-body { flex: 1; padding: 4px 8px 6px; display: flex; flex-direction: column; gap: 7px; overflow: hidden; }
+    .section-lbl { font-size: 6.5px; color: rgba(255,255,255,0.35); margin-bottom: 3px; }
+    .optional-badge { font-size: 5.5px; color: rgba(255,255,255,0.22); font-style: italic; margin-left: 3px; }
+    /* Supplements */
+    .saved-list { display: flex; flex-direction: column; gap: 3px; }
+    .saved-item { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 4px 7px; display: flex; align-items: center; justify-content: space-between; }
+    .saved-item.checked { background: rgba(168,85,247,0.12); }
+    .saved-name { font-size: 7px; color: rgba(255,255,255,0.65); }
+    .saved-name.checked { color: #c084fc; }
+    .saved-dose { font-size: 6px; color: rgba(255,255,255,0.3); }
+    .saved-check { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 7px; }
+    .saved-check.done { background: #7c3aed; border-color: #7c3aed; color: white; }
+    .add-new { background: rgba(168,85,247,0.08); border: 1px dashed rgba(168,85,247,0.25); border-radius: 6px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 6.5px; color: rgba(168,85,247,0.6); }
+    .note-field { background: rgba(255,255,255,0.05); border-radius: 5px; height: 14px; display: flex; align-items: center; padding: 0 5px; font-size: 6.5px; color: rgba(255,255,255,0.22); }
+    .fs-save-purple { background: #7c3aed; border-radius: 7px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; color: #fff; font-weight: 700; margin: 2px 8px 8px; flex-shrink: 0; }
+    /* Symptom */
+    .body-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .bchip { font-size: 6.5px; padding: 2px 6px; border-radius: 8px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35); }
+    .bchip.active { background: rgba(239,68,68,0.18); color: #f87171; }
+    .severity-row { display: flex; justify-content: space-between; align-items: center; gap: 3px; }
+    .sev-block { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .sev-dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 9px; }
+    .sev-dot.active { border-color: #f87171; background: rgba(239,68,68,0.2); }
+    .sev-lbl { font-size: 5.5px; color: rgba(255,255,255,0.25); }
+    .sev-lbl.active { color: #f87171; }
+    .type-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+    .tchip { font-size: 6.5px; padding: 2px 6px; border-radius: 8px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+    .tchip.active { background: rgba(239,68,68,0.15); color: #f87171; }
+    .timing-chips { display: flex; gap: 3px; }
+    .timing-chip { flex: 1; font-size: 6px; padding: 2px 4px; border-radius: 6px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); text-align: center; }
+    .timing-chip.active { background: rgba(239,68,68,0.12); color: #f87171; }
+    .fs-save-red { background: #dc2626; border-radius: 7px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; color: #fff; font-weight: 700; margin: 2px 8px 8px; flex-shrink: 0; }
+    /* Desc cards */
+    .desc { background: var(--bg-secondary); border-radius: 14px; padding: 1.1rem 1.2rem; }
+    .desc ul { margin-left: 1rem; font-size: 0.82rem; color: var(--text-secondary); }
+    .desc ul li { margin-bottom: 0.4rem; }
+    .desc ul li strong { color: var(--text-primary); }
+    .tag { display: inline-block; font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; font-weight: 500; margin-left: 0.25rem; }
+    .tag-opt { background: rgba(156,163,175,0.2); color: #6b7280; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0.5rem 0 1.5rem; }
+    .info-box { background: var(--bg-secondary); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--text-secondary); margin-top: 1rem; }
+    .info-box strong { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Log Detail: 💊 Supplements/Meds · 🩹 Symptom</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <!-- SUPPLEMENTS -->
+      <h2>💊 Supplements / Meds</h2>
+      <p class="subtitle">A daily checklist of what you take — not a prescription manager. The first time you open it you build your personal list. After that, logging is just ticking boxes.</p>
+
+      <div class="two-col">
+        <div class="phone-wrap">
+          <div class="phone" style="height:290px;">
+            <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+            <div class="phone-screen">
+              <div class="fs-bar">
+                <div class="fs-back" style="color:#c084fc;">‹ Back</div>
+                <div class="fs-title">💊 Supplements / Meds</div>
+              </div>
+              <div class="fs-body">
+                <div class="section-lbl">Your list — tap to mark as taken today</div>
+                <div class="saved-list">
+                  <div class="saved-item checked">
+                    <div>
+                      <div class="saved-name checked">Vitamin D3</div>
+                      <div class="saved-dose">2000 IU · Morning</div>
+                    </div>
+                    <div class="saved-check done">✓</div>
+                  </div>
+                  <div class="saved-item checked">
+                    <div>
+                      <div class="saved-name checked">Omega-3</div>
+                      <div class="saved-dose">1000mg · Morning</div>
+                    </div>
+                    <div class="saved-check done">✓</div>
+                  </div>
+                  <div class="saved-item">
+                    <div>
+                      <div class="saved-name">Magnesium</div>
+                      <div class="saved-dose">400mg · Evening</div>
+                    </div>
+                    <div class="saved-check"></div>
+                  </div>
+                  <div class="saved-item">
+                    <div>
+                      <div class="saved-name">Creatine</div>
+                      <div class="saved-dose">5g · Any time</div>
+                    </div>
+                    <div class="saved-check"></div>
+                  </div>
+                  <div class="add-new">+ Add supplement or medication</div>
+                </div>
+                <div class="note-field">Notes… <span class="optional-badge">(optional)</span></div>
+              </div>
+              <div class="fs-save-purple">Save</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="desc">
+          <h3>Supplements / Meds — Field Breakdown</h3>
+          <ul>
+            <li><strong>Your saved list</strong> — Built once in settings or the first time you open this screen. Each item has a name, optional dose, and optional time of day (Morning / Evening / Any time). After setup, logging is just ticking boxes — one tap per item.</li>
+            <li><strong>Mark as taken</strong> — Tap any item to tick it off for today. Tap again to untick. The AI tracks consistency — "You took Magnesium on 18 of the last 30 days."</li>
+            <li><strong>Add new</strong> — Inline "+ Add supplement or medication" at the bottom. Name is required, dose and timing are optional. Saved to your list for future use.</li>
+            <li><strong>Notes</strong> — Free text for anything extra. <span class="tag tag-opt">optional</span></li>
+            <li><strong>Required</strong> — Nothing is technically required. If the list is empty, the screen shows an onboarding prompt to add your first item.</li>
+          </ul>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- SYMPTOM -->
+      <h2>🩹 Symptom</h2>
+      <p class="subtitle">Log when something feels off — a headache, soreness, stomach issue, fatigue. The AI uses this to find correlations — e.g. "Headaches tend to follow nights with less than 6 hours of sleep."</p>
+
+      <div class="two-col">
+        <div class="phone-wrap">
+          <div class="phone" style="height:305px;">
+            <div class="phone-notch"><div class="phone-notch-dot"></div></div>
+            <div class="phone-screen">
+              <div class="fs-bar">
+                <div class="fs-back" style="color:#f87171;">‹ Back</div>
+                <div class="fs-title">🩹 Log Symptom</div>
+              </div>
+              <div class="fs-body">
+                <!-- Body area -->
+                <div>
+                  <div class="section-lbl">Where / what?</div>
+                  <div class="body-chips">
+                    <div class="bchip active">Head</div>
+                    <div class="bchip">Stomach</div>
+                    <div class="bchip">Back</div>
+                    <div class="bchip">Chest</div>
+                    <div class="bchip">Throat</div>
+                    <div class="bchip">Joints</div>
+                    <div class="bchip">Muscles</div>
+                    <div class="bchip">Skin</div>
+                    <div class="bchip">General</div>
+                  </div>
+                </div>
+                <!-- Symptom type -->
+                <div>
+                  <div class="section-lbl">Type <span class="optional-badge">(optional)</span></div>
+                  <div class="type-chips">
+                    <div class="tchip active">Pain</div>
+                    <div class="tchip">Ache</div>
+                    <div class="tchip">Nausea</div>
+                    <div class="tchip">Fatigue</div>
+                    <div class="tchip">Bloating</div>
+                    <div class="tchip">Soreness</div>
+                    <div class="tchip">Dizziness</div>
+                    <div class="tchip">Other</div>
+                  </div>
+                </div>
+                <!-- Severity -->
+                <div>
+                  <div class="section-lbl">Severity</div>
+                  <div class="severity-row">
+                    <div class="sev-block"><div class="sev-dot">😌</div><div class="sev-lbl">Mild</div></div>
+                    <div class="sev-block"><div class="sev-dot active">😣</div><div class="sev-lbl active">Moderate</div></div>
+                    <div class="sev-block"><div class="sev-dot">😩</div><div class="sev-lbl">Bad</div></div>
+                    <div class="sev-block"><div class="sev-dot">🤕</div><div class="sev-lbl">Severe</div></div>
+                  </div>
+                </div>
+                <!-- Timing -->
+                <div>
+                  <div class="section-lbl">When did it start? <span class="optional-badge">(optional)</span></div>
+                  <div class="timing-chips">
+                    <div class="timing-chip active">Just now</div>
+                    <div class="timing-chip">This morning</div>
+                    <div class="timing-chip">Yesterday</div>
+                    <div class="timing-chip">A few days ago</div>
+                  </div>
+                </div>
+                <div class="note-field">Describe it… <span class="optional-badge">(optional)</span></div>
+              </div>
+              <div class="fs-save-red">Save Symptom</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="desc">
+          <h3>Symptom — Field Breakdown</h3>
+          <ul>
+            <li><strong>Where / what?</strong> — Body area chips: Head, Stomach, Back, Chest, Throat, Joints, Muscles, Skin, General. Multi-select. Required. This is the fastest way to get the most useful data point.</li>
+            <li><strong>Type</strong> — What kind of symptom: Pain, Ache, Nausea, Fatigue, Bloating, Soreness, Dizziness, Other. <span class="tag tag-opt">optional</span></li>
+            <li><strong>Severity</strong> — 4-level emoji scale: Mild / Moderate / Bad / Severe. Required. Keeps it human — not a clinical 0–10 scale.</li>
+            <li><strong>When did it start?</strong> — Timing chips: Just now, This morning, Yesterday, A few days ago. Helps the AI correlate with past logs. <span class="tag tag-opt">optional</span></li>
+            <li><strong>Notes</strong> — Free text to describe it more. <span class="tag tag-opt">optional</span></li>
+            <li><strong>Required</strong> — Body area and severity only. Everything else optional and labelled.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <strong>Why symptoms matter for AI:</strong> Symptoms are the most powerful correlation data in the app. A headache logged alone is noise. A headache that consistently follows poor sleep, or meals tagged "Alcohol", or high stress days — that's an insight worth surfacing. The more symptoms users log, the smarter the AI gets at finding those patterns.
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span>Review Supplements/Meds and Symptom — confirm in terminal and we'll wrap up all logs</span>
+  </div>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15); --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 2rem; min-height: 100%; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    .selected-text { color: var(--accent); font-weight: 500; }
+    h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+    h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+    .card { background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 16px; overflow: hidden; cursor: pointer; transition: all 0.15s ease; }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .card.selected { border-color: var(--selected-border); background: var(--selected-bg); }
+    .card-preview { background: var(--bg-tertiary); padding: 1.25rem; display: flex; align-items: flex-end; justify-content: flex-end; min-height: 160px; position: relative; }
+    .card-body { padding: 1rem; }
+    .card-body p { color: var(--text-secondary); font-size: 0.82rem; margin-top: 0.25rem; }
+    /* Mock phone shell */
+    .phone { width: 120px; height: 130px; background: #222; border-radius: 16px; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 10px; overflow: hidden; }
+    .phone-screen { position: absolute; inset: 3px; background: #111; border-radius: 13px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 8px; overflow: hidden; }
+    /* FAB radial style */
+    .fab-radial { width: 28px; height: 28px; background: #6ee7b7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; position: relative; z-index: 2; flex-shrink: 0; }
+    .fab-radial-items { position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+    .fab-radial-item { width: 22px; height: 22px; background: rgba(110,231,183,0.25); border: 1.5px solid #6ee7b7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+    /* FAB bottom sheet style */
+    .fab-sheet-btn { width: 28px; height: 28px; background: #6ee7b7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .fab-sheet-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: rgba(30,30,30,0.95); border-radius: 10px 10px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; padding: 6px 4px; }
+    .fab-sheet-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 9px; color: #aaa; }
+    .fab-sheet-icon { font-size: 14px; }
+    /* FAB category style */
+    .fab-cat-btn { width: 28px; height: 28px; background: #6ee7b7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .fab-cat-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 95px; background: rgba(30,30,30,0.95); border-radius: 10px 10px 0 0; padding: 6px; }
+    .fab-cat-tabs { display: flex; gap: 4px; margin-bottom: 5px; }
+    .fab-cat-tab { font-size: 8px; padding: 2px 6px; border-radius: 8px; background: rgba(110,231,183,0.2); color: #6ee7b7; border: 1px solid #6ee7b7; }
+    .fab-cat-items { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+    .fab-cat-item { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 8px; color: #aaa; }
+    /* smart suggestion style */
+    .fab-smart-btn { width: 28px; height: 28px; background: #6ee7b7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .fab-smart-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(30,30,30,0.95); border-radius: 10px 10px 0 0; padding: 6px; }
+    .fab-smart-title { font-size: 8px; color: #6ee7b7; margin-bottom: 4px; }
+    .fab-smart-items { display: flex; flex-direction: column; gap: 3px; }
+    .fab-smart-item { font-size: 8px; color: #ddd; background: rgba(255,255,255,0.05); border-radius: 5px; padding: 3px 5px; display: flex; align-items: center; gap: 4px; }
+    .fab-smart-all { font-size: 7px; color: #888; margin-top: 3px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Zuralog Today Tab</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>Question 3 of several</h2>
+      <p class="subtitle">When the user taps the floating button, how does the log menu open? This affects how fast and how enjoyable the experience feels. Each option below shows a rough preview of how it would look on screen.</p>
+
+      <div class="cards">
+
+        <div class="card" data-choice="radial" onclick="toggleSelect(this)">
+          <div class="card-preview">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="fab-radial-items">
+                  <div class="fab-radial-item">😴</div>
+                  <div class="fab-radial-item">🏃</div>
+                  <div class="fab-radial-item">💧</div>
+                  <div class="fab-radial-item">🍽️</div>
+                </div>
+                <div class="fab-radial">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <h3>A — Radial / Arc Menu</h3>
+            <p>Icons fan out in an arc above the button. Looks great, very fast for power users. Can get cluttered with 12+ types.</p>
+          </div>
+        </div>
+
+        <div class="card" data-choice="sheet" onclick="toggleSelect(this)">
+          <div class="card-preview">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="fab-sheet-overlay">
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">👟</div>Steps</div>
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">🏋️</div>Workout</div>
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">😴</div>Sleep</div>
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">💧</div>Water</div>
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">🍽️</div>Meal</div>
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">😊</div>Mood</div>
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">⚖️</div>Weight</div>
+                  <div class="fab-sheet-item"><div class="fab-sheet-icon">🔥</div>Calories</div>
+                </div>
+                <div style="position:absolute;bottom:6px;right:8px;" class="fab-sheet-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <h3>B — Full Bottom Sheet Grid</h3>
+            <p>A sheet slides up showing all log types in a grid. Easy to scan, nothing hidden. Works well for 12 types with room to grow.</p>
+          </div>
+        </div>
+
+        <div class="card" data-choice="category" onclick="toggleSelect(this)">
+          <div class="card-preview">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="fab-cat-overlay">
+                  <div class="fab-cat-tabs">
+                    <div class="fab-cat-tab">Body</div>
+                    <div class="fab-cat-tab">Food</div>
+                    <div class="fab-cat-tab">Mind</div>
+                  </div>
+                  <div class="fab-cat-items">
+                    <div class="fab-cat-item"><div>👟</div>Steps</div>
+                    <div class="fab-cat-item"><div>🏋️</div>Workout</div>
+                    <div class="fab-cat-item"><div>🏃</div>Run</div>
+                    <div class="fab-cat-item"><div>⚖️</div>Weight</div>
+                  </div>
+                </div>
+                <div style="position:absolute;bottom:6px;right:8px;" class="fab-cat-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <h3>C — Bottom Sheet with Category Tabs</h3>
+            <p>Sheet slides up with tabs at the top: Body, Food, Mind. User swipes between categories. Very clean, scales well to 50+ types later.</p>
+          </div>
+        </div>
+
+        <div class="card" data-choice="smart" onclick="toggleSelect(this)">
+          <div class="card-preview">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="fab-smart-overlay">
+                  <div class="fab-smart-title">✨ Suggested for you right now</div>
+                  <div class="fab-smart-items">
+                    <div class="fab-smart-item">😴 Log last night's sleep</div>
+                    <div class="fab-smart-item">💧 Water — 3 glasses so far</div>
+                    <div class="fab-smart-item">🏋️ Log today's workout</div>
+                  </div>
+                  <div class="fab-smart-all">See all log types ›</div>
+                </div>
+                <div style="position:absolute;bottom:6px;right:8px;" class="fab-smart-btn">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <h3>D — Smart Suggestions First</h3>
+            <p>Opens showing 3–4 AI-suggested logs based on time of day and what's missing. "See all" expands to the full grid. The most convenient experience — feels personal.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span id="indicator-text">Click your preferred style, then tell me in the terminal</span>
+  </div>
+
+  <script>
+    function toggleSelect(el) {
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      const title = el.querySelector('h3').textContent;
+      document.getElementById('indicator-text').innerHTML = 'Selected: <span class="selected-text">' + title + '</span> — tell me in the terminal';
+    }
+  </script>
+</body>
+</html>

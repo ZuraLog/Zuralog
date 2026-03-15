@@ -34,7 +34,7 @@ void main() {
       expect(find.text('Summary text here'), findsOneWidget);
     });
 
-    testWidgets('shows category chip when rendered', (tester) async {
+    testWidgets('renders category chip and title for unread card', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -51,6 +51,49 @@ void main() {
       expect(find.text('Sleep'), findsOneWidget);
       // Title is rendered.
       expect(find.text('Test Insight Title'), findsOneWidget);
+    });
+
+    testWidgets('shows unread dot container when isRead is false', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: ZInsightCard(
+                insight: _makeInsight(isRead: false),
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      // Unread dot is a 6×6 circle Container
+      final dot = find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+      );
+      expect(dot, findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('does not show unread dot when isRead is true', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: ZInsightCard(
+                insight: _makeInsight(isRead: true),
+                onTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      final dot = find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+      );
+      expect(dot, findsNothing);
     });
 
     testWidgets('calls onTap when tapped', (tester) async {

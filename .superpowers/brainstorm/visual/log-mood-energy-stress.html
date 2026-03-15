@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Superpowers Brainstorming</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    :root {
+      --bg-primary: #f5f5f7; --bg-secondary: #ffffff; --bg-tertiary: #e5e5e7;
+      --border: #d1d1d6; --text-primary: #1d1d1f; --text-secondary: #86868b;
+      --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; --success: #34c759;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1d1d1f; --bg-secondary: #2d2d2f; --bg-tertiary: #3d3d3f;
+        --border: #424245; --text-primary: #f5f5f7; --text-secondary: #86868b;
+        --accent: #0a84ff; --selected-bg: rgba(10,132,255,0.15); --selected-border: #0a84ff;
+      }
+    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; flex-direction: column; line-height: 1.5; }
+    .header { background: var(--bg-secondary); padding: 0.5rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .main { flex: 1; overflow-y: auto; }
+    #claude-content { padding: 1.5rem 2rem 3rem; }
+    .indicator-bar { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 0.5rem 1.5rem; flex-shrink: 0; text-align: center; }
+    .indicator-bar span { font-size: 0.75rem; color: var(--text-secondary); }
+    .selected-text { color: var(--accent); font-weight: 500; }
+    h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.3rem; }
+    h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .option { background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 14px; overflow: hidden; cursor: pointer; transition: all 0.15s ease; }
+    .option:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+    .option.selected { border-color: var(--selected-border); background: var(--selected-bg); }
+    .option-label { padding: 0.85rem 1rem; }
+    .option-label p { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem; }
+    /* Phone */
+    .phone-wrap { background: var(--bg-tertiary); padding: 1rem; display: flex; justify-content: center; }
+    .phone { width: 140px; height: 190px; background: #1a1a1a; border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; position: relative; border: 2px solid #2a2a2a; }
+    .phone-screen { flex: 1; background: #0d0d0d; position: relative; display: flex; flex-direction: column; justify-content: flex-end; }
+    .sheet { border-radius: 14px 14px 0 0; padding: 8px 10px 10px; }
+    .handle { width: 24px; height: 3px; border-radius: 2px; margin: 0 auto 7px; background: rgba(255,255,255,0.18); }
+    .sh-title { font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.85); margin-bottom: 7px; }
+    /* Slider row */
+    .slider-block { margin-bottom: 7px; }
+    .slider-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+    .slider-name { font-size: 7px; color: rgba(255,255,255,0.5); }
+    .slider-val { font-size: 8px; font-weight: 700; }
+    .slider-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); position: relative; margin-bottom: 2px; }
+    .slider-fill { height: 100%; border-radius: 3px; }
+    .slider-ends { display: flex; justify-content: space-between; font-size: 6px; color: rgba(255,255,255,0.2); }
+    /* Emoji row */
+    .emoji-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .emoji-opt { font-size: 14px; opacity: 0.3; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .emoji-opt.active { opacity: 1; }
+    .emoji-sub { font-size: 5.5px; color: rgba(255,255,255,0.3); }
+    .emoji-opt.active .emoji-sub { color: rgba(255,255,255,0.7); }
+    /* Combined all-in-one */
+    .combo-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+    .mini-slider { display: flex; align-items: center; gap: 5px; }
+    .mini-icon { font-size: 10px; width: 14px; text-align: center; }
+    .mini-track { flex: 1; height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; position: relative; }
+    .mini-fill { height: 100%; border-radius: 2px; }
+    .mini-val { font-size: 7px; font-weight: 600; width: 12px; text-align: right; }
+    /* note field */
+    .note-field { background: rgba(255,255,255,0.05); border-radius: 5px; height: 14px; display: flex; align-items: center; padding: 0 5px; font-size: 6.5px; color: rgba(255,255,255,0.25); margin-bottom: 5px; }
+    .save-btn { border-radius: 7px; height: 17px; display: flex; align-items: center; justify-content: center; font-size: 7.5px; font-weight: 700; }
+    .info-box { background: var(--bg-secondary); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--text-secondary); margin-top: 1rem; }
+    .info-box strong { color: var(--text-primary); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Superpowers Brainstorming — Log Detail: 😊 Mood · ⚡ Energy · 😤 Stress</h1>
+    <div class="status">Connected</div>
+  </div>
+  <div class="main">
+    <div id="claude-content">
+
+      <h2>😊 Mood · ⚡ Energy · 😤 Stress</h2>
+      <p class="subtitle">These three are closely related — they're all a feeling on a scale. The question is whether they feel better as a number slider, an emoji pick, or all logged together at once. Three approaches:</p>
+
+      <div class="grid3">
+
+        <!-- Option A: Slider per metric, logged one at a time -->
+        <div class="option" data-choice="individual-slider" onclick="toggleSelect(this)">
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="sheet" style="background:#1c1c1e;">
+                  <div class="handle"></div>
+                  <div class="sh-title">😊 How's your mood?</div>
+                  <div class="slider-block">
+                    <div class="slider-label-row">
+                      <span class="slider-name">Mood</span>
+                      <span class="slider-val" style="color:#a78bfa;">7</span>
+                    </div>
+                    <div class="slider-track"><div class="slider-fill" style="width:70%;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div></div>
+                    <div class="slider-ends"><span>Low</span><span>High</span></div>
+                  </div>
+                  <div class="note-field">Add a note… (optional)</div>
+                  <div class="save-btn" style="background:#7c3aed;color:#fff;">Save Mood</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="option-label">
+            <h3>A — One at a time, slider</h3>
+            <p>Each metric is its own log entry with a 1–10 slider and optional note. Clean and focused. You pick which one to log from the grid.</p>
+          </div>
+        </div>
+
+        <!-- Option B: Emoji pick instead of slider -->
+        <div class="option" data-choice="emoji-pick" onclick="toggleSelect(this)">
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="sheet" style="background:#1c1c1e;">
+                  <div class="handle"></div>
+                  <div class="sh-title">😊 How are you feeling?</div>
+                  <div class="emoji-row">
+                    <div class="emoji-opt"><span>😞</span><span class="emoji-sub">Awful</span></div>
+                    <div class="emoji-opt"><span>😕</span><span class="emoji-sub">Bad</span></div>
+                    <div class="emoji-opt"><span>😐</span><span class="emoji-sub">Okay</span></div>
+                    <div class="emoji-opt active"><span>🙂</span><span class="emoji-sub">Good</span></div>
+                    <div class="emoji-opt"><span>😄</span><span class="emoji-sub">Great</span></div>
+                  </div>
+                  <div style="font-size:6.5px;color:rgba(255,255,255,0.25);margin-bottom:5px;text-align:center;">Tap to select · maps to 1–10 internally</div>
+                  <div class="note-field">What's on your mind?… (optional)</div>
+                  <div class="save-btn" style="background:#7c3aed;color:#fff;">Save</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="option-label">
+            <h3>B — Emoji picker (5 faces)</h3>
+            <p>Five emoji faces instead of a number. More human and relatable — especially for non-fitness users. Maps to 1–10 internally for AI analysis. Optional note field.</p>
+          </div>
+        </div>
+
+        <!-- Option C: All three together -->
+        <div class="option" data-choice="combined" onclick="toggleSelect(this)">
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="sheet" style="background:#1c1c1e;">
+                  <div class="handle"></div>
+                  <div class="sh-title">✨ Quick Wellness Check</div>
+                  <div class="combo-row">
+                    <div class="mini-slider">
+                      <div class="mini-icon">😊</div>
+                      <div class="mini-track"><div class="mini-fill" style="width:70%;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div></div>
+                      <div class="mini-val" style="color:#a78bfa;">7</div>
+                    </div>
+                    <div class="mini-slider">
+                      <div class="mini-icon">⚡</div>
+                      <div class="mini-track"><div class="mini-fill" style="width:50%;background:linear-gradient(90deg,#d97706,#fbbf24);"></div></div>
+                      <div class="mini-val" style="color:#fbbf24;">5</div>
+                    </div>
+                    <div class="mini-slider">
+                      <div class="mini-icon">😤</div>
+                      <div class="mini-track"><div class="mini-fill" style="width:30%;background:linear-gradient(90deg,#dc2626,#f87171);"></div></div>
+                      <div class="mini-val" style="color:#f87171;">3</div>
+                    </div>
+                  </div>
+                  <div class="note-field">How's your day going?… (optional)</div>
+                  <div class="save-btn" style="background:linear-gradient(90deg,#7c3aed,#0ea5e9);color:#fff;">Save Check-in</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="option-label">
+            <h3>C — All three together, one save</h3>
+            <p>Mood, Energy and Stress on one screen with compact sliders. Log all three in one tap. Feels like a daily check-in ritual. Still accessible individually from the grid.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="info-box">
+        <strong>My take:</strong> C is the strongest UX choice — logging all three together takes the same time as logging one, and the AI gets richer context from seeing them together. Mood without energy context is less useful data. Individual options (A or B) can still be accessible if the user wants to log just one.
+      </div>
+
+    </div>
+  </div>
+  <div class="indicator-bar">
+    <span id="indicator-text">Pick your preferred approach — then confirm in the terminal</span>
+  </div>
+  <script>
+    function toggleSelect(el) {
+      document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      const title = el.querySelector('h3').textContent;
+      document.getElementById('indicator-text').innerHTML = 'Selected: <span class="selected-text">' + title + '</span> — confirm in the terminal';
+    }
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/shared/widgets/layout/section_header.dart';
 
 void main() {
@@ -48,17 +49,36 @@ void main() {
           ),
         ),
       );
-      // The accent bar is a Container with a BoxDecoration that has a
-      // borderRadius. It is the only such Container in a plain SectionHeader.
+      // The accent bar is a Container with the primary colour (light mode =
+      // AppColors.primaryOnLight) and a borderRadius.
       final decoratedAccentBar = find.byWidgetPredicate(
-        (widget) =>
-            widget is Container &&
-            widget.decoration is BoxDecoration &&
-            (widget.decoration! as BoxDecoration).borderRadius != null,
+        (w) =>
+            w is Container &&
+            (w.decoration as BoxDecoration?)?.color == AppColors.primaryOnLight &&
+            (w.decoration as BoxDecoration?)?.borderRadius != null,
       );
       expect(decoratedAccentBar, findsOneWidget);
       // Title still renders (bar didn't break layout).
       expect(find.text('Hello'), findsOneWidget);
+    });
+
+    testWidgets('renders actionLabel and calls onAction when tapped', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SectionHeader(
+              title: 'Hello',
+              actionLabel: 'See All',
+              onAction: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('See All'), findsOneWidget);
+      await tester.tap(find.text('See All'));
+      await tester.pump();
+      expect(tapped, isTrue);
     });
 
     testWidgets('trailing takes precedence over actionLabel when both provided', (tester) async {

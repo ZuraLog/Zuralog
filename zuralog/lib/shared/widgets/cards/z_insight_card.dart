@@ -121,7 +121,7 @@ class ZInsightCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppDimens.spaceXs),
                           Text(
                             insight.summary,
                             style: AppTextStyles.bodyMedium.copyWith(

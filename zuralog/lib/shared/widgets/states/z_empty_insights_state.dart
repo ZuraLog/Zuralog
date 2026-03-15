@@ -46,7 +46,7 @@ class ZEmptyInsightsState extends StatelessWidget {
               Icon(
                 Icons.insights_rounded,
                 size: AppDimens.iconMd,
-                color: AppColors.primary,
+                color: colors.primary,
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Text(
@@ -105,12 +105,12 @@ class _ActionRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Icon(icon, size: AppDimens.iconSm, color: AppColors.primary),
+            Icon(icon, size: AppDimens.iconSm, color: colors.primary),
             const SizedBox(width: AppDimens.spaceXs),
             Text(
               label,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.primary,
+                color: colors.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
