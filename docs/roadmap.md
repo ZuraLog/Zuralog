@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-15 (Batches 9 & 10 complete: Flutter package pinning, SharedPreferences centralization, magic number extraction, ORM migration, smoke test rewrite, doc fixes)
+**Last Updated:** 2026-03-15 (All 10 architectural debt cleanup batches complete: N+1 query fixes, dead code removal, security hardening, data integrity, performance optimization, Flutter cleanup, and documentation fixes)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -660,3 +660,31 @@ Completed magic number extraction, ORM migration, smoke test rewrite, and docume
 | P1 | `onboarding_step_order` flag wired into `OnboardingFlowScreen` | ✅ Done | Step 2/3 order (Goals/Persona) is flag-controlled; analytics indices are flag-aware |
 | P1 | `notification_frequency_default` flag wired into `NotificationSettingsScreen` | ✅ Done | Seeds `reminderFrequency` initial state from PostHog on first open |
 | P1 | `ai_persona_default` flag wired into `CoachSettingsScreen` | ✅ Done | Seeds `_personaProvider` initial value from PostHog on first open |
+
+---
+
+## Architectural Debt Cleanup — All 10 Batches Complete (2026-03-15)
+
+> **Status:** ✅ **COMPLETE** — All 50 architectural debt items from the March 2026 audit have been fixed and deployed to production.
+
+**Batches completed:**
+
+| Batch | Branch | Focus | Status | Date |
+|-------|--------|-------|--------|------|
+| 1 | `fix/chat-n-plus-1-queries` | N+1 query fixes in chat endpoints | ✅ Done | 2026-03-14 |
+| 2 | `fix/dead-code-conversation-routes` | Delete dead backend router + test | ✅ Done | 2026-03-14 |
+| 3 | `fix/security-rate-limiting-webhooks` | Rate limiting + webhook verification | ✅ Done | 2026-03-14 |
+| 4 | `fix/security-dev-withings` | Withings webhook cleanup + dev endpoint clarity | ✅ Done | 2026-03-14 |
+| 5 | `fix/data-integrity-insights-ingest` | Duplicate insights fix + datetime deprecation | ✅ Done | 2026-03-14 |
+| 6 | `fix/flutter-hardcoded-values` | Remove hardcoded email, profile fields, prices | ✅ Done | 2026-03-14 |
+| 7 | `fix/flutter-dead-code-cleanup` | Delete dead Flutter screens + providers | ✅ Done | 2026-03-14 |
+| 8 | `fix/backend-performance-cleanup` | Parallelise analytics, consolidate auth, reduce sampling | ✅ Done | 2026-03-15 |
+| 9 | `fix/flutter-medium-priority` | Pin packages, centralise SharedPreferences, remove fire-and-forget | ✅ Done | 2026-03-15 |
+| 10 | `fix/low-priority-cleanup` | Extract magic numbers, ORM migration, smoke test rewrite, doc fixes | ✅ Done | 2026-03-15 |
+
+**Key fixes deployed:**
+- 10 broken test files fixed (Batches 1, 2, 7)
+- Railway deployment fix (Batch 8: auth deps consolidation)
+- Supabase migration idempotency fix (Batch 5: insights upsert)
+- `WITHINGS_API_BASE_URL` env var validation (Batch 8: integration config)
+- All 50 debt items resolved; zero regressions

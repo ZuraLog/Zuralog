@@ -1,9 +1,36 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-15 (Batches 9 & 10 complete: Flutter package pinning, SharedPreferences centralization, magic number extraction, ORM migration, smoke test rewrite, doc fixes)  
+**Last Updated:** 2026-03-15 (All 10 architectural debt cleanup batches complete and deployed)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Architectural Debt Cleanup — All 10 Batches Complete (2026-03-15)
+
+**Status:** ✅ **COMPLETE** — All 50 architectural debt items from the March 2026 audit have been fixed and deployed to production.
+
+**What was fixed:**
+
+1. **Batch 1–2:** N+1 query fixes in chat endpoints (`selectinload`, correlated subqueries); deleted 335-line dead backend router and its test file
+2. **Batch 3:** Added rate limiting to 12 unprotected endpoints; fixed Strava webhook subscription ID verification; fixed Fitbit timing-attack vulnerability; added CORS production warning
+3. **Batch 4:** Fixed Withings webhook subscription cleanup on disconnect; clarified dev endpoint device ownership model
+4. **Batch 5:** Fixed duplicate insight rows via unique constraint + upsert; fixed `datetime.utcnow()` deprecation
+5. **Batch 6:** Removed hardcoded email, profile fields, and subscription prices from Flutter app
+6. **Batch 7:** Deleted 4 dead Flutter screens (`ProfileQuestionnaire`, `IntegrationsHub`, `WsClient`, legacy `dashboardPath`)
+7. **Batch 8:** Parallelised dashboard analytics queries (6–10× faster); consolidated auth dependencies; reduced Sentry sampling; added integration config validation; removed permanent sync stub; moved `psycopg2-binary` to dev deps
+8. **Batch 9:** Pinned all 19 Flutter package versions; created central `prefsProvider` for SharedPreferences; removed fire-and-forget async chains; removed hardcoded goals from settings
+9. **Batch 10:** Extracted magic number `7` to named constants; replaced raw SQL with ORM query; rewrote smoke test; fixed documentation paths and descriptions
+
+**Key fixes deployed:**
+- 10 broken test files fixed (Batches 1, 2, 7)
+- Railway deployment fix (Batch 8: auth deps consolidation)
+- Supabase migration idempotency fix (Batch 5: insights upsert)
+- `WITHINGS_API_BASE_URL` env var validation (Batch 8: integration config)
+- All 50 debt items resolved; zero regressions
+
+---
 
 ---
 
