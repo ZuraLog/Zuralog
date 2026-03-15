@@ -182,10 +182,9 @@ class TodayRepository implements TodayRepositoryInterface {
 
   // ── Quick Log ──────────────────────────────────────────────────────────────
 
-  /// Submits a quick-log payload.
+  /// Submits a quick-log payload to the API.
   ///
-  /// [payload] — a map with keys `mood`, `energy`, `stress`,
-  /// `water_glasses`, `notes`, `symptoms`.
+  /// The keys and values in [payload] are determined by the caller.
   @override
   Future<void> submitQuickLog(Map<String, dynamic> payload) async {
     await _api.post('/api/v1/quick-log', data: payload);

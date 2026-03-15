@@ -58,7 +58,7 @@ final healthScoreProvider = FutureProvider<HealthScoreData>((ref) async {
 
 // ── Today Feed ─────────────────────────────────────────────────────────────────
 
-/// Async provider for the aggregated Today feed (insights + quick actions + streak).
+/// Async provider for the aggregated Today feed (insights + streak).
 ///
 /// Never puts the UI into an error state. All failures resolve to an empty
 /// [TodayFeedData] so the UI always reaches the [data:] branch and renders
