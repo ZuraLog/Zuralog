@@ -5,7 +5,6 @@
 ///   - AI insights list             (`GET /api/v1/insights`)
 ///   - Single insight detail        (`GET /api/v1/insights/:id`)
 ///   - Mark insight read/dismissed  (`PATCH /api/v1/insights/:id`)
-///   - Contextual quick actions     (`GET /api/v1/quick-actions`)
 ///   - Current streak               (`GET /api/v1/streaks`)
 ///   - Quick log submit             (`POST /api/v1/quick-log`)
 ///   - Notifications history        (`GET /api/v1/notifications`)
@@ -30,7 +29,7 @@ abstract interface class TodayRepositoryInterface {
   /// Fetches the current health score and 7-day trend.
   Future<HealthScoreData> getHealthScore();
 
-  /// Fetches all feed data in parallel: insights, quick actions, and streak.
+  /// Fetches all feed data in parallel: insights and streak.
   Future<TodayFeedData> getTodayFeed();
 
   /// Invalidates the feed cache, forcing the next [getTodayFeed] call to
@@ -100,7 +99,7 @@ class TodayRepository implements TodayRepositoryInterface {
 
   // ── Today Feed ─────────────────────────────────────────────────────────────
 
-  /// Fetches all feed data in parallel: insights, quick actions, and streak.
+  /// Fetches all feed data in parallel: insights and streak.
   ///
   /// Cached for 5 minutes. Each constituent call can fail independently;
   /// partial data is returned rather than failing the entire feed.
@@ -113,14 +112,12 @@ class TodayRepository implements TodayRepositoryInterface {
     // Fire all requests in parallel.
     final results = await Future.wait([
       _fetchInsights(),
-      _fetchQuickActions(),
       _fetchStreak(),
     ], eagerError: false);
 
     final data = TodayFeedData(
       insights: results[0] as List<InsightCard>,
-      quickActions: results[1] as List<QuickAction>,
-      streak: results[2] as StreakData?,
+      streak: results[1] as StreakData?,
     );
     _feedCache = _CacheEntry(value: data);
     return data;
@@ -170,20 +167,6 @@ class TodayRepository implements TodayRepositoryInterface {
   Future<void> dismissInsight(String id) async {
     await _api.patch('/api/v1/insights/$id', body: {'status': 'dismissed'});
     _feedCache = null;
-  }
-
-  // ── Quick Actions ──────────────────────────────────────────────────────────
-
-  Future<List<QuickAction>> _fetchQuickActions() async {
-    try {
-      final response = await _api.get('/api/v1/quick-actions');
-      final list = response.data['actions'] as List<dynamic>? ?? [];
-      return list
-          .map((e) => QuickAction.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } on DioException {
-      return [];
-    }
   }
 
   // ── Streaks ────────────────────────────────────────────────────────────────

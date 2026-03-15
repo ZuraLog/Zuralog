@@ -15,6 +15,7 @@
 /// - [userLoggedTypesProvider]        — set of metric types user has ever logged
 /// - [logRingProvider]                — state for the Log Ring widget
 /// - [snapshotProvider]               — list of snapshot card data
+/// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +71,7 @@ final todayFeedProvider = FutureProvider<TodayFeedData>((ref) async {
   try {
     return await repo.getTodayFeed();
   } catch (_) {
-    return TodayFeedData(insights: [], quickActions: [], streak: null);
+    return TodayFeedData(insights: [], streak: null);
   }
 });
 
@@ -114,14 +115,6 @@ final notificationsProvider = FutureProvider<NotificationPage>((ref) async {
 /// still insufficient. Permanent dismissal is handled separately via
 /// [dataMaturityBannerDismissedProvider] in `settings_providers.dart`.
 final todayBannerSessionDismissed = StateProvider<bool>((ref) => false);
-
-// ── Quick Log Loading ─────────────────────────────────────────────────────────
-
-/// Whether a quick-log submission is currently in flight.
-///
-/// Set to `true` when the submit button is tapped and `false` when the
-/// API call completes (success or failure).
-final quickLogLoadingProvider = StateProvider<bool>((ref) => false);
 
 // ── Today Log Summary ─────────────────────────────────────────────────────────
 
