@@ -163,7 +163,7 @@ class _GoalRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(2),
           child: LinearProgressIndicator(
             value: goal.fraction.clamp(0.0, 1.0),
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+            backgroundColor: colors.primary.withValues(alpha: 0.12),
             valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
             minHeight: 4,
           ),

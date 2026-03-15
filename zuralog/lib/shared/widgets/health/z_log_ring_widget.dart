@@ -74,8 +74,8 @@ class _RingContent extends StatelessWidget {
                 size: const Size(80, 80),
                 painter: _RingPainter(
                   fraction: state.fraction,
-                  trackColor: AppColors.primary.withValues(alpha: 0.12),
-                  fillColor: AppColors.primary,
+                  trackColor: colors.primary.withValues(alpha: 0.12),
+                  fillColor: colors.primary,
                 ),
               ),
               if (isEmpty)
