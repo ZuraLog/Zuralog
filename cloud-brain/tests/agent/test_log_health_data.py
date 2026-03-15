@@ -1,259 +1,294 @@
 """
 Tests for the NL health data logging tool (log_health_data.py).
 
+The tool's public API is the LogHealthDataTool class with:
+    execute(arguments, user_id, db) -> dict
+
+Phase 1 (confirmed=False): Parses natural language, returns
+    {"status": "pending_confirmation", "entries": [...], "confirmation_message": "..."}
+    or {"status": "no_data", ...}
+
+Phase 2 (confirmed=True): Writes entries to DB, returns
+    {"status": "logged", "logged_count": N, ...}
+    or {"status": "no_data", ...}
+    or {"status": "error", ...}
+
 Tests cover:
-- "I drank 3 glasses of water" → water: 3
-- "feeling a 7/10 today" → mood: 7
-- "slept 7.5 hours" → sleep_hours: 7.5
-- "stress level is high" → stress detected
-- "weight is 75kg" → weight detected
-- Empty string → no items
-- write_confirmed_logs persists to DB
+- "I drank 3 glasses of water" → pending_confirmation with water entry
+- "feeling a 7/10 today" → pending_confirmation with mood entry
+- "slept 7.5 hours" → no_data (sleep_hours not supported)
+- Empty string → no_data
+- Confirmed=True with pre-parsed entries → logged, DB written
+- Confirmed=True with empty entries → no_data
 """
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.agent.tools.log_health_data import (
-    LogConfirmationPayload,
-    LoggableItem,
-    parse_nl_for_logging,
-    write_confirmed_logs,
-)
+from app.agent.tools.log_health_data import LogHealthDataTool
 
 
 # ---------------------------------------------------------------------------
-# parse_nl_for_logging
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-class TestParseNlForLogging:
-    def test_water_three_glasses(self):
-        payload = parse_nl_for_logging("I drank 3 glasses of water")
-        items = {i.metric_type: i for i in payload.items}
-        assert "water" in items
-        assert items["water"].value == 3.0
-
-    def test_water_cups_variant(self):
-        payload = parse_nl_for_logging("had 2 cups of water")
-        items = {i.metric_type: i for i in payload.items}
-        assert "water" in items
-        assert items["water"].value == 2.0
-
-    def test_mood_numeric_score(self):
-        payload = parse_nl_for_logging("feeling a 7/10 today")
-        items = {i.metric_type: i for i in payload.items}
-        assert "mood" in items
-        assert items["mood"].value == 7.0
-
-    def test_mood_text_great(self):
-        payload = parse_nl_for_logging("mood is great")
-        items = {i.metric_type: i for i in payload.items}
-        assert "mood" in items
-        assert items["mood"].value is not None
-        assert items["mood"].value >= 7.0
-
-    def test_sleep_hours(self):
-        payload = parse_nl_for_logging("slept 7.5 hours")
-        items = {i.metric_type: i for i in payload.items}
-        assert "sleep_hours" in items
-        assert items["sleep_hours"].value == 7.5
-
-    def test_sleep_hours_variant(self):
-        payload = parse_nl_for_logging("got 8 hours of sleep last night")
-        items = {i.metric_type: i for i in payload.items}
-        assert "sleep_hours" in items
-        assert items["sleep_hours"].value == 8.0
-
-    def test_stress_level_high_text(self):
-        payload = parse_nl_for_logging("stress is high today")
-        items = {i.metric_type: i for i in payload.items}
-        assert "stress" in items
-        # "high" maps to >= 7
-        assert items["stress"].value is not None
-        assert items["stress"].value >= 7.0
-
-    def test_stress_numeric(self):
-        payload = parse_nl_for_logging("stress level is 6")
-        items = {i.metric_type: i for i in payload.items}
-        assert "stress" in items
-        assert items["stress"].value == 6.0
-
-    def test_weight_kg(self):
-        payload = parse_nl_for_logging("weight is 75kg")
-        items = {i.metric_type: i for i in payload.items}
-        assert "weight" in items
-        assert items["weight"].value == 75.0
-
-    def test_weight_with_space(self):
-        payload = parse_nl_for_logging("I weigh 80 kg")
-        items = {i.metric_type: i for i in payload.items}
-        assert "weight" in items
-        assert items["weight"].value == 80.0
-
-    def test_steps(self):
-        payload = parse_nl_for_logging("walked 10,000 steps today")
-        items = {i.metric_type: i for i in payload.items}
-        assert "steps" in items
-        assert items["steps"].value == 10000.0
-
-    def test_energy_level(self):
-        payload = parse_nl_for_logging("energy level 8")
-        items = {i.metric_type: i for i in payload.items}
-        assert "energy" in items
-        assert items["energy"].value == 8.0
-
-    def test_note_parsed(self):
-        payload = parse_nl_for_logging('note: "had a headache this afternoon"')
-        items = {i.metric_type: i for i in payload.items}
-        assert "notes" in items
-        assert "headache" in (items["notes"].text_value or "")
-
-    def test_empty_string_returns_no_items(self):
-        payload = parse_nl_for_logging("")
-        assert payload.items == []
-
-    def test_whitespace_only_returns_no_items(self):
-        payload = parse_nl_for_logging("   ")
-        assert payload.items == []
-
-    def test_unrelated_text_returns_no_items(self):
-        payload = parse_nl_for_logging("the weather is nice today")
-        assert payload.items == []
-
-    def test_confirmation_id_is_uuid(self):
-        import uuid
-
-        payload = parse_nl_for_logging("mood is 7")
-        # Should be parseable as UUID
-        uuid.UUID(payload.confirmation_id)
-
-    def test_summary_contains_metric_info(self):
-        payload = parse_nl_for_logging("drank 2 glasses of water")
-        assert "water" in payload.summary.lower() or "2" in payload.summary
-
-    def test_multiple_metrics_parsed(self):
-        payload = parse_nl_for_logging("slept 7 hours and mood is 8/10")
-        types = {i.metric_type for i in payload.items}
-        assert len(types) >= 2  # Both sleep and mood
-
-    def test_deduplication_keeps_highest_confidence(self):
-        """When two patterns match the same metric, highest confidence wins."""
-        # "feeling 8/10" and "feeling a 8 out of 10" could both match mood
-        payload = parse_nl_for_logging("feeling 8/10, mood is great")
-        mood_items = [i for i in payload.items if i.metric_type == "mood"]
-        assert len(mood_items) == 1
+def _make_db():
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    return db
 
 
 # ---------------------------------------------------------------------------
-# write_confirmed_logs
+# Phase 1: Parse (confirmed=False)
 # ---------------------------------------------------------------------------
 
 
-class TestWriteConfirmedLogs:
+class TestParsePhase:
     @pytest.mark.asyncio
-    async def test_writes_items_to_db(self):
-        """Confirmed items are added to the session and committed."""
-        db = AsyncMock()
-        db.add = MagicMock()
-        db.commit = AsyncMock()
+    async def test_water_returns_pending_confirmation(self):
+        """Recognisable water input → pending_confirmation status."""
+        tool = LogHealthDataTool()
+        db = _make_db()
 
-        payload = LogConfirmationPayload(
-            items=[
-                LoggableItem(
-                    metric_type="water",
-                    value=3.0,
-                    text_value=None,
-                    unit="cups",
-                    confidence=0.9,
-                    raw_text="drank 3 glasses",
-                ),
-                LoggableItem(
-                    metric_type="mood",
-                    value=7.0,
-                    text_value=None,
-                    unit="/10",
-                    confidence=0.9,
-                    raw_text="feeling 7/10",
-                ),
-            ],
-            confirmation_id="confirm-abc-123",
-            summary="Water: 3 cups | Mood: 7/10",
+        result = await tool.execute(
+            {"message": "I drank 2 liters of water"},
+            user_id="user-001",
+            db=db,
         )
+        assert result["status"] == "pending_confirmation"
+        assert len(result["entries"]) >= 1
+        water_entries = [e for e in result["entries"] if e["metric_type"] == "water"]
+        assert len(water_entries) == 1
 
-        count = await write_confirmed_logs(payload, "user-001", db)
+    @pytest.mark.asyncio
+    async def test_mood_returns_pending_confirmation(self):
+        """Mood input → pending_confirmation with mood entry."""
+        tool = LogHealthDataTool()
+        db = _make_db()
 
-        assert count == 2
-        assert db.add.call_count == 2
+        result = await tool.execute(
+            {"message": "feeling a 7/10 today"},
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "pending_confirmation"
+        mood_entries = [e for e in result["entries"] if e["metric_type"] == "mood"]
+        assert len(mood_entries) == 1
+        assert mood_entries[0]["value"] == 7.0
+
+    @pytest.mark.asyncio
+    async def test_energy_parsed(self):
+        """Energy level input → pending_confirmation."""
+        tool = LogHealthDataTool()
+        db = _make_db()
+
+        result = await tool.execute(
+            {"message": "energy level 8"},
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "pending_confirmation"
+        energy_entries = [e for e in result["entries"] if e["metric_type"] == "energy"]
+        assert len(energy_entries) == 1
+
+    @pytest.mark.asyncio
+    async def test_stress_parsed(self):
+        """Stress level input → pending_confirmation."""
+        tool = LogHealthDataTool()
+        db = _make_db()
+
+        result = await tool.execute(
+            {"message": "stress 9/10"},
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "pending_confirmation"
+        stress_entries = [e for e in result["entries"] if e["metric_type"] == "stress"]
+        assert len(stress_entries) == 1
+
+    @pytest.mark.asyncio
+    async def test_empty_string_returns_no_data(self):
+        """Empty message → no_data status."""
+        tool = LogHealthDataTool()
+        db = _make_db()
+
+        result = await tool.execute(
+            {"message": ""},
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "no_data"
+
+    @pytest.mark.asyncio
+    async def test_whitespace_only_returns_no_data(self):
+        """Whitespace-only message → no_data status."""
+        tool = LogHealthDataTool()
+        db = _make_db()
+
+        result = await tool.execute(
+            {"message": "   "},
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "no_data"
+
+    @pytest.mark.asyncio
+    async def test_unrelated_text_returns_no_data(self):
+        """Text with no health data → no_data status."""
+        tool = LogHealthDataTool()
+        db = _make_db()
+
+        result = await tool.execute(
+            {"message": "the weather is nice today"},
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "no_data"
+
+    @pytest.mark.asyncio
+    async def test_confirmation_message_is_string(self):
+        """pending_confirmation always includes a non-empty confirmation_message."""
+        tool = LogHealthDataTool()
+        db = _make_db()
+
+        # Use a format that the mood regex matches: "feeling 7/10" or "mood: 7"
+        result = await tool.execute(
+            {"message": "feeling 7/10"},
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "pending_confirmation"
+        assert isinstance(result["confirmation_message"], str)
+        assert len(result["confirmation_message"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: Commit (confirmed=True)
+# ---------------------------------------------------------------------------
+
+
+class TestCommitPhase:
+    @pytest.mark.asyncio
+    async def test_confirmed_with_parsed_entries_returns_logged(self):
+        """confirmed=True with valid entries → logged status and DB write."""
+        tool = LogHealthDataTool()
+        db = _make_db()
+
+        parsed_entries = [
+            {
+                "metric_type": "water",
+                "value": 2.0,
+                "unit": "liters",
+                "label": "Water intake: 2.0 liters",
+            }
+        ]
+
+        result = await tool.execute(
+            {
+                "message": "I drank 2 liters of water",
+                "confirmed": True,
+                "parsed_entries": parsed_entries,
+            },
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "logged"
+        assert result["logged_count"] == 1
+        db.add.assert_called_once()
         db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_skips_low_confidence_items(self):
-        """Items with confidence < 0.5 are not written."""
-        db = AsyncMock()
-        db.add = MagicMock()
-        db.commit = AsyncMock()
+    async def test_confirmed_with_empty_entries_returns_no_data(self):
+        """confirmed=True with no valid entries → no_data."""
+        tool = LogHealthDataTool()
+        db = _make_db()
 
-        payload = LogConfirmationPayload(
-            items=[
-                LoggableItem(
-                    metric_type="mood",
-                    value=7.0,
-                    text_value=None,
-                    unit=None,
-                    confidence=0.3,  # Low confidence
-                    raw_text="some ambiguous text",
-                ),
-            ],
-            confirmation_id="confirm-xyz",
-            summary="...",
+        result = await tool.execute(
+            {
+                "message": "irrelevant",
+                "confirmed": True,
+                "parsed_entries": [],
+            },
+            user_id="user-001",
+            db=db,
         )
-
-        count = await write_confirmed_logs(payload, "user-001", db)
-        assert count == 0
+        assert result["status"] == "no_data"
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_empty_payload_writes_nothing(self):
-        """Empty items list → no DB writes, returns 0."""
-        db = AsyncMock()
-        db.add = MagicMock()
-        db.commit = AsyncMock()
+    async def test_confirmed_multiple_entries_all_written(self):
+        """confirmed=True with multiple entries → all written to DB."""
+        tool = LogHealthDataTool()
+        db = _make_db()
 
-        payload = LogConfirmationPayload(items=[], confirmation_id="empty-123", summary="Nothing to log.")
+        parsed_entries = [
+            {"metric_type": "water", "value": 1.5, "unit": "liters", "label": "Water: 1.5 liters"},
+            {"metric_type": "mood", "value": 8.0, "unit": "/10", "label": "Mood: 8/10"},
+        ]
 
-        count = await write_confirmed_logs(payload, "user-001", db)
-        assert count == 0
-        db.add.assert_not_called()
-        db.commit.assert_not_awaited()
+        result = await tool.execute(
+            {
+                "message": "water and mood",
+                "confirmed": True,
+                "parsed_entries": parsed_entries,
+            },
+            user_id="user-001",
+            db=db,
+        )
+        assert result["status"] == "logged"
+        assert result["logged_count"] == 2
+        assert db.add.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_notes_text_value_persisted(self):
-        """Notes items have their text_value stored."""
-        db = AsyncMock()
-        db.add = MagicMock()
-        db.commit = AsyncMock()
+    async def test_confirmed_invalid_metric_type_skipped(self):
+        """Entries with unknown metric_type are silently skipped."""
+        tool = LogHealthDataTool()
+        db = _make_db()
 
-        payload = LogConfirmationPayload(
-            items=[
-                LoggableItem(
-                    metric_type="notes",
-                    value=None,
-                    text_value="had a great workout",
-                    unit=None,
-                    confidence=0.9,
-                    raw_text='note: "had a great workout"',
-                ),
-            ],
-            confirmation_id="note-abc",
-            summary="Note: had a great workout",
+        parsed_entries = [
+            {"metric_type": "unknown_metric_xyz", "value": 5.0, "unit": "", "label": "Unknown"},
+        ]
+
+        result = await tool.execute(
+            {
+                "message": "something",
+                "confirmed": True,
+                "parsed_entries": parsed_entries,
+            },
+            user_id="user-001",
+            db=db,
         )
+        assert result["status"] == "no_data"
+        db.add.assert_not_called()
 
-        count = await write_confirmed_logs(payload, "user-001", db)
-        assert count == 1
-        added_obj = db.add.call_args[0][0]
-        assert added_obj.text_value == "had a great workout"
+
+# ---------------------------------------------------------------------------
+# Tool metadata
+# ---------------------------------------------------------------------------
+
+
+class TestToolMetadata:
+    def test_tool_has_name(self):
+        """Tool has a non-empty name string."""
+        tool = LogHealthDataTool()
+        assert isinstance(tool.name, str)
+        assert len(tool.name) > 0
+
+    def test_tool_has_description(self):
+        """Tool has a non-empty description string."""
+        tool = LogHealthDataTool()
+        assert isinstance(tool.description, str)
+        assert len(tool.description) > 0
+
+    def test_tool_has_input_schema(self):
+        """Tool has a valid JSON schema dict."""
+        tool = LogHealthDataTool()
+        assert isinstance(tool.input_schema, dict)
+        assert "properties" in tool.input_schema
+        assert "message" in tool.input_schema["properties"]

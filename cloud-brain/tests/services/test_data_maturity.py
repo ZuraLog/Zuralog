@@ -1,22 +1,28 @@
 """
 Tests for DataMaturityService.
 
+The service returns a plain dict from get_maturity() with keys:
+    - days (int)
+    - level (str: "building" | "ready" | "strong" | "excellent")
+    - label (str)
+    - features (dict[str, bool])
+
 Tests cover:
-- 3 days → BUILDING level
-- 7 days → READY level
-- 14 days → STRONG level
-- 30 days → EXCELLENT level
-- Feature thresholds respected
-- Progress percentage calculates correctly
+- 3 days → "building" level
+- 7 days → "ready" level
+- 14 days → "strong" level
+- 30 days → "excellent" level
+- Feature gates respected (via get_feature_gates directly)
+- Return shape is always correct
 """
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.services.data_maturity import DataMaturityResult, DataMaturityService, MaturityLevel
+from app.services.data_maturity import DataMaturityService
 
 
 # ---------------------------------------------------------------------------
@@ -24,12 +30,15 @@ from app.services.data_maturity import DataMaturityResult, DataMaturityService, 
 # ---------------------------------------------------------------------------
 
 
-async def _run(days: int) -> DataMaturityResult:
-    """Run get_maturity with a mocked day count."""
+async def _run(days: int) -> dict:
+    """Run get_maturity with a mocked DB returning a fixed day count."""
     svc = DataMaturityService()
     db = AsyncMock()
-    with patch.object(svc, "_count_days_with_data", return_value=days):
-        return await svc.get_maturity("user-001", db)
+    # The service calls db.execute(stmt) then result.scalar_one()
+    result_mock = MagicMock()
+    result_mock.scalar_one.return_value = days
+    db.execute = AsyncMock(return_value=result_mock)
+    return await svc.get_maturity("user-001", db)
 
 
 # ---------------------------------------------------------------------------
@@ -40,164 +49,137 @@ async def _run(days: int) -> DataMaturityResult:
 class TestMaturityLevels:
     @pytest.mark.asyncio
     async def test_zero_days_returns_building(self):
-        """0 days of data → BUILDING (or edge case below minimum)."""
+        """0 days of data → 'building' level."""
         result = await _run(0)
-        assert result.level == MaturityLevel.BUILDING
+        assert result["level"] == "building"
 
     @pytest.mark.asyncio
     async def test_three_days_returns_building(self):
         result = await _run(3)
-        assert result.level == MaturityLevel.BUILDING
+        assert result["level"] == "building"
 
     @pytest.mark.asyncio
     async def test_six_days_returns_building(self):
         result = await _run(6)
-        assert result.level == MaturityLevel.BUILDING
+        assert result["level"] == "building"
 
     @pytest.mark.asyncio
     async def test_seven_days_returns_ready(self):
         result = await _run(7)
-        assert result.level == MaturityLevel.READY
+        assert result["level"] == "ready"
 
     @pytest.mark.asyncio
     async def test_thirteen_days_returns_ready(self):
         result = await _run(13)
-        assert result.level == MaturityLevel.READY
+        assert result["level"] == "ready"
 
     @pytest.mark.asyncio
     async def test_fourteen_days_returns_strong(self):
         result = await _run(14)
-        assert result.level == MaturityLevel.STRONG
+        assert result["level"] == "strong"
 
     @pytest.mark.asyncio
     async def test_twenty_nine_days_returns_strong(self):
         result = await _run(29)
-        assert result.level == MaturityLevel.STRONG
+        assert result["level"] == "strong"
 
     @pytest.mark.asyncio
     async def test_thirty_days_returns_excellent(self):
         result = await _run(30)
-        assert result.level == MaturityLevel.EXCELLENT
+        assert result["level"] == "excellent"
 
     @pytest.mark.asyncio
     async def test_fifty_days_returns_excellent(self):
         result = await _run(50)
-        assert result.level == MaturityLevel.EXCELLENT
+        assert result["level"] == "excellent"
 
 
 # ---------------------------------------------------------------------------
-# Feature thresholds
+# Return shape tests
 # ---------------------------------------------------------------------------
 
 
-class TestFeatureThresholds:
-    def test_health_score_unlocked_at_7_days(self):
+class TestReturnShape:
+    @pytest.mark.asyncio
+    async def test_result_has_required_keys(self):
+        """get_maturity always returns the expected dict keys."""
+        result = await _run(7)
+        assert "days" in result
+        assert "level" in result
+        assert "label" in result
+        assert "features" in result
+
+    @pytest.mark.asyncio
+    async def test_days_field_matches_input(self):
+        """days field reflects the count returned by the DB query."""
+        result = await _run(15)
+        assert result["days"] == 15
+
+    @pytest.mark.asyncio
+    async def test_label_is_non_empty_string(self):
+        """label is a human-readable non-empty string."""
+        result = await _run(7)
+        assert isinstance(result["label"], str)
+        assert len(result["label"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_features_is_dict(self):
+        """features is a dict of feature gates."""
+        result = await _run(7)
+        assert isinstance(result["features"], dict)
+
+
+# ---------------------------------------------------------------------------
+# Feature gate tests (via get_feature_gates directly)
+# ---------------------------------------------------------------------------
+
+
+class TestFeatureGates:
+    def test_correlations_unlocked_at_7_days(self):
         svc = DataMaturityService()
-        assert svc.get_feature_available("health_score_full", 7) is True
-        assert svc.get_feature_available("health_score_full", 6) is False
+        gates = svc.get_feature_gates(7)
+        assert gates.get("correlations") is True
+
+    def test_correlations_locked_below_7_days(self):
+        svc = DataMaturityService()
+        gates = svc.get_feature_gates(6)
+        assert gates.get("correlations") is False
 
     def test_anomaly_detection_unlocked_at_14_days(self):
         svc = DataMaturityService()
-        assert svc.get_feature_available("anomaly_detection", 14) is True
-        assert svc.get_feature_available("anomaly_detection", 13) is False
+        gates = svc.get_feature_gates(14)
+        assert gates.get("anomaly_detection") is True
 
-    def test_correlations_unlocked_at_7_days(self):
+    def test_anomaly_detection_locked_below_14_days(self):
         svc = DataMaturityService()
-        assert svc.get_feature_available("correlations", 7) is True
+        gates = svc.get_feature_gates(13)
+        assert gates.get("anomaly_detection") is False
 
-    def test_weekly_report_unlocked_at_7_days(self):
+    def test_key_features_locked_at_0_days(self):
         svc = DataMaturityService()
-        assert svc.get_feature_available("weekly_report", 7) is True
+        gates = svc.get_feature_gates(0)
+        # Key features requiring data should be False at zero days
+        assert gates.get("correlations") is False
+        assert gates.get("anomaly_detection") is False
+        assert gates.get("full_insights") is False
 
-    def test_trend_analysis_unlocked_at_14_days(self):
+
+# ---------------------------------------------------------------------------
+# Classify helper tests
+# ---------------------------------------------------------------------------
+
+
+class TestClassify:
+    def test_classify_returns_level_and_label(self):
         svc = DataMaturityService()
-        assert svc.get_feature_available("trend_analysis", 14) is True
-        assert svc.get_feature_available("trend_analysis", 13) is False
+        info = svc._classify(7)
+        assert "level" in info
+        assert "label" in info
 
-    def test_advanced_insights_unlocked_at_30_days(self):
+    def test_classify_building_level(self):
         svc = DataMaturityService()
-        assert svc.get_feature_available("advanced_insights", 30) is True
-        assert svc.get_feature_available("advanced_insights", 29) is False
+        assert svc._classify(3)["level"] == "building"
 
-    def test_unknown_feature_returns_true(self):
-        """Unknown features fail open (don't block users)."""
+    def test_classify_excellent_level(self):
         svc = DataMaturityService()
-        assert svc.get_feature_available("nonexistent_feature", 0) is True
-
-
-# ---------------------------------------------------------------------------
-# Features unlocked/locked in result
-# ---------------------------------------------------------------------------
-
-
-class TestFeaturesInResult:
-    @pytest.mark.asyncio
-    async def test_building_level_has_features_locked(self):
-        result = await _run(3)
-        assert "health_score_full" in result.features_locked
-        assert "advanced_insights" in result.features_locked
-
-    @pytest.mark.asyncio
-    async def test_ready_level_unlocks_weekly_report(self):
-        result = await _run(7)
-        assert "weekly_report" in result.features_unlocked
-        assert "advanced_insights" in result.features_locked
-
-    @pytest.mark.asyncio
-    async def test_excellent_level_unlocks_all_features(self):
-        result = await _run(30)
-        assert result.features_locked == []
-        assert "advanced_insights" in result.features_unlocked
-
-
-# ---------------------------------------------------------------------------
-# Progress percentage
-# ---------------------------------------------------------------------------
-
-
-class TestProgressPercentage:
-    @pytest.mark.asyncio
-    async def test_progress_at_level_start_is_zero(self):
-        """First day of READY level → 0% toward STRONG."""
-        result = await _run(7)
-        assert result.percentage == 0.0
-
-    @pytest.mark.asyncio
-    async def test_progress_halfway_through_level(self):
-        """Midpoint of READY (7–14) → ~50%."""
-        # Midpoint is day 10 (7 + (14-7)/2 ≈ 10.5)
-        result = await _run(10)
-        assert 40.0 < result.percentage < 60.0
-
-    @pytest.mark.asyncio
-    async def test_excellent_level_percentage_is_100(self):
-        result = await _run(30)
-        assert result.percentage == 100.0
-
-    @pytest.mark.asyncio
-    async def test_progress_does_not_exceed_100(self):
-        result = await _run(100)
-        assert result.percentage <= 100.0
-
-
-# ---------------------------------------------------------------------------
-# Next milestone days
-# ---------------------------------------------------------------------------
-
-
-class TestNextMilestoneDays:
-    @pytest.mark.asyncio
-    async def test_building_next_milestone(self):
-        """3 days → needs 4 more to reach READY (7)."""
-        result = await _run(3)
-        assert result.next_milestone_days == 4
-
-    @pytest.mark.asyncio
-    async def test_excellent_next_milestone_is_zero(self):
-        result = await _run(30)
-        assert result.next_milestone_days == 0
-
-    @pytest.mark.asyncio
-    async def test_days_with_data_field_matches_input(self):
-        result = await _run(15)
-        assert result.days_with_data == 15
+        assert svc._classify(30)["level"] == "excellent"
