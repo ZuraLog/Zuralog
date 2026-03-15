@@ -14,6 +14,15 @@ void main() {
     });
   });
 
+  group('userLoggedTypesProvider', () {
+    test('returns empty set by default', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final types = await container.read(userLoggedTypesProvider.future);
+      expect(types, isEmpty);
+    });
+  });
+
   group('logRingProvider', () {
     test('is in loading state before resolving', () async {
       final container = ProviderContainer();

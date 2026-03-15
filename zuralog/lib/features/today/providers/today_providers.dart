@@ -195,7 +195,7 @@ final snapshotProvider = FutureProvider<List<SnapshotCardData>>((ref) async {
 
   // Ordered list matching the log grid tile order.
   const orderedTypes = [
-    'mood', 'water', 'sleep', 'weight',
+    'mood', 'energy', 'stress', 'water', 'sleep', 'weight',
     'steps', 'run', 'meal', 'supplement', 'symptom',
   ];
 
@@ -216,7 +216,23 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Mood',
         icon: '😊',
-        value: hasData ? (value as double).toStringAsFixed(1) : null,
+        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
+        unit: hasData ? '/10' : null,
+        isEmpty: !hasData,
+      ),
+    'energy' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Energy',
+        icon: '⚡',
+        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
+        unit: hasData ? '/10' : null,
+        isEmpty: !hasData,
+      ),
+    'stress' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Stress',
+        icon: '😤',
+        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
         unit: hasData ? '/10' : null,
         isEmpty: !hasData,
       ),
@@ -224,16 +240,17 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Water',
         icon: '💧',
-        value: hasData ? (value as double).toStringAsFixed(0) : null,
+        value: hasData ? (value as double?)?.toStringAsFixed(0) ?? '—' : null,
         unit: hasData ? 'ml' : null,
         isEmpty: !hasData,
       ),
+    // unit is null — the formatted string '7h 30m' is self-describing
     'sleep' => SnapshotCardData(
         metricType: metricType,
         label: 'Sleep',
         icon: '😴',
         value: hasData
-            ? _formatSleep(value as double)
+            ? (value != null ? _formatSleep(value as double) : null)
             : null,
         isEmpty: !hasData,
       ),
@@ -241,7 +258,7 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Weight',
         icon: '⚖️',
-        value: hasData ? (value as double).toStringAsFixed(1) : null,
+        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
         unit: hasData ? 'kg' : null,
         isEmpty: !hasData,
       ),
@@ -249,14 +266,14 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Steps',
         icon: '👟',
-        value: hasData ? _formatSteps((value as double).toInt()) : null,
+        value: hasData ? _formatSteps((value as double?)?.toInt() ?? 0) : null,
         isEmpty: !hasData,
       ),
     'run' => SnapshotCardData(
         metricType: metricType,
         label: 'Run',
         icon: '🏃',
-        value: hasData ? (value as double).toStringAsFixed(1) : null,
+        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
         unit: hasData ? 'km' : null,
         isEmpty: !hasData,
       ),
@@ -264,7 +281,7 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Calories',
         icon: '🍽️',
-        value: hasData ? (value as double).toStringAsFixed(0) : null,
+        value: hasData ? (value as double?)?.toStringAsFixed(0) ?? '—' : null,
         unit: hasData ? 'kcal' : null,
         isEmpty: !hasData,
       ),
@@ -272,10 +289,11 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Supplements',
         icon: '💊',
-        value: hasData ? (value as double).toInt().toString() : null,
+        value: hasData ? (value as double?)?.toInt().toString() ?? '—' : null,
         unit: hasData ? 'taken' : null,
         isEmpty: !hasData,
       ),
+    // reads from 'symptom_severity' key, not 'symptom' — severity is a string, not a numeric value
     'symptom' => SnapshotCardData(
         metricType: metricType,
         label: 'Symptom',
