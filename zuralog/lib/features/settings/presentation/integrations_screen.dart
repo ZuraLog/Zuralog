@@ -273,10 +273,13 @@ class _ConnectedCard extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            integration.name,
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: colors.textPrimary,
+                          Flexible(
+                            child: Text(
+                              integration.name,
+                              style: AppTextStyles.titleMedium.copyWith(
+                                color: colors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (integration.compatibility !=
@@ -364,10 +367,13 @@ class _AvailableCard extends ConsumerWidget {
             Expanded(
               child: Row(
                 children: [
-                  Text(
-                    integration.name,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: colors.textPrimary,
+                  Flexible(
+                    child: Text(
+                      integration.name,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (integration.compatibility !=
