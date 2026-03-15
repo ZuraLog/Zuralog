@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-15 (All 10 architectural debt cleanup batches complete: N+1 query fixes, dead code removal, security hardening, data integrity, performance optimization, Flutter cleanup, and documentation fixes)
+**Last Updated:** 2026-03-16 (Today Tab Part 1 complete: 5 new shared components, layout refactor, stub providers added)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -688,3 +688,65 @@ Completed magic number extraction, ORM migration, smoke test rewrite, and docume
 - Supabase migration idempotency fix (Batch 5: insights upsert)
 - `WITHINGS_API_BASE_URL` env var validation (Batch 8: integration config)
 - All 50 debt items resolved; zero regressions
+
+---
+
+## Today Tab Redesign — Multi-Part Implementation
+
+> **Status:** Part 1 complete and merged to main (2026-03-16)
+
+The Today Feed is being rebuilt in phases to add new shared components, refactor the screen layout, and wire real data from the backend.
+
+### Part 1 — Shared Components & Layout Refactor (2026-03-16)
+
+> **Branch:** `feat/today-tab-redesign-part-1` → merged to main
+
+Extracted 5 new reusable components from the Today screen and refactored the layout to support new features.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Create `SectionHeader` with trailing widget slot and left accent bar | ✅ Done | Extended existing component; used across Today screen |
+| P0 | Create `ZInsightCard` (reusable AI insight card) | ✅ Done | Extracted from Today screen; `cards/z_insight_card.dart` |
+| P0 | Create `ZEmptyInsightsState` (empty state with two CTAs) | ✅ Done | `states/z_empty_insights_state.dart`; replaces private `_EmptyInsightsCard` |
+| P0 | Create `ZLogRingWidget` (circular log completion ring) | ✅ Done | `health/z_log_ring_widget.dart`; watches `logRingProvider` |
+| P0 | Create `ZSnapshotCard` (compact metric snapshot) | ✅ Done | `cards/z_snapshot_card.dart`; displays today's value for one metric |
+| P0 | Create `ZDailyGoalsCard` (daily goals progress) | ✅ Done | `cards/z_daily_goals_card.dart`; shows setup prompt until goals configured |
+| P0 | Create domain models: `TodayLogSummary`, `LogRingState`, `SnapshotCardData` | ✅ Done | `features/today/domain/log_summary_models.dart` |
+| P0 | Add stub providers: `todayLogSummaryProvider`, `userLoggedTypesProvider`, `logRingProvider`, `snapshotProvider` | ✅ Done | Providers in `today_providers.dart`; will be wired to real data in Part 4 |
+| P0 | Refactor Today screen layout: Health Score + Log Ring side-by-side | ✅ Done | Score left, Ring right; 120pt each |
+| P0 | Add Snapshot Cards row (horizontally scrollable, hidden until user logs) | ✅ Done | Appears below Health Score + Log Ring |
+| P0 | Add Daily Goals card | ✅ Done | Shows "Set a daily goal →" until goals configured |
+| P0 | Remove Quick Actions section (superseded by FAB in Part 2) | ✅ Done | Deleted from layout |
+| P0 | Remove Wellness Check-in card (superseded by FAB in Part 2) | ✅ Done | Deleted from layout |
+| P0 | Replace private `_InsightCard`, `_SectionHeader`, `_EmptyInsightsCard` with shared components | ✅ Done | Screen reduced from 985 lines to 447 lines |
+| P0 | Remove `QuickAction` model from `today_models.dart` | ✅ Done | Deleted |
+| P0 | Remove `quickLogLoadingProvider` from `today_providers.dart` | ✅ Done | Deleted |
+
+**Result:** Today screen refactored with 5 new shared components, cleaner layout, and foundation for Parts 2–4. Screen code reduced by 55%.
+
+### Part 2 — FAB & Log Grid Sheet (Planned)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Create floating action button (FAB) for quick log entry | 🔜 Planned | Replaces Quick Actions section |
+| P0 | Create log grid sheet (water, mood, energy, stress, pain, notes) | 🔜 Planned | Inline log panels for quick metrics |
+| P0 | Wire FAB to open log grid sheet | 🔜 Planned | |
+| P0 | Add haptic feedback on log submission | 🔜 Planned | |
+
+### Part 3 — Full-Screen Log Screens (Planned)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Create full-screen log screens: Sleep, Run, Meal, Supplements, Symptom | 🔜 Planned | Detailed entry forms for complex metrics |
+| P0 | Wire log grid sheet to open full-screen screens | 🔜 Planned | |
+
+### Part 4 — Backend Data Wiring (Planned)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Extend `quick_log_routes.py` with new log endpoints | 🔜 Planned | Water, mood, energy, stress, pain, notes |
+| P0 | Wire `todayLogSummaryProvider` to real backend data | 🔜 Planned | Fetch from `/api/v1/today/log-summary` |
+| P0 | Wire `userLoggedTypesProvider` to real backend data | 🔜 Planned | Fetch from `/api/v1/today/logged-types` |
+| P0 | Wire `logRingProvider` to compute ring fill from real data | 🔜 Planned | Derived from log summary |
+| P0 | Wire `snapshotProvider` to build ordered snapshot list | 🔜 Planned | Derived from log summary |
+| P0 | Wire Daily Goals card to real goals data | 🔜 Planned | Fetch from `/api/v1/goals` |

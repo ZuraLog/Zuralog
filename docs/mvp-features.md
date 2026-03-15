@@ -1,6 +1,6 @@
 # Zuralog MVP Feature Specification
 
-> **Last updated:** 2026-03-03
+> **Last updated:** 2026-03-16
 >
 > **Purpose:** This document defines every feature shipping in the initial App Store release (MVP) and documents justified post-MVP features for future development. It is the single source of truth for what Zuralog does.
 >
@@ -353,7 +353,7 @@ Interactive analytics that let users discover patterns in their own data:
 
 ### O. Quick Log / Manual Entry
 
-**Implementation status:** Partially implemented. Water counter with units-aware label wired in feat/today-tab-settings-wiring (2026-03-08). Full Quick Log bottom sheet (mood, energy, stress, pain, notes) not yet implemented.
+**Implementation status:** Part 1 UI foundation complete (2026-03-16). Shared components created: `ZSnapshotCard` for metric display, `ZDailyGoalsCard` for goal tracking. Stub providers added (`todayLogSummaryProvider`, `userLoggedTypesProvider`, `logRingProvider`, `snapshotProvider`) pending real data wiring in Part 4. Water counter with units-aware label wired in feat/today-tab-settings-wiring (2026-03-08). Full Quick Log bottom sheet (mood, energy, stress, pain, notes) and FAB system planned for Part 2.
 
 A dedicated quick-entry interface for data that does not come from integrations. This is the structured complement to natural language logging in chat — for users who prefer tapping over typing.
 
