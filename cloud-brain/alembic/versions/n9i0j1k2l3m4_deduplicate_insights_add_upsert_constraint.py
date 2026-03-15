@@ -27,20 +27,16 @@ depends_on = None
 
 def upgrade() -> None:
     # ------------------------------------------------------------------
-    # Step 1: Add updated_at column
+    # Step 1: Add updated_at column (idempotent — already exists in prod)
     # ------------------------------------------------------------------
-    op.add_column(
-        "insights",
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-            comment="Set on upsert when an existing insight is refreshed",
-        ),
-    )
+    op.execute("""
+        ALTER TABLE insights
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE
+    """)
 
     # ------------------------------------------------------------------
     # Step 2: Delete existing duplicate rows (keep newest per user/type/day)
+    # Idempotent: deleting 0 rows is fine if no duplicates exist.
     # ------------------------------------------------------------------
     op.execute("""
         DELETE FROM insights
@@ -50,7 +46,7 @@ def upgrade() -> None:
                 SELECT
                     id,
                     ROW_NUMBER() OVER (
-                        PARTITION BY user_id, type, created_at::date
+                        PARTITION BY user_id, type, DATE(created_at)
                         ORDER BY created_at DESC
                     ) AS rn
                 FROM insights
@@ -60,50 +56,73 @@ def upgrade() -> None:
     """)
 
     # ------------------------------------------------------------------
-    # Step 3: Create unique index CONCURRENTLY (must run outside a transaction)
+    # Step 3: Ensure unique constraint on (user_id, type, date).
+    # Production already has uq_insights_user_type_date (applied via Supabase MCP).
+    # This step is a no-op if either constraint already exists.
     # ------------------------------------------------------------------
-    op.execute("COMMIT")
     op.execute("""
-        CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_insights_user_type_day
-            ON insights (user_id, type, (created_at::date))
-    """)
-    # Promote the index to a named constraint so SQLAlchemy's
-    # on_conflict_do_update(constraint=...) can reference it by name.
-    op.execute("BEGIN")
-    op.execute("""
-        ALTER TABLE insights
-            ADD CONSTRAINT uq_insights_user_type_day
-            UNIQUE USING INDEX uq_insights_user_type_day
+        DO $$
+        BEGIN
+            -- Add date column if missing (may already exist in prod)
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'insights' AND column_name = 'date'
+            ) THEN
+                ALTER TABLE insights ADD COLUMN date DATE;
+                UPDATE insights SET date = DATE(created_at);
+            END IF;
+
+            -- Add constraint only if neither variant already exists
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'public.insights'::regclass
+                  AND conname IN ('uq_insights_user_type_date', 'uq_insights_user_type_day')
+                  AND contype = 'u'
+            ) THEN
+                ALTER TABLE insights
+                    ADD CONSTRAINT uq_insights_user_type_date
+                    UNIQUE (user_id, type, date);
+            END IF;
+        END $$
     """)
 
     # ------------------------------------------------------------------
-    # Step 4: Enable RLS and add per-user policies (conditional on auth schema)
+    # Step 4: Enable RLS and add per-user policies (idempotent)
     # ------------------------------------------------------------------
     op.execute("ALTER TABLE insights ENABLE ROW LEVEL SECURITY")
     op.execute("""
         DO $$ BEGIN
             IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'auth') THEN
-                -- Service role (backend / Celery) bypass: unrestricted access
-                EXECUTE '
-                    CREATE POLICY insights_service_role_all ON insights
-                        FOR ALL
-                        TO service_role
-                        USING (true)
-                        WITH CHECK (true)
-                ';
-                -- Users can read their own non-dismissed insights
-                EXECUTE '
-                    CREATE POLICY insights_select_own ON insights
-                        FOR SELECT
-                        USING (auth.uid()::text = user_id)
-                ';
-                -- Users can update their own insights (read/dismiss actions)
-                EXECUTE '
-                    CREATE POLICY insights_update_own ON insights
-                        FOR UPDATE
-                        USING (auth.uid()::text = user_id)
-                        WITH CHECK (auth.uid()::text = user_id)
-                ';
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_policies
+                    WHERE tablename = 'insights' AND policyname = 'insights_service_role_all'
+                ) THEN
+                    EXECUTE '
+                        CREATE POLICY insights_service_role_all ON insights
+                            FOR ALL TO service_role
+                            USING (true) WITH CHECK (true)
+                    ';
+                END IF;
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_policies
+                    WHERE tablename = 'insights' AND policyname = 'insights_select_own'
+                ) THEN
+                    EXECUTE '
+                        CREATE POLICY insights_select_own ON insights
+                            FOR SELECT USING (auth.uid()::text = user_id)
+                    ';
+                END IF;
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_policies
+                    WHERE tablename = 'insights' AND policyname = 'insights_update_own'
+                ) THEN
+                    EXECUTE '
+                        CREATE POLICY insights_update_own ON insights
+                            FOR UPDATE
+                            USING (auth.uid()::text = user_id)
+                            WITH CHECK (auth.uid()::text = user_id)
+                    ';
+                END IF;
             END IF;
         END $$
     """)
@@ -114,9 +133,7 @@ def downgrade() -> None:
     op.execute("DROP POLICY IF EXISTS insights_select_own ON insights")
     op.execute("DROP POLICY IF EXISTS insights_update_own ON insights")
     op.execute("ALTER TABLE insights DISABLE ROW LEVEL SECURITY")
-    # DROP INDEX CONCURRENTLY cannot run inside a transaction.
-    op.execute("COMMIT")
+    op.execute("ALTER TABLE insights DROP CONSTRAINT IF EXISTS uq_insights_user_type_date")
     op.execute("ALTER TABLE insights DROP CONSTRAINT IF EXISTS uq_insights_user_type_day")
-    op.execute("DROP INDEX CONCURRENTLY IF EXISTS uq_insights_user_type_day")
-    op.execute("BEGIN")
-    op.drop_column("insights", "updated_at")
+    op.execute("ALTER TABLE insights DROP COLUMN IF EXISTS date")
+    op.execute("ALTER TABLE insights DROP COLUMN IF EXISTS updated_at")
