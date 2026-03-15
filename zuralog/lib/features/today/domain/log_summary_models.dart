@@ -50,8 +50,6 @@ class LogRingState {
   const LogRingState({
     required this.loggedCount,
     required this.totalCount,
-    this.isLoading = false,
-    this.hasError = false,
   });
 
   /// Number of distinct metric types logged today.
@@ -60,24 +58,9 @@ class LogRingState {
   /// Total number of active metric types for this user.
   final int totalCount;
 
-  final bool isLoading;
-  final bool hasError;
-
-  /// Fill fraction 0.0–1.0 for the ring.
+  /// Fill fraction 0.0–1.0 for the ring animation.
   double get fraction =>
       totalCount == 0 ? 0.0 : (loggedCount / totalCount).clamp(0.0, 1.0);
-
-  static const loading = LogRingState(
-    loggedCount: 0,
-    totalCount: 0,
-    isLoading: true,
-  );
-
-  static const error = LogRingState(
-    loggedCount: 0,
-    totalCount: 0,
-    hasError: true,
-  );
 }
 
 // ── SnapshotCardData ──────────────────────────────────────────────────────────

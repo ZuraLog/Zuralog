@@ -209,7 +209,9 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Mood',
         icon: '😊',
-        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
+            : null,
         unit: hasData ? '/10' : null,
         isEmpty: !hasData,
       ),
@@ -217,7 +219,9 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Energy',
         icon: '⚡',
-        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
+            : null,
         unit: hasData ? '/10' : null,
         isEmpty: !hasData,
       ),
@@ -225,7 +229,9 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Stress',
         icon: '😤',
-        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
+            : null,
         unit: hasData ? '/10' : null,
         isEmpty: !hasData,
       ),
@@ -233,7 +239,9 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Water',
         icon: '💧',
-        value: hasData ? (value as double?)?.toStringAsFixed(0) ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toDouble().toStringAsFixed(0) ?? '—'
+            : null,
         unit: hasData ? 'ml' : null,
         isEmpty: !hasData,
       ),
@@ -243,7 +251,7 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         label: 'Sleep',
         icon: '😴',
         value: hasData
-            ? (value != null ? _formatSleep(value as double) : null)
+            ? (value != null ? _formatSleep((value as num).toDouble()) : null)
             : null,
         isEmpty: !hasData,
       ),
@@ -251,7 +259,9 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Weight',
         icon: '⚖️',
-        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
+            : null,
         unit: hasData ? 'kg' : null,
         isEmpty: !hasData,
       ),
@@ -259,14 +269,18 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Steps',
         icon: '👟',
-        value: hasData ? _formatSteps((value as double?)?.toInt() ?? 0) : null,
+        value: hasData
+            ? (value != null ? _formatSteps((value as num).toInt()) : null)
+            : null,
         isEmpty: !hasData,
       ),
     'run' => SnapshotCardData(
         metricType: metricType,
         label: 'Run',
         icon: '🏃',
-        value: hasData ? (value as double?)?.toStringAsFixed(1) ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
+            : null,
         unit: hasData ? 'km' : null,
         isEmpty: !hasData,
       ),
@@ -274,7 +288,9 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Calories',
         icon: '🍽️',
-        value: hasData ? (value as double?)?.toStringAsFixed(0) ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toDouble().toStringAsFixed(0) ?? '—'
+            : null,
         unit: hasData ? 'kcal' : null,
         isEmpty: !hasData,
       ),
@@ -282,7 +298,9 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         metricType: metricType,
         label: 'Supplements',
         icon: '💊',
-        value: hasData ? (value as double?)?.toInt().toString() ?? '—' : null,
+        value: hasData
+            ? (value as num?)?.toInt().toString() ?? '—'
+            : null,
         unit: hasData ? 'taken' : null,
         isEmpty: !hasData,
       ),

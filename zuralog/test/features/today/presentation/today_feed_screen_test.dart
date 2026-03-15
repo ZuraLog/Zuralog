@@ -2,12 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/presentation/today_feed_screen.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/cards/z_daily_goals_card.dart';
 import 'package:zuralog/shared/widgets/health/z_log_ring_widget.dart';
+
+// ── Stub notifiers ────────────────────────────────────────────────────────────
+
+/// Returns null profile without making any network calls.
+class _StubUserProfileNotifier extends UserProfileNotifier {
+  @override
+  UserProfile? build() => null;
+}
+
+/// Returns safe default preferences without making any network calls.
+class _StubUserPreferencesNotifier extends UserPreferencesNotifier {
+  @override
+  Future<UserPreferencesModel> build() async {
+    return const UserPreferencesModel(id: 'test', userId: 'test');
+  }
+
+  @override
+  Future<void> save(UserPreferencesModel updated) async {
+    state = AsyncData(updated);
+  }
+
+  @override
+  Future<void> mutate(
+      UserPreferencesModel Function(UserPreferencesModel) fn) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(fn(current));
+  }
+
+  @override
+  Future<void> refresh() async {}
+}
 
 GoRouter _router() => GoRouter(
       routes: [
@@ -20,6 +56,9 @@ GoRouter _router() => GoRouter(
 
 ProviderContainer _container() => ProviderContainer(
       overrides: [
+        userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+        userPreferencesProvider
+            .overrideWith(() => _StubUserPreferencesNotifier()),
         healthScoreProvider.overrideWith(
           (ref) async =>
               const HealthScoreData(score: 78, trend: [], dataDays: 5),
