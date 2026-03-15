@@ -11,12 +11,17 @@
 /// - [insightDetailProvider]          — family: detail for a single insight
 /// - [notificationsProvider]          — async first page of notifications
 /// - [todayBannerSessionDismissed]    — whether the "still building" banner was dismissed this session
+/// - [todayLogSummaryProvider]        — aggregated summary of today's logged data
+/// - [userLoggedTypesProvider]        — set of metric types user has ever logged
+/// - [logRingProvider]                — state for the Log Ring widget
+/// - [snapshotProvider]               — list of snapshot card data
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
+import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -117,3 +122,185 @@ final todayBannerSessionDismissed = StateProvider<bool>((ref) => false);
 /// Set to `true` when the submit button is tapped and `false` when the
 /// API call completes (success or failure).
 final quickLogLoadingProvider = StateProvider<bool>((ref) => false);
+
+// ── Today Log Summary ─────────────────────────────────────────────────────────
+
+/// Aggregated summary of what the user has logged today.
+///
+/// **MVP stub:** Returns an empty summary until Part 4 adds the backend log
+/// endpoints and wires the real fetch. Swap the implementation here when
+/// the endpoint is ready — all UI code reads from this provider and will
+/// update automatically.
+///
+/// Invalidate after every successful log submission so the Log Ring and
+/// Snapshot Cards reflect the new entry immediately.
+final todayLogSummaryProvider = FutureProvider<TodayLogSummary>((ref) async {
+  // TODO(Part 4): Replace stub with real API call once log endpoints exist.
+  // final repo = ref.read(todayRepositoryProvider);
+  // return repo.getTodayLogSummary();
+  return TodayLogSummary.empty;
+});
+
+// ── User Logged Types ─────────────────────────────────────────────────────────
+
+/// The set of metric type strings the user has *ever* logged (not just today).
+///
+/// Used by [snapshotProvider] to determine which snapshot cards to display.
+/// Cards are shown for all types the user has ever used, even if no data
+/// exists today — they render an empty state rather than disappearing.
+///
+/// **MVP stub:** Returns an empty set until Part 4 adds the backend endpoint
+/// `GET /api/v1/quick-logs/my-metric-types`.
+final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
+  // TODO(Part 4): Replace stub with real API call.
+  // final repo = ref.read(todayRepositoryProvider);
+  // return repo.getUserLoggedTypes();
+  return const <String>{};
+});
+
+// ── Log Ring ──────────────────────────────────────────────────────────────────
+
+/// State for the Log Ring widget.
+///
+/// Derived from [todayLogSummaryProvider] (what was logged today) and
+/// [userLoggedTypesProvider] (all types the user has ever used).
+///
+/// Uses `ref.watch(provider.future)` — the correct pattern inside a
+/// FutureProvider body for establishing reactive dependencies on other
+/// async providers.
+final logRingProvider = FutureProvider<LogRingState>((ref) async {
+  final summary = await ref.watch(todayLogSummaryProvider.future);
+  final allTypes = await ref.watch(userLoggedTypesProvider.future);
+
+  return LogRingState(
+    loggedCount: summary.loggedTypes.length,
+    totalCount: allTypes.length,
+  );
+});
+
+// ── Snapshot Cards ────────────────────────────────────────────────────────────
+
+/// List of snapshot card data for the horizontally scrollable row.
+///
+/// Watches both [todayLogSummaryProvider] and [userLoggedTypesProvider].
+/// Shows one card per metric type the user has ever logged, ordered to
+/// match the log grid. Cards with no data today show an empty state.
+///
+/// **Part 4 note:** The spec describes this as `AsyncNotifierProvider`.
+/// It is `FutureProvider` for Part 1 (stub data). Upgrade to `AsyncNotifier`
+/// in Part 4 when real data is wired in.
+final snapshotProvider = FutureProvider<List<SnapshotCardData>>((ref) async {
+  final summary = await ref.watch(todayLogSummaryProvider.future);
+  final allTypes = await ref.watch(userLoggedTypesProvider.future);
+
+  // Ordered list matching the log grid tile order.
+  const orderedTypes = [
+    'mood', 'water', 'sleep', 'weight',
+    'steps', 'run', 'meal', 'supplement', 'symptom',
+  ];
+
+  return orderedTypes
+      .where((type) => allTypes.contains(type))
+      .map((type) => _buildSnapshotCard(type, summary))
+      .toList();
+});
+
+// ── Snapshot card builder ─────────────────────────────────────────────────────
+
+SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) {
+  final value = summary.latestValues[metricType];
+  final hasData = summary.loggedTypes.contains(metricType);
+
+  return switch (metricType) {
+    'mood' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Mood',
+        icon: '😊',
+        value: hasData ? (value as double).toStringAsFixed(1) : null,
+        unit: hasData ? '/10' : null,
+        isEmpty: !hasData,
+      ),
+    'water' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Water',
+        icon: '💧',
+        value: hasData ? (value as double).toStringAsFixed(0) : null,
+        unit: hasData ? 'ml' : null,
+        isEmpty: !hasData,
+      ),
+    'sleep' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Sleep',
+        icon: '😴',
+        value: hasData
+            ? _formatSleep(value as double)
+            : null,
+        isEmpty: !hasData,
+      ),
+    'weight' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Weight',
+        icon: '⚖️',
+        value: hasData ? (value as double).toStringAsFixed(1) : null,
+        unit: hasData ? 'kg' : null,
+        isEmpty: !hasData,
+      ),
+    'steps' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Steps',
+        icon: '👟',
+        value: hasData ? _formatSteps((value as double).toInt()) : null,
+        isEmpty: !hasData,
+      ),
+    'run' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Run',
+        icon: '🏃',
+        value: hasData ? (value as double).toStringAsFixed(1) : null,
+        unit: hasData ? 'km' : null,
+        isEmpty: !hasData,
+      ),
+    'meal' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Calories',
+        icon: '🍽️',
+        value: hasData ? (value as double).toStringAsFixed(0) : null,
+        unit: hasData ? 'kcal' : null,
+        isEmpty: !hasData,
+      ),
+    'supplement' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Supplements',
+        icon: '💊',
+        value: hasData ? (value as double).toInt().toString() : null,
+        unit: hasData ? 'taken' : null,
+        isEmpty: !hasData,
+      ),
+    'symptom' => SnapshotCardData(
+        metricType: metricType,
+        label: 'Symptom',
+        icon: '🩹',
+        value: hasData
+            ? (summary.latestValues['symptom_severity'] as String?) ?? '—'
+            : null,
+        isEmpty: !hasData,
+      ),
+    _ => SnapshotCardData(
+        metricType: metricType,
+        label: metricType,
+        icon: '📊',
+        isEmpty: true,
+      ),
+  };
+}
+
+String _formatSteps(int steps) {
+  if (steps >= 1000) return '${(steps / 1000).toStringAsFixed(1)}k';
+  return steps.toString();
+}
+
+String _formatSleep(double minutes) {
+  final h = (minutes / 60).floor();
+  final m = (minutes % 60).toInt();
+  return '${h}h ${m}m';
+}
