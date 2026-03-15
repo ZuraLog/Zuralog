@@ -52,16 +52,24 @@ const SwipeTransitionShader = {
 
         void main() {
             float p = clamp(progress, 0.0, 1.0);
-            vec2 uvCurrent = vUv + vec2(0.0, p);
-            vec2 uvNext = vUv + vec2(0.0, p - 1.0);
 
-            vec4 colCurrent = texture2D(texCurrent, uvCurrent);
-            vec4 colNext = texture2D(texNext, uvNext);
+            // Screen mesh UVs: x ranges ~[-0.95, 0.99], y ranges [0, 1]
+            // Normalize x to [0, 1] for horizontal swipe math
+            float normX = (vUv.x + 0.95) / 1.94;
 
-            if (vUv.y + p > 1.0) {
-                gl_FragColor = colNext;
+            // Horizontal swipe: current slides right, next enters from left
+            float offsetX = p * 1.94;
+            vec2 uvCur = vec2(vUv.x - offsetX, vUv.y);
+            vec2 uvNxt = vec2(vUv.x - offsetX + 1.94, vUv.y);
+
+            vec4 colCur = texture2D(texCurrent, uvCur);
+            vec4 colNxt = texture2D(texNext, uvNxt);
+
+            // Wipe line moves from left to right as progress increases
+            if (normX > (1.0 - p)) {
+                gl_FragColor = colNxt;
             } else {
-                gl_FragColor = colCurrent;
+                gl_FragColor = colCur;
             }
         }
     `,
