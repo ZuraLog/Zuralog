@@ -156,9 +156,9 @@ class ZInsightCard extends StatelessWidget {
                               if (insight.createdAt != null)
                                 Text(
                                   _relativeTime(insight.createdAt!),
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.textTertiary,
-                                  ),
+                                   style: AppTextStyles.labelSmall.copyWith(
+                                     color: colors.textTertiary,
+                                   ),
                                 ),
                               const SizedBox(width: AppDimens.spaceXs),
                               Icon(
@@ -197,6 +197,7 @@ IconData _insightIcon(InsightType type) {
 
 String _relativeTime(DateTime dt) {
   final diff = DateTime.now().difference(dt);
+  if (diff.inSeconds < 60) return 'Just now';
   if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
   if (diff.inHours < 24) return '${diff.inHours}h ago';
   if (diff.inDays == 1) return 'Yesterday';

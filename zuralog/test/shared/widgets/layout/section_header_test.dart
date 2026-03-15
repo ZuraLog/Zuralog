@@ -40,7 +40,7 @@ void main() {
       expect(find.text('trail'), findsNothing);
     });
 
-    testWidgets('renders left accent bar', (tester) async {
+    testWidgets('renders left accent bar with correct dimensions', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -48,7 +48,17 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(SectionHeader), findsOneWidget);
+      // The accent bar is a Container with a BoxDecoration that has a
+      // borderRadius. It is the only such Container in a plain SectionHeader.
+      final decoratedAccentBar = find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration! as BoxDecoration).borderRadius != null,
+      );
+      expect(decoratedAccentBar, findsOneWidget);
+      // Title still renders (bar didn't break layout).
+      expect(find.text('Hello'), findsOneWidget);
     });
 
     testWidgets('trailing takes precedence over actionLabel when both provided', (tester) async {

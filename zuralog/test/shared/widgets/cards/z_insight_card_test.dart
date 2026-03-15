@@ -34,7 +34,7 @@ void main() {
       expect(find.text('Summary text here'), findsOneWidget);
     });
 
-    testWidgets('shows unread dot when insight is unread', (tester) async {
+    testWidgets('shows category chip when rendered', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -47,7 +47,10 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(ZInsightCard), findsOneWidget);
+      // Unread card renders the category label chip.
+      expect(find.text('Sleep'), findsOneWidget);
+      // Title is rendered.
+      expect(find.text('Test Insight Title'), findsOneWidget);
     });
 
     testWidgets('calls onTap when tapped', (tester) async {
