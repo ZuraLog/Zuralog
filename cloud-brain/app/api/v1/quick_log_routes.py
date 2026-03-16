@@ -1078,6 +1078,90 @@ async def get_summary_today(
 
 
 # ---------------------------------------------------------------------------
+# Latest values endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.get("/latest", summary="Get the most recent log entry per requested metric type")
+@limiter.limit("60/minute")
+async def get_latest_log_values(
+    request: Request,
+    types: str = "",
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return the most recent quick-log entry for each requested metric type.
+
+    The Cloud Brain is the authoritative deduplicated source — data ingested
+    from Apple Health, Health Connect, Strava, and manual entries is all
+    surfaced here.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        types: Comma-separated list of metric type strings (e.g. 'weight,steps').
+               If absent or empty, returns an empty dict.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict keyed by metric type. Each value is a dict with type-specific
+        fields plus ``logged_at`` and ``source``.
+        Types that have never been logged are absent from the response.
+
+    Raises:
+        HTTPException: 422 if any requested type is not in VALID_METRIC_TYPES.
+    """
+    if not types or not types.strip():
+        return {}
+
+    requested = [t.strip() for t in types.split(",") if t.strip()]
+    for t in requested:
+        if t not in VALID_METRIC_TYPES:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid metric type '{t}'. Must be one of: {sorted(VALID_METRIC_TYPES)}.",
+            )
+
+    result: dict = {}
+    for metric_type in requested:
+        row = await db.execute(
+            select(QuickLog)
+            .where(QuickLog.user_id == user_id, QuickLog.metric_type == metric_type)
+            .order_by(QuickLog.logged_at.desc())
+            .limit(1)
+        )
+        log = row.scalars().first()
+        if log is None:
+            continue
+
+        logged_at_str = log.logged_at.isoformat() if hasattr(log.logged_at, "isoformat") else str(log.logged_at)
+        source = (log.data or {}).get("source", "manual")
+
+        if metric_type == "weight":
+            result["weight"] = {
+                "value_kg": log.value,
+                "logged_at": logged_at_str,
+                "source": source,
+            }
+        elif metric_type == "steps":
+            result["steps"] = {
+                "steps": int(log.value or 0),
+                "logged_at": logged_at_str,
+                "source": source,
+            }
+        else:
+            # Generic fallback for other types — value + logged_at + source
+            result[metric_type] = {
+                "value": log.value,
+                "text_value": log.text_value,
+                "logged_at": logged_at_str,
+                "source": source,
+            }
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Supplement list management
 # ---------------------------------------------------------------------------
 
