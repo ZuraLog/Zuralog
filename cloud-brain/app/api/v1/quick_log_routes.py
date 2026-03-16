@@ -13,7 +13,7 @@ endpoint supports filtering by metric_type and date range.
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
@@ -245,6 +245,96 @@ def _build_log(user_id: str, body: QuickLogCreate) -> QuickLog:
         tags=body.tags,
         logged_at=_resolve_logged_at(body.logged_at),
     )
+
+
+def _aggregate_today_logs(logs) -> tuple[list[str], dict]:
+    """Aggregate a list of today's QuickLog entries into logged_types and latest_values.
+
+    Args:
+        logs: List of QuickLog ORM instances, ordered oldest-first.
+              (The query orders by logged_at ASC so newer entries overwrite earlier ones
+              for 'latest' semantics.)
+
+    Returns:
+        Tuple of (logged_types, latest_values) where:
+        - logged_types: sorted list of distinct metric_type strings
+        - latest_values: dict mapping metric keys to their aggregated values
+    """
+    # Group entries by metric_type, preserving order (oldest first).
+    by_type: dict[str, list] = defaultdict(list)
+    for entry in logs:
+        by_type[entry.metric_type].append(entry)
+
+    latest_values: dict = {}
+
+    # Water — cumulative sum
+    if "water" in by_type:
+        latest_values["water"] = sum(e.value or 0 for e in by_type["water"])
+
+    # Mood / energy / stress — latest value
+    for metric in ("mood", "energy", "stress"):
+        if metric in by_type:
+            latest = by_type[metric][-1]  # list is oldest-first; last = newest
+            if latest.value is not None:
+                latest_values[metric] = latest.value
+
+    # Weight — latest value
+    if "weight" in by_type:
+        latest = by_type["weight"][-1]
+        if latest.value is not None:
+            latest_values["weight"] = latest.value
+
+    # Sleep — latest value (duration_minutes stored in value column)
+    if "sleep" in by_type:
+        latest = by_type["sleep"][-1]
+        if latest.value is not None:
+            latest_values["sleep"] = latest.value
+
+    # Run — latest distance + run_logged_at timestamp
+    if "run" in by_type:
+        latest = by_type["run"][-1]
+        if latest.value is not None:
+            latest_values["run"] = latest.value
+        if latest.logged_at is not None:
+            logged_at_val = latest.logged_at
+            if hasattr(logged_at_val, "isoformat"):
+                latest_values["run_logged_at"] = logged_at_val.isoformat()
+            else:
+                latest_values["run_logged_at"] = str(logged_at_val)
+
+    # Meal — cumulative calories (null values treated as 0)
+    if "meal" in by_type:
+        latest_values["meal"] = sum(e.value or 0 for e in by_type["meal"])
+
+    # Supplement — cumulative count of items taken
+    if "supplement" in by_type:
+        latest_values["supplement"] = sum(e.value or 0 for e in by_type["supplement"])
+
+    # Symptom — latest severity string from text_value
+    if "symptom" in by_type:
+        latest = by_type["symptom"][-1]
+        if latest.text_value:
+            latest_values["symptom_severity"] = latest.text_value
+
+    # Steps — sum add entries; override acts as a reset point
+    if "steps" in by_type:
+        entries = by_type["steps"]  # oldest-first
+        last_override_idx = -1
+        for i, e in enumerate(entries):
+            if (e.data or {}).get("mode") == "override":
+                last_override_idx = i
+
+        if last_override_idx >= 0:
+            override_val = entries[last_override_idx].value or 0
+            add_after = sum(
+                e.value or 0 for e in entries[last_override_idx + 1 :] if (e.data or {}).get("mode", "add") == "add"
+            )
+            latest_values["steps"] = override_val + add_after
+        else:
+            latest_values["steps"] = sum(e.value or 0 for e in entries if (e.data or {}).get("mode", "add") == "add")
+
+    logged_types = sorted(by_type.keys())
+    return logged_types, latest_values
 
 
 # ---------------------------------------------------------------------------
@@ -902,6 +992,87 @@ async def log_steps(
     await db.commit()
     await db.refresh(log)
     return {"id": log.id, "logged_at": str(log.logged_at), "type": "steps"}
+
+
+@router.get("/my-metric-types", summary="Get all metric types the user has ever logged")
+@limiter.limit("60/minute")
+async def get_my_metric_types(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return the distinct metric type strings this user has ever logged.
+
+    Used by the mobile app to determine which snapshot cards to display.
+    Returns at most ~12 values (one per supported metric type).
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with a ``metric_types`` list of distinct type strings.
+    """
+    result = await db.execute(select(distinct(QuickLog.metric_type)).where(QuickLog.user_id == user_id))
+    types = [row[0] for row in result.all()]
+    return {"metric_types": types}
+
+
+@router.get("/summary/today", summary="Get today's aggregated log summary")
+@limiter.limit("60/minute")
+async def get_summary_today(
+    request: Request,
+    tz_offset: int = 0,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return an aggregated summary of the authenticated user's logs for today.
+
+    'Today' is the calendar day in the user's local timezone, determined by
+    the tz_offset query parameter (minutes offset from UTC, e.g. -300 for EST).
+
+    Aggregation rules per metric type:
+    - water, meal, supplement: cumulative sum
+    - steps: sum of 'add' entries; an 'override' entry resets the count
+    - mood, energy, stress, weight, sleep, run: latest value today
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        tz_offset: User's timezone offset from UTC in minutes. Defaults to 0 (UTC).
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with logged_types (list of strings) and latest_values (dict).
+
+    Raises:
+        HTTPException: 422 if tz_offset is outside [-720, 840].
+    """
+    if not (-720 <= tz_offset <= 840):
+        raise HTTPException(
+            status_code=422,
+            detail="tz_offset must be between -720 and 840 minutes.",
+        )
+
+    now_utc = datetime.now(timezone.utc)
+    user_offset = timedelta(minutes=tz_offset)
+    now_local = now_utc + user_offset
+    today_start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start_utc = today_start_local - user_offset
+
+    result = await db.execute(
+        select(QuickLog)
+        .where(
+            QuickLog.user_id == user_id,
+            QuickLog.logged_at >= today_start_utc,
+        )
+        .order_by(QuickLog.logged_at.asc())
+    )
+    logs = result.scalars().all()
+
+    logged_types, latest_values = _aggregate_today_logs(logs)
+    return {"logged_types": logged_types, "latest_values": latest_values}
 
 
 # ---------------------------------------------------------------------------
