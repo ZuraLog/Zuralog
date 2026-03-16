@@ -415,30 +415,44 @@ final stepsLogModeProvider =
 
 // ── Latest Log Values ─────────────────────────────────────────────────────────
 
+/// Produces a stable cache key for [latestLogValuesProvider] from a set of
+/// metric type strings. Always sorts alphabetically so the same set of types
+/// always produces the same string, regardless of insertion order.
+///
+/// Usage: `ref.watch(latestLogValuesProvider(latestLogValuesKey({'weight', 'steps'})))`
+String latestLogValuesKey(Set<String> types) =>
+    (types.toList()..sort()).join(',');
+
 /// The most recent logged value per requested metric type, across all time.
 ///
 /// The Cloud Brain is the deduplicated source of truth — values ingested from
 /// Apple Health, Health Connect, Strava, and manual entries are all surfaced
 /// here.
 ///
-/// Keyed by a [Set<String>] of metric type strings. The provider fetches
-/// all requested types in a single API call.
+/// Keyed by a sorted comma-joined [String] produced by [latestLogValuesKey].
+/// Using a [String] key (rather than [Set<String>]) guarantees correct Riverpod
+/// cache hits — Dart sets do not override `==` for value equality, so two
+/// non-const sets with identical contents are treated as different keys.
 ///
-/// Returns an empty map if [types] is empty or the request fails.
+/// Returns an empty map if [typesKey] is empty or the request fails.
 /// Individual types the user has never logged are absent from the returned map.
 ///
 /// Automatically re-fetches whenever [todayLogSummaryProvider] is invalidated
 /// (i.e. after any successful log submission), keeping pre-fill values fresh.
 final latestLogValuesProvider =
-    FutureProvider.family<Map<String, dynamic>, Set<String>>((ref, types) async {
+    FutureProvider.family<Map<String, dynamic>, String>((ref, typesKey) async {
+  // typesKey is a sorted comma-joined string, e.g. 'steps,weight'.
+  // Use latestLogValuesKey({'weight', 'steps'}) at call sites to
+  // produce a stable cache key.
+  //
   // Establish a reactive dependency so this provider auto-refreshes when
   // a new log is submitted (same invalidation trigger as todayLogSummaryProvider).
   ref.watch(todayLogSummaryProvider);
 
-  if (types.isEmpty) return const {};
+  if (typesKey.isEmpty) return const {};
   final repo = ref.read(todayRepositoryProvider);
   try {
-    return await repo.getLatestLogValues(types);
+    return await repo.getLatestLogValues(typesKey.split(',').toSet());
   } catch (e, st) {
     debugPrint('latestLogValuesProvider failed: $e\n$st');
     return const {};

@@ -104,7 +104,7 @@ void main() {
       addTearDown(container.dispose);
 
       final result = await container.read(
-        latestLogValuesProvider(const {}).future,
+        latestLogValuesProvider(latestLogValuesKey(const {})).future,
       );
       expect(result, isEmpty);
     });
@@ -119,7 +119,7 @@ void main() {
       addTearDown(container.dispose);
 
       final result = await container.read(
-        latestLogValuesProvider(const {'weight'}).future,
+        latestLogValuesProvider(latestLogValuesKey(const {'weight'})).future,
       );
       final weightEntry = result['weight'] as Map<String, dynamic>?;
       expect(weightEntry?['value_kg'], closeTo(78.4, 0.01));

@@ -263,7 +263,10 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   Future<void> logWater({
     required double amountMl,
     String? vesselKey,
-  }) async {}
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
 
   @override
   Future<void> logWellness({
@@ -271,10 +274,16 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     double? energy,
     double? stress,
     String? notes,
-  }) async {}
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
 
   @override
-  Future<void> logWeight({required double valueKg}) async {}
+  Future<void> logWeight({required double valueKg}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
 
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
