@@ -221,6 +221,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                     key: ValueKey(_selectedTile!.key),
                     tile: _selectedTile!,
                     onBack: _backToGrid,
+                    parentMessenger: widget.parentMessenger,
                     onSaved: () {
                       ref.invalidate(todayLogSummaryProvider);
                       if (mounted) Navigator.of(context).pop();
@@ -282,11 +283,20 @@ class _PanelView extends ConsumerWidget {
     required this.tile,
     required this.onBack,
     required this.onSaved,
+    this.parentMessenger,
   });
 
   final _TileDef tile;
   final VoidCallback onBack;
   final VoidCallback onSaved;
+
+  /// Optional messenger from the parent scaffold context.
+  ///
+  /// [_PanelView] lives inside a modal bottom sheet whose [BuildContext] is
+  /// detached from the host page's [Scaffold]. Passing [parentMessenger] from
+  /// [ZLogGridSheet.parentMessenger] ensures error snackbars surface above the
+  /// sheet rather than being swallowed by the modal's detached scaffold.
+  final ScaffoldMessengerState? parentMessenger;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -295,17 +305,16 @@ class _PanelView extends ConsumerWidget {
           onSave: (ml) async {
             try {
               await ref.read(todayRepositoryProvider).logWater(amountMl: ml);
-              ref.invalidate(todayLogSummaryProvider);
               onSaved();
             } catch (e) {
               debugPrint('logWater failed: $e');
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Could not save water. Please try again.'),
-                  ),
-                );
-              }
+              final messenger = parentMessenger ??
+                  (context.mounted ? ScaffoldMessenger.of(context) : null);
+              messenger?.showSnackBar(
+                const SnackBar(
+                  content: Text('Could not save water. Please try again.'),
+                ),
+              );
             }
           },
           onBack: onBack,
@@ -319,17 +328,16 @@ class _PanelView extends ConsumerWidget {
                 stress: data.stress,
                 notes: data.notes,
               );
-              ref.invalidate(todayLogSummaryProvider);
               onSaved();
             } catch (e) {
               debugPrint('logWellness failed: $e');
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Could not save check-in. Please try again.'),
-                  ),
-                );
-              }
+              final messenger = parentMessenger ??
+                  (context.mounted ? ScaffoldMessenger.of(context) : null);
+              messenger?.showSnackBar(
+                const SnackBar(
+                  content: Text('Could not save check-in. Please try again.'),
+                ),
+              );
             }
           },
           onBack: onBack,
@@ -344,17 +352,16 @@ class _PanelView extends ConsumerWidget {
               await ref
                   .read(todayRepositoryProvider)
                   .logSteps(steps: steps, mode: mode);
-              ref.invalidate(todayLogSummaryProvider);
               onSaved();
             } catch (e) {
               debugPrint('logSteps failed: $e');
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Could not save steps. Please try again.'),
-                  ),
-                );
-              }
+              final messenger = parentMessenger ??
+                  (context.mounted ? ScaffoldMessenger.of(context) : null);
+              messenger?.showSnackBar(
+                const SnackBar(
+                  content: Text('Could not save steps. Please try again.'),
+                ),
+              );
             }
           },
           onBack: onBack,
