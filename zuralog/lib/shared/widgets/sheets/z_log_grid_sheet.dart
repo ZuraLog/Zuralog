@@ -311,11 +311,15 @@ class _PanelView extends ConsumerWidget {
                   .logSteps(steps: steps, mode: mode);
               ref.invalidate(todayLogSummaryProvider);
               onSaved();
-            } catch (_) {
-              // Silent failure — the sheet dismisses regardless; the UI will
-              // not reflect the entry but will not crash. A retry/error state
-              // can be added in a future iteration.
-              onSaved();
+            } catch (e) {
+              debugPrint('logSteps failed: $e');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not save steps. Please try again.'),
+                  ),
+                );
+              }
             }
           },
           onBack: onBack,

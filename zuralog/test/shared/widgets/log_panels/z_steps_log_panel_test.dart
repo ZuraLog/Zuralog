@@ -15,7 +15,7 @@ ProviderContainer _container() => ProviderContainer(
 
 Widget _buildPanel({
   required ProviderContainer container,
-  void Function(int, String)? onSave,
+  Future<void> Function(int, String)? onSave,
   VoidCallback? onBack,
 }) =>
     UncontrolledProviderScope(
@@ -23,7 +23,7 @@ Widget _buildPanel({
       child: MaterialApp(
         home: Scaffold(
           body: ZStepsLogPanel(
-            onSave: onSave ?? (steps, mode) {},
+            onSave: onSave ?? (steps, mode) async {},
             onBack: onBack ?? () {},
           ),
         ),
@@ -49,7 +49,7 @@ void main() {
       await tester.pumpWidget(
         _buildPanel(
           container: container,
-          onSave: (steps, mode) => savedSteps = steps,
+          onSave: (steps, mode) async { savedSteps = steps; },
         ),
       );
       await tester.pump();

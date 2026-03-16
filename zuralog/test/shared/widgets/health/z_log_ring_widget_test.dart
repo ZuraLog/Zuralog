@@ -10,6 +10,16 @@ void main() {
     testWidgets('renders without error in loading state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            // Override to avoid real network calls (flutter_secure_storage)
+            // leaving pending timers that outlive the test.
+            todayLogSummaryProvider.overrideWith(
+              (ref) async => TodayLogSummary.empty,
+            ),
+            userLoggedTypesProvider.overrideWith(
+              (ref) async => const <String>{},
+            ),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: ZLogRingWidget(onTap: () {}),

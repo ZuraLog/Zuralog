@@ -31,8 +31,10 @@ class ZStepsLogPanel extends ConsumerStatefulWidget {
     required this.onBack,
   });
 
-  /// Called when the user taps "Save Steps". Receives the step count and mode string.
-  final void Function(int steps, String mode) onSave;
+  /// Called when the user taps "Save Steps". Receives the step count and mode
+  /// string ('add' or 'override'). Returns a [Future] so the caller can await
+  /// the async repository call before deciding whether to close the sheet.
+  final Future<void> Function(int steps, String mode) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -58,10 +60,10 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
     setState(() => _steps = parsed);
   }
 
-  void _handleSave() {
+  Future<void> _handleSave() async {
     final mode = ref.read(stepsLogModeProvider).valueOrNull ?? StepsLogMode.add;
     final modeString = mode == StepsLogMode.override_ ? 'override' : 'add';
-    widget.onSave(_steps, modeString);
+    await widget.onSave(_steps, modeString);
   }
 
   @override

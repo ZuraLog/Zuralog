@@ -17,6 +17,7 @@
 /// - [snapshotProvider]               — list of snapshot card data
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
+/// - [stepsLogModeProvider]           — persisted steps log mode (add vs override)
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
 library;
 
