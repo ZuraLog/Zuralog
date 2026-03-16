@@ -16,6 +16,7 @@ export 'health/z_log_ring_widget.dart';
 export 'indicators/status_indicator.dart';
 export 'indicators/z_icon_badge.dart';
 export 'inputs/app_text_field.dart';
+export 'log_panels/z_steps_log_panel.dart';
 export 'log_panels/z_water_log_panel.dart';
 export 'log_panels/z_wellness_log_panel.dart';
 export 'log_panels/z_weight_log_panel.dart';
