@@ -101,6 +101,36 @@ abstract final class RouteNames {
   /// Path for the Notification History screen.
   static const String notificationHistoryPath = '/today/notifications';
 
+  /// Name for the Sleep Log full-screen form.
+  static const String sleepLog = 'sleepLog';
+
+  /// Path for the Sleep Log screen.
+  static const String sleepLogPath = '/today/log/sleep';
+
+  /// Name for the Run Log full-screen form.
+  static const String runLog = 'runLog';
+
+  /// Path for the Run Log screen.
+  static const String runLogPath = '/today/log/run';
+
+  /// Name for the Meal Log full-screen form.
+  static const String mealLog = 'mealLog';
+
+  /// Path for the Meal Log screen.
+  static const String mealLogPath = '/today/log/meal';
+
+  /// Name for the Supplements Log full-screen form.
+  static const String supplementsLog = 'supplementsLog';
+
+  /// Path for the Supplements Log screen.
+  static const String supplementsLogPath = '/today/log/supplements';
+
+  /// Name for the Symptom Log full-screen form.
+  static const String symptomLog = 'symptomLog';
+
+  /// Path for the Symptom Log screen.
+  static const String symptomLogPath = '/today/log/symptom';
+
   // ── Tab 1: Data ───────────────────────────────────────────────────────────
 
   /// Name for the Health Dashboard tab root.

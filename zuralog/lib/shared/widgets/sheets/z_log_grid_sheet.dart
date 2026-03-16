@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -136,12 +137,12 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
 
   String _routeForTile(String key) {
     return switch (key) {
-      'sleep'      => 'sleepLog',
-      'run'        => 'runLog',
-      'meal'       => 'mealLog',
-      'supplement' => 'supplementsLog',
-      'symptom'    => 'symptomLog',
-      _            => 'today',
+      'sleep'      => RouteNames.sleepLog,
+      'run'        => RouteNames.runLog,
+      'meal'       => RouteNames.mealLog,
+      'supplement' => RouteNames.supplementsLog,
+      'symptom'    => RouteNames.symptomLog,
+      _            => throw AssertionError('No route mapped for full-screen tile key: $key'),
     };
   }
 

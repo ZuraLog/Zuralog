@@ -365,6 +365,43 @@ List<RouteBase> _buildRoutes() {
       ),
     ),
 
+    // ── Log Screens (pushed over shell — no bottom nav visible) ──────────
+    GoRoute(
+      path: RouteNames.sleepLogPath,
+      name: RouteNames.sleepLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: Scaffold(body: Center(child: Text('Sleep Log — coming soon'))),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.runLogPath,
+      name: RouteNames.runLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: Scaffold(body: Center(child: Text('Run Log — coming soon'))),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.mealLogPath,
+      name: RouteNames.mealLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: Scaffold(body: Center(child: Text('Meal Log — coming soon'))),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.supplementsLogPath,
+      name: RouteNames.supplementsLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: Scaffold(body: Center(child: Text('Supplements Log — coming soon'))),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.symptomLogPath,
+      name: RouteNames.symptomLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: Scaffold(body: Center(child: Text('Symptom Log — coming soon'))),
+      ),
+    ),
+
     // ── Main App Shell — 5-tab StatefulShellRoute ─────────────────────────
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
