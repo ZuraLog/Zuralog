@@ -353,7 +353,7 @@ Interactive analytics that let users discover patterns in their own data:
 
 ### O. Quick Log / Manual Entry
 
-**Implementation status:** Part 3 complete (2026-03-16). FAB + log grid sheet + 4 inline log panels (Water, Wellness, Weight, Steps) + 5 full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) fully functional. Shared components: `ZLogFab`, `ZLogGridSheet`, `ZLogGridCell`, `ZWaterLogPanel`, `ZWellnessLogPanel`, `ZWeightLogPanel`, `ZStepsLogPanel`, `ZSectionLabel`. Backend endpoints for all 5 log types implemented with RLS security. Real data wiring complete.
+**Implementation status:** Part 4 complete (2026-03-16). FAB + log grid sheet + 4 inline log panels (Water, Wellness, Weight, Steps) + 5 full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) fully functional. Shared components: `ZLogFab`, `ZLogGridSheet`, `ZLogGridCell`, `ZWaterLogPanel`, `ZWellnessLogPanel`, `ZWeightLogPanel`, `ZStepsLogPanel`, `ZSectionLabel`. Backend endpoints for all 9 log types (water, wellness, weight, steps, sleep, run, meal, supplements, symptom) implemented with RLS security. Real data wiring complete — all endpoints return real data, all UI panels display real logged values, steps mode toggle persisted.
 
 A dedicated quick-entry interface for data that does not come from integrations. This is the structured complement to natural language logging in chat — for users who prefer tapping over typing.
 

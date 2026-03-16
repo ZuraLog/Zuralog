@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-15 (All 10 architectural debt cleanup batches complete and deployed)  
+**Last Updated:** 2026-03-16 (Today Tab Part 4 complete: quick-log real data wiring + steps mode toggle)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -29,6 +29,166 @@
 - Supabase migration idempotency fix (Batch 5: insights upsert)
 - `WITHINGS_API_BASE_URL` env var validation (Batch 8: integration config)
 - All 50 debt items resolved; zero regressions
+
+---
+
+## Today Tab Part 4 — Quick Log Real Data & Steps Mode Toggle (2026-03-16)
+
+**Scope:** Implemented real data wiring for quick-log endpoints (water, wellness, weight, steps) and added a steps log mode toggle (add vs. override).  
+**Branch:** `feat/today-tab-part4-real-data` → merged to main (2026-03-16)
+
+**What was built:**
+
+### Backend Endpoints
+
+**6 new endpoints in `cloud-brain/app/api/v1/quick_log_routes.py`:**
+
+1. **`POST /api/v1/quick-log/water`** — Logs water intake
+   - Payload: `amount_ml` (int, 1–5000), `vessel_key` (str, optional)
+   - Rate limit: 60/minute per user
+   - Stores a single `quick_logs` row with metric type `water`
+   - Returns: logged entry with timestamp
+
+2. **`POST /api/v1/quick-log/wellness`** — Logs mood/energy/stress check-in
+   - Payload: `mood` (float, 1.0–10.0, optional), `energy` (float, 1.0–10.0, optional), `stress` (float, 1.0–10.0, optional)
+   - At least one metric required
+   - Rate limit: 30/minute per user
+   - Stores one `quick_logs` row per metric type (up to 3 rows per request)
+   - Returns: array of logged entries
+
+3. **`POST /api/v1/quick-log/weight`** — Logs body weight
+   - Payload: `weight_kg` (float, 20–500)
+   - Rate limit: 10/minute per user
+   - Stores a single `quick_logs` row with metric type `weight`
+   - Returns: logged entry with timestamp
+
+4. **`POST /api/v1/quick-log/steps`** — Logs step count with add/override mode
+   - Payload: `steps` (int, 0–100,000), `mode` (str, "add" or "override")
+   - Rate limit: 10/minute per user
+   - If mode is "add": increments today's step total
+   - If mode is "override": replaces today's step total (resets to new value)
+   - Stores a single `quick_logs` row with metric type `steps`
+   - Returns: logged entry with mode and new total
+
+5. **`GET /api/v1/quick-log/my-metric-types`** — Returns distinct metric types the user has ever logged
+   - Rate limit: 60/minute per user
+   - Returns: array of metric type strings (e.g., `["water", "mood", "energy", "stress", "weight", "steps"]`)
+   - Used by Flutter to populate the Log Grid Sheet with only the metric types the user has logged before
+
+6. **`GET /api/v1/quick-log/summary/today`** — Returns aggregated summary of today's logs
+   - Query param: `tz_offset` (int, UTC offset in minutes, e.g., -300 for EST)
+   - Rate limit: 60/minute per user
+   - Returns aggregated data:
+     - `water_ml` (sum of all water logged today)
+     - `mood`, `energy`, `stress` (latest value for each)
+     - `weight_kg` (latest value)
+     - `sleep_hours`, `sleep_quality` (latest values)
+     - `run_distance_km`, `run_duration_min` (latest values)
+     - `meal_calories` (sum of all meals logged today)
+     - `supplement_count` (count of supplements logged today)
+     - `steps` (current total, accounting for override-as-reset logic)
+   - Timezone-aware: uses `tz_offset` to determine "today" boundaries in the user's local time
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Separate endpoints per metric type | Each endpoint has different validation rules and rate limits. Separating them makes the API contract clear and allows independent scaling. |
+| Wellness stores one row per metric | Mood, energy, and stress are separate metrics in the analytics engine. Storing them as separate rows allows independent querying and trending. |
+| Steps mode: add vs. override | Users may want to manually adjust their step count (e.g., "I walked 5000 steps, not 3000"). Override mode replaces the total; add mode increments. The mode is persisted client-side so the user's preference is remembered. |
+| Timezone-aware summary endpoint | "Today" is relative to the user's local time, not UTC. The `tz_offset` parameter allows the backend to compute the correct date boundaries. |
+| Rate limits per endpoint | Water is logged frequently (multiple times per day), so 60/min. Wellness check-in is once daily, so 30/min. Weight and steps are less frequent, so 10/min. |
+
+### Flutter Real Data Wiring
+
+**Repository methods:**
+
+1. **`TodayRepository.getTodayLogSummary()`** — Real implementation
+   - Calls `GET /api/v1/quick-log/summary/today` with timezone offset
+   - Returns `TodayLogSummary` model with all aggregated data
+   - Replaces stub that returned hardcoded empty data
+
+2. **`TodayRepository.getUserLoggedTypes()`** — Real implementation
+   - Calls `GET /api/v1/quick-log/my-metric-types`
+   - Returns list of metric type strings
+   - Used to populate the Log Grid Sheet with only the types the user has logged
+
+3. **`TodayRepository.logSteps(int steps, String mode)`** — New method
+   - Calls `POST /api/v1/quick-log/steps` with steps count and mode
+   - Returns logged entry
+   - Wired to `ZStepsLogPanel` submit button
+
+**Providers:**
+
+1. **`todayLogSummaryProvider`** — Real implementation
+   - Calls `getTodayLogSummary()` on every tab switch
+   - Invalidated after any log entry (water, wellness, weight, steps)
+   - Log Ring, Snapshot Cards, and Water panel's "X ml today" now reflect real data
+   - Replaces stub that returned hardcoded empty data
+
+2. **`userLoggedTypesProvider`** — Real implementation
+   - Calls `getUserLoggedTypes()` on app startup
+   - Cached for the session
+   - Used to populate the Log Grid Sheet with only the types the user has logged
+   - Replaces stub that returned hardcoded list
+
+3. **`stepsLogModeProvider`** — New AsyncNotifierProvider
+   - Backed by SharedPreferences key `'steps_log_mode'`
+   - Default value: "add" (increment mode)
+   - Persisted across app sessions
+   - Wired to `ZStepsLogPanel` mode toggle switch
+
+**UI Updates:**
+
+1. **`ZStepsLogPanel`** — Mode toggle added
+   - New `Switch` widget above the step count input
+   - Default label: "Add to today's total"
+   - When toggled: "Set as new total" (override mode)
+   - Mode is read from `stepsLogModeProvider` and persisted on change
+   - Submit button calls `logSteps(steps, mode)` with the selected mode
+
+2. **Today Feed** — Real data display
+   - Log Ring now shows real logged data from `todayLogSummaryProvider`
+   - Snapshot Cards now show real metric values
+   - Water panel shows real "X ml today" total
+   - All update in real-time when new data is logged
+
+**Tests:**
+
+1. **Backend tests** — 48 tests in `cloud-brain/tests/api/v1/test_new_log_endpoints.py`
+   - Tests for all 6 endpoints
+   - Validation tests (boundary values, invalid inputs)
+   - Rate limiting tests
+   - Timezone-aware summary tests
+   - Override-as-reset logic tests for steps
+
+2. **Provider unit tests** — `zuralog/test/features/today/providers/today_providers_test.dart`
+   - Tests for `todayLogSummaryProvider` real data fetch
+   - Tests for `userLoggedTypesProvider` real data fetch
+   - Tests for `stepsLogModeProvider` persistence
+
+3. **Widget tests** — `zuralog/test/shared/widgets/log_panels/z_steps_log_panel_test.dart`
+   - Tests for mode toggle switch
+   - Tests for mode persistence
+   - Tests for submit button with correct mode
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Real data wiring on Part 4 | Parts 1–3 built the UI and backend endpoints. Part 4 connects them. The app now fetches and displays real data instead of stubs. |
+| Steps mode persisted in SharedPreferences | The user's preference (add vs. override) should be remembered across sessions. SharedPreferences is the right place for this client-side preference. |
+| Invalidate `todayLogSummaryProvider` after any log | The summary is stale as soon as new data is logged. Invalidating forces a fresh fetch on the next read. |
+| Timezone-aware summary endpoint | Users expect "today" to mean their local calendar day, not UTC. The `tz_offset` parameter makes this work correctly. |
+
+**Result:**
+- Quick Log now displays real data from the backend
+- Water panel shows real "X ml today" total
+- Log Ring shows real logged metrics
+- Snapshot Cards show real metric values
+- Steps mode toggle is persisted and functional
+- All 48 backend tests passing
+- All provider and widget tests passing
 
 ---
 

@@ -1,7 +1,7 @@
 # Zuralog — Mobile Screen Inventory
 
 **Version:** 1.2  
-**Last Updated:** 2026-03-05  
+**Last Updated:** 2026-03-16  
 **Status:** Living Document
 
 ---
@@ -66,6 +66,7 @@ The app's front door. A curated, AI-driven daily briefing. The user reads; the a
 | **Meal Log Screen** | Full-screen (outside tab shell) | Quick/Full toggle (persisted via SharedPreferences), meal type selector, description field, calorie presets, feel chips (satisfied, energized, sluggish, bloated), tags input. Part 3 complete. |
 | **Supplements Log Screen** | Full-screen (outside tab shell) | Tap-to-check-off checklist of user's supplements, inline add form for new supplements, optimistic UI updates. Part 3 complete. |
 | **Symptom Log Screen** | Full-screen (outside tab shell) | Body area multi-select (head, chest, back, arms, legs, joints), symptom type selector, severity emoji scale, timing selector (onset, duration), optional notes. Part 3 complete. |
+| **Steps Log Panel** | Inline in Log Grid Sheet | Step count entry with mode toggle (Add to today's total / Set as new total). Mode persisted via `stepsLogModeProvider` backed by SharedPreferences. Part 4 complete. |
 | **Insight Detail** | Pushed | Full-screen explanation of a single AI insight. Shows the data behind the observation (charts, numbers, source integrations), the AI's reasoning, and a "Discuss with Coach" action that opens a pre-filled chat thread for follow-up. |
 | **Notification History** | Pushed (bell icon) | Scrollable list of all past push notifications grouped by day. Tapping a notification deep-links to the relevant insight or metric. Accessible from a bell icon in the Today header. |
 

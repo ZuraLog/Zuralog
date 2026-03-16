@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-16 (Today Tab Part 3 complete: 5 full-screen log screens + backend endpoints + route registration + providers)
+**Last Updated:** 2026-03-16 (Today Tab Part 4 complete: water/wellness/weight/steps quick-log endpoints + real data wiring + steps mode toggle)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -191,6 +191,7 @@
 | P0 | Today — Meal Log Screen | ✅ Done | Part 3 complete — quick/full toggle (persisted), meal type, description, calorie presets, feel chips, tags |
 | P0 | Today — Supplements Log Screen | ✅ Done | Part 3 complete — tap-to-check-off checklist, inline add form, optimistic updates |
 | P0 | Today — Symptom Log Screen | ✅ Done | Part 3 complete — body area multi-select, symptom type, severity emoji, timing, notes |
+| P0 | Today — Quick Log Real Data (Part 4) | ✅ Done | Water/Wellness/Weight/Steps endpoints + real data wiring + steps mode toggle; feat/today-tab-part4-real-data merged 2026-03-16 |
 | P0 | Data — Health Dashboard (customizable) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Category Detail (x10) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Metric Detail | ✅ Done | Phase 5 — feat/data-tab |
@@ -418,6 +419,46 @@ Established a centralized shared component library, eliminating duplicated UI co
 | P0 | Never-error provider pattern | ✅ Done | All 4 providers (`healthScoreProvider`, `todayFeedProvider`, `dashboardProvider`, `trendsHomeProvider`) catch all errors and return empty data objects — UI never sees an error branch |
 | P0 | Shared `HealthScoreZeroState` widget | ✅ Done | Extracted to `lib/shared/widgets/health_score_zero_state.dart`; used by TodayFeedScreen card body |
 | P0 | Layout fix — compact zero ring in ScoreTrendHero | ✅ Done | `_CompactScoreZeroState` (48×48 muted ring) replaces full `HealthScoreZeroState` in row slot; prevents row layout break |
+
+---
+
+## Today Tab Part 4 — Quick Log Real Data & Steps Mode Toggle (2026-03-16)
+
+> **Branch:** `feat/today-tab-part4-real-data` → merged to main (2026-03-16)
+
+Completed real data wiring for quick-log endpoints (water, wellness, weight, steps) and added steps log mode toggle (add vs. override).
+
+### Backend (Cloud Brain)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | `POST /api/v1/quick-log/water` endpoint | ✅ Done | Logs water intake (amount_ml, vessel_key). Rate limit 60/min. Validation: 1–5000ml. |
+| P0 | `POST /api/v1/quick-log/wellness` endpoint | ✅ Done | Logs mood/energy/stress check-in. Stores one `quick_logs` row per metric type. Rate limit 30/min. Validation: values 1.0–10.0, at least one required. |
+| P0 | `POST /api/v1/quick-log/weight` endpoint | ✅ Done | Logs body weight in kg. Rate limit 10/min. Validation: 20–500kg. |
+| P0 | `POST /api/v1/quick-log/steps` endpoint | ✅ Done | Logs step count with add/override mode. Rate limit 10/min. Validation: 0–100,000 steps. |
+| P0 | `GET /api/v1/quick-log/my-metric-types` endpoint | ✅ Done | Returns distinct metric types the user has ever logged. Rate limit 60/min. |
+| P0 | `GET /api/v1/quick-log/summary/today` endpoint | ✅ Done | Returns aggregated summary of today's logs (water/meal/supplement summed; mood/energy/stress/weight/sleep/run latest value; steps with override-as-reset logic). Timezone-aware via `tz_offset` query param. Rate limit 60/min. |
+| P0 | Add `weight` and `steps` to `VALID_METRIC_TYPES` frozenset | ✅ Done | Metric type validation updated. |
+
+### Flutter (Mobile App)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | `TodayRepository.getTodayLogSummary()` real implementation | ✅ Done | Replaces stub. Wired to `GET /api/v1/quick-log/summary/today`. |
+| P0 | `TodayRepository.getUserLoggedTypes()` real implementation | ✅ Done | Replaces stub. Wired to `GET /api/v1/quick-log/my-metric-types`. |
+| P0 | `todayLogSummaryProvider` real implementation | ✅ Done | Replaces stub. Log Ring, Snapshot Cards, and Water panel's "X ml today" now reflect real data. |
+| P0 | `userLoggedTypesProvider` real implementation | ✅ Done | Replaces stub. |
+| P0 | `stepsLogModeProvider` new AsyncNotifierProvider | ✅ Done | Backed by SharedPreferences key `'steps_log_mode'`. Default: add mode. |
+| P0 | `ZStepsLogPanel` mode toggle added | ✅ Done | Switch widget. Default: "Add to today's total". Can be switched to "Set as new total" (override mode). Mode remembered across sessions. |
+| P0 | `logSteps` method added to `TodayRepository` | ✅ Done | Wired to `POST /api/v1/quick-log/steps`. |
+
+### Tests
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Backend tests for new endpoints | ✅ Done | 48 tests in `cloud-brain/tests/api/v1/test_new_log_endpoints.py`. |
+| P0 | Provider unit tests | ✅ Done | `zuralog/test/features/today/providers/today_providers_test.dart`. |
+| P0 | Widget tests for steps panel | ✅ Done | `zuralog/test/shared/widgets/log_panels/z_steps_log_panel_test.dart`. |
 
 ---
 
