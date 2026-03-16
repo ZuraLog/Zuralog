@@ -39,7 +39,7 @@ void main() {
   group('ZStepsLogPanel sync banner', () {
     testWidgets('Shows no banner and no placeholder when no synced data', (tester) async {
       await tester.pumpWidget(_wrap(ZStepsLogPanel(
-        onSave: (_, __) async {},
+        onSave: (steps, mode) async {},
         onBack: () {},
       )));
       await tester.pumpAndSettle();
@@ -50,7 +50,7 @@ void main() {
 
     testWidgets('Shows sync banner when today data from health app is available', (tester) async {
       await tester.pumpWidget(_wrap(
-        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        ZStepsLogPanel(onSave: (steps, mode) async {}, onBack: () {}),
         latestSteps: {
           'steps': 9420,
           'logged_at': _todayIso,
@@ -65,7 +65,7 @@ void main() {
 
     testWidgets('Shows Confirm Steps when value matches synced', (tester) async {
       await tester.pumpWidget(_wrap(
-        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        ZStepsLogPanel(onSave: (steps, mode) async {}, onBack: () {}),
         latestSteps: {
           'steps': 9420,
           'logged_at': _todayIso,
@@ -79,7 +79,7 @@ void main() {
 
     testWidgets('Reverts to Save Steps when value is changed', (tester) async {
       await tester.pumpWidget(_wrap(
-        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        ZStepsLogPanel(onSave: (steps, mode) async {}, onBack: () {}),
         latestSteps: {
           'steps': 9420,
           'logged_at': _todayIso,
@@ -96,7 +96,7 @@ void main() {
 
     testWidgets('No banner shown for manual source', (tester) async {
       await tester.pumpWidget(_wrap(
-        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        ZStepsLogPanel(onSave: (steps, mode) async {}, onBack: () {}),
         latestSteps: {
           'steps': 5000,
           'logged_at': _todayIso,
@@ -112,7 +112,7 @@ void main() {
   group('ZStepsLogPanel goal display', () {
     testWidgets('Shows Goal dash when no step goal configured', (tester) async {
       await tester.pumpWidget(_wrap(ZStepsLogPanel(
-        onSave: (_, __) async {},
+        onSave: (steps, mode) async {},
         onBack: () {},
       )));
       await tester.pumpAndSettle();
@@ -122,7 +122,7 @@ void main() {
 
     testWidgets('Shows goal progress when step goal exists', (tester) async {
       await tester.pumpWidget(_wrap(
-        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        ZStepsLogPanel(onSave: (steps, mode) async {}, onBack: () {}),
         goals: [
           DailyGoal(
             id: 'goal-1',
