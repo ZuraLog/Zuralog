@@ -123,18 +123,20 @@ final todayBannerSessionDismissed = StateProvider<bool>((ref) => false);
 
 /// Aggregated summary of what the user has logged today.
 ///
-/// **MVP stub:** Returns an empty summary until Part 4 adds the backend log
-/// endpoints and wires the real fetch. Swap the implementation here when
-/// the endpoint is ready — all UI code reads from this provider and will
-/// update automatically.
+/// On success: returns populated [TodayLogSummary] from the API.
+/// On failure: returns [TodayLogSummary.empty] — the UI stays functional
+/// in an empty state rather than showing an error.
 ///
 /// Invalidate after every successful log submission so the Log Ring and
 /// Snapshot Cards reflect the new entry immediately.
 final todayLogSummaryProvider = FutureProvider<TodayLogSummary>((ref) async {
-  // TODO(Part 4): Replace stub with real API call once log endpoints exist.
-  // final repo = ref.read(todayRepositoryProvider);
-  // return repo.getTodayLogSummary();
-  return TodayLogSummary.empty;
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getTodayLogSummary();
+  } catch (e, st) {
+    debugPrint('todayLogSummaryProvider failed: $e\n$st');
+    return TodayLogSummary.empty;
+  }
 });
 
 // ── User Logged Types ─────────────────────────────────────────────────────────
@@ -142,16 +144,18 @@ final todayLogSummaryProvider = FutureProvider<TodayLogSummary>((ref) async {
 /// The set of metric type strings the user has *ever* logged (not just today).
 ///
 /// Used by [snapshotProvider] to determine which snapshot cards to display.
-/// Cards are shown for all types the user has ever used, even if no data
-/// exists today — they render an empty state rather than disappearing.
+/// On failure: returns an empty set — the UI shows no snapshot cards rather
+/// than crashing.
 ///
-/// **MVP stub:** Returns an empty set until Part 4 adds the backend endpoint
-/// `GET /api/v1/quick-logs/my-metric-types`.
+/// Cached until a new metric type is submitted for the first time.
 final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
-  // TODO(Part 4): Replace stub with real API call.
-  // final repo = ref.read(todayRepositoryProvider);
-  // return repo.getUserLoggedTypes();
-  return const <String>{};
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getUserLoggedTypes();
+  } catch (e, st) {
+    debugPrint('userLoggedTypesProvider failed: $e\n$st');
+    return const <String>{};
+  }
 });
 
 // ── Log Ring ──────────────────────────────────────────────────────────────────
