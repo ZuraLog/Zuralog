@@ -1514,7 +1514,7 @@ class _QuickActionsSheet extends ConsumerWidget {
                       itemCount: totalCount,
                       itemBuilder: (gridCtx, i) {
                         if (i == actions.length) {
-                          return _QuickLogTile(outerContext: ctx);
+                          return const _QuickLogTile();
                         }
                         return _QuickActionTile(
                           action: actions[i],
@@ -1598,8 +1598,7 @@ class _QuickActionTile extends StatelessWidget {
 }
 
 class _QuickLogTile extends ConsumerWidget {
-  const _QuickLogTile({required this.outerContext});
-  final BuildContext outerContext;
+  const _QuickLogTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1607,13 +1606,12 @@ class _QuickLogTile extends ConsumerWidget {
     return GestureDetector(
       onTap: () {
         ref.read(hapticServiceProvider).light();
-        Navigator.of(outerContext).pop(); // close quick actions sheet
-        ScaffoldMessenger.of(outerContext).showSnackBar(
+        Navigator.of(context).pop(); // close quick actions sheet
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
               'Use the + button on the Today tab to log health data.',
             ),
-            backgroundColor: colors.surface,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
