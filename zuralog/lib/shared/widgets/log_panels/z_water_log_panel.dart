@@ -98,8 +98,11 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   void _handleSave() {
     // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/water
     // Body: { amount_ml: double, logged_at: ISO8601 }
+    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
+    // here. The sheet's onSaved callback owns post-save side effects so that
+    // invalidation only fires on confirmed success (not before the server
+    // round-trip in Part 4).
     widget.onSave(_amountMl);
-    ref.invalidate(todayLogSummaryProvider);
   }
 
   @override

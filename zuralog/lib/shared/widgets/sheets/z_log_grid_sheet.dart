@@ -67,16 +67,35 @@ const List<_TileDef> _tiles = [
 /// Reads [todayLogSummaryProvider] to show green checkmarks on tiles the
 /// user has already logged today.
 ///
+/// ## FAB positioning note
+///
+/// [AppShell] uses `extendBody: true` on its outer [Scaffold]. Flutter
+/// therefore automatically injects the frosted nav bar's rendered height into
+/// [MediaQuery.padding.bottom] for all children of the body — including the
+/// inner [Scaffold] inside [ZuralogScaffold]. The inner [Scaffold]'s FAB
+/// uses [FloatingActionButtonLocation.endFloat] by default, which already
+/// reads [MediaQuery.padding.bottom] to lift the button above the nav bar.
+/// No additional manual padding or [extendBody] override is needed here.
+///
 /// Usage:
 /// ```dart
 /// showModalBottomSheet<void>(
 ///   context: context,
 ///   isScrollControlled: true,
-///   builder: (_) => const ZLogGridSheet(),
+///   builder: (_) => ZLogGridSheet(
+///     parentMessenger: ScaffoldMessenger.of(context),
+///   ),
 /// );
 /// ```
 class ZLogGridSheet extends ConsumerStatefulWidget {
-  const ZLogGridSheet({super.key});
+  const ZLogGridSheet({super.key, this.parentMessenger});
+
+  /// Optional [ScaffoldMessengerState] from the parent context.
+  ///
+  /// Used to show snackbars above the modal bottom sheet. If null, falls back
+  /// to [ScaffoldMessenger.of(context)] resolved inside the sheet — which may
+  /// not surface correctly from within a detached modal context.
+  final ScaffoldMessengerState? parentMessenger;
 
   @override
   ConsumerState<ZLogGridSheet> createState() => _ZLogGridSheetState();
@@ -98,7 +117,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
         break;
 
       case _TileBehaviour.comingSoon:
-        ScaffoldMessenger.of(context).showSnackBar(
+        (widget.parentMessenger ?? ScaffoldMessenger.of(context)).showSnackBar(
           SnackBar(
             content: const Text('Workout tracking is coming soon — stay tuned!'),
             backgroundColor: AppColors.primary,
@@ -269,15 +288,10 @@ class _PanelView extends ConsumerWidget {
           onSave: (_) => onSaved(),
           onBack: onBack,
         ),
-      _ => Padding(
-          padding: const EdgeInsets.all(AppDimens.spaceLg),
-          child: Center(
-            child: Text(
-              '${tile.label} panel — coming in Part 3',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColorsOf(context).textTertiary,
-              ),
-            ),
+      _ => Center(
+          child: Text(
+            '${tile.label} — not available',
+            // This branch is unreachable in production — all inline tiles are wired above.
           ),
         ),
     };

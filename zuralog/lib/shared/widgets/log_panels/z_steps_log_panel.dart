@@ -12,7 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── ZStepsLogPanel ─────────────────────────────────────────────────────────────
 
@@ -61,8 +60,11 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
   void _handleSave() {
     // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/steps
     // Body: { steps: int, source: 'manual', logged_at: ISO8601 }
+    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
+    // here. The sheet's onSaved callback owns post-save side effects so that
+    // invalidation only fires on confirmed success (not before the server
+    // round-trip in Part 4).
     widget.onSave(_steps);
-    ref.invalidate(todayLogSummaryProvider);
   }
 
   @override

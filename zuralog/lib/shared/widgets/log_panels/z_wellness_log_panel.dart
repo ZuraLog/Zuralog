@@ -11,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── Data model ─────────────────────────────────────────────────────────────────
 
@@ -86,6 +85,10 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   void _handleSave() {
     // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/wellness
     // Body: { mood?: float, energy?: float, stress?: float, notes?: string, logged_at: ISO8601 }
+    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
+    // here. The sheet's onSaved callback owns post-save side effects so that
+    // invalidation only fires on confirmed success (not before the server
+    // round-trip in Part 4).
     final data = WellnessLogData(
       mood: _moodTouched ? _moodValue : null,
       energy: _energyTouched ? _energyValue : null,
@@ -93,7 +96,6 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
       notes: _notesController.text.isEmpty ? null : _notesController.text,
     );
     widget.onSave(data);
-    ref.invalidate(todayLogSummaryProvider);
   }
 
   @override
@@ -164,7 +166,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
           TextField(
             controller: _notesController,
             maxLength: 500,
-            maxLines: 3,
+            maxLines: 1,
             decoration: InputDecoration(
               hintText: "How's your day going?",
               hintStyle:

@@ -12,7 +12,6 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
-import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── ZWeightLogPanel ────────────────────────────────────────────────────────────
 
@@ -85,8 +84,11 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/weight
     // Body: { value_kg: double, logged_at: ISO8601 }
     // Always submit _value in kg regardless of display toggle.
+    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
+    // here. The sheet's onSaved callback owns post-save side effects so that
+    // invalidation only fires on confirmed success (not before the server
+    // round-trip in Part 4).
     widget.onSave(_value);
-    ref.invalidate(todayLogSummaryProvider);
   }
 
   @override

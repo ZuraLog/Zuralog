@@ -58,7 +58,9 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const ZLogGridSheet(),
+      builder: (_) => ZLogGridSheet(
+        parentMessenger: ScaffoldMessenger.of(context),
+      ),
     );
   }
 
@@ -91,7 +93,6 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
         .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true));
 
     return ZuralogScaffold(
-      addBottomNavPadding: true,
       floatingActionButton: ZLogFab(onPressed: _openLogSheet),
       appBar: ZuralogAppBar(
         title: 'Today',

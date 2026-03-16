@@ -6,17 +6,20 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/sheets/z_log_grid_cell.dart';
 import 'package:zuralog/shared/widgets/sheets/z_log_grid_sheet.dart';
 
-ProviderContainer _container({Set<String> loggedTypes = const {}}) =>
-    ProviderContainer(
-      overrides: [
-        todayLogSummaryProvider.overrideWith(
-          (ref) async => TodayLogSummary(
-            loggedTypes: loggedTypes,
-            latestValues: const {},
-          ),
+ProviderContainer _container({Set<String> loggedTypes = const {}}) {
+  final container = ProviderContainer(
+    overrides: [
+      todayLogSummaryProvider.overrideWith(
+        (ref) async => TodayLogSummary(
+          loggedTypes: loggedTypes,
+          latestValues: const {},
         ),
-      ],
-    );
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  return container;
+}
 
 void main() {
   group('ZLogGridSheet', () {
@@ -32,7 +35,9 @@ void main() {
                   onPressed: () => showModalBottomSheet<void>(
                     context: ctx,
                     isScrollControlled: true,
-                    builder: (_) => const ZLogGridSheet(),
+                    builder: (_) => ZLogGridSheet(
+                      parentMessenger: ScaffoldMessenger.of(ctx),
+                    ),
                   ),
                   child: const Text('Open'),
                 ),
@@ -58,7 +63,9 @@ void main() {
                   onPressed: () => showModalBottomSheet<void>(
                     context: ctx,
                     isScrollControlled: true,
-                    builder: (_) => const ZLogGridSheet(),
+                    builder: (_) => ZLogGridSheet(
+                      parentMessenger: ScaffoldMessenger.of(ctx),
+                    ),
                   ),
                   child: const Text('Open'),
                 ),
@@ -84,7 +91,9 @@ void main() {
                   onPressed: () => showModalBottomSheet<void>(
                     context: ctx,
                     isScrollControlled: true,
-                    builder: (_) => const ZLogGridSheet(),
+                    builder: (_) => ZLogGridSheet(
+                      parentMessenger: ScaffoldMessenger.of(ctx),
+                    ),
                   ),
                   child: const Text('Open'),
                 ),
@@ -116,7 +125,9 @@ void main() {
                   onPressed: () => showModalBottomSheet<void>(
                     context: ctx,
                     isScrollControlled: true,
-                    builder: (_) => const ZLogGridSheet(),
+                    builder: (_) => ZLogGridSheet(
+                      parentMessenger: ScaffoldMessenger.of(ctx),
+                    ),
                   ),
                   child: const Text('Open'),
                 ),
@@ -149,7 +160,9 @@ void main() {
                   onPressed: () => showModalBottomSheet<void>(
                     context: ctx,
                     isScrollControlled: true,
-                    builder: (_) => const ZLogGridSheet(),
+                    builder: (_) => ZLogGridSheet(
+                      parentMessenger: ScaffoldMessenger.of(ctx),
+                    ),
                   ),
                   child: const Text('Open'),
                 ),
