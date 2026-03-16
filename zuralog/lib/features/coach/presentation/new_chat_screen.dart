@@ -32,7 +32,6 @@ import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/quick_log_sheet.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── NewChatScreen ─────────────────────────────────────────────────────────────
@@ -1609,33 +1608,17 @@ class _QuickLogTile extends ConsumerWidget {
       onTap: () {
         ref.read(hapticServiceProvider).light();
         Navigator.of(outerContext).pop(); // close quick actions sheet
-        showModalBottomSheet<void>(
-          context: outerContext,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (ctx) => DraggableScrollableSheet(
-            initialChildSize: 0.85,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            expand: false,
-            builder: (_, scrollController) => QuickLogSheet(
-              scrollController: scrollController,
-              onSubmit: (QuickLogData data) {
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(outerContext).showSnackBar(
-                  SnackBar(
-                    content: const Text('Health data logged!'),
-                    backgroundColor: colors.surface,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppDimens.radiusButtonMd,
-                      ),
-                    ),
-                  ),
-                );
-              },
+        ScaffoldMessenger.of(outerContext).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Use the + button on the Today tab to log health data.',
             ),
+            backgroundColor: colors.surface,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
+            ),
+            duration: const Duration(seconds: 3),
           ),
         );
       },
