@@ -1,4 +1,4 @@
-"""Tests for the new typed quick-log endpoints (sleep, run, meal, supplement, symptom).
+"""Tests for the new typed quick-log endpoints (sleep, run, meal, supplement, symptom, water, wellness, weight, steps).
 
 Uses the same mock-based TestClient pattern as the rest of the test suite.
 There is no live database in CI — all DB calls are replaced by AsyncMock so
@@ -481,6 +481,21 @@ class TestLogWellness:
             headers=AUTH_HEADER,
         )
         assert resp.status_code == 422
+
+    def test_mood_and_energy_returns_two_ids(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_db.add_all = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/wellness",
+            json={"mood": 7.5, "energy": 6.0},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["ids"]) == 2
 
 
 # ---------------------------------------------------------------------------
