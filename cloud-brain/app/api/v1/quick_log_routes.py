@@ -17,7 +17,9 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from collections import defaultdict  # noqa: F401 — used in aggregate helper (later task)
+
+from sqlalchemy import distinct, select  # noqa: F401 — distinct used in aggregate helper (later task)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
@@ -85,6 +87,32 @@ class SymptomLogCreate(BaseModel):
     symptom_type: str | None = None
     timing: str | None = None
     notes: str | None = None
+    logged_at: str | None = None
+
+
+class WaterLogCreate(BaseModel):
+    amount_ml: float
+    vessel_key: str | None = None  # informational only, not validated server-side
+    logged_at: str | None = None
+
+
+class WellnessLogCreate(BaseModel):
+    mood: float | None = None  # 1.0–10.0
+    energy: float | None = None  # 1.0–10.0
+    stress: float | None = None  # 1.0–10.0
+    notes: str | None = None  # max 500 chars
+    logged_at: str | None = None
+
+
+class WeightLogCreate(BaseModel):
+    value_kg: float  # always stored in kg; client converts before submitting
+    logged_at: str | None = None
+
+
+class StepsLogCreate(BaseModel):
+    steps: int
+    mode: str = "add"  # "add" | "override"
+    source: str = "manual"  # "manual" | "apple_health" | "health_connect"
     logged_at: str | None = None
 
 
@@ -664,6 +692,204 @@ async def log_symptom(
     await db.commit()
     await db.refresh(log)
     return {"id": log.id, "logged_at": str(log.logged_at), "type": "symptom"}
+
+
+@router.post("/water", summary="Log a water intake entry")
+@limiter.limit("60/minute")
+async def log_water(
+    request: Request,
+    body: WaterLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a water intake entry.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Water log payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if amount_ml is out of range.
+    """
+    if not (1 <= body.amount_ml <= 5000):
+        raise HTTPException(
+            status_code=422,
+            detail="amount_ml must be between 1 and 5000.",
+        )
+    data = {
+        "amount_ml": body.amount_ml,
+        "vessel_key": body.vessel_key,
+    }
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="water",
+        value=body.amount_ml,
+        data=data,
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "water"}
+
+
+@router.post("/wellness", summary="Log a wellness check-in")
+@limiter.limit("30/minute")
+async def log_wellness(
+    request: Request,
+    body: WellnessLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a wellness check-in with optional mood, energy, and stress values.
+
+    Stores one quick_log row per submitted metric. At least one of mood,
+    energy, or stress must be provided.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Wellness check-in payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with logged_at and type fields, plus a list of created entry IDs.
+
+    Raises:
+        HTTPException: 422 if all three of mood/energy/stress are null, any
+            value is out of range, or notes exceeds 500 characters.
+    """
+    if all(v is None for v in [body.mood, body.energy, body.stress]):
+        raise HTTPException(
+            status_code=422,
+            detail="At least one of mood, energy, or stress must be provided.",
+        )
+    for field_name, field_val in [("mood", body.mood), ("energy", body.energy), ("stress", body.stress)]:
+        if field_val is not None and not (1.0 <= field_val <= 10.0):
+            raise HTTPException(
+                status_code=422,
+                detail=f"{field_name} must be between 1.0 and 10.0.",
+            )
+    if body.notes and len(body.notes) > 500:
+        raise HTTPException(status_code=422, detail="notes must not exceed 500 characters.")
+
+    resolved_at = _resolve_logged_at(body.logged_at)
+    notes_clean = body.notes.strip() if body.notes else None
+    logs = []
+    for metric, val in [("mood", body.mood), ("energy", body.energy), ("stress", body.stress)]:
+        if val is not None:
+            logs.append(
+                QuickLog(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    metric_type=metric,
+                    value=val,
+                    data={"notes": notes_clean} if notes_clean else {},
+                    logged_at=resolved_at,
+                )
+            )
+    db.add_all(logs)
+    await db.commit()
+    ids = [log.id for log in logs]
+    return {"ids": ids, "logged_at": resolved_at, "type": "wellness"}
+
+
+@router.post("/weight", summary="Log a body weight entry")
+@limiter.limit("10/minute")
+async def log_weight(
+    request: Request,
+    body: WeightLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a body weight entry. Always stored in kilograms.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Weight log payload with value in kg.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if value_kg is out of range.
+    """
+    if not (20.0 <= body.value_kg <= 500.0):
+        raise HTTPException(
+            status_code=422,
+            detail="value_kg must be between 20.0 and 500.0.",
+        )
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="weight",
+        value=body.value_kg,
+        data={"value_kg": body.value_kg},
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "weight"}
+
+
+@router.post("/steps", summary="Log a step count")
+@limiter.limit("10/minute")
+async def log_steps(
+    request: Request,
+    body: StepsLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a step count entry.
+
+    mode='add' accumulates on today's running total.
+    mode='override' acts as a reset point; earlier entries for today are
+    ignored when the summary is computed.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Steps log payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if steps is out of range or mode is invalid.
+    """
+    if not (0 <= body.steps <= 100_000):
+        raise HTTPException(
+            status_code=422,
+            detail="steps must be between 0 and 100,000.",
+        )
+    if body.mode not in ("add", "override"):
+        raise HTTPException(
+            status_code=422,
+            detail="mode must be 'add' or 'override'.",
+        )
+    data = {"steps": body.steps, "mode": body.mode, "source": body.source}
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="steps",
+        value=float(body.steps),
+        data=data,
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "steps"}
 
 
 # ---------------------------------------------------------------------------
