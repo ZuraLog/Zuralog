@@ -42,7 +42,7 @@ router = APIRouter(prefix="/quick-log", tags=["quick-log"])
 class SleepLogCreate(BaseModel):
     bedtime: str  # ISO8601
     wake_time: str  # ISO8601
-    duration_minutes: int
+    duration_minutes: int | None = None  # Ignored — server calculates from bedtime/wake_time
     quality_rating: int | None = None  # 1-5
     interruptions: int | None = None  # 0-20
     factors: list[str] = []
@@ -592,7 +592,9 @@ async def log_supplements(
         valid_ids = {row[0] for row in result.all()}
         invalid = set(body.taken_supplement_ids) - valid_ids
         if invalid:
-            raise HTTPException(status_code=422, detail=f"Invalid supplement IDs: {invalid}")
+            raise HTTPException(
+                status_code=422, detail="One or more supplement IDs are invalid or do not belong to this account."
+            )
     data = {
         "taken_supplement_ids": body.taken_supplement_ids,
         "notes": body.notes.strip() if body.notes else None,
@@ -746,6 +748,7 @@ async def update_supplements_list(
     )
     for row in existing.scalars().all():
         row.is_active = False
+        row.updated_at = datetime.now(timezone.utc)
     new_items = [
         UserSupplement(
             id=str(uuid.uuid4()),
