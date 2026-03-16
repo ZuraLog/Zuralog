@@ -353,7 +353,7 @@ Interactive analytics that let users discover patterns in their own data:
 
 ### O. Quick Log / Manual Entry
 
-**Implementation status:** Part 1 UI foundation complete (2026-03-16). Shared components created: `ZSnapshotCard` for metric display, `ZDailyGoalsCard` for goal tracking. Stub providers added (`todayLogSummaryProvider`, `userLoggedTypesProvider`, `logRingProvider`, `snapshotProvider`) pending real data wiring in Part 4. Water counter with units-aware label wired in feat/today-tab-settings-wiring (2026-03-08). Full Quick Log bottom sheet (mood, energy, stress, pain, notes) and FAB system planned for Part 2.
+**Implementation status:** Part 2 complete (2026-03-16). FAB + log grid sheet + 4 inline log panels (Water, Wellness, Weight, Steps) fully functional. Shared components: `ZLogFab`, `ZLogGridSheet`, `ZLogGridCell`, `ZWaterLogPanel`, `ZWellnessLogPanel`, `ZWeightLogPanel`, `ZStepsLogPanel`. Full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) deferred to Part 3. Real data wiring deferred to Part 4.
 
 A dedicated quick-entry interface for data that does not come from integrations. This is the structured complement to natural language logging in chat — for users who prefer tapping over typing.
 

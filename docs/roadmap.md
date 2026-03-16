@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-16 (Today Tab Part 1 complete: 5 new shared components, layout refactor, stub providers added)
+**Last Updated:** 2026-03-16 (Today Tab Part 2 complete: FAB + log grid sheet + inline log panels for Water/Wellness/Weight/Steps)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -693,7 +693,7 @@ Completed magic number extraction, ORM migration, smoke test rewrite, and docume
 
 ## Today Tab Redesign — Multi-Part Implementation
 
-> **Status:** Part 1 complete and merged to main (2026-03-16)
+> **Status:** Part 2 complete and merged to main (2026-03-16)
 
 The Today Feed is being rebuilt in phases to add new shared components, refactor the screen layout, and wire real data from the backend.
 
@@ -724,14 +724,31 @@ Extracted 5 new reusable components from the Today screen and refactored the lay
 
 **Result:** Today screen refactored with 5 new shared components, cleaner layout, and foundation for Parts 2–4. Screen code reduced by 55%.
 
-### Part 2 — FAB & Log Grid Sheet (Planned)
+### Part 2 — FAB & Log Grid Sheet (2026-03-16)
+
+> **Branch:** `feat/today-tab-redesign` → merged to main
+
+Added floating action button (FAB) for quick log entry and a modal bottom sheet with 10-tile log type selection grid. Inline log panels for Water, Wellness, Weight, and Steps. Full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) deferred to Part 3.
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Create floating action button (FAB) for quick log entry | 🔜 Planned | Replaces Quick Actions section |
-| P0 | Create log grid sheet (water, mood, energy, stress, pain, notes) | 🔜 Planned | Inline log panels for quick metrics |
-| P0 | Wire FAB to open log grid sheet | 🔜 Planned | |
-| P0 | Add haptic feedback on log submission | 🔜 Planned | |
+| P0 | Create `ZLogFab` floating action button | ✅ Done | `buttons/z_log_fab.dart`; circular FAB with 500ms debounce |
+| P0 | Create `ZLogGridSheet` modal bottom sheet | ✅ Done | `sheets/z_log_grid_sheet.dart`; 10-tile 4-column grid with animated panel swap |
+| P0 | Create `ZLogGridCell` tile component | ✅ Done | `sheets/z_log_grid_cell.dart`; single tile in log grid |
+| P0 | Create `ZWaterLogPanel` inline panel | ✅ Done | `log_panels/z_water_log_panel.dart`; vessel picker, custom input, today's total |
+| P0 | Create `ZWellnessLogPanel` inline panel | ✅ Done | `log_panels/z_wellness_log_panel.dart`; mood/energy/stress sliders + notes |
+| P0 | Create `ZWeightLogPanel` inline panel | ✅ Done | `log_panels/z_weight_log_panel.dart`; kg/lbs toggle |
+| P0 | Create `ZStepsLogPanel` inline panel | ✅ Done | `log_panels/z_steps_log_panel.dart`; step count entry |
+| P0 | Wire FAB to open log grid sheet | ✅ Done | `today_feed_screen.dart` converted to `ConsumerStatefulWidget` |
+| P0 | Wire inline tiles to log panels | ✅ Done | Wellness, Water, Weight, Steps animate to their panel inside sheet |
+| P0 | Wire full-screen tiles (no-op in Part 2) | ✅ Done | Sleep, Run, Meal, Supplements, Symptom are stubs; Part 3 will build screens |
+| P0 | Wire Workout tile to "coming soon" snackbar | ✅ Done | Placeholder for future integration |
+| P0 | Invalidate `todayLogSummaryProvider` after log submission | ✅ Done | Ensures UI updates with new data |
+| P0 | Delete `quick_log_sheet.dart` | ✅ Done | Replaced by new FAB system |
+| P0 | Update `new_chat_screen.dart` redirect | ✅ Done | Redirects to Today tab instead of old sheet |
+| P0 | Add haptic feedback on log submission | ✅ Done | Medium impact haptic on successful log |
+
+**Result:** 345 tests passing, zero analyzer issues. FAB + log grid sheet + 4 inline log panels fully functional. Full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) ready for Part 3.
 
 ### Part 3 — Full-Screen Log Screens (Planned)
 
