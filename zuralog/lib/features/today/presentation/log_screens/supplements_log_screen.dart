@@ -8,7 +8,6 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 class SupplementsLogScreen extends ConsumerStatefulWidget {
@@ -58,9 +57,11 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
       ref.invalidate(supplementsListProvider);
     } catch (_) {
       setState(() => _localList = currentList);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save supplement. Please try again.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save supplement. Please try again.')),
+        );
+      }
     }
   }
 
@@ -73,13 +74,15 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
       ref.invalidate(todayLogSummaryProvider);
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) { Navigator.of(context).pop(); }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save. Please try again.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save. Please try again.')),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) { setState(() => _isSaving = false); }
     }
   }
 
@@ -185,7 +188,7 @@ class _SupplementRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final subtitleParts = [supplement.dose, supplement.timing]
-        .where((s) => s != null && s!.isNotEmpty)
+        .where((s) => s != null && s.isNotEmpty)
         .cast<String>()
         .toList();
     return ListTile(

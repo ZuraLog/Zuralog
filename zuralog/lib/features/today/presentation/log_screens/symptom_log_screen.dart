@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 const _kBodyAreas = ['Head', 'Stomach', 'Back', 'Chest', 'Throat', 'Joints', 'Muscles', 'Skin', 'General'];
@@ -47,13 +46,15 @@ class _SymptomLogScreenState extends ConsumerState<SymptomLogScreen> {
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
       ref.invalidate(todayLogSummaryProvider);
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) { Navigator.of(context).pop(); }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save. Please try again.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save. Please try again.')),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) { setState(() => _isSaving = false); }
     }
   }
 

@@ -10,7 +10,6 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 const _kActivities = ['Run', 'Walk', 'Cycle', 'Swim', 'Hike', 'Other'];
@@ -89,7 +88,7 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
       ref.invalidate(todayLogSummaryProvider);
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) { Navigator.of(context).pop(); }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,7 +96,7 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) { setState(() => _isSaving = false); }
     }
   }
 
