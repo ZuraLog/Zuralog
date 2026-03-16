@@ -412,3 +412,35 @@ final stepsLogModeProvider =
     AsyncNotifierProvider<StepsLogModeNotifier, StepsLogMode>(
   StepsLogModeNotifier.new,
 );
+
+// ── Latest Log Values ─────────────────────────────────────────────────────────
+
+/// The most recent logged value per requested metric type, across all time.
+///
+/// The Cloud Brain is the deduplicated source of truth — values ingested from
+/// Apple Health, Health Connect, Strava, and manual entries are all surfaced
+/// here.
+///
+/// Keyed by a [Set<String>] of metric type strings. The provider fetches
+/// all requested types in a single API call.
+///
+/// Returns an empty map if [types] is empty or the request fails.
+/// Individual types the user has never logged are absent from the returned map.
+///
+/// Automatically re-fetches whenever [todayLogSummaryProvider] is invalidated
+/// (i.e. after any successful log submission), keeping pre-fill values fresh.
+final latestLogValuesProvider =
+    FutureProvider.family<Map<String, dynamic>, Set<String>>((ref, types) async {
+  // Establish a reactive dependency so this provider auto-refreshes when
+  // a new log is submitted (same invalidation trigger as todayLogSummaryProvider).
+  ref.watch(todayLogSummaryProvider);
+
+  if (types.isEmpty) return const {};
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getLatestLogValues(types);
+  } catch (e, st) {
+    debugPrint('latestLogValuesProvider failed: $e\n$st');
+    return const {};
+  }
+});

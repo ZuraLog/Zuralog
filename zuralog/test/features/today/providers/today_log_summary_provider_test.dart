@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zuralog/features/today/data/mock_today_repository.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
@@ -28,6 +29,10 @@ class _StubRepo implements TodayRepositoryInterface {
   @override Future<void> logSupplements({required List<String> takenIds, String? notes}) async {}
   @override Future<void> logSymptom({required List<String> bodyAreas, required String severity, String? symptomType, String? timing, String? notes}) async {}
   @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) async {}
+  @override Future<void> logWater({required double amountMl, String? vesselKey}) async {}
+  @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) async {}
+  @override Future<void> logWeight({required double valueKg}) async {}
+  @override Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async => const {};
 }
 
 ProviderContainer _container({List<Override> overrides = const []}) =>
@@ -89,6 +94,39 @@ void main() {
     });
   });
 
+  // --- latestLogValuesProvider ---
+
+  group('latestLogValuesProvider', () {
+    test('returns empty map when types set is empty', () async {
+      final container = ProviderContainer(overrides: [
+        todayRepositoryProvider.overrideWithValue(MockTodayRepository()),
+      ]);
+      addTearDown(container.dispose);
+
+      final result = await container.read(
+        latestLogValuesProvider(const {}).future,
+      );
+      expect(result, isEmpty);
+    });
+
+    test('returns map from repository for requested types', () async {
+      final mockRepo = _MockRepoWithLatestValues({
+        'weight': {'value_kg': 78.4, 'logged_at': '2026-03-15T08:22:00Z', 'source': 'apple_health'},
+      });
+      final container = ProviderContainer(overrides: [
+        todayRepositoryProvider.overrideWithValue(mockRepo),
+      ]);
+      addTearDown(container.dispose);
+
+      final result = await container.read(
+        latestLogValuesProvider(const {'weight'}).future,
+      );
+      final weightEntry = result['weight'] as Map<String, dynamic>?;
+      expect(weightEntry?['value_kg'], closeTo(78.4, 0.01));
+      expect(weightEntry?['source'], 'apple_health');
+    });
+  });
+
   group('snapshotProvider', () {
     test('returns empty list when no types ever logged', () async {
       final container = _container();
@@ -111,4 +149,45 @@ void main() {
       expect(cards[1].metricType, 'water');
     });
   });
+}
+
+// Helper mock for latestLogValuesProvider tests.
+// MockTodayRepository is final so we implement the interface directly,
+// forwarding all other methods to a real MockTodayRepository instance.
+class _MockRepoWithLatestValues implements TodayRepositoryInterface {
+  _MockRepoWithLatestValues(this._data);
+  final Map<String, dynamic> _data;
+  final _delegate = const MockTodayRepository();
+
+  @override
+  Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
+    return Map.fromEntries(
+      _data.entries.where((e) => types.contains(e.key)),
+    );
+  }
+
+  // Delegate everything else to the mock.
+  @override Future<HealthScoreData> getHealthScore() => _delegate.getHealthScore();
+  @override Future<TodayFeedData> getTodayFeed() => _delegate.getTodayFeed();
+  @override void invalidateFeedCache() => _delegate.invalidateFeedCache();
+  @override Future<InsightDetail> getInsightDetail(String id) => _delegate.getInsightDetail(id);
+  @override Future<void> markInsightRead(String id) => _delegate.markInsightRead(id);
+  @override Future<void> dismissInsight(String id) => _delegate.dismissInsight(id);
+  @override Future<void> submitQuickLog(Map<String, dynamic> payload) => _delegate.submitQuickLog(payload);
+  @override Future<NotificationPage> getNotifications({int page = 1}) => _delegate.getNotifications(page: page);
+  @override Future<void> markNotificationRead(String id) => _delegate.markNotificationRead(id);
+  @override Future<List<DailyGoal>> getDailyGoals() => _delegate.getDailyGoals();
+  @override Future<TodayLogSummary> getTodayLogSummary() => _delegate.getTodayLogSummary();
+  @override Future<Set<String>> getUserLoggedTypes() => _delegate.getUserLoggedTypes();
+  @override Future<List<SupplementEntry>> getSupplementsList() => _delegate.getSupplementsList();
+  @override Future<List<SupplementEntry>> updateSupplementsList(List<SupplementEntry> supplements) => _delegate.updateSupplementsList(supplements);
+  @override Future<void> logSleep({required DateTime bedtime, required DateTime wakeTime, required int durationMinutes, int? qualityRating, int? interruptions, List<String> factors = const [], String? notes}) => _delegate.logSleep(bedtime: bedtime, wakeTime: wakeTime, durationMinutes: durationMinutes, qualityRating: qualityRating, interruptions: interruptions, factors: factors, notes: notes);
+  @override Future<void> logRun({required String activityType, required double distanceKm, required int durationSeconds, int? avgPaceSecondsPerKm, String? effortLevel, String? notes}) => _delegate.logRun(activityType: activityType, distanceKm: distanceKm, durationSeconds: durationSeconds, avgPaceSecondsPerKm: avgPaceSecondsPerKm, effortLevel: effortLevel, notes: notes);
+  @override Future<void> logMeal({required String mealType, required bool quickMode, String? description, int? caloriesKcal, List<String> feelChips = const [], List<String> tags = const [], String? notes}) => _delegate.logMeal(mealType: mealType, quickMode: quickMode, description: description, caloriesKcal: caloriesKcal, feelChips: feelChips, tags: tags, notes: notes);
+  @override Future<void> logSupplements({required List<String> takenIds, String? notes}) => _delegate.logSupplements(takenIds: takenIds, notes: notes);
+  @override Future<void> logSymptom({required List<String> bodyAreas, required String severity, String? symptomType, String? timing, String? notes}) => _delegate.logSymptom(bodyAreas: bodyAreas, severity: severity, symptomType: symptomType, timing: timing, notes: notes);
+  @override Future<void> logSteps({required int steps, String mode = 'add', String source = 'manual'}) => _delegate.logSteps(steps: steps, mode: mode, source: source);
+  @override Future<void> logWater({required double amountMl, String? vesselKey}) => _delegate.logWater(amountMl: amountMl, vesselKey: vesselKey);
+  @override Future<void> logWellness({double? mood, double? energy, double? stress, String? notes}) => _delegate.logWellness(mood: mood, energy: energy, stress: stress, notes: notes);
+  @override Future<void> logWeight({required double valueKg}) => _delegate.logWeight(valueKg: valueKg);
 }
