@@ -47,7 +47,12 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
     super.dispose();
   }
 
-  bool get _canSave => _bedtime != null && _wakeTime != null && !_isSaving;
+  bool get _canSave {
+    if (_bedtime == null || _wakeTime == null || _isSaving) return false;
+    int mins = _wakeTime!.difference(_bedtime!).inMinutes;
+    if (mins < 0) mins += 24 * 60;
+    return mins >= 1 && mins <= 1440;
+  }
 
   String _formatTime(DateTime? dt) {
     if (dt == null) return 'Tap to set';
@@ -93,7 +98,13 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
       await repo.logSleep(
         bedtime: _bedtime!,
         wakeTime: _wakeTime!,
-        durationMinutes: _wakeTime!.difference(_bedtime!).inMinutes.abs(),
+        durationMinutes: () {
+          int mins = _wakeTime!.difference(_bedtime!).inMinutes;
+          // Handle overnight sleep: if wake time appears before bedtime,
+          // add 24 hours to the wake time difference.
+          if (mins < 0) mins += 24 * 60;
+          return mins;
+        }(),
         qualityRating: _qualityRating,
         interruptions: _interruptions > 0 ? _interruptions : null,
         factors: _factors.toList(),
