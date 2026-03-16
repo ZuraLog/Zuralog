@@ -119,12 +119,31 @@ class ZuralogScaffold extends StatelessWidget {
       );
     }
 
+    // Lift the FAB above the outer AppShell nav bar.
+    //
+    // Flutter's automatic FAB lift only works when the FAB and the bottom
+    // navigation bar live on the *same* Scaffold. AppShell's outer Scaffold
+    // owns the nav bar, so this inner Scaffold never lifts its FAB. We
+    // compensate by adding bottom padding equal to the nav bar height that
+    // AppShell's `extendBody: true` has already injected into
+    // MediaQuery.padding.bottom — but only when this Scaffold has no local
+    // bottom navigation bar of its own.
+    Widget? effectiveFab = floatingActionButton;
+    if (effectiveFab != null && bottomNavigationBar == null) {
+      effectiveFab = Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom,
+        ),
+        child: effectiveFab,
+      );
+    }
+
     return Scaffold(
       // backgroundColor reads from theme — NEVER hardcoded.
       appBar: appBar,
       body: content,
       bottomNavigationBar: bottomNavigationBar,
-      floatingActionButton: floatingActionButton,
+      floatingActionButton: effectiveFab,
       resizeToAvoidBottomInset: resizeToAvoidBottomInset,
       extendBody: extendBody,
     );
