@@ -304,7 +304,20 @@ class _PanelView extends ConsumerWidget {
           onBack: onBack,
         ),
       'steps' => ZStepsLogPanel(
-          onSave: (_) => onSaved(),
+          onSave: (steps, mode) async {
+            try {
+              await ref
+                  .read(todayRepositoryProvider)
+                  .logSteps(steps: steps, mode: mode);
+              ref.invalidate(todayLogSummaryProvider);
+              onSaved();
+            } catch (_) {
+              // Silent failure — the sheet dismisses regardless; the UI will
+              // not reflect the entry but will not crash. A retry/error state
+              // can be added in a future iteration.
+              onSaved();
+            }
+          },
           onBack: onBack,
         ),
       _ => Center(

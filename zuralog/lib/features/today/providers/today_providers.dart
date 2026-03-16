@@ -22,6 +22,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
@@ -376,3 +377,37 @@ final supplementsListProvider =
     return const [];
   }
 });
+
+// ── Steps Log Mode ────────────────────────────────────────────────────────────
+
+/// Whether the user is adding to their running step total or overriding it.
+enum StepsLogMode { add, override_ }
+
+/// Notifier that persists the last-used steps log mode via SharedPreferences.
+///
+/// Default: [StepsLogMode.add] — each entry adds to today's running total.
+class StepsLogModeNotifier extends AsyncNotifier<StepsLogMode> {
+  static const _key = 'steps_log_mode';
+
+  @override
+  Future<StepsLogMode> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_key);
+    return raw == 'override' ? StepsLogMode.override_ : StepsLogMode.add;
+  }
+
+  Future<void> setMode(StepsLogMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _key,
+      mode == StepsLogMode.override_ ? 'override' : 'add',
+    );
+    state = AsyncData(mode);
+  }
+}
+
+/// Provider for the steps log mode. Remembered across app restarts.
+final stepsLogModeProvider =
+    AsyncNotifierProvider<StepsLogModeNotifier, StepsLogMode>(
+  StepsLogModeNotifier.new,
+);

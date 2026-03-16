@@ -122,6 +122,13 @@ abstract interface class TodayRepositoryInterface {
     String? timing,
     String? notes,
   });
+
+  /// Submit a step count log entry.
+  Future<void> logSteps({
+    required int steps,
+    String mode = 'add',
+    String source = 'manual',
+  });
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -413,6 +420,20 @@ class TodayRepository implements TodayRepositoryInterface {
       'symptom_type': ?symptomType,
       'timing': ?timing,
       'notes': ?notes,
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> logSteps({
+    required int steps,
+    String mode = 'add',
+    String source = 'manual',
+  }) async {
+    await _api.post('/api/v1/quick-log/steps', data: {
+      'steps': steps,
+      'mode': mode,
+      'source': source,
       'logged_at': DateTime.now().toUtc().toIso8601String(),
     });
   }

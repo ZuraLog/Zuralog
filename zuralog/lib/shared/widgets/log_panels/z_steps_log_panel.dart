@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── ZStepsLogPanel ─────────────────────────────────────────────────────────────
 
@@ -30,8 +31,8 @@ class ZStepsLogPanel extends ConsumerStatefulWidget {
     required this.onBack,
   });
 
-  /// Called when the user taps "Save Steps". Receives the step count.
-  final void Function(int steps) onSave;
+  /// Called when the user taps "Save Steps". Receives the step count and mode string.
+  final void Function(int steps, String mode) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -58,13 +59,9 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
   }
 
   void _handleSave() {
-    // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/steps
-    // Body: { steps: int, source: 'manual', logged_at: ISO8601 }
-    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
-    // here. The sheet's onSaved callback owns post-save side effects so that
-    // invalidation only fires on confirmed success (not before the server
-    // round-trip in Part 4).
-    widget.onSave(_steps);
+    final mode = ref.read(stepsLogModeProvider).valueOrNull ?? StepsLogMode.add;
+    final modeString = mode == StepsLogMode.override_ ? 'override' : 'add';
+    widget.onSave(_steps, modeString);
   }
 
   @override
@@ -110,6 +107,35 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
           ),
 
           const SizedBox(height: AppDimens.spaceMd),
+
+          // ── Mode toggle ───────────────────────────────────────────────────
+          ref.watch(stepsLogModeProvider).when(
+            loading: () => const SizedBox.shrink(),
+            error: (err, st) => const SizedBox.shrink(),
+            data: (mode) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Add to today\'s total',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  Switch(
+                    value: mode == StepsLogMode.add,
+                    onChanged: (val) {
+                      ref.read(stepsLogModeProvider.notifier).setMode(
+                        val ? StepsLogMode.add : StepsLogMode.override_,
+                      );
+                    },
+                    activeThumbColor: AppColors.primary,
+                  ),
+                ],
+              ),
+            ),
+          ),
 
           // ── Goal stub ─────────────────────────────────────────────────────
           Text(

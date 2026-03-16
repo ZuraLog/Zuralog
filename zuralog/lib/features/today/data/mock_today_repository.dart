@@ -249,6 +249,16 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     // No-op in mock.
   }
 
+  @override
+  Future<void> logSteps({
+    required int steps,
+    String mode = 'add',
+    String source = 'manual',
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
+
   // ── Fixture Builders ──────────────────────────────────────────────────────
 
   List<InsightCard> _mockInsights() {
