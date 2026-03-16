@@ -426,6 +426,45 @@ class NotificationItem {
   }
 }
 
+// ── DailyGoal ─────────────────────────────────────────────────────────────────
+
+/// A single daily goal with today's progress.
+class DailyGoal {
+  const DailyGoal({
+    required this.id,
+    required this.label,
+    required this.current,
+    required this.target,
+    required this.unit,
+  });
+
+  final String id;
+  final String label;
+  final double current;
+  final double target;
+  final String unit;
+
+  double get fraction => target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
+}
+
+// ── SupplementEntry ───────────────────────────────────────────────────────────
+
+/// A supplement or medication in the user's saved list.
+class SupplementEntry {
+  const SupplementEntry({
+    required this.id,
+    required this.name,
+    this.dose,
+    this.timing,
+  });
+
+  /// Server-assigned UUID. Used as `taken_supplement_id` when logging.
+  final String id;
+  final String name;
+  final String? dose;
+  final String? timing;
+}
+
 // ── NotificationPage ──────────────────────────────────────────────────────────
 
 /// Paginated notification history response.

@@ -53,6 +53,64 @@ abstract interface class TodayRepositoryInterface {
 
   /// Marks notification [id] as read.
   Future<void> markNotificationRead(String id);
+
+  /// Fetch the user's daily goals with today's progress.
+  /// Returns an empty list if the user has no goals configured.
+  Future<List<DailyGoal>> getDailyGoals();
+
+  /// Fetch the user's saved supplement list.
+  Future<List<SupplementEntry>> getSupplementsList();
+
+  /// Replace the user's supplement list with [supplements].
+  Future<List<SupplementEntry>> updateSupplementsList(
+      List<SupplementEntry> supplements);
+
+  /// Submit a sleep log entry.
+  Future<void> logSleep({
+    required DateTime bedtime,
+    required DateTime wakeTime,
+    required int durationMinutes,
+    int? qualityRating,
+    int? interruptions,
+    List<String> factors,
+    String? notes,
+  });
+
+  /// Submit a run or cardio activity log.
+  Future<void> logRun({
+    required String activityType,
+    required double distanceKm,
+    required int durationSeconds,
+    int? avgPaceSecondsPerKm,
+    String? effortLevel,
+    String? notes,
+  });
+
+  /// Submit a meal log entry.
+  Future<void> logMeal({
+    required String mealType,
+    required bool quickMode,
+    String? description,
+    int? caloriesKcal,
+    List<String> feelChips,
+    List<String> tags,
+    String? notes,
+  });
+
+  /// Submit a supplements log — which items were taken today.
+  Future<void> logSupplements({
+    required List<String> takenIds,
+    String? notes,
+  });
+
+  /// Submit a symptom log entry.
+  Future<void> logSymptom({
+    required List<String> bodyAreas,
+    required String severity,
+    String? symptomType,
+    String? timing,
+    String? notes,
+  });
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -209,6 +267,150 @@ class TodayRepository implements TodayRepositoryInterface {
   @override
   Future<void> markNotificationRead(String id) async {
     await _api.patch('/api/v1/notifications/$id', body: {'read': true});
+  }
+
+  // ── Daily Goals ────────────────────────────────────────────────────────────
+
+  @override
+  Future<List<DailyGoal>> getDailyGoals() async {
+    // Stub until the goals endpoint is built. Returns empty list.
+    return const [];
+  }
+
+  // ── Log Submission ─────────────────────────────────────────────────────────
+
+  @override
+  Future<void> logSleep({
+    required DateTime bedtime,
+    required DateTime wakeTime,
+    required int durationMinutes,
+    int? qualityRating,
+    int? interruptions,
+    List<String> factors = const [],
+    String? notes,
+  }) async {
+    await _api.post('/api/v1/quick-log/sleep', data: {
+      'bedtime': bedtime.toUtc().toIso8601String(),
+      'wake_time': wakeTime.toUtc().toIso8601String(),
+      'duration_minutes': durationMinutes,
+      'quality_rating': ?qualityRating,
+      'interruptions': ?interruptions,
+      if (factors.isNotEmpty) 'factors': factors,
+      'notes': ?notes,
+      'source': 'manual',
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> logRun({
+    required String activityType,
+    required double distanceKm,
+    required int durationSeconds,
+    int? avgPaceSecondsPerKm,
+    String? effortLevel,
+    String? notes,
+  }) async {
+    await _api.post('/api/v1/quick-log/run', data: {
+      'activity_type': activityType,
+      'distance_km': distanceKm,
+      'duration_seconds': durationSeconds,
+      'avg_pace_seconds_per_km': ?avgPaceSecondsPerKm,
+      'effort_level': ?effortLevel,
+      'notes': ?notes,
+      'source': 'manual',
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> logMeal({
+    required String mealType,
+    required bool quickMode,
+    String? description,
+    int? caloriesKcal,
+    List<String> feelChips = const [],
+    List<String> tags = const [],
+    String? notes,
+  }) async {
+    await _api.post('/api/v1/quick-log/meal', data: {
+      'meal_type': mealType,
+      'quick_mode': quickMode,
+      'description': ?description,
+      'calories_kcal': ?caloriesKcal,
+      if (feelChips.isNotEmpty) 'feel_chips': feelChips,
+      if (tags.isNotEmpty) 'tags': tags,
+      'notes': ?notes,
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> logSupplements({
+    required List<String> takenIds,
+    String? notes,
+  }) async {
+    await _api.post('/api/v1/quick-log/supplements', data: {
+      'taken_supplement_ids': takenIds,
+      'notes': ?notes,
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> logSymptom({
+    required List<String> bodyAreas,
+    required String severity,
+    String? symptomType,
+    String? timing,
+    String? notes,
+  }) async {
+    await _api.post('/api/v1/quick-log/symptom', data: {
+      'body_areas': bodyAreas,
+      'severity': severity,
+      'symptom_type': ?symptomType,
+      'timing': ?timing,
+      'notes': ?notes,
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  // ── Supplements List ───────────────────────────────────────────────────────
+
+  @override
+  Future<List<SupplementEntry>> getSupplementsList() async {
+    final response = await _api.get('/api/v1/quick-log/user/supplements-list');
+    final data = response.data as Map<String, dynamic>;
+    final items = data['supplements'] as List<dynamic>;
+    return items.map((item) => SupplementEntry(
+      id: item['id'] as String,
+      name: item['name'] as String,
+      dose: item['dose'] as String?,
+      timing: item['timing'] as String?,
+    )).toList();
+  }
+
+  @override
+  Future<List<SupplementEntry>> updateSupplementsList(
+      List<SupplementEntry> supplements) async {
+    final response = await _api.post(
+      '/api/v1/quick-log/user/supplements-list',
+      data: {
+        'supplements': supplements.map((s) => {
+          'name': s.name,
+          'dose': ?s.dose,
+          'timing': ?s.timing,
+        }).toList(),
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    final items = data['supplements'] as List<dynamic>;
+    return items.map((item) => SupplementEntry(
+      id: item['id'] as String,
+      name: item['name'] as String,
+      dose: item['dose'] as String?,
+      timing: item['timing'] as String?,
+    )).toList();
   }
 }
 
