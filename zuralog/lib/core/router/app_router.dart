@@ -63,6 +63,7 @@ import 'package:zuralog/features/today/presentation/log_screens/sleep_log_screen
 import 'package:zuralog/features/today/presentation/log_screens/run_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/meal_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/supplements_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 
 // ── Tab 1: Data ───────────────────────────────────────────────────────────────
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
@@ -405,7 +406,7 @@ List<RouteBase> _buildRoutes() {
       path: RouteNames.symptomLogPath,
       name: RouteNames.symptomLog,
       pageBuilder: (context, state) => const MaterialPage(
-        child: Scaffold(body: Center(child: Text('Symptom Log — coming soon'))),
+        child: SentryErrorBoundary(module: 'today.symptom_log', child: SymptomLogScreen()),
       ),
     ),
 
