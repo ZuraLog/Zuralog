@@ -54,7 +54,12 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
       return;
     }
     _lastFabTap = now;
-    // TODO(Part 2 — Chunk 8): Show ZLogGridSheet here once it's built.
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ZLogGridSheet(),
+    );
   }
 
   @override
