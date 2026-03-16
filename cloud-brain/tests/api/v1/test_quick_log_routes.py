@@ -37,9 +37,9 @@ def client_with_auth():
     mock_db.add = MagicMock()
     mock_db.commit = AsyncMock()
 
-    # Default: no rows found
+    # Default: no rows found (single-query path uses .scalars().all())
     mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = None
+    mock_result.scalars.return_value.all.return_value = []
     mock_db.execute = AsyncMock(return_value=mock_result)
 
     app.dependency_overrides[_get_auth_service] = lambda: mock_auth
@@ -84,11 +84,9 @@ class TestLatestEndpoint:
         client, mock_db = client_with_auth
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = _make_log(
-            "weight",
-            value=78.4,
-            data={"value_kg": 78.4, "source": "apple_health"},
-        )
+        mock_result.scalars.return_value.all.return_value = [
+            _make_log("weight", value=78.4, data={"value_kg": 78.4, "source": "apple_health"}),
+        ]
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.get("/api/v1/quick-log/latest?types=weight", headers=AUTH_HEADER)
@@ -102,9 +100,9 @@ class TestLatestEndpoint:
         """A type the user has never logged is absent from the response."""
         client, mock_db = client_with_auth
 
-        # DB returns nothing for this type
+        # DB returns empty list — no rows for this user/type
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.get("/api/v1/quick-log/latest?types=weight", headers=AUTH_HEADER)
@@ -116,11 +114,9 @@ class TestLatestEndpoint:
         client, mock_db = client_with_auth
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = _make_log(
-            "steps",
-            value=9420.0,
-            data={"steps": 9420, "mode": "override", "source": "health_connect"},
-        )
+        mock_result.scalars.return_value.all.return_value = [
+            _make_log("steps", value=9420.0, data={"steps": 9420, "mode": "override", "source": "health_connect"}),
+        ]
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.get("/api/v1/quick-log/latest?types=steps", headers=AUTH_HEADER)
@@ -142,7 +138,7 @@ class TestLatestEndpoint:
         # Simulate the DB correctly filtering by user_id — returns nothing
         # for the authenticated user even though another user has a weight row.
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = None
+        mock_result.scalars.return_value.all.return_value = []
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.get("/api/v1/quick-log/latest?types=weight", headers=AUTH_HEADER)
@@ -150,25 +146,16 @@ class TestLatestEndpoint:
         assert "weight" not in response.json()
 
     def test_latest_multiple_types_returned(self, client_with_auth):
-        """Requesting multiple types returns all that have data."""
+        """Requesting multiple types returns all that have data in one query."""
         client, mock_db = client_with_auth
 
         weight_log = _make_log("weight", value=75.0, data={"value_kg": 75.0, "source": "manual"})
         steps_log = _make_log("steps", value=8000.0, data={"steps": 8000, "mode": "add", "source": "manual"})
 
-        call_count = 0
-
-        async def execute_side_effect(query):
-            nonlocal call_count
-            call_count += 1
-            mock_result = MagicMock()
-            if call_count == 1:
-                mock_result.scalars.return_value.first.return_value = weight_log
-            else:
-                mock_result.scalars.return_value.first.return_value = steps_log
-            return mock_result
-
-        mock_db.execute = execute_side_effect
+        # Single query now returns all matching rows at once via .scalars().all()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [weight_log, steps_log]
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.get("/api/v1/quick-log/latest?types=weight,steps", headers=AUTH_HEADER)
         assert response.status_code == 200
@@ -188,16 +175,25 @@ class TestLatestEndpoint:
         client, mock_db = client_with_auth
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = _make_log(
-            "weight",
-            value=70.0,
-            data={"value_kg": 70.0},  # no 'source' key
-        )
+        mock_result.scalars.return_value.all.return_value = [
+            _make_log("weight", value=70.0, data={"value_kg": 70.0}),  # no 'source' key
+        ]
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.get("/api/v1/quick-log/latest?types=weight", headers=AUTH_HEADER)
         assert response.status_code == 200
         assert response.json()["weight"]["source"] == "manual"
+
+    def test_latest_rejects_more_than_12_types(self, client_with_auth):
+        """Returns 422 when more than 12 types are requested."""
+        client, _ = client_with_auth
+        # Build a string of 13 distinct valid metric types
+        from app.models.quick_log import VALID_METRIC_TYPES
+
+        many_types = ",".join(list(VALID_METRIC_TYPES)[:13])
+        response = client.get(f"/api/v1/quick-log/latest?types={many_types}", headers=AUTH_HEADER)
+        assert response.status_code == 422
+        assert "12" in response.json()["detail"]
 
     def test_latest_requires_auth(self):
         """Unauthenticated request returns 401 or 403."""

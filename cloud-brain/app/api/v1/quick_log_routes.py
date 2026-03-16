@@ -5,6 +5,7 @@ Endpoints:
   POST /api/v1/quick-log          — Log a single metric entry.
   POST /api/v1/quick-log/batch    — Log multiple metric entries at once.
   GET  /api/v1/quick-log          — Query log history with optional filters.
+  GET  /api/v1/quick-log/latest   — Get most recent log value per requested metric type.
 
 All endpoints are auth-guarded; users can only access their own logs.
 Multiple logs per day are permitted (no uniqueness constraint). The GET
@@ -1109,12 +1110,20 @@ async def get_latest_log_values(
         Types that have never been logged are absent from the response.
 
     Raises:
-        HTTPException: 422 if any requested type is not in VALID_METRIC_TYPES.
+        HTTPException: 422 if any requested type is not in VALID_METRIC_TYPES, or
+            if more than 12 types are requested.
     """
     if not types or not types.strip():
         return {}
 
     requested = [t.strip() for t in types.split(",") if t.strip()]
+
+    if len(requested) > 12:
+        raise HTTPException(
+            status_code=422,
+            detail="Maximum 12 types per request.",
+        )
+
     for t in requested:
         if t not in VALID_METRIC_TYPES:
             raise HTTPException(
@@ -1122,15 +1131,22 @@ async def get_latest_log_values(
                 detail=f"Invalid metric type '{t}'. Must be one of: {sorted(VALID_METRIC_TYPES)}.",
             )
 
+    # Single query: most recent row per metric type for this user (DISTINCT ON is PostgreSQL-specific)
+    stmt = (
+        select(QuickLog)
+        .where(
+            QuickLog.user_id == user_id,
+            QuickLog.metric_type.in_(requested),
+        )
+        .distinct(QuickLog.metric_type)
+        .order_by(QuickLog.metric_type, QuickLog.logged_at.desc())
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    logs_by_type: dict[str, QuickLog] = {log.metric_type: log for log in rows}
+
     result: dict = {}
     for metric_type in requested:
-        row = await db.execute(
-            select(QuickLog)
-            .where(QuickLog.user_id == user_id, QuickLog.metric_type == metric_type)
-            .order_by(QuickLog.logged_at.desc())
-            .limit(1)
-        )
-        log = row.scalars().first()
+        log = logs_by_type.get(metric_type)
         if log is None:
             continue
 
