@@ -364,3 +364,229 @@ class TestSupplementList:
             headers=AUTH_HEADER,
         )
         assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Water endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestLogWater:
+    def test_valid_water_log_returns_200(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_db.add = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/water",
+            json={"amount_ml": 250.0},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["type"] == "water"
+        assert "id" in body
+        assert "logged_at" in body
+
+    def test_amount_ml_too_low_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/water",
+            json={"amount_ml": 0.5},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_amount_ml_too_high_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/water",
+            json={"amount_ml": 5001.0},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_user_id_from_jwt_not_body(self, client_with_auth):
+        """Passing user_id in body must be silently ignored."""
+        client, mock_db = client_with_auth
+        mock_db.add = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/water",
+            json={"amount_ml": 250.0, "user_id": "evil-other-user"},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+
+    def test_vessel_key_too_long_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/water",
+            json={"amount_ml": 250.0, "vessel_key": "x" * 101},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Wellness endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestLogWellness:
+    def test_mood_only_returns_200(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_db.add_all = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/wellness",
+            json={"mood": 7.5},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["type"] == "wellness"
+        assert isinstance(body["ids"], list)
+        assert len(body["ids"]) == 1
+
+    def test_all_none_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/wellness",
+            json={},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+        assert "at least one" in resp.json()["detail"].lower()
+
+    def test_mood_out_of_range_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/wellness",
+            json={"mood": 11.0},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_notes_too_long_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/wellness",
+            json={"mood": 7.0, "notes": "x" * 501},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Weight endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestLogWeight:
+    def test_valid_weight_returns_200(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_db.add = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/weight",
+            json={"value_kg": 75.5},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["type"] == "weight"
+
+    def test_too_light_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/weight",
+            json={"value_kg": 19.9},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_too_heavy_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/weight",
+            json={"value_kg": 500.1},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Steps endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestLogSteps:
+    def test_valid_steps_add_mode_returns_200(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_db.add = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/steps",
+            json={"steps": 5000, "mode": "add"},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["type"] == "steps"
+
+    def test_valid_steps_override_mode_returns_200(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_db.add = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/steps",
+            json={"steps": 10000, "mode": "override"},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+
+    def test_steps_too_high_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/steps",
+            json={"steps": 100_001},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_negative_steps_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/steps",
+            json={"steps": -1},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_invalid_mode_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/steps",
+            json={"steps": 5000, "mode": "replace"},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_invalid_source_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/steps",
+            json={"steps": 5000, "source": "fitbit"},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
