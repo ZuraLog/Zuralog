@@ -26,8 +26,6 @@ AUTH_HEADER = {"Authorization": "Bearer test-token"}
 
 def _make_quick_log(metric_type, value=None, text_value=None, data=None, logged_at=None):
     """Build a minimal mock QuickLog object for testing."""
-    from unittest.mock import MagicMock
-
     log = MagicMock()
     log.metric_type = metric_type
     log.value = value

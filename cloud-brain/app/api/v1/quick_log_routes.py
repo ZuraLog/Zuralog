@@ -1015,7 +1015,7 @@ async def get_my_metric_types(
         Dict with a ``metric_types`` list of distinct type strings.
     """
     result = await db.execute(select(distinct(QuickLog.metric_type)).where(QuickLog.user_id == user_id))
-    types = [row[0] for row in result.all()]
+    types = sorted(row[0] for row in result.all())
     return {"metric_types": types}
 
 
@@ -1060,12 +1060,14 @@ async def get_summary_today(
     now_local = now_utc + user_offset
     today_start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     today_start_utc = today_start_local - user_offset
+    today_end_utc = today_start_utc + timedelta(hours=24)
 
     result = await db.execute(
         select(QuickLog)
         .where(
             QuickLog.user_id == user_id,
             QuickLog.logged_at >= today_start_utc,
+            QuickLog.logged_at < today_end_utc,
         )
         .order_by(QuickLog.logged_at.asc())
     )
