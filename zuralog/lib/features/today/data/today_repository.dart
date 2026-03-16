@@ -381,7 +381,7 @@ class TodayRepository implements TodayRepositoryInterface {
   Future<List<SupplementEntry>> getSupplementsList() async {
     final response = await _api.get('/api/v1/quick-log/user/supplements-list');
     final data = response.data as Map<String, dynamic>;
-    final items = data['supplements'] as List<dynamic>;
+    final items = (data['supplements'] as List<dynamic>?) ?? [];
     return items.map((item) => SupplementEntry(
       id: item['id'] as String,
       name: item['name'] as String,
@@ -404,7 +404,7 @@ class TodayRepository implements TodayRepositoryInterface {
       },
     );
     final data = response.data as Map<String, dynamic>;
-    final items = data['supplements'] as List<dynamic>;
+    final items = (data['supplements'] as List<dynamic>?) ?? [];
     return items.map((item) => SupplementEntry(
       id: item['id'] as String,
       name: item['name'] as String,
