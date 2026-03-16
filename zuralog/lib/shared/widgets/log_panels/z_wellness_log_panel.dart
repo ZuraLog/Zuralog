@@ -83,6 +83,7 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
   }
 
   Future<void> _handleSave() async {
+    if (!_canSave) return;
     final data = WellnessLogData(
       mood: _moodTouched ? _moodValue : null,
       energy: _energyTouched ? _energyValue : null,

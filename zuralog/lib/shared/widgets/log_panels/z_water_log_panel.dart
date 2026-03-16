@@ -131,6 +131,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   }
 
   Future<void> _handleSave() async {
+    if (!_canSave) return;
     await widget.onSave(_amountMl);
   }
 
