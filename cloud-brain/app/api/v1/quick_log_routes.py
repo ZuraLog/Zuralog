@@ -721,6 +721,11 @@ async def log_water(
             status_code=422,
             detail="amount_ml must be between 1 and 5000.",
         )
+    if body.vessel_key and len(body.vessel_key) > 100:
+        raise HTTPException(
+            status_code=422,
+            detail="vessel_key must not exceed 100 characters.",
+        )
     data = {
         "amount_ml": body.amount_ml,
         "vessel_key": body.vessel_key,
@@ -796,6 +801,8 @@ async def log_wellness(
             )
     db.add_all(logs)
     await db.commit()
+    for log in logs:
+        await db.refresh(log)
     ids = [log.id for log in logs]
     return {"ids": ids, "logged_at": resolved_at, "type": "wellness"}
 
@@ -876,6 +883,11 @@ async def log_steps(
         raise HTTPException(
             status_code=422,
             detail="mode must be 'add' or 'override'.",
+        )
+    if body.source not in ("manual", "apple_health", "health_connect"):
+        raise HTTPException(
+            status_code=422,
+            detail="source must be 'manual', 'apple_health', or 'health_connect'.",
         )
     data = {"steps": body.steps, "mode": body.mode, "source": body.source}
     log = QuickLog(

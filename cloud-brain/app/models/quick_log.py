@@ -34,6 +34,8 @@ VALID_METRIC_TYPES = frozenset(
         "supplement",
         "symptom",
         "workout",
+        "weight",
+        "steps",
     }
 )
 
@@ -49,7 +51,7 @@ class QuickLog(Base):
         id: UUID primary key.
         user_id: Supabase UID of the owning user. Indexed.
         metric_type: One of: water, mood, energy, stress, sleep_quality, pain,
-            notes, sleep, run, meal, supplement, symptom, workout.
+            notes, sleep, run, meal, supplement, symptom, workout, weight, steps.
         value: Numeric measurement. Nullable for text-only metrics.
         text_value: Free-text content. Nullable for numeric-only metrics.
         tags: JSON array of tag strings.
@@ -74,7 +76,7 @@ class QuickLog(Base):
     metric_type: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        comment="water | mood | energy | stress | sleep_quality | pain | notes | sleep | run | meal | supplement | symptom | workout",
+        comment="water | mood | energy | stress | sleep_quality | pain | notes | sleep | run | meal | supplement | symptom | workout | weight | steps",
     )
     value: Mapped[float | None] = mapped_column(
         Float,
