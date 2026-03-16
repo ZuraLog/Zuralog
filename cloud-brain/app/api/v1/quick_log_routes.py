@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 from collections import defaultdict  # noqa: F401 — used in aggregate helper (later task)
 
-from sqlalchemy import distinct, select  # noqa: F401 — distinct used in aggregate helper (later task)
+from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
@@ -1116,7 +1116,7 @@ async def get_latest_log_values(
     if not types or not types.strip():
         return {}
 
-    requested = [t.strip() for t in types.split(",") if t.strip()]
+    requested = list(dict.fromkeys(t.strip() for t in types.split(",") if t.strip()))
 
     if len(requested) > 12:
         raise HTTPException(
@@ -1131,15 +1131,27 @@ async def get_latest_log_values(
                 detail=f"Invalid metric type '{t}'. Must be one of: {sorted(VALID_METRIC_TYPES)}.",
             )
 
-    # Single query: most recent row per metric type for this user (DISTINCT ON is PostgreSQL-specific)
-    stmt = (
-        select(QuickLog)
+    # Single query: most recent row per metric type for this user.
+    # ROW_NUMBER window function is standard SQL and works on all backends.
+    subq = (
+        select(
+            QuickLog,
+            func.row_number()
+            .over(
+                partition_by=QuickLog.metric_type,
+                order_by=QuickLog.logged_at.desc(),
+            )
+            .label("rn"),
+        )
         .where(
             QuickLog.user_id == user_id,
             QuickLog.metric_type.in_(requested),
         )
-        .distinct(QuickLog.metric_type)
-        .order_by(QuickLog.metric_type, QuickLog.logged_at.desc())
+        .subquery()
+    )
+    stmt = select(QuickLog).where(
+        QuickLog.id == subq.c.id,
+        subq.c.rn == 1,
     )
     rows = (await db.execute(stmt)).scalars().all()
     logs_by_type: dict[str, QuickLog] = {log.metric_type: log for log in rows}

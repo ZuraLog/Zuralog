@@ -162,6 +162,8 @@ class TestLatestEndpoint:
         body = response.json()
         assert "weight" in body
         assert "steps" in body
+        # Verify that exactly one DB call was made (not N+1)
+        assert mock_db.execute.call_count == 1
 
     def test_latest_empty_types_string_returns_empty(self, client_with_auth):
         """Explicitly passing an empty types string returns an empty dict."""
