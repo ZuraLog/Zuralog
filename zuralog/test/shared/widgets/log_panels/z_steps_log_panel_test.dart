@@ -67,7 +67,7 @@ void main() {
       expect(saveButton.onPressed, isNull);
     });
 
-    testWidgets('save passes mode string to onSave callback', (tester) async {
+    testWidgets('save passes add mode string when in default mode', (tester) async {
       String? capturedMode;
       await tester.pumpWidget(buildPanel(
         onSave: (steps, mode) async {
@@ -85,6 +85,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Default mode is add
+      expect(capturedMode, isNotNull, reason: 'onSave was never called — check if the save button was tappable');
       expect(capturedMode, equals('add'));
     });
 
@@ -109,6 +110,7 @@ void main() {
       await tester.tap(find.byType(FilledButton));
       await tester.pumpAndSettle();
 
+      expect(capturedMode, isNotNull, reason: 'onSave was never called — check if the save button was tappable');
       expect(capturedMode, equals('override'));
     });
   });
