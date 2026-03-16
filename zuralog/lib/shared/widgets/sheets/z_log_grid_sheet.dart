@@ -88,7 +88,15 @@ const List<_TileDef> _tiles = [
 /// );
 /// ```
 class ZLogGridSheet extends ConsumerStatefulWidget {
-  const ZLogGridSheet({super.key, this.parentMessenger});
+  const ZLogGridSheet({
+    super.key,
+    this.onFullScreenRoute,
+    this.parentMessenger,
+  });
+
+  /// Called when a full-screen log tile is tapped.
+  /// Receives the named route string (e.g. RouteNames.sleepLog).
+  final ValueChanged<String>? onFullScreenRoute;
 
   /// Optional [ScaffoldMessengerState] from the parent context.
   ///
@@ -113,8 +121,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
         setState(() => _selectedTile = tile);
 
       case _TileBehaviour.fullScreen:
-        // Full-screen forms not yet wired in Part 2 — no-op.
-        break;
+        widget.onFullScreenRoute?.call(_routeForTile(tile.key));
 
       case _TileBehaviour.comingSoon:
         (widget.parentMessenger ?? ScaffoldMessenger.of(context)).showSnackBar(
@@ -125,6 +132,17 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
           ),
         );
     }
+  }
+
+  String _routeForTile(String key) {
+    return switch (key) {
+      'sleep'      => 'sleepLog',
+      'run'        => 'runLog',
+      'meal'       => 'mealLog',
+      'supplement' => 'supplementsLog',
+      'symptom'    => 'symptomLog',
+      _            => 'today',
+    };
   }
 
   @override
@@ -146,8 +164,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
         ),
       ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom +
-            MediaQuery.of(context).padding.bottom,
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

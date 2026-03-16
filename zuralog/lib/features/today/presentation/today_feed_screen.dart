@@ -13,6 +13,7 @@ import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/constants/app_constants.dart';
 import 'package:zuralog/core/haptics/haptic_providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
@@ -42,30 +43,9 @@ class TodayFeedScreen extends ConsumerStatefulWidget {
 }
 
 class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
-  DateTime? _lastFabTap;
-
-  void _openLogSheet() {
-    if (!mounted) return;
-    // _lastFabTap is shared across all entry points (FAB, ring tap, snapshot card tap)
-    // so rapid taps from any source are all subject to the same 500ms window.
-    final now = DateTime.now();
-    if (_lastFabTap != null &&
-        now.difference(_lastFabTap!) < const Duration(milliseconds: 500)) {
-      return;
-    }
-    _lastFabTap = now;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ZLogGridSheet(
-        parentMessenger: ScaffoldMessenger.of(context),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final openSheet = ref.watch(logSheetCallbackProvider) ?? () {};
     final colors = AppColorsOf(context);
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
@@ -93,7 +73,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
         .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true));
 
     return ZuralogScaffold(
-      floatingActionButton: ZLogFab(onPressed: _openLogSheet),
+      floatingActionButton: ZLogFab(onPressed: openSheet),
       appBar: ZuralogAppBar(
         title: 'Today',
         actions: [
@@ -171,11 +151,11 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                     ),
                     const SizedBox(width: AppDimens.spaceSm),
                     // Log Ring — right half.
-                    Flexible(
+                     Flexible(
                        child: ZLogRingWidget(
-                        onTap: _openLogSheet,
+                        onTap: openSheet,
                       ),
-                    ),
+                     ),
                   ],
                 ),
               ),
@@ -226,7 +206,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
 
             // ── Snapshot Cards (horizontally scrollable row) ─────────────────
             _SnapshotRow(
-              onCardTap: _openLogSheet,
+              onCardTap: openSheet,
             ),
 
             const SizedBox(height: AppDimens.spaceMd),
@@ -261,7 +241,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
             ...feedAsync.when(
               error: (err, stack) => [
                 ZEmptyInsightsState(
-                  onLogTap: _openLogSheet,
+                  onLogTap: openSheet,
                   onConnectTap: () =>
                       context.pushNamed(RouteNames.settingsIntegrations),
                 ),
@@ -278,7 +258,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 if (feed.insights.isEmpty) {
                   return [
                     ZEmptyInsightsState(
-                      onLogTap: _openLogSheet,
+                      onLogTap: openSheet,
                       onConnectTap: () =>
                           context.pushNamed(RouteNames.settingsIntegrations),
                     ),
