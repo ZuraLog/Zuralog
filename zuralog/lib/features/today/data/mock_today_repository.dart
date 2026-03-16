@@ -9,6 +9,7 @@
 library;
 
 import 'package:zuralog/features/today/data/today_repository.dart';
+import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── MockTodayRepository ───────────────────────────────────────────────────────
@@ -153,6 +154,20 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   Future<List<DailyGoal>> getDailyGoals() async {
     await Future<void>.delayed(_delay);
     return const [];
+  }
+
+  // ── Today Log Summary ─────────────────────────────────────────────────────
+
+  @override
+  Future<TodayLogSummary> getTodayLogSummary() async {
+    await Future<void>.delayed(_delay);
+    return TodayLogSummary.empty;
+  }
+
+  @override
+  Future<Set<String>> getUserLoggedTypes() async {
+    await Future<void>.delayed(_delay);
+    return const <String>{};
   }
 
   // ── Supplements ───────────────────────────────────────────────────────────

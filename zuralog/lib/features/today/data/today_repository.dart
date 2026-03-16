@@ -18,6 +18,7 @@ library;
 import 'package:dio/dio.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── TodayRepositoryInterface ──────────────────────────────────────────────────
@@ -57,6 +58,16 @@ abstract interface class TodayRepositoryInterface {
   /// Fetch the user's daily goals with today's progress.
   /// Returns an empty list if the user has no goals configured.
   Future<List<DailyGoal>> getDailyGoals();
+
+  /// Fetches the aggregated summary of today's logs.
+  ///
+  /// Returns [TodayLogSummary.empty] on any network or parse failure.
+  Future<TodayLogSummary> getTodayLogSummary();
+
+  /// Fetches the set of metric types the user has ever logged.
+  ///
+  /// Returns an empty set on any network or parse failure.
+  Future<Set<String>> getUserLoggedTypes();
 
   /// Fetch the user's saved supplement list.
   Future<List<SupplementEntry>> getSupplementsList();
@@ -275,6 +286,37 @@ class TodayRepository implements TodayRepositoryInterface {
   Future<List<DailyGoal>> getDailyGoals() async {
     // Stub until the goals endpoint is built. Returns empty list.
     return const [];
+  }
+
+  // ── Today Log Summary ──────────────────────────────────────────────────────
+
+  @override
+  Future<TodayLogSummary> getTodayLogSummary() async {
+    final tzOffset = DateTime.now().timeZoneOffset.inMinutes;
+    final response = await _api.get(
+      '/api/v1/quick-log/summary/today',
+      queryParameters: {'tz_offset': tzOffset},
+    );
+    final data = response.data as Map<String, dynamic>;
+    final loggedTypes = (data['logged_types'] as List<dynamic>? ?? [])
+        .map((e) => e as String)
+        .toSet();
+    final rawValues =
+        (data['latest_values'] as Map<String, dynamic>?) ?? {};
+    return TodayLogSummary(
+      loggedTypes: loggedTypes,
+      latestValues: rawValues,
+    );
+  }
+
+  @override
+  Future<Set<String>> getUserLoggedTypes() async {
+    final response =
+        await _api.get('/api/v1/quick-log/my-metric-types');
+    final data = response.data as Map<String, dynamic>;
+    return (data['metric_types'] as List<dynamic>? ?? [])
+        .map((e) => e as String)
+        .toSet();
   }
 
   // ── Log Submission ─────────────────────────────────────────────────────────
