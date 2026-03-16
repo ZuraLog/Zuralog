@@ -74,7 +74,7 @@ class QuickLog(Base):
     metric_type: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        comment="water | mood | energy | stress | sleep_quality | pain | notes",
+        comment="water | mood | energy | stress | sleep_quality | pain | notes | sleep | run | meal | supplement | symptom | workout",
     )
     value: Mapped[float | None] = mapped_column(
         Float,
@@ -105,7 +105,7 @@ class QuickLog(Base):
         nullable=True,
         comment="Last modification timestamp",
     )
-    logged_at: Mapped[str] = mapped_column(
+    logged_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
