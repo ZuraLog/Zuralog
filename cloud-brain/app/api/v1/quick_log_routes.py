@@ -61,6 +61,7 @@ class QuickLogResponse(BaseModel):
         value: Numeric measurement value or None.
         text_value: Free-text content or None.
         tags: Array of tag strings.
+        data: Structured per-type payload dict.
         logged_at: ISO timestamp of when the metric was recorded.
     """
 
@@ -70,6 +71,7 @@ class QuickLogResponse(BaseModel):
     value: float | None
     text_value: str | None
     tags: list
+    data: dict
     logged_at: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -92,10 +94,7 @@ def _validate_metric_type(metric_type: str) -> None:
     if metric_type not in VALID_METRIC_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"Invalid metric_type '{metric_type}'. "
-                f"Must be one of: {sorted(VALID_METRIC_TYPES)}."
-            ),
+            detail=(f"Invalid metric_type '{metric_type}'. Must be one of: {sorted(VALID_METRIC_TYPES)}."),
         )
 
 
@@ -129,6 +128,7 @@ def _log_to_response(log: QuickLog) -> dict:
         "value": log.value,
         "text_value": log.text_value,
         "tags": log.tags or [],
+        "data": log.data or {},
         "logged_at": str(log.logged_at),
     }
 
