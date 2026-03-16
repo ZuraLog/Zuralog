@@ -15,13 +15,14 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
+from app.limiter import limiter
 from app.models.quick_log import QuickLog, VALID_METRIC_TYPES
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,70 @@ router = APIRouter(prefix="/quick-log", tags=["quick-log"])
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Typed log schemas
+# ---------------------------------------------------------------------------
+
+
+class SleepLogCreate(BaseModel):
+    bedtime: str  # ISO8601
+    wake_time: str  # ISO8601
+    duration_minutes: int
+    quality_rating: int | None = None  # 1-5
+    interruptions: int | None = None  # 0-20
+    factors: list[str] = []
+    notes: str | None = None
+    source: str = "manual"
+    logged_at: str | None = None
+
+
+class RunLogCreate(BaseModel):
+    activity_type: str
+    distance_km: float
+    duration_seconds: int
+    avg_pace_seconds_per_km: int | None = None
+    effort_level: str | None = None
+    notes: str | None = None
+    source: str = "manual"
+    logged_at: str | None = None
+
+
+class MealLogCreate(BaseModel):
+    meal_type: str
+    description: str | None = None
+    calories_kcal: int | None = None
+    feel_chips: list[str] = []
+    tags: list[str] = []
+    notes: str | None = None
+    quick_mode: bool = False
+    logged_at: str | None = None
+
+
+class SupplementLogCreate(BaseModel):
+    taken_supplement_ids: list[str] = []
+    notes: str | None = None
+    logged_at: str | None = None
+
+
+class SymptomLogCreate(BaseModel):
+    body_areas: list[str]
+    severity: str
+    symptom_type: str | None = None
+    timing: str | None = None
+    notes: str | None = None
+    logged_at: str | None = None
+
+
+class SupplementListEntry(BaseModel):
+    name: str
+    dose: str | None = None
+    timing: str | None = None
+
+
+class SupplementListCreate(BaseModel):
+    supplements: list[SupplementListEntry]
 
 
 class QuickLogCreate(BaseModel):
@@ -286,3 +351,412 @@ async def list_quick_logs(
     result = await db.execute(query)
     logs = result.scalars().all()
     return [_log_to_response(log) for log in logs]
+
+
+# ---------------------------------------------------------------------------
+# Typed log endpoints
+# ---------------------------------------------------------------------------
+
+_VALID_SEVERITY = frozenset({"mild", "moderate", "bad", "severe"})
+
+
+@router.post("/sleep", summary="Log a sleep entry")
+@limiter.limit("10/minute")
+async def log_sleep(
+    request: Request,
+    body: SleepLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a sleep entry with bedtime, wake time, and optional quality data.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Sleep log payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if wake_time is before bedtime, quality_rating is out
+            of range, or interruptions is out of range.
+    """
+    try:
+        bed = datetime.fromisoformat(body.bedtime.replace("Z", "+00:00"))
+        wake = datetime.fromisoformat(body.wake_time.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid bedtime or wake_time format.")
+    if wake <= bed:
+        raise HTTPException(status_code=422, detail="wake_time must be after bedtime.")
+    diff_minutes = int((wake - bed).total_seconds() / 60)
+    if not (1 <= diff_minutes <= 1440):
+        raise HTTPException(
+            status_code=422,
+            detail="Sleep duration must be between 1 minute and 24 hours.",
+        )
+    if body.quality_rating is not None and not (1 <= body.quality_rating <= 5):
+        raise HTTPException(status_code=422, detail="quality_rating must be between 1 and 5.")
+    if body.interruptions is not None and not (0 <= body.interruptions <= 20):
+        raise HTTPException(status_code=422, detail="interruptions must be between 0 and 20.")
+    if body.notes and len(body.notes) > 500:
+        raise HTTPException(status_code=422, detail="notes must not exceed 500 characters.")
+
+    data = {
+        "bedtime": body.bedtime,
+        "wake_time": body.wake_time,
+        "duration_minutes": diff_minutes,
+        "quality_rating": body.quality_rating,
+        "interruptions": body.interruptions,
+        "factors": body.factors,
+        "notes": body.notes.strip() if body.notes else None,
+        "source": body.source,
+    }
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="sleep",
+        value=float(diff_minutes),
+        data=data,
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "sleep"}
+
+
+@router.post("/run", summary="Log a run or cardio activity")
+@limiter.limit("20/minute")
+async def log_run(
+    request: Request,
+    body: RunLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a run or cardio activity entry.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Run log payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if distance_km or duration_seconds are out of range.
+    """
+    if not (0.01 <= body.distance_km <= 1000):
+        raise HTTPException(
+            status_code=422,
+            detail="distance_km must be between 0.01 and 1000.",
+        )
+    if not (1 <= body.duration_seconds <= 86400):
+        raise HTTPException(
+            status_code=422,
+            detail="duration_seconds must be between 1 and 86400.",
+        )
+    if body.notes and len(body.notes) > 500:
+        raise HTTPException(status_code=422, detail="notes must not exceed 500 characters.")
+    activity_type = body.activity_type.strip().lower()
+    pace = body.avg_pace_seconds_per_km or (
+        int(body.duration_seconds / body.distance_km) if body.distance_km > 0 else None
+    )
+    data = {
+        "activity_type": activity_type,
+        "distance_km": body.distance_km,
+        "duration_seconds": body.duration_seconds,
+        "avg_pace_seconds_per_km": pace,
+        "effort_level": body.effort_level,
+        "notes": body.notes.strip() if body.notes else None,
+        "source": body.source,
+    }
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="run",
+        value=body.distance_km,
+        data=data,
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "run"}
+
+
+@router.post("/meal", summary="Log a meal")
+@limiter.limit("30/minute")
+async def log_meal(
+    request: Request,
+    body: MealLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a meal entry.
+
+    In full mode (quick_mode=False) a description is required.
+    In quick mode only a meal_type is required.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Meal log payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if full mode is used without a description, or if
+            calories_kcal is out of range.
+    """
+    if not body.quick_mode and not body.description:
+        raise HTTPException(status_code=422, detail="description is required in full mode.")
+    if body.description and len(body.description) > 1000:
+        raise HTTPException(
+            status_code=422,
+            detail="description must not exceed 1000 characters.",
+        )
+    if body.calories_kcal is not None and not (0 <= body.calories_kcal <= 9999):
+        raise HTTPException(
+            status_code=422,
+            detail="calories_kcal must be between 0 and 9999.",
+        )
+    if body.notes and len(body.notes) > 500:
+        raise HTTPException(status_code=422, detail="notes must not exceed 500 characters.")
+    meal_type = body.meal_type.strip().lower()
+    data = {
+        "meal_type": meal_type,
+        "description": body.description.strip() if body.description else None,
+        "calories_kcal": body.calories_kcal,
+        "feel_chips": body.feel_chips,
+        "tags": body.tags,
+        "notes": body.notes.strip() if body.notes else None,
+        "quick_mode": body.quick_mode,
+    }
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="meal",
+        value=float(body.calories_kcal) if body.calories_kcal is not None else None,
+        data=data,
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "meal"}
+
+
+@router.post("/supplements", summary="Log today's supplements taken")
+@limiter.limit("10/minute")
+async def log_supplements(
+    request: Request,
+    body: SupplementLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record which supplements the user took today.
+
+    Validates that every supplement ID in taken_supplement_ids belongs to the
+    authenticated user.  Foreign IDs (from a different account) are rejected
+    with 422 to prevent enumeration.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Supplement log payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if any supplement ID does not belong to this user.
+    """
+    from app.models.user_supplement import UserSupplement  # noqa: PLC0415
+
+    if body.notes and len(body.notes) > 500:
+        raise HTTPException(status_code=422, detail="notes must not exceed 500 characters.")
+    if body.taken_supplement_ids:
+        result = await db.execute(
+            select(UserSupplement.id).where(
+                UserSupplement.id.in_(body.taken_supplement_ids),
+                UserSupplement.user_id == user_id,
+            )
+        )
+        valid_ids = {row[0] for row in result.all()}
+        invalid = set(body.taken_supplement_ids) - valid_ids
+        if invalid:
+            raise HTTPException(status_code=422, detail=f"Invalid supplement IDs: {invalid}")
+    data = {
+        "taken_supplement_ids": body.taken_supplement_ids,
+        "notes": body.notes.strip() if body.notes else None,
+    }
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="supplement",
+        value=float(len(body.taken_supplement_ids)),
+        data=data,
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "supplement"}
+
+
+@router.post("/symptom", summary="Log a symptom")
+@limiter.limit("20/minute")
+async def log_symptom(
+    request: Request,
+    body: SymptomLogCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Record a symptom entry.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: Symptom log payload.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with id, logged_at, and type fields.
+
+    Raises:
+        HTTPException: 422 if body_areas is empty or severity is not a
+            recognised value.
+    """
+    if not body.body_areas:
+        raise HTTPException(status_code=422, detail="body_areas must not be empty.")
+    if body.severity not in _VALID_SEVERITY:
+        raise HTTPException(
+            status_code=422,
+            detail=f"severity must be one of {sorted(_VALID_SEVERITY)}.",
+        )
+    if body.notes and len(body.notes) > 500:
+        raise HTTPException(status_code=422, detail="notes must not exceed 500 characters.")
+    data = {
+        "body_areas": body.body_areas,
+        "severity": body.severity,
+        "symptom_type": body.symptom_type,
+        "timing": body.timing,
+        "notes": body.notes.strip() if body.notes else None,
+    }
+    log = QuickLog(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        metric_type="symptom",
+        text_value=body.severity,
+        data=data,
+        logged_at=_resolve_logged_at(body.logged_at),
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+    return {"id": log.id, "logged_at": str(log.logged_at), "type": "symptom"}
+
+
+# ---------------------------------------------------------------------------
+# Supplement list management
+# ---------------------------------------------------------------------------
+
+
+@router.get("/user/supplements-list", summary="Get user's saved supplement list")
+@limiter.limit("30/minute")
+async def get_supplements_list(
+    request: Request,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return the user's active supplement list ordered by sort_order then created_at.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with a ``supplements`` list containing id, name, dose, and timing.
+    """
+    from app.models.user_supplement import UserSupplement  # noqa: PLC0415
+
+    result = await db.execute(
+        select(UserSupplement)
+        .where(UserSupplement.user_id == user_id, UserSupplement.is_active == True)  # noqa: E712
+        .order_by(UserSupplement.sort_order, UserSupplement.created_at)
+    )
+    supplements = result.scalars().all()
+    return {"supplements": [{"id": s.id, "name": s.name, "dose": s.dose, "timing": s.timing} for s in supplements]}
+
+
+@router.post("/user/supplements-list", summary="Replace user's supplement list")
+@limiter.limit("10/minute")
+async def update_supplements_list(
+    request: Request,
+    body: SupplementListCreate,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Replace the user's active supplement list with a new ordered set.
+
+    Existing active items are soft-deleted (is_active=False) rather than
+    physically removed so that past supplement logs that reference their IDs
+    remain valid.  New items are inserted with sort_order derived from their
+    position in the submitted array.
+
+    Args:
+        request: The incoming FastAPI request (required by slowapi limiter).
+        body: New supplement list.
+        user_id: Authenticated user ID (injected by dependency).
+        db: Async database session.
+
+    Returns:
+        Dict with the newly created ``supplements`` list.
+
+    Raises:
+        HTTPException: 422 if more than 50 supplements are submitted or any
+            name is empty or too long.
+    """
+    from app.models.user_supplement import UserSupplement  # noqa: PLC0415
+
+    if len(body.supplements) > 50:
+        raise HTTPException(status_code=422, detail="Maximum 50 supplements per user.")
+    for entry in body.supplements:
+        if not entry.name or not entry.name.strip():
+            raise HTTPException(status_code=422, detail="Supplement name must not be empty.")
+        if len(entry.name) > 200:
+            raise HTTPException(
+                status_code=422,
+                detail="Supplement name must not exceed 200 characters.",
+            )
+    # Soft-delete existing active items so past logs retain referential integrity.
+    existing = await db.execute(
+        select(UserSupplement).where(
+            UserSupplement.user_id == user_id,
+            UserSupplement.is_active == True,  # noqa: E712
+        )
+    )
+    for row in existing.scalars().all():
+        row.is_active = False
+    new_items = [
+        UserSupplement(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            name=entry.name.strip(),
+            dose=entry.dose.strip() if entry.dose else None,
+            timing=entry.timing,
+            sort_order=idx,
+        )
+        for idx, entry in enumerate(body.supplements)
+    ]
+    db.add_all(new_items)
+    await db.commit()
+    return {"supplements": [{"id": s.id, "name": s.name, "dose": s.dose, "timing": s.timing} for s in new_items]}

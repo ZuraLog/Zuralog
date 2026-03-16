@@ -32,7 +32,7 @@ def _stub_router_module(module_path: str) -> None:
 _stub_router_module("app.api.v1.journal_routes")
 _stub_router_module("app.api.v1.achievement_routes")
 _stub_router_module("app.api.v1.streak_routes")
-_stub_router_module("app.api.v1.quick_log_routes")
+# quick_log_routes no longer needs stubbing — it loads cleanly on Python 3.14.
 _stub_router_module("app.api.v1.emergency_card_routes")
 
 # Also stub dependent models so the stubs don't cascade.
@@ -40,7 +40,7 @@ for _m in (
     "app.models.journal_entry",
     "app.models.achievement",
     "app.models.streak",
-    "app.models.quick_log",
+    # app.models.quick_log no longer needs stubbing.
     "app.models.emergency_card",
 ):
     if _m not in sys.modules:
