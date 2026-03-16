@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-16 (Today Tab Part 2 complete: FAB + log grid sheet + inline log panels for Water/Wellness/Weight/Steps)
+**Last Updated:** 2026-03-16 (Today Tab Part 3 complete: 5 full-screen log screens + backend endpoints + route registration + providers)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -186,6 +186,11 @@
 | P0 | Today Feed (curated daily briefing) | ✅ Done | Phase 3 complete — Health Score hero, insight cards, quick actions, wellness check-in, streak, Quick Log FAB; feat/today-tab-settings-wiring: greeting personalization, data maturity banner persistence, wellness check-in gating |
 | P0 | Today — Insight Detail | ✅ Done | Phase 3 complete — bar chart, AI reasoning, source chips, Discuss with Coach CTA |
 | P0 | Today — Notification History | ✅ Done | Phase 3 complete — grouped by day, unread indicators, deep-link routing |
+| P0 | Today — Sleep Log Screen | ✅ Done | Part 3 complete — bedtime/wake time pickers, quality emoji, interruptions counter, factors chips, notes |
+| P0 | Today — Run Log Screen | ✅ Done | Part 3 complete — mode picker (Strava/past/live), activity type, distance, duration, auto-pace, effort |
+| P0 | Today — Meal Log Screen | ✅ Done | Part 3 complete — quick/full toggle (persisted), meal type, description, calorie presets, feel chips, tags |
+| P0 | Today — Supplements Log Screen | ✅ Done | Part 3 complete — tap-to-check-off checklist, inline add form, optimistic updates |
+| P0 | Today — Symptom Log Screen | ✅ Done | Part 3 complete — body area multi-select, symptom type, severity emoji, timing, notes |
 | P0 | Data — Health Dashboard (customizable) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Category Detail (x10) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Metric Detail | ✅ Done | Phase 5 — feat/data-tab |
@@ -413,6 +418,43 @@ Established a centralized shared component library, eliminating duplicated UI co
 | P0 | Never-error provider pattern | ✅ Done | All 4 providers (`healthScoreProvider`, `todayFeedProvider`, `dashboardProvider`, `trendsHomeProvider`) catch all errors and return empty data objects — UI never sees an error branch |
 | P0 | Shared `HealthScoreZeroState` widget | ✅ Done | Extracted to `lib/shared/widgets/health_score_zero_state.dart`; used by TodayFeedScreen card body |
 | P0 | Layout fix — compact zero ring in ScoreTrendHero | ✅ Done | `_CompactScoreZeroState` (48×48 muted ring) replaces full `HealthScoreZeroState` in row slot; prevents row layout break |
+
+---
+
+## Today Tab Part 3 — Full-Screen Log Screens (2026-03-16)
+
+> **Branch:** `feat/today-tab-part-3` → merged to main (2026-03-16)
+
+Completed 5 full-screen log screens for Sleep, Run, Meal, Supplements, and Symptom logging, plus all backend endpoints and route registration.
+
+### Flutter (Mobile App)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | SleepLogScreen — bedtime/wake time pickers, quality emoji, interruptions counter, factors chips, notes | ✅ Done | Full-screen route outside tab shell; floating submit button |
+| P0 | RunLogScreen — mode picker (Open Strava / Log a past run / Record live), activity type, distance, duration, auto-pace, effort | ✅ Done | Full-screen route; Strava deep link support |
+| P0 | MealLogScreen — quick/full toggle (persisted via SharedPreferences), meal type, description, calorie presets, feel chips, tags | ✅ Done | Full-screen route; toggle state persisted across sessions |
+| P0 | SupplementsLogScreen — tap-to-check-off checklist, inline add form, optimistic updates | ✅ Done | Full-screen route; real-time checklist UI |
+| P0 | SymptomLogScreen — body area multi-select, symptom type, severity emoji, timing, notes | ✅ Done | Full-screen route; multi-select body area picker |
+| P0 | Register 5 routes outside tab shell in `app_router.dart` | ✅ Done | Routes: `/sleep-log`, `/run-log`, `/meal-log`, `/supplements-log`, `/symptom-log` |
+| P0 | Add `logSheetCallbackProvider` in `log_sheet_provider.dart` | ✅ Done | Enables log grid sheet to launch from AppShell, floating above nav bar |
+| P0 | Add `ZSectionLabel` shared widget | ✅ Done | Section title label for log screens; added to `lib/shared/widgets/layout/z_section_label.dart` |
+| P0 | Add `DailyGoal` and `SupplementEntry` models to `today_models.dart` | ✅ Done | ORM models for goals and supplements |
+| P0 | Add `dailyGoalsProvider` and `supplementsListProvider` to `today_providers.dart` | ✅ Done | Riverpod providers for goals and supplements data |
+| P0 | Add repository methods: `logSleep`, `logRun`, `logMeal`, `logSupplements`, `logSymptom`, `getSupplementsList`, `updateSupplementsList`, `getDailyGoals` | ✅ Done | All methods wired to backend endpoints |
+
+### Backend (Cloud Brain)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Add database migration: `data` JSONB column to `quick_logs` | ✅ Done | Stores structured log data (sleep, run, meal, supplements, symptom) |
+| P0 | Add composite indexes replacing single-column indexes | ✅ Done | Performance optimization for queries |
+| P0 | Create `user_supplements` table | ✅ Done | Stores user's supplement list with timestamps |
+| P0 | Add RLS policies on `quick_logs` and `user_supplements` | ✅ Done | Critical security fix — RLS was never enabled on `quick_logs` |
+| P0 | Add `UserSupplement` ORM model | ✅ Done | SQLAlchemy model for supplements |
+| P0 | Extend `VALID_METRIC_TYPES` to include sleep, run, meal, supplement, symptom, workout | ✅ Done | Metric type validation |
+| P0 | Add 7 new endpoints to `quick_log_routes.py` | ✅ Done | `/sleep`, `/run`, `/meal`, `/supplements`, `/symptom`, `/user/supplements-list` (GET + POST) |
+| P0 | Rate limit all endpoints via slowapi | ✅ Done | Per-user rate limiting |
 
 ---
 

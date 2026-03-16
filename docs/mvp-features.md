@@ -353,7 +353,7 @@ Interactive analytics that let users discover patterns in their own data:
 
 ### O. Quick Log / Manual Entry
 
-**Implementation status:** Part 2 complete (2026-03-16). FAB + log grid sheet + 4 inline log panels (Water, Wellness, Weight, Steps) fully functional. Shared components: `ZLogFab`, `ZLogGridSheet`, `ZLogGridCell`, `ZWaterLogPanel`, `ZWellnessLogPanel`, `ZWeightLogPanel`, `ZStepsLogPanel`. Full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) deferred to Part 3. Real data wiring deferred to Part 4.
+**Implementation status:** Part 3 complete (2026-03-16). FAB + log grid sheet + 4 inline log panels (Water, Wellness, Weight, Steps) + 5 full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) fully functional. Shared components: `ZLogFab`, `ZLogGridSheet`, `ZLogGridCell`, `ZWaterLogPanel`, `ZWellnessLogPanel`, `ZWeightLogPanel`, `ZStepsLogPanel`, `ZSectionLabel`. Backend endpoints for all 5 log types implemented with RLS security. Real data wiring complete.
 
 A dedicated quick-entry interface for data that does not come from integrations. This is the structured complement to natural language logging in chat — for users who prefer tapping over typing.
 
@@ -362,14 +362,18 @@ A dedicated quick-entry interface for data that does not come from integrations.
 - Quick Log option in the Quick Actions bottom sheet (Coach Tab)
 - "Log" shortcut in the bottom navigation bar (optional — accessible via long-press on Today tab)
 
-**Quick Log bottom sheet contents:**
+**Quick Log bottom sheet contents (inline panels):**
 - **Water:** tap-to-increment counter (glasses or ml), daily total shown
 - **Mood:** 1-10 slider with emoji scale
 - **Energy:** 1-10 slider
 - **Stress:** 1-10 slider
-- **Sleep quality:** 1-10 slider (for users without sleep wearables)
-- **Pain/Symptoms:** text field with common symptom chips (headache, fatigue, soreness, nausea, dizziness) plus free-text
-- **Notes:** free-text field for any context ("started new medication", "stressful day at work")
+
+**Full-screen log screens (Part 3 complete):**
+- **Sleep:** bedtime/wake time pickers, sleep quality emoji, interruptions counter, sleep factors chips (stress, caffeine, exercise, alcohol, temperature), optional notes
+- **Run:** mode picker (Open Strava / Log a past run / Record live), activity type, distance, duration, auto-calculated pace, effort rating
+- **Meal:** quick/full toggle (persisted), meal type, description, calorie presets, feel chips (satisfied, energized, sluggish, bloated), tags
+- **Supplements:** tap-to-check-off checklist of user's supplements, inline add form for new supplements, optimistic updates
+- **Symptom:** body area multi-select (head, chest, back, arms, legs, joints), symptom type, severity emoji, timing, optional notes
 
 **Behavior:**
 - Each metric is a single tap or slide — the entire check-in should take under 15 seconds
