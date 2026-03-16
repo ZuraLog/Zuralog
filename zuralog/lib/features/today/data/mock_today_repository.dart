@@ -147,6 +147,93 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     // No-op in mock.
   }
 
+  // ── Daily Goals ───────────────────────────────────────────────────────────
+
+  @override
+  Future<List<DailyGoal>> getDailyGoals() async {
+    await Future<void>.delayed(_delay);
+    return const [];
+  }
+
+  // ── Supplements ───────────────────────────────────────────────────────────
+
+  @override
+  Future<List<SupplementEntry>> getSupplementsList() async {
+    await Future<void>.delayed(_delay);
+    return const [];
+  }
+
+  @override
+  Future<List<SupplementEntry>> updateSupplementsList(
+      List<SupplementEntry> supplements) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return supplements;
+  }
+
+  // ── Log Endpoints ─────────────────────────────────────────────────────────
+
+  @override
+  Future<void> logSleep({
+    required DateTime bedtime,
+    required DateTime wakeTime,
+    required int durationMinutes,
+    int? qualityRating,
+    int? interruptions,
+    List<String> factors = const [],
+    String? notes,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
+
+  @override
+  Future<void> logRun({
+    required String activityType,
+    required double distanceKm,
+    required int durationSeconds,
+    int? avgPaceSecondsPerKm,
+    String? effortLevel,
+    String? notes,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
+
+  @override
+  Future<void> logMeal({
+    required String mealType,
+    required bool quickMode,
+    String? description,
+    int? caloriesKcal,
+    List<String> feelChips = const [],
+    List<String> tags = const [],
+    String? notes,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
+
+  @override
+  Future<void> logSupplements({
+    required List<String> takenIds,
+    String? notes,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
+
+  @override
+  Future<void> logSymptom({
+    required List<String> bodyAreas,
+    required String severity,
+    String? symptomType,
+    String? timing,
+    String? notes,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    // No-op in mock.
+  }
+
   // ── Fixture Builders ──────────────────────────────────────────────────────
 
   List<InsightCard> _mockInsights() {
