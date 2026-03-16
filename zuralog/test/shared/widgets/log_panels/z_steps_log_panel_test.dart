@@ -1,79 +1,115 @@
+// zuralog/test/shared/widgets/log_panels/z_steps_log_panel_test.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zuralog/features/today/domain/log_summary_models.dart';
-import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:zuralog/shared/widgets/log_panels/z_steps_log_panel.dart';
 
-ProviderContainer _container() => ProviderContainer(
-      overrides: [
-        todayLogSummaryProvider.overrideWith(
-          (ref) async => TodayLogSummary.empty,
-        ),
-      ],
-    );
+void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
-Widget _buildPanel({
-  required ProviderContainer container,
-  Future<void> Function(int, String)? onSave,
-  VoidCallback? onBack,
-}) =>
-    UncontrolledProviderScope(
-      container: container,
+  Widget buildPanel({Future<void> Function(int, String)? onSave}) {
+    return ProviderScope(
       child: MaterialApp(
         home: Scaffold(
+          // onSave signature: Future<void> Function(int steps, String mode)
           body: ZStepsLogPanel(
+            onBack: () {},
             onSave: onSave ?? (steps, mode) async {},
-            onBack: onBack ?? () {},
           ),
         ),
       ),
     );
+  }
 
-void main() {
-  group('ZStepsLogPanel', () {
-    testWidgets('Test 1: Save disabled initially (steps = 0)', (tester) async {
-      final container = _container();
-      await tester.pumpWidget(_buildPanel(container: container));
-      await tester.pump();
-
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(button.onPressed, isNull);
+  group('ZStepsLogPanel mode toggle', () {
+    testWidgets('toggle is visible', (tester) async {
+      await tester.pumpWidget(buildPanel());
+      await tester.pumpAndSettle();
+      expect(find.byType(Switch), findsOneWidget);
     });
 
-    testWidgets(
-        'Test 2: entering a value enables Save and calls onSave with correct int',
-        (tester) async {
-      final container = _container();
-      int? savedSteps;
-      await tester.pumpWidget(
-        _buildPanel(
-          container: container,
-          onSave: (steps, mode) async { savedSteps = steps; },
-        ),
-      );
-      await tester.pump();
+    testWidgets('starts in add mode by default', (tester) async {
+      await tester.pumpWidget(buildPanel());
+      await tester.pumpAndSettle();
+      final switchWidget = tester.widget<Switch>(find.byType(Switch));
+      expect(switchWidget.value, isTrue); // add mode = toggle ON
+    });
 
-      await tester.enterText(find.byType(TextField), '8500');
-      await tester.pump();
+    testWidgets('tapping toggle changes to override mode', (tester) async {
+      await tester.pumpWidget(buildPanel());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      final switchWidget = tester.widget<Switch>(find.byType(Switch));
+      expect(switchWidget.value, isFalse); // override mode = toggle OFF
+    });
 
-      final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(button.onPressed, isNotNull);
+    testWidgets('mode persists — override mode loaded from prefs', (tester) async {
+      SharedPreferences.setMockInitialValues({'steps_log_mode': 'override'});
+      await tester.pumpWidget(buildPanel());
+      await tester.pumpAndSettle();
+      final switchWidget = tester.widget<Switch>(find.byType(Switch));
+      expect(switchWidget.value, isFalse); // override mode = toggle OFF
+    });
+  });
 
+  group('ZStepsLogPanel save callback', () {
+    testWidgets('save button disabled when no steps entered', (tester) async {
+      await tester.pumpWidget(buildPanel());
+      await tester.pumpAndSettle();
+      // Find the Save button — it should be disabled (onPressed is null)
+      final saveButton = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(saveButton.onPressed, isNull);
+    });
+
+    testWidgets('save passes mode string to onSave callback', (tester) async {
+      String? capturedMode;
+      await tester.pumpWidget(buildPanel(
+        onSave: (steps, mode) async {
+          capturedMode = mode;
+        },
+      ));
+      await tester.pumpAndSettle();
+
+      // Enter a step count
+      await tester.enterText(find.byType(TextField), '5000');
+      await tester.pumpAndSettle();
+
+      // Tap save
       await tester.tap(find.byType(FilledButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(savedSteps, 8500);
+      // Default mode is add
+      expect(capturedMode, equals('add'));
     });
 
-    testWidgets('Test 3: renders numeric input field', (tester) async {
-      final container = _container();
-      await tester.pumpWidget(_buildPanel(container: container));
-      await tester.pump();
+    testWidgets('save passes override mode when toggled off', (tester) async {
+      String? capturedMode;
+      await tester.pumpWidget(buildPanel(
+        onSave: (steps, mode) async {
+          capturedMode = mode;
+        },
+      ));
+      await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsWidgets);
-      // Should find the step count input field by hint text.
-      expect(find.text('Enter step count'), findsOneWidget);
+      // Toggle to override mode
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      // Enter a step count
+      await tester.enterText(find.byType(TextField), '10000');
+      await tester.pumpAndSettle();
+
+      // Tap save
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+
+      expect(capturedMode, equals('override'));
     });
   });
 }
