@@ -53,6 +53,10 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
   /// Step count received from the most recent sync — null until data arrives.
   int? _syncedSteps;
 
+  /// Display name of the source that provided the synced value (e.g. "Apple Health").
+  /// Captured once at sync time so the banner never reads from a stale provider value.
+  String? _syncedSource;
+
   bool get _canSave => _steps > 0;
 
   @override
@@ -122,6 +126,7 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
                     _syncedSteps = steps;
                     _steps = steps;
                     _controller.text = steps.toString();
+                    _syncedSource = _sourceDisplayName(source);
                   });
                 }
               });
@@ -137,16 +142,6 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
       (g) =>
           g.unit.toLowerCase() == 'steps' || g.label.toLowerCase() == 'steps',
     ).firstOrNull;
-
-    // Resolve the source display name for the banner from the raw provider data.
-    final syncSource = _syncedSteps != null
-        ? ref
-              .watch(
-                latestLogValuesProvider(latestLogValuesKey(const {'steps'})),
-              )
-              .valueOrNull?['steps']?['source'] as String? ??
-            'manual'
-        : 'manual';
 
     return Padding(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -179,7 +174,7 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
                     BorderRadius.circular(AppDimens.radiusSm),
               ),
               child: Text(
-                '✓ Synced from ${_sourceDisplayName(syncSource)} — '
+                '✓ Synced from ${_syncedSource ?? ''} — '
                 '$_syncedSteps steps today. You can override below.',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.primary,
