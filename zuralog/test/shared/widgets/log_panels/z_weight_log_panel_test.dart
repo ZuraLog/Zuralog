@@ -82,5 +82,23 @@ void main() {
       expect(savedKg, isNotNull);
       expect(savedKg, closeTo(70.0, 0.1));
     });
+
+    testWidgets('Last logged omits source for manual entries', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZWeightLogPanel(onSave: (_) async {}, onBack: () {}),
+        latestWeight: {
+          'value_kg': 75.0,
+          'logged_at': '2026-03-10T09:00:00Z',
+          'source': 'manual',
+        },
+      ));
+      await tester.pumpAndSettle();
+
+      // The source text should not appear for manual entries
+      expect(find.textContaining('manual'), findsNothing);
+      expect(find.textContaining('Manual'), findsNothing);
+      // The date should still appear
+      expect(find.textContaining('Last logged:'), findsOneWidget);
+    });
   });
 }

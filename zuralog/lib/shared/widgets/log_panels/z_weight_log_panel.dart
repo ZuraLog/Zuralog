@@ -144,26 +144,33 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     final displayStr = _displayValue.toStringAsFixed(1);
 
     // Pre-fill from latest logged value when data arrives.
-    ref.watch(latestLogValuesProvider(latestLogValuesKey(const {'weight'}))).whenData((latest) {
-      final w = latest['weight'] as Map<String, dynamic>?;
-      if (w != null && _lastLoggedKg == null) {
-        final kg = (w['value_kg'] as num?)?.toDouble();
-        final loggedAt = w['logged_at'] as String?;
-        final source = w['source'] as String? ?? 'manual';
-        if (kg != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _value = kg.clamp(20.0, 500.0);
-                _lastLoggedKg = kg;
-                _lastLoggedAt = _formatDate(loggedAt);
-                _lastLoggedSource = _sourceDisplayName(source);
+    // ref.listen is used (not ref.watch) because this is a side-effect —
+    // it must not run on every rebuild, only when the provider value changes.
+    ref.listen<AsyncValue<Map<String, dynamic>>>(
+      latestLogValuesProvider(latestLogValuesKey(const {'weight'})),
+      (_, next) {
+        next.whenData((latest) {
+          final w = latest['weight'] as Map<String, dynamic>?;
+          if (w != null && _lastLoggedKg == null) {
+            final kg = (w['value_kg'] as num?)?.toDouble();
+            final loggedAt = w['logged_at'] as String?;
+            final source = w['source'] as String? ?? 'manual';
+            if (kg != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _value = kg.clamp(20.0, 500.0);
+                    _lastLoggedKg = kg;
+                    _lastLoggedAt = _formatDate(loggedAt);
+                    _lastLoggedSource = _sourceDisplayName(source);
+                  });
+                }
               });
             }
-          });
-        }
-      }
-    });
+          }
+        });
+      },
+    );
 
     return Padding(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
