@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-16 (Today Tab Part 4 complete: water/wellness/weight/steps quick-log endpoints + real data wiring + steps mode toggle)
+**Last Updated:** 2026-03-17 (Today Tab Part 5 complete: inline log panels fully wired — real API calls, pre-fill, unit awareness, sync banner)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -192,6 +192,7 @@
 | P0 | Today — Supplements Log Screen | ✅ Done | Part 3 complete — tap-to-check-off checklist, inline add form, optimistic updates |
 | P0 | Today — Symptom Log Screen | ✅ Done | Part 3 complete — body area multi-select, symptom type, severity emoji, timing, notes |
 | P0 | Today — Quick Log Real Data (Part 4) | ✅ Done | Water/Wellness/Weight/Steps endpoints + real data wiring + steps mode toggle; feat/today-tab-part4-real-data merged 2026-03-16 |
+| P0 | Today — Inline Log Panels (Part 5) | ✅ Done | GET /quick-log/latest endpoint; latestLogValuesProvider; ZWaterLogPanel (oz/ml unit-aware, real logWater API); ZWellnessLogPanel (real logWellness API); ZWeightLogPanel (pre-fill, delta, unit persistence, real logWeight); ZStepsLogPanel (sync banner, goal display, Confirm Steps, real source); _PanelView snackbar fix; 2026-03-17 |
 | P0 | Data — Health Dashboard (customizable) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Category Detail (x10) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Metric Detail | ✅ Done | Phase 5 — feat/data-tab |
@@ -459,6 +460,42 @@ Completed real data wiring for quick-log endpoints (water, wellness, weight, ste
 | P0 | Backend tests for new endpoints | ✅ Done | 48 tests in `cloud-brain/tests/api/v1/test_new_log_endpoints.py`. |
 | P0 | Provider unit tests | ✅ Done | `zuralog/test/features/today/providers/today_providers_test.dart`. |
 | P0 | Widget tests for steps panel | ✅ Done | `zuralog/test/shared/widgets/log_panels/z_steps_log_panel_test.dart`. |
+
+---
+
+## Today Tab Part 5 — Inline Log Panels (2026-03-17)
+
+> **Branch:** commits on `main` (2026-03-17)
+
+Completed full wiring of the four inline log panels — Water, Wellness, Weight, and Steps — with real API calls, pre-fill from backend latest values, unit awareness, and sync banners.
+
+### Backend (Cloud Brain)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | `GET /api/v1/quick-log/latest` endpoint | ✅ Done | Returns the most recent logged value per metric type across all time, deduplicated (one entry per type). Single ROW_NUMBER subquery. Rate limit 60/min. |
+
+### Flutter (Mobile App)
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | `TodayRepository.getLatestLogValues()` | ✅ Done | Wired to `GET /api/v1/quick-log/latest`. Returns `Map<String, dynamic>` keyed by metric type. |
+| P0 | `TodayRepository.logWater()` | ✅ Done | Wired to `POST /api/v1/quick-log/water`. |
+| P0 | `TodayRepository.logWellness()` | ✅ Done | Wired to `POST /api/v1/quick-log/wellness`. |
+| P0 | `TodayRepository.logWeight()` | ✅ Done | Wired to `POST /api/v1/quick-log/weight`. |
+| P0 | `latestLogValuesProvider` | ✅ Done | `FutureProvider.family<Map<String, dynamic>, String>` keyed via `latestLogValuesKey(Set<String>)` helper. Caches per metric-type set. |
+| P0 | `ZWaterLogPanel` — real API + unit awareness | ✅ Done | Calls `logWater` on save. oz/ml unit awareness (reads user prefs). Shows "X ml today" from `todayLogSummaryProvider`. Error handling via `parentMessenger`. |
+| P0 | `ZWellnessLogPanel` — real API | ✅ Done | Calls `logWellness` on save. Error handling via `parentMessenger`. |
+| P0 | `ZWeightLogPanel` — pre-fill, delta, unit persistence | ✅ Done | Pre-fills from `latestLogValuesProvider(weight)`. Shows delta indicator vs previous. Last-used unit (kg/lbs) persisted via SharedPreferences. Calls `logWeight` on save. |
+| P0 | `ZStepsLogPanel` — sync banner + goal display | ✅ Done | Shows sync banner when Apple Health / Health Connect source detected (source stored as state). Displays goal progress from `dailyGoalsProvider`. "Confirm Steps" label when value matches synced total. Manual source omits banner. |
+| P0 | `_PanelView` snackbar fix in `z_log_grid_sheet.dart` | ✅ Done | Single `todayLogSummaryProvider` invalidation on save. `parentMessenger` threaded through to all error handlers. |
+
+### Tests
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Backend tests for GET /quick-log/latest | ✅ Done | 11 tests in `cloud-brain/tests/api/v1/test_quick_log_routes.py`. |
+| P0 | Widget tests for ZStepsLogPanel sync banner + goal display | ✅ Done | 7 tests in `zuralog/test/shared/widgets/log_panels/z_steps_log_panel_test.dart`. |
 
 ---
 
@@ -833,20 +870,24 @@ Added floating action button (FAB) for quick log entry and a modal bottom sheet 
 
 **Result:** 345 tests passing, zero analyzer issues. FAB + log grid sheet + 4 inline log panels fully functional. Full-screen log screens (Sleep, Run, Meal, Supplements, Symptom) ready for Part 3.
 
-### Part 3 — Full-Screen Log Screens (Planned)
+### Part 3 — Full-Screen Log Screens (Complete)
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Create full-screen log screens: Sleep, Run, Meal, Supplements, Symptom | 🔜 Planned | Detailed entry forms for complex metrics |
-| P0 | Wire log grid sheet to open full-screen screens | 🔜 Planned | |
+| P0 | Create full-screen log screens: Sleep, Run, Meal, Supplements, Symptom | ✅ Done | See "Today Tab Part 3" section above |
+| P0 | Wire log grid sheet to open full-screen screens | ✅ Done | Routes registered in `app_router.dart` |
 
-### Part 4 — Backend Data Wiring (Planned)
+### Part 4 — Backend Data Wiring (Complete)
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Extend `quick_log_routes.py` with new log endpoints | 🔜 Planned | Water, mood, energy, stress, pain, notes |
-| P0 | Wire `todayLogSummaryProvider` to real backend data | 🔜 Planned | Fetch from `/api/v1/today/log-summary` |
-| P0 | Wire `userLoggedTypesProvider` to real backend data | 🔜 Planned | Fetch from `/api/v1/today/logged-types` |
-| P0 | Wire `logRingProvider` to compute ring fill from real data | 🔜 Planned | Derived from log summary |
-| P0 | Wire `snapshotProvider` to build ordered snapshot list | 🔜 Planned | Derived from log summary |
-| P0 | Wire Daily Goals card to real goals data | 🔜 Planned | Fetch from `/api/v1/goals` |
+| P0 | Extend `quick_log_routes.py` with new log endpoints | ✅ Done | Water, wellness, weight, steps endpoints added |
+| P0 | Wire `todayLogSummaryProvider` to real backend data | ✅ Done | Wired to `GET /api/v1/quick-log/summary/today` |
+| P0 | Wire `userLoggedTypesProvider` to real backend data | ✅ Done | Wired to `GET /api/v1/quick-log/my-metric-types` |
+| P0 | Wire `logRingProvider` to compute ring fill from real data | ✅ Done | Derived from `todayLogSummaryProvider` |
+| P0 | Wire `snapshotProvider` to build ordered snapshot list | ✅ Done | Derived from `todayLogSummaryProvider` |
+| P0 | Wire Daily Goals card to real goals data | ✅ Done | `dailyGoalsProvider` wired to `GET /api/v1/goals` |
+
+### Part 5 — Inline Panels (Complete)
+
+See "Today Tab Part 5" section above.

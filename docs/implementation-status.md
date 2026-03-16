@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-16 (Today Tab Part 4 complete: quick-log real data wiring + steps mode toggle)  
+**Last Updated:** 2026-03-17 (Today Tab Part 5 complete: inline log panels fully wired)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -29,6 +29,53 @@
 - Supabase migration idempotency fix (Batch 5: insights upsert)
 - `WITHINGS_API_BASE_URL` env var validation (Batch 8: integration config)
 - All 50 debt items resolved; zero regressions
+
+---
+
+## Today Tab Part 5 — Inline Log Panels (2026-03-17)
+
+**Scope:** Fully wired all four inline log panels (Water, Wellness, Weight, Steps) to real backend API calls, added pre-fill from latest known values, unit awareness, sync banners, and fixed snackbar routing.  
+**Branch:** commits directly on `main` (2026-03-17)
+
+**What was built:**
+
+### Backend
+
+**1 new endpoint in `cloud-brain/app/api/v1/quick_log_routes.py`:**
+
+**`GET /api/v1/quick-log/latest`** — Returns the most recent logged value per metric type
+- Deduplicated: one entry per metric type (most recent by `logged_at`)
+- Uses a single ROW_NUMBER subquery — no N+1 queries
+- Rate limit: 60/minute per user
+- Returns: `{ metric_type: { value, logged_at, source, ... } }`
+
+### Flutter
+
+**New provider:**
+- `latestLogValuesProvider` — `FutureProvider.family<Map<String, dynamic>, String>` keyed by `latestLogValuesKey(Set<String>)` helper. Fetches from `GET /quick-log/latest` via `TodayRepository.getLatestLogValues()`.
+
+**New `TodayRepository` methods:**
+- `logWater(int amountMl, String vesselKey)` — `POST /api/v1/quick-log/water`
+- `logWellness(double? mood, double? energy, double? stress)` — `POST /api/v1/quick-log/wellness`
+- `logWeight(double weightKg)` — `POST /api/v1/quick-log/weight`
+- `getLatestLogValues(Set<String> metricTypes)` — `GET /api/v1/quick-log/latest`
+
+**Panel changes:**
+
+- **`ZWaterLogPanel`** — oz/ml unit awareness (reads `userPreferencesProvider`), real `logWater` API call on save, `_canSave` guard, error handling via `parentMessenger`
+- **`ZWellnessLogPanel`** — real `logWellness` API call on save, `_canSave` guard, error handling via `parentMessenger`
+- **`ZWeightLogPanel`** — pre-fills from `latestLogValuesProvider(weight)`, shows delta indicator vs previous weight, last-used unit (kg/lbs) persisted via SharedPreferences, real `logWeight` API call on save
+- **`ZStepsLogPanel`** — sync banner when Apple Health or Health Connect source detected (source name stored as state to prevent stale text), goal progress display from `dailyGoalsProvider`, "Confirm Steps" button label when value matches synced total, banner omitted for manual source, real `logSteps` already wired in Part 4
+
+**`_PanelView` fix in `z_log_grid_sheet.dart`:**
+- Single `todayLogSummaryProvider.invalidate()` call on save (was double-invalidating)
+- `parentMessenger` (the sheet's `ScaffoldMessenger`) threaded through to all panel error callbacks so snackbars appear in the correct position
+
+### Tests
+
+- 11 backend tests for `GET /quick-log/latest` in `cloud-brain/tests/api/v1/test_quick_log_routes.py`
+- 7 Flutter widget tests for `ZStepsLogPanel` sync banner and goal display in `zuralog/test/shared/widgets/log_panels/z_steps_log_panel_test.dart`
+- Flutter analyze: 0 issues | Flutter tests: 377 passed, 0 failed
 
 ---
 
