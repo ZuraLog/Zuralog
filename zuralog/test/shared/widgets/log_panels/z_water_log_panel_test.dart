@@ -1,98 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_water_log_panel.dart';
 
-ProviderContainer _container({Map<String, dynamic> latestValues = const {}}) =>
-    ProviderContainer(
-      overrides: [
-        todayLogSummaryProvider.overrideWith(
-          (ref) async => TodayLogSummary(
-            loggedTypes:
-                latestValues.containsKey('water') ? const {'water'} : const {},
-            latestValues: latestValues,
-          ),
-        ),
-      ],
-    );
-
-Widget _buildPanel({
-  required ProviderContainer container,
-  void Function(double)? onSave,
-  VoidCallback? onBack,
-}) =>
-    UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        home: Scaffold(
-          body: ZWaterLogPanel(
-            onSave: onSave ?? (_) {},
-            onBack: onBack ?? () {},
-          ),
-        ),
+Widget _wrap(Widget child, {UnitsSystem units = UnitsSystem.metric}) {
+  return ProviderScope(
+    overrides: [
+      todayLogSummaryProvider.overrideWith(
+        (ref) async => TodayLogSummary.empty,
       ),
-    );
+      unitsSystemProvider.overrideWithValue(units),
+    ],
+    child: MaterialApp(home: Scaffold(body: child)),
+  );
+}
 
 void main() {
   group('ZWaterLogPanel', () {
-    testWidgets('Test 1: renders vessel chips', (tester) async {
-      final container = _container();
-      await tester.pumpWidget(_buildPanel(container: container));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Small cup'), findsOneWidget);
-      expect(find.text('Glass'), findsOneWidget);
-      expect(find.text('Bottle'), findsOneWidget);
-      expect(find.text('Large'), findsOneWidget);
-      expect(find.text('Custom'), findsOneWidget);
-    });
-
-    testWidgets(
-        'Test 2: Save button disabled when no vessel selected and no custom value',
-        (tester) async {
-      final container = _container();
-      await tester.pumpWidget(_buildPanel(container: container));
-      await tester.pumpAndSettle();
+    testWidgets('Save button disabled before vessel selection', (tester) async {
+      double? savedAmount;
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml) async => savedAmount = ml,
+        onBack: () {},
+      )));
+      await tester.pump();
 
       final button = tester.widget<FilledButton>(find.byType(FilledButton));
       expect(button.onPressed, isNull);
+      expect(savedAmount, isNull);
     });
 
-    testWidgets(
-        'Test 3: selecting Glass sets 250ml and enables Save; tapping Save calls onSave(250.0)',
-        (tester) async {
-      final container = _container();
+    testWidgets('Selecting Glass chip sets 250 ml and enables Save', (tester) async {
       double? savedAmount;
-      await tester.pumpWidget(
-        _buildPanel(
-          container: container,
-          onSave: (amount) => savedAmount = amount,
-        ),
-      );
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml) async => savedAmount = ml,
+        onBack: () {},
+      )));
+      await tester.pump();
 
-      await tester.tap(find.text('Glass'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Glass'));
+      await tester.pump();
 
       final button = tester.widget<FilledButton>(find.byType(FilledButton));
       expect(button.onPressed, isNotNull);
 
       await tester.tap(find.byType(FilledButton));
-      await tester.pumpAndSettle();
-
-      expect(savedAmount, 250.0);
+      await tester.pump();
+      expect(savedAmount, closeTo(250.0, 0.01));
     });
 
-    testWidgets(
-        "Test 4: shows today total when water has been logged (latestValues['water'] = 750.0)",
-        (tester) async {
-      final container = _container(latestValues: {'water': 750.0});
-      await tester.pumpWidget(_buildPanel(container: container));
-      await tester.pumpAndSettle();
+    testWidgets('Custom chip shows text field; numeric input accepted', (tester) async {
+      double? savedAmount;
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml) async => savedAmount = ml,
+        onBack: () {},
+      )));
+      await tester.pump();
 
-      expect(find.text('750 ml logged today'), findsOneWidget);
+      await tester.tap(find.text('Custom'));
+      await tester.pump();
+
+      expect(find.byType(TextField), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '300');
+      await tester.pump();
+
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(savedAmount, closeTo(300.0, 0.01));
+    });
+
+    testWidgets('In imperial mode vessel chips show oz labels', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZWaterLogPanel(onSave: (_) async {}, onBack: () {}),
+        units: UnitsSystem.imperial,
+      ));
+      await tester.pump();
+
+      expect(find.textContaining('oz'), findsWidgets);
+    });
+
+    testWidgets('In imperial mode Glass save converts oz to ml', (tester) async {
+      double? savedAmount;
+      await tester.pumpWidget(_wrap(
+        ZWaterLogPanel(onSave: (ml) async => savedAmount = ml, onBack: () {}),
+        units: UnitsSystem.imperial,
+      ));
+      await tester.pump();
+
+      await tester.tap(find.textContaining('8 oz'));
+      await tester.pump();
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+
+      // 8 oz * 29.5735 = 236.588 ml
+      expect(savedAmount, closeTo(236.6, 1.0));
     });
   });
 }

@@ -12,6 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── Vessel presets ─────────────────────────────────────────────────────────────
@@ -33,6 +35,16 @@ const _kVessels = [
   _VesselPreset(key: 'custom', label: 'Custom', ml: null),
 ];
 
+const double _kOzToMl = 29.5735;
+
+// oz display amounts per vessel (rounded to nearest whole oz)
+const _kVesselOz = {
+  'small_cup': 5.0,
+  'glass': 8.0,
+  'bottle': 17.0,
+  'large': 25.0,
+};
+
 // ── ZWaterLogPanel ─────────────────────────────────────────────────────────────
 
 /// Inline log panel for water intake.
@@ -51,7 +63,7 @@ class ZWaterLogPanel extends ConsumerStatefulWidget {
   });
 
   /// Called when the user taps "Add Water". Receives the amount in ml.
-  final void Function(double amountMl) onSave;
+  final Future<void> Function(double amountMl) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -78,11 +90,33 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     super.dispose();
   }
 
+  String _vesselLabel(_VesselPreset vessel, bool isImperial) {
+    if (vessel.ml == null) return 'Custom';
+    if (isImperial) {
+      final oz = _kVesselOz[vessel.key] ?? (vessel.ml! / _kOzToMl).roundToDouble();
+      return '${vessel.label}\n${oz.toStringAsFixed(0)} oz';
+    }
+    return '${vessel.label}\n${vessel.ml!.toStringAsFixed(0)} ml';
+  }
+
+  double _toMl(_VesselPreset vessel, {double? customDisplayValue, required bool isImperial}) {
+    if (vessel.ml != null) {
+      if (isImperial) {
+        final oz = _kVesselOz[vessel.key] ?? (vessel.ml! / _kOzToMl);
+        return oz * _kOzToMl;
+      }
+      return vessel.ml!;
+    }
+    if (customDisplayValue == null || customDisplayValue <= 0) return 0;
+    return isImperial ? customDisplayValue * _kOzToMl : customDisplayValue;
+  }
+
   void _selectVessel(_VesselPreset vessel) {
+    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
     setState(() {
       _selectedVesselKey = vessel.key;
       if (vessel.ml != null) {
-        _amountMl = vessel.ml!;
+        _amountMl = _toMl(vessel, isImperial: isImperial);
         _customController.clear();
       } else {
         _amountMl = 0;
@@ -91,24 +125,20 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
   }
 
   void _onCustomChanged(String value) {
+    final isImperial = ref.read(unitsSystemProvider) == UnitsSystem.imperial;
     final parsed = double.tryParse(value) ?? 0;
-    setState(() => _amountMl = parsed);
+    setState(() => _amountMl = isImperial ? parsed * _kOzToMl : parsed);
   }
 
-  void _handleSave() {
-    // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/water
-    // Body: { amount_ml: double, logged_at: ISO8601 }
-    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
-    // here. The sheet's onSaved callback owns post-save side effects so that
-    // invalidation only fires on confirmed success (not before the server
-    // round-trip in Part 4).
-    widget.onSave(_amountMl);
+  Future<void> _handleSave() async {
+    await widget.onSave(_amountMl);
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final summaryAsync = ref.watch(todayLogSummaryProvider);
+    final isImperial = ref.watch(unitsSystemProvider) == UnitsSystem.imperial;
 
     return Padding(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -123,7 +153,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
             children: _kVessels.map((vessel) {
               final isSelected = _selectedVesselKey == vessel.key;
               return ChoiceChip(
-                label: Text(vessel.label),
+                label: Text(_vesselLabel(vessel, isImperial)),
                 selected: isSelected,
                 onSelected: (_) => _selectVessel(vessel),
                 selectedColor: AppColors.primary,
@@ -155,10 +185,10 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               decoration: InputDecoration(
-                hintText: 'Enter amount (ml)',
+                hintText: isImperial ? 'Enter amount (oz)' : 'Enter amount (ml)',
                 hintStyle: AppTextStyles.bodyMedium
                     .copyWith(color: colors.textTertiary),
-                suffixText: 'ml',
+                suffixText: isImperial ? 'oz' : 'ml',
               ),
               onChanged: _onCustomChanged,
               cursorColor: AppColors.primary,
@@ -171,9 +201,15 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
           summaryAsync.when(
             data: (summary) {
               final todayMl = summary.latestValues['water'] as double?;
-              final label = todayMl == null
-                  ? 'Nothing logged yet today'
-                  : '${todayMl.toStringAsFixed(0)} ml logged today';
+              final String label;
+              if (todayMl == null) {
+                label = 'Nothing logged yet today';
+              } else if (isImperial) {
+                final oz = todayMl / _kOzToMl;
+                label = '${oz.toStringAsFixed(1)} oz logged today';
+              } else {
+                label = '${todayMl.toStringAsFixed(0)} ml logged today';
+              }
               return Text(
                 label,
                 style: AppTextStyles.bodySmall

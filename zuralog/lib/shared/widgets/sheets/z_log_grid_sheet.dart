@@ -292,11 +292,46 @@ class _PanelView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return switch (tile.key) {
       'water' => ZWaterLogPanel(
-          onSave: (ml) => onSaved(),
+          onSave: (ml) async {
+            try {
+              await ref.read(todayRepositoryProvider).logWater(amountMl: ml);
+              ref.invalidate(todayLogSummaryProvider);
+              onSaved();
+            } catch (e) {
+              debugPrint('logWater failed: $e');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not save water. Please try again.'),
+                  ),
+                );
+              }
+            }
+          },
           onBack: onBack,
         ),
       'mood' => ZWellnessLogPanel(
-          onSave: (_) => onSaved(),
+          onSave: (data) async {
+            try {
+              await ref.read(todayRepositoryProvider).logWellness(
+                mood: data.mood,
+                energy: data.energy,
+                stress: data.stress,
+                notes: data.notes,
+              );
+              ref.invalidate(todayLogSummaryProvider);
+              onSaved();
+            } catch (e) {
+              debugPrint('logWellness failed: $e');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not save check-in. Please try again.'),
+                  ),
+                );
+              }
+            }
+          },
           onBack: onBack,
         ),
       'weight' => ZWeightLogPanel(
