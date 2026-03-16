@@ -21,6 +21,8 @@ export 'layout/zuralog_scaffold.dart';
 export 'list/z_settings_tile.dart';
 export 'loading/z_loading_skeleton.dart';
 export 'profile_side_panel.dart';
+export 'sheets/z_log_grid_cell.dart';
+export 'sheets/z_log_grid_sheet.dart';
 export 'states/z_empty_insights_state.dart';
 export 'states/z_empty_state.dart';
 export 'states/z_error_state.dart';
