@@ -129,6 +129,38 @@ abstract interface class TodayRepositoryInterface {
     String mode = 'add',
     String source = 'manual',
   });
+
+  /// Submit a water intake log entry.
+  Future<void> logWater({
+    required double amountMl,
+    String? vesselKey,
+  });
+
+  /// Submit a wellness check-in.
+  ///
+  /// At least one of [mood], [energy], or [stress] must be non-null.
+  Future<void> logWellness({
+    double? mood,
+    double? energy,
+    double? stress,
+    String? notes,
+  });
+
+  /// Submit a body weight log entry. Always in kg — caller converts.
+  Future<void> logWeight({required double valueKg});
+
+  /// Fetch the most recent log entry for each of the requested [types].
+  ///
+  /// Returns a map keyed by metric type. Types the user has never logged
+  /// are absent. The Cloud Brain is the single source of truth — all
+  /// data ingested from connected health apps is surfaced here.
+  ///
+  /// Example:
+  /// ```dart
+  /// final latest = await repo.getLatestLogValues({'weight', 'steps'});
+  /// // latest['weight'] → { 'value_kg': 78.4, 'logged_at': '...', 'source': 'apple_health' }
+  /// ```
+  Future<Map<String, dynamic>> getLatestLogValues(Set<String> types);
 }
 
 // ── TodayRepository ──────────────────────────────────────────────────────────
@@ -436,6 +468,53 @@ class TodayRepository implements TodayRepositoryInterface {
       'source': source,
       'logged_at': DateTime.now().toUtc().toIso8601String(),
     });
+  }
+
+  @override
+  Future<void> logWater({
+    required double amountMl,
+    String? vesselKey,
+  }) async {
+    await _api.post('/api/v1/quick-log/water', data: {
+      'amount_ml': amountMl,
+      'vessel_key': ?vesselKey,
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> logWellness({
+    double? mood,
+    double? energy,
+    double? stress,
+    String? notes,
+  }) async {
+    await _api.post('/api/v1/quick-log/wellness', data: {
+      'mood': ?mood,
+      'energy': ?energy,
+      'stress': ?stress,
+      'notes': ?notes,
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> logWeight({required double valueKg}) async {
+    await _api.post('/api/v1/quick-log/weight', data: {
+      'value_kg': valueKg,
+      'logged_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
+    if (types.isEmpty) return const {};
+    final typesParam = types.join(',');
+    final response = await _api.get(
+      '/api/v1/quick-log/latest',
+      queryParameters: {'types': typesParam},
+    );
+    return (response.data as Map<String, dynamic>?) ?? const {};
   }
 
   // ── Supplements List ───────────────────────────────────────────────────────

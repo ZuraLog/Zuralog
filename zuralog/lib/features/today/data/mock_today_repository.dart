@@ -259,6 +259,28 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     // No-op in mock.
   }
 
+  @override
+  Future<void> logWater({
+    required double amountMl,
+    String? vesselKey,
+  }) async {}
+
+  @override
+  Future<void> logWellness({
+    double? mood,
+    double? energy,
+    double? stress,
+    String? notes,
+  }) async {}
+
+  @override
+  Future<void> logWeight({required double valueKg}) async {}
+
+  @override
+  Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
+    return const {};
+  }
+
   // ── Fixture Builders ──────────────────────────────────────────────────────
 
   List<InsightCard> _mockInsights() {
