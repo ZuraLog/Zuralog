@@ -15,9 +15,12 @@
 /// - [userLoggedTypesProvider]        — set of metric types user has ever logged
 /// - [logRingProvider]                — state for the Log Ring widget
 /// - [snapshotProvider]               — list of snapshot card data
+/// - [dailyGoalsProvider]             — user's daily goals with today's progress
+/// - [supplementsListProvider]        — user's saved supplement and medication list
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
@@ -333,3 +336,39 @@ String _formatSleep(double minutes) {
   final m = (minutes % 60).toInt();
   return '${h}h ${m}m';
 }
+
+// ── Daily Goals ───────────────────────────────────────────────────────────────
+
+/// User's configured daily goals with today's progress.
+///
+/// Cached — does not re-fetch on every rebuild. Invalidate only after the
+/// user changes a goal in settings.
+///
+/// Returns an empty list if the user has no goals configured — the daily
+/// goals card shows a "Set a daily goal →" prompt in that case.
+final dailyGoalsProvider = FutureProvider<List<DailyGoal>>((ref) async {
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getDailyGoals();
+  } catch (e, st) {
+    debugPrint('dailyGoalsProvider failed: $e\n$st');
+    return const [];
+  }
+});
+
+// ── Supplements List ──────────────────────────────────────────────────────────
+
+/// The user's saved supplement and medication list.
+///
+/// Cached — only invalidated when the user edits their list.
+/// The supplements log screen reads this to build the tap-to-check-off list.
+final supplementsListProvider =
+    FutureProvider<List<SupplementEntry>>((ref) async {
+  final repo = ref.read(todayRepositoryProvider);
+  try {
+    return await repo.getSupplementsList();
+  } catch (e, st) {
+    debugPrint('supplementsListProvider failed: $e\n$st');
+    return const [];
+  }
+});

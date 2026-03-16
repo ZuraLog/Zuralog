@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -88,7 +89,15 @@ const List<_TileDef> _tiles = [
 /// );
 /// ```
 class ZLogGridSheet extends ConsumerStatefulWidget {
-  const ZLogGridSheet({super.key, this.parentMessenger});
+  const ZLogGridSheet({
+    super.key,
+    this.onFullScreenRoute,
+    this.parentMessenger,
+  });
+
+  /// Called when a full-screen log tile is tapped.
+  /// Receives the named route string (e.g. RouteNames.sleepLog).
+  final ValueChanged<String>? onFullScreenRoute;
 
   /// Optional [ScaffoldMessengerState] from the parent context.
   ///
@@ -113,8 +122,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
         setState(() => _selectedTile = tile);
 
       case _TileBehaviour.fullScreen:
-        // Full-screen forms not yet wired in Part 2 — no-op.
-        break;
+        widget.onFullScreenRoute?.call(_routeForTile(tile.key));
 
       case _TileBehaviour.comingSoon:
         (widget.parentMessenger ?? ScaffoldMessenger.of(context)).showSnackBar(
@@ -125,6 +133,17 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
           ),
         );
     }
+  }
+
+  String _routeForTile(String key) {
+    return switch (key) {
+      'sleep'      => RouteNames.sleepLog,
+      'run'        => RouteNames.runLog,
+      'meal'       => RouteNames.mealLog,
+      'supplement' => RouteNames.supplementsLog,
+      'symptom'    => RouteNames.symptomLog,
+      _            => throw AssertionError('No route mapped for full-screen tile key: $key'),
+    };
   }
 
   @override
@@ -146,8 +165,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
         ),
       ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom +
-            MediaQuery.of(context).padding.bottom,
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

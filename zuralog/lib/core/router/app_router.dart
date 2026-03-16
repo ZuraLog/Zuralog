@@ -59,6 +59,11 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/features/today/presentation/today_feed_screen.dart';
 import 'package:zuralog/features/today/presentation/insight_detail_screen.dart';
 import 'package:zuralog/features/today/presentation/notification_history_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/sleep_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/run_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/meal_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/supplements_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
 
 // ── Tab 1: Data ───────────────────────────────────────────────────────────────
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
@@ -362,6 +367,46 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) => const SentryErrorBoundary(
         module: 'dev.catalog',
         child: CatalogScreen(),
+      ),
+    ),
+
+    // ── Log Screens (pushed over shell — no bottom nav visible) ──────────
+    GoRoute(
+      path: RouteNames.sleepLogPath,
+      name: RouteNames.sleepLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(
+          module: 'today.sleep_log',
+          child: SleepLogScreen(),
+        ),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.runLogPath,
+      name: RouteNames.runLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(module: 'today.run_log', child: RunLogScreen()),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.mealLogPath,
+      name: RouteNames.mealLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(module: 'today.meal_log', child: MealLogScreen()),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.supplementsLogPath,
+      name: RouteNames.supplementsLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(module: 'today.supplements_log', child: SupplementsLogScreen()),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.symptomLogPath,
+      name: RouteNames.symptomLog,
+      pageBuilder: (context, state) => const MaterialPage(
+        child: SentryErrorBoundary(module: 'today.symptom_log', child: SymptomLogScreen()),
       ),
     ),
 

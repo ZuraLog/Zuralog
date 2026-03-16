@@ -8,16 +8,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zuralog/core/haptics/haptic.dart';
+import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/state/side_panel_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/profile_side_panel.dart';
+import 'package:zuralog/shared/widgets/sheets/z_log_grid_sheet.dart';
 
 const double _kPanelWidth = 320.0;
 const Duration _kPanelDuration = Duration(milliseconds: 300);
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
@@ -50,19 +52,64 @@ class AppShell extends ConsumerWidget {
     ),
   ];
 
-  void _onDestinationSelected(WidgetRef ref, int index) {
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  DateTime? _lastSheetTap;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(logSheetCallbackProvider.notifier).state = _openLogSheet;
+    });
+  }
+
+  @override
+  void dispose() {
+    // Guard against the ProviderContainer being disposed before this widget
+    // (can happen during hot restart or test teardown).
+    try {
+      ref.read(logSheetCallbackProvider.notifier).state = null;
+    } catch (_) {}
+    super.dispose();
+  }
+
+  void _openLogSheet() {
+    final now = DateTime.now();
+    if (_lastSheetTap != null &&
+        now.difference(_lastSheetTap!) < const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastSheetTap = now;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ZLogGridSheet(
+        onFullScreenRoute: (routeName) {
+          Navigator.of(context).pop();
+          context.pushNamed(routeName);
+        },
+      ),
+    );
+  }
+
+  void _onDestinationSelected(int index) {
     if (ref.read(sidePanelOpenProvider)) {
       ref.read(sidePanelOpenProvider.notifier).state = false;
     }
     ref.read(hapticServiceProvider).selectionTick();
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isPanelOpen = ref.watch(sidePanelOpenProvider);
     final isPanelVisible = ref.watch(sidePanelVisibleProvider);
 
@@ -72,7 +119,7 @@ class AppShell extends ConsumerWidget {
         fit: StackFit.expand,
         children: [
           // Main content — always full size, no transforms.
-          navigationShell,
+          widget.navigationShell,
 
           // Backdrop — only present when panel is open.
           if (isPanelOpen)
@@ -122,8 +169,8 @@ class AppShell extends ConsumerWidget {
         ],
       ),
       bottomNavigationBar: _FrostedNavigationBar(
-        currentIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => _onDestinationSelected(ref, index),
+        currentIndex: widget.navigationShell.currentIndex,
+        onDestinationSelected: _onDestinationSelected,
       ),
     );
   }

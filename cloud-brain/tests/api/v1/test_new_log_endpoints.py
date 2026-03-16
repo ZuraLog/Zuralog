@@ -1,0 +1,366 @@
+"""Tests for the new typed quick-log endpoints (sleep, run, meal, supplement, symptom).
+
+Uses the same mock-based TestClient pattern as the rest of the test suite.
+There is no live database in CI — all DB calls are replaced by AsyncMock so
+tests run fast and deterministically.
+"""
+
+from __future__ import annotations
+
+import uuid
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.api.deps import _get_auth_service, get_authenticated_user_id
+from app.database import get_db
+from app.main import app
+from app.services.auth_service import AuthService
+
+TEST_USER_ID = "new-log-test-user-001"
+OTHER_USER_ID = "other-user-id-not-authenticated"
+AUTH_HEADER = {"Authorization": "Bearer test-token"}
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _refresh_side_effect(obj):
+    """Give the object a UUID if it doesn't have one yet (mimics DB refresh)."""
+    if not getattr(obj, "id", None):
+        obj.id = str(uuid.uuid4())
+    if not getattr(obj, "logged_at", None):
+        from datetime import datetime, timezone
+
+        obj.logged_at = datetime.now(timezone.utc)
+
+
+def _make_supplement(supplement_id: str, user_id: str = TEST_USER_ID):
+    """Return a SimpleNamespace shaped like a UserSupplement row."""
+    return SimpleNamespace(id=supplement_id, user_id=user_id)
+
+
+# ---------------------------------------------------------------------------
+# Shared fixture
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def client_with_auth():
+    """TestClient with mocked auth and database — no real DB required."""
+    mock_auth = AsyncMock(spec=AuthService)
+    mock_auth.get_user = AsyncMock(return_value={"id": TEST_USER_ID})
+
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+    mock_db.add_all = MagicMock()
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock(side_effect=_refresh_side_effect)
+
+    # Default execute: return empty result (no supplements)
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_result.scalars.return_value.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    app.dependency_overrides[_get_auth_service] = lambda: mock_auth
+    app.dependency_overrides[get_authenticated_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c, mock_db
+
+    app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Sleep endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestSleepLog:
+    def test_sleep_log_valid(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/sleep",
+            json={
+                "bedtime": "2026-03-16T22:30:00Z",
+                "wake_time": "2026-03-17T06:30:00Z",
+                "duration_minutes": 480,
+                "source": "manual",
+                "logged_at": "2026-03-17T06:30:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["type"] == "sleep"
+        assert "id" in body
+        assert "logged_at" in body
+
+    def test_sleep_log_wake_before_bedtime_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/sleep",
+            json={
+                "bedtime": "2026-03-17T06:30:00Z",
+                "wake_time": "2026-03-16T22:30:00Z",
+                "duration_minutes": 480,
+                "source": "manual",
+                "logged_at": "2026-03-17T06:30:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_sleep_log_invalid_quality_rating_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/sleep",
+            json={
+                "bedtime": "2026-03-16T22:30:00Z",
+                "wake_time": "2026-03-17T06:30:00Z",
+                "duration_minutes": 480,
+                "quality_rating": 6,
+                "source": "manual",
+                "logged_at": "2026-03-17T06:30:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Run endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestRunLog:
+    def test_run_log_valid(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/run",
+            json={
+                "activity_type": "run",
+                "distance_km": 5.2,
+                "duration_seconds": 1560,
+                "source": "manual",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["type"] == "run"
+
+    def test_run_log_invalid_distance_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/run",
+            json={
+                "activity_type": "run",
+                "distance_km": 0.0,
+                "duration_seconds": 1560,
+                "source": "manual",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/run",
+            json={
+                "activity_type": "run",
+                "distance_km": 5.0,
+                "duration_seconds": 1500,
+                "user_id": "some-other-user",
+                "source": "manual",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "some-other-user"
+
+
+# ---------------------------------------------------------------------------
+# Meal endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestMealLog:
+    def test_meal_log_full_mode_requires_description(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/meal",
+            json={
+                "meal_type": "lunch",
+                "quick_mode": False,
+                "logged_at": "2026-03-17T12:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_meal_log_quick_mode_without_description_succeeds(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/meal",
+            json={
+                "meal_type": "lunch",
+                "quick_mode": True,
+                "calories_kcal": 600,
+                "logged_at": "2026-03-17T12:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Supplement endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestSupplementLog:
+    def test_supplement_empty_taken_ids_succeeds(self, client_with_auth):
+        """An empty supplement log (nothing checked off) is valid."""
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/supplements",
+            json={
+                "taken_supplement_ids": [],
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+
+    def test_supplement_log_rejects_foreign_supplement_ids(self, client_with_auth):
+        """Supplement IDs that don't belong to this user are rejected."""
+        client, mock_db = client_with_auth
+
+        # DB returns empty set — no valid IDs found for this user
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        foreign_id = str(uuid.uuid4())
+        resp = client.post(
+            "/api/v1/quick-log/supplements",
+            json={
+                "taken_supplement_ids": [foreign_id],
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Symptom endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestSymptomLog:
+    def test_symptom_log_invalid_severity_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/symptom",
+            json={
+                "body_areas": ["head"],
+                "severity": "extreme",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_symptom_log_empty_body_areas_returns_422(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/symptom",
+            json={
+                "body_areas": [],
+                "severity": "mild",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_symptom_log_valid(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/symptom",
+            json={
+                "body_areas": ["head"],
+                "severity": "mild",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["type"] == "symptom"
+
+
+# ---------------------------------------------------------------------------
+# Supplement list management endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestSupplementList:
+    def test_get_supplements_list_returns_200(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        resp = client.get("/api/v1/quick-log/user/supplements-list", headers=AUTH_HEADER)
+        assert resp.status_code == 200
+        assert "supplements" in resp.json()
+
+    def test_update_supplements_list_returns_200(self, client_with_auth):
+        client, mock_db = client_with_auth
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        resp = client.post(
+            "/api/v1/quick-log/user/supplements-list",
+            json={
+                "supplements": [
+                    {"name": "Vitamin D", "dose": "2000IU", "timing": "morning"},
+                    {"name": "Magnesium"},
+                ]
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["supplements"]) == 2
+
+    def test_update_supplements_list_rejects_over_50(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/user/supplements-list",
+            json={"supplements": [{"name": f"Supp {i}"} for i in range(51)]},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
+
+    def test_update_supplements_list_rejects_empty_name(self, client_with_auth):
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/user/supplements-list",
+            json={"supplements": [{"name": ""}]},
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 422
