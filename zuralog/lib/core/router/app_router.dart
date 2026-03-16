@@ -60,6 +60,7 @@ import 'package:zuralog/features/today/presentation/today_feed_screen.dart';
 import 'package:zuralog/features/today/presentation/insight_detail_screen.dart';
 import 'package:zuralog/features/today/presentation/notification_history_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/sleep_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/run_log_screen.dart';
 
 // ── Tab 1: Data ───────────────────────────────────────────────────────────────
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
@@ -381,7 +382,7 @@ List<RouteBase> _buildRoutes() {
       path: RouteNames.runLogPath,
       name: RouteNames.runLog,
       pageBuilder: (context, state) => const MaterialPage(
-        child: Scaffold(body: Center(child: Text('Run Log — coming soon'))),
+        child: SentryErrorBoundary(module: 'today.run_log', child: RunLogScreen()),
       ),
     ),
     GoRoute(
