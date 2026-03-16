@@ -52,7 +52,7 @@ class ZWellnessLogPanel extends ConsumerStatefulWidget {
   });
 
   /// Called when the user taps "Save Check-in". Receives the check-in data.
-  final void Function(WellnessLogData data) onSave;
+  final Future<void> Function(WellnessLogData data) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -82,20 +82,14 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
     super.dispose();
   }
 
-  void _handleSave() {
-    // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/wellness
-    // Body: { mood?: float, energy?: float, stress?: float, notes?: string, logged_at: ISO8601 }
-    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
-    // here. The sheet's onSaved callback owns post-save side effects so that
-    // invalidation only fires on confirmed success (not before the server
-    // round-trip in Part 4).
+  Future<void> _handleSave() async {
     final data = WellnessLogData(
       mood: _moodTouched ? _moodValue : null,
       energy: _energyTouched ? _energyValue : null,
       stress: _stressTouched ? _stressValue : null,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
     );
-    widget.onSave(data);
+    await widget.onSave(data);
   }
 
   @override
