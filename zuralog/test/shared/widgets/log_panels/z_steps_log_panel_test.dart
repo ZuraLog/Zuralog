@@ -1,117 +1,142 @@
-// zuralog/test/shared/widgets/log_panels/z_steps_log_panel_test.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/today_models.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_steps_log_panel.dart';
 
-void main() {
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
-  });
+final _todayIso = DateTime.now().toUtc().toIso8601String();
 
-  Widget buildPanel({Future<void> Function(int, String)? onSave}) {
-    return ProviderScope(
-      child: MaterialApp(
-        home: Scaffold(
-          // onSave signature: Future<void> Function(int steps, String mode)
-          body: ZStepsLogPanel(
-            onBack: () {},
-            onSave: onSave ?? (steps, mode) async {},
-          ),
-        ),
+Widget _wrap(
+  Widget child, {
+  Map<String, dynamic> latestSteps = const {},
+  List<DailyGoal> goals = const [],
+}) {
+  return ProviderScope(
+    overrides: [
+      stepsLogModeProvider.overrideWith(() => _StubModeNotifier()),
+      todayLogSummaryProvider.overrideWith(
+        (ref) async => TodayLogSummary.empty,
       ),
-    );
-  }
+      latestLogValuesProvider(latestLogValuesKey(const {'steps'})).overrideWith(
+        (ref) async => latestSteps.isEmpty
+            ? const <String, dynamic>{}
+            : {'steps': latestSteps},
+      ),
+      dailyGoalsProvider.overrideWith((ref) async => goals),
+    ],
+    child: MaterialApp(home: Scaffold(body: child)),
+  );
+}
 
-  group('ZStepsLogPanel mode toggle', () {
-    testWidgets('toggle is visible', (tester) async {
-      await tester.pumpWidget(buildPanel());
+class _StubModeNotifier extends StepsLogModeNotifier {
+  @override
+  Future<StepsLogMode> build() async => StepsLogMode.add;
+}
+
+void main() {
+  group('ZStepsLogPanel sync banner', () {
+    testWidgets('Shows no banner and no placeholder when no synced data', (tester) async {
+      await tester.pumpWidget(_wrap(ZStepsLogPanel(
+        onSave: (_, __) async {},
+        onBack: () {},
+      )));
       await tester.pumpAndSettle();
-      expect(find.byType(Switch), findsOneWidget);
+
+      expect(find.textContaining('Synced'), findsNothing);
+      expect(find.textContaining('will appear here'), findsNothing);
     });
 
-    testWidgets('starts in add mode by default', (tester) async {
-      await tester.pumpWidget(buildPanel());
+    testWidgets('Shows sync banner when today data from health app is available', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        latestSteps: {
+          'steps': 9420,
+          'logged_at': _todayIso,
+          'source': 'apple_health',
+        },
+      ));
       await tester.pumpAndSettle();
-      final switchWidget = tester.widget<Switch>(find.byType(Switch));
-      expect(switchWidget.value, isTrue); // add mode = toggle ON
+
+      expect(find.textContaining('Apple Health'), findsOneWidget);
+      expect(find.textContaining('9420'), findsWidgets);
     });
 
-    testWidgets('tapping toggle changes to override mode', (tester) async {
-      await tester.pumpWidget(buildPanel());
+    testWidgets('Shows Confirm Steps when value matches synced', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        latestSteps: {
+          'steps': 9420,
+          'logged_at': _todayIso,
+          'source': 'health_connect',
+        },
+      ));
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(Switch));
-      await tester.pumpAndSettle();
-      final switchWidget = tester.widget<Switch>(find.byType(Switch));
-      expect(switchWidget.value, isFalse); // override mode = toggle OFF
+
+      expect(find.text('Confirm Steps'), findsOneWidget);
     });
 
-    testWidgets('mode persists — override mode loaded from prefs', (tester) async {
-      SharedPreferences.setMockInitialValues({'steps_log_mode': 'override'});
-      await tester.pumpWidget(buildPanel());
+    testWidgets('Reverts to Save Steps when value is changed', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        latestSteps: {
+          'steps': 9420,
+          'logged_at': _todayIso,
+          'source': 'apple_health',
+        },
+      ));
       await tester.pumpAndSettle();
-      final switchWidget = tester.widget<Switch>(find.byType(Switch));
-      expect(switchWidget.value, isFalse); // override mode = toggle OFF
+
+      await tester.enterText(find.byType(TextField), '8000');
+      await tester.pump();
+
+      expect(find.text('Save Steps'), findsOneWidget);
+    });
+
+    testWidgets('No banner shown for manual source', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        latestSteps: {
+          'steps': 5000,
+          'logged_at': _todayIso,
+          'source': 'manual',
+        },
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Synced'), findsNothing);
     });
   });
 
-  group('ZStepsLogPanel save callback', () {
-    testWidgets('save button disabled when no steps entered', (tester) async {
-      await tester.pumpWidget(buildPanel());
+  group('ZStepsLogPanel goal display', () {
+    testWidgets('Shows Goal dash when no step goal configured', (tester) async {
+      await tester.pumpWidget(_wrap(ZStepsLogPanel(
+        onSave: (_, __) async {},
+        onBack: () {},
+      )));
       await tester.pumpAndSettle();
-      // Find the Save button — it should be disabled (onPressed is null)
-      final saveButton = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(saveButton.onPressed, isNull);
+
+      expect(find.textContaining('Goal: —'), findsOneWidget);
     });
 
-    testWidgets('save passes add mode string when in default mode', (tester) async {
-      String? capturedMode;
-      await tester.pumpWidget(buildPanel(
-        onSave: (steps, mode) async {
-          capturedMode = mode;
-        },
+    testWidgets('Shows goal progress when step goal exists', (tester) async {
+      await tester.pumpWidget(_wrap(
+        ZStepsLogPanel(onSave: (_, __) async {}, onBack: () {}),
+        goals: [
+          DailyGoal(
+            id: 'goal-1',
+            label: 'Steps',
+            target: 10000,
+            current: 6200,
+            unit: 'steps',
+          ),
+        ],
       ));
       await tester.pumpAndSettle();
 
-      // Enter a step count
-      await tester.enterText(find.byType(TextField), '5000');
-      await tester.pumpAndSettle();
-
-      // Tap save
-      await tester.tap(find.byType(FilledButton));
-      await tester.pumpAndSettle();
-
-      // Default mode is add
-      expect(capturedMode, isNotNull, reason: 'onSave was never called — check if the save button was tappable');
-      expect(capturedMode, equals('add'));
-    });
-
-    testWidgets('save passes override mode when toggled off', (tester) async {
-      String? capturedMode;
-      await tester.pumpWidget(buildPanel(
-        onSave: (steps, mode) async {
-          capturedMode = mode;
-        },
-      ));
-      await tester.pumpAndSettle();
-
-      // Toggle to override mode
-      await tester.tap(find.byType(Switch));
-      await tester.pumpAndSettle();
-
-      // Enter a step count
-      await tester.enterText(find.byType(TextField), '10000');
-      await tester.pumpAndSettle();
-
-      // Tap save
-      await tester.tap(find.byType(FilledButton));
-      await tester.pumpAndSettle();
-
-      expect(capturedMode, isNotNull, reason: 'onSave was never called — check if the save button was tappable');
-      expect(capturedMode, equals('override'));
+      expect(find.textContaining('10,000'), findsOneWidget);
+      expect(find.textContaining('62%'), findsOneWidget);
     });
   });
 }

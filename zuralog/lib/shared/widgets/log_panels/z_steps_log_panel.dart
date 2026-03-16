@@ -1,8 +1,9 @@
 /// Zuralog — Steps Inline Log Panel.
 ///
 /// Displayed inside the ZLogGridSheet when the user taps the Steps tile.
-/// Allows manual entry of a step count. A placeholder sync banner is shown
-/// for future Health Connect / Apple Health integration.
+/// Allows manual entry of a step count. Shows a sync banner when today's
+/// step data has arrived from Apple Health or Health Connect, and displays
+/// progress toward the user's configured daily step goal.
 library;
 
 import 'package:flutter/material.dart';
@@ -18,12 +19,14 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 
 /// Inline log panel for manual step count entry.
 ///
-/// Shows a numeric [TextField] for the step count, a placeholder sync banner
-/// for future device integration, and a "Goal: —" stub row.
+/// Shows a numeric [TextField] for the step count, a sync banner when today's
+/// step data is available from a connected health app (Apple Health or Health
+/// Connect), goal progress, and a mode toggle (add vs. override).
 ///
-/// The Save button is enabled only when `_steps > 0`.
+/// The Save button is enabled only when `_steps > 0`. When the current value
+/// matches the synced value the button label changes to "Confirm Steps".
 ///
-/// The [onSave] callback receives the step count as an [int].
+/// The [onSave] callback receives the step count as an [int] and mode string.
 class ZStepsLogPanel extends ConsumerStatefulWidget {
   const ZStepsLogPanel({
     super.key,
@@ -31,9 +34,9 @@ class ZStepsLogPanel extends ConsumerStatefulWidget {
     required this.onBack,
   });
 
-  /// Called when the user taps "Save Steps". Receives the step count and mode
-  /// string ('add' or 'override'). Returns a [Future] so the caller can await
-  /// the async repository call before deciding whether to close the sheet.
+  /// Called when the user taps "Save Steps" / "Confirm Steps". Receives the
+  /// step count and mode string ('add' or 'override'). Returns a [Future] so
+  /// the caller can await the async repository call before closing the sheet.
   final Future<void> Function(int steps, String mode) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
@@ -46,6 +49,9 @@ class ZStepsLogPanel extends ConsumerStatefulWidget {
 class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
   int _steps = 0;
   final TextEditingController _controller = TextEditingController();
+
+  /// Step count received from the most recent sync — null until data arrives.
+  int? _syncedSteps;
 
   bool get _canSave => _steps > 0;
 
@@ -66,9 +72,81 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
     await widget.onSave(_steps, modeString);
   }
 
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  bool _isToday(String? iso) {
+    if (iso == null) return false;
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      final now = DateTime.now();
+      return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _sourceDisplayName(String source) => switch (source) {
+    'apple_health'   => 'Apple Health',
+    'health_connect' => 'Health Connect',
+    _                => '',
+  };
+
+  String _formatStepGoal(double target) {
+    final n = target.toInt();
+    if (n >= 1000) {
+      return '${n ~/ 1000},${(n % 1000).toString().padLeft(3, '0')}';
+    }
+    return n.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+
+    // Listen for synced step data from the cloud brain.
+    // ref.listen (not ref.watch) — this is a side-effect that pre-fills the
+    // field once on open; we don't want it re-running on every rebuild.
+    ref.listen<AsyncValue<Map<String, dynamic>>>(
+      latestLogValuesProvider(latestLogValuesKey(const {'steps'})),
+      (_, next) {
+        next.whenData((latest) {
+          final s = latest['steps'] as Map<String, dynamic>?;
+          if (s != null && _syncedSteps == null) {
+            final steps = (s['steps'] as num?)?.toInt();
+            final loggedAt = s['logged_at'] as String?;
+            final source = s['source'] as String? ?? 'manual';
+            if (steps != null && _isToday(loggedAt) && source != 'manual') {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _syncedSteps = steps;
+                    _steps = steps;
+                    _controller.text = steps.toString();
+                  });
+                }
+              });
+            }
+          }
+        });
+      },
+    );
+
+    // Read daily goals to find any configured step goal.
+    final goals = ref.watch(dailyGoalsProvider).valueOrNull ?? const [];
+    final stepGoal = goals.where(
+      (g) =>
+          g.unit.toLowerCase() == 'steps' || g.label.toLowerCase() == 'steps',
+    ).firstOrNull;
+
+    // Resolve the source display name for the banner from the raw provider data.
+    final syncSource = _syncedSteps != null
+        ? ref
+              .watch(
+                latestLogValuesProvider(latestLogValuesKey(const {'steps'})),
+              )
+              .valueOrNull?['steps']?['source'] as String? ??
+            'manual'
+        : 'manual';
 
     return Padding(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -90,23 +168,25 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
             cursorColor: AppColors.primary,
           ),
 
-          const SizedBox(height: AppDimens.spaceMd),
-
-          // ── Sync banner (MVP placeholder) ─────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(AppDimens.spaceMd),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius:
-                  BorderRadius.circular(AppDimens.radiusSm),
-            ),
-            child: Text(
-              'Synced step data will appear here once connected.',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.primary,
+          // ── Sync banner (only shown when today's data has arrived) ─────────
+          if (_syncedSteps != null) ...[
+            const SizedBox(height: AppDimens.spaceMd),
+            Container(
+              padding: const EdgeInsets.all(AppDimens.spaceMd),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius:
+                    BorderRadius.circular(AppDimens.radiusSm),
+              ),
+              child: Text(
+                '✓ Synced from ${_sourceDisplayName(syncSource)} — '
+                '$_syncedSteps steps today. You can override below.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.primary,
+                ),
               ),
             ),
-          ),
+          ],
 
           const SizedBox(height: AppDimens.spaceMd),
 
@@ -139,9 +219,12 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
             ),
           ),
 
-          // ── Goal stub ─────────────────────────────────────────────────────
+          // ── Goal display ──────────────────────────────────────────────────
           Text(
-            'Goal: —',
+            stepGoal == null
+                ? 'Goal: —'
+                : 'Goal: ${_formatStepGoal(stepGoal.target)} · '
+                  '${(stepGoal.fraction * 100).round()}% done',
             style:
                 AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
           ),
@@ -161,7 +244,9 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
               minimumSize: const Size.fromHeight(AppDimens.touchTargetMin),
             ),
             child: Text(
-              'Save Steps',
+              (_syncedSteps != null && _steps == _syncedSteps)
+                  ? 'Confirm Steps'
+                  : 'Save Steps',
               style: AppTextStyles.labelLarge,
             ),
           ),
