@@ -33,12 +33,32 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 ///
 /// Displays the Health Score hero paired with the Log Ring, data maturity
 /// banner, snapshot row, daily goals, AI insight cards, and streak badge.
-class TodayFeedScreen extends ConsumerWidget {
+class TodayFeedScreen extends ConsumerStatefulWidget {
   /// Creates the [TodayFeedScreen].
   const TodayFeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TodayFeedScreen> createState() => _TodayFeedScreenState();
+}
+
+class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
+  DateTime? _lastFabTap;
+
+  void _openLogSheet() {
+    if (!mounted) return;
+    // _lastFabTap is shared across all entry points (FAB, ring tap, snapshot card tap)
+    // so rapid taps from any source are all subject to the same 500ms window.
+    final now = DateTime.now();
+    if (_lastFabTap != null &&
+        now.difference(_lastFabTap!) < const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastFabTap = now;
+    // TODO(Part 2 — Chunk 8): Show ZLogGridSheet here once it's built.
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final scoreAsync = ref.watch(healthScoreProvider);
     final feedAsync = ref.watch(todayFeedProvider);
@@ -67,6 +87,7 @@ class TodayFeedScreen extends ConsumerWidget {
 
     return ZuralogScaffold(
       addBottomNavPadding: true,
+      floatingActionButton: ZLogFab(onPressed: _openLogSheet),
       appBar: ZuralogAppBar(
         title: 'Today',
         actions: [
@@ -145,10 +166,8 @@ class TodayFeedScreen extends ConsumerWidget {
                     const SizedBox(width: AppDimens.spaceSm),
                     // Log Ring — right half.
                     Flexible(
-                      child: ZLogRingWidget(
-                        onTap: () {
-                          // TODO(Part 2): Open ZLogGridSheet when FAB system is built.
-                        },
+                       child: ZLogRingWidget(
+                        onTap: _openLogSheet,
                       ),
                     ),
                   ],
@@ -201,9 +220,7 @@ class TodayFeedScreen extends ConsumerWidget {
 
             // ── Snapshot Cards (horizontally scrollable row) ─────────────────
             _SnapshotRow(
-              onCardTap: () {
-                // TODO(Part 2): Open ZLogGridSheet when FAB system is built.
-              },
+              onCardTap: _openLogSheet,
             ),
 
             const SizedBox(height: AppDimens.spaceMd),
@@ -238,9 +255,7 @@ class TodayFeedScreen extends ConsumerWidget {
             ...feedAsync.when(
               error: (err, stack) => [
                 ZEmptyInsightsState(
-                  onLogTap: () {
-                    // TODO(Part 2): Open ZLogGridSheet.
-                  },
+                  onLogTap: _openLogSheet,
                   onConnectTap: () =>
                       context.pushNamed(RouteNames.settingsIntegrations),
                 ),
@@ -257,9 +272,7 @@ class TodayFeedScreen extends ConsumerWidget {
                 if (feed.insights.isEmpty) {
                   return [
                     ZEmptyInsightsState(
-                      onLogTap: () {
-                        // TODO(Part 2): Open ZLogGridSheet.
-                      },
+                      onLogTap: _openLogSheet,
                       onConnectTap: () =>
                           context.pushNamed(RouteNames.settingsIntegrations),
                     ),
