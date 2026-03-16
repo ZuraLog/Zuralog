@@ -3,8 +3,6 @@
 /// A bottom sheet that shows a 4-column grid of loggable metric tiles.
 /// Tapping a tile either opens a panel inline (Part 4–7), navigates to a
 /// full-screen form, or shows a "coming soon" snackbar.
-///
-/// Part 2: Grid view only — panel content is a placeholder.
 library;
 
 import 'package:flutter/material.dart';
@@ -13,6 +11,10 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/shared/widgets/log_panels/z_steps_log_panel.dart';
+import 'package:zuralog/shared/widgets/log_panels/z_water_log_panel.dart';
+import 'package:zuralog/shared/widgets/log_panels/z_wellness_log_panel.dart';
+import 'package:zuralog/shared/widgets/log_panels/z_weight_log_panel.dart';
 import 'package:zuralog/shared/widgets/sheets/z_log_grid_cell.dart';
 
 // ── Tile definitions ─────────────────────────────────────────────────────────
@@ -84,6 +86,8 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
   /// When non-null, the sheet shows the inline panel for this tile.
   _TileDef? _selectedTile;
 
+  void _backToGrid() => setState(() => _selectedTile = null);
+
   void _handleTileTap(_TileDef tile) {
     switch (tile.behaviour) {
       case _TileBehaviour.inline:
@@ -150,7 +154,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                 if (_selectedTile != null)
                   IconButton(
                     icon: const Icon(Icons.arrow_back_rounded),
-                    onPressed: () => setState(() => _selectedTile = null),
+                    onPressed: _backToGrid,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -166,7 +170,7 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
           ),
           const SizedBox(height: AppDimens.spaceMd),
 
-          // Content — grid or panel placeholder
+          // Content — grid or inline panel
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: _selectedTile == null
@@ -175,10 +179,14 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                     loggedTypes: loggedTypes,
                     onTileTap: _handleTileTap,
                   )
-                : _PanelPlaceholder(
+                : _PanelView(
                     key: ValueKey(_selectedTile!.key),
-                    type: _selectedTile!,
-                    onSaved: () => setState(() => _selectedTile = null),
+                    tile: _selectedTile!,
+                    onBack: _backToGrid,
+                    onSaved: () {
+                      ref.invalidate(todayLogSummaryProvider);
+                      if (mounted) Navigator.of(context).pop();
+                    },
                   ),
           ),
 
@@ -227,38 +235,51 @@ class _GridView extends StatelessWidget {
   }
 }
 
-// ── _PanelPlaceholder ─────────────────────────────────────────────────────────
+// ── _PanelView ────────────────────────────────────────────────────────────────
 
-/// Temporary placeholder shown while the real inline panels are built in Chunk 4–7.
-class _PanelPlaceholder extends StatelessWidget {
-  const _PanelPlaceholder({
+/// Renders the correct inline log panel for the selected tile.
+class _PanelView extends ConsumerWidget {
+  const _PanelView({
     super.key,
-    required this.type,
+    required this.tile,
+    required this.onBack,
     required this.onSaved,
   });
 
-  final _TileDef type;
-
-  /// Called after a successful log submission.
+  final _TileDef tile;
+  final VoidCallback onBack;
   final VoidCallback onSaved;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: AppDimens.spaceLg,
-      ),
-      child: Center(
-        child: Text(
-          '${type.label} panel — coming in Chunk 4–7',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: colors.textTertiary,
-          ),
-          textAlign: TextAlign.center,
+  Widget build(BuildContext context, WidgetRef ref) {
+    return switch (tile.key) {
+      'water' => ZWaterLogPanel(
+          onSave: (ml) => onSaved(),
+          onBack: onBack,
         ),
-      ),
-    );
+      'mood' => ZWellnessLogPanel(
+          onSave: (_) => onSaved(),
+          onBack: onBack,
+        ),
+      'weight' => ZWeightLogPanel(
+          onSave: (_) => onSaved(),
+          onBack: onBack,
+        ),
+      'steps' => ZStepsLogPanel(
+          onSave: (_) => onSaved(),
+          onBack: onBack,
+        ),
+      _ => Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Center(
+            child: Text(
+              '${tile.label} panel — coming in Part 3',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColorsOf(context).textTertiary,
+              ),
+            ),
+          ),
+        ),
+    };
   }
 }
