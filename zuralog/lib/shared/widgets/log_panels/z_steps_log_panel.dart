@@ -95,15 +95,14 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
           Container(
             padding: const EdgeInsets.all(AppDimens.spaceMd),
             decoration: BoxDecoration(
-              // Soft blue background — brand-neutral information styling.
-              color: const Color(0xFFE3F0FF),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius:
                   BorderRadius.circular(AppDimens.radiusSm),
             ),
             child: Text(
               'Synced step data will appear here once connected.',
               style: AppTextStyles.bodySmall.copyWith(
-                color: const Color(0xFF2C6EA6),
+                color: AppColors.primary,
               ),
             ),
           ),

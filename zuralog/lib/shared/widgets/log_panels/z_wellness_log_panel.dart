@@ -6,7 +6,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -165,7 +164,6 @@ class _ZWellnessLogPanelState extends ConsumerState<ZWellnessLogPanel> {
           TextField(
             controller: _notesController,
             maxLength: 500,
-            inputFormatters: [LengthLimitingTextInputFormatter(500)],
             maxLines: 3,
             decoration: InputDecoration(
               hintText: "How's your day going?",

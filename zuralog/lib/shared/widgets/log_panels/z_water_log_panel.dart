@@ -149,7 +149,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
               decoration: InputDecoration(
                 hintText: 'Enter amount (ml)',

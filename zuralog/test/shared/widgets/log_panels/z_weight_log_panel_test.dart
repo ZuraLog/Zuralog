@@ -43,6 +43,14 @@ void main() {
     expect(delta, closeTo(0.5, 0.001));
   });
 
+  test('lbs step is applied correctly in kg storage', () {
+    // 0.1 lbs in kg = 0.1 / 2.20462 ≈ 0.04536 kg
+    const lbsStep = 0.1 / 2.20462;
+    const startKg = 70.0;
+    final result = (startKg + lbsStep).clamp(20.0, 500.0);
+    expect(result, closeTo(70.045, 0.001));
+  });
+
   group('ZWeightLogPanel', () {
     testWidgets('Test 1: renders with default value 70.0 shown', (tester) async {
       final container = _container();

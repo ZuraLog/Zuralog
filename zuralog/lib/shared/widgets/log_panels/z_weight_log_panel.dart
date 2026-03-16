@@ -22,7 +22,7 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 /// the numeric display and defaults to the user's preferred unit from
 /// [unitsSystemProvider].
 ///
-/// The +/− buttons step by 0.1 kg (or 0.2 lbs), clamped to [20, 500] kg.
+/// The +/− buttons step by 0.1 kg (or 0.1 lbs), clamped to [20, 500] kg.
 ///
 /// The [onSave] callback always receives the value in kg regardless of the
 /// display unit toggle.
@@ -52,7 +52,9 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   bool _initialized = false;
 
   /// Step size in kg units.
-  double get _step => _isKg ? 0.1 : 0.2;
+  // In kg mode: 0.1 kg per tap.
+  // In lbs mode: 0.1 lbs per tap → 0.1 / 2.20462 kg ≈ 0.0454 kg per tap.
+  double get _step => _isKg ? 0.1 : 0.1 / 2.20462;
 
   /// Displayed value — converts to lbs when the lbs toggle is active.
   double get _displayValue => _isKg ? _value : _value * 2.20462;
