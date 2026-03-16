@@ -6,12 +6,14 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
 
 // ── ZWeightLogPanel ────────────────────────────────────────────────────────────
 
@@ -19,9 +21,13 @@ import 'package:zuralog/features/settings/providers/settings_providers.dart';
 ///
 /// Always stores the value internally in kg. A kg/lbs toggle is shown above
 /// the numeric display and defaults to the user's preferred unit from
-/// [unitsSystemProvider].
+/// [unitsSystemProvider], with the last-used unit persisted via SharedPreferences.
 ///
 /// The +/− buttons step by 0.1 kg (or 0.1 lbs), clamped to [20, 500] kg.
+///
+/// On open, the panel pre-fills with the user's last logged weight from the
+/// Cloud Brain via [latestLogValuesProvider]. A delta indicator shows how the
+/// current value compares to the last logged value.
 ///
 /// The [onSave] callback always receives the value in kg regardless of the
 /// display unit toggle.
@@ -33,7 +39,7 @@ class ZWeightLogPanel extends ConsumerStatefulWidget {
   });
 
   /// Called when the user taps "Save Weight". Receives the weight in kg.
-  final void Function(double valueKg) onSave;
+  final Future<void> Function(double valueKg) onSave;
 
   /// Called by the parent when the user taps the back button in the sheet header.
   final VoidCallback onBack;
@@ -50,6 +56,17 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   bool _isKg = true;
   bool _initialized = false;
 
+  /// The last logged weight in kg (from Cloud Brain). Null until data arrives.
+  double? _lastLoggedKg;
+
+  /// Formatted date string of the last log entry (e.g. "15 Mar 2026").
+  String? _lastLoggedAt;
+
+  /// Display name of the source (e.g. "Apple Health", "Health Connect", or "").
+  String? _lastLoggedSource;
+
+  static const _kWeightUnitKey = 'weight_log_unit';
+
   /// Step size in kg units.
   // In kg mode: 0.1 kg per tap.
   // In lbs mode: 0.1 lbs per tap → 0.1 / 2.20462 kg ≈ 0.0454 kg per tap.
@@ -62,10 +79,27 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initialized) {
-      final units = ref.read(unitsSystemProvider);
-      _isKg = units == UnitsSystem.metric;
       _initialized = true;
+      _loadUnitPreference();
     }
+  }
+
+  Future<void> _loadUnitPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_kWeightUnitKey);
+    if (!mounted) return;
+    if (saved != null) {
+      setState(() => _isKg = saved == 'kg');
+    } else {
+      final units = ref.read(unitsSystemProvider);
+      setState(() => _isKg = units == UnitsSystem.metric);
+    }
+  }
+
+  Future<void> _setUnit(bool isKg) async {
+    setState(() => _isKg = isKg);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kWeightUnitKey, isKg ? 'kg' : 'lbs');
   }
 
   void _increment() {
@@ -80,21 +114,56 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
     });
   }
 
-  void _handleSave() {
-    // TODO(Part 4): Call repository. Endpoint: POST /api/v1/logs/weight
-    // Body: { value_kg: double, logged_at: ISO8601 }
-    // Always submit _value in kg regardless of display toggle.
-    // Note: ref.invalidate(todayLogSummaryProvider) is intentionally NOT called
-    // here. The sheet's onSaved callback owns post-save side effects so that
-    // invalidation only fires on confirmed success (not before the server
-    // round-trip in Part 4).
-    widget.onSave(_value);
+  Future<void> _handleSave() async {
+    await widget.onSave(_value);
   }
+
+  String _formatDate(String? iso) {
+    if (iso == null) return '—';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    } catch (_) {
+      return '—';
+    }
+  }
+
+  String _sourceDisplayName(String source) => switch (source) {
+    'apple_health'   => 'Apple Health',
+    'health_connect' => 'Health Connect',
+    _                => '',
+  };
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     final displayStr = _displayValue.toStringAsFixed(1);
+
+    // Pre-fill from latest logged value when data arrives.
+    ref.watch(latestLogValuesProvider(latestLogValuesKey(const {'weight'}))).whenData((latest) {
+      final w = latest['weight'] as Map<String, dynamic>?;
+      if (w != null && _lastLoggedKg == null) {
+        final kg = (w['value_kg'] as num?)?.toDouble();
+        final loggedAt = w['logged_at'] as String?;
+        final source = w['source'] as String? ?? 'manual';
+        if (kg != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _value = kg.clamp(20.0, 500.0);
+                _lastLoggedKg = kg;
+                _lastLoggedAt = _formatDate(loggedAt);
+                _lastLoggedSource = _sourceDisplayName(source);
+              });
+            }
+          });
+        }
+      }
+    });
 
     return Padding(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
@@ -109,13 +178,13 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
               _UnitChip(
                 label: 'kg',
                 isSelected: _isKg,
-                onTap: () => setState(() => _isKg = true),
+                onTap: () => _setUnit(true),
               ),
               const SizedBox(width: AppDimens.spaceSm),
               _UnitChip(
                 label: 'lbs',
                 isSelected: !_isKg,
-                onTap: () => setState(() => _isKg = false),
+                onTap: () => _setUnit(false),
               ),
             ],
           ),
@@ -162,12 +231,26 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
 
           const SizedBox(height: AppDimens.spaceSm),
 
-          // ── Last logged (MVP stub) ─────────────────────────────────────────
+          // ── Last logged + delta ───────────────────────────────────────────
           Center(
-            child: Text(
-              'Last logged: —',
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: colors.textTertiary),
+            child: Column(
+              children: [
+                Text(
+                  _lastLoggedKg == null
+                      ? 'Last logged: —'
+                      : 'Last logged: $_lastLoggedAt'
+                        '${(_lastLoggedSource != null && _lastLoggedSource!.isNotEmpty) ? " · $_lastLoggedSource" : ""}',
+                  style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
+                ),
+                if (_lastLoggedKg != null) ...[
+                  const SizedBox(height: AppDimens.spaceXs),
+                  _DeltaIndicator(
+                    currentKg: _value,
+                    previousKg: _lastLoggedKg!,
+                    isKg: _isKg,
+                  ),
+                ],
+              ],
             ),
           ),
 
@@ -234,6 +317,48 @@ class _UnitChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── _DeltaIndicator ────────────────────────────────────────────────────────────
+
+/// Shows the difference between the current value and the last logged value.
+///
+/// - Green ([AppColors.categoryActivity]) when the user has lost weight.
+/// - Red ([AppColors.categoryHeart]) when the user has gained weight.
+/// - Grey ([AppColors.textTertiary]) when there is no meaningful change (< 0.05 kg).
+class _DeltaIndicator extends StatelessWidget {
+  const _DeltaIndicator({
+    required this.currentKg,
+    required this.previousKg,
+    required this.isKg,
+  });
+
+  final double currentKg;
+  final double previousKg;
+  final bool isKg;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final deltaKg = currentKg - previousKg;
+    if (deltaKg.abs() < 0.05) {
+      return Text(
+        'No change from last entry',
+        style: AppTextStyles.bodySmall.copyWith(color: colors.textTertiary),
+      );
+    }
+    final display = isKg
+        ? deltaKg.abs().toStringAsFixed(1)
+        : (deltaKg.abs() * 2.20462).toStringAsFixed(1);
+    final unit = isKg ? 'kg' : 'lbs';
+    final sign = deltaKg > 0 ? '+' : '−';
+    // Red for weight gain, green for weight loss.
+    final color = deltaKg > 0 ? AppColors.categoryHeart : AppColors.categoryActivity;
+    return Text(
+      '$sign$display $unit from last entry',
+      style: AppTextStyles.bodySmall.copyWith(color: color),
     );
   }
 }

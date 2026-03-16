@@ -343,7 +343,21 @@ class _PanelView extends ConsumerWidget {
           onBack: onBack,
         ),
       'weight' => ZWeightLogPanel(
-          onSave: (_) => onSaved(),
+          onSave: (kg) async {
+            try {
+              await ref.read(todayRepositoryProvider).logWeight(valueKg: kg);
+              onSaved();
+            } catch (e) {
+              debugPrint('logWeight failed: $e');
+              final messenger = parentMessenger ??
+                  (context.mounted ? ScaffoldMessenger.of(context) : null);
+              messenger?.showSnackBar(
+                const SnackBar(
+                  content: Text('Could not save weight. Please try again.'),
+                ),
+              );
+            }
+          },
           onBack: onBack,
         ),
       'steps' => ZStepsLogPanel(
