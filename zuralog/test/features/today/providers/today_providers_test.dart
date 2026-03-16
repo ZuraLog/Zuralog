@@ -52,6 +52,7 @@ void main() {
       final result = await container.read(todayLogSummaryProvider.future);
       expect(result.loggedTypes, isEmpty);
       expect(result.latestValues, isEmpty);
+      expect(identical(result, TodayLogSummary.empty), isTrue);
     });
   });
 
@@ -60,8 +61,6 @@ void main() {
       final repo = MockTodayRepository();
       when(() => repo.getUserLoggedTypes())
           .thenAnswer((_) async => {'water', 'mood', 'sleep'});
-      when(() => repo.getTodayLogSummary())
-          .thenAnswer((_) async => TodayLogSummary.empty);
 
       final container = makeContainer(repo);
       addTearDown(container.dispose);
@@ -73,8 +72,6 @@ void main() {
     test('returns empty set on network failure', () async {
       final repo = MockTodayRepository();
       when(() => repo.getUserLoggedTypes()).thenThrow(Exception('timeout'));
-      when(() => repo.getTodayLogSummary())
-          .thenAnswer((_) async => TodayLogSummary.empty);
 
       final container = makeContainer(repo);
       addTearDown(container.dispose);
