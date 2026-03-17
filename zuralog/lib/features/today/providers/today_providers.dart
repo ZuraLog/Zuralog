@@ -13,7 +13,6 @@
 /// - [todayBannerSessionDismissed]    — whether the "still building" banner was dismissed this session
 /// - [todayLogSummaryProvider]        — aggregated summary of today's logged data
 /// - [userLoggedTypesProvider]        — set of metric types user has ever logged
-/// - [logRingProvider]                — state for the Log Ring widget
 /// - [snapshotProvider]               — list of snapshot card data
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
@@ -160,36 +159,6 @@ final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
     return const <String>{};
   }
 });
-
-// ── Log Ring ──────────────────────────────────────────────────────────────────
-
-/// Notifier for the Log Ring widget state.
-///
-/// Watches [todayLogSummaryProvider] and [userLoggedTypesProvider] reactively.
-/// When either upstream provider is invalidated (e.g. after a log submission),
-/// this notifier automatically rebuilds.
-///
-/// Using an [AsyncNotifier] instead of a plain [FutureProvider] ensures that
-/// the reactive `ref.watch` inside [build] correctly establishes dependencies
-/// and handles loading/error/data states without runtime errors on first load.
-class LogRingNotifier extends AsyncNotifier<LogRingState> {
-  @override
-  Future<LogRingState> build() async {
-    final summary = await ref.watch(todayLogSummaryProvider.future);
-    final allTypes = await ref.watch(userLoggedTypesProvider.future);
-
-    return LogRingState(
-      loggedCount: summary.loggedTypes.length,
-      totalCount: allTypes.length,
-    );
-  }
-}
-
-/// Provider for the Log Ring widget state. Rebuilds automatically when
-/// [todayLogSummaryProvider] or [userLoggedTypesProvider] change.
-final logRingProvider = AsyncNotifierProvider<LogRingNotifier, LogRingState>(
-  LogRingNotifier.new,
-);
 
 // ── Snapshot Cards ────────────────────────────────────────────────────────────
 

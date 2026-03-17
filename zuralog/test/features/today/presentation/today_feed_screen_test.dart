@@ -11,17 +11,9 @@ import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/presentation/today_feed_screen.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/cards/z_daily_goals_card.dart';
-import 'package:zuralog/shared/widgets/health/z_log_ring_widget.dart';
+import 'package:zuralog/shared/widgets/streak_hero_card.dart';
 
 // ── Stub notifiers ────────────────────────────────────────────────────────────
-
-/// Returns a fixed [LogRingState] without hitting real data sources.
-class _StubLogRingNotifier extends LogRingNotifier {
-  _StubLogRingNotifier(this._value);
-  final LogRingState _value;
-  @override
-  Future<LogRingState> build() async => _value;
-}
 
 /// Returns a fixed snapshot card list without hitting real data sources.
 class _StubSnapshotNotifier extends SnapshotNotifier {
@@ -85,9 +77,6 @@ ProviderContainer _container() => ProviderContainer(
         todayLogSummaryProvider.overrideWith(
           (ref) async => TodayLogSummary.empty,
         ),
-        logRingProvider.overrideWith(
-          () => _StubLogRingNotifier(const LogRingState(loggedCount: 0, totalCount: 0)),
-        ),
         snapshotProvider.overrideWith(
           () => _StubSnapshotNotifier(const []),
         ),
@@ -138,7 +127,7 @@ void main() {
       expect(find.text('How are you feeling today?'), findsNothing);
     });
 
-    testWidgets('renders ZLogRingWidget', (tester) async {
+    testWidgets('renders StreakHeroCard', (tester) async {
       final container = _container();
       addTearDown(container.dispose);
       await tester.pumpWidget(
@@ -148,7 +137,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(ZLogRingWidget), findsOneWidget);
+      expect(find.byType(StreakHeroCard), findsOneWidget);
     });
 
     testWidgets('renders ZDailyGoalsCard with setup prompt', (tester) async {

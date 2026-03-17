@@ -99,10 +99,6 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
           ref.invalidate(todayFeedProvider);
           ref.invalidate(todayLogSummaryProvider);
           ref.invalidate(userLoggedTypesProvider);
-          // logRingProvider and snapshotProvider are derived — explicitly
-          // invalidating their dependencies above causes them to recompute.
-          // Also invalidate directly per spec requirement.
-          ref.invalidate(logRingProvider);
           ref.invalidate(snapshotProvider);
           await Future.wait([
             ref
@@ -150,12 +146,20 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                       ),
                     ),
                     const SizedBox(width: AppDimens.spaceSm),
-                    // Log Ring — right half.
-                     Flexible(
-                       child: ZLogRingWidget(
-                        onTap: openSheet,
+                    // Streak Hero Card — right half.
+                    Flexible(
+                      child: feedAsync.when(
+                        loading: () => const StreakHeroCard(streakDays: 0),
+                        error: (_, __) => const StreakHeroCard(streakDays: 0),
+                        data: (feed) => StreakHeroCard(
+                          streakDays: feed.streak?.currentStreak ?? 0,
+                          isPersonalBest: feed.streak != null &&
+                              feed.streak!.currentStreak > 0 &&
+                              feed.streak!.currentStreak >=
+                                  (feed.streak!.longestStreak ?? 0),
+                        ),
                       ),
-                     ),
+                    ),
                   ],
                 ),
               ),
