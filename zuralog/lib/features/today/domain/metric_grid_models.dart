@@ -49,7 +49,8 @@ class MetricTileData {
   /// Returns a copy of this tile with the given fields replaced.
   ///
   /// To explicitly clear [value] or [unit] back to null, pass
-  /// [clearValue] or [clearUnit] as true.
+  /// `value: null` or `unit: null` — omitting the parameter preserves
+  /// the existing value.
   MetricTileData copyWith({
     String? metricType,
     String? label,
