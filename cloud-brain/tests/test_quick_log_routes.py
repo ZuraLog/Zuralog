@@ -47,7 +47,7 @@ TEST_USER_ID = "test-user-supplement-guard"
 
 def test_supplement_log_rejects_empty_ids(mock_db, auth_headers):
     """POST /quick-log/supplements with an empty ID list must return 422."""
-    from app.api.deps import _get_auth_service, get_authenticated_user_id
+    from app.api.deps import get_authenticated_user_id
     from app.database import get_db
     from app.main import app
 
@@ -55,7 +55,7 @@ def test_supplement_log_rejects_empty_ids(mock_db, auth_headers):
     app.dependency_overrides[get_db] = lambda: mock_db
 
     try:
-        with TestClient(app, raise_server_exceptions=False) as client:
+        with TestClient(app) as client:
             response = client.post(
                 "/api/v1/quick-log/supplements",
                 json={"taken_supplement_ids": []},

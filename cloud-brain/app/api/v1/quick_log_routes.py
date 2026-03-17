@@ -745,19 +745,18 @@ async def log_supplements(
             status_code=422,
             detail="taken_supplement_ids must contain at least one supplement ID.",
         )
-    if body.taken_supplement_ids:
-        result = await db.execute(
-            select(UserSupplement.id).where(
-                UserSupplement.id.in_(body.taken_supplement_ids),
-                UserSupplement.user_id == user_id,
-            )
+    result = await db.execute(
+        select(UserSupplement.id).where(
+            UserSupplement.id.in_(body.taken_supplement_ids),
+            UserSupplement.user_id == user_id,
         )
-        valid_ids = {row[0] for row in result.all()}
-        invalid = set(body.taken_supplement_ids) - valid_ids
-        if invalid:
-            raise HTTPException(
-                status_code=422, detail="One or more supplement IDs are invalid or do not belong to this account."
-            )
+    )
+    valid_ids = {row[0] for row in result.all()}
+    invalid = set(body.taken_supplement_ids) - valid_ids
+    if invalid:
+        raise HTTPException(
+            status_code=422, detail="One or more supplement IDs are invalid or do not belong to this account."
+        )
     data = {
         "taken_supplement_ids": body.taken_supplement_ids,
         "notes": body.notes.strip() if body.notes else None,
