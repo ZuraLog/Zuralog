@@ -1,9 +1,46 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-17 (Today Tab Part 5 complete: inline log panels fully wired)  
+**Last Updated:** 2026-03-17 (Today Tab Part 6 complete: log screen fixes)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Today Tab Part 6 — Log Screen Fixes (2026-03-17)
+
+**Scope:** Four targeted fixes to the five full-screen log screens. No new screens, no backend changes, no schema changes.  
+**Branch:** `feat/part6-log-screen-fixes`
+
+**What was fixed:**
+
+### 1. Sleep screen — overnight duration display bug (`sleep_log_screen.dart`)
+- `_formatDuration()` now applies the same overnight correction (`if (mins < 0) mins += 24 * 60`) already present in `_canSave` and `_save()`
+- Setting bedtime to 11:00 PM and wake to 7:00 AM now correctly shows `8h 0m` instead of `Invalid range`
+- Returns `''` (empty) rather than `'Invalid range'` for the zero-duration edge case
+
+### 2. Symptom screen — severity cannot be deselected (`symptom_log_screen.dart`)
+- Severity is a required field; the old tap handler allowed tapping the same emoji again to deselect it (setting `_severityIndex = null` and disabling Save)
+- Fixed by changing `_severityIndex = selected ? null : i` → `_severityIndex = i`
+- Once a severity level is chosen it stays chosen; the user can switch to a different level but cannot clear it
+
+### 3. Meal screen — custom calorie input in quick mode + Save label fix (`meal_log_screen.dart`)
+- Quick mode previously only offered 5 calorie preset chips (200/400/600/800/1000 kcal); users could not enter a custom value
+- Added a numeric `TextField` above the preset chips (`maxLength: 4`, `FilteringTextInputFormatter.digitsOnly` to prevent negative/decimal input and values above 9999)
+- Tapping a preset chip populates the field and highlights the chip; tapping the same chip again clears both; typing a custom number deselects chips (but highlights the chip if the typed number matches a preset)
+- Renamed `_caloriesPreset` → `_calories` everywhere (field, `_save()`, quick-mode chips, full-mode chips)
+- Full-mode calorie chips are now also toggleable (tap to select, tap again to deselect)
+- Save button label is now `'Save'` in quick mode and `'Save Meal'` in full mode (was always `'Save Meal'`)
+
+### 4. Run screen — km/mi unit toggle (`run_log_screen.dart`)
+- Distance field previously hardcoded to `km`; imperial users submitting miles were silently saving the wrong values
+- Added a session-scoped `km · mi` pill toggle next to the Distance section label
+- Toggle defaults to `unitsSystemProvider` (the user's global units setting in Settings); no SharedPreferences persistence — the toggle resets to the global preference each time the screen opens
+- `_distanceKm` getter converts entered miles → km via `× 1.60934` before any save
+- Pace display (`_calcDisplayPace()`) converts sec/km → sec/mile via `× 1.60934` for imperial display; backend always receives `avg_pace_seconds_per_km` in metric
+- Toggling units clears the distance field to prevent silent data corruption (a user who typed `5 km` and then flips to miles must re-enter)
+- `_durationSeconds` now clamps the seconds field to 0–59 (was uncapped, silently accepting `90` seconds)
+- Added `_UnitToggle` private `StatelessWidget`
 
 ---
 
