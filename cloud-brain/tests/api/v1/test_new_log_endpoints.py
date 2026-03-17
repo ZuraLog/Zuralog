@@ -952,3 +952,43 @@ class TestGetSummaryToday:
         assert "run_logged_at" in body["latest_values"]
         assert isinstance(body["latest_values"]["run_logged_at"], str)
         assert len(body["latest_values"]["run_logged_at"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# Rate limit decorator presence
+# ---------------------------------------------------------------------------
+
+
+class TestRateLimitDecoratorsPresent:
+    """Verify each typed log endpoint has a @limiter.limit() decorator applied.
+
+    slowapi's @limiter.limit() wraps the function using functools.wraps, which
+    sets __wrapped__ on the decorated function pointing back to the original.
+    An undecorated async function has no __wrapped__ attribute, so its presence
+    is a reliable signal that the decorator was applied.
+    """
+
+    @pytest.mark.parametrize(
+        "func_name",
+        [
+            "log_sleep",
+            "log_run",
+            "log_meal",
+            "log_supplements",
+            "log_symptom",
+            "log_water",
+            "log_wellness",
+            "log_weight",
+            "log_steps",
+        ],
+    )
+    def test_endpoint_has_rate_limit_decorator(self, func_name):
+        """Verify the route handler was decorated with @limiter.limit()."""
+        from app.api.v1 import quick_log_routes
+
+        handler = getattr(quick_log_routes, func_name, None)
+        assert handler is not None, f"Function {func_name} not found in quick_log_routes"
+        assert hasattr(handler, "__wrapped__"), (
+            f"Function {func_name} has no @limiter.limit() decorator "
+            f"(expected __wrapped__ attribute set by slowapi/functools.wraps)."
+        )
