@@ -30,6 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/metric_format_utils.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -248,7 +249,7 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         label: 'Sleep',
         icon: '😴',
         value: hasData
-            ? (value != null ? _formatSleep((value as num).toDouble()) : null)
+            ? (value != null ? formatSleepMinutes((value as num).toDouble()) : null)
             : null,
         isEmpty: !hasData,
       ),
@@ -267,7 +268,7 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         label: 'Steps',
         icon: '👟',
         value: hasData
-            ? (value != null ? _formatSteps((value as num).toInt()) : null)
+            ? (value != null ? formatSteps((value as num).toInt()) : null)
             : null,
         isEmpty: !hasData,
       ),
@@ -318,17 +319,6 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         isEmpty: true,
       ),
   };
-}
-
-String _formatSteps(int steps) {
-  if (steps >= 1000) return '${(steps / 1000).toStringAsFixed(1)}k';
-  return steps.toString();
-}
-
-String _formatSleep(double minutes) {
-  final h = (minutes / 60).floor();
-  final m = (minutes % 60).toInt();
-  return '${h}h ${m}m';
 }
 
 // ── Daily Goals ───────────────────────────────────────────────────────────────
@@ -517,6 +507,8 @@ class PinnedMetricsNotifier extends AsyncNotifier<List<String>> {
       final updated = [...current, metricType];
       await _persist(updated);
       state = AsyncData(List.unmodifiable(updated));
+    }).catchError((Object e, StackTrace st) {
+      debugPrint('PinnedMetricsNotifier.addMetric: $e\n$st');
     });
     return _pendingOperation;
   }
@@ -530,6 +522,8 @@ class PinnedMetricsNotifier extends AsyncNotifier<List<String>> {
       final updated = current.where((m) => m != metricType).toList();
       await _persist(updated);
       state = AsyncData(List.unmodifiable(updated));
+    }).catchError((Object e, StackTrace st) {
+      debugPrint('PinnedMetricsNotifier.removeMetric: $e\n$st');
     });
     return _pendingOperation;
   }

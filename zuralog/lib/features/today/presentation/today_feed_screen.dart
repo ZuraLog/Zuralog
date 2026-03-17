@@ -19,6 +19,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/metric_format_utils.dart';
 import 'package:zuralog/features/today/domain/metric_grid_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -501,7 +502,7 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         emoji: '😴',
         categoryColor: AppColors.categorySleep.toARGB32(),
         value: isLit && raw != null
-            ? _formatSleepMinutes((raw as num).toDouble())
+            ? formatSleepMinutes((raw as num).toDouble())
             : null,
       ),
     'weight' => MetricTileData(
@@ -518,7 +519,7 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         emoji: '👣',
         categoryColor: AppColors.categoryActivity.toARGB32(),
         value: isLit && raw != null
-            ? _formatStepsValue((raw as num).toInt())
+            ? formatSteps((raw as num).toInt())
             : null,
       ),
     'run' => MetricTileData(
@@ -570,17 +571,6 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryVitals.toARGB32(),
       ),
   };
-}
-
-String _formatStepsValue(int steps) {
-  if (steps >= 1000) return '${(steps / 1000).toStringAsFixed(1)}k';
-  return steps.toString();
-}
-
-String _formatSleepMinutes(double minutes) {
-  final h = (minutes / 60).floor();
-  final m = (minutes % 60).toInt();
-  return '${h}h ${m}m';
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
