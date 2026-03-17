@@ -1,9 +1,191 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-17 (Today Tab Parts 9 & 11 complete: provider gaps and full test suite)  
+**Last Updated:** 2026-03-18 (Today Tab Redesign complete: Health Score zero state, Streak Hero Card, Adaptive Metric Grid)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Today Tab Redesign — Complete (2026-03-18)
+
+**Scope:** Redesigned the Today tab with three major UI changes: Health Score zero state, Streak Hero Card, and Adaptive Metric Grid.  
+**Branch:** `feat/today-tab-redesign` → merged to main (2026-03-18)
+
+**What was built:**
+
+### 1. Health Score Zero State Redesign
+
+**File changed:** `zuralog/lib/features/today/presentation/today_feed_screen.dart`
+
+**What changed:**
+- Previously: Muted ring + heart icon + "Your health score awaits" headline
+- Now: 😔 sad face emoji + "Health Score" label + "Log to unlock" subtitle
+
+**Implementation:**
+- Replaced the `HealthScoreZeroState` widget with a simpler, more approachable design
+- Emoji-based visual is more friendly and less clinical
+- Subtitle "Log to unlock" sets clear expectation that the score builds as data accumulates
+
+**Key decision:**
+| Decision | Rationale |
+|----------|-----------|
+| Emoji instead of icon | Emojis feel more human and approachable. The sad face conveys "no data yet" without being negative. |
+| "Log to unlock" subtitle | Clear call-to-action that explains what the user needs to do to see their score. |
+
+### 2. Streak Hero Card
+
+**Files created:**
+- `zuralog/lib/shared/widgets/streak_hero_card.dart` — New reusable component
+
+**What was built:**
+- Replaced the old "Logged Today" ring (`ZLogRingWidget`) with a new `StreakHeroCard` component
+- Zero streak: Shows a ghost flame icon with "Start your streak today" text
+- Active streak: Shows a large orange number (the streak count) with a flame icon
+
+**Implementation:**
+```dart
+class StreakHeroCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streak = ref.watch(streakProvider);
+    
+    if (streak == 0) {
+      return _ZeroStreakState();  // Ghost flame + "Start your streak today"
+    } else {
+      return _ActiveStreakState(count: streak);  // Orange number + flame
+    }
+  }
+}
+```
+
+**Key decisions:**
+| Decision | Rationale |
+|----------|-----------|
+| Separate zero and active states | Zero state is motivational ("Start your streak today"). Active state is celebratory (big number + flame). Different visual treatments for different user states. |
+| Ghost flame for zero state | Flame is the streak symbol. Ghost/muted version indicates "not yet active". |
+| Large orange number for active | Orange is the app's action color. Large number makes the streak count prominent and celebratory. |
+
+### 3. Adaptive Metric Grid
+
+**Files created:**
+- `zuralog/lib/shared/widgets/metric_grid/metric_grid.dart` — Main grid component
+- `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart` — Individual metric tile
+- `zuralog/lib/shared/widgets/metric_grid/metric_picker_sheet.dart` — Add/remove metrics sheet
+- `zuralog/lib/features/today/domain/metric_grid_models.dart` — Domain models
+- `zuralog/lib/features/today/domain/metric_format_utils.dart` — Formatting utilities
+
+**What was built:**
+- Replaced the fixed horizontal snapshot row with a user-configurable adaptive grid
+- Users long-press to enter edit mode and add/remove metrics
+- Tiles are greyscale when not logged today, lit in color when logged or synced
+
+**Implementation:**
+
+**Metric Grid Component:**
+```dart
+class MetricGrid extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final config = ref.watch(metricGridConfigProvider);
+    final isEditMode = ref.watch(metricGridEditModeProvider);
+    
+    return GestureDetector(
+      onLongPress: () => ref.read(metricGridEditModeProvider.notifier).state = true,
+      child: GridView(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+        children: config.visibleMetrics.map((metric) {
+          return MetricTile(
+            metric: metric,
+            isEditMode: isEditMode,
+            onRemove: () => _removeMetric(metric),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+```
+
+**Metric Tile Component:**
+```dart
+class MetricTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value = ref.watch(metricValueProvider(metric.type));
+    final isLogged = value != null;
+    
+    return Container(
+      color: isLogged ? metric.color : Colors.grey[300],  // Greyscale when not logged
+      child: Column(
+        children: [
+          Text(metric.label),
+          Text(formatValue(value)),  // Uses metric_format_utils
+        ],
+      ),
+    );
+  }
+}
+```
+
+**Metric Picker Sheet:**
+- Long-press in edit mode opens a bottom sheet
+- Shows all available metrics with toggles
+- User can add/remove metrics from the grid
+- Configuration persisted via `userPreferencesProvider`
+
+**Key decisions:**
+| Decision | Rationale |
+|----------|-----------|
+| Long-press to enter edit mode | Non-destructive. Users can view the grid without accidentally entering edit mode. Long-press is a standard mobile pattern for edit/context menus. |
+| Greyscale when not logged | Visual feedback that the metric has no data today. Color indicates "data available". |
+| Adaptive grid layout | Grid adapts to screen width. 3 columns on phone, more on tablet. Responsive without hardcoding breakpoints. |
+| Persist configuration via userPreferencesProvider | User's metric selection is remembered across sessions. Stored in the backend via the preferences API. |
+| Format utilities extracted | `metric_format_utils.dart` contains pure functions for formatting metric values. Testable without widget context. |
+
+### 4. Removed Components
+
+**Files deleted:**
+- `zuralog/lib/shared/widgets/health/z_log_ring_widget.dart` — The old "Logged Today" ring
+
+**Providers removed from `today_providers.dart`:**
+- `logRingProvider` — FutureProvider that computed ring fill
+- `LogRingNotifier` — AsyncNotifier that watched upstream providers
+
+**Why removed:**
+- The Log Ring was replaced by the Streak Hero Card, which is more visually prominent and motivational
+- The ring's functionality (showing what was logged today) is now handled by the Metric Grid tiles (greyscale vs. color)
+
+### 5. Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Three separate components (Health Score, Streak, Grid) | Each has a distinct purpose and visual treatment. Separation of concerns makes them reusable and testable. |
+| Emoji-based zero states | More approachable and friendly than icons. Emojis are universally understood. |
+| User-configurable grid | Different users care about different metrics. Letting them customize the grid increases engagement. |
+| Greyscale for no-data tiles | Clear visual feedback without being harsh. Users understand "no data" at a glance. |
+| Persist grid config in backend | User's preferences are synced across devices. If they log in on a different phone, their metric grid is the same. |
+
+### 6. Test Coverage
+
+**All tests passing:**
+- 397 Flutter unit + integration tests
+- 81 backend tests
+- 0 `flutter analyze` issues
+
+**Key test areas:**
+- Metric grid add/remove functionality
+- Greyscale vs. color tile rendering
+- Configuration persistence
+- Streak count display
+- Health Score zero state rendering
+
+**Result:**
+- Today tab redesigned with improved visual hierarchy
+- User-configurable metric grid increases engagement
+- Streak Hero Card is more motivational than the old Log Ring
+- Health Score zero state is friendlier and more approachable
+- All tests passing, ready for production
 
 ---
 

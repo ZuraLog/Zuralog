@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-17 (Today Tab Parts 9 & 11 complete: provider gaps closed, full test suite)
+**Last Updated:** 2026-03-18 (Today Tab Redesign complete: Health Score zero state, Streak Hero Card, Adaptive Metric Grid)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -970,3 +970,39 @@ Added floating action button (FAB) for quick log entry and a modal bottom sheet 
 ### Part 5 — Inline Panels (Complete)
 
 See "Today Tab Part 5" section above.
+
+---
+
+## Today Tab Redesign — Complete (2026-03-18)
+
+> **Branch:** `feat/today-tab-redesign` → merged to main (2026-03-18)
+
+Completed the Today tab visual redesign with three major UI changes: Health Score zero state, Streak Hero Card, and Adaptive Metric Grid.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Health Score zero state redesign | ✅ Done | Replaced muted ring + heart icon with 😔 sad face emoji, "Health Score" label, and "Log to unlock" subtitle |
+| P0 | Create `StreakHeroCard` component | ✅ Done | `zuralog/lib/shared/widgets/streak_hero_card.dart`; zero streak shows ghost flame with "Start your streak today", active streak shows big orange number and flame |
+| P0 | Remove `ZLogRingWidget` from Today screen | ✅ Done | Deleted `zuralog/lib/shared/widgets/health/z_log_ring_widget.dart`; removed `logRingProvider` and `LogRingNotifier` from `today_providers.dart` |
+| P0 | Create Adaptive Metric Grid component | ✅ Done | `zuralog/lib/shared/widgets/metric_grid/metric_grid.dart`; user-configurable grid with long-press edit mode |
+| P0 | Create Metric Tile component | ✅ Done | `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart`; greyscale when not logged, colored when logged or synced |
+| P0 | Create Metric Picker Sheet | ✅ Done | `zuralog/lib/shared/widgets/metric_grid/metric_picker_sheet.dart`; add/remove metrics in edit mode |
+| P0 | Create metric grid domain models | ✅ Done | `zuralog/lib/features/today/domain/metric_grid_models.dart`; metric configuration and state |
+| P0 | Create metric format utilities | ✅ Done | `zuralog/lib/features/today/domain/metric_format_utils.dart`; value formatting and display logic |
+| P0 | Wire metric grid to user preferences | ✅ Done | Grid configuration persisted via `userPreferencesProvider` |
+| P0 | Update Today Feed layout | ✅ Done | Health Score zero state, Streak Hero Card, Adaptive Metric Grid in new layout |
+| P0 | Full test suite | ✅ Done | 397 Flutter tests + 81 backend tests, all passing; zero `flutter analyze` issues |
+
+**New files created:**
+- `zuralog/lib/shared/widgets/streak_hero_card.dart`
+- `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart`
+- `zuralog/lib/shared/widgets/metric_grid/metric_grid.dart`
+- `zuralog/lib/shared/widgets/metric_grid/metric_picker_sheet.dart`
+- `zuralog/lib/features/today/domain/metric_grid_models.dart`
+- `zuralog/lib/features/today/domain/metric_format_utils.dart`
+
+**Retired:**
+- `zuralog/lib/shared/widgets/health/z_log_ring_widget.dart` — deleted
+- `logRingProvider` / `LogRingNotifier` — removed from `today_providers.dart`
+
+**Result:** Today tab redesigned with new visual hierarchy, user-configurable metric grid, and improved zero-state UX. All tests passing, ready for production.
