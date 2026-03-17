@@ -18,6 +18,7 @@
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
 /// - [stepsLogModeProvider]           — persisted steps log mode (add vs override)
+/// - [mealLogModeProvider]             — persisted meal log mode (quick vs full)
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
 library;
 
@@ -427,6 +428,34 @@ class StepsLogModeNotifier extends AsyncNotifier<StepsLogMode> {
 final stepsLogModeProvider =
     AsyncNotifierProvider<StepsLogModeNotifier, StepsLogMode>(
   StepsLogModeNotifier.new,
+);
+
+// ── Meal Log Mode ─────────────────────────────────────────────────────────────
+
+/// Notifier that persists the meal log quick-mode toggle via SharedPreferences.
+///
+/// Default: `false` — full mode (description required).
+/// When `true`, the meal log screen shows a simplified calorie-only form.
+class MealLogModeNotifier extends AsyncNotifier<bool> {
+  static const _key = 'meal_log_quick_mode';
+
+  @override
+  Future<bool> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_key) ?? false;
+  }
+
+  Future<void> setMode(bool quickMode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key, quickMode);
+    state = AsyncData(quickMode);
+  }
+}
+
+/// Provider for the meal log quick-mode toggle. Remembered across app restarts.
+final mealLogModeProvider =
+    AsyncNotifierProvider<MealLogModeNotifier, bool>(
+  MealLogModeNotifier.new,
 );
 
 // ── Latest Log Values ─────────────────────────────────────────────────────────
