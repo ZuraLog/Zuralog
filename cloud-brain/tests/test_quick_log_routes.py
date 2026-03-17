@@ -31,10 +31,11 @@ def test_resolve_logged_at_z_suffix_normalized():
 def test_resolve_logged_at_none_returns_utc_now():
     """None input must return a valid UTC ISO 8601 string."""
     result = _resolve_logged_at(None)
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     dt = datetime.fromisoformat(result)
     assert dt.tzinfo is not None
+    assert dt.utcoffset() == timedelta(0), f"Expected UTC offset (0), got {dt.utcoffset()}"
 
 
 # ---------------------------------------------------------------------------
