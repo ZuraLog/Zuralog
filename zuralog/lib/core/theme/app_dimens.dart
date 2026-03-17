@@ -120,6 +120,9 @@ abstract final class AppDimens {
   /// Health ring outer diameter.
   static const double ringDiameter = 180;
 
+  /// Small emoji display size (in logical pixels) — used in compact tiles.
+  static const double emojiSm = 16;
+
   /// Standard emoji display size (in logical pixels).
   static const double emojiMd = 32;
 
