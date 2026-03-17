@@ -195,27 +195,29 @@ def _validate_metric_type(metric_type: str) -> None:
 def _resolve_logged_at(logged_at: str | None) -> str:
     """Resolve the logged_at timestamp, defaulting to UTC now.
 
-    Validates the format and rejects obviously wrong timestamps (more than
-    24 hours in the future or more than 1 year in the past).
+    Accepts ISO 8601 strings with any UTC offset. Always returns a UTC
+    ISO 8601 string (``+00:00`` suffix). Validates that the timestamp is
+    not more than 24 hours in the future or more than 1 year in the past.
 
     Args:
-        logged_at: ISO datetime string provided by the client, or None.
+        logged_at: ISO 8601 datetime string from the client, or None.
 
     Returns:
-        ISO datetime string to store.
+        UTC ISO 8601 datetime string.
 
     Raises:
-        HTTPException: 422 if the string is not valid ISO 8601, or if the
-            timestamp is out of the accepted range.
+        HTTPException 422: if the value is out of the allowed window or
+            not a valid ISO 8601 string.
     """
     if not logged_at:
         return datetime.now(timezone.utc).isoformat()
     try:
         dt = datetime.fromisoformat(logged_at.replace("Z", "+00:00"))
-        # Reject timestamps more than 24h in the future or more than 1 year in the past
         now = datetime.now(timezone.utc)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
         if dt > now + timedelta(hours=24):
             raise HTTPException(
                 status_code=422,
@@ -226,7 +228,7 @@ def _resolve_logged_at(logged_at: str | None) -> str:
                 status_code=422,
                 detail="logged_at cannot be more than 1 year in the past.",
             )
-        return logged_at
+        return dt.isoformat()
     except (ValueError, OverflowError):
         raise HTTPException(
             status_code=422,
