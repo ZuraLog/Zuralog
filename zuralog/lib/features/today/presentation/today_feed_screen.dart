@@ -240,7 +240,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
             // Provider never errors — only loading and data branches needed.
             ...feedAsync.when(
               error: (err, stack) => [
-                ZEmptyInsightsState(
+                ZEmptyInsightsCard(
                   onLogTap: openSheet,
                   onConnectTap: () =>
                       context.pushNamed(RouteNames.settingsIntegrations),
@@ -257,7 +257,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
               data: (feed) {
                 if (feed.insights.isEmpty) {
                   return [
-                    ZEmptyInsightsState(
+                    ZEmptyInsightsCard(
                       onLogTap: openSheet,
                       onConnectTap: () =>
                           context.pushNamed(RouteNames.settingsIntegrations),

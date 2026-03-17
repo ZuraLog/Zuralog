@@ -16,8 +16,8 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 ///   The caller should open the log grid sheet.
 /// [onConnectTap] — called when the user taps "Connect a health app".
 ///   The caller should navigate to the integrations settings screen.
-class ZEmptyInsightsState extends StatelessWidget {
-  const ZEmptyInsightsState({
+class ZEmptyInsightsCard extends StatelessWidget {
+  const ZEmptyInsightsCard({
     super.key,
     required this.onLogTap,
     required this.onConnectTap,

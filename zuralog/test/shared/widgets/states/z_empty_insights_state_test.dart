@@ -3,12 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/shared/widgets/states/z_empty_insights_state.dart';
 
 void main() {
-  group('ZEmptyInsightsState', () {
+  group('ZEmptyInsightsCard', () {
     testWidgets('renders headline text', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ZEmptyInsightsState(
+            body: ZEmptyInsightsCard(
               onLogTap: () {},
               onConnectTap: () {},
             ),
@@ -23,7 +23,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ZEmptyInsightsState(
+            body: ZEmptyInsightsCard(
               onLogTap: () => tapped = true,
               onConnectTap: () {},
             ),
@@ -40,7 +40,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ZEmptyInsightsState(
+            body: ZEmptyInsightsCard(
               onLogTap: () {},
               onConnectTap: () => tapped = true,
             ),
