@@ -19,6 +19,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/metric_grid_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
@@ -99,7 +100,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
           ref.invalidate(todayFeedProvider);
           ref.invalidate(todayLogSummaryProvider);
           ref.invalidate(userLoggedTypesProvider);
-          ref.invalidate(snapshotProvider);
+          ref.invalidate(pinnedMetricsProvider);
           await Future.wait([
             ref
                 .read(healthScoreProvider.future)
@@ -208,9 +209,10 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
               ),
             ),
 
-            // ── Snapshot Cards (horizontally scrollable row) ─────────────────
-            _SnapshotRow(
-              onCardTap: openSheet,
+            // ── My Metrics Grid ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+              child: _MetricGridSection(),
             ),
 
             const SizedBox(height: AppDimens.spaceMd),
@@ -389,44 +391,172 @@ class _HealthScoreHero extends ConsumerWidget {
   }
 }
 
-// ── _SnapshotRow ──────────────────────────────────────────────────────────────
+// ── _MetricGridSection ────────────────────────────────────────────────────────
 
-/// Horizontally scrollable row of today's metric snapshot cards.
-///
-/// Hidden when the user has never logged anything (empty provider list).
-class _SnapshotRow extends ConsumerWidget {
-  const _SnapshotRow({required this.onCardTap});
-
-  final VoidCallback onCardTap;
+/// Builds the Today tab metric grid, wiring pinned metrics to today's log data.
+class _MetricGridSection extends ConsumerWidget {
+  const _MetricGridSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final snapshotAsync = ref.watch(snapshotProvider);
+    final pinnedAsync = ref.watch(pinnedMetricsProvider);
+    final summaryAsync = ref.watch(todayLogSummaryProvider);
 
-    return snapshotAsync.when(
-      loading: () => const SizedBox(height: 110),
-      error: (e, st) => const SizedBox.shrink(),
-      data: (cards) {
-        if (cards.isEmpty) return const SizedBox.shrink();
-        return SizedBox(
-          height: 110,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.spaceMd,
-            ),
-            itemCount: cards.length,
-            separatorBuilder: (context, index) =>
-                const SizedBox(width: AppDimens.spaceSm),
-            itemBuilder: (context, i) => ZSnapshotCard(
-              data: cards[i],
-              onTap: onCardTap,
-            ),
-          ),
+    return pinnedAsync.when(
+      loading: () => const SizedBox(height: 60),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (pinned) {
+        final summary = summaryAsync.valueOrNull ?? TodayLogSummary.empty;
+        final tiles = pinned.map((type) => _buildTile(type, summary)).toList();
+
+        return MetricGrid(
+          tiles: tiles,
+          onAddTap: () {
+            // Chunk 3 wires the picker sheet here.
+            // For now, show a placeholder snackbar.
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('Metric picker — coming in next step')),
+            );
+          },
+          onRemove: (tile) {
+            ref
+                .read(pinnedMetricsProvider.notifier)
+                .removeMetric(tile.metricType);
+          },
         );
       },
     );
   }
+}
+
+// ── _buildTile ────────────────────────────────────────────────────────────────
+
+/// Maps a metric type string and today's log summary to a [MetricTileData].
+MetricTileData _buildTile(String type, TodayLogSummary summary) {
+  final isLit = summary.loggedTypes.contains(type);
+  final raw = summary.latestValues[type];
+
+  return switch (type) {
+    'mood' => MetricTileData(
+        metricType: type,
+        label: 'Mood',
+        emoji: '😊',
+        categoryColor: AppColors.categoryWellness.toARGB32(),
+        value:
+            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
+      ),
+    'energy' => MetricTileData(
+        metricType: type,
+        label: 'Energy',
+        emoji: '⚡',
+        categoryColor: AppColors.categoryWellness.toARGB32(),
+        value:
+            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
+      ),
+    'stress' => MetricTileData(
+        metricType: type,
+        label: 'Stress',
+        emoji: '😤',
+        categoryColor: AppColors.categoryWellness.toARGB32(),
+        value:
+            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
+      ),
+    'water' => MetricTileData(
+        metricType: type,
+        label: 'Water',
+        emoji: '💧',
+        categoryColor: AppColors.categoryBody.toARGB32(),
+        value:
+            isLit ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'}ml' : null,
+      ),
+    'sleep' => MetricTileData(
+        metricType: type,
+        label: 'Sleep',
+        emoji: '😴',
+        categoryColor: AppColors.categorySleep.toARGB32(),
+        value: isLit && raw != null
+            ? _formatSleepMinutes((raw as num).toDouble())
+            : null,
+      ),
+    'weight' => MetricTileData(
+        metricType: type,
+        label: 'Weight',
+        emoji: '⚖️',
+        categoryColor: AppColors.categoryBody.toARGB32(),
+        value:
+            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}kg' : null,
+      ),
+    'steps' => MetricTileData(
+        metricType: type,
+        label: 'Steps',
+        emoji: '👣',
+        categoryColor: AppColors.categoryActivity.toARGB32(),
+        value: isLit && raw != null
+            ? _formatStepsValue((raw as num).toInt())
+            : null,
+      ),
+    'run' => MetricTileData(
+        metricType: type,
+        label: 'Run',
+        emoji: '🏃',
+        categoryColor: AppColors.categoryActivity.toARGB32(),
+        value:
+            isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}km' : null,
+      ),
+    'meal' => MetricTileData(
+        metricType: type,
+        label: 'Calories',
+        emoji: '🍽️',
+        categoryColor: AppColors.categoryNutrition.toARGB32(),
+        value: isLit
+            ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'} kcal'
+            : null,
+      ),
+    'supplement' => MetricTileData(
+        metricType: type,
+        label: 'Supplements',
+        emoji: '💊',
+        categoryColor: AppColors.categoryVitals.toARGB32(),
+        value: isLit
+            ? '${(raw as num?)?.toInt() ?? '—'} taken'
+            : null,
+      ),
+    'symptom' => MetricTileData(
+        metricType: type,
+        label: 'Symptom',
+        emoji: '🩹',
+        categoryColor: AppColors.categoryVitals.toARGB32(),
+        value: isLit
+            ? (summary.latestValues['symptom_severity'] as String?)
+            : null,
+      ),
+    'heart_rate' => MetricTileData(
+        metricType: type,
+        label: 'Heart Rate',
+        emoji: '❤️',
+        categoryColor: AppColors.categoryHeart.toARGB32(),
+        value:
+            isLit ? '${(raw as num?)?.toInt() ?? '—'} bpm' : null,
+      ),
+    _ => MetricTileData(
+        metricType: type,
+        label: type,
+        emoji: '📊',
+        categoryColor: AppColors.categoryVitals.toARGB32(),
+      ),
+  };
+}
+
+String _formatStepsValue(int steps) {
+  if (steps >= 1000) return '${(steps / 1000).toStringAsFixed(1)}k';
+  return steps.toString();
+}
+
+String _formatSleepMinutes(double minutes) {
+  final h = (minutes / 60).floor();
+  final m = (minutes % 60).toInt();
+  return '${h}h ${m}m';
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
