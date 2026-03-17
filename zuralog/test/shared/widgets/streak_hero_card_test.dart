@@ -1,7 +1,7 @@
 // zuralog/test/shared/widgets/streak_hero_card_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zuralog/shared/widgets/streak_hero_card.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
 
 void main() {
   group('StreakHeroCard — zero state', () {

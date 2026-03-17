@@ -34,6 +34,7 @@ class StreakHeroCard extends StatelessWidget {
 
   /// Whether [streakDays] equals the user's all-time best. When true, the
   /// subtitle reads "Personal best 🏆" instead of "Keep it up!".
+  /// Ignored when [streakDays] is 0.
   final bool isPersonalBest;
 
   @override
@@ -76,7 +77,7 @@ class _ZeroState extends StatelessWidget {
       children: [
         // Ghost flame — greyscale, low opacity
         Opacity(
-          opacity: 0.22,
+          opacity: AppDimens.ghostOpacity,
           child: ColorFiltered(
             colorFilter: const ColorFilter.matrix(<double>[
               0.2126, 0.7152, 0.0722, 0, 0,
@@ -136,8 +137,7 @@ class _ActiveState extends StatelessWidget {
         Text(
           '$streakDays',
           style: AppTextStyles.displayLarge.copyWith(
-            color: AppColors.categoryNutrition,
-            fontWeight: FontWeight.w700,
+            color: AppColors.healthScoreAmber,
           ),
         ),
         // Unit label
