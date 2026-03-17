@@ -1,7 +1,7 @@
 /// Today Feed — Tab 0 root screen.
 ///
 /// Curated daily briefing: Health Score hero paired with the Streak Hero Card,
-/// AI insight cards, snapshot row, daily goals, and streak badge.
+/// AI insight cards, metric grid, daily goals, and streak badge.
 library;
 
 import 'package:flutter/material.dart';
@@ -518,8 +518,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         label: 'Supplements',
         emoji: '💊',
         categoryColor: AppColors.categoryVitals.toARGB32(),
-        value: isLit
-            ? '${(raw as num?)?.toInt() ?? '—'} taken'
+        value: isLit && raw != null
+            ? '${(raw as num).toInt()} taken'
             : null,
       ),
     'symptom' => MetricTileData(
@@ -527,9 +527,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         label: 'Symptom',
         emoji: '🩹',
         categoryColor: AppColors.categoryVitals.toARGB32(),
-        value: isLit
-            ? (summary.latestValues['symptom_severity'] as String?)
-            : null,
+        // 'symptom_severity' holds the formatted severity string; 'symptom' is the log type key.
+        value: isLit ? (summary.latestValues['symptom_severity'] as String?) : null,
       ),
     'heart_rate' => MetricTileData(
         metricType: type,
