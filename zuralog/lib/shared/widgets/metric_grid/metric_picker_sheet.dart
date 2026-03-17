@@ -184,7 +184,7 @@ class _MetricRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Opacity(
-        opacity: isPinned ? 0.45 : 1.0,
+        opacity: isPinned ? AppDimens.disabledOpacity : 1.0,
         child: Container(
           margin: const EdgeInsets.only(bottom: AppDimens.spaceXs),
           padding: const EdgeInsets.symmetric(
@@ -210,7 +210,7 @@ class _MetricRow extends StatelessWidget {
               if (isPinned)
                 Icon(
                   Icons.check_circle_rounded,
-                  color: AppColors.primary,
+                  color: colors.primary,
                   size: AppDimens.iconSm,
                 ),
             ],

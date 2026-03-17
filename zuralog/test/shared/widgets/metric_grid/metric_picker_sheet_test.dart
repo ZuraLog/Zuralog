@@ -28,7 +28,7 @@ void main() {
           ),
         ),
       ));
-      expect(find.byIcon(Icons.check_circle_rounded), findsWidgets);
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
     });
 
     testWidgets('tapping an unpinned metric calls onSelect', (tester) async {

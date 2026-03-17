@@ -134,6 +134,9 @@ abstract final class AppDimens {
   /// Opacity for ghost/inactive states (e.g. ghost flame in zero-streak card).
   static const double ghostOpacity = 0.22;
 
+  /// Opacity for disabled/pinned interactive elements.
+  static const double disabledOpacity = 0.45;
+
   // ── Navigation Bar ────────────────────────────────────────────────────────
 
   /// Navigation bar backdrop blur intensity (sigmaX and sigmaY).
