@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-17 (Today Tab Part 5 complete: inline log panels fully wired — real API calls, pre-fill, unit awareness, sync banner)
+**Last Updated:** 2026-03-17 (Today Tab Parts 9 & 11 complete: provider gaps closed, full test suite)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -488,6 +488,57 @@ Completed 1 shared component rename: `ZEmptyInsightsState` → `ZEmptyInsightsCa
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
 | P0 | Rename `ZEmptyInsightsState` to `ZEmptyInsightsCard` | ✅ Done | Updated definition file, two call sites in `today_feed_screen.dart`, widget test file; `widgets.dart` barrel export unchanged (exports by file path); `flutter analyze`: 0 issues; `flutter test`: 377 passing |
+
+---
+
+## Today Tab Part 9 — Provider Gaps Closed (2026-03-17)
+
+> **Branch:** `feat/today-tab-redesign` → merged to main (2026-03-17)
+
+Converted three remaining FutureProviders to AsyncNotifierProviders for reactive state management, and added persistent meal log mode provider.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | `logRingProvider` — FutureProvider → AsyncNotifierProvider | ✅ Done | `LogRingNotifier` watches `todayLogSummaryProvider` and `userLoggedTypesProvider` reactively. Eliminates stale data on upstream changes. |
+| P0 | `snapshotProvider` — FutureProvider → AsyncNotifierProvider | ✅ Done | `SnapshotNotifier` watches both upstream providers reactively. Snapshot cards update in real-time when new data is logged. |
+| P0 | `mealLogModeProvider` — new AsyncNotifierProvider | ✅ Done | Backed by SharedPreferences key `meal_log_quick_mode`, default `false`. `MealLogScreen` refactored to consume this provider instead of raw `setState` + `SharedPreferences`. |
+
+---
+
+## Today Tab Part 11 — Full Test Suite (2026-03-17)
+
+> **Branch:** `feat/today-tab-redesign` → merged to main (2026-03-17)
+
+Comprehensive test coverage across Flutter unit tests, integration tests, and backend security/rate-limit tests.
+
+### Flutter Tests
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Unit tests: `mealLogModeProvider` | ✅ Done | 4 tests covering persistence, default value, updates |
+| P0 | Unit tests: `calculatePaceSecondsPerKm` | ✅ Done | 6 tests covering metric/imperial conversions, edge cases |
+| P0 | Unit tests: `formatWeightDelta` | ✅ Done | 4 tests covering positive/negative deltas, unit display |
+| P0 | Unit tests: logRing notifier AsyncData resolution | ✅ Done | 1 test verifying reactive updates on upstream changes |
+| P0 | Unit tests: water panel vessel coverage | ✅ Done | 2 tests covering vessel selection and display |
+| P0 | Function extractions for testability | ✅ Done | `calculatePaceSecondsPerKm` extracted in `run_log_screen.dart`; `formatWeightDelta` extracted in `z_weight_log_panel.dart` |
+| P0 | Integration tests: water log end-to-end | ✅ Done | 1 test in `test/integration/today_log_flow_test.dart` |
+| P0 | Integration tests: meal full-mode end-to-end | ✅ Done | 1 test in `test/integration/today_log_flow_test.dart` |
+| P0 | Integration tests: network failure path | ✅ Done | 1 test in `test/integration/today_log_flow_test.dart` |
+
+### Backend Tests
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Security: `user_id`-from-body ignored on all 9 typed endpoints | ✅ Done | 7 new tests (run, water, meal, supplements, symptom, sleep, weight endpoints). Existing tests for wellness and steps already covered. |
+| P0 | Rate limiting: `@limiter.limit()` decorator on all 9 typed endpoints | ✅ Done | 9 tests verifying rate limit headers and 429 responses |
+
+### Test Results
+
+| Metric | Result |
+|--------|--------|
+| Flutter unit + integration tests | 397/397 passing |
+| Backend (api/v1) tests | 81/81 passing |
+| `flutter analyze` | 0 issues |
 
 ---
 

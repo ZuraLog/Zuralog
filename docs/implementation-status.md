@@ -1,9 +1,219 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-17 (Today Tab Parts 7 & 8 complete: backend hardening & component rename)  
+**Last Updated:** 2026-03-17 (Today Tab Parts 9 & 11 complete: provider gaps and full test suite)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Today Tab Part 9 — Provider Gaps Closed (2026-03-17)
+
+**Scope:** Converted three FutureProviders to AsyncNotifierProviders for reactive state management, and added persistent meal log mode provider.  
+**Branch:** `feat/today-tab-redesign` → merged to main (2026-03-17)
+
+**What was built:**
+
+### 1. `logRingProvider` — FutureProvider → AsyncNotifierProvider
+
+**File changed:** `zuralog/lib/features/today/providers/today_providers.dart`
+
+**What was fixed:**
+- Previously: `FutureProvider<LogRingState>` that fetched data once and never updated
+- Now: `AsyncNotifierProvider<LogRingNotifier, LogRingState>` that watches `todayLogSummaryProvider` and `userLoggedTypesProvider` reactively
+
+**Implementation:**
+```dart
+class LogRingNotifier extends AsyncNotifier<LogRingState> {
+  @override
+  Future<LogRingState> build() async {
+    final summary = await ref.watch(todayLogSummaryProvider.future);
+    final types = await ref.watch(userLoggedTypesProvider.future);
+    // Compute ring state from summary and types
+    return LogRingState(...);
+  }
+}
+```
+
+**Key decision:**
+| Decision | Rationale |
+|----------|-----------|
+| Watch upstream providers | When `todayLogSummaryProvider` updates (new log entry), the ring automatically recomputes. No stale data. |
+| AsyncNotifier instead of FutureProvider | Allows reactive dependencies. FutureProviders don't watch other providers. |
+
+### 2. `snapshotProvider` — FutureProvider → AsyncNotifierProvider
+
+**File changed:** `zuralog/lib/features/today/providers/today_providers.dart`
+
+**What was fixed:**
+- Previously: `FutureProvider<List<SnapshotCardData>>` that fetched data once
+- Now: `AsyncNotifierProvider<SnapshotNotifier, List<SnapshotCardData>>` that watches both upstream providers
+
+**Implementation:**
+```dart
+class SnapshotNotifier extends AsyncNotifier<List<SnapshotCardData>> {
+  @override
+  Future<List<SnapshotCardData>> build() async {
+    final summary = await ref.watch(todayLogSummaryProvider.future);
+    final types = await ref.watch(userLoggedTypesProvider.future);
+    // Build snapshot cards from summary and types
+    return [...];
+  }
+}
+```
+
+**Key decision:**
+| Decision | Rationale |
+|----------|-----------|
+| Watch both upstream providers | Snapshot cards depend on both the summary (today's values) and the types (which cards to show). Changes to either trigger a rebuild. |
+
+### 3. `mealLogModeProvider` — New AsyncNotifierProvider
+
+**File changed:** `zuralog/lib/features/today/providers/today_providers.dart`
+
+**What was added:**
+- New `AsyncNotifierProvider<MealLogModeNotifier, bool>` backed by SharedPreferences key `meal_log_quick_mode`
+- Default value: `false` (full mode)
+- Persisted across app sessions
+
+**Implementation:**
+```dart
+class MealLogModeNotifier extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() async {
+    final prefs = ref.read(prefsProvider);
+    return prefs.getBool('meal_log_quick_mode') ?? false;
+  }
+
+  Future<void> setQuickMode(bool isQuick) async {
+    final prefs = ref.read(prefsProvider);
+    await prefs.setBool('meal_log_quick_mode', isQuick);
+    state = AsyncValue.data(isQuick);
+  }
+}
+```
+
+**File changed:** `zuralog/lib/features/today/presentation/meal_log_screen.dart`
+
+**What was refactored:**
+- Previously: `MealLogScreen` used raw `setState` + `SharedPreferences.getInstance()` to manage quick/full mode toggle
+- Now: Consumes `mealLogModeProvider` via Riverpod
+
+**Key decision:**
+| Decision | Rationale |
+|----------|-----------|
+| Persistent SharedPreferences storage | User's preference (quick vs. full mode) should be remembered across sessions. |
+| AsyncNotifier instead of StateNotifier | Allows async initialization from SharedPreferences at app startup. |
+| Default to full mode | Full mode is the more complete experience; users opt into quick mode if they prefer. |
+
+**Result:**
+- Log Ring updates reactively when new data is logged
+- Snapshot Cards update reactively when new data is logged
+- Meal Log mode is persisted and consumed via Riverpod instead of raw SharedPreferences
+- All three providers now follow the AsyncNotifier pattern for consistency
+
+---
+
+## Today Tab Part 11 — Full Test Suite (2026-03-17)
+
+**Scope:** Comprehensive test coverage across Flutter unit tests, integration tests, and backend security/rate-limit tests.  
+**Branch:** `feat/today-tab-redesign` → merged to main (2026-03-17)
+
+**What was built:**
+
+### Flutter Unit Tests
+
+**File:** `zuralog/test/features/today/providers/today_providers_test.dart`
+
+| Test | Count | Coverage |
+|------|-------|----------|
+| `mealLogModeProvider` persistence | 4 | Default value, save, load, toggle |
+| `calculatePaceSecondsPerKm` conversions | 6 | Metric input, imperial input, zero pace, edge cases |
+| `formatWeightDelta` display | 4 | Positive delta, negative delta, zero delta, unit labels |
+| logRing notifier AsyncData resolution | 1 | Reactive update on upstream provider change |
+| water panel vessel coverage | 2 | Vessel selection, display formatting |
+
+**Function Extractions for Testability:**
+
+- **`calculatePaceSecondsPerKm`** extracted as top-level function in `zuralog/lib/features/today/presentation/run_log_screen.dart`
+  - Converts distance (km) and duration (seconds) to pace (seconds per km)
+  - Testable without widget context
+  - Used by `_calcDisplayPace()` method
+
+- **`formatWeightDelta`** extracted as top-level function in `zuralog/lib/shared/widgets/log_panels/z_weight_log_panel.dart`
+  - Formats weight delta with unit label (e.g., "+2.5 kg", "-1.2 lbs")
+  - Testable without widget context
+  - Used by weight panel display
+
+### Flutter Integration Tests
+
+**File:** `zuralog/test/integration/today_log_flow_test.dart`
+
+| Test | Coverage |
+|------|----------|
+| Water log end-to-end | User opens Log Grid Sheet, taps Water, enters amount, submits, verifies API call and UI update |
+| Meal full-mode end-to-end | User opens Log Grid Sheet, taps Meal, toggles to full mode, enters all fields, submits, verifies API call |
+| Network failure path | User submits log entry while offline, verifies error snackbar and retry mechanism |
+
+### Backend Security Tests
+
+**File:** `cloud-brain/tests/api/v1/test_quick_log_routes.py`
+
+**Security: `user_id`-from-body ignored on all 9 typed endpoints**
+
+All 9 endpoints reject attempts to override the authenticated user's ID via request body:
+
+| Endpoint | Test | Coverage |
+|----------|------|----------|
+| `POST /quick-log/water` | ✅ New | Verifies `user_id` in body is ignored; uses JWT `sub` claim |
+| `POST /quick-log/wellness` | ✅ Existing | Already tested in Part 4 |
+| `POST /quick-log/weight` | ✅ New | Verifies `user_id` in body is ignored |
+| `POST /quick-log/steps` | ✅ Existing | Already tested in Part 4 |
+| `POST /quick-log/sleep` | ✅ New | Verifies `user_id` in body is ignored |
+| `POST /quick-log/run` | ✅ New | Verifies `user_id` in body is ignored |
+| `POST /quick-log/meal` | ✅ New | Verifies `user_id` in body is ignored |
+| `POST /quick-log/supplements` | ✅ New | Verifies `user_id` in body is ignored |
+| `POST /quick-log/symptom` | ✅ New | Verifies `user_id` in body is ignored |
+
+**Rate Limiting: `@limiter.limit()` decorator on all 9 typed endpoints**
+
+All 9 endpoints have rate limiting configured and tested:
+
+| Endpoint | Limit | Test |
+|----------|-------|------|
+| `POST /quick-log/water` | 60/min | ✅ Verified |
+| `POST /quick-log/wellness` | 30/min | ✅ Verified |
+| `POST /quick-log/weight` | 10/min | ✅ Verified |
+| `POST /quick-log/steps` | 10/min | ✅ Verified |
+| `POST /quick-log/sleep` | 10/min | ✅ Verified |
+| `POST /quick-log/run` | 10/min | ✅ Verified |
+| `POST /quick-log/meal` | 10/min | ✅ Verified |
+| `POST /quick-log/supplements` | 10/min | ✅ Verified |
+| `POST /quick-log/symptom` | 10/min | ✅ Verified |
+
+### Test Results
+
+| Metric | Result |
+|--------|--------|
+| Flutter unit + integration tests | 397/397 passing |
+| Backend (api/v1) tests | 81/81 passing |
+| `flutter analyze` | 0 issues |
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Extract functions for testability | `calculatePaceSecondsPerKm` and `formatWeightDelta` are pure functions with no widget dependencies. Extracting them makes unit tests simpler and faster. |
+| Test security at the API boundary | Every endpoint must verify that the authenticated user (from JWT) is used, not a user ID from the request body. This prevents privilege escalation. |
+| Test rate limiting on all endpoints | Rate limiting is a security control. Testing it ensures the limits are actually enforced. |
+| 100% test pass rate | All 397 Flutter tests and 81 backend tests pass. Zero failures. |
+
+**Result:**
+- All provider gaps closed — reactive state management in place
+- Comprehensive test coverage across unit, integration, and security tests
+- All tests passing (397 Flutter + 81 backend)
+- Zero `flutter analyze` issues
+- Ready for production deployment
 
 ---
 
