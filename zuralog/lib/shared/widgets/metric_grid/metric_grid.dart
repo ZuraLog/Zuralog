@@ -102,7 +102,7 @@ class _MetricGridState extends State<MetricGrid> {
                 GestureDetector(
                   onTap: widget.onAddTap,
                   child: Text(
-                    '+ Add metrics',
+                    '+ Add metric',
                     style: AppTextStyles.labelSmall.copyWith(
                       color: colors.primary,
                     ),
@@ -130,7 +130,7 @@ class _MetricGridState extends State<MetricGrid> {
               editMode: _editMode,
               onRemove: (tile) {
                 widget.onRemove?.call(tile);
-                if (widget.tiles.length <= 1) _exitEditMode();
+                if (widget.tiles.length == 1) _exitEditMode();
               },
               onAddTap: widget.onAddTap,
             ),
@@ -174,15 +174,15 @@ class _GridLayout extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
               child: Row(
                 children: [
-                  for (final tile in rowTiles) ...[
+                  for (var tIdx = 0; tIdx < rowTiles.length; tIdx++) ...[
                     Expanded(
                       child: MetricTile(
-                        data: tile,
+                        data: rowTiles[tIdx],
                         inEditMode: editMode,
-                        onRemove: () => onRemove(tile),
+                        onRemove: () => onRemove(rowTiles[tIdx]),
                       ),
                     ),
-                    if (tile != rowTiles.last)
+                    if (tIdx < rowTiles.length - 1)
                       const SizedBox(width: AppDimens.spaceXs),
                   ],
                 ],
@@ -222,15 +222,15 @@ class _GridLayout extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
           child: Row(
             children: [
-              for (final tile in chunk) ...[
+              for (var tIdx = 0; tIdx < chunk.length; tIdx++) ...[
                 Expanded(
                   child: MetricTile(
-                    data: tile,
+                    data: chunk[tIdx],
                     inEditMode: editMode,
-                    onRemove: () => onRemove(tile),
+                    onRemove: () => onRemove(chunk[tIdx]),
                   ),
                 ),
-                if (tile != chunk.last)
+                if (tIdx < chunk.length - 1)
                   const SizedBox(width: AppDimens.spaceXs),
               ],
             ],

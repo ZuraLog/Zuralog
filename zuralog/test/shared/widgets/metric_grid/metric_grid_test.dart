@@ -15,7 +15,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(home: Scaffold(body: MetricGrid(tiles: const [], onAddTap: () {}))),
       );
-      expect(find.text('+ Add metric'), findsOneWidget);
+      // Both the header action and the prompt tile show '+ Add metric' when empty
+      expect(find.text('+ Add metric'), findsNWidgets(2));
     });
 
     testWidgets('renders correct number of MetricTile widgets', (tester) async {
