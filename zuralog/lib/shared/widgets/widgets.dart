@@ -25,6 +25,7 @@ export 'layout/zuralog_scaffold.dart';
 export 'list/z_settings_tile.dart';
 export 'loading/z_loading_skeleton.dart';
 export 'metric_grid/metric_grid.dart';
+export 'metric_grid/metric_picker_sheet.dart';
 export 'metric_grid/metric_tile.dart';
 export 'profile_side_panel.dart';
 export 'sheets/z_log_grid_cell.dart';
