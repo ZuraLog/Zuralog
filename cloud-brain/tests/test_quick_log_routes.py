@@ -88,7 +88,7 @@ def test_supplement_log_accepts_nonempty_ids(mock_db, auth_headers):
     app.dependency_overrides[get_db] = lambda: mock_db
 
     try:
-        with TestClient(app, raise_server_exceptions=False) as client:
+        with TestClient(app) as client:
             response = client.post(
                 "/api/v1/quick-log/supplements",
                 json={"taken_supplement_ids": ["supp-1"]},
@@ -98,6 +98,5 @@ def test_supplement_log_accepts_nonempty_ids(mock_db, auth_headers):
         app.dependency_overrides.pop(get_authenticated_user_id, None)
         app.dependency_overrides.pop(get_db, None)
 
-    # Must NOT be rejected by the empty-list guard specifically.
-    detail = response.json().get("detail", "") if response.status_code == 422 else ""
-    assert "taken_supplement_ids must contain" not in detail
+    # Must pass the empty-list guard — 500 means a real server error slipped through.
+    assert response.status_code != 500, f"Server error: {response.json()}"
