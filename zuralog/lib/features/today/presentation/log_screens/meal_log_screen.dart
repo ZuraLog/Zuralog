@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -38,8 +39,9 @@ class MealLogScreen extends ConsumerStatefulWidget {
 class _MealLogScreenState extends ConsumerState<MealLogScreen> {
   bool _quickMode = false;
   String? _mealType;
-  int? _caloriesPreset;
+  int? _calories;
   final _descriptionCtrl = TextEditingController();
+  final _caloriesCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   final Set<String> _feelChips = {};
   final Set<String> _tags = {};
@@ -69,6 +71,19 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
     await prefs.setBool('meal_log_quick_mode', value);
   }
 
+  void _onCaloriesTyped(String raw) {
+    final parsed = int.tryParse(raw.trim());
+    setState(() => _calories = parsed);
+  }
+
+  void _onPresetChipTapped(int preset) {
+    final isDeselecting = _calories == preset;
+    setState(() {
+      _calories = isDeselecting ? null : preset;
+      _caloriesCtrl.text = isDeselecting ? '' : preset.toString();
+    });
+  }
+
   bool get _canSave {
     if (_isSaving || _mealType == null) return false;
     if (!_quickMode && _descriptionCtrl.text.trim().isEmpty) return false;
@@ -84,7 +99,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
         mealType: _mealType!.toLowerCase().replaceAll('-', '_'),
         quickMode: _quickMode,
         description: _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
-        caloriesKcal: _caloriesPreset,
+        caloriesKcal: _calories,
         feelChips: _feelChips.toList(),
         tags: _tags.toList(),
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
@@ -105,6 +120,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
   @override
   void dispose() {
     _descriptionCtrl.dispose();
+    _caloriesCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -143,12 +159,25 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                 if (_quickMode) ...[
                   const ZSectionLabel(label: 'Calories'),
                   const SizedBox(height: AppDimens.spaceSm),
+                  TextField(
+                    controller: _caloriesCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 4,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      hintText: 'Enter calories',
+                      suffixText: 'kcal',
+                      counterText: '',
+                    ),
+                    onChanged: _onCaloriesTyped,
+                  ),
+                  const SizedBox(height: AppDimens.spaceSm),
                   Wrap(
                     spacing: AppDimens.spaceSm,
                     children: _kCaloriePresets.map((c) => ChoiceChip(
                       label: Text('~$c'),
-                      selected: _caloriesPreset == c,
-                      onSelected: (_) => setState(() => _caloriesPreset = c),
+                      selected: _calories == c,
+                      onSelected: (_) => _onPresetChipTapped(c),
                     )).toList(),
                   ),
                 ] else ...[
@@ -162,14 +191,14 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: AppDimens.spaceLg),
-                  ZSectionLabel(label: 'Rough calories', isOptional: true),
+                  const ZSectionLabel(label: 'Rough calories', isOptional: true),
                   const SizedBox(height: AppDimens.spaceSm),
                   Wrap(
                     spacing: AppDimens.spaceSm,
                     children: _kCaloriePresets.map((c) => ChoiceChip(
                       label: Text('~$c'),
-                      selected: _caloriesPreset == c,
-                      onSelected: (_) => setState(() => _caloriesPreset = c),
+                      selected: _calories == c,
+                      onSelected: (_) => setState(() => _calories = _calories == c ? null : c),
                     )).toList(),
                   ),
                   const SizedBox(height: AppDimens.spaceLg),
@@ -213,7 +242,9 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
             child: FilledButton(
               onPressed: _canSave ? _save : null,
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              child: _isSaving ? const CircularProgressIndicator.adaptive() : const Text('Save Meal'),
+              child: _isSaving
+                  ? const CircularProgressIndicator.adaptive()
+                  : Text(_quickMode ? 'Save' : 'Save Meal'),
             ),
           ),
         ],

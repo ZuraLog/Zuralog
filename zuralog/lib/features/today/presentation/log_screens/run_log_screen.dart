@@ -9,6 +9,8 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -34,6 +36,16 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
   int? _effortIndex;
   final _notesCtrl = TextEditingController();
   bool _isSaving = false;
+  bool _useMetric = true; // initialised from unitsSystemProvider in initState
+
+  @override
+  void initState() {
+    super.initState();
+    // ref.read() is safe to call synchronously in initState for ConsumerStatefulWidget.
+    // Read once — the toggle is session-scoped and does not write back to the preference.
+    final units = ref.read(unitsSystemProvider);
+    _useMetric = units == UnitsSystem.metric;
+  }
 
   @override
   void dispose() {
@@ -44,11 +56,17 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
     super.dispose();
   }
 
-  double? get _distanceKm => double.tryParse(_distanceCtrl.text.trim());
+  /// Returns the entered distance converted to km regardless of display unit.
+  /// This is what gets posted to the API — the backend always stores km.
+  double? get _distanceKm {
+    final raw = double.tryParse(_distanceCtrl.text.trim());
+    if (raw == null) return null;
+    return _useMetric ? raw : raw * 1.60934; // mi → km
+  }
 
   int? get _durationSeconds {
     final m = int.tryParse(_minutesCtrl.text.trim()) ?? 0;
-    final s = int.tryParse(_secondsCtrl.text.trim()) ?? 0;
+    final s = (int.tryParse(_secondsCtrl.text.trim()) ?? 0).clamp(0, 59);
     final total = m * 60 + s;
     return total > 0 ? total : null;
   }
@@ -60,11 +78,21 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
     return (durSec / distKm).round();
   }
 
+  /// Pace converted to the display unit.
+  int? _calcDisplayPace() {
+    final secsPerKm = _calcPaceSecondsPerKm();
+    if (secsPerKm == null) return null;
+    if (_useMetric) return secsPerKm;
+    // A mile is longer than a km, so pace per mile is a larger number — multiply.
+    // e.g. 300 sec/km × 1.60934 ≈ 483 sec/mile ≈ 8:03/mi
+    return (secsPerKm * 1.60934).round();
+  }
+
   String _formatPace(int? secsPerKm) {
     if (secsPerKm == null) return '—';
     final m = secsPerKm ~/ 60;
     final s = secsPerKm % 60;
-    return '$m:${s.toString().padLeft(2, '0')} / km';
+    return '$m:${s.toString().padLeft(2, '0')} / ${_useMetric ? 'km' : 'mi'}';
   }
 
   bool get _canSave =>
@@ -139,12 +167,27 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                         )).toList(),
                       ),
                       const SizedBox(height: AppDimens.spaceLg),
-                      const ZSectionLabel(label: 'Distance'),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const ZSectionLabel(label: 'Distance'),
+                          _UnitToggle(
+                            useMetric: _useMetric,
+                            onToggle: () => setState(() {
+                              _useMetric = !_useMetric;
+                              _distanceCtrl.clear();
+                            }),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: AppDimens.spaceSm),
                       TextField(
                         controller: _distanceCtrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(hintText: '0.0', suffixText: 'km'),
+                        decoration: InputDecoration(
+                          hintText: '0.0',
+                          suffixText: _useMetric ? 'km' : 'mi',
+                        ),
                         onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: AppDimens.spaceLg),
@@ -178,7 +221,7 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                             Text('Avg pace', style: AppTextStyles.caption),
                             Text(': ', style: AppTextStyles.caption),
                             Text(
-                              _formatPace(_calcPaceSecondsPerKm()),
+                              _formatPace(_calcDisplayPace()),
                               style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -220,6 +263,51 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _UnitToggle extends StatelessWidget {
+  const _UnitToggle({required this.useMetric, required this.onToggle});
+  final bool useMetric;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onToggle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'km',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: useMetric ? FontWeight.w700 : FontWeight.w400,
+                color: useMetric ? AppColors.primary : Colors.grey,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text('·', style: TextStyle(color: Colors.grey)),
+            ),
+            Text(
+              'mi',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: !useMetric ? FontWeight.w700 : FontWeight.w400,
+                color: !useMetric ? AppColors.primary : Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

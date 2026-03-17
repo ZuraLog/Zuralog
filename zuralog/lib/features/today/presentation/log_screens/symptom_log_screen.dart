@@ -102,7 +102,7 @@ class _SymptomLogScreenState extends ConsumerState<SymptomLogScreen> {
                   children: List.generate(4, (i) {
                     final selected = _severityIndex == i;
                     return GestureDetector(
-                      onTap: () => setState(() => _severityIndex = selected ? null : i),
+                      onTap: () => setState(() => _severityIndex = i),
                       child: Column(
                         children: [
                           Text(_kSeverityEmojis[i], style: TextStyle(fontSize: selected ? 36 : 28)),
