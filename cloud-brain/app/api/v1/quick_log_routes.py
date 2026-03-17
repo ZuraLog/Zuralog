@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
-from collections import defaultdict  # noqa: F401 — used in aggregate helper (later task)
+from collections import defaultdict
 
 from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -195,15 +195,43 @@ def _validate_metric_type(metric_type: str) -> None:
 def _resolve_logged_at(logged_at: str | None) -> str:
     """Resolve the logged_at timestamp, defaulting to UTC now.
 
+    Validates the format and rejects obviously wrong timestamps (more than
+    24 hours in the future or more than 1 year in the past).
+
     Args:
         logged_at: ISO datetime string provided by the client, or None.
 
     Returns:
         ISO datetime string to store.
+
+    Raises:
+        HTTPException: 422 if the string is not valid ISO 8601, or if the
+            timestamp is out of the accepted range.
     """
-    if logged_at:
+    if not logged_at:
+        return datetime.now(timezone.utc).isoformat()
+    try:
+        dt = datetime.fromisoformat(logged_at.replace("Z", "+00:00"))
+        # Reject timestamps more than 24h in the future or more than 1 year in the past
+        now = datetime.now(timezone.utc)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        if dt > now + timedelta(hours=24):
+            raise HTTPException(
+                status_code=422,
+                detail="logged_at cannot be more than 24 hours in the future.",
+            )
+        if dt < now - timedelta(days=365):
+            raise HTTPException(
+                status_code=422,
+                detail="logged_at cannot be more than 1 year in the past.",
+            )
         return logged_at
-    return datetime.now(timezone.utc).isoformat()
+    except (ValueError, OverflowError):
+        raise HTTPException(
+            status_code=422,
+            detail="logged_at must be a valid ISO 8601 datetime string.",
+        )
 
 
 def _log_to_response(log: QuickLog) -> dict:
@@ -344,7 +372,9 @@ def _aggregate_today_logs(logs) -> tuple[list[str], dict]:
 
 
 @router.post("", summary="Log a single metric entry")
+@limiter.limit("60/minute")
 async def create_quick_log(
+    request: Request,
     body: QuickLogCreate,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
@@ -373,7 +403,9 @@ async def create_quick_log(
 
 
 @router.post("/batch", summary="Log multiple metric entries at once")
+@limiter.limit("10/minute")
 async def create_quick_log_batch(
+    request: Request,
     body: list[QuickLogCreate],
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
@@ -424,7 +456,9 @@ async def create_quick_log_batch(
 
 
 @router.get("", summary="Query quick-log history")
+@limiter.limit("60/minute")
 async def list_quick_logs(
+    request: Request,
     metric_type: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
@@ -455,6 +489,8 @@ async def list_quick_logs(
     """
     if metric_type is not None:
         _validate_metric_type(metric_type)
+
+    limit = min(limit, 100)  # cap at 100 regardless of client request
 
     query = select(QuickLog).where(QuickLog.user_id == user_id)
 
