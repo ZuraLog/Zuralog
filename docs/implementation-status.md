@@ -1,9 +1,206 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-17 (Today Tab Part 6 complete: log screen fixes)  
+**Last Updated:** 2026-03-17 (Today Tab Parts 7 & 8 complete: backend hardening & component rename)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Today Tab Part 8 — Shared Components Audit (2026-03-17)
+
+**Scope:** Single shared component rename across definition, call sites, and tests.  
+**Branch:** commits on `main` (2026-03-17)
+
+**What was built:**
+
+### Component Rename: `ZEmptyInsightsState` → `ZEmptyInsightsCard`
+
+**Files changed:**
+- `zuralog/lib/shared/widgets/empty_insights_card.dart` — File renamed from `empty_insights_state.dart`; class renamed from `ZEmptyInsightsState` to `ZEmptyInsightsCard`
+- `zuralog/lib/features/today/presentation/today_feed_screen.dart` — Two call sites updated: `ZEmptyInsightsCard()` in `_buildInsightsSection()` and `ZEmptyInsightsCard()` in `_buildEmptyInsightsCard()`
+- `zuralog/test/shared/widgets/empty_insights_card_test.dart` — Test file renamed from `empty_insights_state_test.dart`; test class and references updated
+- `zuralog/lib/shared/widgets/widgets.dart` — Barrel export unchanged (exports by file path, so no code changes needed)
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Rename from `State` to `Card` | The widget displays a card UI element, not a state machine. The new name is more descriptive of what the widget renders. |
+| Update all call sites in one batch | Ensures consistency. No code path accidentally uses the old name. |
+| Barrel export by file path | The `widgets.dart` barrel uses `export 'empty_insights_card.dart'` (file path), not `export 'package:zuralog/shared/widgets/ZEmptyInsightsCard.dart'` (class name). File rename automatically updates the export. |
+
+**Test results:**
+- `flutter analyze`: 0 issues
+- `flutter test`: 377 tests passing, 0 failing
+
+---
+
+## Today Tab Part 7 — Backend Hardening (2026-03-17)
+
+**Scope:** Five backend hardening tasks: composite index verification, Redis storage for rate-limit counters, UTC normalization, empty supplement guard, and CORS production safety.  
+**Branch:** commits on `main` (2026-03-17)
+
+**What was built:**
+
+### 1. Composite Index Already Existed
+
+**Verification:** The composite index `ix_quick_logs_user_type_logged` on `(user_id, metric_type, logged_at DESC)` was already added in migration `o0p1q2r3s4t5`. No new migration needed. Confirmed via `\d quick_logs` in Supabase SQL editor.
+
+**Key decision:** Avoid redundant index creation. The index was already in place from earlier work.
+
+### 2. slowapi Redis Storage for Rate-Limit Counters
+
+**File changed:** `cloud-brain/app/limiter.py`
+
+**What was fixed:**
+- Previously: `Limiter(key_func=...)` with no storage backend — rate-limit counters stored in-memory on each server instance
+- Now: `Limiter(key_func=..., storage_uri=os.getenv("REDIS_URL"))` — counters stored in Redis and shared across all server instances in production
+
+**Key decision:**
+| Decision | Rationale |
+|----------|-----------|
+| Redis storage for rate-limit counters | In production, the backend runs on multiple Railway instances. In-memory counters on each instance would allow a user to bypass rate limits by distributing requests across instances (e.g., 60 requests/min limit becomes 60 × N instances). Redis is the single source of truth for all instances. |
+| Use `os.getenv("REDIS_URL")` | Railway sets `REDIS_URL` env var automatically when a Redis service is provisioned. Fallback to in-memory if unset (safe for local dev). |
+
+### 3. `logged_at` UTC Normalization
+
+**File changed:** `cloud-brain/app/api/v1/quick_log_routes.py`
+
+**What was fixed:**
+- Previously: `logged_at` returned as-is from the request, potentially with a non-UTC timezone offset
+- Now: `_resolve_logged_at()` helper normalizes any non-UTC offset to UTC before returning the string
+
+**Implementation:**
+```python
+def _resolve_logged_at(logged_at_str: str | None) -> str:
+    """Normalize logged_at to UTC ISO string."""
+    if not logged_at_str:
+        return datetime.now(timezone.utc).isoformat()
+    dt = datetime.fromisoformat(logged_at_str)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt.isoformat()
+```
+
+**Tests added:** 3 tests in `cloud-brain/tests/api/v1/test_quick_log_routes.py` covering:
+- Non-UTC offset → UTC conversion
+- Naive datetime → UTC assumption
+- None/empty string → current UTC time
+
+**Key decision:**
+| Decision | Rationale |
+|----------|-----------|
+| Normalize to UTC at the API boundary | The backend stores all timestamps in UTC. Normalizing at the API entry point ensures consistency and prevents timezone bugs downstream. |
+| Assume naive datetimes are UTC | If a client sends a naive datetime (no timezone), assume it's UTC rather than local time. This is the safest assumption for a health app. |
+
+### 4. Empty Supplement IDs Guard
+
+**File changed:** `cloud-brain/app/api/v1/quick_log_routes.py`
+
+**What was fixed:**
+- Previously: `POST /quick-log/supplements` accepted `taken_supplement_ids: []` (empty list) and created a log entry with no supplements
+- Now: Returns 422 (Unprocessable Entity) when `taken_supplement_ids` is empty
+
+**Implementation:**
+```python
+@router.post("/supplements", status_code=201)
+async def log_supplements(
+    body: QuickLogSupplementsRequest,
+    user_id: str = Depends(get_authenticated_user_id),
+    session: AsyncSession = Depends(get_session),
+):
+    if not body.taken_supplement_ids:
+        raise HTTPException(status_code=422, detail="At least one supplement ID required")
+    # ... rest of handler
+```
+
+**Dead code removed:** The old ownership-check wrapper that was never used.
+
+**Tests added:** 2 tests covering:
+- Empty list → 422 response
+- Non-empty list → 201 response
+
+**Key decision:**
+| Decision | Rationale |
+|----------|-----------|
+| Reject empty supplement lists | A supplement log with no supplements is meaningless. Rejecting it prevents data pollution and makes the API contract clearer. |
+| Return 422 instead of 400 | 422 (Unprocessable Entity) is semantically correct for validation failures. 400 (Bad Request) is for malformed syntax. |
+
+### 5. CORS Production Guard
+
+**File changed:** `cloud-brain/app/main.py`
+
+**What was fixed:**
+- Previously: CORS was configured with `allow_origins=["*"]` in production (unsafe) or via a dead `lifespan` check that never ran
+- Now: `_resolve_cors_origins()` helper validates the configuration at startup
+
+**Implementation:**
+```python
+def _resolve_cors_origins() -> list[str]:
+    """Resolve CORS allowed origins with production safety check."""
+    allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
+    if not allowed_origins_str:
+        if os.getenv("ENVIRONMENT") == "production":
+            raise RuntimeError(
+                "ALLOWED_ORIGINS env var is required in production. "
+                "Set to comma-separated list of allowed domains (e.g., 'https://app.zuralog.com,https://web.zuralog.com')"
+            )
+        logger.warning("ALLOWED_ORIGINS not set; using wildcard '*' in development")
+        return ["*"]
+    
+    origins = [o.strip() for o in allowed_origins_str.split(",")]
+    if not origins:
+        if os.getenv("ENVIRONMENT") == "production":
+            raise RuntimeError("ALLOWED_ORIGINS parses to empty list in production")
+        logger.warning("ALLOWED_ORIGINS parses to empty list; using wildcard '*' in development")
+        return ["*"]
+    
+    return origins
+```
+
+**Wired in lifespan:**
+```python
+async def lifespan(app: FastAPI):
+    # Startup
+    cors_origins = _resolve_cors_origins()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    yield
+    # Shutdown
+```
+
+**Dead code removed:** The old `lifespan` CORS check that was never executed.
+
+**Tests added:** 4 tests covering:
+- Production + `ALLOWED_ORIGINS` unset → `RuntimeError`
+- Production + `ALLOWED_ORIGINS` empty → `RuntimeError`
+- Development + `ALLOWED_ORIGINS` unset → warning + wildcard
+- Development + `ALLOWED_ORIGINS` set → uses provided origins
+
+**Key decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| Fail fast at startup in production | Misconfigured CORS is a security issue. Failing at startup makes the problem visible immediately during deployment. Silent wildcard in production is dangerous. |
+| Warn but allow wildcard in development | Development environments often need wildcard CORS for local testing (localhost:3000, localhost:3001, etc.). Warning reminds developers to set proper origins before deploying. |
+| Validate at startup, not per-request | CORS configuration is static. Validating once at startup is more efficient than checking on every request. |
+| Comma-separated env var format | Simple, human-readable, and standard for multi-value env vars. |
+
+**Result:**
+- Production deployments with missing or empty `ALLOWED_ORIGINS` fail immediately with a clear error message
+- Development deployments work out of the box with a warning
+- Rate-limit counters are shared across all server instances via Redis
+- All timestamps are normalized to UTC at the API boundary
+- Empty supplement logs are rejected
+- CORS is validated at startup, not silently misconfigured
 
 ---
 
