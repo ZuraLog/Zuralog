@@ -162,23 +162,33 @@ final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
 
 // ── Log Ring ──────────────────────────────────────────────────────────────────
 
-/// State for the Log Ring widget.
+/// Notifier for the Log Ring widget state.
 ///
-/// Derived from [todayLogSummaryProvider] (what was logged today) and
-/// [userLoggedTypesProvider] (all types the user has ever used).
+/// Watches [todayLogSummaryProvider] and [userLoggedTypesProvider] reactively.
+/// When either upstream provider is invalidated (e.g. after a log submission),
+/// this notifier automatically rebuilds.
 ///
-/// Uses `ref.watch(provider.future)` — the correct pattern inside a
-/// FutureProvider body for establishing reactive dependencies on other
-/// async providers.
-final logRingProvider = FutureProvider<LogRingState>((ref) async {
-  final summary = await ref.watch(todayLogSummaryProvider.future);
-  final allTypes = await ref.watch(userLoggedTypesProvider.future);
+/// Using an [AsyncNotifier] instead of a plain [FutureProvider] ensures that
+/// the reactive `ref.watch` inside [build] correctly establishes dependencies
+/// and handles loading/error/data states without runtime errors on first load.
+class LogRingNotifier extends AsyncNotifier<LogRingState> {
+  @override
+  Future<LogRingState> build() async {
+    final summary = await ref.watch(todayLogSummaryProvider.future);
+    final allTypes = await ref.watch(userLoggedTypesProvider.future);
 
-  return LogRingState(
-    loggedCount: summary.loggedTypes.length,
-    totalCount: allTypes.length,
-  );
-});
+    return LogRingState(
+      loggedCount: summary.loggedTypes.length,
+      totalCount: allTypes.length,
+    );
+  }
+}
+
+/// Provider for the Log Ring widget state. Rebuilds automatically when
+/// [todayLogSummaryProvider] or [userLoggedTypesProvider] change.
+final logRingProvider = AsyncNotifierProvider<LogRingNotifier, LogRingState>(
+  LogRingNotifier.new,
+);
 
 // ── Snapshot Cards ────────────────────────────────────────────────────────────
 

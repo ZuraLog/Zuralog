@@ -5,6 +5,15 @@ import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/health/z_log_ring_widget.dart';
 
+/// Stub notifier that returns a fixed [LogRingState] without hitting any
+/// real data sources. Used to override [logRingProvider] in widget tests.
+class _StubLogRingNotifier extends LogRingNotifier {
+  _StubLogRingNotifier(this._value);
+  final LogRingState _value;
+  @override
+  Future<LogRingState> build() async => _value;
+}
+
 void main() {
   group('ZLogRingWidget', () {
     testWidgets('renders without error in loading state', (tester) async {
@@ -35,7 +44,7 @@ void main() {
         ProviderScope(
           overrides: [
             logRingProvider.overrideWith(
-              (ref) async => const LogRingState(loggedCount: 0, totalCount: 0),
+              () => _StubLogRingNotifier(const LogRingState(loggedCount: 0, totalCount: 0)),
             ),
           ],
           child: MaterialApp(
@@ -54,7 +63,7 @@ void main() {
         ProviderScope(
           overrides: [
             logRingProvider.overrideWith(
-              (ref) async => const LogRingState(loggedCount: 3, totalCount: 9),
+              () => _StubLogRingNotifier(const LogRingState(loggedCount: 3, totalCount: 9)),
             ),
           ],
           child: MaterialApp(
@@ -74,7 +83,7 @@ void main() {
         ProviderScope(
           overrides: [
             logRingProvider.overrideWith(
-              (ref) async => const LogRingState(loggedCount: 0, totalCount: 0),
+              () => _StubLogRingNotifier(const LogRingState(loggedCount: 0, totalCount: 0)),
             ),
           ],
           child: MaterialApp(

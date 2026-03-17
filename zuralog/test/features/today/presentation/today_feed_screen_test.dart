@@ -15,6 +15,14 @@ import 'package:zuralog/shared/widgets/health/z_log_ring_widget.dart';
 
 // ── Stub notifiers ────────────────────────────────────────────────────────────
 
+/// Returns a fixed [LogRingState] without hitting real data sources.
+class _StubLogRingNotifier extends LogRingNotifier {
+  _StubLogRingNotifier(this._value);
+  final LogRingState _value;
+  @override
+  Future<LogRingState> build() async => _value;
+}
+
 /// Returns null profile without making any network calls.
 class _StubUserProfileNotifier extends UserProfileNotifier {
   @override
@@ -70,7 +78,7 @@ ProviderContainer _container() => ProviderContainer(
           (ref) async => TodayLogSummary.empty,
         ),
         logRingProvider.overrideWith(
-          (ref) async => const LogRingState(loggedCount: 0, totalCount: 0),
+          () => _StubLogRingNotifier(const LogRingState(loggedCount: 0, totalCount: 0)),
         ),
         snapshotProvider.overrideWith(
           (ref) async => const <SnapshotCardData>[],
