@@ -27,30 +27,6 @@ class MockTodayRepo extends Mock implements TodayRepositoryInterface {}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Builds a [ProviderContainer] with a [MockTodayRepo] override.
-///
-/// [loggedTypesAfterSave] controls what [getTodayLogSummary] returns after
-/// [logWater] is called — simulates the server reflecting the new entry.
-ProviderContainer _makeContainer({
-  required MockTodayRepo repo,
-  Set<String> initialLoggedTypes = const {},
-}) {
-  final container = ProviderContainer(
-    overrides: [
-      todayRepositoryProvider.overrideWithValue(repo),
-      todayLogSummaryProvider.overrideWith(
-        (ref) async => TodayLogSummary(
-          loggedTypes: initialLoggedTypes,
-          latestValues: const {},
-        ),
-      ),
-      unitsSystemProvider.overrideWithValue(UnitsSystem.metric),
-    ],
-  );
-  addTearDown(container.dispose);
-  return container;
-}
-
 /// A host scaffold that opens [ZLogGridSheet] when the "Open" button is tapped.
 ///
 /// [onFullScreenRoute] is forwarded to the sheet so full-screen tiles can
