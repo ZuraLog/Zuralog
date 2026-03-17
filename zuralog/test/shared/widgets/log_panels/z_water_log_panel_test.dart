@@ -100,5 +100,37 @@ void main() {
       // 8 oz * 29.5735 = 236.588 ml
       expect(savedAmount, closeTo(236.6, 1.0));
     });
+
+    testWidgets('Selecting Small cup chip sets 150 ml', (tester) async {
+      double? savedAmount;
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml) async => savedAmount = ml,
+        onBack: () {},
+      )));
+      await tester.pump();
+
+      await tester.tap(find.textContaining('Small cup'));
+      await tester.pump();
+
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(savedAmount, closeTo(150.0, 0.01));
+    });
+
+    testWidgets('Selecting Bottle chip sets 500 ml', (tester) async {
+      double? savedAmount;
+      await tester.pumpWidget(_wrap(ZWaterLogPanel(
+        onSave: (ml) async => savedAmount = ml,
+        onBack: () {},
+      )));
+      await tester.pump();
+
+      await tester.tap(find.textContaining('Bottle'));
+      await tester.pump();
+
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(savedAmount, closeTo(500.0, 0.01));
+    });
   });
 }
