@@ -21,6 +21,8 @@
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -472,3 +474,60 @@ final latestLogValuesProvider =
     return const {};
   }
 });
+
+// ── Pinned Metrics ────────────────────────────────────────────────────────────
+
+/// Notifier that persists the user's ordered list of pinned metric type
+/// strings for the Today tab's adaptive metric grid.
+///
+/// The list is stored as a JSON-encoded string in SharedPreferences under
+/// the key [_kPinnedMetricsKey].
+///
+/// Call [addMetric] / [removeMetric] to update the list. Both methods
+/// persist immediately and update the state synchronously.
+class PinnedMetricsNotifier extends AsyncNotifier<List<String>> {
+  static const _kPinnedMetricsKey = 'today_pinned_metrics';
+
+  @override
+  Future<List<String>> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kPinnedMetricsKey);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = (jsonDecode(raw) as List<dynamic>).cast<String>();
+      return decoded;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Adds [metricType] to the end of the pinned list.
+  /// No-op if [metricType] is already present.
+  Future<void> addMetric(String metricType) async {
+    final current = await future;
+    if (current.contains(metricType)) return;
+    final updated = [...current, metricType];
+    await _persist(updated);
+    state = AsyncData(updated);
+  }
+
+  /// Removes [metricType] from the pinned list.
+  /// No-op if [metricType] is not in the list.
+  Future<void> removeMetric(String metricType) async {
+    final current = await future;
+    final updated = current.where((m) => m != metricType).toList();
+    await _persist(updated);
+    state = AsyncData(updated);
+  }
+
+  Future<void> _persist(List<String> list) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kPinnedMetricsKey, jsonEncode(list));
+  }
+}
+
+/// Provider for the user's ordered list of pinned metric type strings.
+final pinnedMetricsProvider =
+    AsyncNotifierProvider<PinnedMetricsNotifier, List<String>>(
+  PinnedMetricsNotifier.new,
+);
