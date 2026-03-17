@@ -192,30 +192,36 @@ final logRingProvider = AsyncNotifierProvider<LogRingNotifier, LogRingState>(
 
 // ── Snapshot Cards ────────────────────────────────────────────────────────────
 
-/// List of snapshot card data for the horizontally scrollable row.
+/// Notifier for the snapshot card list.
 ///
 /// Watches both [todayLogSummaryProvider] and [userLoggedTypesProvider].
 /// Shows one card per metric type the user has ever logged, ordered to
 /// match the log grid. Cards with no data today show an empty state.
-///
-/// **Part 4 note:** The spec describes this as `AsyncNotifierProvider`.
-/// It is `FutureProvider` for Part 1 (stub data). Upgrade to `AsyncNotifier`
-/// in Part 4 when real data is wired in.
-final snapshotProvider = FutureProvider<List<SnapshotCardData>>((ref) async {
-  final summary = await ref.watch(todayLogSummaryProvider.future);
-  final allTypes = await ref.watch(userLoggedTypesProvider.future);
+class SnapshotNotifier extends AsyncNotifier<List<SnapshotCardData>> {
+  @override
+  Future<List<SnapshotCardData>> build() async {
+    final summary = await ref.watch(todayLogSummaryProvider.future);
+    final allTypes = await ref.watch(userLoggedTypesProvider.future);
 
-  // Ordered list matching the log grid tile order.
-  const orderedTypes = [
-    'mood', 'energy', 'stress', 'water', 'sleep', 'weight',
-    'steps', 'run', 'meal', 'supplement', 'symptom',
-  ];
+    // Ordered list matching the log grid tile order.
+    const orderedTypes = [
+      'mood', 'energy', 'stress', 'water', 'sleep', 'weight',
+      'steps', 'run', 'meal', 'supplement', 'symptom',
+    ];
 
-  return orderedTypes
-      .where((type) => allTypes.contains(type))
-      .map((type) => _buildSnapshotCard(type, summary))
-      .toList();
-});
+    return orderedTypes
+        .where((type) => allTypes.contains(type))
+        .map((type) => _buildSnapshotCard(type, summary))
+        .toList();
+  }
+}
+
+/// Provider for snapshot card data. Rebuilds automatically when
+/// [todayLogSummaryProvider] or [userLoggedTypesProvider] change.
+final snapshotProvider =
+    AsyncNotifierProvider<SnapshotNotifier, List<SnapshotCardData>>(
+  SnapshotNotifier.new,
+);
 
 // ── Snapshot card builder ─────────────────────────────────────────────────────
 
