@@ -41,13 +41,10 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
   @override
   void initState() {
     super.initState();
-    // Read the global units preference. This runs once — the toggle is
-    // session-scoped and does not write back to the preference.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final units = ref.read(unitsSystemProvider);
-      setState(() => _useMetric = units == UnitsSystem.metric);
-    });
+    // ref.read() is safe to call synchronously in initState for ConsumerStatefulWidget.
+    // Read once — the toggle is session-scoped and does not write back to the preference.
+    final units = ref.read(unitsSystemProvider);
+    _useMetric = units == UnitsSystem.metric;
   }
 
   @override
@@ -69,7 +66,7 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
 
   int? get _durationSeconds {
     final m = int.tryParse(_minutesCtrl.text.trim()) ?? 0;
-    final s = int.tryParse(_secondsCtrl.text.trim()) ?? 0;
+    final s = (int.tryParse(_secondsCtrl.text.trim()) ?? 0).clamp(0, 59);
     final total = m * 60 + s;
     return total > 0 ? total : null;
   }
@@ -176,7 +173,10 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
                           const ZSectionLabel(label: 'Distance'),
                           _UnitToggle(
                             useMetric: _useMetric,
-                            onToggle: () => setState(() => _useMetric = !_useMetric),
+                            onToggle: () => setState(() {
+                              _useMetric = !_useMetric;
+                              _distanceCtrl.clear();
+                            }),
                           ),
                         ],
                       ),
