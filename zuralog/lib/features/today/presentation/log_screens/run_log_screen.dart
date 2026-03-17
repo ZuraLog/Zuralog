@@ -20,6 +20,19 @@ const _kEffortLabels = ['Easy', 'Steady', 'Hard', 'Max'];
 
 enum _RunMode { picker, manualForm }
 
+/// Calculates average pace in seconds per kilometre.
+///
+/// Returns `null` if [distanceKm] is zero or negative, or if
+/// [durationSeconds] is zero or negative — prevents division by zero.
+///
+/// Examples:
+/// - `calculatePaceSecondsPerKm(5.0, 1500)` → `300` (5:00/km)
+/// - `calculatePaceSecondsPerKm(10.0, 3600)` → `360` (6:00/km)
+int? calculatePaceSecondsPerKm(double distanceKm, int durationSeconds) {
+  if (distanceKm <= 0 || durationSeconds <= 0) return null;
+  return (durationSeconds / distanceKm).round();
+}
+
 class RunLogScreen extends ConsumerStatefulWidget {
   const RunLogScreen({super.key});
 
@@ -74,8 +87,8 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
   int? _calcPaceSecondsPerKm() {
     final distKm = _distanceKm;
     final durSec = _durationSeconds;
-    if (distKm == null || distKm == 0 || durSec == null) return null;
-    return (durSec / distKm).round();
+    if (distKm == null || durSec == null) return null;
+    return calculatePaceSecondsPerKm(distKm, durSec);
   }
 
   /// Pace converted to the display unit.
