@@ -488,41 +488,61 @@ final latestLogValuesProvider =
 class PinnedMetricsNotifier extends AsyncNotifier<List<String>> {
   static const _kPinnedMetricsKey = 'today_pinned_metrics';
 
+  /// Used to expose the key for testing.
+  @visibleForTesting
+  static const kPinnedMetricsKeyForTest = _kPinnedMetricsKey;
+
+  // Serializes read-modify-write operations so concurrent calls don't clobber each other.
+  Future<void> _pendingOperation = Future.value();
+
   @override
   Future<List<String>> build() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_kPinnedMetricsKey);
-    if (raw == null || raw.isEmpty) return [];
+    if (raw == null || raw.isEmpty) return List.unmodifiable([]);
     try {
       final decoded = (jsonDecode(raw) as List<dynamic>).cast<String>();
-      return decoded;
+      return List.unmodifiable(decoded);
     } catch (_) {
-      return [];
+      return List.unmodifiable([]);
     }
   }
 
   /// Adds [metricType] to the end of the pinned list.
   /// No-op if [metricType] is already present.
-  Future<void> addMetric(String metricType) async {
-    final current = await future;
-    if (current.contains(metricType)) return;
-    final updated = [...current, metricType];
-    await _persist(updated);
-    state = AsyncData(updated);
+  Future<void> addMetric(String metricType) {
+    _pendingOperation = _pendingOperation.then((_) async {
+      final current = await future;
+      if (current.contains(metricType)) return;
+      final updated = [...current, metricType];
+      await _persist(updated);
+      state = AsyncData(List.unmodifiable(updated));
+    });
+    return _pendingOperation;
   }
 
   /// Removes [metricType] from the pinned list.
   /// No-op if [metricType] is not in the list.
-  Future<void> removeMetric(String metricType) async {
-    final current = await future;
-    final updated = current.where((m) => m != metricType).toList();
-    await _persist(updated);
-    state = AsyncData(updated);
+  Future<void> removeMetric(String metricType) {
+    _pendingOperation = _pendingOperation.then((_) async {
+      final current = await future;
+      if (!current.contains(metricType)) return; // no-op guard
+      final updated = current.where((m) => m != metricType).toList();
+      await _persist(updated);
+      state = AsyncData(List.unmodifiable(updated));
+    });
+    return _pendingOperation;
   }
 
   Future<void> _persist(List<String> list) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kPinnedMetricsKey, jsonEncode(list));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kPinnedMetricsKey, jsonEncode(list));
+    } catch (e, st) {
+      // Persistence failed — state is already updated in memory.
+      // Log for diagnostics; do not rethrow so the UI remains functional.
+      debugPrint('PinnedMetricsNotifier: failed to persist: $e\n$st');
+    }
   }
 }
 

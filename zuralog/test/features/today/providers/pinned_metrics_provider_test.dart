@@ -28,7 +28,7 @@ void main() {
 
     test('removeMetric removes from the list', () async {
       SharedPreferences.setMockInitialValues(
-        {'today_pinned_metrics': '["water","steps"]'},
+        {PinnedMetricsNotifier.kPinnedMetricsKeyForTest: '["water","steps"]'},
       );
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -40,7 +40,7 @@ void main() {
 
     test('addMetric does not add duplicates', () async {
       SharedPreferences.setMockInitialValues(
-        {'today_pinned_metrics': '["water"]'},
+        {PinnedMetricsNotifier.kPinnedMetricsKeyForTest: '["water"]'},
       );
       final container = ProviderContainer();
       addTearDown(container.dispose);
