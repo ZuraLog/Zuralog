@@ -178,7 +178,6 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
               return _VesselCard(
                 vessel: vessel,
                 isSelected: _selectedVesselKey == vessel.key,
-                isImperial: isImperial,
                 amount: _vesselAmount(vessel, isImperial),
                 onTap: () => _selectVessel(vessel),
               );
@@ -283,14 +282,12 @@ class _VesselCard extends StatelessWidget {
   const _VesselCard({
     required this.vessel,
     required this.isSelected,
-    required this.isImperial,
     required this.amount,
     required this.onTap,
   });
 
   final _VesselPreset vessel;
   final bool isSelected;
-  final bool isImperial;
 
   /// Pre-computed amount string (e.g. "150 ml" or "5 oz").
   final String amount;
