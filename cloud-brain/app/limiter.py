@@ -1,9 +1,16 @@
 """
 Zuralog Cloud Brain — Global Limiter Configuration.
 
-Provides a shared slowapi Limiter used to protect endpoints
-from abuse and brute-force attacks.
+Uses slowapi (Starlette-native wrapper around the `limits` library).
+Rate limit key: authenticated user ID when a Bearer JWT is present,
+falling back to the client's remote IP address.
+
+In production, limits are stored in Redis so they are shared across
+all server instances. Set REDIS_URL in the environment to enable this.
+If REDIS_URL is not set, limits fall back to in-memory storage (dev only).
 """
+
+import os
 
 from fastapi import Request
 from slowapi import Limiter
@@ -13,17 +20,14 @@ from slowapi.util import get_remote_address
 def get_user_or_ip(request: Request) -> str:
     """Rate limit key: authenticated user ID if available, else remote IP.
 
-    Authenticated endpoints are keyed by user ID so users behind shared NAT
-    (corporate networks, mobile carriers) don't share a single quota bucket.
-    Unauthenticated endpoints (webhooks) fall back to IP address.
+    The JWT is decoded WITHOUT signature verification — this is intentional.
+    The auth layer (get_authenticated_user_id) performs full verification.
+    We only need the `sub` claim to produce a stable per-user key.
     """
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header[7:]
         try:
-            # Decode without signature verification — we only need the `sub`
-            # claim for rate-limiting purposes. Auth integrity is verified
-            # separately by the dependency injection layer.
             import jwt as pyjwt  # noqa: PLC0415
 
             payload = pyjwt.decode(token, options={"verify_signature": False})
@@ -35,4 +39,9 @@ def get_user_or_ip(request: Request) -> str:
     return get_remote_address(request)
 
 
-limiter = Limiter(key_func=get_user_or_ip)
+_redis_url = os.getenv("REDIS_URL")
+
+limiter = Limiter(
+    key_func=get_user_or_ip,
+    storage_uri=_redis_url,  # None → in-memory (dev). Set in production.
+)
