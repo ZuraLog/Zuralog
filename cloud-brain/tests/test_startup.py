@@ -33,3 +33,14 @@ def test_cors_origins_parses_comma_separated_list(monkeypatch):
 
     result = _resolve_cors_origins()
     assert result == ["https://app.zuralog.com", "https://zuralog.com"]
+
+
+def test_cors_origins_rejects_comma_only_in_production(monkeypatch):
+    """_resolve_cors_origins raises RuntimeError when ALLOWED_ORIGINS is only commas."""
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ALLOWED_ORIGINS", ",,")
+
+    from app.main import _resolve_cors_origins
+
+    with pytest.raises(RuntimeError, match="no valid origins"):
+        _resolve_cors_origins()

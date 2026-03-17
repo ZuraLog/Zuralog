@@ -8,7 +8,6 @@ and wires up the MCP framework (registry, client, memory store).
 """
 
 import logging
-import logging as _startup_logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -127,11 +126,20 @@ def _resolve_cors_origins() -> list[str]:
                 "ALLOWED_ORIGINS environment variable must be set in production. "
                 "Refusing to start with CORS wildcard (*) enabled."
             )
-        _startup_logging.getLogger(__name__).warning(
+        logging.getLogger(__name__).warning(
             "ALLOWED_ORIGINS not set — falling back to CORS wildcard (*). Only acceptable in development."
         )
         return ["*"]
-    return [o.strip() for o in raw.split(",") if o.strip()]
+    result = [o.strip() for o in raw.split(",") if o.strip()]
+    if not result:
+        app_env = os.getenv("APP_ENV", "development").lower()
+        if app_env == "production":
+            raise RuntimeError(
+                "ALLOWED_ORIGINS is set but contains no valid origins. "
+                "Check for extra commas or whitespace-only values."
+            )
+        return ["*"]
+    return result
 
 
 def _get_release() -> str:
@@ -174,12 +182,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # --- Startup ---
     print(f"Zuralog Cloud Brain starting in {settings.app_env} mode")
-
-    if settings.app_env == "production" and settings.allowed_origins.strip() == "*":
-        logger.warning(
-            "SECURITY WARNING: CORS allowed_origins is '*' in production. "
-            "Set the ALLOWED_ORIGINS environment variable to your specific domains."
-        )
 
     # HTTP client (shared across services)
     http_client = httpx.AsyncClient(timeout=30.0)
