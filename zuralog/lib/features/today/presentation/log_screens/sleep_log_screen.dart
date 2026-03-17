@@ -63,8 +63,9 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
 
   String _formatDuration() {
     if (_bedtime == null || _wakeTime == null) return '';
-    final mins = _wakeTime!.difference(_bedtime!).inMinutes;
-    if (mins <= 0) return 'Invalid range';
+    int mins = _wakeTime!.difference(_bedtime!).inMinutes;
+    if (mins < 0) mins += 24 * 60;   // overnight: wake is next calendar day
+    if (mins <= 0) return '';
     final h = mins ~/ 60;
     final m = mins % 60;
     return '${h}h ${m}m';
