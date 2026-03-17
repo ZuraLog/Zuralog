@@ -31,7 +31,7 @@ const _kVessels = [
   _VesselPreset(key: 'small_cup', label: 'Small cup', ml: 150),
   _VesselPreset(key: 'glass', label: 'Glass', ml: 250),
   _VesselPreset(key: 'bottle', label: 'Bottle', ml: 500),
-  _VesselPreset(key: 'large', label: 'Large', ml: 750),
+  _VesselPreset(key: 'large', label: 'Large bottle', ml: 750),
   _VesselPreset(key: 'custom', label: 'Custom', ml: null),
 ];
 
@@ -45,13 +45,22 @@ const _kVesselOz = {
   'large': 25.0,
 };
 
+/// Icon for each vessel key. All icons come from Flutter's built-in Material Icons.
+const _kVesselIcons = <String, IconData>{
+  'small_cup': Icons.local_cafe,
+  'glass': Icons.local_bar,
+  'bottle': Icons.sports_bar,
+  'large': Icons.water_drop,
+  'custom': Icons.edit,
+};
+
 // ── ZWaterLogPanel ─────────────────────────────────────────────────────────────
 
 /// Inline log panel for water intake.
 ///
-/// Shows vessel chips (Small cup, Glass, Bottle, Large, Custom).
-/// Selecting a preset chip sets the amount automatically. Selecting Custom
-/// reveals a text field for numeric input.
+/// Shows vessel cards in a 2-column grid (Small cup, Glass, Bottle, Large bottle)
+/// plus a full-width Custom tile below. Selecting a preset card sets the amount
+/// automatically. Selecting Custom reveals a text field for numeric input.
 ///
 /// The [onSave] callback receives the amount in ml as a [double].
 /// The [onBack] callback is provided for the parent sheet header's back button.
@@ -90,13 +99,14 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     super.dispose();
   }
 
-  String _vesselLabel(_VesselPreset vessel, bool isImperial) {
-    if (vessel.ml == null) return 'Custom';
+  /// Returns just the amount string (number + unit) for display on the vessel card.
+  String _vesselAmount(_VesselPreset vessel, bool isImperial) {
+    if (vessel.ml == null) return ''; // Custom — no fixed amount
     if (isImperial) {
       final oz = _kVesselOz[vessel.key] ?? (vessel.ml! / _kOzToMl).roundToDouble();
-      return '${vessel.label}\n${oz.toStringAsFixed(0)} oz';
+      return '${oz.toStringAsFixed(0)} oz';
     }
-    return '${vessel.label}\n${vessel.ml!.toStringAsFixed(0)} ml';
+    return '${vessel.ml!.toStringAsFixed(0)} ml';
   }
 
   double _toMl(_VesselPreset vessel, {double? customDisplayValue, required bool isImperial}) {
@@ -141,38 +151,46 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     final summaryAsync = ref.watch(todayLogSummaryProvider);
     final isImperial = ref.watch(unitsSystemProvider) == UnitsSystem.imperial;
 
-    return Padding(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Vessel chips ────────────────────────────────────────────────────
-          Wrap(
-            spacing: AppDimens.spaceSm,
-            runSpacing: AppDimens.spaceSm,
-            children: _kVessels.map((vessel) {
-              final isSelected = _selectedVesselKey == vessel.key;
-              return ChoiceChip(
-                label: Text(_vesselLabel(vessel, isImperial)),
-                selected: isSelected,
-                onSelected: (_) => _selectVessel(vessel),
-                selectedColor: AppColors.primary,
-                backgroundColor: colors.surface,
-                labelStyle: AppTextStyles.labelMedium.copyWith(
-                  color: isSelected
-                      ? AppColors.primaryButtonText
-                      : colors.textPrimary,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusChip),
-                ),
-                side: BorderSide(
-                  color: isSelected ? AppColors.primary : colors.border,
-                ),
+    // The 4 preset vessels (all except 'custom')
+    final presets = _kVessels.where((v) => v.key != 'custom').toList();
+    final customVessel = _kVessels.firstWhere((v) => v.key == 'custom');
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+          // ── 2-column vessel card grid (4 presets) ───────────────────────────
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: AppDimens.spaceSm,
+              mainAxisSpacing: AppDimens.spaceSm,
+              mainAxisExtent: 100,
+            ),
+            itemCount: presets.length,
+            itemBuilder: (context, index) {
+              final vessel = presets[index];
+              return _VesselCard(
+                vessel: vessel,
+                isSelected: _selectedVesselKey == vessel.key,
+                isImperial: isImperial,
+                amount: _vesselAmount(vessel, isImperial),
+                onTap: () => _selectVessel(vessel),
               );
-            }).toList(),
+            },
+          ),
+
+          const SizedBox(height: AppDimens.spaceSm),
+
+          // ── Full-width Custom tile ──────────────────────────────────────────
+          _CustomTile(
+            isSelected: _isCustomSelected,
+            onTap: () => _selectVessel(customVessel),
           ),
 
           // ── Custom amount input ─────────────────────────────────────────────
@@ -248,7 +266,141 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
               style: AppTextStyles.labelLarge,
             ),
           ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _VesselCard ────────────────────────────────────────────────────────────────
+
+/// A square card representing a water vessel preset.
+///
+/// Shows an icon, the vessel name, and the amount (ml or oz depending on units).
+/// Used only inside [ZWaterLogPanel] — not part of the shared widget library.
+class _VesselCard extends StatelessWidget {
+  const _VesselCard({
+    required this.vessel,
+    required this.isSelected,
+    required this.isImperial,
+    required this.amount,
+    required this.onTap,
+  });
+
+  final _VesselPreset vessel;
+  final bool isSelected;
+  final bool isImperial;
+
+  /// Pre-computed amount string (e.g. "150 ml" or "5 oz").
+  final String amount;
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final icon = _kVesselIcons[vessel.key] ?? Icons.water_drop;
+
+    final backgroundColor = isSelected
+        ? colors.primary.withValues(alpha: 0.10)
+        : colors.cardBackground;
+    final borderColor = isSelected ? colors.primary : colors.border;
+    final borderWidth = isSelected ? 2.0 : 1.5;
+    final iconColor = isSelected ? colors.primary : colors.textSecondary;
+    final nameColor = isSelected ? colors.textPrimary : colors.textSecondary;
+    final amountColor = isSelected ? colors.primary : colors.textPrimary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          border: Border.all(color: borderColor, width: borderWidth),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, size: 32, color: iconColor),
+            const SizedBox(height: AppDimens.spaceXs),
+            Text(
+              vessel.label,
+              style: AppTextStyles.labelMedium.copyWith(color: nameColor),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              amount,
+              style: AppTextStyles.labelLarge.copyWith(color: amountColor),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _CustomTile ────────────────────────────────────────────────────────────────
+
+/// Full-width tile for the Custom vessel option.
+///
+/// Shows an edit icon on the left and "Custom" label centered.
+/// Used only inside [ZWaterLogPanel].
+class _CustomTile extends StatelessWidget {
+  const _CustomTile({
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
+    final backgroundColor = isSelected
+        ? colors.primary.withValues(alpha: 0.10)
+        : colors.cardBackground;
+    final borderColor = isSelected ? colors.primary : colors.border;
+    final borderWidth = isSelected ? 2.0 : 1.5;
+    final iconColor = isSelected ? colors.primary : colors.textSecondary;
+    final labelColor = isSelected ? colors.textPrimary : colors.textSecondary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        constraints: const BoxConstraints(minHeight: AppDimens.touchTargetMin),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          border: Border.all(color: borderColor, width: borderWidth),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceSm,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.edit, size: 20, color: iconColor),
+            const SizedBox(width: AppDimens.spaceSm),
+            Text(
+              'Custom',
+              style: AppTextStyles.labelMedium.copyWith(color: labelColor),
+            ),
+          ],
+        ),
       ),
     );
   }
