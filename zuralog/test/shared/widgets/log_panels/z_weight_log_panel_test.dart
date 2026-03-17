@@ -101,4 +101,22 @@ void main() {
       expect(find.textContaining('Last logged:'), findsOneWidget);
     });
   });
+
+  group('formatWeightDelta', () {
+    test('gain: 80.0 → 80.5 kg shows "+0.5 kg"', () {
+      expect(formatWeightDelta(80.0, 80.5), equals('+0.5 kg'));
+    });
+
+    test('loss: 80.0 → 79.3 kg shows "-0.7 kg"', () {
+      expect(formatWeightDelta(80.0, 79.3), equals('-0.7 kg'));
+    });
+
+    test('no previous entry → null', () {
+      expect(formatWeightDelta(null, 80.0), isNull);
+    });
+
+    test('negligible change (< 0.05 kg) → null', () {
+      expect(formatWeightDelta(80.0, 80.02), isNull);
+    });
+  });
 }
