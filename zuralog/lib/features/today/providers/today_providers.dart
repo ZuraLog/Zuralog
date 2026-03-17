@@ -129,7 +129,7 @@ final todayBannerSessionDismissed = StateProvider<bool>((ref) => false);
 /// On failure: returns [TodayLogSummary.empty] — the UI stays functional
 /// in an empty state rather than showing an error.
 ///
-/// Invalidate after every successful log submission so the Log Ring and
+/// Invalidate after every successful log submission so the Streak Hero Card and
 /// Snapshot Cards reflect the new entry immediately.
 final todayLogSummaryProvider = FutureProvider<TodayLogSummary>((ref) async {
   final repo = ref.read(todayRepositoryProvider);
