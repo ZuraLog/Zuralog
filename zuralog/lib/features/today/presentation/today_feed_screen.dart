@@ -411,14 +411,7 @@ class _MetricGridSection extends ConsumerWidget {
 
         return MetricGrid(
           tiles: tiles,
-          onAddTap: () {
-            // Chunk 3 wires the picker sheet here.
-            // For now, show a placeholder snackbar.
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Metric picker — coming in next step')),
-            );
-          },
+          onAddTap: () => _showMetricPicker(context, ref, pinned.toSet()),
           onRemove: (tile) {
             ref
                 .read(pinnedMetricsProvider.notifier)
@@ -426,6 +419,38 @@ class _MetricGridSection extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+
+  void _showMetricPicker(
+    BuildContext context,
+    WidgetRef ref,
+    Set<String> pinnedTypes,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (_, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: AppColorsOf(context).elevatedSurface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppDimens.shapeLg),
+            ),
+          ),
+          child: MetricPickerSheet(
+            pinnedTypes: pinnedTypes,
+            onSelect: (type) {
+              ref.read(pinnedMetricsProvider.notifier).addMetric(type);
+              Navigator.of(context).pop();
+            },
+          ),
+        ),
+      ),
     );
   }
 }
