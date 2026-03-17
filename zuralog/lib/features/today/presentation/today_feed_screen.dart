@@ -24,7 +24,6 @@ import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
-import 'package:zuralog/shared/widgets/health_score_zero_state.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/streak_badge.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
@@ -151,7 +150,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                     Flexible(
                       child: feedAsync.when(
                         loading: () => const StreakHeroCard(streakDays: 0),
-                        error: (_, __) => const StreakHeroCard(streakDays: 0),
+                        error: (e, _) => const StreakHeroCard(streakDays: 0),
                         data: (feed) => StreakHeroCard(
                           streakDays: feed.streak?.currentStreak ?? 0,
                           isPersonalBest: feed.streak != null &&
@@ -404,7 +403,7 @@ class _MetricGridSection extends ConsumerWidget {
 
     return pinnedAsync.when(
       loading: () => const SizedBox(height: 60),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (e, _) => const SizedBox.shrink(),
       data: (pinned) {
         final summary = summaryAsync.valueOrNull ?? TodayLogSummary.empty;
         final tiles = pinned.map((type) => _buildTile(type, summary)).toList();
