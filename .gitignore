@@ -57,6 +57,10 @@ opencode.json
 .agent/screenshots/
 .agent/plans/
 
+# Brainstorming & design specs (local AI session artifacts — never push to main)
+.superpowers/
+docs/superpowers/
+
 # Dev / session artifacts
 test_compilation.sh
 
