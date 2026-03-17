@@ -38,7 +38,7 @@ class HealthScoreZeroState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('😔', style: TextStyle(fontSize: 32)),
+          const Text('😔', style: TextStyle(fontSize: AppDimens.emojiMd)),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Health Score',

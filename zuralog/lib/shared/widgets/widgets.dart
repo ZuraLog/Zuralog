@@ -28,6 +28,7 @@ export 'loading/z_loading_skeleton.dart';
 export 'profile_side_panel.dart';
 export 'sheets/z_log_grid_cell.dart';
 export 'sheets/z_log_grid_sheet.dart';
+export 'health_score_zero_state.dart';
 export 'states/z_empty_insights_state.dart';
 export 'states/z_empty_state.dart';
 export 'states/z_error_state.dart';

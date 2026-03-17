@@ -120,6 +120,9 @@ abstract final class AppDimens {
   /// Health ring outer diameter.
   static const double ringDiameter = 180;
 
+  /// Standard emoji display size (in logical pixels).
+  static const double emojiMd = 32;
+
   // ── Navigation Bar ────────────────────────────────────────────────────────
 
   /// Navigation bar backdrop blur intensity (sigmaX and sigmaY).
