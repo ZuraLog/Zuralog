@@ -42,5 +42,18 @@ void main() {
       expect(updated.value, '8,432');
       expect(updated.isLit, isTrue);
     });
+
+    test('copyWith can clear value back to null', () {
+      const tile = MetricTileData(
+        metricType: 'water',
+        label: 'Water',
+        emoji: '💧',
+        categoryColor: 0xFF64D2FF,
+        value: '2.1L',
+      );
+      final cleared = tile.copyWith(value: null);
+      expect(cleared.value, isNull);
+      expect(cleared.isLit, isFalse);
+    });
   });
 }

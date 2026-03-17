@@ -17,8 +17,8 @@ class MetricTileData {
     required this.label,
     required this.emoji,
     required this.categoryColor,
-    required this.value,
-    required this.unit,
+    this.value,   // defaults to null
+    this.unit,    // defaults to null
   });
 
   /// The canonical metric type string (e.g. 'water', 'steps', 'sleep').
@@ -47,21 +47,26 @@ class MetricTileData {
   bool get isLit => value != null;
 
   /// Returns a copy of this tile with the given fields replaced.
+  ///
+  /// To explicitly clear [value] or [unit] back to null, pass
+  /// [clearValue] or [clearUnit] as true.
   MetricTileData copyWith({
     String? metricType,
     String? label,
     String? emoji,
     int? categoryColor,
-    String? value,
-    String? unit,
+    Object? value = _absent,
+    Object? unit = _absent,
   }) {
     return MetricTileData(
       metricType: metricType ?? this.metricType,
       label: label ?? this.label,
       emoji: emoji ?? this.emoji,
       categoryColor: categoryColor ?? this.categoryColor,
-      value: value ?? this.value,
-      unit: unit ?? this.unit,
+      value: value == _absent ? this.value : value as String?,
+      unit: unit == _absent ? this.unit : unit as String?,
     );
   }
+
+  static const Object _absent = Object();
 }
