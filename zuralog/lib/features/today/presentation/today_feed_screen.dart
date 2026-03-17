@@ -431,22 +431,23 @@ class _MetricGridSection extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
+        builder: (_) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
         maxChildSize: 0.9,
-        builder: (_, scrollController) => Container(
+        builder: (sheetContext, scrollController) => Container(
           decoration: BoxDecoration(
-            color: AppColorsOf(context).elevatedSurface,
+            color: AppColorsOf(sheetContext).elevatedSurface,
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppDimens.shapeLg),
             ),
           ),
           child: MetricPickerSheet(
             pinnedTypes: pinnedTypes,
+            scrollController: scrollController,
             onSelect: (type) {
               ref.read(pinnedMetricsProvider.notifier).addMetric(type);
-              Navigator.of(context).pop();
+              Navigator.of(sheetContext).pop();
             },
           ),
         ),

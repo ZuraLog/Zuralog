@@ -84,16 +84,19 @@ class MetricPickerSheet extends StatelessWidget {
     super.key,
     required this.pinnedTypes,
     required this.onSelect,
+    this.scrollController,
   });
 
   final Set<String> pinnedTypes;
   final ValueChanged<String> onSelect;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
 
     return ListView(
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceMd, AppDimens.spaceLg,
         AppDimens.spaceMd, AppDimens.spaceXxl,
