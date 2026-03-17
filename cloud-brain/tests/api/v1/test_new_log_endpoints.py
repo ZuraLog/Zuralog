@@ -153,6 +153,24 @@ class TestSleepLog:
         )
         assert resp.status_code == 422
 
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/sleep",
+            json={
+                "bedtime": "2026-03-16T22:30:00Z",
+                "wake_time": "2026-03-17T06:30:00Z",
+                "duration_minutes": 480,
+                "user_id": "evil-other-user",
+                "source": "manual",
+                "logged_at": "2026-03-17T06:30:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "evil-other-user"
+
 
 # ---------------------------------------------------------------------------
 # Run endpoint
@@ -243,6 +261,23 @@ class TestMealLog:
         )
         assert resp.status_code == 200
 
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/meal",
+            json={
+                "meal_type": "lunch",
+                "quick_mode": True,
+                "calories_kcal": 600,
+                "user_id": "evil-other-user",
+                "logged_at": "2026-03-17T12:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "evil-other-user"
+
 
 # ---------------------------------------------------------------------------
 # Supplement endpoint
@@ -283,6 +318,29 @@ class TestSupplementLog:
             headers=AUTH_HEADER,
         )
         assert resp.status_code == 422
+
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        import uuid
+
+        client, mock_db = client_with_auth
+
+        supp_id = str(uuid.uuid4())
+        mock_result = MagicMock()
+        mock_result.all.return_value = [(supp_id,)]
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        resp = client.post(
+            "/api/v1/quick-log/supplements",
+            json={
+                "taken_supplement_ids": [supp_id],
+                "user_id": "evil-other-user",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "evil-other-user"
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +388,22 @@ class TestSymptomLog:
         )
         assert resp.status_code == 200
         assert resp.json()["type"] == "symptom"
+
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        client, _ = client_with_auth
+        resp = client.post(
+            "/api/v1/quick-log/symptom",
+            json={
+                "body_areas": ["head"],
+                "severity": "mild",
+                "user_id": "evil-other-user",
+                "logged_at": "2026-03-17T08:00:00Z",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "evil-other-user"
 
 
 # ---------------------------------------------------------------------------
@@ -518,6 +592,24 @@ class TestLogWellness:
         body = resp.json()
         assert len(body["ids"]) == 2
 
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        client, mock_db = client_with_auth
+        mock_db.add_all = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/wellness",
+            json={
+                "mood": 7.5,
+                "user_id": "evil-other-user",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "evil-other-user"
+
 
 # ---------------------------------------------------------------------------
 # Weight endpoint
@@ -556,6 +648,24 @@ class TestLogWeight:
             headers=AUTH_HEADER,
         )
         assert resp.status_code == 422
+
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        client, mock_db = client_with_auth
+        mock_db.add = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/weight",
+            json={
+                "value_kg": 75.5,
+                "user_id": "evil-other-user",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "evil-other-user"
 
 
 # ---------------------------------------------------------------------------
@@ -626,6 +736,25 @@ class TestLogSteps:
             headers=AUTH_HEADER,
         )
         assert resp.status_code == 422
+
+    def test_user_id_from_body_is_ignored(self, client_with_auth):
+        """Passing user_id in the body must never override the JWT user."""
+        client, mock_db = client_with_auth
+        mock_db.add = MagicMock()
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        resp = client.post(
+            "/api/v1/quick-log/steps",
+            json={
+                "steps": 5000,
+                "mode": "add",
+                "user_id": "evil-other-user",
+            },
+            headers=AUTH_HEADER,
+        )
+        assert resp.status_code == 200
+        assert resp.json().get("user_id") != "evil-other-user"
 
 
 # ---------------------------------------------------------------------------
@@ -823,3 +952,43 @@ class TestGetSummaryToday:
         assert "run_logged_at" in body["latest_values"]
         assert isinstance(body["latest_values"]["run_logged_at"], str)
         assert len(body["latest_values"]["run_logged_at"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# Rate limit decorator presence
+# ---------------------------------------------------------------------------
+
+
+class TestRateLimitDecoratorsPresent:
+    """Verify each typed log endpoint has a @limiter.limit() decorator applied.
+
+    slowapi's @limiter.limit() wraps the function using functools.wraps, which
+    sets __wrapped__ on the decorated function pointing back to the original.
+    An undecorated async function has no __wrapped__ attribute, so its presence
+    is a reliable signal that the decorator was applied.
+    """
+
+    @pytest.mark.parametrize(
+        "func_name",
+        [
+            "log_sleep",
+            "log_run",
+            "log_meal",
+            "log_supplements",
+            "log_symptom",
+            "log_water",
+            "log_wellness",
+            "log_weight",
+            "log_steps",
+        ],
+    )
+    def test_endpoint_has_rate_limit_decorator(self, func_name):
+        """Verify the route handler was decorated with @limiter.limit()."""
+        from app.api.v1 import quick_log_routes
+
+        handler = getattr(quick_log_routes, func_name, None)
+        assert handler is not None, f"Function {func_name} not found in quick_log_routes"
+        assert hasattr(handler, "__wrapped__"), (
+            f"Function {func_name} has no @limiter.limit() decorator "
+            f"(expected __wrapped__ attribute set by slowapi/functools.wraps)."
+        )

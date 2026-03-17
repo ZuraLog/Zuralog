@@ -75,6 +75,24 @@ void main() {
       final ring = await container.read(logRingProvider.future);
       expect(ring.fraction, 0.0);
     });
+
+    test('notifier build() returns AsyncData after both upstream providers resolve', () async {
+      final container = _container(overrides: [
+        userLoggedTypesProvider.overrideWith(
+          (ref) async => const {'water', 'mood'},
+        ),
+      ]);
+      addTearDown(container.dispose);
+
+      // Read .future to wait for the notifier's build() to complete.
+      final ring = await container.read(logRingProvider.future);
+
+      // After both upstream providers resolve, the state must be AsyncData.
+      final state = container.read(logRingProvider);
+      expect(state, isA<AsyncData<LogRingState>>());
+      expect(ring.loggedCount, equals(0));  // stub repo returns empty summary
+      expect(ring.totalCount, equals(2));   // userLoggedTypes override returns 2 types
+    });
   });
 
   group('LogRingState', () {

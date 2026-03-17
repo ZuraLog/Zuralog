@@ -15,6 +15,25 @@ import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
+// ── Top-level helpers ──────────────────────────────────────────────────────────
+
+/// Formats the weight change between a previous and current entry.
+///
+/// Returns `null` if [previousKg] is `null` (no previous entry) or if the
+/// absolute difference is less than 0.05 kg (effectively no change).
+///
+/// Examples:
+/// - `formatWeightDelta(80.0, 80.5)` → `'+0.5 kg'`
+/// - `formatWeightDelta(80.0, 79.3)` → `'-0.7 kg'`
+/// - `formatWeightDelta(null, 80.0)` → `null`
+String? formatWeightDelta(double? previousKg, double currentKg) {
+  if (previousKg == null) return null;
+  final delta = currentKg - previousKg;
+  if (delta.abs() < 0.05) return null;
+  final sign = delta > 0 ? '+' : '-';
+  return '$sign${delta.abs().toStringAsFixed(1)} kg';
+}
+
 // ── ZWeightLogPanel ────────────────────────────────────────────────────────────
 
 /// Inline log panel for body weight.

@@ -18,6 +18,7 @@
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
 /// - [stepsLogModeProvider]           — persisted steps log mode (add vs override)
+/// - [mealLogModeProvider]             — persisted meal log mode (quick vs full)
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
 library;
 
@@ -162,50 +163,66 @@ final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
 
 // ── Log Ring ──────────────────────────────────────────────────────────────────
 
-/// State for the Log Ring widget.
+/// Notifier for the Log Ring widget state.
 ///
-/// Derived from [todayLogSummaryProvider] (what was logged today) and
-/// [userLoggedTypesProvider] (all types the user has ever used).
+/// Watches [todayLogSummaryProvider] and [userLoggedTypesProvider] reactively.
+/// When either upstream provider is invalidated (e.g. after a log submission),
+/// this notifier automatically rebuilds.
 ///
-/// Uses `ref.watch(provider.future)` — the correct pattern inside a
-/// FutureProvider body for establishing reactive dependencies on other
-/// async providers.
-final logRingProvider = FutureProvider<LogRingState>((ref) async {
-  final summary = await ref.watch(todayLogSummaryProvider.future);
-  final allTypes = await ref.watch(userLoggedTypesProvider.future);
+/// Using an [AsyncNotifier] instead of a plain [FutureProvider] ensures that
+/// the reactive `ref.watch` inside [build] correctly establishes dependencies
+/// and handles loading/error/data states without runtime errors on first load.
+class LogRingNotifier extends AsyncNotifier<LogRingState> {
+  @override
+  Future<LogRingState> build() async {
+    final summary = await ref.watch(todayLogSummaryProvider.future);
+    final allTypes = await ref.watch(userLoggedTypesProvider.future);
 
-  return LogRingState(
-    loggedCount: summary.loggedTypes.length,
-    totalCount: allTypes.length,
-  );
-});
+    return LogRingState(
+      loggedCount: summary.loggedTypes.length,
+      totalCount: allTypes.length,
+    );
+  }
+}
+
+/// Provider for the Log Ring widget state. Rebuilds automatically when
+/// [todayLogSummaryProvider] or [userLoggedTypesProvider] change.
+final logRingProvider = AsyncNotifierProvider<LogRingNotifier, LogRingState>(
+  LogRingNotifier.new,
+);
 
 // ── Snapshot Cards ────────────────────────────────────────────────────────────
 
-/// List of snapshot card data for the horizontally scrollable row.
+/// Notifier for the snapshot card list.
 ///
 /// Watches both [todayLogSummaryProvider] and [userLoggedTypesProvider].
 /// Shows one card per metric type the user has ever logged, ordered to
 /// match the log grid. Cards with no data today show an empty state.
-///
-/// **Part 4 note:** The spec describes this as `AsyncNotifierProvider`.
-/// It is `FutureProvider` for Part 1 (stub data). Upgrade to `AsyncNotifier`
-/// in Part 4 when real data is wired in.
-final snapshotProvider = FutureProvider<List<SnapshotCardData>>((ref) async {
-  final summary = await ref.watch(todayLogSummaryProvider.future);
-  final allTypes = await ref.watch(userLoggedTypesProvider.future);
+class SnapshotNotifier extends AsyncNotifier<List<SnapshotCardData>> {
+  @override
+  Future<List<SnapshotCardData>> build() async {
+    final summary = await ref.watch(todayLogSummaryProvider.future);
+    final allTypes = await ref.watch(userLoggedTypesProvider.future);
 
-  // Ordered list matching the log grid tile order.
-  const orderedTypes = [
-    'mood', 'energy', 'stress', 'water', 'sleep', 'weight',
-    'steps', 'run', 'meal', 'supplement', 'symptom',
-  ];
+    // Ordered list matching the log grid tile order.
+    const orderedTypes = [
+      'mood', 'energy', 'stress', 'water', 'sleep', 'weight',
+      'steps', 'run', 'meal', 'supplement', 'symptom',
+    ];
 
-  return orderedTypes
-      .where((type) => allTypes.contains(type))
-      .map((type) => _buildSnapshotCard(type, summary))
-      .toList();
-});
+    return orderedTypes
+        .where((type) => allTypes.contains(type))
+        .map((type) => _buildSnapshotCard(type, summary))
+        .toList();
+  }
+}
+
+/// Provider for snapshot card data. Rebuilds automatically when
+/// [todayLogSummaryProvider] or [userLoggedTypesProvider] change.
+final snapshotProvider =
+    AsyncNotifierProvider<SnapshotNotifier, List<SnapshotCardData>>(
+  SnapshotNotifier.new,
+);
 
 // ── Snapshot card builder ─────────────────────────────────────────────────────
 
@@ -411,6 +428,34 @@ class StepsLogModeNotifier extends AsyncNotifier<StepsLogMode> {
 final stepsLogModeProvider =
     AsyncNotifierProvider<StepsLogModeNotifier, StepsLogMode>(
   StepsLogModeNotifier.new,
+);
+
+// ── Meal Log Mode ─────────────────────────────────────────────────────────────
+
+/// Notifier that persists the meal log quick-mode toggle via SharedPreferences.
+///
+/// Default: `false` — full mode (description required).
+/// When `true`, the meal log screen shows a simplified calorie-only form.
+class MealLogModeNotifier extends AsyncNotifier<bool> {
+  static const _key = 'meal_log_quick_mode';
+
+  @override
+  Future<bool> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_key) ?? false;
+  }
+
+  Future<void> setMode(bool quickMode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key, quickMode);
+    state = AsyncData(quickMode);
+  }
+}
+
+/// Provider for the meal log quick-mode toggle. Remembered across app restarts.
+final mealLogModeProvider =
+    AsyncNotifierProvider<MealLogModeNotifier, bool>(
+  MealLogModeNotifier.new,
 );
 
 // ── Latest Log Values ─────────────────────────────────────────────────────────
