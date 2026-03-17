@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -161,9 +162,12 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                   TextField(
                     controller: _caloriesCtrl,
                     keyboardType: TextInputType.number,
+                    maxLength: 4,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(
                       hintText: 'Enter calories',
                       suffixText: 'kcal',
+                      counterText: '',
                     ),
                     onChanged: _onCaloriesTyped,
                   ),
@@ -187,7 +191,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: AppDimens.spaceLg),
-                  ZSectionLabel(label: 'Rough calories', isOptional: true),
+                  const ZSectionLabel(label: 'Rough calories', isOptional: true),
                   const SizedBox(height: AppDimens.spaceSm),
                   Wrap(
                     spacing: AppDimens.spaceSm,
