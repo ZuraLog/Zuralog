@@ -155,8 +155,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
     final presets = _kVessels.where((v) => v.key != 'custom').toList();
     final customVessel = _kVessels.firstWhere((v) => v.key == 'custom');
 
-    return SingleChildScrollView(
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -170,7 +169,7 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
               crossAxisCount: 2,
               crossAxisSpacing: AppDimens.spaceSm,
               mainAxisSpacing: AppDimens.spaceSm,
-              mainAxisExtent: 100,
+              mainAxisExtent: 110,
             ),
             itemCount: presets.length,
             itemBuilder: (context, index) {
@@ -267,7 +266,6 @@ class _ZWaterLogPanelState extends ConsumerState<ZWaterLogPanel> {
           ),
           ],
         ),
-      ),
     );
   }
 }
@@ -308,37 +306,57 @@ class _VesselCard extends StatelessWidget {
     final nameColor = isSelected ? colors.textPrimary : colors.textSecondary;
     final amountColor = isSelected ? colors.primary : colors.textPrimary;
 
-    return GestureDetector(
-      onTap: onTap,
+    // Vessel card inner padding. 12px is intentional — AppDimens.spaceSm (8px)
+    // is too tight for the icon+label+amount stack at mainAxisExtent 110, and
+    // AppDimens.spaceMd (16px) leaves insufficient room. 12px is the midpoint.
+    const cardPadding = 12.0;
+    // 2px gap between vessel name and amount — tighter than spaceXs (4px) so
+    // the name and amount read as one visual unit rather than two separate lines.
+    const nameAmountGap = 2.0;
+
+    final radius = BorderRadius.circular(AppDimens.radiusCard);
+    return ClipRRect(
+      borderRadius: radius,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeInOut,
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          borderRadius: radius,
           border: Border.all(color: borderColor, width: borderWidth),
         ),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: iconColor),
-            const SizedBox(height: AppDimens.spaceXs),
-            Text(
-              vessel.label,
-              style: AppTextStyles.labelMedium.copyWith(color: nameColor),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            splashColor: colors.primary.withValues(alpha: 0.12),
+            highlightColor: colors.primary.withValues(alpha: 0.06),
+            child: Padding(
+              padding: const EdgeInsets.all(cardPadding),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 32, color: iconColor),
+                  const SizedBox(height: AppDimens.spaceXs),
+                  Text(
+                    vessel.label,
+                    style: AppTextStyles.labelMedium.copyWith(color: nameColor),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: nameAmountGap),
+                  Text(
+                    amount,
+                    style: AppTextStyles.labelLarge.copyWith(color: amountColor),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              amount,
-              style: AppTextStyles.labelLarge.copyWith(color: amountColor),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -372,31 +390,43 @@ class _CustomTile extends StatelessWidget {
     final iconColor = isSelected ? colors.primary : colors.textSecondary;
     final labelColor = isSelected ? colors.textPrimary : colors.textSecondary;
 
-    return GestureDetector(
-      onTap: onTap,
+    final radius = BorderRadius.circular(AppDimens.radiusCard);
+    return ClipRRect(
+      borderRadius: radius,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeInOut,
         constraints: const BoxConstraints(minHeight: AppDimens.touchTargetMin),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          borderRadius: radius,
           border: Border.all(color: borderColor, width: borderWidth),
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceSm,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.edit, size: 20, color: iconColor),
-            const SizedBox(width: AppDimens.spaceSm),
-            Text(
-              'Custom',
-              style: AppTextStyles.labelMedium.copyWith(color: labelColor),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            splashColor: colors.primary.withValues(alpha: 0.12),
+            highlightColor: colors.primary.withValues(alpha: 0.06),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceSm,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.edit, size: 20, color: iconColor),
+                  const SizedBox(width: AppDimens.spaceSm),
+                  Text(
+                    'Custom',
+                    style: AppTextStyles.labelMedium.copyWith(color: labelColor),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
