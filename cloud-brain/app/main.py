@@ -106,6 +106,42 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _resolve_cors_origins() -> list[str]:
+    """Resolve allowed CORS origins from the environment.
+
+    In production, ALLOWED_ORIGINS must be set — refuses to start with wildcard (*).
+    In development/staging, falls back to wildcard with a logged warning.
+
+    Returns:
+        List of allowed origin strings.
+
+    Raises:
+        RuntimeError: if APP_ENV is 'production' and ALLOWED_ORIGINS is not set.
+    """
+    raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+    if not raw:
+        app_env = os.getenv("APP_ENV", "development").lower()
+        if app_env == "production":
+            raise RuntimeError(
+                "ALLOWED_ORIGINS environment variable must be set in production. "
+                "Refusing to start with CORS wildcard (*) enabled."
+            )
+        logging.getLogger(__name__).warning(
+            "ALLOWED_ORIGINS not set — falling back to CORS wildcard (*). Only acceptable in development."
+        )
+        return ["*"]
+    result = [o.strip() for o in raw.split(",") if o.strip()]
+    if not result:
+        app_env = os.getenv("APP_ENV", "development").lower()
+        if app_env == "production":
+            raise RuntimeError(
+                "ALLOWED_ORIGINS is set but contains no valid origins. "
+                "Check for extra commas or whitespace-only values."
+            )
+        return ["*"]
+    return result
+
+
 def _get_release() -> str:
     """Return a Sentry release string from the Railway git SHA env var.
 
@@ -146,12 +182,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # --- Startup ---
     print(f"Zuralog Cloud Brain starting in {settings.app_env} mode")
-
-    if settings.app_env == "production" and settings.allowed_origins.strip() == "*":
-        logger.warning(
-            "SECURITY WARNING: CORS allowed_origins is '*' in production. "
-            "Set the ALLOWED_ORIGINS environment variable to your specific domains."
-        )
 
     # HTTP client (shared across services)
     http_client = httpx.AsyncClient(timeout=30.0)
@@ -303,16 +333,9 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Parse CORS origins from config. Supports "*" or comma-separated list.
-_origins: list[str] = (
-    ["*"]
-    if settings.allowed_origins.strip() == "*"
-    else [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
-)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins,
+    allow_origins=_resolve_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

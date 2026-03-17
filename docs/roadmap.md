@@ -463,6 +463,34 @@ Completed real data wiring for quick-log endpoints (water, wellness, weight, ste
 
 ---
 
+## Today Tab Part 7 — Backend Hardening (2026-03-17)
+
+> **Branch:** commits on `main` (2026-03-17)
+
+Completed 5 backend hardening tasks: composite index verification, Redis storage for rate-limit counters, UTC normalization, empty supplement guard, and CORS production safety.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Composite index verification | ✅ Done | `ix_quick_logs_user_type_logged` on `(user_id, metric_type, logged_at DESC)` already existed in migration `o0p1q2r3s4t5` |
+| P0 | slowapi Redis storage for rate-limit counters | ✅ Done | `cloud-brain/app/limiter.py` passes `storage_uri=os.getenv("REDIS_URL")` to Limiter; counters shared across all server instances |
+| P0 | `logged_at` UTC normalization | ✅ Done | `_resolve_logged_at()` in `quick_log_routes.py` normalizes non-UTC offsets to UTC before returning string; tests added |
+| P0 | Empty supplement IDs guard | ✅ Done | `POST /quick-log/supplements` returns 422 when `taken_supplement_ids` is empty; dead ownership-check wrapper removed; tests added |
+| P0 | CORS production guard | ✅ Done | `_resolve_cors_origins()` helper in `main.py` raises `RuntimeError` in production when `ALLOWED_ORIGINS` unset or empty; falls back to `*` in dev with warning; 4 tests added |
+
+---
+
+## Today Tab Part 8 — Shared Components Audit (2026-03-17)
+
+> **Branch:** commits on `main` (2026-03-17)
+
+Completed 1 shared component rename: `ZEmptyInsightsState` → `ZEmptyInsightsCard` across definition, two call sites, and widget test.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Rename `ZEmptyInsightsState` to `ZEmptyInsightsCard` | ✅ Done | Updated definition file, two call sites in `today_feed_screen.dart`, widget test file; `widgets.dart` barrel export unchanged (exports by file path); `flutter analyze`: 0 issues; `flutter test`: 377 passing |
+
+---
+
 ## Today Tab Part 5 — Inline Log Panels (2026-03-17)
 
 > **Branch:** commits on `main` (2026-03-17)
