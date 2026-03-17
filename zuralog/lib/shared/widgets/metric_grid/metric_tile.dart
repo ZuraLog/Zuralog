@@ -61,7 +61,7 @@ class MetricTile extends StatelessWidget {
         children: [
           // Emoji
           Text(data.emoji, style: TextStyle(fontSize: AppDimens.emojiSm)),
-          const SizedBox(height: 2),
+          const SizedBox(height: AppDimens.spaceXxs),
           // Value or dash
           Text(
             data.isLit ? (data.value ?? '—') : '—',
@@ -109,17 +109,25 @@ class MetricTile extends StatelessWidget {
             right: -6,
             child: GestureDetector(
               onTap: onRemove,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: const BoxDecoration(
-                  color: AppColors.statusError,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close_rounded,
-                  color: Colors.white,
-                  size: 12,
+              behavior: HitTestBehavior.translucent,
+              child: SizedBox(
+                width: AppDimens.touchTargetMin,
+                height: AppDimens.touchTargetMin,
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: const BoxDecoration(
+                      color: AppColors.statusError,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ),
                 ),
               ),
             ),

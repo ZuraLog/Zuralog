@@ -13,6 +13,9 @@ import 'package:flutter/material.dart';
 abstract final class AppDimens {
   // ── Spacing (4px base grid) ───────────────────────────────────────────────
 
+  /// 2px — double extra-small spacing (tight inline gaps, e.g. emoji-to-value).
+  static const double spaceXxs = 2;
+
   /// 4px — extra-small spacing (icon gaps, tight padding).
   static const double spaceXs = 4;
 
