@@ -250,8 +250,8 @@ class TestMealLog:
 
 
 class TestSupplementLog:
-    def test_supplement_empty_taken_ids_succeeds(self, client_with_auth):
-        """An empty supplement log (nothing checked off) is valid."""
+    def test_supplement_empty_taken_ids_rejected(self, client_with_auth):
+        """An empty taken_supplement_ids list must be rejected with 422."""
         client, _ = client_with_auth
         resp = client.post(
             "/api/v1/quick-log/supplements",
@@ -261,7 +261,8 @@ class TestSupplementLog:
             },
             headers=AUTH_HEADER,
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 422
+        assert "taken_supplement_ids" in resp.json().get("detail", "").lower()
 
     def test_supplement_log_rejects_foreign_supplement_ids(self, client_with_auth):
         """Supplement IDs that don't belong to this user are rejected."""

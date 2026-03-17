@@ -739,6 +739,12 @@ async def log_supplements(
 
     if body.notes and len(body.notes) > 500:
         raise HTTPException(status_code=422, detail="notes must not exceed 500 characters.")
+    # Require at least one supplement ID — empty list creates a useless zero-value row
+    if not body.taken_supplement_ids:
+        raise HTTPException(
+            status_code=422,
+            detail="taken_supplement_ids must contain at least one supplement ID.",
+        )
     if body.taken_supplement_ids:
         result = await db.execute(
             select(UserSupplement.id).where(

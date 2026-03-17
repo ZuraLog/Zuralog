@@ -1,6 +1,11 @@
-"""Tests for _resolve_logged_at."""
+"""Tests for quick_log_routes guards and helpers."""
 
 from datetime import timezone
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from fastapi.testclient import TestClient
+
 from app.api.v1.quick_log_routes import _resolve_logged_at
 
 
@@ -30,3 +35,68 @@ def test_resolve_logged_at_none_returns_utc_now():
 
     dt = datetime.fromisoformat(result)
     assert dt.tzinfo is not None
+
+
+# ---------------------------------------------------------------------------
+# Supplement log — empty taken_supplement_ids guard
+# ---------------------------------------------------------------------------
+
+TEST_USER_ID = "test-user-supplement-guard"
+
+
+def test_supplement_log_rejects_empty_ids(mock_db, auth_headers):
+    """POST /quick-log/supplements with an empty ID list must return 422."""
+    from app.api.deps import _get_auth_service, get_authenticated_user_id
+    from app.database import get_db
+    from app.main import app
+
+    app.dependency_overrides[get_authenticated_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.post(
+                "/api/v1/quick-log/supplements",
+                json={"taken_supplement_ids": []},
+                headers=auth_headers,
+            )
+    finally:
+        app.dependency_overrides.pop(get_authenticated_user_id, None)
+        app.dependency_overrides.pop(get_db, None)
+
+    assert response.status_code == 422
+    body = response.json()
+    assert "taken_supplement_ids" in body.get("detail", "").lower()
+
+
+def test_supplement_log_accepts_nonempty_ids(mock_db, auth_headers):
+    """POST /quick-log/supplements with at least one valid ID must not fail the empty-list guard."""
+    from app.api.deps import get_authenticated_user_id
+    from app.database import get_db
+    from app.main import app
+
+    # DB returns the ID as valid so the ownership check passes.
+    db_result = MagicMock()
+    db_result.all.return_value = [("supp-1",)]
+    mock_db.execute = AsyncMock(return_value=db_result)
+    mock_db.add = MagicMock()
+    mock_db.commit = AsyncMock()
+    mock_db.refresh = AsyncMock()
+
+    app.dependency_overrides[get_authenticated_user_id] = lambda: TEST_USER_ID
+    app.dependency_overrides[get_db] = lambda: mock_db
+
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.post(
+                "/api/v1/quick-log/supplements",
+                json={"taken_supplement_ids": ["supp-1"]},
+                headers=auth_headers,
+            )
+    finally:
+        app.dependency_overrides.pop(get_authenticated_user_id, None)
+        app.dependency_overrides.pop(get_db, None)
+
+    # Must NOT be rejected by the empty-list guard specifically.
+    detail = response.json().get("detail", "") if response.status_code == 422 else ""
+    assert "taken_supplement_ids must contain" not in detail
