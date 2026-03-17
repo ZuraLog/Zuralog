@@ -4,7 +4,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -37,7 +36,6 @@ class MealLogScreen extends ConsumerStatefulWidget {
 }
 
 class _MealLogScreenState extends ConsumerState<MealLogScreen> {
-  bool _quickMode = false;
   String? _mealType;
   int? _calories;
   final _descriptionCtrl = TextEditingController();
@@ -50,25 +48,13 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPrefs();
     _autoSuggest();
-  }
-
-  Future<void> _loadPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => _quickMode = prefs.getBool('meal_log_quick_mode') ?? false);
   }
 
   void _autoSuggest() {
     final summary = ref.read(todayLogSummaryProvider).valueOrNull;
     final latestValues = summary?.latestValues ?? {};
     setState(() => _mealType = _autoSuggestMealType(DateTime.now(), latestValues));
-  }
-
-  Future<void> _setQuickMode(bool value) async {
-    setState(() => _quickMode = value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('meal_log_quick_mode', value);
   }
 
   void _onCaloriesTyped(String raw) {
@@ -86,7 +72,8 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
 
   bool get _canSave {
     if (_isSaving || _mealType == null) return false;
-    if (!_quickMode && _descriptionCtrl.text.trim().isEmpty) return false;
+    final quickMode = ref.read(mealLogModeProvider).valueOrNull ?? false;
+    if (!quickMode && _descriptionCtrl.text.trim().isEmpty) return false;
     return true;
   }
 
@@ -97,7 +84,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
       final repo = ref.read(todayRepositoryProvider);
       await repo.logMeal(
         mealType: _mealType!.toLowerCase().replaceAll('-', '_'),
-        quickMode: _quickMode,
+        quickMode: ref.read(mealLogModeProvider).valueOrNull ?? false,
         description: _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
         caloriesKcal: _calories,
         feelChips: _feelChips.toList(),
@@ -127,6 +114,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final quickMode = ref.watch(mealLogModeProvider).valueOrNull ?? false;
     final bottomPad = MediaQuery.of(context).padding.bottom;
     return ZuralogScaffold(
       appBar: AppBar(title: const Text('Log Meal'), leading: const BackButton()),
@@ -140,7 +128,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Quick calorie entry', style: AppTextStyles.bodyMedium),
-                    Switch(value: _quickMode, onChanged: _setQuickMode),
+                    Switch(value: quickMode, onChanged: (v) => ref.read(mealLogModeProvider.notifier).setMode(v)),
                   ],
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
@@ -156,7 +144,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
                   )).toList(),
                 ),
                 const SizedBox(height: AppDimens.spaceLg),
-                if (_quickMode) ...[
+                if (quickMode) ...[
                   const ZSectionLabel(label: 'Calories'),
                   const SizedBox(height: AppDimens.spaceSm),
                   TextField(
@@ -244,7 +232,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               child: _isSaving
                   ? const CircularProgressIndicator.adaptive()
-                  : Text(_quickMode ? 'Save' : 'Save Meal'),
+                  : Text(quickMode ? 'Save' : 'Save Meal'),
             ),
           ),
         ],
