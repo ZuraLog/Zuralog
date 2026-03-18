@@ -325,6 +325,98 @@ class InsightSignalDetector:
                         },
                     )
                 )
+            # Goal behind pace: 20–79% progress AND behind schedule
+            # Only applies to weekly/monthly goals with time context
+            elif 20 <= pct < 80 and goal.period in ("weekly", "monthly", "custom"):
+                # For weekly: 7 days in period, for monthly: 30 days
+                period_days = 7 if goal.period == "weekly" else 30
+                # If the user has been tracking for more than half the period and is < 50% done
+                if pct < 50 and self.brief.data_maturity_days > period_days // 2:
+                    signals.append(
+                        InsightSignal(
+                            signal_type="goal_behind_pace",
+                            category="B",
+                            metrics=[goal.metric],
+                            values={"current": current, "target": goal.target_value, "progress_pct": pct},
+                            severity=3,
+                            actionable=True,
+                            focus_relevant=False,
+                            title_hint=f"{goal.metric} goal behind pace",
+                            data_payload={
+                                "metric": goal.metric,
+                                "current": current,
+                                "target": goal.target_value,
+                                "progress_pct": pct,
+                            },
+                        )
+                    )
+                elif pct >= 50 and pct < 80 and self.brief.data_maturity_days > period_days // 2:
+                    signals.append(
+                        InsightSignal(
+                            signal_type="goal_ahead_of_pace",
+                            category="B",
+                            metrics=[goal.metric],
+                            values={"current": current, "target": goal.target_value, "progress_pct": pct},
+                            severity=2,
+                            actionable=False,
+                            focus_relevant=False,
+                            title_hint=f"{goal.metric} goal ahead of pace",
+                            data_payload={
+                                "metric": goal.metric,
+                                "current": current,
+                                "target": goal.target_value,
+                                "progress_pct": pct,
+                            },
+                        )
+                    )
+
+            # Goal deadline approaching (within 7 days)
+            if goal.deadline:
+                from datetime import date as date_type
+
+                try:
+                    deadline_date = date_type.fromisoformat(str(goal.deadline)[:10])
+                    days_remaining = (deadline_date - self.brief.generated_at.date()).days
+                    if 0 < days_remaining <= 7 and not progress["is_met"]:
+                        signals.append(
+                            InsightSignal(
+                                signal_type="goal_deadline_approaching",
+                                category="B",
+                                metrics=[goal.metric],
+                                values={
+                                    "current": current,
+                                    "target": goal.target_value,
+                                    "days_remaining": days_remaining,
+                                    "progress_pct": pct,
+                                },
+                                severity=4 if days_remaining <= 3 else 3,
+                                actionable=True,
+                                focus_relevant=False,
+                                title_hint=f"{goal.metric} deadline in {days_remaining}d",
+                                data_payload={
+                                    "metric": goal.metric,
+                                    "days_remaining": days_remaining,
+                                    "progress_pct": pct,
+                                },
+                            )
+                        )
+                    # Goal completed (deadline goal that is now met)
+                    if days_remaining <= 0 and progress["is_met"]:
+                        signals.append(
+                            InsightSignal(
+                                signal_type="goal_completed",
+                                category="B",
+                                metrics=[goal.metric],
+                                values={"current": current, "target": goal.target_value},
+                                severity=4,
+                                actionable=False,
+                                focus_relevant=False,
+                                title_hint=f"{goal.metric} goal completed!",
+                                data_payload={"metric": goal.metric, "current": current, "target": goal.target_value},
+                            )
+                        )
+                except (ValueError, TypeError):
+                    pass  # Invalid deadline — skip
 
             # Streak for this goal
             goal_daily_values = self._get_metric_values(goal.metric)
@@ -403,7 +495,7 @@ class InsightSignalDetector:
         weight_by_date = {r.date: r.weight_kg for r in self.brief.weight if r.weight_kg is not None}
         if today in weight_by_date:
             recent_weights = sorted([(d, v) for d, v in weight_by_date.items() if d != today])[-7:]
-            if len(recent_weights) >= 3:
+            if len(recent_weights) >= 7:
                 avg = sum(v for _, v in recent_weights) / len(recent_weights)
                 diff = abs(weight_by_date[today] - avg)
                 if diff >= 2.0:
@@ -518,7 +610,7 @@ class InsightSignalDetector:
                     continue
                 result = analyzer.calculate_correlation(x_vals, y_vals)
                 score = abs(result.get("score", 0.0))
-                if score <= 0.4:
+                if score < 0.4:
                     continue
                 severity = 3 if score > 0.7 else 2
                 signals.append(

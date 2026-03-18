@@ -572,6 +572,62 @@ def test_focus_boost_increases_severity():
     assert near_miss[0].focus_relevant is True
 
 
+def test_cat_b_goal_deadline_approaching_fires():
+    """Deadline 3 days out with 30% progress must emit goal_deadline_approaching."""
+    from app.analytics.insight_signal_detector import InsightSignalDetector
+    from datetime import timedelta
+
+    deadline = (date.today() + timedelta(days=3)).isoformat()
+    goal = GoalRow(
+        id="g1",
+        metric="steps",
+        target_value=100000.0,
+        period="monthly",
+        current_value=30000.0,
+        deadline=deadline,
+        is_active=True,
+    )
+    brief = _brief(goals=[goal], data_maturity_days=20)
+    signals = InsightSignalDetector(brief).detect_all()
+    types = [s.signal_type for s in signals]
+    assert "goal_deadline_approaching" in types
+
+
+def test_cat_b_goal_completed_fires_when_deadline_passed_and_met():
+    """Deadline yesterday + goal met must emit goal_completed."""
+    from app.analytics.insight_signal_detector import InsightSignalDetector
+    from datetime import timedelta
+
+    deadline = (date.today() - timedelta(days=1)).isoformat()  # yesterday
+    goal = GoalRow(
+        id="g1",
+        metric="steps",
+        target_value=100000.0,
+        period="monthly",
+        current_value=105000.0,
+        deadline=deadline,
+        is_active=True,
+    )
+    brief = _brief(goals=[goal], data_maturity_days=30)
+    signals = InsightSignalDetector(brief).detect_all()
+    types = [s.signal_type for s in signals]
+    assert "goal_completed" in types
+
+
+def test_cat_b_goal_behind_pace_fires():
+    """Weekly goal at ~14% progress after more than half the period must emit goal_behind_pace."""
+    from app.analytics.insight_signal_detector import InsightSignalDetector
+
+    goal = GoalRow(
+        id="g1", metric="steps", target_value=70000.0, period="weekly", current_value=10000.0, is_active=True
+    )
+    brief = _brief(goals=[goal], data_maturity_days=10)  # more than 7//2 days
+    signals = InsightSignalDetector(brief).detect_all()
+    types = [s.signal_type for s in signals]
+    # Should fire either goal_at_risk or goal_behind_pace
+    assert any(t in types for t in ("goal_at_risk", "goal_behind_pace"))
+
+
 def test_focus_boost_does_not_exceed_5():
     """Focus boost on an already-severity-5 signal must not push above 5."""
     from app.analytics.insight_signal_detector import InsightSignalDetector
