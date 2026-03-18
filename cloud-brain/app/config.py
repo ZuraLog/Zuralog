@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     openrouter_referer: str = "https://zuralog.app"
     openrouter_title: str = "Zuralog"
     openrouter_model: str = "moonshotai/kimi-k2.5"
-    openrouter_insight_model: str = "google/gemini-flash-2.5"
+    openrouter_insight_model: str = "google/gemini-3.1-flash-lite-preview"
     # OPENROUTER_INSIGHT_MODEL — cheap fast model for daily insight generation.
     # Separate from openrouter_model (Kimi K2.5) which is the Coach tab model.
     google_web_client_id: str = ""
