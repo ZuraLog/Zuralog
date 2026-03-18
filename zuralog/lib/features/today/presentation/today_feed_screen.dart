@@ -101,6 +101,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
           ref.invalidate(todayLogSummaryProvider);
           ref.invalidate(userLoggedTypesProvider);
           ref.invalidate(pinnedMetricsProvider);
+          ref.invalidate(dailyGoalsProvider);
           await Future.wait([
             ref
                 .read(healthScoreProvider.future)
@@ -119,6 +120,9 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 .catchError(
                   (Object e, StackTrace _) => TodayLogSummary.empty,
                 ),
+            ref.read(dailyGoalsProvider.future).catchError(
+              (Object e, StackTrace _) => <DailyGoal>[],
+            ),
           ]);
         },
         child: ListView(
