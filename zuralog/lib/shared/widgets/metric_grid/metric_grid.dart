@@ -50,11 +50,17 @@ class MetricGrid extends StatefulWidget {
     required this.tiles,
     required this.onAddTap,
     this.onRemove,
+    this.onTileTap,
   });
 
   final List<MetricTileData> tiles;
   final VoidCallback onAddTap;
   final ValueChanged<MetricTileData>? onRemove;
+
+  /// Called when the user taps a tile in normal (non-edit) mode.
+  /// Receives the tapped [MetricTileData] so the caller can open the
+  /// appropriate log panel for that metric type.
+  final ValueChanged<MetricTileData>? onTileTap;
 
   @override
   State<MetricGrid> createState() => _MetricGridState();
@@ -133,6 +139,7 @@ class _MetricGridState extends State<MetricGrid> {
                 if (widget.tiles.length == 1) _exitEditMode();
               },
               onAddTap: widget.onAddTap,
+              onTileTap: widget.onTileTap,
             ),
           ),
       ],
@@ -148,12 +155,14 @@ class _GridLayout extends StatelessWidget {
     required this.editMode,
     required this.onRemove,
     required this.onAddTap,
+    this.onTileTap,
   });
 
   final List<MetricTileData> tiles;
   final bool editMode;
   final ValueChanged<MetricTileData> onRemove;
   final VoidCallback onAddTap;
+  final ValueChanged<MetricTileData>? onTileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +196,9 @@ class _GridLayout extends StatelessWidget {
                           data: rowTiles[tIdx],
                           inEditMode: editMode,
                           onRemove: () => onRemove(rowTiles[tIdx]),
+                          onTap: onTileTap != null
+                              ? () => onTileTap!(rowTiles[tIdx])
+                              : null,
                         ),
                       ),
                       if (tIdx < rowTiles.length - 1)
@@ -239,6 +251,9 @@ class _GridLayout extends StatelessWidget {
                       data: chunk[tIdx],
                       inEditMode: editMode,
                       onRemove: () => onRemove(chunk[tIdx]),
+                      onTap: onTileTap != null
+                          ? () => onTileTap!(chunk[tIdx])
+                          : null,
                     ),
                   ),
                   if (tIdx < chunk.length - 1)

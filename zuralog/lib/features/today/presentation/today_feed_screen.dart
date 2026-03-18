@@ -434,9 +434,61 @@ class _MetricGridSection extends ConsumerWidget {
                 .read(pinnedMetricsProvider.notifier)
                 .removeMetric(tile.metricType);
           },
+          onTileTap: (tile) => _openLogForMetric(context, tile.metricType),
         );
       },
     );
+  }
+
+  /// Opens the appropriate logging experience for [metricType].
+  ///
+  /// Inline metrics (mood/energy/stress/water/weight/steps) open
+  /// [ZLogGridSheet] pre-navigated to the correct panel.
+  /// Full-screen metrics (sleep/run/meal/supplement/symptom) push the
+  /// corresponding named route directly over the shell.
+  /// Read-only synced metrics (heart_rate, etc.) are silently ignored.
+  void _openLogForMetric(BuildContext context, String metricType) {
+    // Map energy/stress → mood since they share the wellness inline panel.
+    final sheetKey = switch (metricType) {
+      'energy' || 'stress' => 'mood',
+      _                    => metricType,
+    };
+
+    // Full-screen routes — push directly, no sheet needed.
+    final fullScreenRoute = switch (metricType) {
+      'sleep'      => RouteNames.sleepLog,
+      'run'        => RouteNames.runLog,
+      'meal'       => RouteNames.mealLog,
+      'supplement' => RouteNames.supplementsLog,
+      'symptom'    => RouteNames.symptomLog,
+      _            => null,
+    };
+
+    if (fullScreenRoute != null) {
+      context.pushNamed(fullScreenRoute);
+      return;
+    }
+
+    // Inline metrics — open the sheet pre-navigated to the right panel.
+    const inlineKeys = {'mood', 'water', 'weight', 'steps'};
+    if (inlineKeys.contains(sheetKey)) {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => ZLogGridSheet(
+          initialTileKey: sheetKey,
+          parentMessenger: ScaffoldMessenger.of(context),
+          onFullScreenRoute: (routeName) {
+            Navigator.of(context).pop();
+            context.pushNamed(routeName);
+          },
+        ),
+      );
+      return;
+    }
+
+    // heart_rate and any unrecognised types are read-only — no action.
   }
 }
 

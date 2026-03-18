@@ -93,6 +93,7 @@ class ZLogGridSheet extends ConsumerStatefulWidget {
     super.key,
     this.onFullScreenRoute,
     this.parentMessenger,
+    this.initialTileKey,
   });
 
   /// Called when a full-screen log tile is tapped.
@@ -106,6 +107,15 @@ class ZLogGridSheet extends ConsumerStatefulWidget {
   /// not surface correctly from within a detached modal context.
   final ScaffoldMessengerState? parentMessenger;
 
+  /// When provided, the sheet opens directly to the inline panel for this
+  /// metric type key (e.g. `'water'`, `'mood'`, `'weight'`, `'steps'`),
+  /// skipping the grid picker entirely.
+  ///
+  /// Only effective for inline-behaviour tiles. If the key maps to a
+  /// full-screen tile or is unrecognised, it is silently ignored and the grid
+  /// picker is shown instead.
+  final String? initialTileKey;
+
   @override
   ConsumerState<ZLogGridSheet> createState() => _ZLogGridSheetState();
 }
@@ -113,6 +123,26 @@ class ZLogGridSheet extends ConsumerStatefulWidget {
 class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
   /// When non-null, the sheet shows the inline panel for this tile.
   _TileDef? _selectedTile;
+
+  @override
+  void initState() {
+    super.initState();
+    // If an initialTileKey was provided, pre-navigate to the inline panel
+    // for that tile so the sheet opens directly at the right panel.
+    // Only inline tiles support this — full-screen and comingSoon tiles
+    // are ignored (caller should use context.pushNamed for full-screen).
+    final key = widget.initialTileKey;
+    if (key != null) {
+      try {
+        final match = _tiles.firstWhere(
+          (t) => t.key == key && t.behaviour == _TileBehaviour.inline,
+        );
+        _selectedTile = match;
+      } catch (_) {
+        // No inline tile found for this key — show the grid picker.
+      }
+    }
+  }
 
   void _backToGrid() => setState(() => _selectedTile = null);
 

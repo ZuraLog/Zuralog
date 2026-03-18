@@ -56,6 +56,7 @@ class MetricTile extends StatelessWidget {
     required this.data,
     this.inEditMode = false,
     this.onRemove,
+    this.onTap,
   });
 
   /// The tile's data — metric type, value, colour.
@@ -67,6 +68,11 @@ class MetricTile extends StatelessWidget {
   /// Called when the remove button is tapped. Only relevant when
   /// [inEditMode] is true.
   final VoidCallback? onRemove;
+
+  /// Called when the user taps the tile in normal (non-edit) mode.
+  /// Ignored when [inEditMode] is true so taps don't accidentally open log
+  /// panels while the user is rearranging tiles.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +155,7 @@ class MetricTile extends StatelessWidget {
     // Always use a Stack so the widget tree stays stable between normal and
     // edit mode — this prevents Flutter from rebuilding with a different widget
     // type, which caused the "shrink" artefact when entering edit mode.
-    return Stack(
+    final stack = Stack(
       clipBehavior: Clip.none,
       children: [
         tile,
@@ -176,5 +182,17 @@ class MetricTile extends StatelessWidget {
           ),
       ],
     );
+
+    // In normal mode, wrap in a tap handler so pressing the tile opens the
+    // corresponding log panel. Disabled in edit mode so the remove badge
+    // takes precedence and accidental log-panel opens are avoided.
+    if (!inEditMode && onTap != null) {
+      return GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: stack,
+      );
+    }
+    return stack;
   }
 }
