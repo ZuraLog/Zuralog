@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-18 (Today Tab Redesign complete: Health Score zero state, Streak Hero Card, Adaptive Metric Grid)
+**Last Updated:** 2026-03-18 (Today Tab Redesign polish: metric picker full-screen, tile uniformity, tap-to-log, nav bar fix)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -183,7 +183,7 @@
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Today Feed (curated daily briefing) | ✅ Done | Phase 3 complete — Health Score hero, insight cards, quick actions, wellness check-in, streak, Quick Log FAB; feat/today-tab-settings-wiring: greeting personalization, data maturity banner persistence, wellness check-in gating |
+| P0 | Today Feed (curated daily briefing) | ✅ Done | Phase 3 complete — Health Score hero, insight cards, quick actions, wellness check-in, streak, Quick Log FAB; feat/today-tab-settings-wiring: greeting personalization, data maturity banner persistence, wellness check-in gating; Polish pass (2026-03-18): metric picker full-screen route, tile uniformity (width/height/badge), tap-to-log, nav bar obstruction fix |
 | P0 | Today — Insight Detail | ✅ Done | Phase 3 complete — bar chart, AI reasoning, source chips, Discuss with Coach CTA |
 | P0 | Today — Notification History | ✅ Done | Phase 3 complete — grouped by day, unread indicators, deep-link routing |
 | P0 | Today — Sleep Log Screen | ✅ Done | Part 3 complete — bedtime/wake time pickers, quality emoji, interruptions counter, factors chips, notes |
@@ -193,6 +193,7 @@
 | P0 | Today — Symptom Log Screen | ✅ Done | Part 3 complete — body area multi-select, symptom type, severity emoji, timing, notes |
 | P0 | Today — Quick Log Real Data (Part 4) | ✅ Done | Water/Wellness/Weight/Steps endpoints + real data wiring + steps mode toggle; feat/today-tab-part4-real-data merged 2026-03-16 |
 | P0 | Today — Inline Log Panels (Part 5) | ✅ Done | GET /quick-log/latest endpoint; latestLogValuesProvider; ZWaterLogPanel (oz/ml unit-aware, real logWater API); ZWellnessLogPanel (real logWellness API); ZWeightLogPanel (pre-fill, delta, unit persistence, real logWeight); ZStepsLogPanel (sync banner, goal display, Confirm Steps, real source); _PanelView snackbar fix; 2026-03-17 |
+| P0 | Today — Metric grid tap-to-log | ✅ Done | Tap metric tile to open log sheet directly; energy/stress mapped to mood; water/weight/meal/supplement/symptom open inline or full-screen; heart_rate read-only; useRootNavigator: true for nav bar clearance; 2026-03-18 |
 | P0 | Data — Health Dashboard (customizable) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Category Detail (x10) | ✅ Done | Phase 5 — feat/data-tab |
 | P0 | Data — Metric Detail | ✅ Done | Phase 5 — feat/data-tab |

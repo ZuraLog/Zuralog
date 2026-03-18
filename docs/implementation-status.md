@@ -7,6 +7,114 @@
 
 ---
 
+## Today Tab Redesign — Polish Pass (2026-03-18)
+
+**Scope:** Seven iterative fixes to the Today tab metric grid and log sheet after the initial redesign merged. All changes direct to `main` (2026-03-18).
+
+**What was fixed:**
+
+### 1. Metric Picker Sheet — Full-Screen Route Over Nav Bar
+
+**Files changed:** `zuralog/lib/features/today/presentation/log_screens/metric_picker_screen.dart` (new), `zuralog/lib/core/router/app_router.dart`, `zuralog/lib/core/router/route_names.dart`
+
+**What was built:**
+- Created `MetricPickerScreen` as a full-screen `Scaffold` with AppBar, wrapping the existing `MetricPickerSheet`
+- Added top-level `GoRoute` in `app_router.dart` (outside `StatefulShellRoute`) so the picker covers the nav bar
+- Added `RouteNames.metricPicker` and `metricPickerPath` to route registry
+- Replaced `_showMetricPicker` in `today_feed_screen.dart` with `context.pushNamed(RouteNames.metricPicker, extra: pinned.toSet())`
+- Removed drag handle and built-in title from `MetricPickerSheet` (AppBar handles both)
+
+**Key decision:** Full-screen route outside the shell ensures the picker overlays the nav bar, not underneath it. Users can see the full sheet without the nav bar blocking content.
+
+### 2. Edit Mode Badge Positioning
+
+**Files changed:** `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart`, `zuralog/lib/shared/widgets/metric_grid/metric_grid.dart`
+
+**What was fixed:**
+- `MetricTile` badge moved from `top: -6, right: -6` → `top: -4, right: -4` to reduce overflow
+- `_GridLayout` adds `top: AppDimens.spaceSm` padding in edit mode so badge has clearance above first row
+- `MetricTile` always returns a `Stack` (not conditionally) to keep widget tree stable and prevent tile-shrink artefact when entering edit mode
+
+**Key decision:** Consistent `Stack` structure prevents widget tree mutations that cause layout glitches. Explicit padding prevents badge overflow.
+
+### 3. Tile Width Uniformity Fix
+
+**Files changed:** `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart`
+
+**What was fixed:**
+- `MetricTile`'s inner `Container` now has `width: double.infinity` — forces it to fill the `Stack`'s width (which is constrained by `Expanded`)
+- Without this, the `Container` shrank to its text content's intrinsic width, making tiles in the same row appear different widths
+
+**Key decision:** Explicit width constraint ensures all tiles in a row have uniform width regardless of label length.
+
+### 4. Tile Height Uniformity Fix
+
+**Files changed:** `zuralog/lib/shared/widgets/metric_grid/metric_grid.dart`, `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart`
+
+**What was fixed:**
+- `_GridLayout` rows wrapped in `IntrinsicHeight` + `CrossAxisAlignment.stretch` so all tiles in a row share the tallest tile's height
+- `MetricTile` column changed from `mainAxisSize: MainAxisSize.min` → `MainAxisSize.max` so it fills the given height with content centred via `MainAxisAlignment.center`
+
+**Key decision:** `IntrinsicHeight` measures all children and applies the max height to all. This ensures visual alignment across rows.
+
+### 5. Health Score Sad Face for Low/Broken Scores
+
+**Files changed:** `zuralog/lib/features/today/presentation/today_feed_screen.dart`
+
+**What was fixed:**
+- `_HealthScoreHero` condition changed from `dataDays == 0 && score == 0` → `dataDays == 0 || score < 20`
+- A score below 20 almost always means the calculation hasn't run yet; show the 😔 sad face instead of a misleadingly low number
+
+**Key decision:** Threshold of 20 catches broken calculations without hiding legitimately low scores (which are rare for active users).
+
+### 6. Last-Logged Value + Relative Date on Unlit Tiles
+
+**Files changed:** `zuralog/lib/features/today/domain/metric_grid_models.dart`, `zuralog/lib/shared/widgets/metric_grid/metric_grid.dart`, `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart`
+
+**What was built:**
+- `MetricTileData` model now has `lastValue: String?` and `lastLoggedAt: DateTime?` fields
+- `_MetricGridSection` now also watches `latestLogValuesProvider` (which calls `GET /api/v1/quick-log/latest`)
+- `_buildTile` accepts the latest-values map and extracts formatted last value + parsed timestamp per type
+- `MetricTile` shows the last value on unlit tiles and a relative date hint (e.g. "4d ago") below the label
+
+**Key decision:** Showing last-logged value on unlit tiles gives users context ("I logged this 4 days ago") without cluttering lit tiles.
+
+### 7. Tile Tap-to-Log
+
+**Files changed:** `zuralog/lib/shared/widgets/metric_grid/metric_tile.dart`, `zuralog/lib/shared/widgets/metric_grid/metric_grid.dart`, `zuralog/lib/shared/widgets/sheets/z_log_grid_sheet.dart`, `zuralog/lib/features/today/presentation/today_feed_screen.dart`
+
+**What was built:**
+- `MetricTile` gained optional `onTap: VoidCallback?` — fires in normal mode, disabled in edit mode
+- `MetricGrid` gained `onTileTap: ValueChanged<MetricTileData>?` — passed through `_GridLayout` to each tile
+- `ZLogGridSheet` gained `initialTileKey: String?` — if provided, `initState` pre-selects the inline panel, skipping the grid picker
+- `_MetricGridSection` wires `onTileTap` via `_openLogForMetric()`:
+  - `energy`/`stress` → mapped to `'mood'` (shares the Wellness inline panel)
+  - `mood`/`water`/`weight`/`steps` → opens `ZLogGridSheet(initialTileKey: key)` as modal bottom sheet
+  - `sleep`/`run`/`meal`/`supplement`/`symptom` → `context.pushNamed(routeName)` directly
+  - `heart_rate` and unrecognised types → no-op (read-only synced metrics)
+
+**Nav bar obstruction fix:**
+- The tile-tap sheet call added `useRootNavigator: true` to `showModalBottomSheet`
+- Also updated `onFullScreenRoute` pop to use `Navigator.of(context, rootNavigator: true).pop()`
+- Without this, the sheet rendered inside the inner scaffold (below the nav bar). `useRootNavigator: true` pushes it onto the root navigator — same level AppShell uses for the FAB sheet.
+
+**Key decision:** Routing to full-screen log screens via `context.pushNamed()` keeps them in the navigation stack. Inline panels open as sheets via `useRootNavigator: true` to avoid nav bar obstruction.
+
+### Test Results
+
+- `flutter test`: 427/427 passing
+- `flutter analyze`: 0 issues
+
+**Result:**
+- Metric picker is now a full-screen route that overlays the nav bar
+- All tiles have uniform width and height across rows
+- Unlit tiles show last-logged value and relative date for context
+- Tapping a tile opens the appropriate log screen or inline panel
+- Health score shows sad face for broken calculations (score < 20)
+- All 427 tests passing, zero analyze issues
+
+---
+
 ## Today Tab Redesign — Complete (2026-03-18)
 
 **Scope:** Redesigned the Today tab with three major UI changes: Health Score zero state, Streak Hero Card, and Adaptive Metric Grid.  
