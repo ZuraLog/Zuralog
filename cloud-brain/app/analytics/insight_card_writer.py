@@ -22,6 +22,7 @@ from app.agent.llm_client import LLMClient
 from app.analytics.insight_signal_detector import InsightSignal
 from app.analytics.user_focus_profile import UserFocusProfile
 from app.config import settings
+from app.analytics.insight_card_schema import InsightCardSchema
 
 logger = logging.getLogger(__name__)
 
@@ -184,11 +185,23 @@ class InsightCardWriter:
             raw = raw.rsplit("```", 1)[0].strip()
 
         try:
-            cards = json.loads(raw)
-            if not isinstance(cards, list) or len(cards) == 0:
+            raw_cards = json.loads(raw)
+            if not isinstance(raw_cards, list) or len(raw_cards) == 0:
                 logger.warning("InsightCardWriter: LLM returned non-list or empty response")
                 return None
-            return cards
+
+            validated: list[dict[str, Any]] = []
+            for i, raw_card in enumerate(raw_cards):
+                try:
+                    card = InsightCardSchema.model_validate(raw_card)
+                    validated.append(card.model_dump())
+                except Exception as e:
+                    logger.warning(
+                        "InsightCardWriter: skipping invalid card at index %d — %s",
+                        i,
+                        e,
+                    )
+            return validated if validated else None
         except (json.JSONDecodeError, ValueError) as e:
             logger.warning("InsightCardWriter: malformed JSON from LLM — %s. Raw: %.200s", e, raw)
             return None
