@@ -34,6 +34,17 @@ from app.analytics.user_focus_profile import UserFocusProfileBuilder
 
 logger = logging.getLogger(__name__)
 
+# Category E compound pattern thresholds
+_WEIGHT_PLATEAU_STDDEV_KG = 0.3  # Weight considered "plateaued" if stddev < this over 14 days
+_SLEEP_DEBT_AVG_HOURS = 6.5  # Sleep debt fires if 7-day avg sleep below this
+_SLEEP_DEBT_NIGHT_THRESHOLD = 6.0  # Night considered "short" if sleep hours below this
+_SLEEP_DEBT_MIN_NIGHTS = 3  # Minimum nights below threshold to fire sleep debt signal
+_DEFICIT_TOO_DEEP_RATIO = 0.6  # Fire if calories_in < TDEE * this ratio
+_DEHYDRATION_MIN_ML_PER_DAY = 1500.0  # Minimum daily water intake before flagging
+_RECOVERY_PEAK_HRV_BOOST = 0.15  # HRV boost threshold for recovery peak (15%)
+_WEEKEND_GAP_THRESHOLD = 0.60  # Weekend rate must be < weekday rate * this to fire
+_OVERTRAINING_CONSECUTIVE_DAYS = 5  # Min consecutive workout days to trigger overtraining check
+
 
 # ---------------------------------------------------------------------------
 # InsightSignal dataclass
@@ -372,8 +383,6 @@ class InsightSignalDetector:
 
             # Goal deadline approaching (within 7 days)
             if goal.deadline:
-                from datetime import date as date_type
-
                 try:
                     deadline_date = date_type.fromisoformat(str(goal.deadline)[:10])
                     days_remaining = (deadline_date - self.brief.generated_at.date()).days
@@ -444,12 +453,33 @@ class InsightSignalDetector:
 
     def _get_metric_values(self, metric: str) -> list[float]:
         """Extract ordered daily values for a named metric from the brief."""
-        if metric in ("steps", "active_calories", "resting_heart_rate", "hrv_ms"):
+        # Daily metrics
+        daily_attrs = {
+            "steps",
+            "active_calories",
+            "resting_heart_rate",
+            "hrv_ms",
+            "heart_rate_avg",
+            "vo2_max",
+            "respiratory_rate",
+            "oxygen_saturation",
+            "body_fat_percentage",
+            "flights_climbed",
+            "distance_meters",
+        }
+        if metric in daily_attrs:
             return [v for r in self.brief.daily_metrics for v in [getattr(r, metric, None)] if v is not None]
         if metric == "sleep_hours":
             return [r.hours for r in self.brief.sleep_records if r.hours is not None]
+        if metric == "sleep_quality":
+            return [r.quality_score for r in self.brief.sleep_records if r.quality_score is not None]
         if metric == "weight_kg":
             return [r.weight_kg for r in self.brief.weight if r.weight_kg is not None]
+        if metric in ("calories", "calorie_intake"):
+            return [r.calories for r in self.brief.nutrition if r.calories is not None]
+        if metric == "protein_grams":
+            return [r.protein_grams for r in self.brief.nutrition if r.protein_grams is not None]
+        logger.debug("_get_metric_values: unknown metric '%s'", metric)
         return []
 
     # ------------------------------------------------------------------
@@ -680,7 +710,7 @@ class InsightSignalDetector:
             mean = sum(recent) / len(recent)
             variance = sum((v - mean) ** 2 for v in recent) / len(recent)
             stddev = math.sqrt(variance)
-            if stddev >= 0.3:
+            if stddev >= _WEIGHT_PLATEAU_STDDEV_KG:
                 return []
 
             has_weight_loss_goal = any(
@@ -744,7 +774,7 @@ class InsightSignalDetector:
                 else:
                     break
 
-            if consecutive < 5:
+            if consecutive < _OVERTRAINING_CONSECUTIVE_DAYS:
                 return []
 
             # HRV: recent 7-day avg < previous 7-day avg
@@ -801,8 +831,8 @@ class InsightSignalDetector:
             if len(recent_sleep) < 7:
                 return []
             avg = sum(recent_sleep) / len(recent_sleep)
-            nights_under_6 = sum(1 for h in recent_sleep if h < 6.0)
-            if avg >= 6.5 or nights_under_6 <= 3:
+            nights_under_6 = sum(1 for h in recent_sleep if h < _SLEEP_DEBT_NIGHT_THRESHOLD)
+            if avg >= _SLEEP_DEBT_AVG_HOURS or nights_under_6 < _SLEEP_DEBT_MIN_NIGHTS:
                 return []
             return [
                 InsightSignal(
@@ -833,7 +863,7 @@ class InsightSignalDetector:
             if len(recent_nutrition) < 5:
                 return []
             avg_calories = sum(recent_nutrition) / len(recent_nutrition)
-            threshold = self.brief.estimated_tdee * 0.6
+            threshold = self.brief.estimated_tdee * _DEFICIT_TOO_DEEP_RATIO
             if avg_calories >= threshold:
                 return []
             return [
@@ -922,7 +952,7 @@ class InsightSignalDetector:
             if hrv_30d == 0:
                 return []
             hrv_boost_pct = (hrv_7d - hrv_30d) / hrv_30d * 100
-            if hrv_boost_pct < 15:
+            if hrv_boost_pct < _RECOVERY_PEAK_HRV_BOOST * 100:
                 return []
 
             rhr_values = [r.resting_heart_rate for r in self.brief.daily_metrics if r.resting_heart_rate is not None]
@@ -972,8 +1002,8 @@ class InsightSignalDetector:
             bad_days = 0
             for offset in range(3):
                 day = (today - timedelta(days=offset)).isoformat()
-                day_stress = [q.value for q in stress_logs if q.logged_at.startswith(day)]
-                day_mood = [q.value for q in mood_logs if q.logged_at.startswith(day)]
+                day_stress = [q.value for q in stress_logs if q.logged_at[:10] == day]
+                day_mood = [q.value for q in mood_logs if q.logged_at[:10] == day]
                 stress_bad = (sum(day_stress) / len(day_stress)) > 7 if day_stress else False
                 mood_bad = (sum(day_mood) / len(day_mood)) < 4 if day_mood else False
                 if stress_bad or mood_bad:
@@ -1029,7 +1059,7 @@ class InsightSignalDetector:
                 return []
 
             avg_water = sum(totals) / 3
-            if avg_water >= 1500:
+            if avg_water >= _DEHYDRATION_MIN_ML_PER_DAY:
                 return []
 
             return [
@@ -1066,16 +1096,28 @@ class InsightSignalDetector:
             weekend_days = sum(1 for d in relevant if date_type.fromisoformat(d).weekday() >= 5)
             weekday_days = sum(1 for d in relevant if date_type.fromisoformat(d).weekday() < 5)
 
-            # Normalise to per-day rate (28 days: 8 weekend days, 20 weekday days)
-            if weekday_days == 0:
+            # Count actual weekend and weekday days in the 4-week window
+            window_start = date_type.fromisoformat(cutoff)
+            window_end = today
+            total_weekend = sum(
+                1
+                for i in range((window_end - window_start).days + 1)
+                if (window_start + timedelta(days=i)).weekday() >= 5
+            )
+            total_weekday = sum(
+                1
+                for i in range((window_end - window_start).days + 1)
+                if (window_start + timedelta(days=i)).weekday() < 5
+            )
+            if total_weekend == 0 or total_weekday == 0:
                 return []
-            weekend_rate = weekend_days / 8  # out of 8 weekend days in 4 weeks
-            weekday_rate = weekday_days / 20  # out of 20 weekday days in 4 weeks
+            weekend_rate = weekend_days / total_weekend
+            weekday_rate = weekday_days / total_weekday
 
             if weekday_rate == 0:
                 return []
             gap_pct = (weekday_rate - weekend_rate) / weekday_rate * 100
-            if gap_pct < 60:
+            if gap_pct < _WEEKEND_GAP_THRESHOLD * 100:
                 return []
 
             return [

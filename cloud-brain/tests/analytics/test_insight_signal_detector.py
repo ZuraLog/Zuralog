@@ -374,6 +374,23 @@ def test_cat_e_sleep_debt_fires():
     assert sleep_debt[0].severity == 3
 
 
+def test_cat_e_sleep_debt_fires_at_exactly_3_nights():
+    """Exactly 3 nights below 6h should trigger the sleep debt signal."""
+    from app.analytics.insight_signal_detector import InsightSignalDetector
+
+    brief = _brief()
+    today = date.today()
+    sleep = []
+    for i in range(7):
+        d = (today - timedelta(days=i)).isoformat()
+        hours = 5.5 if i < 3 else 7.0  # exactly 3 nights under 6h
+        sleep.append(SleepRow(date=d, hours=hours))
+    brief.sleep_records = sleep
+    detector = InsightSignalDetector(brief)
+    signals = [s for s in detector.detect_all() if s.signal_type == "compound_sleep_debt"]
+    assert len(signals) == 1
+
+
 def test_cat_e_no_overtraining_without_declining_hrv():
     """6 consecutive workouts with healthy stable HRV must NOT emit overtraining signal."""
     from app.analytics.insight_signal_detector import InsightSignalDetector
