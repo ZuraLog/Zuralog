@@ -191,5 +191,60 @@ void main() {
       expect(find.text('Steps'), findsOneWidget);
       expect(find.text('Set a daily goal'), findsNothing);
     });
+
+    testWidgets('invalidates dailyGoalsProvider when goalsProvider emits new data',
+        (tester) async {
+      // Track how many times dailyGoalsProvider was called (i.e. built/re-fetched).
+      var dailyGoalsFetchCount = 0;
+
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 78, trend: [], dataDays: 5),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(insights: [], streak: null),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => TodayLogSummary.empty,
+          ),
+          snapshotProvider.overrideWith(
+            () => _StubSnapshotNotifier(const []),
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async {
+            dailyGoalsFetchCount++;
+            return const <DailyGoal>[];
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final initialFetchCount = dailyGoalsFetchCount;
+
+      // Simulate the Progress tab invalidating goalsProvider after a goal change.
+      container.invalidate(goalsProvider);
+      await tester.pumpAndSettle();
+
+      // The ref.listen in TodayFeedScreen should have re-fetched dailyGoalsProvider.
+      expect(dailyGoalsFetchCount, greaterThan(initialFetchCount));
+    });
   });
 }

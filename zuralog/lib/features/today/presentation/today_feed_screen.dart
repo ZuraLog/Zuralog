@@ -749,7 +749,7 @@ class _DailyGoalsSection extends ConsumerWidget {
     final goalsAsync = ref.watch(dailyGoalsProvider);
 
     return goalsAsync.when(
-      loading: () => _GoalsSkeleton(),
+      loading: () => const _GoalsSkeleton(),
       error: (e, _) => ZDailyGoalsCard(
         goals: const [],
         onSetupTap: () => context.go(RouteNames.progressPath),
@@ -782,7 +782,7 @@ class _GoalsSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return Container(
-      height: 56,
+      height: 88,
       decoration: BoxDecoration(
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
