@@ -1,16 +1,15 @@
 /// Privacy & Data Screen.
 ///
-/// AI memory management, analytics opt-out, data export/deletion,
-/// wellness check-in toggle, legal links.
+/// AI memory management, analytics opt-out, data export/deletion, legal links.
 ///
 /// ## Fixes applied (settings-mapping remediation)
-/// Previously, the three privacy toggles (Wellness Check-in card visibility,
-/// Data Maturity Banner visibility, Analytics opt-out) were held in an
-/// in-memory [_PrivacyState] that reset on every cold start.
+/// Previously, the privacy toggles (Data Maturity Banner visibility,
+/// Analytics opt-out) were held in an in-memory [_PrivacyState] that reset
+/// on every cold start.
 ///
 /// They now read from and write to [userPreferencesProvider] via the
-/// [wellnessCheckinCardVisibleProvider], [dataMaturityBannerDismissedProvider],
-/// and [analyticsOptOutProvider] derived providers.
+/// [dataMaturityBannerDismissedProvider] and [analyticsOptOutProvider]
+/// derived providers.
 library;
 
 import 'package:flutter/material.dart';
@@ -52,7 +51,6 @@ class PrivacyDataScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorsOf(context);
     // Global persisted privacy preferences.
-    final wellnessCheckin = ref.watch(wellnessCheckinCardVisibleProvider);
     final dataMaturityBanner =
         !ref.watch(dataMaturityBannerDismissedProvider);
     final analyticsEnabled = !ref.watch(analyticsOptOutProvider);
@@ -195,17 +193,6 @@ class PrivacyDataScreen extends ConsumerWidget {
               const SettingsSectionLabel('Privacy'),
               _SettingsCard(
                 children: [
-                  _ToggleRow(
-                    icon: Icons.self_improvement_rounded,
-                    iconColor: AppColors.categoryWellness,
-                    title: 'Wellness Check-in',
-                    subtitle: 'Show check-in card on Today tab',
-                    value: wellnessCheckin,
-                    onChanged: (v) => prefsNotifier.mutate(
-                      (p) => p.copyWith(wellnessCheckinCardVisible: v),
-                    ),
-                  ),
-                  const _Divider(),
                   _ToggleRow(
                     icon: Icons.info_outline_rounded,
                     iconColor: AppColors.categoryBody,

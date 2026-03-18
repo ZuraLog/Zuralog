@@ -215,14 +215,6 @@ final themeModePreferenceProvider = Provider<ThemeMode>((ref) {
 
 // ── Privacy & Visibility ───────────────────────────────────────────────────────
 
-/// Whether the Wellness Check-in card is visible on the Today tab.
-final wellnessCheckinCardVisibleProvider = Provider<bool>((ref) {
-  return ref
-      .watch(userPreferencesProvider)
-      .valueOrNull
-      ?.wellnessCheckinCardVisible ?? true;
-});
-
 /// Whether the Data Maturity Banner has been dismissed by the user.
 final dataMaturityBannerDismissedProvider = Provider<bool>((ref) {
   return ref

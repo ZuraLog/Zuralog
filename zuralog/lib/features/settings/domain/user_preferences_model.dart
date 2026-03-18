@@ -6,8 +6,8 @@
 ///
 /// All fields map 1-to-1 with backend columns. New columns added in the
 /// settings-mapping remediation (response_length, suggested_prompts_enabled,
-/// voice_input_enabled, wellness_checkin_card_visible,
-/// data_maturity_banner_dismissed, analytics_opt_out) are included here.
+/// voice_input_enabled, data_maturity_banner_dismissed,
+/// analytics_opt_out) are included here.
 library;
 
 import 'package:flutter/material.dart' show TimeOfDay, immutable;
@@ -246,7 +246,6 @@ class UserPreferencesModel {
     this.quietHoursStart,
     this.quietHoursEnd,
     // Privacy & visibility
-    this.wellnessCheckinCardVisible = true,
     this.dataMaturityBannerDismissed = false,
     this.analyticsOptOut = false,
     // Account
@@ -291,7 +290,6 @@ class UserPreferencesModel {
   final TimeOfDay? quietHoursEnd;
 
   // Privacy & visibility
-  final bool wellnessCheckinCardVisible;
   final bool dataMaturityBannerDismissed;
   final bool analyticsOptOut;
 
@@ -357,8 +355,6 @@ class UserPreferencesModel {
           _timeFromString(json['quiet_hours_start'] as String?),
       quietHoursEnd: _timeFromString(json['quiet_hours_end'] as String?),
       // Privacy & visibility
-      wellnessCheckinCardVisible:
-          json['wellness_checkin_card_visible'] as bool? ?? true,
       dataMaturityBannerDismissed:
           json['data_maturity_banner_dismissed'] as bool? ?? false,
       analyticsOptOut: json['analytics_opt_out'] as bool? ?? false,
@@ -399,7 +395,6 @@ class UserPreferencesModel {
         'quiet_hours_enabled': quietHoursEnabled,
         'quiet_hours_start': _timeToString(quietHoursStart),
         'quiet_hours_end': _timeToString(quietHoursEnd),
-        'wellness_checkin_card_visible': wellnessCheckinCardVisible,
         'data_maturity_banner_dismissed': dataMaturityBannerDismissed,
         'analytics_opt_out': analyticsOptOut,
         'goals': goals,
@@ -428,7 +423,6 @@ class UserPreferencesModel {
         'quiet_hours_enabled': quietHoursEnabled,
         'quiet_hours_start': _timeToString(quietHoursStart),
         'quiet_hours_end': _timeToString(quietHoursEnd),
-        'wellness_checkin_card_visible': wellnessCheckinCardVisible,
         'data_maturity_banner_dismissed': dataMaturityBannerDismissed,
         'analytics_opt_out': analyticsOptOut,
         'goals': goals,
@@ -459,7 +453,6 @@ class UserPreferencesModel {
     bool? quietHoursEnabled,
     TimeOfDay? quietHoursStart,
     TimeOfDay? quietHoursEnd,
-    bool? wellnessCheckinCardVisible,
     bool? dataMaturityBannerDismissed,
     bool? analyticsOptOut,
     List<String>? goals,
@@ -492,8 +485,6 @@ class UserPreferencesModel {
         quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
         quietHoursStart: quietHoursStart ?? this.quietHoursStart,
         quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
-        wellnessCheckinCardVisible:
-            wellnessCheckinCardVisible ?? this.wellnessCheckinCardVisible,
         dataMaturityBannerDismissed:
             dataMaturityBannerDismissed ?? this.dataMaturityBannerDismissed,
         analyticsOptOut: analyticsOptOut ?? this.analyticsOptOut,
