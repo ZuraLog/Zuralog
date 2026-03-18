@@ -222,12 +222,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimens.spaceMd,
               ),
-              child: ZDailyGoalsCard(
-                goals: const [], // MVP stub — Part 4 wires real goals data.
-                onSetupTap: () {
-                  // TODO(Part 4): Route to goals settings screen.
-                },
-              ),
+              child: _DailyGoalsSection(),
             ),
 
             const SizedBox(height: AppDimens.spaceLg),
@@ -724,6 +719,63 @@ MetricTileData _buildTile(
   }
 
   return (lastValue, loggedAt);
+}
+
+// ── _DailyGoalsSection ────────────────────────────────────────────────────────
+
+/// Watches [dailyGoalsProvider] and renders [ZDailyGoalsCard] with real data.
+///
+/// Loading: shows a skeleton placeholder matching the card height.
+/// Data: maps [DailyGoal] → [DailyGoalDisplay] and passes to the card.
+class _DailyGoalsSection extends ConsumerWidget {
+  const _DailyGoalsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final goalsAsync = ref.watch(dailyGoalsProvider);
+
+    return goalsAsync.when(
+      loading: () => _GoalsSkeleton(),
+      error: (e, _) => ZDailyGoalsCard(
+        goals: const [],
+        onSetupTap: () => context.go(RouteNames.progressPath),
+      ),
+      data: (goals) => ZDailyGoalsCard(
+        goals: goals
+            .map((g) => DailyGoalDisplay(
+                  label: g.label,
+                  current: _formatGoalValue(g.current),
+                  target: _formatGoalValue(g.target),
+                  unit: g.unit,
+                  fraction: g.fraction,
+                ))
+            .toList(),
+        onSetupTap: () => context.go(RouteNames.progressPath),
+      ),
+    );
+  }
+
+  String _formatGoalValue(double value) {
+    if (value == value.roundToDouble()) return value.toInt().toString();
+    return value.toStringAsFixed(1);
+  }
+}
+
+class _GoalsSkeleton extends StatelessWidget {
+  const _GoalsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: colors.cardBackground,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        border: Border.all(color: colors.border),
+      ),
+    );
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
