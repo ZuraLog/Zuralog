@@ -173,7 +173,7 @@ async def _persist_cards(
             "title": card.get("title", "Health insight")[:200],
             "body": card.get("body", "")[:2000],
             "data": card.get("data_payload", card.get("data", {})),
-            "reasoning": (card.get("reasoning") or "")[:1000] or None,
+            "reasoning": (lambda r: str(r)[:1000] if r else None)(card.get("reasoning")),
             "priority": int(card.get("priority", 5)),
             "generation_date": generation_date,
             "signal_type": card.get("signal_type", card.get("type", "welcome")),
@@ -190,6 +190,13 @@ async def _persist_cards(
 def _enrich_cards(llm_cards: list[dict], signals: list) -> list[dict]:
     """Attach signal metadata from InsightSignal instances to LLM-written cards."""
     llm_cards = llm_cards[: len(signals)]  # Prevent extra hallucinated cards from slipping through
+    if len(llm_cards) < len(signals):
+        logger.warning(
+            "_enrich_cards: LLM returned %d cards for %d signals — %d signal(s) will have no card",
+            len(llm_cards),
+            len(signals),
+            len(signals) - len(llm_cards),
+        )
     enriched = []
     for i, card in enumerate(llm_cards):
         signal = signals[i] if i < len(signals) else None

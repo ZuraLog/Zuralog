@@ -111,3 +111,30 @@ async def test_markdown_fenced_json_is_parsed():
         cards = await writer.write_cards()
     assert len(cards) == 1
     assert cards[0]["title"] == "T"
+
+
+class TestInsightCardWriterValidation:
+    """Tests for per-card validation in _call_llm()."""
+
+    @pytest.mark.asyncio
+    async def test_partial_valid_cards_returns_valid_only(self):
+        """When LLM returns mixed valid/invalid cards, only valid ones are returned."""
+        mixed_response = [
+            {
+                "type": "trend_decline",
+                "title": "Sleep declining",
+                "body": "Down 15%.",
+                "priority": 3,
+                "reasoning": "Trend.",
+            },
+            {"type": "broken_card"},  # Missing title, body, priority — should be skipped
+        ]
+        content = json.dumps(mixed_response)
+        with patch("app.analytics.insight_card_writer.LLMClient") as MockLLM:
+            MockLLM.return_value.chat = AsyncMock(return_value=_mock_llm_response(content))
+            writer = InsightCardWriter(signals=[_signal()], focus=_focus(), target_date="2026-03-18")
+            result = await writer._call_llm()
+
+        assert result is not None
+        assert len(result) == 1
+        assert result[0]["title"] == "Sleep declining"

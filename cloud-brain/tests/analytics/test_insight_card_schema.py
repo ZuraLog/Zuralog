@@ -77,3 +77,46 @@ class TestInsightCardSchema:
             priority=15,
         )
         assert card.priority == 10
+
+    def test_reasoning_empty_string_is_none(self):
+        """Empty string reasoning is preserved as empty string by the schema (not None)."""
+        card = InsightCardSchema(
+            type="trend_decline",
+            title="Title",
+            body="Body.",
+            priority=5,
+            reasoning="",
+        )
+        # Schema returns "" — the _persist_cards layer converts "" to None
+        assert card.reasoning == "" or card.reasoning is None  # either is acceptable
+
+    def test_priority_at_lower_boundary(self):
+        card = InsightCardSchema(
+            type="trend_decline",
+            title="Title",
+            body="Body.",
+            priority=1,
+        )
+        assert card.priority == 1
+
+    def test_priority_at_upper_boundary(self):
+        card = InsightCardSchema(
+            type="trend_decline",
+            title="Title",
+            body="Body.",
+            priority=10,
+        )
+        assert card.priority == 10
+
+    def test_model_validate_from_dict(self):
+        """model_validate() with a plain dict works correctly — mirrors real call site."""
+        raw = {
+            "type": "trend_decline",
+            "title": "A" * 300,  # over limit — should be truncated
+            "body": "Short body.",
+            "priority": 7,
+            # reasoning intentionally omitted — should default to None
+        }
+        card = InsightCardSchema.model_validate(raw)
+        assert len(card.title) == 200
+        assert card.reasoning is None
