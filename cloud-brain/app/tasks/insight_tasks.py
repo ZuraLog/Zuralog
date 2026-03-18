@@ -19,6 +19,8 @@ import uuid
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import redis
+
 from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -218,9 +220,30 @@ def fan_out_daily_insights() -> dict:
     """Hourly fan-out: enqueue insight tasks for users whose local time is 6 AM.
 
     Runs at the top of every UTC hour via Celery Beat.
+    Uses a Redis distributed lock keyed to the current UTC hour to prevent
+    duplicate runs if Beat fires the task more than once per hour.
     """
-    logger.info("fan_out_daily_insights: starting")
-    return asyncio.run(_fan_out_async())
+    from app.config import settings
+
+    now_utc = datetime.now(timezone.utc)
+    utc_hour = now_utc.strftime("%Y-%m-%dT%H")
+    lock_key = f"zuralog:fan_out_lock:{utc_hour}"
+
+    redis_client = redis.Redis.from_url(settings.redis_url)
+    lock_acquired = redis_client.set(lock_key, "1", nx=True, ex=3300)
+
+    if not lock_acquired:
+        logger.info(
+            "fan_out_daily_insights: lock already held for %s, skipping duplicate run",
+            utc_hour,
+        )
+        return {"enqueued": 0, "status": "skipped_lock"}
+
+    try:
+        logger.info("fan_out_daily_insights: starting for hour %s", utc_hour)
+        return asyncio.run(_fan_out_async())
+    finally:
+        redis_client.delete(lock_key)
 
 
 async def _fan_out_async() -> dict:
