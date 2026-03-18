@@ -173,12 +173,9 @@ class UserFocusProfileBuilder:
                 layout_metrics = metrics
                 break
 
-        # 3. Combine: layout focus wins if it also appears in goal focuses,
-        #    otherwise layout still wins (it reflects what the user *looks* at).
-        if layout_focus and layout_focus in goal_focuses:
-            inferred_focus = layout_focus
-            focus_metrics = _merge_unique(layout_metrics, goal_metrics)
-        elif layout_focus:
+        # 3. Combine: layout focus always wins when present (it reflects what
+        #    the user *looks* at), with goal metrics merged in after.
+        if layout_focus:
             inferred_focus = layout_focus
             focus_metrics = _merge_unique(layout_metrics, goal_metrics)
         elif goal_focuses:

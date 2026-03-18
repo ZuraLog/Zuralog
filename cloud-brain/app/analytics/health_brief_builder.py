@@ -23,9 +23,10 @@ Design decisions
 """
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Coroutine
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +44,8 @@ from app.models.user_goal import UserGoal
 from app.models.user_preferences import UserPreferences
 from app.models.user_streak import UserStreak
 
+logger = logging.getLogger(__name__)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -59,6 +62,7 @@ _SOURCE_PRIORITY = [
 _LOOKBACK_DAILY = 30  # days of daily metrics + sleep to fetch
 _LOOKBACK_WEIGHT = 90  # days of weight history to fetch
 _LOOKBACK_QUICK_LOGS = 14  # days of quick-log entries to fetch
+_TDEE_ACTIVE_CAL_WINDOW = 14  # days of active-calorie history used for TDEE
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +286,14 @@ class HealthBriefBuilder:
     # Public API
     # ------------------------------------------------------------------
 
+    async def _safe_fetch(self, coro: Coroutine, default: Any = None) -> Any:
+        """Run a coroutine and return ``default`` on any exception."""
+        try:
+            return await coro
+        except Exception as exc:
+            logger.warning("HealthBriefBuilder: fetch failed — %s: %s", type(exc).__name__, exc)
+            return default if default is not None else []
+
     async def build(self) -> HealthBrief:
         """Fire all 10 data fetches in parallel and assemble the brief."""
         (
@@ -296,16 +308,16 @@ class HealthBriefBuilder:
             preferences,
             integrations,
         ) = await asyncio.gather(
-            self._fetch_daily_metrics(),
-            self._fetch_sleep_records(),
-            self._fetch_activities(),
-            self._fetch_nutrition(),
-            self._fetch_weight(),
-            self._fetch_quick_logs(),
-            self._fetch_goals(),
-            self._fetch_streaks(),
-            self._fetch_preferences(),
-            self._fetch_integrations(),
+            self._safe_fetch(self._fetch_daily_metrics()),
+            self._safe_fetch(self._fetch_sleep_records()),
+            self._safe_fetch(self._fetch_activities()),
+            self._safe_fetch(self._fetch_nutrition()),
+            self._safe_fetch(self._fetch_weight()),
+            self._safe_fetch(self._fetch_quick_logs()),
+            self._safe_fetch(self._fetch_goals()),
+            self._safe_fetch(self._fetch_streaks()),
+            self._safe_fetch(self._fetch_preferences(), default=None),
+            self._safe_fetch(self._fetch_integrations()),
         )
 
         prefs = preferences or UserPreferencesSnapshot()
@@ -315,8 +327,10 @@ class HealthBriefBuilder:
         data_maturity_days = len(all_dates)
 
         # TDEE estimation using the most recent weight + 14-day avg active cals
-        latest_weight = next((r.weight_kg for r in weight if r.weight_kg is not None), None)
-        avg_active_cals = _safe_mean([r.active_calories for r in daily[-14:] if r.active_calories is not None])
+        latest_weight = next((r.weight_kg for r in reversed(weight) if r.weight_kg is not None), None)
+        avg_active_cals = _safe_mean(
+            [r.active_calories for r in daily[-_TDEE_ACTIVE_CAL_WINDOW:] if r.active_calories is not None]
+        )
         estimated_tdee = self._compute_tdee(
             weight_kg=latest_weight,
             avg_active_calories=avg_active_cals,
@@ -457,10 +471,12 @@ class HealthBriefBuilder:
             tzinfo=timezone.utc,
         ) - timedelta(days=_LOOKBACK_DAILY)
         result = await self.db.execute(
-            select(UnifiedActivity).where(
+            select(UnifiedActivity)
+            .where(
                 UnifiedActivity.user_id == self.user_id,
                 UnifiedActivity.start_time >= cutoff,
             )
+            .limit(200)
         )
         rows = result.scalars().all()
         return [
@@ -541,10 +557,12 @@ class HealthBriefBuilder:
             tzinfo=timezone.utc,
         ) - timedelta(days=_LOOKBACK_QUICK_LOGS)
         result = await self.db.execute(
-            select(QuickLog).where(
+            select(QuickLog)
+            .where(
                 QuickLog.user_id == self.user_id,
                 QuickLog.logged_at >= cutoff,
             )
+            .limit(500)
         )
         rows = result.scalars().all()
         return [
@@ -561,17 +579,19 @@ class HealthBriefBuilder:
     async def _fetch_goals(self) -> list[GoalRow]:
         """Fetch all active user goals."""
         result = await self.db.execute(
-            select(UserGoal).where(
+            select(UserGoal)
+            .where(
                 UserGoal.user_id == self.user_id,
                 UserGoal.is_active.is_(True),
             )
+            .limit(50)
         )
         rows = result.scalars().all()
         return [
             GoalRow(
                 id=str(r.id),
                 metric=r.metric,
-                target_value=float(r.target_value),
+                target_value=_float(r, "target_value") or 0.0,
                 period=str(r.period.value) if hasattr(r.period, "value") else str(r.period),
                 current_value=_float(r, "current_value"),
                 is_active=bool(r.is_active),
@@ -582,7 +602,7 @@ class HealthBriefBuilder:
 
     async def _fetch_streaks(self) -> list[StreakRow]:
         """Fetch all streak counters for the user."""
-        result = await self.db.execute(select(UserStreak).where(UserStreak.user_id == self.user_id))
+        result = await self.db.execute(select(UserStreak).where(UserStreak.user_id == self.user_id).limit(50))
         rows = result.scalars().all()
         return [
             StreakRow(
