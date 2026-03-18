@@ -376,6 +376,9 @@ class HealthBriefBuilder:
             # Unknown sex: average male and female BMR
             male_bmr = 88.362 + (13.397 * weight_kg) + (4.799 * height_cm)
             female_bmr = 447.593 + (9.247 * weight_kg) + (3.098 * height_cm)
+            if age is not None:
+                male_bmr -= 5.677 * age
+                female_bmr -= 4.330 * age
             bmr = (male_bmr + female_bmr) / 2
 
         kcal = avg_active_calories or 0.0

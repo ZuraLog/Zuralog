@@ -49,3 +49,14 @@ def test_stated_goals_preserved():
     profile = builder.build()
     assert "sleep" in profile.stated_goals
     assert "fitness" in profile.stated_goals
+
+
+def test_build_muscle_goal_only_maps_to_body_recomp():
+    """build_muscle goal alone (no layout) maps to body_recomposition."""
+    builder = UserFocusProfileBuilder(
+        goals=["build_muscle"],
+        dashboard_layout={},  # no layout — exercises goal-only path
+    )
+    profile = builder.build()
+    assert profile.inferred_focus == "body_recomposition"
+    assert "protein_grams" in profile.focus_metrics
