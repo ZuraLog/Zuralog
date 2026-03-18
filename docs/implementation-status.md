@@ -1,9 +1,88 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-18 (AI Insights Engine complete: 8 signal categories, composite scoring, LLM writing, daily scheduling)  
+**Last Updated:** 2026-03-19 (Today tab daily goals wiring complete: real API integration, cross-tab reactivity, mock data)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Today Tab — Daily Goals Card Wiring (2026-03-19)
+
+**Scope:** Wired the Daily Goals card to real API data, removed dead stub code, and added cross-tab reactivity.  
+**Branch:** `feat/today-daily-goals-wiring` → merged to main (2026-03-19)  
+**Status:** All tests passing (433 Flutter tests, 0 analyze issues)
+
+### Task A — Dead Stub Removal
+
+**A1 — Wellness Check-in Card Visibility Toggle Removed**
+
+The `wellnessCheckinCardVisible` field and its associated infrastructure were removed because the card they controlled was never built.
+
+Files changed:
+- `zuralog/lib/features/settings/presentation/privacy_data_screen.dart` — removed the toggle row and its `ref.watch(wellnessCheckinCardVisibleProvider)` variable
+- `zuralog/lib/features/settings/domain/user_preferences_model.dart` — removed `wellnessCheckinCardVisible` field (declaration, constructor param, `fromJson`, `toJson`, `toPatchJson`, `copyWith`)
+- `zuralog/lib/features/settings/providers/settings_providers.dart` — removed `wellnessCheckinCardVisibleProvider`
+
+What was NOT removed: `ZWellnessLogPanel` (the inline log panel in the Log Grid Sheet is working and unrelated to the removed toggle).
+
+**A2 — Time-Aware Feed Dead Code: No Change Needed**
+
+No dead time-of-day content switching code existed in `today_feed_screen.dart`. The `_timeOfDayGreeting()` function is actively used and was left in place.
+
+### Task B — Daily Goals Card Wired to Real Data
+
+**B1 — `TodayRepositoryImpl.getDailyGoals()` Wired to Real API**
+
+Previously returned an empty list. Now calls `GET /api/v1/goals`, filters to daily-relevant goals (period == daily OR goal type is stepCount/waterIntake/dailyCalorieLimit/sleepDuration), maps to `DailyGoal` objects with human-readable labels. Returns empty list on any error — Today tab never crashes.
+
+Key additions: `_dailyGoalTypes` static const set, `_goalLabel()` static helper.
+
+**B2 — `ZDailyGoalsCard` Stub Replaced with `_DailyGoalsSection` ConsumerWidget**
+
+The hardcoded `goals: const []` stub in `today_feed_screen.dart` was replaced with `_DailyGoalsSection`, a private ConsumerWidget that:
+- Watches `dailyGoalsProvider`
+- Loading state: shows `_GoalsSkeleton` (88px height, no spinner)
+- Error state: falls back to empty `ZDailyGoalsCard`
+- Data state: maps `DailyGoal` → `DailyGoalDisplay` and passes to `ZDailyGoalsCard`
+- `onSetupTap`: `context.go(RouteNames.progressPath)` — switches to Progress tab
+
+**B3 — Pull-to-Refresh Invalidates `dailyGoalsProvider`**
+
+`ref.invalidate(dailyGoalsProvider)` added to the `RefreshIndicator.onRefresh` callback in `today_feed_screen.dart`, alongside the existing provider invalidations. `dailyGoalsProvider.future` also added to the `Future.wait` block.
+
+**B4 — Cross-Tab Reactivity: Progress Tab Goal Changes Refresh Today Card**
+
+`ref.listen(goalsProvider, ...)` added to `_TodayFeedScreenState.build()`. When `goalsProvider` emits `AsyncData` (i.e., the user created, edited, or deleted a goal on the Progress tab), `dailyGoalsProvider` is invalidated so the Today card updates immediately.
+
+### Task C — Mock Repository Updated with Realistic Fixture Data
+
+`MockTodayRepository.getDailyGoals()` now returns 3 realistic `DailyGoal` entries:
+- Steps: 6,240 of 8,000 steps
+- Water: 600 of 2,000 ml
+- Sleep: 5.9 of 7 hrs
+
+This is development/test data only. It does not affect production.
+
+### Files Changed
+
+**Modified:**
+- `zuralog/lib/features/settings/presentation/privacy_data_screen.dart`
+- `zuralog/lib/features/settings/domain/user_preferences_model.dart`
+- `zuralog/lib/features/settings/providers/settings_providers.dart`
+- `zuralog/lib/features/today/data/today_repository.dart`
+- `zuralog/lib/features/today/data/mock_today_repository.dart`
+- `zuralog/lib/features/today/presentation/today_feed_screen.dart`
+- `zuralog/test/features/today/presentation/today_feed_screen_test.dart`
+
+### Important Note
+
+The backend still has the `wellness_checkin_card_visible` column in `user_preferences`. The Flutter app no longer sends or reads this field — the backend column retains its default value (`true`) and can be removed in a future backend-only cleanup if desired.
+
+### Test Results
+
+- **Flutter tests:** 433 passing
+- **`flutter analyze`:** 0 issues
 
 ---
 
