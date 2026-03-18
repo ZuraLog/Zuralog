@@ -64,7 +64,7 @@ class ZDailyGoalsCard extends StatelessWidget {
       ),
       child: goals.isEmpty
           ? _EmptyGoals(onTap: onSetupTap)
-          : _GoalList(goals: goals),
+          : _GoalList(goals: goals, onSetupTap: onSetupTap),
     );
   }
 }
@@ -110,20 +110,55 @@ class _EmptyGoals extends StatelessWidget {
 }
 
 class _GoalList extends StatelessWidget {
-  const _GoalList({required this.goals});
+  const _GoalList({required this.goals, required this.onSetupTap});
 
   final List<DailyGoalDisplay> goals;
+  final VoidCallback onSetupTap;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     // Show at most 4 goals without scrolling.
     final visible = goals.take(4).toList();
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Header row ─────────────────────────────────────────────────────
+        Row(
+          children: [
+            Icon(
+              Icons.flag_rounded,
+              size: AppDimens.iconSm,
+              color: colors.primary,
+            ),
+            const SizedBox(width: AppDimens.spaceXs),
+            Text(
+              "Today's Goals",
+              style: AppTextStyles.labelMedium.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: onSetupTap,
+              child: Text(
+                'Manage',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppDimens.spaceMd),
+        // ── Goal rows ───────────────────────────────────────────────────────
         for (int i = 0; i < visible.length; i++) ...[
           _GoalRow(goal: visible[i]),
           if (i < visible.length - 1)
-            const SizedBox(height: AppDimens.spaceSm),
+            const SizedBox(height: AppDimens.spaceMd),
         ],
       ],
     );
@@ -138,34 +173,67 @@ class _GoalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final pct = (goal.fraction * 100).round();
+    final isComplete = goal.fraction >= 1.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              goal.label,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textPrimary,
+            // Goal label
+            Expanded(
+              child: Text(
+                goal.label,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            Text(
-              '${goal.current} / ${goal.target} ${goal.unit}',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.textSecondary,
+            const SizedBox(width: AppDimens.spaceSm),
+            // Percentage badge — green when complete, muted otherwise
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: isComplete
+                    ? colors.primary.withValues(alpha: 0.18)
+                    : colors.border,
+                borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+              ),
+              child: Text(
+                isComplete ? 'Done' : '$pct%',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: isComplete ? colors.primary : colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: AppDimens.spaceXs),
+        // Progress bar
         ClipRRect(
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
           child: LinearProgressIndicator(
             value: goal.fraction.clamp(0.0, 1.0),
             backgroundColor: colors.primary.withValues(alpha: 0.12),
-            valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
-            minHeight: 4,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              isComplete ? colors.primary : colors.primary.withValues(alpha: 0.75),
+            ),
+            minHeight: 6,
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceXs),
+        // Current / target values
+        Text(
+          '${goal.current} of ${goal.target} ${goal.unit}',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: colors.textTertiary,
           ),
         ),
       ],

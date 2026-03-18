@@ -782,7 +782,7 @@ class _GoalsSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return Container(
-      height: 88,
+      height: 120,
       decoration: BoxDecoration(
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),

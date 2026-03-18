@@ -38,7 +38,7 @@ void main() {
         ),
       );
       expect(find.text('Water'), findsOneWidget);
-      expect(find.text('4 / 8 glasses'), findsOneWidget);
+      expect(find.text('4 of 8 glasses'), findsOneWidget);
     });
 
     testWidgets('calls onSetupTap when setup prompt tapped', (tester) async {
