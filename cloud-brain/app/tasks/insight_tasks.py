@@ -233,6 +233,7 @@ def fan_out_daily_insights() -> dict:
     lock_acquired = redis_client.set(lock_key, "1", nx=True, ex=3300)
 
     if not lock_acquired:
+        redis_client.close()
         logger.info(
             "fan_out_daily_insights: lock already held for %s, skipping duplicate run",
             utc_hour,
@@ -244,6 +245,7 @@ def fan_out_daily_insights() -> dict:
         return asyncio.run(_fan_out_async())
     finally:
         redis_client.delete(lock_key)
+        redis_client.close()
 
 
 async def _fan_out_async() -> dict:
