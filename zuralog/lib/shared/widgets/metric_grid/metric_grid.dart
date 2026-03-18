@@ -177,20 +177,23 @@ class _GridLayout extends StatelessWidget {
             idx += cols;
             return Padding(
               padding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
-              child: Row(
-                children: [
-                  for (var tIdx = 0; tIdx < rowTiles.length; tIdx++) ...[
-                    Expanded(
-                      child: MetricTile(
-                        data: rowTiles[tIdx],
-                        inEditMode: editMode,
-                        onRemove: () => onRemove(rowTiles[tIdx]),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var tIdx = 0; tIdx < rowTiles.length; tIdx++) ...[
+                      Expanded(
+                        child: MetricTile(
+                          data: rowTiles[tIdx],
+                          inEditMode: editMode,
+                          onRemove: () => onRemove(rowTiles[tIdx]),
+                        ),
                       ),
-                    ),
-                    if (tIdx < rowTiles.length - 1)
-                      const SizedBox(width: AppDimens.spaceXs),
+                      if (tIdx < rowTiles.length - 1)
+                        const SizedBox(width: AppDimens.spaceXs),
+                    ],
                   ],
-                ],
+                ),
               ),
             );
           }).toList();
@@ -226,20 +229,23 @@ class _GridLayout extends StatelessWidget {
       rows.add(
         Padding(
           padding: const EdgeInsets.only(bottom: AppDimens.spaceXs),
-          child: Row(
-            children: [
-              for (var tIdx = 0; tIdx < chunk.length; tIdx++) ...[
-                Expanded(
-                  child: MetricTile(
-                    data: chunk[tIdx],
-                    inEditMode: editMode,
-                    onRemove: () => onRemove(chunk[tIdx]),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var tIdx = 0; tIdx < chunk.length; tIdx++) ...[
+                  Expanded(
+                    child: MetricTile(
+                      data: chunk[tIdx],
+                      inEditMode: editMode,
+                      onRemove: () => onRemove(chunk[tIdx]),
+                    ),
                   ),
-                ),
-                if (tIdx < chunk.length - 1)
-                  const SizedBox(width: AppDimens.spaceXs),
+                  if (tIdx < chunk.length - 1)
+                    const SizedBox(width: AppDimens.spaceXs),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );

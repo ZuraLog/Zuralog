@@ -87,7 +87,7 @@ class MetricTile extends StatelessWidget {
         horizontal: AppDimens.spaceXs,
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Emoji
@@ -154,8 +154,8 @@ class MetricTile extends StatelessWidget {
         tile,
         if (inEditMode)
           Positioned(
-            top: -8,
-            right: -8,
+            top: -4,
+            right: -4,
             child: GestureDetector(
               onTap: onRemove,
               child: Container(
