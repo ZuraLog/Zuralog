@@ -61,40 +61,6 @@ void main() {
     });
   });
 
-  group('logRingProvider', () {
-    test('is in loading state before resolving', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-      final ringAsync = container.read(logRingProvider);
-      expect(ringAsync, isA<AsyncLoading>());
-    });
-
-    test('fraction is 0.0 when nothing logged', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-      final ring = await container.read(logRingProvider.future);
-      expect(ring.fraction, 0.0);
-    });
-
-    test('notifier build() returns AsyncData after both upstream providers resolve', () async {
-      final container = _container(overrides: [
-        userLoggedTypesProvider.overrideWith(
-          (ref) async => const {'water', 'mood'},
-        ),
-      ]);
-      addTearDown(container.dispose);
-
-      // Read .future to wait for the notifier's build() to complete.
-      final ring = await container.read(logRingProvider.future);
-
-      // After both upstream providers resolve, the state must be AsyncData.
-      final state = container.read(logRingProvider);
-      expect(state, isA<AsyncData<LogRingState>>());
-      expect(ring.loggedCount, equals(0));  // stub repo returns empty summary
-      expect(ring.totalCount, equals(2));   // userLoggedTypes override returns 2 types
-    });
-  });
-
   group('LogRingState', () {
     test('fraction clamps to 0.0 when totalCount is 0', () {
       const state = LogRingState(loggedCount: 0, totalCount: 0);

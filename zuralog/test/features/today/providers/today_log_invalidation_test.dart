@@ -6,7 +6,7 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 void main() {
   group('todayLogSummaryProvider invalidation', () {
     test(
-        'invalidating todayLogSummaryProvider causes logRingProvider to recompute',
+        'invalidating todayLogSummaryProvider triggers a re-fetch',
         () async {
       var fetchCount = 0;
       final container = ProviderContainer(
@@ -30,36 +30,6 @@ void main() {
       container.invalidate(todayLogSummaryProvider);
       await container.read(todayLogSummaryProvider.future);
       expect(fetchCount, 2);
-    });
-
-    test('logRingProvider updates after todayLogSummaryProvider invalidation',
-        () async {
-      var summaryData = TodayLogSummary.empty;
-
-      final container = ProviderContainer(
-        overrides: [
-          todayLogSummaryProvider.overrideWith((ref) async => summaryData),
-          userLoggedTypesProvider.overrideWith(
-            (ref) async => const {'water', 'mood', 'steps'},
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      // Initial state: nothing logged → fraction 0.
-      final ringBefore = await container.read(logRingProvider.future);
-      expect(ringBefore.fraction, 0.0);
-
-      // Simulate a successful log — update summaryData and invalidate.
-      summaryData = const TodayLogSummary(
-        loggedTypes: {'water'},
-        latestValues: {'water': 750.0},
-      );
-      container.invalidate(todayLogSummaryProvider);
-
-      // After re-fetch: 1 of 3 types logged → fraction ≈ 0.333.
-      final ringAfter = await container.read(logRingProvider.future);
-      expect(ringAfter.fraction, closeTo(1 / 3, 0.001));
     });
 
     test('snapshotProvider rebuilds after todayLogSummaryProvider invalidation',

@@ -13,6 +13,9 @@ import 'package:flutter/material.dart';
 abstract final class AppDimens {
   // ── Spacing (4px base grid) ───────────────────────────────────────────────
 
+  /// 2px — double extra-small spacing (tight inline gaps, e.g. emoji-to-value).
+  static const double spaceXxs = 2;
+
   /// 4px — extra-small spacing (icon gaps, tight padding).
   static const double spaceXs = 4;
 
@@ -119,6 +122,20 @@ abstract final class AppDimens {
 
   /// Health ring outer diameter.
   static const double ringDiameter = 180;
+
+  /// Small emoji display size (in logical pixels) — used in compact tiles.
+  static const double emojiSm = 16;
+
+  /// Standard emoji display size (in logical pixels).
+  static const double emojiMd = 32;
+
+  // ── Opacity ───────────────────────────────────────────────────────────────
+
+  /// Opacity for ghost/inactive states (e.g. ghost flame in zero-streak card).
+  static const double ghostOpacity = 0.22;
+
+  /// Opacity for disabled/pinned interactive elements.
+  static const double disabledOpacity = 0.45;
 
   // ── Navigation Bar ────────────────────────────────────────────────────────
 

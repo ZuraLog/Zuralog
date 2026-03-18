@@ -22,9 +22,8 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 
 /// Welcoming zero-data placeholder for the Health Score hero.
 ///
-/// Shows a muted ring with a heart icon, a short headline, and a one-line
-/// nudge to start logging or connect an app. Does **not** mention errors or
-/// network connectivity.
+/// Shows a sad face emoji, a "Health Score" label, and a "Log to unlock"
+/// subtitle. Does **not** mention errors or network connectivity.
 class HealthScoreZeroState extends StatelessWidget {
   /// Creates a [HealthScoreZeroState].
   const HealthScoreZeroState({super.key});
@@ -37,40 +36,24 @@ class HealthScoreZeroState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Muted ring — same visual language as the real score ring but
-          // at low opacity so it reads as "pending", not "broken".
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.25),
-                width: 6,
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.favorite_border_rounded,
-                size: 28,
-                color: AppColors.primary.withValues(alpha: 0.6),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
+          const Text('😔', style: TextStyle(fontSize: AppDimens.emojiMd)),
+          const SizedBox(height: AppDimens.spaceSm),
           Text(
-            'Your health score awaits',
-            style: AppTextStyles.titleMedium.copyWith(
-              color: colors.textPrimary,
+            'Health Score',
+            style: AppTextStyles.labelMedium.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
-            'Log your first data point or connect an\napp to see your daily score.',
+            'Log to unlock',
             style: AppTextStyles.bodySmall.copyWith(
-              color: colors.textSecondary,
+              color: colors.textTertiary,
             ),
             textAlign: TextAlign.center,
           ),

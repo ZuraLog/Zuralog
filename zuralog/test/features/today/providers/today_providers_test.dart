@@ -81,38 +81,4 @@ void main() {
     });
   });
 
-  group('logRingProvider', () {
-    test('computes correct fraction from summary and user types', () async {
-      final repo = MockTodayRepository();
-      when(() => repo.getTodayLogSummary()).thenAnswer((_) async =>
-          TodayLogSummary(
-            loggedTypes: {'water', 'mood'},
-            latestValues: {},
-          ));
-      when(() => repo.getUserLoggedTypes())
-          .thenAnswer((_) async => {'water', 'mood', 'sleep', 'steps'});
-
-      final container = makeContainer(repo);
-      addTearDown(container.dispose);
-
-      final result = await container.read(logRingProvider.future);
-      expect(result.loggedCount, equals(2));
-      expect(result.totalCount, equals(4));
-      expect(result.fraction, equals(0.5));
-    });
-
-    test('fraction is 0.0 when user has no logged types', () async {
-      final repo = MockTodayRepository();
-      when(() => repo.getTodayLogSummary())
-          .thenAnswer((_) async => TodayLogSummary.empty);
-      when(() => repo.getUserLoggedTypes())
-          .thenAnswer((_) async => <String>{});
-
-      final container = makeContainer(repo);
-      addTearDown(container.dispose);
-
-      final result = await container.read(logRingProvider.future);
-      expect(result.fraction, equals(0.0));
-    });
-  });
 }

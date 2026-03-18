@@ -13,7 +13,6 @@
 /// - [todayBannerSessionDismissed]    — whether the "still building" banner was dismissed this session
 /// - [todayLogSummaryProvider]        — aggregated summary of today's logged data
 /// - [userLoggedTypesProvider]        — set of metric types user has ever logged
-/// - [logRingProvider]                — state for the Log Ring widget
 /// - [snapshotProvider]               — list of snapshot card data
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
@@ -22,6 +21,8 @@
 /// (quickLogLoadingProvider removed — superseded by FAB system in Part 2)
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
+import 'package:zuralog/features/today/domain/metric_format_utils.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -130,7 +132,7 @@ final todayBannerSessionDismissed = StateProvider<bool>((ref) => false);
 /// On failure: returns [TodayLogSummary.empty] — the UI stays functional
 /// in an empty state rather than showing an error.
 ///
-/// Invalidate after every successful log submission so the Log Ring and
+/// Invalidate after every successful log submission so the Streak Hero Card and
 /// Snapshot Cards reflect the new entry immediately.
 final todayLogSummaryProvider = FutureProvider<TodayLogSummary>((ref) async {
   final repo = ref.read(todayRepositoryProvider);
@@ -160,36 +162,6 @@ final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
     return const <String>{};
   }
 });
-
-// ── Log Ring ──────────────────────────────────────────────────────────────────
-
-/// Notifier for the Log Ring widget state.
-///
-/// Watches [todayLogSummaryProvider] and [userLoggedTypesProvider] reactively.
-/// When either upstream provider is invalidated (e.g. after a log submission),
-/// this notifier automatically rebuilds.
-///
-/// Using an [AsyncNotifier] instead of a plain [FutureProvider] ensures that
-/// the reactive `ref.watch` inside [build] correctly establishes dependencies
-/// and handles loading/error/data states without runtime errors on first load.
-class LogRingNotifier extends AsyncNotifier<LogRingState> {
-  @override
-  Future<LogRingState> build() async {
-    final summary = await ref.watch(todayLogSummaryProvider.future);
-    final allTypes = await ref.watch(userLoggedTypesProvider.future);
-
-    return LogRingState(
-      loggedCount: summary.loggedTypes.length,
-      totalCount: allTypes.length,
-    );
-  }
-}
-
-/// Provider for the Log Ring widget state. Rebuilds automatically when
-/// [todayLogSummaryProvider] or [userLoggedTypesProvider] change.
-final logRingProvider = AsyncNotifierProvider<LogRingNotifier, LogRingState>(
-  LogRingNotifier.new,
-);
 
 // ── Snapshot Cards ────────────────────────────────────────────────────────────
 
@@ -277,7 +249,7 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         label: 'Sleep',
         icon: '😴',
         value: hasData
-            ? (value != null ? _formatSleep((value as num).toDouble()) : null)
+            ? (value != null ? formatSleepMinutes((value as num).toDouble()) : null)
             : null,
         isEmpty: !hasData,
       ),
@@ -296,7 +268,7 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         label: 'Steps',
         icon: '👟',
         value: hasData
-            ? (value != null ? _formatSteps((value as num).toInt()) : null)
+            ? (value != null ? formatSteps((value as num).toInt()) : null)
             : null,
         isEmpty: !hasData,
       ),
@@ -347,17 +319,6 @@ SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) 
         isEmpty: true,
       ),
   };
-}
-
-String _formatSteps(int steps) {
-  if (steps >= 1000) return '${(steps / 1000).toStringAsFixed(1)}k';
-  return steps.toString();
-}
-
-String _formatSleep(double minutes) {
-  final h = (minutes / 60).floor();
-  final m = (minutes % 60).toInt();
-  return '${h}h ${m}m';
 }
 
 // ── Daily Goals ───────────────────────────────────────────────────────────────
@@ -503,3 +464,84 @@ final latestLogValuesProvider =
     return const {};
   }
 });
+
+// ── Pinned Metrics ────────────────────────────────────────────────────────────
+
+/// Notifier that persists the user's ordered list of pinned metric type
+/// strings for the Today tab's adaptive metric grid.
+///
+/// The list is stored as a JSON-encoded string in SharedPreferences under
+/// the key [_kPinnedMetricsKey].
+///
+/// Call [addMetric] / [removeMetric] to update the list. Both methods
+/// persist immediately and update the state synchronously.
+class PinnedMetricsNotifier extends AsyncNotifier<List<String>> {
+  static const _kPinnedMetricsKey = 'today_pinned_metrics';
+
+  /// Used to expose the key for testing.
+  @visibleForTesting
+  static const kPinnedMetricsKeyForTest = _kPinnedMetricsKey;
+
+  // Serializes read-modify-write operations so concurrent calls don't clobber each other.
+  Future<void> _pendingOperation = Future.value();
+
+  @override
+  Future<List<String>> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kPinnedMetricsKey);
+    if (raw == null || raw.isEmpty) return List.unmodifiable([]);
+    try {
+      final decoded = (jsonDecode(raw) as List<dynamic>).cast<String>();
+      return List.unmodifiable(decoded);
+    } catch (_) {
+      return List.unmodifiable([]);
+    }
+  }
+
+  /// Adds [metricType] to the end of the pinned list.
+  /// No-op if [metricType] is already present.
+  Future<void> addMetric(String metricType) {
+    _pendingOperation = _pendingOperation.then((_) async {
+      final current = await future;
+      if (current.contains(metricType)) return;
+      final updated = [...current, metricType];
+      await _persist(updated);
+      state = AsyncData(List.unmodifiable(updated));
+    }).catchError((Object e, StackTrace st) {
+      debugPrint('PinnedMetricsNotifier.addMetric: $e\n$st');
+    });
+    return _pendingOperation;
+  }
+
+  /// Removes [metricType] from the pinned list.
+  /// No-op if [metricType] is not in the list.
+  Future<void> removeMetric(String metricType) {
+    _pendingOperation = _pendingOperation.then((_) async {
+      final current = await future;
+      if (!current.contains(metricType)) return; // no-op guard
+      final updated = current.where((m) => m != metricType).toList();
+      await _persist(updated);
+      state = AsyncData(List.unmodifiable(updated));
+    }).catchError((Object e, StackTrace st) {
+      debugPrint('PinnedMetricsNotifier.removeMetric: $e\n$st');
+    });
+    return _pendingOperation;
+  }
+
+  Future<void> _persist(List<String> list) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kPinnedMetricsKey, jsonEncode(list));
+    } catch (e, st) {
+      // Persistence failed — state is already updated in memory.
+      // Log for diagnostics; do not rethrow so the UI remains functional.
+      debugPrint('PinnedMetricsNotifier: failed to persist: $e\n$st');
+    }
+  }
+}
+
+/// Provider for the user's ordered list of pinned metric type strings.
+final pinnedMetricsProvider =
+    AsyncNotifierProvider<PinnedMetricsNotifier, List<String>>(
+  PinnedMetricsNotifier.new,
+);
