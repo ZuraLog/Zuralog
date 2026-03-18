@@ -247,7 +247,7 @@ class TodayRepository implements TodayRepositoryInterface {
         '/api/v1/insights',
         queryParameters: {'limit': 20},
       );
-      final list = response.data['items'] as List<dynamic>? ?? [];
+      final list = response.data['insights'] as List<dynamic>? ?? [];
       return list
           .map((e) => InsightCard.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -266,14 +266,14 @@ class TodayRepository implements TodayRepositoryInterface {
   /// Marks insight [id] as read.
   @override
   Future<void> markInsightRead(String id) async {
-    await _api.patch('/api/v1/insights/$id', body: {'status': 'read'});
+    await _api.patch('/api/v1/insights/$id', body: {'action': 'read'});
     _feedCache = null; // Invalidate so the read state refreshes.
   }
 
   /// Dismisses insight [id].
   @override
   Future<void> dismissInsight(String id) async {
-    await _api.patch('/api/v1/insights/$id', body: {'status': 'dismissed'});
+    await _api.patch('/api/v1/insights/$id', body: {'action': 'dismiss'});
     _feedCache = null;
   }
 

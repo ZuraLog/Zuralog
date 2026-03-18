@@ -1,9 +1,156 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-18 (Today Tab Redesign complete: Health Score zero state, Streak Hero Card, Adaptive Metric Grid)  
+**Last Updated:** 2026-03-18 (AI Insights Engine complete: 8 signal categories, composite scoring, LLM writing, daily scheduling)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## AI Insights Engine (2026-03-18)
+
+**Scope:** Implemented a complete AI-powered insights pipeline that detects health patterns, prioritizes them by relevance, and generates personalized insight cards via LLM.  
+**Branch:** `feat/ai-insights-engine` → merged to main (2026-03-18)  
+**Status:** All tests passing (65 backend + Flutter model tests), ready for production
+
+**What was built:**
+
+### Database Schema Changes
+
+**Migration:** `p1q2r3s4t5u6_ai_insights_engine_schema.py`
+
+- Added `generation_date` (DATE) and `signal_type` (VARCHAR(100)) columns to `insights` table
+- Added `timezone` (VARCHAR(50), default UTC) to `user_preferences` table
+- Dropped old `uq_insights_user_type_day` unique constraint
+- Added new `uq_insights_user_signal_date (user_id, signal_type, generation_date)` unique constraint with composite partial index
+- Expanded `INSIGHT_TYPES` from 8 to 23 types
+
+### Bug Fixes (Chunk 2)
+
+Fixed 5 critical display bugs in the Flutter insights integration:
+- Flutter was reading `insights` key (backend sends `items`)
+- Flutter was reading `summary` field (backend sends `body`)
+- Flutter was reading `is_read` bool (backend sends `read_at` timestamp)
+- `PATCH` endpoint was sending `status` field (backend expects `action`)
+- Added missing `GET /api/v1/insights/{insight_id}` endpoint with UUID validation and ownership check
+
+### Data Fetching Layer (Chunk 3)
+
+**New files:**
+- `cloud-brain/app/analytics/health_brief_builder.py` — Parallel 10-source data fetch (Apple Health, Health Connect, Strava, Fitbit, Oura, Polar, Withings, manual logs, integrations, goals)
+- `cloud-brain/app/analytics/user_focus_profile.py` — Goal→focus inference, dashboard layout pattern matching
+
+**Key features:**
+- TDEE calculation via Harris-Benedict formula
+- Multi-source deduplication with priority order
+- Error isolation per fetch (one source failure doesn't block others)
+
+### Signal Detection (Chunk 4)
+
+**New file:** `cloud-brain/app/analytics/insight_signal_detector.py`
+
+**8 signal categories:**
+- **A:** 15 metric trends (slope-based anomalies)
+- **B:** 8 goal signal types (goal progress, milestones, missed targets)
+- **C:** 12 metric anomalies (outliers, sudden changes)
+- **D:** 14 correlation pairs with lag detection
+- **E:** 10 compound cross-domain patterns
+- **F:** User focus pre-processing (boost severity for user's focus metrics)
+- **G:** Streak signals with milestone detection
+- **H:** Data quality signals (stale data, sync gaps)
+
+**Key feature:** Focus severity boost — metrics in the user's focus list receive +1 severity boost.
+
+### Signal Prioritization (Chunk 5)
+
+**New files:**
+- `cloud-brain/app/analytics/signal_prioritizer.py` — Composite scoring, anomaly pinning, trend+goal deduplication, diversity cap, 2–10 dynamic count
+- `cloud-brain/app/analytics/insight_card_writer.py` — Single LLM call to `OPENROUTER_INSIGHT_MODEL`, 3-level fallback chain (LLM → rule-based → minimum card), prompt injection guard via allowlists
+
+**Key features:**
+- Composite scoring: severity × recency × user-focus boost
+- Anomaly pinning: anomalies always included if present
+- Trend+goal deduplication: prevents duplicate signals
+- Diversity cap: ensures variety across signal types
+- Dynamic count: 2–10 insights based on data maturity
+- 3-level LLM fallback: LLM → rule-based templates → minimum card (never fails)
+
+### Pipeline Wiring & Scheduling (Chunk 6)
+
+**New file:** `cloud-brain/app/tasks/insight_tasks.py`
+
+**5-step pipeline:**
+1. Date-lock: Prevent re-running for same date
+2. Brief: Fetch health data from all sources
+3. Detect: Run signal detection (8 categories)
+4. Prioritize: Score and rank signals
+5. Write: Generate insight cards via LLM
+
+**Scheduling:**
+- `fan_out_daily_insights` Celery task runs hourly
+- Enqueues users at their local 6 AM time
+- Timezone-aware via `user_preferences.timezone`
+- Beat schedule entry added to `cloud-brain/app/worker.py`
+
+### New Files Created
+
+**Analytics modules:**
+- `cloud-brain/app/analytics/health_brief_builder.py`
+- `cloud-brain/app/analytics/user_focus_profile.py`
+- `cloud-brain/app/analytics/insight_signal_detector.py`
+- `cloud-brain/app/analytics/signal_prioritizer.py`
+- `cloud-brain/app/analytics/insight_card_writer.py`
+
+**Database migration:**
+- `cloud-brain/alembic/versions/p1q2r3s4t5u6_ai_insights_engine_schema.py`
+
+**Tests:**
+- `cloud-brain/tests/analytics/test_health_brief_builder.py`
+- `cloud-brain/tests/analytics/test_user_focus_profile.py`
+- `cloud-brain/tests/analytics/test_insight_signal_detector.py`
+- `cloud-brain/tests/analytics/test_signal_prioritizer.py`
+- `cloud-brain/tests/analytics/test_insight_card_writer.py`
+- `cloud-brain/tests/integration/test_insight_pipeline.py`
+- `zuralog/test/features/today/domain/today_models_test.dart`
+
+### Modified Files
+
+**Backend:**
+- `cloud-brain/app/models/insight.py` — Added `generation_date`, `signal_type` columns
+- `cloud-brain/app/models/user_preferences.py` — Added `timezone` column
+- `cloud-brain/app/api/v1/insight_routes.py` — Added `GET /api/v1/insights/{insight_id}` endpoint
+- `cloud-brain/app/tasks/insight_tasks.py` — Replaced old rule-based pipeline with new 5-step one
+- `cloud-brain/app/worker.py` — Added Beat schedule for `fan_out_daily_insights`
+- `cloud-brain/app/config.py` — Added `OPENROUTER_INSIGHT_MODEL` config
+
+**Flutter:**
+- `zuralog/lib/features/today/data/today_repository.dart` — Fixed insights key reading
+- `zuralog/lib/features/today/domain/today_models.dart` — Fixed field mappings (`body` not `summary`, `read_at` not `is_read`)
+
+### Test Results
+
+- **Backend:** 65 tests passing (analytics + integration)
+- **Flutter:** Model tests passing
+- **Regressions:** 0
+
+### Key Architectural Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Analytics-first, LLM-last pipeline | Signals are deterministic and testable. LLM is only used for writing copy, not for detection. Ensures reliability and cost efficiency. |
+| 8 signal categories | Covers the full spectrum of health insights: trends, goals, anomalies, correlations, patterns, focus, streaks, data quality. No single category dominates. |
+| Composite scoring | Severity × recency × user-focus boost ensures the most relevant signals bubble to the top. |
+| 3-level LLM fallback | LLM failures are graceful. If OpenRouter is down, rule-based templates generate cards. If templates fail, a minimum card is always returned. |
+| Date-lock mechanism | Prevents re-running the pipeline for the same user on the same date. Saves compute and prevents duplicate insights. |
+| Fan-out scheduling | Hourly task enqueues users at their local 6 AM. Timezone-aware and scalable to 1M users. |
+| Timezone in user_preferences | Enables accurate "local 6 AM" scheduling without querying a separate timezone service. |
+
+**Result:**
+- Insights are now AI-powered and personalized
+- Pipeline is reliable (3-level fallback, error isolation)
+- Scheduling is timezone-aware and scalable
+- All 65 tests passing, zero regressions
+- Ready for production deployment
 
 ---
 

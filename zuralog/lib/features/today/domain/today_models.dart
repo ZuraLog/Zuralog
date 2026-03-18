@@ -193,10 +193,10 @@ class InsightCard {
     return InsightCard(
       id: json['id'] as String,
       title: json['title'] as String,
-      summary: json['summary'] as String,
+      summary: json['body'] as String? ?? '',
       type: _insightTypeFromString(json['type'] as String?),
       category: json['category'] as String? ?? 'general',
-      isRead: json['is_read'] as bool? ?? false,
+      isRead: json['read_at'] != null,
       priorityScore: (json['priority_score'] as num?)?.toDouble(),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
@@ -303,12 +303,15 @@ class InsightDetail {
 
   /// Deserializes from a JSON map.
   factory InsightDetail.fromJson(Map<String, dynamic> json) {
+    // TODO: The backend GET /api/v1/insights/{id} does not yet return data_points,
+    // sources, chart_title, or chart_unit. These fields default to empty/null until
+    // the backend InsightResponse schema is extended.
     final rawPoints = json['data_points'] as List<dynamic>? ?? [];
     final rawSources = json['sources'] as List<dynamic>? ?? [];
     return InsightDetail(
       id: json['id'] as String,
       title: json['title'] as String,
-      summary: json['summary'] as String,
+      summary: json['body'] as String? ?? '',
       reasoning: json['reasoning'] as String? ?? '',
       type: _insightTypeFromString(json['type'] as String?),
       category: json['category'] as String? ?? 'general',

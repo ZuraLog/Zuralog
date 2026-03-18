@@ -58,6 +58,7 @@ class LLMClient:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
         temperature: float = 0.7,
+        max_tokens: int | None = None,
     ) -> Any:
         """Send a chat completion request to the LLM.
 
@@ -65,6 +66,7 @@ class LLMClient:
             messages: The conversation history in OpenAI message format.
             tools: Optional list of tool definitions for function-calling.
             temperature: Sampling temperature (0.0-2.0). Defaults to 0.7.
+            max_tokens: Optional cap on the number of tokens in the response.
 
         Returns:
             The full ChatCompletion response object from the OpenAI SDK.
@@ -77,6 +79,9 @@ class LLMClient:
             "messages": messages,
             "temperature": temperature,
         }
+
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
 
         if tools:
             kwargs["tools"] = tools
