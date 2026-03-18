@@ -126,6 +126,7 @@
 |----------|------|--------|-------|
 | P1 | Correlation analysis engine | ✅ Done | |
 | P1 | Analytics API endpoints | ✅ Done | |
+| P1 | AI Insights Engine (signal detection, prioritization, LLM writing) | ✅ Done | 2026-03-18 — 8 signal categories, composite scoring, 3-level LLM fallback, daily fan-out scheduling |
 | P2 | Pinecone vector store for long-term context | ✅ Done | PineconeMemoryStore with per-user namespace; graceful InMemoryStore fallback when unconfigured |
 
 ### Phase 1.12 — Health Score Calculation & Caching
