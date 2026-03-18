@@ -10,11 +10,11 @@ Dismissed insights are permanently excluded from GET responses.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from typing import Any, Literal
 
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -179,11 +179,27 @@ async def list_insights(
         filters.append(Insight.type == type)
 
     if date_from is not None:
-        filters.append(Insight.created_at >= date_from)
+        try:
+            dt_from = datetime.fromisoformat(date_from).replace(tzinfo=timezone.utc)
+            filters.append(Insight.created_at >= dt_from)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="date_from must be a valid ISO date (YYYY-MM-DD)",
+            )
 
     if date_to is not None:
-        # Treat date_to as end-of-day by appending a time component
-        filters.append(Insight.created_at <= f"{date_to}T23:59:59")
+        try:
+            dt_to = datetime.combine(
+                datetime.fromisoformat(date_to).date(),
+                time.max,
+            ).replace(tzinfo=timezone.utc)
+            filters.append(Insight.created_at <= dt_to)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="date_to must be a valid ISO date (YYYY-MM-DD)",
+            )
 
     where_clause = and_(*filters)
 
@@ -224,7 +240,7 @@ async def list_insights(
 
 @router.get("/{insight_id}", summary="Get a single insight card", response_model=InsightResponse)
 async def get_insight(
-    insight_id: str,
+    insight_id: str = Path(..., pattern=r"^[0-9a-fA-F-]{36}$", description="UUID v4 insight identifier"),
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
@@ -244,6 +260,11 @@ async def get_insight(
 
     Raises:
         HTTPException: 404 if not found or owned by a different user.
+
+    Note:
+        The InsightResponse schema does not yet include data_points, sources, chart_title,
+        or chart_unit. The Flutter InsightDetail model handles missing fields defensively
+        (empty lists/None). Full detail enrichment is planned as a follow-up task.
     """
     sentry_sdk.set_user({"id": user_id})
 
