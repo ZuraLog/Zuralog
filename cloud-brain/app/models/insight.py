@@ -159,7 +159,6 @@ class Insight(Base):
     generation_date: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
-        index=True,
         comment="Date in the user's local timezone (YYYY-MM-DD). Used for the daily date-lock check.",
     )
     signal_type: Mapped[str | None] = mapped_column(

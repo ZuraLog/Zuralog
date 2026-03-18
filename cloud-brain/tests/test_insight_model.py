@@ -27,6 +27,8 @@ def test_insight_types_contains_new_types():
     required = [
         "trend_decline",
         "trend_improvement",
+        "goal_at_risk",
+        "goal_streak",
         "compound_weight_plateau",
         "compound_overtraining_risk",
         "compound_sleep_debt",
