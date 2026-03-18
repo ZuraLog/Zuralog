@@ -76,7 +76,7 @@ class SignalPrioritizer:
 
 def _deduplicate(signals: list[InsightSignal]) -> list[InsightSignal]:
     """Merge trend_decline + goal_near_miss/goal_behind_pace for the same metric."""
-    MERGEABLE_GOAL_TYPES = {"goal_near_miss", "goal_behind_pace", "goal_at_risk"}
+    MERGEABLE_GOAL_TYPES = {"goal_near_miss", "goal_behind_pace"}
 
     # Index: metric → list of signals about that metric
     by_metric: dict[str, list[InsightSignal]] = {}

@@ -6,10 +6,10 @@ into natural-language insight cards. Uses OPENROUTER_INSIGHT_MODEL
 (separate from the Coach tab model).
 
 Fallback chain:
-1. LLM call succeeds + valid JSON array → use LLM cards
-2. LLM call succeeds + malformed/empty JSON → rule-based fallback per signal
-3. LLM call fails (APIError) → rule-based fallback per signal
-4. Rule-based fallback also fails → minimum "working on it" card
+1. LLM returns valid JSON array → use LLM cards
+   (sub-case: LLM returns malformed JSON → treated as failure, goes to step 2)
+2. LLM call fails (APIError/timeout/parse error) → rule-based fallback per signal
+3. Rule-based fallback also fails → minimum "working on it" card (always succeeds)
 """
 
 import json
