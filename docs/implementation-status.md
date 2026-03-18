@@ -2557,7 +2557,7 @@ Completed all 3 Data tab actions from the Settings Mapping Audit plan. Branch: `
 Completed 4 tasks from the Settings Mapping Audit plan, wiring persisted user preferences to the Today tab and Quick Log. Branch: `feat/today-tab-settings-wiring`.
 
 **Files changed:**
-- `zuralog/lib/features/today/presentation/today_feed_screen.dart` — greeting personalization, data maturity banner persistence, wellness check-in card gating
+- `zuralog/lib/features/today/presentation/today_feed_screen.dart` — greeting personalization, data maturity banner persistence
 - `zuralog/lib/features/today/providers/today_providers.dart` — removed dead session-scoped `dataMaturityBannerDismissed` StateProvider
 - `zuralog/lib/shared/widgets/quick_log_sheet.dart` — units-aware water label
 - `zuralog/lib/features/settings/domain/user_preferences_model.dart` — added `UnitsSystemWaterLabel` extension
@@ -2568,9 +2568,7 @@ Completed 4 tasks from the Settings Mapping Audit plan, wiring persisted user pr
 
 2. **Data Maturity Banner dismiss persistence (Task 3.2)** — Banner dismiss now writes to persisted `userPreferencesProvider` via `mutate()`. Progress mode `onDismiss` and stillBuilding `onPermanentDismiss` both persist to the backend. Session X-dismiss on stillBuilding remains session-only (intentional — users can re-dismiss daily). Removed dead session-scoped `dataMaturityBannerDismissed` StateProvider. Fixed race condition: `showBanner` logic now gates on both `!bannerDismissed` AND `!prefsAsync.isLoading` to prevent the banner from flickering when preferences are loading.
 
-3. **Wellness Check-in card gated on Privacy toggle (Task 3.3)** — `_WellnessCheckinCard` is now wrapped in `if (wellnessCardVisible)`. The visibility is controlled by `wellnessCheckinCardVisibleProvider`, which reads from persisted `userPreferencesProvider`. The Privacy & Data settings screen's "Wellness Check-in" toggle now controls whether the card appears on the Today tab.
-
-4. **Units-aware water label in Quick Log (Task 3.4)** — Added `UnitsSystemWaterLabel` extension to `user_preferences_model.dart` with a `waterUnitLabel` getter that returns `'glasses (250 ml)'` for metric units or `'glasses (8 oz)'` for imperial. `_WaterCounter` in `quick_log_sheet.dart` now accepts a `required String label` parameter and receives `unitsSystem.waterUnitLabel`. The backend `waterGlasses` payload remains unchanged.
+3. **Units-aware water label in Quick Log (Task 3.4)** — Added `UnitsSystemWaterLabel` extension to `user_preferences_model.dart` with a `waterUnitLabel` getter that returns `'glasses (250 ml)'` for metric units or `'glasses (8 oz)'` for imperial. `_WaterCounter` in `quick_log_sheet.dart` now accepts a `required String label` parameter and receives `unitsSystem.waterUnitLabel`. The backend `waterGlasses` payload remains unchanged.
 
 **Key decisions:**
 
@@ -2579,7 +2577,6 @@ Completed 4 tasks from the Settings Mapping Audit plan, wiring persisted user pr
 | Persist banner dismiss to backend | Users expect the banner to stay dismissed across sessions. Session-only dismissal would be frustrating. |
 | Session-only X-dismiss on stillBuilding | The X button on the stillBuilding state is a "hide for now" action, not a permanent dismiss. Users should see it again tomorrow if they open the app. |
 | Race condition fix: `!prefsAsync.isLoading` | Without this guard, the banner could flicker on/off as preferences load. The guard ensures the banner is only shown when we have definitive dismiss state. |
-| Wellness check-in gating | Privacy & Data is the natural home for this toggle since it controls data collection. Gating the card on this toggle ensures the UI reflects the user's privacy preference. |
 | Units-aware water label | Users in metric regions expect "ml" or "250 ml per glass"; imperial users expect "oz" or "8 oz per glass". The label is now context-aware. |
 
 **`flutter analyze`:** 24 issues (all pre-existing — zero in Today tab files). Zero errors.
@@ -3364,14 +3361,14 @@ Replaced the old 3-field `ProfileQuestionnaireScreen` with a new 6-step paginate
 - `zuralog/lib/features/onboarding/presentation/steps/goals_step.dart` — 2-col multi-select grid of 8 health goals; requires ≥1 selection to advance
 - `zuralog/lib/features/onboarding/presentation/steps/persona_step.dart` — 3 AI persona cards (Tough Love / Balanced / Gentle) + Proactivity slider (Low / Medium / High)
 - `zuralog/lib/features/onboarding/presentation/steps/connect_apps_step.dart` — Informational grid of 6 featured integrations with "Later" badge; no OAuth during onboarding
-- `zuralog/lib/features/onboarding/presentation/steps/notifications_step.dart` — Morning Briefing toggle + time picker, Smart Reminders toggle, Wellness Check-in toggle + time picker
+- `zuralog/lib/features/onboarding/presentation/steps/notifications_step.dart` — Morning Briefing toggle + time picker, Smart Reminders toggle
 - `zuralog/lib/features/onboarding/presentation/steps/discovery_step.dart` — "Where did you hear about us?" picker; fires `onboarding_discovery` PostHog event on selection
 
 **Modified files:**
 - `zuralog/lib/core/router/app_router.dart` — Route `profileQuestionnairePath` now imports and instantiates `OnboardingFlowScreen` instead of `ProfileQuestionnaireScreen`
 
 **Documentation updates:**
-- `docs/screens.md` → v1.2: Auth & Onboarding section replaced with 6-step flow spec; Quick Log Bottom Sheet added to Today Tab; Emergency Health Card + Edit added to Settings; all existing screen descriptions updated with MVP feature additions (Health Score hero, Data Maturity banner, Wellness Check-in, streak badges, file attachments, memory management, story-style Weekly Report, personalized AI starters, expanded Notifications settings, Appearance theme/haptics, Coach proactivity selector, Integrations sync badges, Emergency Health Card link in Profile)
+- `docs/screens.md` → v1.2: Auth & Onboarding section replaced with 6-step flow spec; Quick Log Bottom Sheet added to Today Tab; Emergency Health Card + Edit added to Settings; all existing screen descriptions updated with MVP feature additions (Health Score hero, Data Maturity banner, streak badges, file attachments, memory management, story-style Weekly Report, personalized AI starters, expanded Notifications settings, Appearance theme/haptics, Coach proactivity selector, Integrations sync badges, Emergency Health Card link in Profile)
 - `docs/roadmap.md` → Onboarding Flow marked ✅ Complete; Emergency Health Card, Emergency Health Card Edit, and Quick Log Bottom Sheet added as 🔜 Planned
 
 **Key decisions:**
@@ -3548,8 +3545,8 @@ Systematic remediation of the Settings system: all user-configurable preferences
 
 ### New files
 
-- `zuralog/lib/features/settings/domain/user_preferences_model.dart` — Immutable Dart model mirroring the backend `user_preferences` table. Includes all existing columns plus 6 new planned columns (`response_length`, `suggested_prompts_enabled`, `voice_input_enabled`, `wellness_checkin_card_visible`, `data_maturity_banner_dismissed`, `analytics_opt_out`). Enums with `fromValue` fallbacks; `fromJson`, `toJson`, `toPatchJson`, `copyWith`.
-- `zuralog/lib/features/settings/providers/settings_providers.dart` — `UserPreferencesNotifier` (`AsyncNotifier`: `GET /api/v1/preferences` on build, SharedPrefs fallback, optimistic PATCH writes via `save()`/`mutate()`). 10 derived `Provider`s: `coachPersonaProvider`, `proactivityLevelProvider`, `responseLengthProvider`, `suggestedPromptsEnabledProvider`, `voiceInputEnabledProvider`, `themeModePreferenceProvider`, `wellnessCheckinCardVisibleProvider`, `dataMaturityBannerDismissedProvider`, `analyticsOptOutProvider`, `unitsSystemProvider`.
+- `zuralog/lib/features/settings/domain/user_preferences_model.dart` — Immutable Dart model mirroring the backend `user_preferences` table. Includes all existing columns plus 5 new planned columns (`response_length`, `suggested_prompts_enabled`, `voice_input_enabled`, `data_maturity_banner_dismissed`, `analytics_opt_out`). Enums with `fromValue` fallbacks; `fromJson`, `toJson`, `toPatchJson`, `copyWith`.
+- `zuralog/lib/features/settings/providers/settings_providers.dart` — `UserPreferencesNotifier` (`AsyncNotifier`: `GET /api/v1/preferences` on build, SharedPrefs fallback, optimistic PATCH writes via `save()`/`mutate()`). 10 derived `Provider`s: `coachPersonaProvider`, `proactivityLevelProvider`, `responseLengthProvider`, `suggestedPromptsEnabledProvider`, `voiceInputEnabledProvider`, `themeModePreferenceProvider`, `dataMaturityBannerDismissedProvider`, `analyticsOptOutProvider`, `unitsSystemProvider`.
 
 ### Modified files
 
@@ -3560,7 +3557,7 @@ Systematic remediation of the Settings system: all user-configurable preferences
 - `catalog_screen.dart` — Dev screen theme toggle updated to use `setTheme()`.
 - `coach_settings_screen.dart` — Removed 5 file-private `StateProvider`s + manual `_savePreferences()` PATCH; reads from `userPreferencesProvider.valueOrNull`, writes via `mutate()`.
 - `notification_settings_screen.dart` — Seeds local `_notificationStateProvider` from `userPreferencesProvider` in `initState` via `addPostFrameCallback`; every change calls `_persist()` → `mutate()`.
-- `privacy_data_screen.dart` — Removed `_PrivacyState` / `_privacyStateProvider`; reads from `wellnessCheckinCardVisibleProvider`, `dataMaturityBannerDismissedProvider`, `analyticsOptOutProvider`; writes via `prefsNotifier.mutate()`.
+- `privacy_data_screen.dart` — Removed `_PrivacyState` / `_privacyStateProvider`; reads from `dataMaturityBannerDismissedProvider`, `analyticsOptOutProvider`; writes via `prefsNotifier.mutate()`.
 - `account_settings_screen.dart` — Added **Preferences** section with a `_UnitsTile` widget: compact segmented Metric/Imperial toggle reads `unitsSystemProvider`, writes via `userPreferencesProvider.notifier.mutate()`.
 
 ### Bugs fixed
@@ -3603,7 +3600,6 @@ Completed all P0, P1, and P2 items from the Settings Mapping Audit for the Coach
   - `response_length` (VARCHAR, DEFAULT 'concise')
   - `suggested_prompts_enabled` (BOOLEAN, DEFAULT true)
   - `voice_input_enabled` (BOOLEAN, DEFAULT true)
-  - `wellness_checkin_card_visible` (BOOLEAN, DEFAULT true)
   - `data_maturity_banner_dismissed` (BOOLEAN, DEFAULT false)
   - `analytics_opt_out` (BOOLEAN, DEFAULT false)
 - `cloud-brain/app/schemas/preferences_schemas.py` — Pydantic models updated with 6 new fields; route validation updated

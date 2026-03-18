@@ -850,7 +850,6 @@ No CTA change beyond "Next" — no connectivity happens here.
 
 - Morning Briefing toggle + time picker (visible when on)
 - Smart Reminders toggle
-- Wellness Check-in toggle + time picker (visible when on)
 
 No visual redesign needed beyond the global switch theme. The layout is clean and functional.
 

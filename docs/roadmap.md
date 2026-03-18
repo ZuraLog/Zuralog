@@ -184,7 +184,7 @@
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Today Feed (curated daily briefing) | ✅ Done | Phase 3 complete — Health Score hero, insight cards, quick actions, wellness check-in, streak, Quick Log FAB; feat/today-tab-settings-wiring: greeting personalization, data maturity banner persistence, wellness check-in gating; Polish pass (2026-03-18): metric picker full-screen route, tile uniformity (width/height/badge), tap-to-log, nav bar obstruction fix |
+| P0 | Today Feed (curated daily briefing) | ✅ Done | Phase 3 complete — Health Score hero, insight cards, quick actions, streak, Quick Log FAB; feat/today-tab-settings-wiring: greeting personalization, data maturity banner persistence; Polish pass (2026-03-18): metric picker full-screen route, tile uniformity (width/height/badge), tap-to-log, nav bar obstruction fix |
 | P0 | Today — Insight Detail | ✅ Done | Phase 3 complete — bar chart, AI reasoning, source chips, Discuss with Coach CTA |
 | P0 | Today — Notification History | ✅ Done | Phase 3 complete — grouped by day, unread indicators, deep-link routing |
 | P0 | Today — Sleep Log Screen | ✅ Done | Part 3 complete — bedtime/wake time pickers, quality emoji, interruptions counter, factors chips, notes |
@@ -263,7 +263,7 @@ Completed 4 tasks from the Settings Mapping Audit plan, wiring persisted user pr
 |----------|------|--------|-------|
 | P0 | Task 3.1: Greeting personalization (Bug fix) | ✅ Done | `_timeOfDayGreeting()` now shows "Good morning, Alex" using `profile?.aiName`; falls back gracefully to "Good morning" if no name available |
 | P0 | Task 3.2: Data Maturity Banner dismiss persistence | ✅ Done | Banner dismiss writes to persisted `userPreferencesProvider` via `mutate()`; progress mode `onDismiss` and stillBuilding `onPermanentDismiss` both persist; session X-dismiss on stillBuilding remains session-only (intentional); dead session-scoped `dataMaturityBannerDismissed` StateProvider removed; `showBanner` logic gates on both `!bannerDismissed` AND `!prefsAsync.isLoading` (prevents race condition) |
-| P0 | Task 3.3: Wellness Check-in card gated on Privacy toggle | ✅ Done | `_WellnessCheckinCard` wrapped in `if (wellnessCardVisible)`; reads `wellnessCheckinCardVisibleProvider` (persisted via `userPreferencesProvider`); Privacy & Data screen's "Wellness Check-in" toggle now controls Today tab card visibility |
+
 | P0 | Task 3.4: Units-aware water label in Quick Log | ✅ Done | Added `UnitsSystemWaterLabel` extension to `user_preferences_model.dart` — `waterUnitLabel` getter returns `'glasses (250 ml)'` for metric, `'glasses (8 oz)'` for imperial; `_WaterCounter` now has `required String label`; receives `unitsSystem.waterUnitLabel`; backend `waterGlasses` payload unchanged |
 
 ---

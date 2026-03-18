@@ -380,35 +380,9 @@ A dedicated quick-entry interface for data that does not come from integrations.
 - Logged data appears in the relevant Category Detail screens and feeds into AI analytics
 - History is viewable per metric in the Metric Detail screen
 
-**User settings:** Settings > Privacy & Data: Wellness Check-in toggle controls whether the daily check-in prompt appears. The Quick Log entry point in the UI is always available regardless of this setting.
+**User settings:** None — the Quick Log entry point in the UI is always available.
 
-### P. Wearable-Free Wellness Check-in
-
-**Implementation status:** Partially implemented. Card visibility gated on Privacy & Data toggle (feat/today-tab-settings-wiring, 2026-03-08). Full check-in flow (subjective rating prompt, push notification trigger) not yet implemented.
-
-A daily prompted check-in for users who do not have wearables or who want to add subjective context alongside device data:
-
-**Trigger:**
-- Push notification at user-configured time (default: 9:00 AM)
-- Card in the Today Feed (appears once daily until completed or dismissed)
-
-**Check-in flow:**
-- Compact inline card that expands in the Today Feed (not a separate screen)
-- Rate: energy (1-10), mood (1-10), stress (1-10), sleep quality (1-10)
-- Optional free-text note for context ("felt anxious about work", "great workout this morning")
-- Submit button logs all values at once
-- Total interaction time: under 30 seconds
-
-**Value for AI:**
-- Subjective data fills gaps that wearables cannot capture (mood, stress, perceived energy)
-- Enables correlations like "Your mood rating is 2 points higher on days you exercise" or "Your stress spikes on Mondays"
-- For users with no wearables at all, this is the primary data input that powers AI insights
-
-**Relationship to Quick Log:** The Wellness Check-in is a prompted, time-based version of the Quick Log. The Quick Log bottom sheet is available anytime on-demand. They share the same underlying data storage.
-
-**User settings:** Settings > Privacy & Data: toggle to enable/disable the daily check-in prompt (on by default). Settings > Notifications: check-in reminder time picker.
-
-### Q. Integration Health Monitor
+### P. Integration Health Monitor
 
 **Implementation status:** Backend `Integration` model tracks `sync_status` (idle/syncing/error), `sync_error`, and `last_synced_at`. Data Sources screen planned in [screens.md](./screens.md) Trends Tab. Staleness detection and proactive alerts not implemented.
 
@@ -506,13 +480,12 @@ A comprehensive onboarding flow immediately after account creation that configur
   - Withings
   - Polar
 - "Connect at least one app to unlock AI insights" prompt
-- Skip button available — the app works without integrations via manual logging and wellness check-ins
+- Skip button available — the app works without integrations via manual logging
 - Trigger Common Correlation Suggestions (Feature J) based on selected goals if the user skips
 
 **Step 5 — Notification Preferences** (1 screen)
 - Morning Briefing: toggle + time picker (default: 7:00 AM)
 - Smart Reminders: toggle (default: on)
-- Wellness Check-in: toggle + time picker (default: 9:00 AM)
 - Brief explanation of each: what it does, why it helps
 
 **Step 6 — Discovery Question** (1 screen)
@@ -529,7 +502,7 @@ A comprehensive onboarding flow immediately after account creation that configur
 
 **Completion:** After Step 6, the user lands on the Today Feed with a welcome insight card and their first onboarding tooltips.
 
-**User settings:** Users can redo any onboarding choice later: Coach Settings (persona, proactivity), Account (goals), Notifications (briefing, reminders, check-in). The discovery question is one-time and not re-editable.
+**User settings:** Users can redo any onboarding choice later: Coach Settings (persona, proactivity), Account (goals), Notifications (briefing, reminders). The discovery question is one-time and not re-editable.
 
 **Design Impact:** Replaces the current single `ProfileQuestionnaireScreen` with a 6-step paginated flow. Update [screens.md](./screens.md) Auth & Onboarding section to specify each step.
 
@@ -613,7 +586,6 @@ A multi-layered engagement system that rewards consistency without feeling gimmi
   - Consecutive days logging any data (app engagement streak)
   - Consecutive days meeting step goal
   - Consecutive workout days
-  - Consecutive days completing the wellness check-in
 - Streak counter displayed on Progress Home and as a compact badge in the Today Feed
 - **Streak freeze:** 1 free freeze per week — protects the streak if the user misses a day. Freezes accumulate up to a maximum of 2. Displayed as a "shield" icon next to the streak counter.
 - **Streak milestone celebrations:** Haptic feedback (success pattern) + a celebratory card in the Today Feed at 7, 14, 30, 60, 90, 180, and 365 days. These are meaningful intervals, not every-day noise.
@@ -686,12 +658,11 @@ The Today Feed adapts its content, card ordering, and tone based on the current 
 **Time periods and content priority:**
 
 - **Morning (5:00 AM – 11:00 AM):**
-  - Health Score for today (hero position)
-  - Sleep recap card (duration, quality, comparison to baseline)
-  - AI Morning Briefing content (if notification was sent, the same content is available here)
-  - Wellness Check-in prompt (if enabled and not yet completed)
-  - Today's plan: active goals and what's needed to hit them
-  - Contextual quick action: "Log your morning supplements"
+   - Health Score for today (hero position)
+   - Sleep recap card (duration, quality, comparison to baseline)
+   - AI Morning Briefing content (if notification was sent, the same content is available here)
+   - Today's plan: active goals and what's needed to hit them
+   - Contextual quick action: "Log your morning supplements"
 
 - **Afternoon (11:00 AM – 5:00 PM):**
   - Health Score (hero position)
@@ -785,7 +756,7 @@ This section specifies all changes required to [screens.md](./screens.md) and [d
 
 | Screen | Modifications |
 |--------|---------------|
-| **Today Feed** | Add: Health Score hero widget at top. Data Maturity indicator banner (first 30 days). Wellness Check-in card (daily prompt). Contextual Quick Actions cards. Streak counter badge. Common Correlation Suggestion cards. Quick Log entry point button. Time-of-Day content ordering logic specification. |
+| **Today Feed** | Add: Health Score hero widget at top. Data Maturity indicator banner (first 30 days). Contextual Quick Actions cards. Streak counter badge. Common Correlation Suggestion cards. Quick Log entry point button. Time-of-Day content ordering logic specification. |
 | **Health Dashboard (Data Tab)** | Add: Health Score as hero element at top of the card grid, above all category cards. |
 | **New Chat (Coach Tab)** | Add: Personalized AI Conversation Starters (replace generic prompts). File attachment button in input bar. Camera/photo capture button. Integration context banner showing which apps the AI can access. |
 | **Chat Thread** | Add: File attachment support (images, PDFs). Attachment preview cards in message bubbles. Memory extraction confirmation card after AI processes a file. Food photo response card with nutrition estimate and confirm/adjust UI. Natural language logging confirmation card. |
@@ -795,7 +766,7 @@ This section specifies all changes required to [screens.md](./screens.md) and [d
 | **Trends Home** | Add: Common Correlation Suggestion cards ("Track X for better insights"). |
 | **Data Sources (Trends Tab)** | Add: Staleness indicators (green/yellow/red dot per integration). Last sync timestamp. Reconnect button for error-state integrations. Data type breakdown per integration. |
 | **Settings Hub** | No structural changes. Feature-specific settings are distributed across existing settings sub-screens. |
-| **Notifications Settings** | Expand significantly: Morning Briefing toggle + time picker. Smart Reminders master toggle with per-category sub-toggles (pattern, gap, goal, celebration). Frequency selector. Streak reminders toggle. Achievement notifications toggle. Anomaly alerts toggle. Integration alerts toggle. Wellness Check-in reminder toggle + time picker. Quiet Hours start/end time. |
+| **Notifications Settings** | Expand significantly: Morning Briefing toggle + time picker. Smart Reminders master toggle with per-category sub-toggles (pattern, gap, goal, celebration). Frequency selector. Streak reminders toggle. Achievement notifications toggle. Anomaly alerts toggle. Integration alerts toggle. Quiet Hours start/end time. |
 | **Appearance Settings** | Add: Theme selector (Dark / Light / System). Haptic Feedback toggle. Reset Onboarding Tooltips button. Disable Tooltips toggle. |
 | **Coach Settings** | Add: Proactivity level selector (Low / Medium / High) below existing persona selector. |
 | **Profile** | Add: Emergency Health Card link/button (prominent, possibly as a card). |
@@ -830,7 +801,7 @@ Every feature must emit structured PostHog events for usage tracking and product
 
 - **Feature adoption:** Track first-use events per feature per user (e.g., `first_quick_log`, `first_file_attachment`, `first_goal_created`). Track daily/weekly active usage per feature.
 - **Funnel analysis:** Instrument the onboarding flow step-by-step (completion rate per step, drop-off points). Instrument goal creation through goal completion. Instrument chat message through AI response.
-- **Feature-specific events:** AI messages sent, insights viewed and tapped, streaks started/broken/frozen, achievements unlocked, attachments sent by type, anomaly alerts viewed, wellness check-ins completed, quick logs submitted, correlation suggestions tapped.
+- **Feature-specific events:** AI messages sent, insights viewed and tapped, streaks started/broken/frozen, achievements unlocked, attachments sent by type, anomaly alerts viewed, quick logs submitted, correlation suggestions tapped.
 - **Engagement metrics:** Session duration, screens visited per session, time-of-day usage distribution, notification tap-through rate by type.
 - **A/B testing readiness:** PostHog feature flags should be used to gate experimental feature variants in future (notification frequency, AI persona defaults, onboarding flow order).
 
@@ -879,8 +850,6 @@ A consolidated map of all user-configurable settings introduced by MVP features.
 | Achievement Notifications | Toggle | On | Notify when a badge is unlocked |
 | Anomaly Alerts | Toggle | On | Notify on unusual metric readings |
 | Integration Alerts | Toggle | On | Notify when an integration stops syncing |
-| Wellness Check-in Reminder | Toggle | On | Daily prompt to complete the wellness check-in |
-| Check-in Reminder Time | Time picker | 9:00 AM | When to prompt the wellness check-in |
 | Quiet Hours | Time range | 10:00 PM – 7:00 AM | Suppress all non-critical notifications |
 
 ### Settings > Appearance
@@ -897,7 +866,6 @@ A consolidated map of all user-configurable settings introduced by MVP features.
 | Setting | Type | Default | Description | Status |
 |---------|------|---------|-------------|--------|
 | AI Memory | View/Manage | — | View stored memories, delete individual entries, clear all | 📋 Future |
-| Wellness Check-in | Toggle | On | Enable/disable daily check-in prompt in Today Feed | ✅ Wired (feat/today-tab-settings-wiring) |
 | Data Maturity Banner | Toggle | On | Show/dismiss the data maturity progress indicator | ✅ Wired (feat/today-tab-settings-wiring) |
 
 ### Settings > Account
@@ -1057,7 +1025,6 @@ Organized by category. Each title is an actionable implementation task suitable 
 [Feature] Customizable Dashboard — drag-and-drop reorder, show/hide categories, accent color override
 [Feature] Deep Analytics UI — interactive two-metric correlation explorer with scatter/overlay charts
 [Feature] Quick Log / Manual Entry — bottom sheet for water, mood, energy, stress, pain, and notes
-[Feature] Wearable-Free Wellness Check-in — daily subjective rating prompt with push notification trigger
 [Feature] Integration Health Monitor — sync status indicators, staleness alerts, one-tap reconnect
 [Feature] Emergency Health Card — quick-access medical info screen (blood type, allergies, meds, contacts)
 [Feature] Data Maturity Indicator — progressive transparency on data sufficiency for AI insights
