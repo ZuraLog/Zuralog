@@ -153,7 +153,29 @@ final class MockTodayRepository implements TodayRepositoryInterface {
   @override
   Future<List<DailyGoal>> getDailyGoals() async {
     await Future<void>.delayed(_delay);
-    return const [];
+    return const [
+      DailyGoal(
+        id: 'goal-steps',
+        label: 'Steps',
+        current: 6240,
+        target: 8000,
+        unit: 'steps',
+      ),
+      DailyGoal(
+        id: 'goal-water',
+        label: 'Water',
+        current: 600,
+        target: 2000,
+        unit: 'ml',
+      ),
+      DailyGoal(
+        id: 'goal-sleep',
+        label: 'Sleep',
+        current: 5.9,
+        target: 7,
+        unit: 'hrs',
+      ),
+    ];
   }
 
   // ── Today Log Summary ─────────────────────────────────────────────────────
