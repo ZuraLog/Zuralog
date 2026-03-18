@@ -18,6 +18,7 @@ library;
 import 'package:dio/dio.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
@@ -321,10 +322,51 @@ class TodayRepository implements TodayRepositoryInterface {
 
   // ── Daily Goals ────────────────────────────────────────────────────────────
 
+  /// Goal types that are inherently daily-relevant regardless of their period.
+  static const _dailyGoalTypes = {
+    GoalType.stepCount,
+    GoalType.waterIntake,
+    GoalType.dailyCalorieLimit,
+    GoalType.sleepDuration,
+  };
+
   @override
   Future<List<DailyGoal>> getDailyGoals() async {
-    // Stub until the goals endpoint is built. Returns empty list.
-    return const [];
+    try {
+      final response = await _api.get('/api/v1/goals');
+      final goalList = GoalList.fromJson(response.data as Map<String, dynamic>);
+      return goalList.goals
+          .where(
+            (g) =>
+                g.period == GoalPeriod.daily ||
+                _dailyGoalTypes.contains(g.type),
+          )
+          .map(
+            (g) => DailyGoal(
+              id: g.id,
+              label: _goalLabel(g),
+              current: g.currentValue,
+              target: g.targetValue,
+              unit: g.unit,
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Returns a short human-readable label for a goal.
+  static String _goalLabel(Goal goal) {
+    return switch (goal.type) {
+      GoalType.stepCount => 'Steps',
+      GoalType.waterIntake => 'Water',
+      GoalType.dailyCalorieLimit => 'Calories',
+      GoalType.sleepDuration => 'Sleep',
+      GoalType.weightTarget => 'Weight',
+      GoalType.weeklyRunCount => 'Runs',
+      GoalType.custom => goal.title.isNotEmpty ? goal.title : 'Goal',
+    };
   }
 
   // ── Today Log Summary ──────────────────────────────────────────────────────
