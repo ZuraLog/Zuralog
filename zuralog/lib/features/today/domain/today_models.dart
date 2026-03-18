@@ -193,10 +193,10 @@ class InsightCard {
     return InsightCard(
       id: json['id'] as String,
       title: json['title'] as String,
-      summary: json['summary'] as String,
+      summary: json['body'] as String? ?? '',
       type: _insightTypeFromString(json['type'] as String?),
       category: json['category'] as String? ?? 'general',
-      isRead: json['is_read'] as bool? ?? false,
+      isRead: json['read_at'] != null,
       priorityScore: (json['priority_score'] as num?)?.toDouble(),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
@@ -308,7 +308,7 @@ class InsightDetail {
     return InsightDetail(
       id: json['id'] as String,
       title: json['title'] as String,
-      summary: json['summary'] as String,
+      summary: json['body'] as String? ?? '',
       reasoning: json['reasoning'] as String? ?? '',
       type: _insightTypeFromString(json['type'] as String?),
       category: json['category'] as String? ?? 'general',
