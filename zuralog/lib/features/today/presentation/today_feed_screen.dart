@@ -362,8 +362,12 @@ class _HealthScoreHero extends ConsumerWidget {
                 ),
               ),
               data: (data) {
-                // No data yet — welcome the user instead of showing a 0 ring.
-                if (data.dataDays == 0 && data.score == 0) {
+                // No data or implausibly low score (< 20) → show the
+                // sad-face zero state rather than a misleading 0 or near-0
+                // ring. A real health score below 20 would be extraordinary;
+                // a value that low almost always means the calculation hasn't
+                // run yet or returned an error.
+                if (data.dataDays == 0 || data.score < 20) {
                   return const HealthScoreZeroState();
                 }
                 return Column(
@@ -407,7 +411,17 @@ class _MetricGridSection extends ConsumerWidget {
       error: (e, _) => const SizedBox.shrink(),
       data: (pinned) {
         final summary = summaryAsync.valueOrNull ?? TodayLogSummary.empty;
-        final tiles = pinned.map((type) => _buildTile(type, summary)).toList();
+
+        // Fetch last-ever logged values for all pinned metrics so unlit tiles
+        // can show "87kg · 4d ago" instead of a plain dash.
+        final latestAsync = ref.watch(
+          latestLogValuesProvider(latestLogValuesKey(pinned.toSet())),
+        );
+        final latest = latestAsync.valueOrNull ?? const {};
+
+        final tiles = pinned
+            .map((type) => _buildTile(type, summary, latest))
+            .toList();
 
         return MetricGrid(
           tiles: tiles,
@@ -429,9 +443,21 @@ class _MetricGridSection extends ConsumerWidget {
 // ── _buildTile ────────────────────────────────────────────────────────────────
 
 /// Maps a metric type string and today's log summary to a [MetricTileData].
-MetricTileData _buildTile(String type, TodayLogSummary summary) {
+///
+/// [latest] is the result of `latestLogValuesProvider` — the most recent ever-
+/// logged value per metric type (across all time, not just today). Used to
+/// populate [MetricTileData.lastValue] and [MetricTileData.lastLoggedAt] so
+/// unlit tiles can display "87kg · 4d ago" instead of a plain dash.
+MetricTileData _buildTile(
+  String type,
+  TodayLogSummary summary,
+  Map<String, dynamic> latest,
+) {
   final isLit = summary.loggedTypes.contains(type);
   final raw = summary.latestValues[type];
+
+  // Extract last-ever logged value and timestamp from the /latest endpoint.
+  final (lastValue, lastLoggedAt) = _extractLastLogged(type, latest);
 
   return switch (type) {
     'mood' => MetricTileData(
@@ -441,6 +467,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryWellness.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'energy' => MetricTileData(
         metricType: type,
@@ -449,6 +477,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryWellness.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'stress' => MetricTileData(
         metricType: type,
@@ -457,6 +487,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryWellness.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}/10' : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'water' => MetricTileData(
         metricType: type,
@@ -465,6 +497,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryBody.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'}ml' : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'sleep' => MetricTileData(
         metricType: type,
@@ -474,6 +508,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         value: isLit && raw != null
             ? formatSleepMinutes((raw as num).toDouble())
             : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'weight' => MetricTileData(
         metricType: type,
@@ -482,6 +518,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryBody.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}kg' : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'steps' => MetricTileData(
         metricType: type,
@@ -491,6 +529,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         value: isLit && raw != null
             ? formatSteps((raw as num).toInt())
             : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'run' => MetricTileData(
         metricType: type,
@@ -499,6 +539,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryActivity.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toStringAsFixed(1) ?? '—'}km' : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'meal' => MetricTileData(
         metricType: type,
@@ -508,6 +550,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         value: isLit
             ? '${(raw as num?)?.toStringAsFixed(0) ?? '—'} kcal'
             : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'supplement' => MetricTileData(
         metricType: type,
@@ -517,6 +561,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         value: isLit && raw != null
             ? '${(raw as num).toInt()} taken'
             : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'symptom' => MetricTileData(
         metricType: type,
@@ -525,6 +571,8 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryVitals.toARGB32(),
         // 'symptom_severity' holds the formatted severity string; 'symptom' is the log type key.
         value: isLit ? (summary.latestValues['symptom_severity'] as String?) : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     'heart_rate' => MetricTileData(
         metricType: type,
@@ -533,14 +581,96 @@ MetricTileData _buildTile(String type, TodayLogSummary summary) {
         categoryColor: AppColors.categoryHeart.toARGB32(),
         value:
             isLit ? '${(raw as num?)?.toInt() ?? '—'} bpm' : null,
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
     _ => MetricTileData(
         metricType: type,
         label: type,
         emoji: '📊',
         categoryColor: AppColors.categoryVitals.toARGB32(),
+        lastValue: lastValue,
+        lastLoggedAt: lastLoggedAt,
       ),
   };
+}
+
+/// Extracts the formatted last-ever value and its timestamp for [type] from
+/// the [latest] map returned by `latestLogValuesProvider`.
+///
+/// The `/latest` endpoint returns type-specific shapes:
+///   weight  → {"value_kg": 87.3, "logged_at": "...", ...}
+///   steps   → {"steps": 8432,    "logged_at": "...", ...}
+///   others  → {"value": 7.5,     "logged_at": "...", ...}
+(String?, DateTime?) _extractLastLogged(
+  String type,
+  Map<String, dynamic> latest,
+) {
+  final entry = latest[type] as Map<String, dynamic>?;
+  if (entry == null) return (null, null);
+
+  // Parse logged_at
+  DateTime? loggedAt;
+  final loggedAtRaw = entry['logged_at'] as String?;
+  if (loggedAtRaw != null) {
+    try {
+      loggedAt = DateTime.parse(loggedAtRaw).toLocal();
+    } catch (_) {
+      loggedAt = null;
+    }
+  }
+
+  // Format value per type
+  String? lastValue;
+  try {
+    lastValue = switch (type) {
+      'weight' => () {
+          final v = entry['value_kg'] as num?;
+          return v != null ? '${v.toStringAsFixed(1)}kg' : null;
+        }(),
+      'steps' => () {
+          final v = entry['steps'] as num?;
+          return v != null ? formatSteps(v.toInt()) : null;
+        }(),
+      'sleep' => () {
+          final v = entry['value'] as num?;
+          return v != null ? formatSleepMinutes(v.toDouble()) : null;
+        }(),
+      'water' => () {
+          final v = entry['value'] as num?;
+          return v != null ? '${v.toStringAsFixed(0)}ml' : null;
+        }(),
+      'run' => () {
+          final v = entry['value'] as num?;
+          return v != null ? '${v.toStringAsFixed(1)}km' : null;
+        }(),
+      'meal' => () {
+          final v = entry['value'] as num?;
+          return v != null ? '${v.toStringAsFixed(0)} kcal' : null;
+        }(),
+      'supplement' => () {
+          final v = entry['value'] as num?;
+          return v != null ? '${v.toInt()} taken' : null;
+        }(),
+      'heart_rate' => () {
+          final v = entry['value'] as num?;
+          return v != null ? '${v.toInt()} bpm' : null;
+        }(),
+      'mood' || 'energy' || 'stress' => () {
+          final v = entry['value'] as num?;
+          return v != null ? '${v.toStringAsFixed(1)}/10' : null;
+        }(),
+      'symptom' => entry['text_value'] as String?,
+      _ => () {
+          final v = entry['value'];
+          return v != null ? '$v' : null;
+        }(),
+    };
+  } catch (_) {
+    lastValue = null;
+  }
+
+  return (lastValue, loggedAt);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

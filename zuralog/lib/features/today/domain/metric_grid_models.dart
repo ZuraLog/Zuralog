@@ -17,8 +17,10 @@ class MetricTileData {
     required this.label,
     required this.emoji,
     required this.categoryColor,
-    this.value,   // defaults to null
-    this.unit,    // defaults to null
+    this.value,
+    this.unit,
+    this.lastValue,
+    this.lastLoggedAt,
   });
 
   /// The canonical metric type string (e.g. 'water', 'steps', 'sleep').
@@ -42,15 +44,23 @@ class MetricTileData {
   /// Null for self-describing values like sleep duration.
   final String? unit;
 
+  /// The most recent ever-logged formatted value for this metric (across all
+  /// time, not just today). Shown on greyscale tiles as a faint hint.
+  /// Null when the user has never logged this metric.
+  final String? lastValue;
+
+  /// UTC timestamp of [lastValue]'s log entry. Used to derive the relative
+  /// "X days ago" label shown beneath the last value on greyscale tiles.
+  final DateTime? lastLoggedAt;
+
   /// True when [value] is non-null — tile is fully lit in colour.
   /// False when [value] is null — tile is greyscale.
   bool get isLit => value != null;
 
   /// Returns a copy of this tile with the given fields replaced.
   ///
-  /// To explicitly clear [value] or [unit] back to null, pass
-  /// `value: null` or `unit: null` — omitting the parameter preserves
-  /// the existing value.
+  /// To explicitly clear nullable fields back to null, pass them as null
+  /// explicitly — omitting a parameter preserves the existing value.
   MetricTileData copyWith({
     String? metricType,
     String? label,
@@ -58,6 +68,8 @@ class MetricTileData {
     int? categoryColor,
     Object? value = _absent,
     Object? unit = _absent,
+    Object? lastValue = _absent,
+    Object? lastLoggedAt = _absent,
   }) {
     return MetricTileData(
       metricType: metricType ?? this.metricType,
@@ -66,6 +78,10 @@ class MetricTileData {
       categoryColor: categoryColor ?? this.categoryColor,
       value: value == _absent ? this.value : value as String?,
       unit: unit == _absent ? this.unit : unit as String?,
+      lastValue: lastValue == _absent ? this.lastValue : lastValue as String?,
+      lastLoggedAt: lastLoggedAt == _absent
+          ? this.lastLoggedAt
+          : lastLoggedAt as DateTime?,
     );
   }
 
