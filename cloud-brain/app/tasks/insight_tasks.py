@@ -4,6 +4,7 @@ Zuralog Cloud Brain — Celery Tasks for Insight Generation.
 New pipeline (replaces the old rule-based generator):
 1. Date-lock check — exit immediately if today's batch already exists.
 2. HealthBriefBuilder — fetches all 10 data sources in parallel.
+2b. Welcome card for immature accounts (< MIN_DATA_DAYS_FOR_MATURITY) — bypasses steps 3-5.
 3. InsightSignalDetector — runs all 8 signal categories.
 4. SignalPrioritizer — ranks, deduplicates, enforces diversity.
 5. InsightCardWriter — single LLM call with 3-level fallback chain.
@@ -58,7 +59,7 @@ async def _run_pipeline_for_celery(user_id: str) -> dict:
 
 
 async def _run_pipeline_async(user_id: str, db: AsyncSession) -> dict:
-    """Testable async implementation of the 5-step insight pipeline."""
+    """Testable async implementation of the 6-step insight pipeline."""
 
     # ── Step 1: Date-lock ────────────────────────────────────────────────────
     today = date.today()
@@ -70,7 +71,6 @@ async def _run_pipeline_async(user_id: str, db: AsyncSession) -> dict:
             and_(
                 Insight.user_id == user_id,
                 Insight.generation_date == today,
-                Insight.dismissed_at.is_(None),
             )
         )
     )
