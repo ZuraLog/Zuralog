@@ -169,18 +169,7 @@ def generate_insights_for_user(user_id: str) -> dict:
                     priority=1,
                 )
                 _welcome_ins = pg_insert(Insight).values(**welcome_values)
-                welcome_stmt = _welcome_ins.on_conflict_do_update(
-                    constraint="uq_insights_user_type_day",
-                    set_={
-                        "title": _welcome_ins.excluded.title,
-                        "body": _welcome_ins.excluded.body,
-                        "data": _welcome_ins.excluded.data,
-                        "reasoning": _welcome_ins.excluded.reasoning,
-                        "priority": _welcome_ins.excluded.priority,
-                        "updated_at": func.now(),
-                    },
-                    where=Insight.dismissed_at.is_(None),
-                )
+                welcome_stmt = _welcome_ins.on_conflict_do_nothing()
                 await db.execute(welcome_stmt)
                 insights_upserted.append(welcome_values)
 
@@ -207,18 +196,7 @@ def generate_insights_for_user(user_id: str) -> dict:
                     priority=base_priority if is_mature else base_priority + 1,
                 )
                 _card_ins = pg_insert(Insight).values(**card_values)
-                card_stmt = _card_ins.on_conflict_do_update(
-                    constraint="uq_insights_user_type_day",
-                    set_={
-                        "title": _card_ins.excluded.title,
-                        "body": _card_ins.excluded.body,
-                        "data": _card_ins.excluded.data,
-                        "reasoning": _card_ins.excluded.reasoning,
-                        "priority": _card_ins.excluded.priority,
-                        "updated_at": func.now(),
-                    },
-                    where=Insight.dismissed_at.is_(None),
-                )
+                card_stmt = _card_ins.on_conflict_do_nothing()
                 await db.execute(card_stmt)
                 insights_upserted.append(card_values)
 

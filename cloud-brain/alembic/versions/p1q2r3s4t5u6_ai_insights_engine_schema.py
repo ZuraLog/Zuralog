@@ -110,6 +110,7 @@ def upgrade() -> None:
     op.execute("""
         CREATE INDEX IF NOT EXISTS ix_insights_user_generation_date
             ON insights (user_id, generation_date)
+            WHERE dismissed_at IS NULL
     """)
 
 
