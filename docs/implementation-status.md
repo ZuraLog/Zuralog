@@ -7,6 +7,53 @@
 
 ---
 
+## Security Audit Fixes — AI Insights Engine (2026-03-18)
+
+**Scope:** Three must-fix issues identified in a full security and infrastructure audit of the AI Insights Engine.  
+**Branch:** `fix/security-audit-insights-engine`  
+**Status:** All fixes applied and verified
+
+### Fix 1 — Celery Worker Crash-Loop (P0 Blocker)
+
+**Problem:** The Celery_Worker service on Railway was crash-looping on startup because `WITHINGS_API_BASE_URL` and `POLAR_API_BASE_URL` were missing from its environment. The Pydantic config validator raises a fatal error when the corresponding client IDs are set but the base URLs are absent.
+
+**Fix:** Set `WITHINGS_API_BASE_URL=https://api.zuralog.com` and `POLAR_API_BASE_URL=https://api.zuralog.com` on the `Celery_Worker` service via Railway. Both variables were already present on the API service — they had simply not been copied to the worker. The worker restarted cleanly and all scheduled tasks (fan-out insights, integration syncs) are now running.
+
+**Notable:** The entire background task system had been down — no insight generation, no integration syncs, no reminders.
+
+---
+
+### Fix 2 — user_preferences Missing Row Level Security (P0 Security)
+
+**Problem:** RLS was disabled on the `user_preferences` table. Any authenticated user could read or overwrite any other user's preferences (timezone, coach_persona, goals, fitness_level, notification settings, analytics opt-out) via the Supabase PostgREST API. The Python application-layer allowlists (e.g. for `coach_persona`) were completely bypassable at the DB level.
+
+**Fix:** Applied migration `q2r3s4t5u6v7_enable_rls_on_user_preferences.py`:
+- Enabled RLS on `user_preferences`
+- Added `service_role_bypass` policy (ALL operations, for `service_role`)
+- Added `user_preferences_select_own` (SELECT own row)
+- Added `user_preferences_insert_own` (INSERT own row)
+- Added `user_preferences_update_own` (UPDATE own row, with matching WITH CHECK)
+- No DELETE policy — deletion only via cascade or service role
+
+Migration is idempotent (all `CREATE POLICY` statements wrapped in `DO $$ IF NOT EXISTS` blocks) and safe on local Postgres (wrapped in an `_has_auth` schema check).
+
+---
+
+### Fix 3 — Insight Endpoints Missing Rate Limiting (P1)
+
+**Problem:** The three insight API endpoints had no `@limiter.limit(...)` decorators. A user could call them in an unbounded loop, exhausting the database connection pool.
+
+**Fix:** Added `slowapi` rate limiting to all three handlers in `cloud-brain/app/api/v1/insight_routes.py`:
+- `GET /api/v1/insights` → `60/minute`
+- `GET /api/v1/insights/{id}` → `120/minute`
+- `PATCH /api/v1/insights/{id}` → `30/minute`
+
+Also fixed a pre-existing gap: the PATCH handler's `insight_id` path parameter had no format validation. Added `Path(..., pattern=r"^[0-9a-fA-F-]{36}$")` to match the GET handler.
+
+Limits are keyed per authenticated user (via JWT `sub` claim), falling back to IP for unauthenticated requests.
+
+---
+
 ## AI Insights Engine (2026-03-18)
 
 **Scope:** Implemented a complete AI-powered insights pipeline that detects health patterns, prioritizes them by relevance, and generates personalized insight cards via LLM.  
