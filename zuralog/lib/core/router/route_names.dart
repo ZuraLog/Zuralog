@@ -13,6 +13,7 @@
 /// /today                          → TodayFeedScreen (tab 0)
 ///   /today/insight/:id            → InsightDetailScreen
 ///   /today/notifications          → NotificationHistoryScreen
+///   /today/log/metric-picker      → MetricPickerScreen
  /// /data                           → HealthDashboardScreen (tab 1)
  ///   /data/category/:id            → CategoryDetailScreen
  ///   /data/metric/:id              → MetricDetailScreen
@@ -130,6 +131,12 @@ abstract final class RouteNames {
 
   /// Path for the Symptom Log screen.
   static const String symptomLogPath = '/today/log/symptom';
+
+  /// Name for the Metric Picker full-screen sheet (add metrics to Today grid).
+  static const String metricPicker = 'metricPicker';
+
+  /// Path for the Metric Picker screen.
+  static const String metricPickerPath = '/today/log/metric-picker';
 
   // ── Tab 1: Data ───────────────────────────────────────────────────────────
 

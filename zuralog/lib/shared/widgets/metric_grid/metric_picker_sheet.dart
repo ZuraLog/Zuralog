@@ -98,28 +98,10 @@ class MetricPickerSheet extends StatelessWidget {
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd, AppDimens.spaceLg,
+        AppDimens.spaceMd, AppDimens.spaceMd,
         AppDimens.spaceMd, AppDimens.spaceXxl,
       ),
       children: [
-        // Sheet handle
-        Center(
-          child: Container(
-            width: 36,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: AppDimens.spaceLg),
-            decoration: BoxDecoration(
-              color: colors.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
-        Text(
-          'Add a metric',
-          style: AppTextStyles.titleLarge.copyWith(color: colors.textPrimary),
-        ),
-        const SizedBox(height: AppDimens.spaceLg),
-
         for (final category in _kMetricCatalogue) ...[
           // Category header with colour accent
           Padding(

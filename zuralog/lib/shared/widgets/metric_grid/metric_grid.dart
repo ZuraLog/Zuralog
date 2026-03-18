@@ -162,7 +162,12 @@ class _GridLayout extends StatelessWidget {
     final layout = computeGridLayout(visibleCount);
     final scrollable = tiles.length > 9;
 
-    Widget grid = Column(
+    // When in edit mode, each tile shows a badge that extends 8px outside
+    // its top-right corner. Add top padding to the first row so the badge
+    // is not clipped by the section header above.
+    Widget grid = Padding(
+      padding: EdgeInsets.only(top: editMode ? AppDimens.spaceSm : 0),
+      child: Column(
       children: [
         // Rows from layout
         ...() {
@@ -199,6 +204,7 @@ class _GridLayout extends StatelessWidget {
             child: _AddTile(onTap: onAddTap),
           ),
       ],
+      ),
     );
 
     if (scrollable) {

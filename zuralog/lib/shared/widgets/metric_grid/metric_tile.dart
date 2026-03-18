@@ -98,36 +98,30 @@ class MetricTile extends StatelessWidget {
       );
     }
 
-    // Edit mode: add remove badge
+    // Edit mode: add remove badge.
+    // The badge sits just outside the tile bounds via Clip.none — the parent
+    // grid adds top padding per row so the badge is never clipped.
     if (inEditMode) {
       return Stack(
         clipBehavior: Clip.none,
         children: [
           tile,
           Positioned(
-            top: -6,
-            right: -6,
+            top: -8,
+            right: -8,
             child: GestureDetector(
               onTap: onRemove,
-              behavior: HitTestBehavior.translucent,
-              child: SizedBox(
-                width: AppDimens.touchTargetMin,
-                height: AppDimens.touchTargetMin,
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: const BoxDecoration(
-                      color: AppColors.statusError,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.white,
-                      size: 12,
-                    ),
-                  ),
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  color: AppColors.statusError,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 12,
                 ),
               ),
             ),

@@ -411,7 +411,10 @@ class _MetricGridSection extends ConsumerWidget {
 
         return MetricGrid(
           tiles: tiles,
-          onAddTap: () => _showMetricPicker(context, ref, pinned.toSet()),
+          onAddTap: () => context.pushNamed(
+            RouteNames.metricPicker,
+            extra: pinned.toSet(),
+          ),
           onRemove: (tile) {
             ref
                 .read(pinnedMetricsProvider.notifier)
@@ -419,39 +422,6 @@ class _MetricGridSection extends ConsumerWidget {
           },
         );
       },
-    );
-  }
-
-  void _showMetricPicker(
-    BuildContext context,
-    WidgetRef ref,
-    Set<String> pinnedTypes,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-        builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        builder: (sheetContext, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: AppColorsOf(sheetContext).elevatedSurface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppDimens.shapeLg),
-            ),
-          ),
-          child: MetricPickerSheet(
-            pinnedTypes: pinnedTypes,
-            scrollController: scrollController,
-            onSelect: (type) {
-              ref.read(pinnedMetricsProvider.notifier).addMetric(type);
-              Navigator.of(sheetContext).pop();
-            },
-          ),
-        ),
-      ),
     );
   }
 }

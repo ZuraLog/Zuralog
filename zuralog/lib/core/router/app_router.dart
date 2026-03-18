@@ -64,6 +64,7 @@ import 'package:zuralog/features/today/presentation/log_screens/run_log_screen.d
 import 'package:zuralog/features/today/presentation/log_screens/meal_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/supplements_log_screen.dart';
 import 'package:zuralog/features/today/presentation/log_screens/symptom_log_screen.dart';
+import 'package:zuralog/features/today/presentation/log_screens/metric_picker_screen.dart';
 
 // ── Tab 1: Data ───────────────────────────────────────────────────────────────
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
@@ -408,6 +409,20 @@ List<RouteBase> _buildRoutes() {
       pageBuilder: (context, state) => const MaterialPage(
         child: SentryErrorBoundary(module: 'today.symptom_log', child: SymptomLogScreen()),
       ),
+    ),
+    GoRoute(
+      path: RouteNames.metricPickerPath,
+      name: RouteNames.metricPicker,
+      pageBuilder: (context, state) {
+        final pinnedTypes =
+            (state.extra as Set<String>?) ?? const <String>{};
+        return MaterialPage(
+          child: SentryErrorBoundary(
+            module: 'today.metric_picker',
+            child: MetricPickerScreen(pinnedTypes: pinnedTypes),
+          ),
+        );
+      },
     ),
 
     // ── Main App Shell — 5-tab StatefulShellRoute ─────────────────────────
