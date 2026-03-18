@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/auth/domain/user_profile.dart';
+import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
@@ -62,7 +64,10 @@ GoRouter _router() => GoRouter(
       ],
     );
 
-ProviderContainer _container() => ProviderContainer(
+ProviderContainer _container({
+  List<DailyGoal> dailyGoals = const [],
+}) =>
+    ProviderContainer(
       overrides: [
         userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
         userPreferencesProvider
@@ -82,6 +87,12 @@ ProviderContainer _container() => ProviderContainer(
         ),
         userLoggedTypesProvider.overrideWith(
           (ref) async => const <String>{},
+        ),
+        goalsProvider.overrideWith(
+          (ref) async => const GoalList(goals: []),
+        ),
+        dailyGoalsProvider.overrideWith(
+          (ref) async => dailyGoals,
         ),
       ],
     );
@@ -141,8 +152,7 @@ void main() {
     });
 
     testWidgets('renders ZDailyGoalsCard with setup prompt', (tester) async {
-      // ZDailyGoalsCard is a pure display component — data is passed via
-      // goals: const [] hardcoded stub. No provider needed.
+      // dailyGoalsProvider returns empty list → card shows setup prompt.
       final container = _container();
       addTearDown(container.dispose);
       await tester.pumpWidget(
@@ -154,6 +164,32 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(ZDailyGoalsCard), findsOneWidget);
       expect(find.text('Set a daily goal'), findsOneWidget);
+    });
+
+    testWidgets('renders ZDailyGoalsCard with goal progress bars when data is present',
+        (tester) async {
+      final container = _container(
+        dailyGoals: const [
+          DailyGoal(
+            id: 'g1',
+            label: 'Steps',
+            current: 6240,
+            target: 8000,
+            unit: 'steps',
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ZDailyGoalsCard), findsOneWidget);
+      expect(find.text('Steps'), findsOneWidget);
+      expect(find.text('Set a daily goal'), findsNothing);
     });
   });
 }

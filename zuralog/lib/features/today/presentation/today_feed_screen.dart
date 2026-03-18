@@ -17,6 +17,7 @@ import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
 import 'package:zuralog/features/today/domain/metric_format_utils.dart';
@@ -72,6 +73,15 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
     void persistBannerDismissed() => ref
         .read(userPreferencesProvider.notifier)
         .mutate((p) => p.copyWith(dataMaturityBannerDismissed: true));
+
+    // When the user creates, edits, or deletes a goal on the Progress tab,
+    // goalsProvider gets invalidated. Listen for that and refresh the daily
+    // goals card so it reflects the change immediately.
+    ref.listen(goalsProvider, (previous, next) {
+      if (next is AsyncData) {
+        ref.invalidate(dailyGoalsProvider);
+      }
+    });
 
     return ZuralogScaffold(
       floatingActionButton: ZLogFab(onPressed: openSheet),
