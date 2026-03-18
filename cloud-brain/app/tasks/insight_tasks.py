@@ -19,6 +19,8 @@ import uuid
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import redis
+
 from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -170,10 +172,10 @@ async def _persist_cards(
             "id": str(uuid.uuid4()),
             "user_id": user_id,
             "type": card.get("type", "welcome"),
-            "title": card.get("title", "Health insight"),
-            "body": card.get("body", ""),
+            "title": card.get("title", "Health insight")[:200],
+            "body": card.get("body", "")[:2000],
             "data": card.get("data_payload", card.get("data", {})),
-            "reasoning": card.get("reasoning"),
+            "reasoning": (lambda r: str(r)[:1000] if r else None)(card.get("reasoning")),
             "priority": int(card.get("priority", 5)),
             "generation_date": generation_date,
             "signal_type": card.get("signal_type", card.get("type", "welcome")),
@@ -190,6 +192,13 @@ async def _persist_cards(
 def _enrich_cards(llm_cards: list[dict], signals: list) -> list[dict]:
     """Attach signal metadata from InsightSignal instances to LLM-written cards."""
     llm_cards = llm_cards[: len(signals)]  # Prevent extra hallucinated cards from slipping through
+    if len(llm_cards) < len(signals):
+        logger.warning(
+            "_enrich_cards: LLM returned %d cards for %d signals — %d signal(s) will have no card",
+            len(llm_cards),
+            len(signals),
+            len(signals) - len(llm_cards),
+        )
     enriched = []
     for i, card in enumerate(llm_cards):
         signal = signals[i] if i < len(signals) else None
@@ -211,9 +220,32 @@ def fan_out_daily_insights() -> dict:
     """Hourly fan-out: enqueue insight tasks for users whose local time is 6 AM.
 
     Runs at the top of every UTC hour via Celery Beat.
+    Uses a Redis distributed lock keyed to the current UTC hour to prevent
+    duplicate runs if Beat fires the task more than once per hour.
     """
-    logger.info("fan_out_daily_insights: starting")
-    return asyncio.run(_fan_out_async())
+    from app.config import settings
+
+    now_utc = datetime.now(timezone.utc)
+    utc_hour = now_utc.strftime("%Y-%m-%dT%H")
+    lock_key = f"zuralog:fan_out_lock:{utc_hour}"
+
+    redis_client = redis.Redis.from_url(settings.redis_url)
+    lock_acquired = redis_client.set(lock_key, "1", nx=True, ex=3300)
+
+    if not lock_acquired:
+        redis_client.close()
+        logger.info(
+            "fan_out_daily_insights: lock already held for %s, skipping duplicate run",
+            utc_hour,
+        )
+        return {"enqueued": 0, "status": "skipped_lock"}
+
+    try:
+        logger.info("fan_out_daily_insights: starting for hour %s", utc_hour)
+        return asyncio.run(_fan_out_async())
+    finally:
+        redis_client.delete(lock_key)
+        redis_client.close()
 
 
 async def _fan_out_async() -> dict:

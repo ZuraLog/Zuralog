@@ -7,6 +7,95 @@
 
 ---
 
+## Security Hardening — AI Insights Engine (Medium Priority) (2026-03-18)
+
+**Scope:** Four medium-priority items from the AI Insights Engine security audit. The P0/P1 items were fixed in a previous branch. This branch fixes the remaining items.
+**Branch:** `fix/insights-engine-hardening` → merged to main (2026-03-18)
+**Status:** All fixes applied and verified
+
+### Fix 1 — LLM Response Field Length Caps
+
+**Problem:** The LLM could return arbitrarily long strings for `title`, `body`, and `reasoning` on insight cards. No application-level cap existed before the database write, and the DB columns had no length constraints.
+
+**Fix:**
+- Added `InsightCardSchema` Pydantic model (`cloud-brain/app/analytics/insight_card_schema.py`) that silently truncates `title` to 200 chars, `body` to 2000 chars, `reasoning` to 1000 chars, and clamps `priority` to 1–10.
+- `InsightCardWriter._call_llm()` now validates each LLM card through `InsightCardSchema` before returning it. Cards that fail validation (missing required fields, wrong types) are skipped with a warning log — the batch continues with the remaining valid cards.
+- `_persist_cards()` in `insight_tasks.py` applies slice-based truncation as a last-resort safety net for cards arriving via the rule-based fallback path.
+- Migration `r3s4t5u6v7w8_add_insight_field_length_caps.py` alters `insights.title` to VARCHAR(200), `insights.body` to VARCHAR(2000), and `insights.reasoning` to VARCHAR(1000). Pre-truncates any existing oversized rows before altering column types.
+- Added `_enrich_cards()` warning log when the LLM returns fewer cards than signals.
+
+**Verified:** DB columns confirm VARCHAR(200)/VARCHAR(2000)/VARCHAR(1000) constraints via Supabase MCP.
+
+---
+
+### Fix 2 — Fan-out Idempotency Lock
+
+**Problem:** If Celery Beat fired `fan_out_daily_insights` twice in the same hour (worker restart, RedBeat glitch, or Beat running on two instances), two fan-outs ran concurrently — doubling the task queue. The per-user date-lock prevented duplicate insight cards but not duplicate tasks being enqueued.
+
+**Fix:** Added a Redis distributed lock to `fan_out_daily_insights()` in `insight_tasks.py`:
+- Key: `"zuralog:fan_out_lock:{utc_hour}"` (e.g. `"zuralog:fan_out_lock:2026-03-18T06"`)
+- Uses `SET NX EX 3300` — atomic set-if-not-exists with 55-minute TTL
+- If lock not acquired: logs `"fan_out_daily_insights: lock already held for %s, skipping duplicate run"` and returns `{"enqueued": 0, "status": "skipped_lock"}`
+- Lock explicitly released in `finally` block after fan-out completes; Redis client closed to prevent connection leaks
+- Uses `redis.Redis.from_url(settings.redis_url)` — the same Redis already used as Celery's broker
+
+**Tests:** 4 tests in `cloud-brain/tests/tasks/test_insight_tasks.py` covering: lock acquired (fan-out runs + lock deleted), lock not acquired (skips), exception during fan-out (lock still deleted), and lock key format validation.
+
+---
+
+### Fix 3 — Sentry Traces on the Worker
+
+**Problem:** `SENTRY_TRACES_SAMPLE_RATE` was set to `0.0` on the `Celery_Worker` Railway service, meaning zero task performance data reached Sentry. Slow insight generation or stalled fan-outs were invisible.
+
+**Fix:** Set `SENTRY_TRACES_SAMPLE_RATE=0.05` on the `Celery_Worker` service via Railway MCP. No code change needed — the worker already reads this from environment. Verified via Railway variable listing.
+
+---
+
+### Fix 4 — Row Level Security on Remaining Sensitive Tables
+
+**Problem:** `journal_entries`, `emergency_health_cards`, and `health_scores` had RLS disabled. These tables contain sensitive personal health data accessible to any authenticated user via the Supabase PostgREST API.
+
+**Fix:** Applied the same four-policy pattern used for `user_preferences`. For each table:
+- `service_role_bypass` — full access for the backend service role
+- `<table>_select_own` — SELECT own rows only (`auth.uid()::text = user_id`)
+- `<table>_insert_own` — INSERT own rows only
+- `<table>_update_own` — UPDATE own rows only (USING + WITH CHECK)
+
+**Migrations** (three files, linear chain after `r3s4t5u6v7w8`):
+- `s4t5u6v7w8x9_enable_rls_on_journal_entries.py` (down_revision: `r3s4t5u6v7w8`)
+- `t5u6v7w8x9y0_enable_rls_on_emergency_health_cards.py` (down_revision: `s4t5u6v7w8x9`)
+- `u6v7w8x9y0z1_enable_rls_on_health_scores.py` (down_revision: `t5u6v7w8x9y0`)
+
+All migrations use `_has_auth` schema guard (safe on plain Postgres) and `DO $$ IF NOT EXISTS` guards (idempotent).
+
+**Verified:** RLS enabled and all 4 policies confirmed on each table via Supabase MCP. All three tables cleared from the Supabase security advisor.
+
+---
+
+### New Files Created
+
+- `cloud-brain/app/analytics/insight_card_schema.py`
+- `cloud-brain/alembic/versions/r3s4t5u6v7w8_add_insight_field_length_caps.py`
+- `cloud-brain/alembic/versions/s4t5u6v7w8x9_enable_rls_on_journal_entries.py`
+- `cloud-brain/alembic/versions/t5u6v7w8x9y0_enable_rls_on_emergency_health_cards.py`
+- `cloud-brain/alembic/versions/u6v7w8x9y0z1_enable_rls_on_health_scores.py`
+- `cloud-brain/tests/analytics/test_insight_card_schema.py`
+- `cloud-brain/tests/tasks/test_insight_tasks.py`
+- `cloud-brain/tests/tasks/__init__.py`
+
+### Modified Files
+
+- `cloud-brain/app/analytics/insight_card_writer.py` — per-card schema validation in `_call_llm()`
+- `cloud-brain/app/tasks/insight_tasks.py` — truncation in `_persist_cards()`, warning in `_enrich_cards()`, Redis lock in `fan_out_daily_insights()`
+- `cloud-brain/tests/analytics/test_insight_card_writer.py` — added `TestInsightCardWriterValidation`
+
+### Test Results
+
+- **Backend analytics + tasks:** 87 tests passing
+- **Regressions:** 0 (1 pre-existing failure in `test_attachments.py` unrelated to this work)
+
+---
+
 ## Security Audit Fixes — AI Insights Engine (2026-03-18)
 
 **Scope:** Three must-fix issues identified in a full security and infrastructure audit of the AI Insights Engine.  
