@@ -68,6 +68,7 @@ async def test_pipeline_produces_cards_and_returns_ok():
     mock_db.execute = AsyncMock()
     mock_scalar = MagicMock()
     mock_scalar.scalar_one.return_value = 0
+    mock_scalar.rowcount = 1  # simulate 1 row inserted by _persist_cards
     mock_db.execute.return_value = mock_scalar
     mock_db.commit = AsyncMock()
 
@@ -86,7 +87,7 @@ async def test_pipeline_produces_cards_and_returns_ok():
         MockBuilder.return_value.build = AsyncMock(return_value=brief)
         MockLLM.return_value.chat = AsyncMock(return_value=mock_llm_response)
 
-        result = await _run_pipeline_async(user_id="test-user-1", db=mock_db)
+        result = await _run_pipeline_async(user_id="test-user-1", db=mock_db, user_timezone="UTC")
 
     assert result["status"] == "ok"
     assert result["insights_written"] >= 1
@@ -107,7 +108,7 @@ async def test_date_lock_prevents_second_run():
     mock_scalar.scalar_one.return_value = 3  # 3 cards already exist for today
     mock_db.execute.return_value = mock_scalar
 
-    result = await _run_pipeline_async(user_id="test-user-1", db=mock_db)
+    result = await _run_pipeline_async(user_id="test-user-1", db=mock_db, user_timezone="UTC")
 
     assert result["status"] == "skipped_date_lock"
     assert result["insights_written"] == 0
@@ -146,12 +147,13 @@ async def test_immature_account_gets_welcome_card():
     mock_db = AsyncMock()
     mock_scalar = MagicMock()
     mock_scalar.scalar_one.return_value = 0
+    mock_scalar.rowcount = 1  # simulate 1 row inserted by _persist_cards
     mock_db.execute.return_value = mock_scalar
     mock_db.commit = AsyncMock()
 
     with patch("app.tasks.insight_tasks.HealthBriefBuilder") as MockBuilder:
         MockBuilder.return_value.build = AsyncMock(return_value=brief)
-        result = await _run_pipeline_async(user_id="test-user-2", db=mock_db)
+        result = await _run_pipeline_async(user_id="test-user-2", db=mock_db, user_timezone="UTC")
 
     assert result["status"] == "ok"
     assert result["insights_written"] == 1
@@ -192,7 +194,7 @@ async def test_fan_out_enqueues_users_at_6am():
         mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=None)
         # Patch datetime.now so the fan-out sees our fixed UTC time
         mock_datetime.now.return_value = test_utc_now
-        mock_task.delay = MagicMock(side_effect=lambda uid: enqueued_users.append(uid))
+        mock_task.delay = MagicMock(side_effect=lambda uid, tz="UTC": enqueued_users.append(uid))
 
         result = await _fan_out_async()
 

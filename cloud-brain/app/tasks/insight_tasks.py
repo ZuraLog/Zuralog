@@ -38,32 +38,41 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name="app.tasks.insight_tasks.generate_insights_for_user")
-def generate_insights_for_user(user_id: str) -> dict:
+def generate_insights_for_user(user_id: str, user_timezone: str = "UTC") -> dict:
     """Generate and persist daily insight cards for a user.
 
     Safe to call multiple times — the date-lock prevents re-generation.
 
     Args:
         user_id: Zuralog user ID.
+        user_timezone: IANA timezone string (e.g. "America/New_York"). Defaults to "UTC".
 
     Returns:
         Summary dict: user_id, insights_written, status.
     """
-    logger.info("generate_insights_for_user: starting for user '%s'", user_id)
-    return asyncio.run(_run_pipeline_for_celery(user_id))
+    logger.info("generate_insights_for_user: starting for user='%s' tz='%s'", user_id, user_timezone)
+    return asyncio.run(_run_pipeline_for_celery(user_id, user_timezone))
 
 
-async def _run_pipeline_for_celery(user_id: str) -> dict:
+async def _run_pipeline_for_celery(user_id: str, user_timezone: str = "UTC") -> dict:
     async with async_session() as db:
-        return await _run_pipeline_async(user_id=user_id, db=db)
+        return await _run_pipeline_async(user_id=user_id, db=db, user_timezone=user_timezone)
 
 
-async def _run_pipeline_async(user_id: str, db: AsyncSession) -> dict:
+async def _run_pipeline_async(user_id: str, db: AsyncSession, user_timezone: str = "UTC") -> dict:
     """Testable async implementation of the 6-step insight pipeline."""
 
     # ── Step 1: Date-lock ────────────────────────────────────────────────────
-    today = date.today()
+    try:
+        tz = ZoneInfo(user_timezone)
+    except (ZoneInfoNotFoundError, Exception):
+        tz = ZoneInfo("UTC")
+    today = datetime.now(tz).date()
 
+    # Date-lock: counts non-dismissed cards only.
+    # This allows re-generation if the user has dismissed all their cards,
+    # which is intentional — fresh cards give the dismissed user new content.
+    # The unique constraint (uq_insights_user_signal_date) prevents true duplicates.
     lock_stmt = (
         select(func.count())
         .select_from(Insight)
@@ -71,6 +80,7 @@ async def _run_pipeline_async(user_id: str, db: AsyncSession) -> dict:
             and_(
                 Insight.user_id == user_id,
                 Insight.generation_date == today,
+                Insight.dismissed_at.is_(None),  # matches partial index; dismissed cards don't block re-generation
             )
         )
     )
@@ -172,13 +182,14 @@ async def _persist_cards(
     ]
 
     stmt = pg_insert(Insight).values(rows).on_conflict_do_nothing(constraint="uq_insights_user_signal_date")
-    await db.execute(stmt)
+    result = await db.execute(stmt)
     await db.commit()
-    return len(rows)
+    return result.rowcount if result.rowcount >= 0 else len(rows)
 
 
 def _enrich_cards(llm_cards: list[dict], signals: list) -> list[dict]:
     """Attach signal metadata from InsightSignal instances to LLM-written cards."""
+    llm_cards = llm_cards[: len(signals)]  # Prevent extra hallucinated cards from slipping through
     enriched = []
     for i, card in enumerate(llm_cards):
         signal = signals[i] if i < len(signals) else None
@@ -208,7 +219,13 @@ def fan_out_daily_insights() -> dict:
 async def _fan_out_async() -> dict:
     now_utc = datetime.now(timezone.utc)
     async with async_session() as db:
-        stmt = select(UserPreferences.user_id, UserPreferences.timezone)
+        # At 1M users: replace with cursor/keyset pagination to avoid loading all rows into memory.
+        # For now, a 100k LIMIT provides a safety guard against accidental OOM during rollout.
+        stmt = (
+            select(UserPreferences.user_id, UserPreferences.timezone).limit(
+                100_000
+            )  # Safety cap — revisit with cursor-based pagination at 100k+ users
+        )
         result = await db.execute(stmt)
         rows = result.all()
 
@@ -220,7 +237,7 @@ async def _fan_out_async() -> dict:
             tz = ZoneInfo("UTC")
 
         if now_utc.astimezone(tz).hour == 6:
-            generate_insights_for_user.delay(user_id)
+            generate_insights_for_user.delay(user_id, tz_str or "UTC")
             enqueued += 1
 
     logger.info("fan_out_daily_insights: enqueued %d tasks", enqueued)
