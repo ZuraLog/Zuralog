@@ -12,10 +12,12 @@ from app.analytics.insight_signal_detector import InsightSignal
 
 logger = logging.getLogger(__name__)
 
-_MIN_CARDS = 2
+# Advisory minimum — the prioritizer returns all available signals if fewer than this exist.
+# No padding logic: callers must handle <2 cards gracefully.
+_DESIRED_MIN_CARDS = 2
 _MAX_CARDS = 10
 _MAX_PER_CATEGORY = 2
-# Recency ordering for tie-breaking (lower = more recency-weighted)
+# Categories not listed (E, G, H) default to 99 (low recency weight — intentional for compound/quality signals)
 _RECENCY_ORDER: dict[str, int] = {"C": 0, "A": 1, "B": 1, "E": 1, "G": 1, "H": 2, "D": 3}
 
 
@@ -84,7 +86,7 @@ def _deduplicate(signals: list[InsightSignal]) -> list[InsightSignal]:
         for m in s.metrics:
             by_metric.setdefault(m, []).append(s)
 
-    merged_ids: set[int] = set()
+    merged_ids: set[int] = set()  # id() is safe: signals are short-lived, non-mutated dataclass instances
     result: list[InsightSignal] = []
 
     for s in signals:

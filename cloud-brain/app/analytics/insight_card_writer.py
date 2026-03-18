@@ -25,6 +25,34 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Allowlist validation to prevent prompt injection via user preferences
+VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
+VALID_GOALS = {
+    "weight_loss",
+    "sleep",
+    "fitness",
+    "stress",
+    "nutrition",
+    "longevity",
+    "build_muscle",
+    "general_health",
+}
+VALID_FOCUSES = {
+    "cutting",
+    "recovery",
+    "performance",
+    "stress_management",
+    "nutrition",
+    "longevity",
+    "body_recomposition",
+    "sleep_optimisation",
+    "activity_volume",
+    "nutrition_tracking",
+    "general",
+}
+
+_PROMPT_CHAR_WARN_THRESHOLD = 8000  # ~2000 tokens; log warning if exceeded
+
 _SYSTEM_PROMPT = """\
 You are a health insight writer for Zuralog. Turn structured health signal data into clear, personal, actionable insight cards.
 
@@ -83,9 +111,11 @@ class InsightCardWriter:
             if cards is not None:
                 return cards
         except APIError as e:
-            logger.warning("InsightCardWriter: LLM API error, falling back. error=%s", e)
+            logger.warning("InsightCardWriter: LLM API error, falling back for date=%s. error=%s", self.target_date, e)
         except Exception as e:
-            logger.error("InsightCardWriter: unexpected LLM error, falling back. error=%s", e)
+            logger.error(
+                "InsightCardWriter: unexpected LLM error, falling back for date=%s. error=%s", self.target_date, e
+            )
 
         # Level 2: Rule-based fallback
         try:
@@ -98,12 +128,19 @@ class InsightCardWriter:
 
     async def _call_llm(self) -> list[dict[str, Any]] | None:
         """Call LLM and parse JSON response. Returns None on parse failure."""
+        safe_persona = self.focus.coach_persona if self.focus.coach_persona in VALID_PERSONAS else "balanced"
+        safe_goals = ", ".join(g for g in self.focus.stated_goals if g in VALID_GOALS) or "general health"
+        safe_focus = self.focus.inferred_focus if self.focus.inferred_focus in VALID_FOCUSES else "general"
+        safe_fitness = "active"
+        if self.focus.fitness_level in ("beginner", "active", "athletic"):
+            safe_fitness = self.focus.fitness_level
+
         system = _SYSTEM_PROMPT.format(
-            persona=self.focus.coach_persona,
-            fitness_level=self.focus.fitness_level or "active",
-            stated_goals=", ".join(self.focus.stated_goals) or "general health",
-            inferred_focus=self.focus.inferred_focus,
-            units_system=self.focus.units_system,
+            persona=safe_persona,
+            fitness_level=safe_fitness,
+            stated_goals=safe_goals,
+            inferred_focus=safe_focus,
+            units_system="metric" if self.focus.units_system not in ("metric", "imperial") else self.focus.units_system,
         )
 
         signals_for_llm = [
@@ -123,17 +160,25 @@ class InsightCardWriter:
             signals_json=json.dumps(signals_for_llm, indent=2),
         )
 
+        if len(system) + len(user_msg) > _PROMPT_CHAR_WARN_THRESHOLD:
+            logger.warning(
+                "InsightCardWriter: prompt is large (%d chars, %d signals). Consider reducing data_payload.",
+                len(system) + len(user_msg),
+                len(self.signals),
+            )
+
         response = await self._llm.chat(
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_msg},
             ],
             temperature=0.4,
+            max_tokens=1024,
         )
 
         raw = (response.choices[0].message.content or "").strip()
 
-        # Strip markdown code fences if present
+        # Strips the opening fence line (handles ```json, ```JSON, plain ```, etc.)
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1]
             raw = raw.rsplit("```", 1)[0].strip()
@@ -184,5 +229,5 @@ def _minimum_card() -> dict[str, Any]:
         "title": "Insights loading",
         "body": "Your health insights are being prepared. Check back shortly.",
         "priority": 10,
-        "reasoning": "Fallback card — insight generation in progress.",
+        "reasoning": "Your insights are being prepared.",
     }
