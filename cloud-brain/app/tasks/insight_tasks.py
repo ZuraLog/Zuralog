@@ -1,316 +1,246 @@
 """
 Zuralog Cloud Brain — Celery Tasks for Insight Generation.
 
-Provides the ``generate_insights_for_user`` Celery task, which is invoked
-after health data ingest to produce fresh AI insight cards for a user.
+New pipeline (replaces the old rule-based generator):
+1. Date-lock check — exit immediately if today's batch already exists.
+2. HealthBriefBuilder — fetches all 10 data sources in parallel.
+3. InsightSignalDetector — runs all 8 signal categories.
+4. SignalPrioritizer — ranks, deduplicates, enforces diversity.
+5. InsightCardWriter — single LLM call with 3-level fallback chain.
+6. Persist — bulk insert with generation_date + signal_type set.
 
-Pipeline overview
------------------
-1. Determine which insight types are most relevant given the current hour
-   of the day (time-of-day awareness).
-2. Query the ``daily_health_metrics`` table to check data maturity.  If
-   fewer than 7 days of data are available, inject a ``welcome`` card so
-   the user knows the AI is still learning.
-3. Instantiate ``InsightGenerator`` and call ``generate_dashboard_insight``
-   to obtain rule-based text, then persist one or more ``Insight`` rows.
-
-Architecture notes
-------------------
-- All tasks run in the synchronous Celery worker process.
-- Async DB access is bridged via ``asyncio.run(_run())``.
-- The task is idempotent: duplicate calls for the same user on the same day
-  upsert existing insight rows rather than inserting new duplicates.  A
-  unique database constraint on (user_id, type, date) enforces this at the
-  data layer.
+Also provides fan_out_daily_insights task for the hourly Celery Beat schedule.
 """
 
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import and_, func, or_, select, text as sa_text
+from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analytics.insight_generator import InsightGenerator
+from app.analytics.health_brief_builder import HealthBriefBuilder
+from app.analytics.insight_signal_detector import InsightSignalDetector
+from app.analytics.insight_card_writer import InsightCardWriter
+from app.analytics.signal_prioritizer import SignalPrioritizer
+from app.analytics.user_focus_profile import UserFocusProfileBuilder
 from app.constants import MIN_DATA_DAYS_FOR_MATURITY
 from app.database import worker_async_session as async_session
-from app.models.daily_metrics import DailyHealthMetrics
 from app.models.insight import Insight
-from app.models.integration import Integration
+from app.models.user_preferences import UserPreferences
 from app.worker import celery_app
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Time-of-day priority bands
-# ---------------------------------------------------------------------------
-# Hour ranges (UTC) → list of (insight_type, priority) tuples that should
-# be emphasised during that window.  Lower priority number = more urgent.
-
-_PRIORITY_BY_HOUR: dict[tuple[int, int], list[tuple[str, int]]] = {
-    (0, 6): [("sleep_analysis", 1), ("goal_nudge", 3)],
-    (6, 12): [("activity_progress", 1), ("goal_nudge", 2), ("nutrition_summary", 4)],
-    (12, 18): [("nutrition_summary", 1), ("activity_progress", 2), ("goal_nudge", 3)],
-    (18, 24): [("sleep_analysis", 2), ("activity_progress", 3), ("goal_nudge", 4)],
-}
-
-
-def _get_time_of_day_priorities(hour: int) -> list[tuple[str, int]]:
-    """Return the ordered (type, priority) list for a given UTC hour.
-
-    Args:
-        hour: Current UTC hour (0–23).
-
-    Returns:
-        List of ``(insight_type, priority)`` tuples for the active band,
-        or the morning band as a safe default.
-    """
-    for (start, end), priorities in _PRIORITY_BY_HOUR.items():
-        if start <= hour < end:
-            return priorities
-    # Should not happen for valid hours — fall back to morning band.
-    return _PRIORITY_BY_HOUR[(6, 12)]
-
-
-# ---------------------------------------------------------------------------
-# Celery task
-# ---------------------------------------------------------------------------
-
 
 @celery_app.task(name="app.tasks.insight_tasks.generate_insights_for_user")
 def generate_insights_for_user(user_id: str) -> dict:
-    """Generate and persist AI insight cards for a user after data ingest.
+    """Generate and persist daily insight cards for a user.
 
-    Called by the health ingest pipeline (or manually) to synthesise the
-    latest health data into actionable insight cards.  The function is
-    time-of-day aware and data-maturity aware:
-
-    - **Time-of-day**: The insight type order and priority are adjusted
-      based on the current UTC hour so the most contextually relevant
-      cards bubble to the top (e.g. sleep analysis in the early morning,
-      nutrition in the afternoon).
-    - **Data maturity**: If the user has fewer than
-      ``MIN_DATA_DAYS_FOR_MATURITY`` days of health metric records, a
-      ``welcome`` insight is injected first to inform them that the AI is
-      still building a baseline.
+    Safe to call multiple times — the date-lock prevents re-generation.
 
     Args:
-        user_id: Zuralog user ID to generate insights for.
+        user_id: Zuralog user ID.
 
     Returns:
-        A summary dict with ``"user_id"``, ``"insights_upserted"``, and
-        ``"status"`` for Celery task result inspection.
+        Summary dict: user_id, insights_written, status.
     """
     logger.info("generate_insights_for_user: starting for user '%s'", user_id)
+    return asyncio.run(_run_pipeline_for_celery(user_id))
 
-    async def _run() -> dict:
-        async with async_session() as db:  # type: ignore[attr-defined]
-            # ------------------------------------------------------------------
-            # 1. Check data maturity
-            # ------------------------------------------------------------------
-            distinct_days_stmt = select(func.count(DailyHealthMetrics.date.distinct())).where(
-                DailyHealthMetrics.user_id == user_id
+
+async def _run_pipeline_for_celery(user_id: str) -> dict:
+    async with async_session() as db:
+        return await _run_pipeline_async(user_id=user_id, db=db)
+
+
+async def _run_pipeline_async(user_id: str, db: AsyncSession) -> dict:
+    """Testable async implementation of the 5-step insight pipeline."""
+
+    # ── Step 1: Date-lock ────────────────────────────────────────────────────
+    today = date.today()
+
+    lock_stmt = (
+        select(func.count())
+        .select_from(Insight)
+        .where(
+            and_(
+                Insight.user_id == user_id,
+                Insight.generation_date == today,
+                Insight.dismissed_at.is_(None),
             )
-            result = await db.execute(distinct_days_stmt)
-            distinct_day_count: int = result.scalar_one() or 0
+        )
+    )
+    existing_count: int = (await db.execute(lock_stmt)).scalar_one()
 
-            is_mature = distinct_day_count >= MIN_DATA_DAYS_FOR_MATURITY
+    if existing_count > 0:
+        logger.info(
+            "generate_insights_for_user: date-lock hit for user='%s' date='%s' existing=%d",
+            user_id,
+            today.isoformat(),
+            existing_count,
+        )
+        return {"user_id": user_id, "insights_written": 0, "status": "skipped_date_lock"}
 
-            logger.debug(
-                "generate_insights_for_user: user='%s' distinct_days=%d mature=%s",
-                user_id,
-                distinct_day_count,
-                is_mature,
-            )
+    # ── Step 2: Fetch health data ────────────────────────────────────────────
+    brief = await HealthBriefBuilder(user_id=user_id, db=db).build()
 
-            # ------------------------------------------------------------------
-            # 2. Determine time-of-day context
-            # ------------------------------------------------------------------
-            now_utc = datetime.now(timezone.utc)
-            current_hour = now_utc.hour
-            tod_priorities = _get_time_of_day_priorities(current_hour)
-
-            # ------------------------------------------------------------------
-            # 3. Generate the primary insight text via InsightGenerator
-            # ------------------------------------------------------------------
-            generator = InsightGenerator()
-
-            # For now we pass empty goal_status and trends — the generator
-            # falls back to generic messaging.  A richer integration would
-            # pull live goal and trend data from the analytics service.
-            dashboard_text = generator.generate_dashboard_insight(
-                goal_status=[],
-                trends={},
-            )
-
-            insights_upserted: list[dict] = []
-
-            # ------------------------------------------------------------------
-            # 4. Inject welcome / building card for immature accounts
-            # ------------------------------------------------------------------
-            if not is_mature:
-                days_remaining = max(0, MIN_DATA_DAYS_FOR_MATURITY - distinct_day_count)
-                welcome_values = dict(
-                    id=str(uuid.uuid4()),
-                    user_id=user_id,
-                    type="welcome",
-                    title="Building your health baseline",
-                    body=(
-                        f"Zuralog is learning your patterns. Keep syncing — "
-                        f"personalised insights unlock in about {days_remaining} more "
-                        f"day{'s' if days_remaining != 1 else ''}."
-                    ),
-                    data={
-                        "days_logged": distinct_day_count,
-                        "days_until_mature": days_remaining,
-                    },
-                    reasoning=None,
-                    priority=1,
-                )
-                _welcome_ins = pg_insert(Insight).values(**welcome_values)
-                welcome_stmt = _welcome_ins.on_conflict_do_nothing()
-                await db.execute(welcome_stmt)
-                insights_upserted.append(welcome_values)
-
-            # ------------------------------------------------------------------
-            # 5. Create time-of-day contextual insight cards
-            # ------------------------------------------------------------------
-            for insight_type, base_priority in tod_priorities:
-                card_title, card_body = _build_card_text(
-                    insight_type=insight_type,
-                    dashboard_text=dashboard_text,
-                    hour=current_hour,
-                )
-                card_values = dict(
-                    id=str(uuid.uuid4()),
-                    user_id=user_id,
-                    type=insight_type,
-                    title=card_title,
-                    body=card_body,
-                    data={
-                        "generated_at": now_utc.isoformat(),
-                        "hour_utc": current_hour,
-                    },
-                    reasoning=None,
-                    priority=base_priority if is_mature else base_priority + 1,
-                )
-                _card_ins = pg_insert(Insight).values(**card_values)
-                card_stmt = _card_ins.on_conflict_do_nothing()
-                await db.execute(card_stmt)
-                insights_upserted.append(card_values)
-
-            await db.commit()
-
-            count = len(insights_upserted)
-            logger.info(
-                "generate_insights_for_user: upserted %d insight(s) for user '%s'",
-                count,
-                user_id,
-            )
-
-            return {
-                "user_id": user_id,
-                "insights_upserted": count,
-                "status": "ok",
+    # ── Welcome card for immature accounts ───────────────────────────────────
+    if brief.data_maturity_days < MIN_DATA_DAYS_FOR_MATURITY:
+        days_remaining = max(0, MIN_DATA_DAYS_FOR_MATURITY - brief.data_maturity_days)
+        welcome_cards = [
+            {
+                "type": "welcome",
+                "title": "Building your health baseline",
+                "body": (
+                    f"Zuralog is learning your patterns. Keep syncing — "
+                    f"personalised insights unlock in about {days_remaining} more "
+                    f"day{'s' if days_remaining != 1 else ''}."
+                ),
+                "priority": 1,
+                "reasoning": None,
+                "signal_type": "first_week",
+                "data_payload": {
+                    "days_logged": brief.data_maturity_days,
+                    "days_until_mature": days_remaining,
+                },
             }
+        ]
+        written = await _persist_cards(user_id, welcome_cards, today, db)
+        return {"user_id": user_id, "insights_written": written, "status": "ok"}
 
-    return asyncio.run(_run())
+    # ── Step 3: Detect signals ───────────────────────────────────────────────
+    raw_signals = InsightSignalDetector(brief).detect_all()
+    logger.debug("insight pipeline: user='%s' raw_signals=%d", user_id, len(raw_signals))
+
+    # ── Step 4: Prioritize ───────────────────────────────────────────────────
+    prioritized = SignalPrioritizer(raw_signals).prioritize()
+    if not prioritized:
+        logger.info("insight pipeline: no signals for user='%s'", user_id)
+        return {"user_id": user_id, "insights_written": 0, "status": "ok_no_signals"}
+
+    # ── Step 5: Write cards via LLM ──────────────────────────────────────────
+    focus = UserFocusProfileBuilder(
+        goals=brief.preferences.goals,
+        dashboard_layout=brief.preferences.dashboard_layout,
+        coach_persona=brief.preferences.coach_persona,
+        fitness_level=brief.preferences.fitness_level,
+        units_system=brief.preferences.units_system,
+    ).build()
+
+    llm_cards = await InsightCardWriter(
+        signals=prioritized,
+        focus=focus,
+        target_date=today.isoformat(),
+    ).write_cards()
+
+    enriched = _enrich_cards(llm_cards, prioritized)
+
+    # ── Step 6: Persist ──────────────────────────────────────────────────────
+    written = await _persist_cards(user_id, enriched, today, db)
+    logger.info("insight pipeline: wrote %d card(s) for user='%s'", written, user_id)
+    return {"user_id": user_id, "insights_written": written, "status": "ok"}
 
 
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
+async def _persist_cards(
+    user_id: str,
+    cards: list[dict],
+    generation_date: date,
+    db: AsyncSession,
+) -> int:
+    """Bulk insert insight cards. Skips conflicts on (user_id, signal_type, generation_date)."""
+    if not cards:
+        return 0
+
+    rows = [
+        {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "type": card.get("type", "welcome"),
+            "title": card.get("title", "Health insight"),
+            "body": card.get("body", ""),
+            "data": card.get("data_payload", card.get("data", {})),
+            "reasoning": card.get("reasoning"),
+            "priority": int(card.get("priority", 5)),
+            "generation_date": generation_date,
+            "signal_type": card.get("signal_type", card.get("type", "welcome")),
+        }
+        for card in cards
+    ]
+
+    stmt = pg_insert(Insight).values(rows).on_conflict_do_nothing(constraint="uq_insights_user_signal_date")
+    await db.execute(stmt)
+    await db.commit()
+    return len(rows)
 
 
-def _build_card_text(
-    insight_type: str,
-    dashboard_text: str,
-    hour: int,
-) -> tuple[str, str]:
-    """Produce (title, body) strings for a given insight type and hour.
+def _enrich_cards(llm_cards: list[dict], signals: list) -> list[dict]:
+    """Attach signal metadata from InsightSignal instances to LLM-written cards."""
+    enriched = []
+    for i, card in enumerate(llm_cards):
+        signal = signals[i] if i < len(signals) else None
+        enriched.append(
+            {
+                **card,
+                "signal_type": signal.signal_type if signal else card.get("type", "welcome"),
+                "data_payload": signal.data_payload if signal else {},
+            }
+        )
+    return enriched
 
-    For the MVP these are rule-based templates.  An LLM-backed variant can
-    replace this function without changing the task signature.
 
-    Args:
-        insight_type: One of the canonical ``INSIGHT_TYPES``.
-        dashboard_text: Primary insight string from ``InsightGenerator``.
-        hour: Current UTC hour (used for contextual phrasing).
+# ── Fan-out task ─────────────────────────────────────────────────────────────
 
-    Returns:
-        A ``(title, body)`` tuple of strings.
+
+@celery_app.task(name="app.tasks.insight_tasks.fan_out_daily_insights")
+def fan_out_daily_insights() -> dict:
+    """Hourly fan-out: enqueue insight tasks for users whose local time is 6 AM.
+
+    Runs at the top of every UTC hour via Celery Beat.
     """
-    _time_label: str
-    if 0 <= hour < 6:
-        _time_label = "last night"
-    elif 6 <= hour < 12:
-        _time_label = "this morning"
-    elif 12 <= hour < 18:
-        _time_label = "today"
-    else:
-        _time_label = "this evening"
-
-    _templates: dict[str, tuple[str, str]] = {
-        "sleep_analysis": (
-            "Sleep summary",
-            f"Here's how you slept {_time_label}. {dashboard_text}",
-        ),
-        "activity_progress": (
-            "Activity update",
-            f"Your activity progress {_time_label}: {dashboard_text}",
-        ),
-        "nutrition_summary": (
-            "Nutrition overview",
-            f"A quick look at your nutrition {_time_label}. {dashboard_text}",
-        ),
-        "anomaly_alert": (
-            "Something looks unusual",
-            dashboard_text,
-        ),
-        "goal_nudge": (
-            "Goal check-in",
-            dashboard_text,
-        ),
-        "correlation_discovery": (
-            "Pattern detected",
-            dashboard_text,
-        ),
-        "streak_milestone": (
-            "Streak milestone",
-            dashboard_text,
-        ),
-        "welcome": (
-            "Welcome to Zuralog",
-            dashboard_text,
-        ),
-    }
-
-    return _templates.get(insight_type, ("Health insight", dashboard_text))
+    logger.info("fan_out_daily_insights: starting")
+    return asyncio.run(_fan_out_async())
 
 
-# ---------------------------------------------------------------------------
-# Stale integration check task
-# ---------------------------------------------------------------------------
+async def _fan_out_async() -> dict:
+    now_utc = datetime.now(timezone.utc)
+    async with async_session() as db:
+        stmt = select(UserPreferences.user_id, UserPreferences.timezone)
+        result = await db.execute(stmt)
+        rows = result.all()
+
+    enqueued = 0
+    for user_id, tz_str in rows:
+        try:
+            tz = ZoneInfo(tz_str or "UTC")
+        except (ZoneInfoNotFoundError, Exception):
+            tz = ZoneInfo("UTC")
+
+        if now_utc.astimezone(tz).hour == 6:
+            generate_insights_for_user.delay(user_id)
+            enqueued += 1
+
+    logger.info("fan_out_daily_insights: enqueued %d tasks", enqueued)
+    return {"enqueued": enqueued}
+
+
+# ── Stale integration check (unchanged) ──────────────────────────────────────
 
 
 @celery_app.task(name="app.tasks.insight_tasks.check_stale_integrations_task")
 def check_stale_integrations_task() -> dict[str, int]:
-    """Check for integrations that haven't synced in 24+ hours.
-
-    Logs warnings for stale integrations. Runs daily via Beat.
-
-    Returns:
-        dict with 'stale_count' key indicating number of stale integrations found.
-    """
+    """Check for integrations that haven't synced in 24+ hours."""
+    from datetime import timedelta
+    from sqlalchemy import or_
+    from app.models.integration import Integration
 
     async def _run() -> dict[str, int]:
         async with async_session() as session:
             now = datetime.now(timezone.utc)
             cutoff = now - timedelta(hours=24)
-
-            # Use COUNT — never load ORM objects just to count rows.
-            # At 1M users × 5 integrations = 5M rows; a full fetch would OOM the worker.
             stmt = (
                 select(func.count())
                 .select_from(Integration)
@@ -326,13 +256,8 @@ def check_stale_integrations_task() -> dict[str, int]:
                 )
             )
             stale_count: int = (await session.execute(stmt)).scalar_one()
-
             if stale_count > 0:
-                logger.warning(
-                    "Found %d stale integrations (not synced in 24h)",
-                    stale_count,
-                )
-
+                logger.warning("Found %d stale integrations (not synced in 24h)", stale_count)
             return {"stale_count": stale_count}
 
     return asyncio.run(_run())

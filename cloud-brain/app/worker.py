@@ -162,6 +162,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.insight_tasks.check_stale_integrations_task",
         "schedule": 86400.0,  # 24 hours
     },
+    "fan-out-daily-insights-1h": {
+        "task": "app.tasks.insight_tasks.fan_out_daily_insights",
+        "schedule": crontab(minute=0),  # top of every UTC hour
+    },
 }
 
 # Auto-discover tasks in services and tasks modules
