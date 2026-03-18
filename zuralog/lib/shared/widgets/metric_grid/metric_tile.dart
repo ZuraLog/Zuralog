@@ -78,6 +78,7 @@ class MetricTile extends StatelessWidget {
     final hint = _buildLastLoggedHint(data);
 
     Widget tile = Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.shapeSm),
