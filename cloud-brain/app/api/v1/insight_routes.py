@@ -14,13 +14,14 @@ from datetime import datetime, time, timezone
 from typing import Any, Literal
 
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
+from app.limiter import limiter
 from app.models.insight import Insight
 
 logger = logging.getLogger(__name__)
@@ -140,8 +141,10 @@ def _insight_to_response(insight: Insight) -> InsightResponse:
 # ---------------------------------------------------------------------------
 
 
+@limiter.limit("60/minute")
 @router.get("", summary="List insight cards", response_model=InsightListResponse)
 async def list_insights(
+    request: Request,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
     type: str | None = Query(None, description="Filter by insight type (e.g. sleep_analysis)"),
@@ -238,8 +241,10 @@ async def list_insights(
     }
 
 
+@limiter.limit("120/minute")
 @router.get("/{insight_id}", summary="Get a single insight card", response_model=InsightResponse)
 async def get_insight(
+    request: Request,
     insight_id: str = Path(..., pattern=r"^[0-9a-fA-F-]{36}$", description="UUID v4 insight identifier"),
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
@@ -285,10 +290,12 @@ async def get_insight(
     return _insight_to_response(insight).model_dump()
 
 
+@limiter.limit("30/minute")
 @router.patch("/{insight_id}", summary="Mark insight as read or dismissed")
 async def update_insight(
-    insight_id: str,
-    body: InsightActionRequest,
+    request: Request,
+    insight_id: str = Path(..., pattern=r"^[0-9a-fA-F-]{36}$", description="UUID v4 insight identifier"),
+    body: InsightActionRequest = Body(...),
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
