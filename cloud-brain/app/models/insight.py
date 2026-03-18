@@ -16,8 +16,9 @@ Types:
 """
 
 import uuid
+from datetime import date
 
-from sqlalchemy import DateTime, Integer, JSON, String
+from sqlalchemy import Date, DateTime, Integer, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -28,6 +29,7 @@ from app.database import Base
 # validate without importing a heavyweight enum.
 # ---------------------------------------------------------------------------
 INSIGHT_TYPES: tuple[str, ...] = (
+    # Existing
     "sleep_analysis",
     "activity_progress",
     "nutrition_summary",
@@ -36,6 +38,25 @@ INSIGHT_TYPES: tuple[str, ...] = (
     "correlation_discovery",
     "streak_milestone",
     "welcome",
+    # New trend types
+    "trend_decline",
+    "trend_improvement",
+    # New goal types
+    "goal_at_risk",
+    "goal_streak",
+    # New compound cross-domain patterns
+    "compound_weight_plateau",
+    "compound_overtraining_risk",
+    "compound_sleep_debt",
+    "compound_deficit_too_deep",
+    "compound_workout_collapse",
+    "compound_recovery_peak",
+    "compound_stress_cascade",
+    "compound_dehydration_pattern",
+    "compound_weekend_gap",
+    "compound_event_on_track",
+    # Data quality
+    "data_quality",
 )
 
 
@@ -134,4 +155,15 @@ class Insight(Base):
         DateTime(timezone=True),
         nullable=True,
         comment="Set on upsert when an existing insight is refreshed",
+    )
+    generation_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+        index=True,
+        comment="Date in the user's local timezone (YYYY-MM-DD). Used for the daily date-lock check.",
+    )
+    signal_type: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Raw signal_type from InsightSignalDetector (e.g. trend_decline, compound_overtraining_risk). Nullable for legacy rows.",
     )

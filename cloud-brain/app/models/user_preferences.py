@@ -276,6 +276,15 @@ class UserPreferences(Base):
         comment="beginner | active | athletic — set during onboarding",
     )
 
+    # Timezone for scheduling fan-out (e.g. 6 AM local)
+    timezone: Mapped[str] = mapped_column(
+        String(50),
+        default="UTC",
+        server_default="UTC",
+        nullable=False,
+        comment="IANA timezone name (e.g. America/New_York). Used for 6 AM fan-out scheduling.",
+    )
+
     # Timestamps
     created_at: Mapped[str | None] = mapped_column(
         DateTime(timezone=True),
