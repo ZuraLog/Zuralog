@@ -476,11 +476,12 @@ class _MetricGridSection extends ConsumerWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
+        useRootNavigator: true,
         builder: (_) => ZLogGridSheet(
           initialTileKey: sheetKey,
           parentMessenger: ScaffoldMessenger.of(context),
           onFullScreenRoute: (routeName) {
-            Navigator.of(context).pop();
+            Navigator.of(context, rootNavigator: true).pop();
             context.pushNamed(routeName);
           },
         ),
