@@ -369,4 +369,4 @@ The exported `openapi.json` can be used for client codegen, documentation hostin
 
 Copyright © 2026 Hyo Won Bernabe and Fernando Leano. All Rights Reserved.
 
-This is proprietary software. See [LICENSE](./LICENSE) for details.
+This is proprietary software. See [LICENSE](./LICENSE.md) for details.
