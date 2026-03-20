@@ -79,31 +79,35 @@ class _EmptyGoals extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        children: [
-          Icon(
-            Icons.flag_outlined,
-            size: AppDimens.iconSm,
-            color: colors.primary,
-          ),
-          const SizedBox(width: AppDimens.spaceXs),
-          Text(
-            'Set a daily goal',
-            style: AppTextStyles.bodyMedium.copyWith(
+    return Semantics(
+      button: true,
+      label: 'Set a daily goal',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          children: [
+            Icon(
+              Icons.flag_outlined,
+              size: AppDimens.iconSm,
               color: colors.primary,
-              fontWeight: FontWeight.w600,
             ),
-          ),
-          const Spacer(),
-          Icon(
-            Icons.chevron_right_rounded,
-            size: AppDimens.iconSm,
-            color: colors.textTertiary,
-          ),
-        ],
+            const SizedBox(width: AppDimens.spaceXs),
+            Text(
+              'Set a daily goal',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: AppDimens.iconSm,
+              color: colors.textTertiary,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -141,13 +145,18 @@ class _GoalList extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: onSetupTap,
-              child: Text(
-                'Manage',
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w600,
+            Semantics(
+              button: true,
+              label: 'Manage goals',
+              child: GestureDetector(
+                onTap: onSetupTap,
+                behavior: HitTestBehavior.opaque,
+                child: Text(
+                  'Manage',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),

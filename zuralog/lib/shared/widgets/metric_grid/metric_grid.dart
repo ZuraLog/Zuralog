@@ -95,22 +95,32 @@ class _MetricGridState extends State<MetricGrid> {
               ),
               const Spacer(),
               if (_editMode)
-                GestureDetector(
-                  onTap: _exitEditMode,
-                  child: Text(
-                    'Done',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.primary,
+                Semantics(
+                  button: true,
+                  label: 'Done editing metrics',
+                  child: GestureDetector(
+                    onTap: _exitEditMode,
+                    behavior: HitTestBehavior.opaque,
+                    child: Text(
+                      'Done',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: colors.primary,
+                      ),
                     ),
                   ),
                 )
               else if (tiles.isEmpty)
-                GestureDetector(
-                  onTap: widget.onAddTap,
-                  child: Text(
-                    '+ Add metric',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: colors.primary,
+                Semantics(
+                  button: true,
+                  label: 'Add a metric to your grid',
+                  child: GestureDetector(
+                    onTap: widget.onAddTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: Text(
+                      '+ Add metric',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: colors.primary,
+                      ),
                     ),
                   ),
                 )
@@ -129,17 +139,20 @@ class _MetricGridState extends State<MetricGrid> {
         if (tiles.isEmpty)
           _AddPromptTile(onTap: widget.onAddTap)
         else
-          GestureDetector(
-            onLongPress: _editMode ? null : _enterEditMode,
-            child: _GridLayout(
-              tiles: tiles,
-              editMode: _editMode,
-              onRemove: (tile) {
-                widget.onRemove?.call(tile);
-                if (widget.tiles.length == 1) _exitEditMode();
-              },
-              onAddTap: widget.onAddTap,
-              onTileTap: widget.onTileTap,
+          Semantics(
+            hint: _editMode ? null : 'Long press to edit metrics',
+            child: GestureDetector(
+              onLongPress: _editMode ? null : _enterEditMode,
+              child: _GridLayout(
+                tiles: tiles,
+                editMode: _editMode,
+                onRemove: (tile) {
+                  widget.onRemove?.call(tile);
+                  if (widget.tiles.length == 1) _exitEditMode();
+                },
+                onAddTap: widget.onAddTap,
+                onTileTap: widget.onTileTap,
+              ),
             ),
           ),
       ],

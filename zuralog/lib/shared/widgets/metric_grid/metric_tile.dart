@@ -161,21 +161,32 @@ class MetricTile extends StatelessWidget {
         tile,
         if (inEditMode)
           Positioned(
-            top: -4,
-            right: -4,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: const BoxDecoration(
-                  color: AppColors.statusError,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.close_rounded,
-                  color: Colors.white,
-                  size: 12,
+            top: -14,
+            right: -14,
+            child: Semantics(
+              button: true,
+              label: 'Remove ${data.label}',
+              child: GestureDetector(
+                onTap: onRemove,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: AppDimens.touchTargetMin,
+                  height: AppDimens.touchTargetMin,
+                  child: Center(
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: AppColors.statusError,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -187,9 +198,19 @@ class MetricTile extends StatelessWidget {
     // corresponding log panel. Disabled in edit mode so the remove badge
     // takes precedence and accidental log-panel opens are avoided.
     if (!inEditMode && onTap != null) {
-      return GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
+      return Semantics(
+        button: true,
+        label: 'Log ${data.label}',
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: stack,
+        ),
+      );
+    }
+    if (inEditMode) {
+      return Semantics(
+        label: '${data.label} metric, in edit mode',
         child: stack,
       );
     }

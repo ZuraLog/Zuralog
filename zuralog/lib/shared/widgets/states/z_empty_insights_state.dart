@@ -98,29 +98,33 @@ class _ActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Icon(icon, size: AppDimens.iconSm, color: colors.primary),
-            const SizedBox(width: AppDimens.spaceXs),
-            Text(
-              label,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.primary,
-                fontWeight: FontWeight.w600,
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: AppDimens.iconSm, color: colors.primary),
+              const SizedBox(width: AppDimens.spaceXs),
+              Text(
+                label,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: AppDimens.iconSm,
-              color: colors.textTertiary,
-            ),
-          ],
+              const Spacer(),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: AppDimens.iconSm,
+                color: colors.textTertiary,
+              ),
+            ],
+          ),
         ),
       ),
     );
