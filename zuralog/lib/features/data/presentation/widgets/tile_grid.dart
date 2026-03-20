@@ -268,10 +268,6 @@ class TileGrid extends StatelessWidget {
                 },
               ),
             ),
-        // Bottom clearance.
-        SliverToBoxAdapter(
-          child: SizedBox(height: AppDimens.bottomClearance(context)),
-        ),
       ],
     );
   }
@@ -325,9 +321,16 @@ class TileGrid extends StatelessWidget {
         return;
       }
       final fullOld = visiblePositions[visibleOld];
-      // For fullNew, clamp to valid range.
-      final clampedNew = visibleNew.clamp(0, visiblePositions.length - 1);
-      final fullNew = visiblePositions[clampedNew];
+      // When newIndex equals visibleIds.length the item is dropped after the
+      // last visible tile. In that case insert after the last visible position
+      // (i.e. orderedTileIds.length - hiddenIds.length) rather than clamping
+      // to second-to-last.
+      final int fullNew;
+      if (visibleNew >= visiblePositions.length) {
+        fullNew = orderedTileIds.length - hiddenIds.length;
+      } else {
+        fullNew = visiblePositions[visibleNew];
+      }
       onReorder(fullOld, fullNew);
     }
 
@@ -386,12 +389,6 @@ class TileGrid extends StatelessWidget {
             ),
           ),
 
-        // Bottom clearance.
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: AppDimens.bottomClearance(context),
-          ),
-        ),
       ],
     );
   }

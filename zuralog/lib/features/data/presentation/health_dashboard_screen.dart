@@ -112,7 +112,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   }
 
   void _onViewDetails(TileId tileId) {
-    context.push('/data/category/${tileId.category.name}');
+    context.push('/data/metric/${tileId.name}');
   }
 
   void _onAskCoach(TileId tileId, String primaryValue) {
@@ -192,6 +192,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
 
   void _persistLayout(DashboardLayout layout) {
     unawaited(Future(() async {
+      if (!mounted) return;
       try {
         await ref.read(dataRepositoryProvider).saveDashboardLayout(layout);
       } catch (e) {
@@ -430,8 +431,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 if (activeFilter != null && !allNoSource)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      padding: const EdgeInsets.fromLTRB(
+                          AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, 0),
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.auto_awesome_rounded),
                         label: Text(

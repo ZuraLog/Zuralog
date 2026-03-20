@@ -118,6 +118,13 @@ GoRouter _makeRouter() => GoRouter(
           },
         ),
         GoRoute(
+          path: '/data/metric/:id',
+          builder: (context, state) {
+            _lastRoute = '/data/metric/${state.pathParameters['id']}';
+            return const Scaffold(body: Text('Metric Detail'));
+          },
+        ),
+        GoRoute(
           path: '/settings/integrations',
           builder: (context, state) {
             _lastRoute = '/settings/integrations';
@@ -445,6 +452,37 @@ void main() {
 
       // After expansion, TileExpandedView with action buttons should appear.
       expect(find.text('View Details ›'), findsOneWidget);
+    });
+
+    testWidgets('"View Details ›" navigates to /data/metric/:id', (tester) async {
+      final tiles = [
+        TileData(
+          tileId: TileId.steps,
+          dataState: TileDataState.loaded,
+          lastUpdated: '2026-03-19T12:00:00Z',
+          visualization: const ValueData(primaryValue: '8,432'),
+        ),
+        ...TileId.values
+            .where((id) => id != TileId.steps)
+            .map((id) => TileData(
+                  tileId: id,
+                  dataState: TileDataState.noSource,
+                )),
+      ];
+      final container = _container(tiles: tiles);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Expand the steps tile.
+      await tester.tap(find.text('8,432').first);
+      await tester.pumpAndSettle();
+
+      // Tap "View Details ›".
+      await tester.tap(find.text('View Details ›'));
+      await tester.pumpAndSettle();
+
+      expect(_lastRoute, '/data/metric/steps');
     });
 
     testWidgets('tapping the expanded tile again collapses it', (tester) async {
