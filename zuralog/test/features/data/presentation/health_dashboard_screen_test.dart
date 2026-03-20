@@ -235,6 +235,50 @@ void main() {
       expect(find.text('Start tracking your health'), findsOneWidget);
     });
 
+    testWidgets('shows network error message instead of onboarding when fetch fails', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          dashboardProvider.overrideWith(
+            (_) async => const DashboardData(
+              categories: [],
+              visibleOrder: [],
+              isNetworkError: true,
+            ),
+          ),
+          dailyGoalsProvider.overrideWith((_) async => const <DailyGoal>[]),
+          healthScoreProvider.overrideWith((_) async => const HealthScoreData(score: 0, trend: [], dataDays: 0)),
+          dashboardTilesProvider.overrideWith(
+            (_) async => TileId.values
+                .map(
+                  (id) => TileData(
+                    tileId: id,
+                    dataState: TileDataState.noSource,
+                  ),
+                )
+                .toList(),
+          ),
+          dashboardLayoutLoaderProvider.overrideWith(
+            (_) async => null,
+          ),
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          tooltipsEnabledProvider
+              .overrideWith(() => _StubTooltipsEnabledNotifier()),
+          dataRepositoryProvider.overrideWith(
+            (ref) => _MockDataRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Should NOT show the onboarding "Connect a Device" message.
+      expect(find.textContaining('Connect a Device'), findsNothing);
+      // Should show a network/source unavailable indicator.
+      expect(find.textContaining('unavailable'), findsOneWidget);
+    });
+
     testWidgets('onboarding shows ghost tiles (GhostTileContent)', (tester) async {
       final container = _container(); // all noSource → onboarding state
       addTearDown(container.dispose);

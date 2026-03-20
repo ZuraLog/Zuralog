@@ -221,6 +221,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final orderedTileIds = ref.watch(tileOrderingProvider);
     final activeFilter = ref.watch(tileFilterProvider);
     final scoreAsync = ref.watch(healthScoreProvider);
+    final hasNetworkError = ref.watch(dashboardHasNetworkErrorProvider);
 
     // Data maturity banner state.
     final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
@@ -399,7 +400,37 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   ),
 
                 // ── Onboarding empty state or Tile Grid ───────────────────
-                if (allNoSource)
+                if (allNoSource && hasNetworkError)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceLg,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.cloud_off_rounded,
+                            size: 48,
+                            color: AppColors.textTertiary,
+                          ),
+                          const SizedBox(height: AppDimens.spaceMd),
+                          Text(
+                            'Data source unavailable',
+                            style: AppTextStyles.titleMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppDimens.spaceXs),
+                          const Text(
+                            'Pull down to retry when your connection is restored.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (allNoSource)
                   SliverToBoxAdapter(
                     child: OnboardingEmptyState(
                       onConnectDevice: () => context
