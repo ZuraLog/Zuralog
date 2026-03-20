@@ -96,6 +96,26 @@ class MetricTile extends StatelessWidget {
     // Hidden tiles take zero space.
     if (dataState == TileDataState.hidden) return const SizedBox.shrink();
 
+    final label = switch (dataState) {
+      TileDataState.loaded =>
+        '${tileId.displayName}: ${primaryValue ?? '—'}${unit != null ? ' $unit' : ''}',
+      TileDataState.noSource =>
+        '${tileId.displayName}: not connected',
+      TileDataState.syncing =>
+        '${tileId.displayName}: syncing',
+      TileDataState.noDataForRange =>
+        '${tileId.displayName}: no data for selected range',
+      TileDataState.hidden =>
+        '${tileId.displayName}: hidden',
+    };
+
+    return Semantics(
+      label: label,
+      child: _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     final colors = AppColorsOf(context);
     final effectiveColor = _effectiveColor();
     final isSquare = size == TileSize.square;
@@ -110,11 +130,11 @@ class MetricTile extends StatelessWidget {
         boxShadow: colors.isDark ? null : AppDimens.cardShadowLight,
       ),
       padding: const EdgeInsets.all(12),
-      child: _buildContent(context, colors, effectiveColor, isSquare),
+      child: _buildTileContent(context, colors, effectiveColor, isSquare),
     );
   }
 
-  Widget _buildContent(
+  Widget _buildTileContent(
     BuildContext context,
     AppColorsOf colors,
     Color effectiveColor,
@@ -147,7 +167,7 @@ class MetricTile extends StatelessWidget {
 
     // Loaded state: full tile layout.
     final showFooter =
-        !isSquare && visualization != null && (avgLabel != null || deltaLabel != null);
+        !isSquare && (avgLabel != null || deltaLabel != null);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

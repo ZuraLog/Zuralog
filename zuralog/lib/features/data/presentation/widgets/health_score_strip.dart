@@ -35,20 +35,24 @@ class HealthScoreStrip extends ConsumerWidget {
     final scoreAsync = ref.watch(healthScoreProvider);
     final colors = AppColorsOf(context);
 
-    return GestureDetector(
-      onTap: () => context.push('/data/score'),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          boxShadow: colors.isDark ? null : AppDimens.cardShadowLight,
-        ),
-        padding: const EdgeInsets.all(12), // tight card padding for compact strip
-        child: scoreAsync.when(
-          loading: () => const _SkeletonRow(),
-          error: (e, _) => const _ScoreRow(data: null),
-          data: (data) => _ScoreRow(data: data),
+    return Semantics(
+      label: 'Health score. Tap to view breakdown.',
+      button: true,
+      child: GestureDetector(
+        onTap: () => context.push('/data/score'),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            boxShadow: colors.isDark ? null : AppDimens.cardShadowLight,
+          ),
+          padding: const EdgeInsets.all(12), // tight card padding for compact strip
+          child: scoreAsync.when(
+            loading: () => const _SkeletonRow(),
+            error: (e, _) => const _ScoreRow(data: null),
+            data: (data) => _ScoreRow(data: data),
+          ),
         ),
       ),
     );

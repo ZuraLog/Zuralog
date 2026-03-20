@@ -98,23 +98,33 @@ class _AllChip extends StatelessWidget {
     final borderColor = isActive ? colors.primary : colors.border;
     final textColor = isActive ? Colors.white : colors.textSecondary;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-          border: Border.all(color: borderColor, width: 1),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          'All',
-          style: AppTextStyles.labelMedium.copyWith(
-            color: textColor,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+    return Semantics(
+      label: 'All categories filter',
+      button: true,
+      selected: isActive,
+      child: GestureDetector(
+        onTap: onTap,
+        child: SizedBox(
+          height: 48,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'All',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: textColor,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -144,40 +154,50 @@ class _CategoryChip extends StatelessWidget {
     final borderColor = isActive ? catColor : colors.border;
     final textColor = isActive ? Colors.white : colors.textSecondary;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-          border: Border.all(color: borderColor, width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isActive) ...[
-              Container(
-                key: Key('chip_dot_${category.name}'),
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  shape: BoxShape.circle,
-                ),
+    return Semantics(
+      label: '${category.displayName} filter',
+      button: true,
+      selected: isActive,
+      child: GestureDetector(
+        onTap: onTap,
+        child: SizedBox(
+          height: 48,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                border: Border.all(color: borderColor, width: 1),
               ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              category.displayName,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: textColor,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isActive) ...[
+                    Container(
+                      key: Key('chip_dot_${category.name}'),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                  ],
+                  Text(
+                    category.displayName,
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: textColor,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
