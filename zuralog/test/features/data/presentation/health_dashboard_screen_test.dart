@@ -18,6 +18,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/domain/time_range.dart';
 import 'package:zuralog/features/data/presentation/health_dashboard_screen.dart';
+import 'package:zuralog/features/data/presentation/widgets/tile_empty_states.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -223,30 +224,46 @@ void main() {
       await tester.pumpWidget(_buildApp(container));
       await tester.pumpAndSettle();
 
-      // Onboarding state: 'No data yet' heading.
-      expect(find.text('No data yet'), findsOneWidget);
+      // OnboardingEmptyState shows welcome card heading.
+      expect(find.text('Start tracking your health'), findsOneWidget);
     });
 
-    testWidgets('onboarding "Connect a device" navigates to integrations',
+    testWidgets('onboarding shows ghost tiles (GhostTileContent)', (tester) async {
+      final container = _container(); // all noSource → onboarding state
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // OnboardingEmptyState renders 4 GhostTileContent widgets in a grid.
+      expect(find.byType(GhostTileContent), findsWidgets);
+    });
+
+    testWidgets('onboarding "Connect a Device" navigates to integrations',
         (tester) async {
       final container = _container();
       addTearDown(container.dispose);
       await tester.pumpWidget(_buildApp(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Connect a device'));
+      // Connect a Device button may be below the viewport — scroll to it first.
+      await tester.ensureVisible(find.text('Connect a Device').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Connect a Device').first);
       await tester.pumpAndSettle();
 
       expect(_lastRoute, '/settings/integrations');
     });
 
-    testWidgets('onboarding "Log manually" navigates to /today', (tester) async {
+    testWidgets('onboarding "Log Manually" navigates to /today', (tester) async {
       final container = _container();
       addTearDown(container.dispose);
       await tester.pumpWidget(_buildApp(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Log manually'));
+      // Log Manually may be below the viewport — scroll to it first.
+      await tester.ensureVisible(find.text('Log Manually'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Log Manually'));
       await tester.pumpAndSettle();
 
       expect(_lastRoute, '/today');
@@ -349,13 +366,13 @@ void main() {
   // that never settles. Use pump(Duration) instead.
 
   group('Edit mode', () {
-    testWidgets('tapping tune icon enters edit mode', (tester) async {
+    testWidgets('tapping edit icon enters edit mode', (tester) async {
       final container = _container(allLoaded: true);
       addTearDown(container.dispose);
       await tester.pumpWidget(_buildApp(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.tap(find.byIcon(Icons.edit_rounded));
       // Use pump instead of pumpAndSettle to avoid infinite wiggle animation.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -371,7 +388,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Enter edit mode.
-      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.tap(find.byIcon(Icons.edit_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -380,21 +397,21 @@ void main() {
       await tester.pumpAndSettle();
 
       // tune icon should be visible again.
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.edit_rounded), findsOneWidget);
       expect(find.text('Done'), findsNothing);
     });
 
-    testWidgets('tune icon is absent when in edit mode', (tester) async {
+    testWidgets('edit icon is absent when in edit mode', (tester) async {
       final container = _container(allLoaded: true);
       addTearDown(container.dispose);
       await tester.pumpWidget(_buildApp(container));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.tap(find.byIcon(Icons.edit_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.byIcon(Icons.tune_rounded), findsNothing);
+      expect(find.byIcon(Icons.edit_rounded), findsNothing);
     });
   });
 
@@ -544,7 +561,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Enter edit mode (use pump to avoid infinite wiggle animation).
-      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.tap(find.byIcon(Icons.edit_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -603,14 +620,14 @@ void main() {
       expect(find.text('Data'), findsOneWidget);
     });
 
-    testWidgets('shows search icon and tune icon in normal mode', (tester) async {
+    testWidgets('shows search icon and edit icon in normal mode', (tester) async {
       final container = _container(allLoaded: true);
       addTearDown(container.dispose);
       await tester.pumpWidget(_buildApp(container));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.search_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.edit_rounded), findsOneWidget);
     });
   });
 
@@ -625,6 +642,134 @@ void main() {
 
       // Score of 72 should be visible.
       expect(find.text('72'), findsOneWidget);
+    });
+  });
+
+  // ── Per-category time range selector (Issue 2) ───────────────────────────────
+
+  group('Per-category time range selector', () {
+    testWidgets(
+        'category time range selector appears when a category chip is active',
+        (tester) async {
+      final container = _container(allLoaded: true);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Before activating a category filter, the per-category selector is absent.
+      expect(find.byKey(const Key('category_time_range_selector')), findsNothing);
+
+      // Tap Activity chip to activate the category filter.
+      await tester.tap(find.text('Activity').first);
+      await tester.pumpAndSettle();
+
+      // Per-category time range selector should now be present.
+      expect(
+        find.byKey(const Key('category_time_range_selector')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        'category time range selector disappears when category filter is cleared',
+        (tester) async {
+      final container = _container(allLoaded: true);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Activate then deactivate the category filter.
+      await tester.tap(find.text('Activity').first);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('category_time_range_selector')),
+        findsOneWidget,
+      );
+
+      // Tap again to deselect.
+      await tester.tap(find.text('Activity').first);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('category_time_range_selector')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'category range label is shown when selector is active',
+        (tester) async {
+      final container = _container(allLoaded: true);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Activate a category filter.
+      await tester.tap(find.text('Sleep').first);
+      await tester.pumpAndSettle();
+
+      // 'Category range' label should be present.
+      expect(find.text('Category range'), findsOneWidget);
+    });
+  });
+
+  // ── Edit mode hidden section (Issue 4) ───────────────────────────────────────
+
+  group('Edit mode hidden section', () {
+    testWidgets(
+        'hidden section header appears in edit mode when tiles are hidden',
+        (tester) async {
+      // Create a layout with the steps tile hidden.
+      final container = _container(allLoaded: true);
+      addTearDown(container.dispose);
+
+      // Hide the steps tile via provider.
+      container.read(dashboardLayoutProvider.notifier).state =
+          DashboardLayout.defaultLayout.copyWith(
+        tileVisibility: {TileId.steps.name: false},
+      );
+
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Enter edit mode (use pump to avoid infinite wiggle animation).
+      await tester.tap(find.byIcon(Icons.edit_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // "Hidden" section header should appear.
+      expect(find.text('Hidden'), findsOneWidget);
+    });
+
+    testWidgets(
+        'no hidden section when all tiles are visible in edit mode',
+        (tester) async {
+      final container = _container(allLoaded: true);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Enter edit mode — no tiles hidden by default.
+      await tester.tap(find.byIcon(Icons.edit_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Hidden'), findsNothing);
+    });
+  });
+
+  // ── Layout-change animation (Issue 5) ────────────────────────────────────────
+
+  group('Category filter animation', () {
+    testWidgets('AnimatedSwitcher is in the widget tree when tiles are loaded',
+        (tester) async {
+      final container = _container(allLoaded: true);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AnimatedSwitcher), findsAtLeastNWidgets(1));
     });
   });
 }

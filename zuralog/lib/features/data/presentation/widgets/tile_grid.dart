@@ -13,7 +13,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/presentation/widgets/metric_tile.dart';
@@ -274,36 +276,123 @@ class TileGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildEditMode(BuildContext context) {
-    // Edit mode: show ALL tiles (including hidden, which appear dimmed).
-    final allIds = orderedTileIds;
+  Widget _buildEditHiddenTile(BuildContext context, TileId id) {
+    final size = _effectiveSize(id);
+    final colorOverride = _colorOverride(id);
 
-    if (allIds.isEmpty) {
+    return Padding(
+      key: ValueKey('hidden_${id.name}'),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceXs,
+      ),
+      child: Opacity(
+        opacity: AppDimens.disabledOpacity,
+        child: TileEditOverlay(
+          tileId: id,
+          currentSize: size,
+          isVisible: false,
+          currentColorOverride: colorOverride,
+          onSizeChanged: (newSize) => onSizeChanged(id, newSize),
+          onVisibilityToggled: () => onVisibilityToggled(id),
+          onColorPick: () => onColorPick(id),
+          child: _buildTileContent(context, id),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditMode(BuildContext context) {
+    // Split tiles into visible and hidden.
+    final visibleIds =
+        orderedTileIds.where(_isVisible).toList();
+    final hiddenIds =
+        orderedTileIds.where((id) => !_isVisible(id)).toList();
+
+    if (visibleIds.isEmpty && hiddenIds.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    return SliverPadding(
-      padding: EdgeInsets.only(bottom: AppDimens.bottomClearance(context)),
-      sliver: SliverReorderableList(
-        itemCount: allIds.length,
-        onReorder: onReorder,
-        proxyDecorator: (child, index, animation) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, animChild) => Material(
-              elevation: 4 * animation.value,
-              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              color: Colors.transparent,
-              child: animChild,
+    // Map visible-list indices to full orderedTileIds indices for onReorder.
+    void mappedOnReorder(int visibleOld, int visibleNew) {
+      // Find the positions of visible tiles within the full ordered list.
+      final visiblePositions = <int>[];
+      for (var i = 0; i < orderedTileIds.length; i++) {
+        if (_isVisible(orderedTileIds[i])) visiblePositions.add(i);
+      }
+      if (visibleOld >= visiblePositions.length ||
+          visibleNew > visiblePositions.length) {
+        return;
+      }
+      final fullOld = visiblePositions[visibleOld];
+      // For fullNew, clamp to valid range.
+      final clampedNew = visibleNew.clamp(0, visiblePositions.length - 1);
+      final fullNew = visiblePositions[clampedNew];
+      onReorder(fullOld, fullNew);
+    }
+
+    return SliverMainAxisGroup(
+      slivers: [
+        // ── Visible tiles — reorderable ─────────────────────────────────
+        SliverReorderableList(
+          itemCount: visibleIds.length,
+          onReorder: mappedOnReorder,
+          proxyDecorator: (child, index, animation) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, animChild) => Material(
+                elevation: 4 * animation.value,
+                borderRadius:
+                    BorderRadius.circular(AppDimens.radiusCard),
+                color: Colors.transparent,
+                child: animChild,
+              ),
+              child: child,
+            );
+          },
+          itemBuilder: (context, i) {
+            final id = visibleIds[i];
+            return _buildEditTile(context, id, i);
+          },
+        ),
+
+        // ── "Hidden" section header ─────────────────────────────────────
+        if (hiddenIds.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.spaceMd,
+                AppDimens.spaceLg,
+                AppDimens.spaceMd,
+                AppDimens.spaceSm,
+              ),
+              child: Text(
+                'Hidden',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textTertiary,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
-            child: child,
-          );
-        },
-        itemBuilder: (context, i) {
-          final id = allIds[i];
-          return _buildEditTile(context, id, i);
-        },
-      ),
+          ),
+
+        // ── Hidden tiles — non-reorderable, dimmed ──────────────────────
+        if (hiddenIds.isNotEmpty)
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) =>
+                  _buildEditHiddenTile(context, hiddenIds[i]),
+              childCount: hiddenIds.length,
+            ),
+          ),
+
+        // Bottom clearance.
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: AppDimens.bottomClearance(context),
+          ),
+        ),
+      ],
     );
   }
 }

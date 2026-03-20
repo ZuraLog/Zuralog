@@ -22,10 +22,12 @@ import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/domain/time_range.dart';
 import 'package:zuralog/features/data/presentation/widgets/category_filter_chips.dart';
 import 'package:zuralog/features/data/presentation/widgets/global_time_range_selector.dart';
 import 'package:zuralog/features/data/presentation/widgets/health_score_strip.dart';
 import 'package:zuralog/features/data/presentation/widgets/search_overlay.dart';
+import 'package:zuralog/features/data/presentation/widgets/tile_empty_states.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_grid.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -49,6 +51,10 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   bool _isEditMode = false;
   TileId? _expandedTileId;
   bool _showSearch = false;
+
+  /// Per-category time range override. `null` means "inherit global range".
+  /// Set when a category chip is activated; cleared when filter is cleared.
+  TimeRange? _categoryTimeRange;
 
   @override
   bool get wantKeepAlive => true;
@@ -267,7 +273,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 )
               else
                 IconButton(
-                  icon: const Icon(Icons.tune_rounded),
+                  icon: const Icon(Icons.edit_rounded),
                   onPressed: _enterEditMode,
                   tooltip: 'Customize',
                 ),
@@ -342,9 +348,16 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                     child: CategoryFilterChips(
                       selected: activeFilter,
                       onSelected: (cat) {
+                        final globalRange =
+                            ref.read(dashboardTimeRangeProvider);
                         ref.read(tileFilterProvider.notifier).state = cat;
                         // Collapse expanded tile when filter changes.
-                        setState(() => _expandedTileId = null);
+                        // Initialise (or clear) the per-category time range.
+                        setState(() {
+                          _expandedTileId = null;
+                          _categoryTimeRange =
+                              cat != null ? globalRange : null;
+                        });
                       },
                     ),
                   ),
@@ -358,10 +371,28 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   ),
                 ),
 
+                // ── Per-category Time Range Selector ──────────────────────
+                // Shown only when a category chip is active. Inherits the
+                // global range on activation but can be changed independently.
+                if (activeFilter != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: AppDimens.spaceSm,
+                      ),
+                      child: _CategoryTimeRangeSelector(
+                        selected: _categoryTimeRange ??
+                            ref.watch(dashboardTimeRangeProvider),
+                        onChanged: (range) =>
+                            setState(() => _categoryTimeRange = range),
+                      ),
+                    ),
+                  ),
+
                 // ── Onboarding empty state or Tile Grid ───────────────────
                 if (allNoSource)
                   SliverToBoxAdapter(
-                    child: _OnboardingEmptyState(
+                    child: OnboardingEmptyState(
                       onConnectDevice: () => context
                           .push(RouteNames.settingsIntegrationsPath),
                       onLogManually: () => context.go('/today'),
@@ -370,19 +401,29 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 else if (tilesAsync.isLoading)
                   _buildLoadingSlivers()
                 else
-                  TileGrid(
-                    orderedTileIds: filteredTileIds,
-                    tiles: tileMap,
-                    layout: layout,
-                    isEditMode: _isEditMode,
-                    expandedTileId: _expandedTileId,
-                    onTileTap: _onTileTap,
-                    onViewDetails: _onViewDetails,
-                    onAskCoach: _onAskCoach,
-                    onSizeChanged: _onSizeChanged,
-                    onVisibilityToggled: _onVisibilityToggled,
-                    onColorPick: _onColorPick,
-                    onReorder: _onReorder,
+                  SliverToBoxAdapter(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      ),
+                      child: _TileGridBox(
+                        key: ValueKey(activeFilter),
+                        orderedTileIds: filteredTileIds,
+                        tiles: tileMap,
+                        layout: layout,
+                        isEditMode: _isEditMode,
+                        expandedTileId: _expandedTileId,
+                        onTileTap: _onTileTap,
+                        onViewDetails: _onViewDetails,
+                        onAskCoach: _onAskCoach,
+                        onSizeChanged: _onSizeChanged,
+                        onVisibilityToggled: _onVisibilityToggled,
+                        onColorPick: _onColorPick,
+                        onReorder: _onReorder,
+                      ),
+                    ),
                   ),
 
                 // ── "Ask Coach about [Category]" CTA ──────────────────────
@@ -455,63 +496,153 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   }
 }
 
-// ── _OnboardingEmptyState ─────────────────────────────────────────────────────
+// ── _CategoryTimeRangeSelector ────────────────────────────────────────────────
 
-/// Shown when all tiles are in [TileDataState.noSource] — brand-new user.
-class _OnboardingEmptyState extends StatelessWidget {
-  const _OnboardingEmptyState({
-    required this.onConnectDevice,
-    required this.onLogManually,
+/// Per-category time range selector.
+///
+/// Shown below the global [GlobalTimeRangeSelector] when a category filter
+/// chip is active (§3.3, §3.4, §8.2). Inherits the global range when a
+/// category is first selected but can be changed independently for that
+/// session. Does NOT persist — state lives in the screen.
+class _CategoryTimeRangeSelector extends StatelessWidget {
+  const _CategoryTimeRangeSelector({
+    required this.selected,
+    required this.onChanged,
   });
 
-  final VoidCallback onConnectDevice;
-  final VoidCallback onLogManually;
+  final TimeRange selected;
+  final ValueChanged<TimeRange> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AppDimens.spaceMd),
-          Icon(
-            Icons.monitor_heart_rounded,
-            size: 56,
-            color: colors.textTertiary,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(
+            left: AppDimens.spaceMd,
+            bottom: AppDimens.spaceXs,
           ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            'No data yet',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.titleLarge.copyWith(
-              color: colors.textPrimary,
+          child: Text(
+            'Category range',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: colors.textTertiary,
             ),
           ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            'Connect a health app or log your first data point manually '
-            'to start seeing your metrics here.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: colors.textSecondary,
-            ),
+        ),
+        SingleChildScrollView(
+          key: const Key('category_time_range_selector'),
+          scrollDirection: Axis.horizontal,
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+          child: Row(
+            children: TimeRange.values.expand((range) {
+              final isActive = selected == range;
+              final bgColor =
+                  isActive ? colors.primary : Colors.transparent;
+              final borderColor =
+                  isActive ? colors.primary : colors.border;
+              final textColor =
+                  isActive ? Colors.white : colors.textSecondary;
+              return [
+                GestureDetector(
+                  onTap: () => onChanged(range),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    height: 28,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusChip),
+                      border: Border.all(
+                        color: borderColor,
+                        width: 1,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      range.label,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: textColor,
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+              ];
+            }).toList(),
           ),
-          const SizedBox(height: AppDimens.spaceLg),
-          FilledButton.icon(
-            icon: const Icon(Icons.cable_rounded),
-            label: const Text('Connect a device'),
-            onPressed: onConnectDevice,
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.edit_rounded),
-            label: const Text('Log manually'),
-            onPressed: onLogManually,
-          ),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── _TileGridBox ──────────────────────────────────────────────────────────────
+
+/// Box-widget wrapper around [TileGrid] for use inside [AnimatedSwitcher].
+///
+/// Embeds TileGrid (a sliver widget) in a [CustomScrollView] with
+/// [shrinkWrap] and [NeverScrollableScrollPhysics] so it sizes itself to its
+/// content and the outer [CustomScrollView] in [HealthDashboardScreen]
+/// controls scrolling.
+class _TileGridBox extends StatelessWidget {
+  const _TileGridBox({
+    super.key,
+    required this.orderedTileIds,
+    required this.tiles,
+    required this.layout,
+    required this.isEditMode,
+    required this.expandedTileId,
+    required this.onTileTap,
+    required this.onViewDetails,
+    required this.onAskCoach,
+    required this.onSizeChanged,
+    required this.onVisibilityToggled,
+    required this.onColorPick,
+    required this.onReorder,
+  });
+
+  final List<TileId> orderedTileIds;
+  final Map<TileId, TileData> tiles;
+  final DashboardLayout layout;
+  final bool isEditMode;
+  final TileId? expandedTileId;
+  final void Function(TileId) onTileTap;
+  final void Function(TileId) onViewDetails;
+  final void Function(TileId, String) onAskCoach;
+  final void Function(TileId, TileSize) onSizeChanged;
+  final void Function(TileId) onVisibilityToggled;
+  final void Function(TileId) onColorPick;
+  final void Function(int, int) onReorder;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      slivers: [
+        TileGrid(
+          orderedTileIds: orderedTileIds,
+          tiles: tiles,
+          layout: layout,
+          isEditMode: isEditMode,
+          expandedTileId: expandedTileId,
+          onTileTap: onTileTap,
+          onViewDetails: onViewDetails,
+          onAskCoach: onAskCoach,
+          onSizeChanged: onSizeChanged,
+          onVisibilityToggled: onVisibilityToggled,
+          onColorPick: onColorPick,
+          onReorder: onReorder,
+        ),
+      ],
     );
   }
 }
