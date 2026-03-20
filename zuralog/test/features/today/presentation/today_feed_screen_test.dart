@@ -351,5 +351,179 @@ void main() {
       expect(find.byType(HealthScoreZeroState), findsNothing);
       expect(find.byType(HealthScoreBuildingState), findsNothing);
     });
+
+    // ── Greeting subtitle tests ───────────────────────────────────────
+
+    testWidgets('shows sleep subtitle when sleep data >= 180 min',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 80, trend: [], dataDays: 10),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(insights: [], streak: null),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => const TodayLogSummary(
+              loggedTypes: {'sleep'},
+              latestValues: {'sleep': 450.0}, // 7h 30m
+            ),
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sleep last night: 7h 30m'), findsOneWidget);
+    });
+
+    testWidgets('shows "Welcome to Zuralog" when dataDays is 0',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 0, trend: [], dataDays: 0),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(insights: [], streak: null),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => TodayLogSummary.empty,
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Welcome to Zuralog'), findsOneWidget);
+    });
+
+    testWidgets('shows building encouragement on Days 2–6 without sleep',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 30, trend: [], dataDays: 3),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(insights: [], streak: null),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => TodayLogSummary.empty,
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text("You're building something real."),
+        findsOneWidget,
+      );
+    });
+
+    // ── Building briefing state test ──────────────────────────────────
+
+    testWidgets('shows "More insights unlock at Day 7" during building state',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 30, trend: [], dataDays: 4),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(
+              insights: [
+                InsightCard(
+                  id: 'i1',
+                  title: 'Early observation',
+                  summary: 'Test insight body',
+                  type: InsightType.trend,
+                  category: 'Sleep',
+                  isRead: false,
+                ),
+              ],
+              streak: null,
+            ),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => TodayLogSummary.empty,
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // Scroll down to reveal briefing section (below the fold).
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
+      expect(find.text('More insights unlock at Day 7'), findsOneWidget);
+      expect(find.text('Early observation'), findsOneWidget);
+    });
   });
 }

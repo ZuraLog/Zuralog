@@ -999,7 +999,7 @@ class _HealthScoreDeltaChip extends StatelessWidget {
     final isPositive = weekChange > 0;
     final chipColor = isPositive
         ? AppColors.categoryActivity // green
-        : AppColors.accentLight;     // red/coral
+        : AppColors.healthScoreRed;  // error red per spec
     final arrow = isPositive ? '↑' : '↓';
     final absChange = weekChange.abs();
 

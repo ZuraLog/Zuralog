@@ -68,4 +68,48 @@ void main() {
       expect(find.text('Keep it up!'), findsOneWidget);
     });
   });
+
+  group('StreakHeroCard — frozen state', () {
+    testWidgets('shows "Streak frozen" when isFrozen is true', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StreakHeroCard(streakDays: 10, isFrozen: true),
+          ),
+        ),
+      );
+      expect(find.text('Streak frozen'), findsOneWidget);
+      expect(find.text('Keep it up!'), findsNothing);
+      expect(find.byIcon(Icons.shield_rounded), findsOneWidget);
+    });
+
+    testWidgets('frozen takes priority over personal best', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StreakHeroCard(
+              streakDays: 10,
+              isFrozen: true,
+              isPersonalBest: true,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Streak frozen'), findsOneWidget);
+      expect(find.textContaining('Personal best'), findsNothing);
+    });
+
+    testWidgets('isFrozen is ignored when streakDays is 0', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: StreakHeroCard(streakDays: 0, isFrozen: true),
+          ),
+        ),
+      );
+      // Zero state renders regardless of isFrozen
+      expect(find.text('Start your streak today'), findsOneWidget);
+      expect(find.text('Streak frozen'), findsNothing);
+    });
+  });
 }

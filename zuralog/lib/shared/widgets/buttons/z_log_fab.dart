@@ -21,10 +21,11 @@ class ZLogFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     return FloatingActionButton(
       onPressed: onPressed,
-      backgroundColor: AppColors.primary,
-      foregroundColor: AppColors.primaryButtonText,
+      backgroundColor: colors.primary,
+      foregroundColor: Theme.of(context).colorScheme.onPrimary,
       elevation: 4,
       shape: const CircleBorder(),
       child: const Icon(Icons.add_rounded, size: 28),
