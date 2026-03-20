@@ -270,20 +270,20 @@ class _StatsFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final parts = [
-      ?avgLabel,
-      ?deltaLabel,
-    ];
-    final text = parts.join(' · ');
+    final labelStyle = AppTextStyles.labelSmall.copyWith(
+      fontSize: 10,
+      color: colors.textTertiary,
+    );
 
     return SizedBox(
       key: const Key('stats_footer'),
-      child: Text(
-        text,
-        style: AppTextStyles.labelSmall.copyWith(
-          fontSize: 10,
-          color: colors.textTertiary,
-        ),
+      child: Row(
+        children: [
+          if (avgLabel != null) Text(avgLabel!, style: labelStyle),
+          if (avgLabel != null && deltaLabel != null)
+            Text(' · ', style: labelStyle),
+          if (deltaLabel != null) Text(deltaLabel!, style: labelStyle),
+        ],
       ),
     );
   }

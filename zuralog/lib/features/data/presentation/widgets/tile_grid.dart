@@ -103,7 +103,17 @@ class TileGrid extends StatelessWidget {
     // If the tile is expanded, render TileExpandedView.
     if (isExpanded && tileData != null && tileData.dataState == TileDataState.loaded) {
       final viz = tileData.visualization;
-      final primaryValue = viz is ValueData ? viz.primaryValue : '—';
+      // Extract primaryValue from the visualization for coach prefill and display.
+      // Handles all viz subtypes — avoids sending "—" to the coach.
+      final primaryValue = switch (viz) {
+        ValueData(:final primaryValue) => primaryValue,
+        RingData(:final value) => value.toStringAsFixed(0),
+        CountBadgeData(:final count) => count.toString(),
+        DualValueData(:final topValue, :final bottomValue) =>
+          '$topValue/$bottomValue',
+        GaugeData(:final label) => label ?? '—',
+        _ => '—',
+      };
       final effectiveColor = colorOverride != null
           ? Color(colorOverride)
           : categoryColor(id.category);
@@ -121,6 +131,10 @@ class TileGrid extends StatelessWidget {
         primaryValue: primaryValue,
         unit: viz is ValueData ? viz.secondaryLabel : null,
         colorOverride: colorOverride,
+        avgValue: tileData.avgValue,
+        bestValue: tileData.bestValue,
+        worstValue: tileData.worstValue,
+        changeValue: tileData.changeValue,
         onViewDetails: () => onViewDetails(id),
         onAskCoach: () => onAskCoach(id, primaryValue),
       );
@@ -128,7 +142,17 @@ class TileGrid extends StatelessWidget {
 
     // Otherwise render MetricTile.
     final viz = tileData?.visualization;
-    final primaryValue = viz is ValueData ? viz.primaryValue : null;
+    final primaryValue = viz == null
+        ? null
+        : switch (viz) {
+            ValueData(:final primaryValue) => primaryValue,
+            RingData(:final value) => value.toStringAsFixed(0),
+            CountBadgeData(:final count) => count.toString(),
+            DualValueData(:final topValue, :final bottomValue) =>
+              '$topValue/$bottomValue',
+            GaugeData(:final label) => label,
+            _ => null,
+          };
     final unit = viz is ValueData ? viz.secondaryLabel : null;
     final effectiveColor = colorOverride != null
         ? Color(colorOverride)
@@ -147,6 +171,8 @@ class TileGrid extends StatelessWidget {
           : null,
       primaryValue: primaryValue,
       unit: unit,
+      avgLabel: tileData?.avgLabel,
+      deltaLabel: tileData?.deltaLabel,
       lastUpdated: tileData?.lastUpdated,
       colorOverride: colorOverride,
     );

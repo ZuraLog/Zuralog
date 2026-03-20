@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/today/domain/metric_grid_models.dart';
 import 'package:zuralog/shared/widgets/metric_grid/metric_tile.dart';
+import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/presentation/widgets/metric_tile.dart'
+    as data_tile;
 
 const _litTile = MetricTileData(
   metricType: 'water',
@@ -94,6 +98,28 @@ void main() {
       );
       await tester.tap(find.byIcon(Icons.close_rounded));
       expect(called, isTrue);
+    });
+  });
+
+  group('MetricTile stats footer', () {
+    testWidgets('stats footer visible on tall tile when avgLabel + deltaLabel provided', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: data_tile.MetricTile(
+              tileId: TileId.steps,
+              dataState: TileDataState.loaded,
+              size: TileSize.tall,
+              primaryValue: '8,432',
+              unit: 'steps',
+              avgLabel: 'Avg 8.2k',
+              deltaLabel: '↑ 12%',
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Avg 8.2k'), findsOneWidget);
+      expect(find.text('↑ 12%'), findsOneWidget);
     });
   });
 }
