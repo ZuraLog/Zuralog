@@ -270,25 +270,23 @@ class _SearchResultTile extends StatelessWidget {
           const Spacer(),
           // MetricTile content for loaded tiles; otherwise a small placeholder
           if (tile.dataState == TileDataState.loaded)
-            Expanded(
-              child: Builder(builder: (context) {
-                final viz = tile.visualization;
-                final effectiveColor = categoryColor(tile.tileId.category);
-                return MetricTile(
-                  tileId: tile.tileId,
-                  dataState: tile.dataState,
-                  size: TileSize.square,
-                  visualization: viz != null
-                      ? buildTileVisualization(
-                          data: viz,
-                          categoryColor: effectiveColor,
-                        )
-                      : null,
-                  primaryValue: viz is ValueData ? viz.primaryValue : null,
-                  unit: viz is ValueData ? viz.secondaryLabel : null,
-                );
-              }),
-            )
+            Builder(builder: (context) {
+              final viz = tile.visualization;
+              final effectiveColor = categoryColor(tile.tileId.category);
+              return MetricTile(
+                tileId: tile.tileId,
+                dataState: tile.dataState,
+                size: TileSize.square,
+                visualization: viz != null
+                    ? buildTileVisualization(
+                        data: viz,
+                        categoryColor: effectiveColor,
+                      )
+                    : null,
+                primaryValue: viz is ValueData ? viz.primaryValue : null,
+                unit: viz is ValueData ? viz.secondaryLabel : null,
+              );
+            })
           else
             Icon(
               Icons.show_chart_rounded,
