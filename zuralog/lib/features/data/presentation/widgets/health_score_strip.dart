@@ -37,7 +37,7 @@ class HealthScoreStrip extends ConsumerWidget {
 
     final semanticLabel = scoreAsync.when(
       loading: () => 'Health score. Loading.',
-      error: (_, __) => 'Health score: not enough data yet. Tap to view breakdown.',
+      error: (err, st) => 'Health score: not enough data yet. Tap to view breakdown.',
       data: (scoreData) {
         if (scoreData.score == 0) {
           return 'Health score: not enough data yet. Tap to view breakdown.';
