@@ -210,9 +210,31 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 AppDimens.spaceMd,
                 AppDimens.spaceSm,
               ),
-              child: SectionHeader(
-                title: _timeOfDayGreeting(profile?.aiName),
-              ),
+              child: () {
+                final subtitle = _greetingSubtitle(
+                  dataDays,
+                  ref.watch(todayLogSummaryProvider).valueOrNull ??
+                      TodayLogSummary.empty,
+                );
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SectionHeader(
+                      title: _timeOfDayGreeting(profile?.aiName),
+                    ),
+                    if (subtitle != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppDimens.spaceXs),
+                        child: Text(
+                          subtitle,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              }(),
             ),
 
             // ── My Metrics Grid ──────────────────────────────────────────────
@@ -271,33 +293,47 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                     ),
                   ];
                 }
-                return feed.insights.map(
-                  (insight) => Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceMd,
-                      vertical: AppDimens.spaceXs,
-                    ),
-                    child: ZInsightCard(
-                      insight: insight,
-                      onTap: () {
-                        ref.read(hapticServiceProvider).light();
-                        ref.read(analyticsServiceProvider).capture(
-                          event: AnalyticsEvents.insightCardTapped,
-                          properties: {
-                            'insight_id': insight.id,
-                            'insight_type': insight.type.name,
-                            'category': insight.category,
-                            'is_unread': !insight.isRead,
-                          },
-                        );
-                        context.pushNamed(
-                          RouteNames.insightDetail,
-                          pathParameters: {'id': insight.id},
-                        );
-                      },
-                    ),
+
+                // Building Up (Days 1–6): show first insight + "Day 7" teaser.
+                final isBuilding = dataDays > 0 &&
+                    dataDays < kMinDataDaysForMaturity;
+
+                Widget buildInsightCard(InsightCard insight) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceXs,
                   ),
-                ).toList();
+                  child: ZInsightCard(
+                    insight: insight,
+                    onTap: () {
+                      ref.read(hapticServiceProvider).light();
+                      ref.read(analyticsServiceProvider).capture(
+                        event: AnalyticsEvents.insightCardTapped,
+                        properties: {
+                          'insight_id': insight.id,
+                          'insight_type': insight.type.name,
+                          'category': insight.category,
+                          'is_unread': !insight.isRead,
+                        },
+                      );
+                      context.pushNamed(
+                        RouteNames.insightDetail,
+                        pathParameters: {'id': insight.id},
+                      );
+                    },
+                  ),
+                );
+
+                if (isBuilding) {
+                  return [
+                    buildInsightCard(feed.insights.first),
+                    const _BuildingInsightsNote(),
+                  ];
+                }
+
+                return feed.insights
+                    .map((insight) => buildInsightCard(insight))
+                    .toList();
               },
             ),
 
@@ -795,6 +831,41 @@ class _GoalsSkeleton extends StatelessWidget {
   }
 }
 
+// ── _BuildingInsightsNote ─────────────────────────────────────────────────────
+
+/// Subtle inline hint shown during Days 1–6 below the first insight card.
+class _BuildingInsightsNote extends StatelessWidget {
+  const _BuildingInsightsNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimens.spaceMd,
+        vertical: AppDimens.spaceMd,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.schedule_rounded,
+            size: AppDimens.iconSm,
+            color: colors.textTertiary,
+          ),
+          const SizedBox(width: AppDimens.spaceXs),
+          Text(
+            'More insights unlock at Day 7',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: colors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── _HealthScoreDeltaChip ─────────────────────────────────────────────────────
 
 /// Small pill chip showing week-over-week health score change.
@@ -855,4 +926,26 @@ String _timeOfDayGreeting([String? name]) {
   }
   if (name != null && name.isNotEmpty) return '$base, $name';
   return base;
+}
+
+/// Returns a contextual subtitle for the greeting row, or null if none.
+///
+/// Priority order:
+///   1. Sleep ≥ 180 min → "Sleep last night: Xh Ym"
+///   2. Sleep < 180 min → skip sleep, show encouraging line
+///   3. No sleep → Day 1: "Welcome to Zuralog", Days 2–6: "You're building
+///      something real.", Day 7+: null (greeting alone suffices).
+String? _greetingSubtitle(int dataDays, TodayLogSummary summary) {
+  // Check for sleep data.
+  final sleepMinutes = summary.latestValues['sleep'] as num?;
+  if (sleepMinutes != null && sleepMinutes.toDouble() >= 180) {
+    return 'Sleep last night: ${formatSleepMinutes(sleepMinutes.toDouble())}';
+  }
+
+  // No valid sleep — contextual fallback based on data maturity.
+  if (dataDays == 0) return 'Welcome to Zuralog';
+  if (dataDays < kMinDataDaysForMaturity) {
+    return "You're building something real.";
+  }
+  return null; // Day 7+ with no sleep — greeting alone is sufficient.
 }
