@@ -11,9 +11,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/presentation/widgets/metric_tile.dart';
+import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
 
 // ── SearchOverlay ─────────────────────────────────────────────────────────────
 
@@ -269,11 +271,23 @@ class _SearchResultTile extends StatelessWidget {
           // MetricTile content for loaded tiles; otherwise a small placeholder
           if (tile.dataState == TileDataState.loaded)
             Expanded(
-              child: MetricTile(
-                tileId: tile.tileId,
-                dataState: tile.dataState,
-                size: TileSize.square,
-              ),
+              child: Builder(builder: (context) {
+                final viz = tile.visualization;
+                final effectiveColor = categoryColor(tile.tileId.category);
+                return MetricTile(
+                  tileId: tile.tileId,
+                  dataState: tile.dataState,
+                  size: TileSize.square,
+                  visualization: viz != null
+                      ? buildTileVisualization(
+                          data: viz,
+                          categoryColor: effectiveColor,
+                        )
+                      : null,
+                  primaryValue: viz is ValueData ? viz.primaryValue : null,
+                  unit: viz is ValueData ? viz.secondaryLabel : null,
+                );
+              }),
             )
           else
             Icon(
