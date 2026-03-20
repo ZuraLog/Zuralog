@@ -1,12 +1,9 @@
 /// Health Dashboard Screen — Tab 1 (Data) root screen.
 ///
-/// Customizable grid/list of health category cards. Users can reorder via
-/// drag-and-drop (long-press to enter edit mode, drag to reorder) and
-/// toggle per-category visibility. Each card shows today's primary value and
-/// a 7-day sparkline trend. Layout is persisted via the user preferences API.
-///
-/// Includes the Health Score hero at the top. Tap a category card to push
-/// [CategoryDetailScreen].
+/// Phase 8 rewrite: integrates the full masonry tile grid with all Phase 3-7
+/// widgets — [HealthScoreStrip], [CategoryFilterChips],
+/// [GlobalTimeRangeSelector], [TileGrid], [TileExpandedView],
+/// [SearchOverlay], and [TileEditOverlay] — into a single cohesive screen.
 library;
 
 import 'dart:async';
@@ -22,13 +19,17 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
-import 'package:zuralog/features/data/domain/category_color.dart';
+import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/presentation/widgets/category_filter_chips.dart';
+import 'package:zuralog/features/data/presentation/widgets/global_time_range_selector.dart';
+import 'package:zuralog/features/data/presentation/widgets/health_score_strip.dart';
+import 'package:zuralog/features/data/presentation/widgets/search_overlay.dart';
+import 'package:zuralog/features/data/presentation/widgets/tile_grid.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
-import 'package:zuralog/shared/widgets/category_card.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
-import 'package:zuralog/shared/widgets/score_trend_hero.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── HealthDashboardScreen ─────────────────────────────────────────────────────
@@ -46,6 +47,8 @@ class HealthDashboardScreen extends ConsumerStatefulWidget {
 class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     with AutomaticKeepAliveClientMixin {
   bool _isEditMode = false;
+  TileId? _expandedTileId;
+  bool _showSearch = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -54,18 +57,12 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   void initState() {
     super.initState();
     // Restore persisted layout on cold-start after first frame.
-    // If no layout is persisted, fall back to seeding from the dashboard API
-    // response (if already loaded) or leave orderedCategories empty so the
-    // HealthCategory.values fallback at build-time renders all cards.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dashboardLayoutLoaderProvider.future).then((persistedLayout) {
         if (!mounted) return;
         if (persistedLayout != null) {
           ref.read(dashboardLayoutProvider.notifier).state = persistedLayout;
         } else {
-          // No persisted layout — seed from the dashboard data if it has
-          // already resolved so the user sees the API-ordered categories
-          // rather than the canonical enum order.
           final dashData = ref.read(dashboardProvider).valueOrNull;
           if (dashData != null && dashData.visibleOrder.isNotEmpty) {
             ref.read(dashboardLayoutProvider.notifier).state = DashboardLayout(
@@ -73,70 +70,142 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
               hiddenCategories: const {},
             );
           }
-          // If dashboardProvider hasn't resolved yet, orderedCategories
-          // remains [] and the HealthCategory.values fallback in build()
-          // shows all categories in canonical order — no cards are hidden.
         }
       });
     });
   }
 
-  void _toggleEditMode() {
+  // ── Edit mode ────────────────────────────────────────────────────────────────
+
+  void _enterEditMode() {
     ref.read(hapticServiceProvider).medium();
-    setState(() => _isEditMode = !_isEditMode);
+    setState(() {
+      _isEditMode = true;
+      _expandedTileId = null; // collapse any expanded tile
+    });
   }
 
-  void _onColorPick(
-    BuildContext context,
-    WidgetRef ref,
-    DashboardLayout layout,
-    HealthCategory cat,
-  ) {
-    ref.read(hapticServiceProvider).light();
-    final defaultColor = categoryColor(cat);
-    final currentColorValue = layout.categoryColorOverrides[cat.name];
-    final currentColor =
-        currentColorValue != null ? Color(currentColorValue) : defaultColor;
+  void _exitEditMode() {
+    ref.read(hapticServiceProvider).medium();
+    setState(() => _isEditMode = false);
+    // Re-apply smart ordering after edits.
+    ref.invalidate(dashboardTilesProvider);
+  }
 
+  // ── Tile interactions ────────────────────────────────────────────────────────
+
+  void _onTileTap(TileId tileId) {
+    if (_isEditMode) return;
+    setState(() {
+      if (_expandedTileId == tileId) {
+        _expandedTileId = null; // collapse
+      } else {
+        _expandedTileId = tileId; // expand
+      }
+    });
+  }
+
+  void _onViewDetails(TileId tileId) {
+    context.push('/data/category/${tileId.category.name}');
+  }
+
+  void _onAskCoach(TileId tileId, String primaryValue) {
+    ref.read(coachPrefillProvider.notifier).state =
+        'Tell me about my ${tileId.displayName}: $primaryValue';
+    context.go('/coach');
+  }
+
+  // ── Layout mutations ─────────────────────────────────────────────────────────
+
+  void _onSizeChanged(TileId tileId, TileSize newSize) {
+    final layout = ref.read(dashboardLayoutProvider);
+    final sizes = Map<String, TileSize>.from(layout.tileSizes);
+    sizes[tileId.name] = newSize;
+    final updated = layout.copyWith(tileSizes: sizes);
+    ref.read(dashboardLayoutProvider.notifier).state = updated;
+    _persistLayout(updated);
+  }
+
+  void _onVisibilityToggled(TileId tileId) {
+    ref.read(hapticServiceProvider).selectionTick();
+    final layout = ref.read(dashboardLayoutProvider);
+    final visibility = Map<String, bool>.from(layout.tileVisibility);
+    final current = visibility[tileId.name] ?? true;
+    visibility[tileId.name] = !current;
+    final updated = layout.copyWith(tileVisibility: visibility);
+    ref.read(dashboardLayoutProvider.notifier).state = updated;
+    _persistLayout(updated);
+  }
+
+  void _onColorPick(TileId tileId) {
+    final layout = ref.read(dashboardLayoutProvider);
+    final colorOverride = layout.tileColorOverrides[tileId.name];
+    final currentColor = colorOverride != null
+        ? Color(colorOverride)
+        : null;
+
+    // Reuse the existing _ColorPickerSheet.
+    ref.read(hapticServiceProvider).light();
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _ColorPickerSheet(
-        categoryName: cat.displayName,
-        currentColor: currentColor,
-        defaultColor: defaultColor,
+        categoryName: tileId.displayName,
+        currentColor: currentColor ?? const Color(0xFF007AFF),
+        defaultColor: const Color(0xFF007AFF),
         onColorSelected: (picked) {
+          final currentLayout = ref.read(dashboardLayoutProvider);
           final overrides =
-              Map<String, int>.from(layout.categoryColorOverrides);
+              Map<String, int>.from(currentLayout.tileColorOverrides);
           if (picked == null) {
-            overrides.remove(cat.name);
+            overrides.remove(tileId.name);
           } else {
-            overrides[cat.name] = picked.toARGB32();
+            overrides[tileId.name] = picked.toARGB32();
           }
-          final updated = layout.copyWith(categoryColorOverrides: overrides);
+          final updated =
+              currentLayout.copyWith(tileColorOverrides: overrides);
           ref.read(dashboardLayoutProvider.notifier).state = updated;
-          unawaited(Future(() async {
-            try {
-              await ref
-                  .read(dataRepositoryProvider)
-                  .saveDashboardLayout(updated);
-            } catch (e) {
-              debugPrint('[Dashboard] saveDashboardLayout error (color): $e');
-            }
-          }));
+          _persistLayout(updated);
         },
       ),
     );
   }
 
+  void _onReorder(int oldIndex, int newIndex) {
+    ref.read(hapticServiceProvider).light();
+    final layout = ref.read(dashboardLayoutProvider);
+    final orderedIds = ref.read(tileOrderingProvider);
+    final names = orderedIds.map((id) => id.name).toList();
+    if (newIndex > oldIndex) newIndex--;
+    names.insert(newIndex, names.removeAt(oldIndex));
+    final updated = layout.copyWith(tileOrder: names);
+    ref.read(dashboardLayoutProvider.notifier).state = updated;
+    _persistLayout(updated);
+  }
+
+  void _persistLayout(DashboardLayout layout) {
+    unawaited(Future(() async {
+      try {
+        await ref.read(dataRepositoryProvider).saveDashboardLayout(layout);
+      } catch (e) {
+        debugPrint('[Dashboard] saveDashboardLayout error: $e');
+      }
+    }));
+  }
+
+  // ── Build ────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required by AutomaticKeepAliveClientMixin.
+
     final colors = AppColorsOf(context);
-    final scoreAsync = ref.watch(healthScoreProvider);
-    final dashAsync = ref.watch(dashboardProvider);
     final layout = ref.watch(dashboardLayoutProvider);
+    final tilesAsync = ref.watch(dashboardTilesProvider);
+    final orderedTileIds = ref.watch(tileOrderingProvider);
+    final activeFilter = ref.watch(tileFilterProvider);
+    final scoreAsync = ref.watch(healthScoreProvider);
 
     // Data maturity banner state.
     final dataDays = scoreAsync.valueOrNull?.dataDays ?? 0;
@@ -147,380 +216,301 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final dataBannerMode = accountAge >= kMinDataDaysForMaturity
         ? DataMaturityMode.stillBuilding
         : DataMaturityMode.progress;
-    final showDataBanner = dataDays < kMinDataDaysForMaturity && !layout.bannerDismissed;
+    final showDataBanner =
+        dataDays < kMinDataDaysForMaturity && !layout.bannerDismissed;
 
-    return ZuralogScaffold(
-      addBottomNavPadding: true,
-      appBar: ZuralogAppBar(
-        title: 'Data',
-        tooltipConfig: const ZuralogAppBarTooltipConfig(
-          screenKey: 'health_dashboard',
-          tooltipKey: 'welcome',
-          message: 'This is your data command center. Long-press a card to '
-              'reorder, or tap the edit button to show/hide categories.',
-        ),
-        actions: [
-          if (_isEditMode)
-            TextButton(
-              onPressed: _toggleEditMode,
-              child: Text(
-                'Done',
-                style: AppTextStyles.bodyLarge.copyWith(color: colors.primary),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.tune_rounded),
-              onPressed: _toggleEditMode,
-              tooltip: 'Customize',
+    // Build tile map for O(1) lookup.
+    final tileMap = {
+      for (final t in tilesAsync.valueOrNull ?? <TileData>[]) t.tileId: t,
+    };
+
+    // Filter by active category chip.
+    final filteredTileIds = activeFilter == null
+        ? orderedTileIds
+        : orderedTileIds
+            .where((id) => id.category == activeFilter)
+            .toList();
+
+    // Check onboarding state.
+    final allTiles = tilesAsync.valueOrNull ?? [];
+    final allNoSource =
+        allTiles.isNotEmpty &&
+        allTiles.every((t) => t.dataState == TileDataState.noSource);
+
+    return Stack(
+      children: [
+        ZuralogScaffold(
+          // ignore: deprecated_member_use
+          addBottomNavPadding: true,
+          appBar: ZuralogAppBar(
+            title: 'Data',
+            tooltipConfig: const ZuralogAppBarTooltipConfig(
+              screenKey: 'health_dashboard',
+              tooltipKey: 'welcome',
+              message: 'This is your data command center. Tap the search icon '
+                  'to find metrics, or the edit button to customize your grid.',
             ),
-        ],
-      ),
-      body: RefreshIndicator(
-        color: colors.primary,
-        onRefresh: () async {
-          ref.invalidate(healthScoreProvider);
-          ref.invalidate(dashboardProvider);
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // ── Score Trend Hero ─────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: const ScoreTrendHero(),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () => setState(() => _showSearch = true),
+                tooltip: 'Search metrics',
               ),
-            ),
-
-            // ── Data Maturity Banner ─────────────────────────────────────────
-            if (showDataBanner)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimens.spaceMd,
-                    0,
-                    AppDimens.spaceMd,
-                    AppDimens.spaceSm,
+              if (_isEditMode)
+                TextButton(
+                  onPressed: _exitEditMode,
+                  child: Text(
+                    'Done',
+                    style:
+                        AppTextStyles.bodyLarge.copyWith(color: colors.primary),
                   ),
-                  child: DataMaturityBanner(
-                    daysWithData: dataDays,
-                    targetDays: kMinDataDaysForMaturity,
-                    mode: dataBannerMode,
-                    onDismiss: () {
-                      final updated = layout.copyWith(bannerDismissed: true);
-                      ref.read(dashboardLayoutProvider.notifier).state = updated;
-                      unawaited(Future(() async {
-                        try {
-                          await ref
-                              .read(dataRepositoryProvider)
-                              .saveDashboardLayout(updated);
-                        } catch (e) {
-                          debugPrint('[Dashboard] saveDashboardLayout error (banner): $e');
-                        }
-                      }));
-                    },
-                    onPermanentDismiss: dataBannerMode == DataMaturityMode.stillBuilding
-                        ? () {
-                            final updated = layout.copyWith(bannerDismissed: true);
-                            ref.read(dashboardLayoutProvider.notifier).state = updated;
-                            unawaited(Future(() async {
-                              try {
-                                await ref
-                                    .read(dataRepositoryProvider)
-                                    .saveDashboardLayout(updated);
-                              } catch (e) {
-                                debugPrint('[Dashboard] saveDashboardLayout error (banner): $e');
-                              }
-                            }));
-                          }
-                        : null,
-                  ),
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.tune_rounded),
+                  onPressed: _enterEditMode,
+                  tooltip: 'Customize',
                 ),
-              ),
-
-            // ── Section title ────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceSm,
-                ),
-                child: Text(
-                  _isEditMode ? 'Customize Dashboard' : 'Categories',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: _isEditMode
-                        ? colors.primary
-                        : Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Category cards ───────────────────────────────────────────────
-            // Provider never errors — safety-net error branch falls through
-            // to empty data, same as a zero-data response.
-            dashAsync.when(
-              error: (err, stack) => SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppDimens.spaceMd,
-                    AppDimens.spaceSm,
-                    AppDimens.spaceMd,
-                    AppDimens.bottomClearance(context),
-                  ),
-                  child: const _CategoriesEmptyState(),
-                ),
-              ),
-              loading: () => SliverMainAxisGroup(
-                slivers: [
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, i) => Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.spaceMd,
-                          vertical: AppDimens.spaceXs,
-                        ),
-                        child: const _CardSkeleton(),
-                      ),
-                      childCount: 6,
+            ],
+          ),
+          body: RefreshIndicator(
+            color: colors.primary,
+            onRefresh: () async {
+              if (_isEditMode) return;
+              ref.invalidate(dashboardTilesProvider);
+              ref.invalidate(healthScoreProvider);
+              ref.invalidate(dashboardProvider);
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // ── Health Score Strip ────────────────────────────────────
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceMd,
+                      AppDimens.spaceSm,
                     ),
+                    child: HealthScoreStrip(),
                   ),
+                ),
+
+                // ── Data Maturity Banner ──────────────────────────────────
+                if (showDataBanner)
                   SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: AppDimens.bottomClearance(context),
-                    ),
-                  ),
-                ],
-              ),
-              data: (dashboard) {
-                // Build ordered visible list from layout.
-                final allSummaries = {
-                  for (final s in dashboard.categories)
-                    s.category.name: s,
-                };
-
-                // Merge: use layout order, fall back to API order for new cats.
-                final orderedNames = layout.orderedCategories.isNotEmpty
-                    ? layout.orderedCategories
-                    : HealthCategory.values.map((c) => c.name).toList();
-
-                final items = [
-                  for (final name in orderedNames)
-                    if (allSummaries.containsKey(name))
-                      allSummaries[name]!,
-                  // Append any summaries not in the layout (newly added).
-                  for (final s in dashboard.categories)
-                    if (!orderedNames.contains(s.category.name)) s,
-                ];
-
-                if (items.isEmpty) {
-                  return SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimens.spaceMd,
+                        0,
                         AppDimens.spaceMd,
                         AppDimens.spaceSm,
-                        AppDimens.spaceMd,
-                        AppDimens.bottomClearance(context),
                       ),
-                      child: const _CategoriesEmptyState(),
+                      child: DataMaturityBanner(
+                        daysWithData: dataDays,
+                        targetDays: kMinDataDaysForMaturity,
+                        mode: dataBannerMode,
+                        onDismiss: () {
+                          final updated = layout.copyWith(bannerDismissed: true);
+                          ref.read(dashboardLayoutProvider.notifier).state =
+                              updated;
+                          _persistLayout(updated);
+                        },
+                        onPermanentDismiss:
+                            dataBannerMode == DataMaturityMode.stillBuilding
+                                ? () {
+                                    final updated =
+                                        layout.copyWith(bannerDismissed: true);
+                                    ref
+                                        .read(dashboardLayoutProvider.notifier)
+                                        .state = updated;
+                                    _persistLayout(updated);
+                                  }
+                                : null,
+                      ),
                     ),
-                  );
-                }
-
-                if (_isEditMode) {
-                  return _EditableList(
-                    items: items,
-                    layout: layout,
-                    onReorder: (oldIdx, newIdx) => _onReorder(
-                      ref,
-                      items,
-                      layout,
-                      oldIdx,
-                      newIdx,
-                    ),
-                    onVisibilityToggle: (catName) => _onToggleVisibility(
-                      ref,
-                      layout,
-                      catName,
-                    ),
-                    onColorPick: (cat) =>
-                        _onColorPick(context, ref, layout, cat),
-                  );
-                }
-
-                // Normal view: show only visible cards.
-                final visibleItems = items
-                    .where((s) =>
-                        !layout.hiddenCategories.contains(s.category.name))
-                    .toList();
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) {
-                      final summary = visibleItems[i];
-                      final cat = summary.category;
-                      final overrideValue =
-                          layout.categoryColorOverrides[cat.name];
-                      final cardColor = overrideValue != null
-                          ? Color(overrideValue)
-                          : categoryColor(cat);
-                        return Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            AppDimens.spaceMd,
-                            AppDimens.spaceXs,
-                            AppDimens.spaceMd,
-                            i == visibleItems.length - 1
-                                ? AppDimens.bottomClearance(context)
-                                : AppDimens.spaceXs,
-                          ),
-                        child: CategoryCard(
-                          title: cat.displayName,
-                          categoryColor: cardColor,
-                          primaryValue: summary.primaryValue,
-                          unit: summary.unit,
-                          deltaPercent: summary.deltaPercent,
-                          trend: summary.trend,
-                          onTap: () => context.push(
-                            '/data/category/${cat.name}',
-                          ),
-                        ),
-                      );
-                    },
-                    childCount: visibleItems.length,
                   ),
-                );
-              },
+
+                // ── Category Filter Chips ─────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      top: AppDimens.spaceSm,
+                      bottom: AppDimens.spaceSm,
+                    ),
+                    child: CategoryFilterChips(
+                      selected: activeFilter,
+                      onSelected: (cat) {
+                        ref.read(tileFilterProvider.notifier).state = cat;
+                        // Collapse expanded tile when filter changes.
+                        setState(() => _expandedTileId = null);
+                      },
+                    ),
+                  ),
+                ),
+
+                // ── Global Time Range Selector ────────────────────────────
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: AppDimens.spaceSm),
+                    child: GlobalTimeRangeSelector(),
+                  ),
+                ),
+
+                // ── Onboarding empty state or Tile Grid ───────────────────
+                if (allNoSource)
+                  SliverToBoxAdapter(
+                    child: _OnboardingEmptyState(
+                      onConnectDevice: () => context
+                          .push(RouteNames.settingsIntegrationsPath),
+                      onLogManually: () => context.go('/today'),
+                    ),
+                  )
+                else if (tilesAsync.isLoading)
+                  _buildLoadingSlivers()
+                else
+                  TileGrid(
+                    orderedTileIds: filteredTileIds,
+                    tiles: tileMap,
+                    layout: layout,
+                    isEditMode: _isEditMode,
+                    expandedTileId: _expandedTileId,
+                    onTileTap: _onTileTap,
+                    onViewDetails: _onViewDetails,
+                    onAskCoach: _onAskCoach,
+                    onSizeChanged: _onSizeChanged,
+                    onVisibilityToggled: _onVisibilityToggled,
+                    onColorPick: _onColorPick,
+                    onReorder: _onReorder,
+                  ),
+
+                // ── "Ask Coach about [Category]" CTA ──────────────────────
+                if (activeFilter != null && !allNoSource)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.auto_awesome_rounded),
+                        label: Text(
+                          'Ask Coach about ${activeFilter.displayName}',
+                        ),
+                        onPressed: () {
+                          ref.read(coachPrefillProvider.notifier).state =
+                              'Tell me about my ${activeFilter.displayName} data';
+                          context.go('/coach');
+                        },
+                      ),
+                    ),
+                  ),
+
+                // ── Bottom padding ────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: AppDimens.bottomClearance(context) +
+                        AppDimens.spaceMd,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+
+        // ── Search Overlay ────────────────────────────────────────────────
+        if (_showSearch)
+          SearchOverlay(
+            tiles: tilesAsync.valueOrNull ?? [],
+            onClose: () => setState(() => _showSearch = false),
+            onTileSelected: (tileId) {
+              setState(() {
+                _showSearch = false;
+                _expandedTileId = tileId;
+                // Clear category filter so the tile is visible.
+                ref.read(tileFilterProvider.notifier).state = null;
+              });
+            },
+          ),
+      ],
     );
   }
 
-  void _onReorder(
-    WidgetRef ref,
-    List<CategorySummary> items,
-    DashboardLayout layout,
-    int oldIdx,
-    int newIdx,
-  ) {
-    ref.read(hapticServiceProvider).light();
-    final names = items.map((s) => s.category.name).toList();
-    if (newIdx > oldIdx) newIdx--;
-    names.insert(newIdx, names.removeAt(oldIdx));
-    final updated = layout.copyWith(orderedCategories: names);
-    ref.read(dashboardLayoutProvider.notifier).state = updated;
-    // Persist to API (fire-and-forget).
-    unawaited(Future(() async {
-      try {
-        await ref.read(dataRepositoryProvider).saveDashboardLayout(updated);
-      } catch (e) {
-        debugPrint('[Dashboard] saveDashboardLayout error (reorder): $e');
-      }
-    }));
-  }
-
-  void _onToggleVisibility(
-    WidgetRef ref,
-    DashboardLayout layout,
-    String catName,
-  ) {
-    ref.read(hapticServiceProvider).selectionTick();
-    final hidden = Set<String>.from(layout.hiddenCategories);
-    if (hidden.contains(catName)) {
-      hidden.remove(catName);
-    } else {
-      hidden.add(catName);
-    }
-    final updated = layout.copyWith(hiddenCategories: hidden);
-    ref.read(dashboardLayoutProvider.notifier).state = updated;
-    unawaited(Future(() async {
-      try {
-        await ref.read(dataRepositoryProvider).saveDashboardLayout(updated);
-      } catch (e) {
-        debugPrint('[Dashboard] saveDashboardLayout error (visibility): $e');
-      }
-    }));
+  Widget _buildLoadingSlivers() {
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, i) => const Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceXs,
+              ),
+              child: _CardSkeleton(),
+            ),
+            childCount: 6,
+          ),
+        ),
+      ],
+    );
   }
 }
 
-// ── _EditableList ─────────────────────────────────────────────────────────────
+// ── _OnboardingEmptyState ─────────────────────────────────────────────────────
 
-class _EditableList extends StatelessWidget {
-  const _EditableList({
-    required this.items,
-    required this.layout,
-    required this.onReorder,
-    required this.onVisibilityToggle,
-    required this.onColorPick,
+/// Shown when all tiles are in [TileDataState.noSource] — brand-new user.
+class _OnboardingEmptyState extends StatelessWidget {
+  const _OnboardingEmptyState({
+    required this.onConnectDevice,
+    required this.onLogManually,
   });
 
-  final List<CategorySummary> items;
-  final DashboardLayout layout;
-  final void Function(int oldIdx, int newIdx) onReorder;
-  final void Function(String catName) onVisibilityToggle;
-  final void Function(HealthCategory cat) onColorPick;
+  final VoidCallback onConnectDevice;
+  final VoidCallback onLogManually;
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        0,
-        AppDimens.spaceMd,
-        AppDimens.bottomClearance(context),
-      ),
-      sliver: SliverReorderableList(
-        itemCount: items.length,
-        onReorder: onReorder,
-        proxyDecorator: (child, index, animation) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, animChild) => Material(
-              elevation: 4 * animation.value,
-              borderRadius: BorderRadius.circular(20),
-              color: Colors.transparent,
-              child: animChild,
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: AppDimens.spaceMd),
+          Icon(
+            Icons.monitor_heart_rounded,
+            size: 56,
+            color: colors.textTertiary,
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          Text(
+            'No data yet',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.titleLarge.copyWith(
+              color: colors.textPrimary,
             ),
-            child: child,
-          );
-        },
-        itemBuilder: (context, i) {
-          final summary = items[i];
-          final cat = summary.category;
-          final isVisible = !layout.hiddenCategories.contains(cat.name);
-          final overrideValue = layout.categoryColorOverrides[cat.name];
-          final cardColor = overrideValue != null
-              ? Color(overrideValue)
-              : categoryColor(cat);
-          return ReorderableDragStartListener(
-            key: ValueKey(cat.name),
-            index: i,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: AppDimens.spaceXs,
-              ),
-              child: CategoryCard(
-                title: cat.displayName,
-                categoryColor: cardColor,
-                primaryValue: summary.primaryValue,
-                unit: summary.unit,
-                isVisible: isVisible,
-                isEditMode: true,
-                onVisibilityToggle: () => onVisibilityToggle(cat.name),
-                onColorPick: () => onColorPick(cat),
-              ),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'Connect a health app or log your first data point manually '
+            'to start seeing your metrics here.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colors.textSecondary,
             ),
-          );
-        },
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
+          FilledButton.icon(
+            icon: const Icon(Icons.cable_rounded),
+            label: const Text('Connect a device'),
+            onPressed: onConnectDevice,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.edit_rounded),
+            label: const Text('Log manually'),
+            onPressed: onLogManually,
+          ),
+        ],
       ),
     );
   }
@@ -528,7 +518,7 @@ class _EditableList extends StatelessWidget {
 
 // ── _ColorPickerSheet ─────────────────────────────────────────────────────────
 
-/// Bottom sheet for picking a category accent color override.
+/// Bottom sheet for picking a tile accent color override.
 class _ColorPickerSheet extends StatelessWidget {
   const _ColorPickerSheet({
     required this.categoryName,
@@ -569,7 +559,8 @@ class _ColorPickerSheet extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: colors.elevatedSurface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(
           AppDimens.spaceMd,
@@ -578,75 +569,47 @@ class _ColorPickerSheet extends StatelessWidget {
           AppDimens.spaceMd,
         ),
         child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text('Accent Color', style: AppTextStyles.titleMedium),
-          const SizedBox(height: AppDimens.spaceMd),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              // Reset to default chip
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).pop();
-                  onColorSelected(null);
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: defaultColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: currentColor == defaultColor
-                          ? Colors.white
-                          : Colors.transparent,
-                      width: 2.5,
-                    ),
-                  ),
-                  child: currentColor == defaultColor
-                      ? const Icon(
-                          Icons.check_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        )
-                      : null,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              ..._palette.map(
-                (c) => GestureDetector(
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            Text('Accent Color', style: AppTextStyles.titleMedium),
+            const SizedBox(height: AppDimens.spaceMd),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                // Reset to default chip
+                GestureDetector(
                   onTap: () {
                     Navigator.of(context).pop();
-                    onColorSelected(c);
+                    onColorSelected(null);
                   },
                   child: Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: c,
+                      color: defaultColor,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: currentColor.toARGB32() == c.toARGB32()
+                        color: currentColor == defaultColor
                             ? Colors.white
                             : Colors.transparent,
                         width: 2.5,
                       ),
                     ),
-                    child: currentColor.toARGB32() == c.toARGB32()
+                    child: currentColor == defaultColor
                         ? const Icon(
                             Icons.check_rounded,
                             color: Colors.white,
@@ -655,193 +618,39 @@ class _ColorPickerSheet extends StatelessWidget {
                         : null,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppDimens.spaceMd),
-        ],
-      ),
-    ),
-    );
-  }
-}
-
-// ── _CategoriesEmptyState ─────────────────────────────────────────────────────
-
-/// Shown when the dashboard has no category data yet — typically for a
-/// brand-new user who hasn't connected any integrations.
-///
-/// Welcoming and action-oriented: guides the user toward connecting an app
-/// or logging their first data point manually.
-class _CategoriesEmptyState extends StatelessWidget {
-  const _CategoriesEmptyState();
-
-  static const _categories = [
-    _CategoryPreviewItem(
-      label: 'Activity',
-      color: AppColors.categoryActivity,
-    ),
-    _CategoryPreviewItem(
-      label: 'Sleep',
-      color: AppColors.categorySleep,
-    ),
-    _CategoryPreviewItem(
-      label: 'Heart',
-      color: AppColors.categoryHeart,
-    ),
-    _CategoryPreviewItem(
-      label: 'Nutrition',
-      color: AppColors.categoryNutrition,
-    ),
-    _CategoryPreviewItem(
-      label: 'Body',
-      color: AppColors.categoryBody,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Preview cards — ghost/dimmed to show what's coming
-        ..._categories.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
-            child: _GhostCategoryCard(item: item),
-          ),
-        ),
-        const SizedBox(height: AppDimens.spaceMd),
-        // Call-to-action card
-        GestureDetector(
-          onTap: () => context.push(RouteNames.settingsIntegrationsPath),
-          child: Container(
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
-          decoration: BoxDecoration(
-            color: colors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-            border: Border.all(
-              color: colors.primary.withValues(alpha: 0.20),
+                ..._palette.map(
+                  (c) => GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onColorSelected(c);
+                    },
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: c,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: currentColor.toARGB32() == c.toARGB32()
+                              ? Colors.white
+                              : Colors.transparent,
+                          width: 2.5,
+                        ),
+                      ),
+                      child: currentColor.toARGB32() == c.toARGB32()
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          child: Row(
-            children: [
-              ZIconBadge(
-                icon: Icons.cable_rounded,
-                color: colors.primary,
-                size: 40,
-                iconSize: 20,
-              ),
-              const SizedBox(width: AppDimens.spaceMd),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Connect your first app',
-                      style: AppTextStyles.titleMedium,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Your categories fill in automatically once you connect a health app.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: colors.primary,
-              ),
-            ],
-          ),
-        ),
-        ),
-      ],
-    );
-  }
-}
-
-@immutable
-class _CategoryPreviewItem {
-  const _CategoryPreviewItem({required this.label, required this.color});
-  final String label;
-  final Color color;
-}
-
-/// A dimmed, ghost version of a category card — shows the placeholder layout
-/// that will be filled once the user has real data.
-class _GhostCategoryCard extends StatelessWidget {
-  const _GhostCategoryCard({required this.item});
-  final _CategoryPreviewItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Opacity(
-      opacity: 0.45,
-      child: IntrinsicHeight(
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.cardBackground,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Category color accent stripe
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  color: item.color,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceSm + 2,
-                  ),
-                  child: Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            width: 28,
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: AppColors.textTertiary
-                                  .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            const SizedBox(height: AppDimens.spaceMd),
+          ],
         ),
       ),
     );
@@ -857,10 +666,10 @@ class _CardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return Container(
-      height: 72,
+      height: 120,
       decoration: BoxDecoration(
         color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
     );
   }
