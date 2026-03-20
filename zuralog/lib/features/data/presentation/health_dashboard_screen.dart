@@ -20,6 +20,7 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
+import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/domain/time_range.dart';
@@ -51,6 +52,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   bool _isEditMode = false;
   TileId? _expandedTileId;
   bool _showSearch = false;
+  bool _reorderedDuringEdit = false;
 
   /// Per-category time range override. `null` means "inherit global range".
   /// Set when a category chip is activated; cleared when filter is cleared.
@@ -88,14 +90,19 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     setState(() {
       _isEditMode = true;
       _expandedTileId = null; // collapse any expanded tile
+      _reorderedDuringEdit = false;
     });
   }
 
   void _exitEditMode() {
     ref.read(hapticServiceProvider).medium();
-    setState(() => _isEditMode = false);
-    // Re-apply smart ordering after edits.
-    ref.invalidate(dashboardTilesProvider);
+    final didReorder = _reorderedDuringEdit;
+    setState(() {
+      _isEditMode = false;
+      _reorderedDuringEdit = false;
+    });
+    // Only re-apply smart ordering when the tile order actually changed.
+    if (didReorder) ref.invalidate(dashboardTilesProvider);
   }
 
   // ── Tile interactions ────────────────────────────────────────────────────────
@@ -158,8 +165,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
       isScrollControlled: true,
       builder: (_) => _ColorPickerSheet(
         categoryName: tileId.displayName,
-        currentColor: currentColor ?? const Color(0xFF007AFF),
-        defaultColor: const Color(0xFF007AFF),
+        currentColor: currentColor ?? categoryColor(tileId.category),
+        defaultColor: categoryColor(tileId.category),
         onColorSelected: (picked) {
           final currentLayout = ref.read(dashboardLayoutProvider);
           final overrides =
@@ -179,6 +186,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   }
 
   void _onReorder(int oldIndex, int newIndex) {
+    _reorderedDuringEdit = true;
     ref.read(hapticServiceProvider).light();
     final layout = ref.read(dashboardLayoutProvider);
     final orderedIds = ref.read(tileOrderingProvider);
