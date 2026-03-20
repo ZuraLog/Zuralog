@@ -16,6 +16,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/state/log_sheet_provider.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -362,14 +363,20 @@ class _HealthScoreHero extends ConsumerWidget {
                 ),
               ),
               data: (data) {
-                // No data or implausibly low score (< 20) → show the
-                // sad-face zero state rather than a misleading 0 or near-0
-                // ring. A real health score below 20 would be extraordinary;
-                // a value that low almost always means the calculation hasn't
-                // run yet or returned an error.
-                if (data.dataDays == 0 || data.score < 20) {
+                // Three states based on data maturity:
+                // 1. No data at all → sad-face zero state.
+                if (data.dataDays == 0) {
                   return const HealthScoreZeroState();
                 }
+                // 2. Building up (Days 1–6) → partial sage-green ring
+                //    showing progress towards the 7-day threshold.
+                if (data.dataDays < kMinDataDaysForMaturity) {
+                  return HealthScoreBuildingState(
+                    dataDays: data.dataDays,
+                    targetDays: kMinDataDaysForMaturity,
+                  );
+                }
+                // 3. Full (Day 7+) → real score ring with sparkline.
                 return Column(
                   children: [
                     HealthScoreWidget.hero(
@@ -384,6 +391,11 @@ class _HealthScoreHero extends ConsumerWidget {
                         context.go(RouteNames.dataPath);
                       },
                     ),
+                    // AI delta chip — week-over-week score change.
+                    if (data.weekChange != null &&
+                        data.weekChange != 0 &&
+                        data.dataDays > kMinDataDaysForMaturity)
+                      _HealthScoreDeltaChip(weekChange: data.weekChange!),
                   ],
                 );
               },
@@ -778,6 +790,46 @@ class _GoalsSkeleton extends StatelessWidget {
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         border: Border.all(color: colors.border),
+      ),
+    );
+  }
+}
+
+// ── _HealthScoreDeltaChip ─────────────────────────────────────────────────────
+
+/// Small pill chip showing week-over-week health score change.
+///
+/// Positive: green arrow up + "↑ X pts this week".
+/// Negative: red arrow down + "↓ X pts this week".
+class _HealthScoreDeltaChip extends StatelessWidget {
+  const _HealthScoreDeltaChip({required this.weekChange});
+
+  final int weekChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositive = weekChange > 0;
+    final chipColor = isPositive
+        ? AppColors.categoryActivity // green
+        : AppColors.accentLight;     // red/coral
+    final arrow = isPositive ? '↑' : '↓';
+    final absChange = weekChange.abs();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppDimens.spaceSm),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: chipColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+        ),
+        child: Text(
+          '$arrow $absChange pts this week',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: chipColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

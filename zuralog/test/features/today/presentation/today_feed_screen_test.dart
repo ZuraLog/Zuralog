@@ -13,6 +13,8 @@ import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/presentation/today_feed_screen.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/cards/z_daily_goals_card.dart';
+import 'package:zuralog/shared/widgets/health_score_building_state.dart';
+import 'package:zuralog/shared/widgets/health_score_zero_state.dart';
 import 'package:zuralog/shared/widgets/streak_hero_card.dart';
 
 
@@ -231,6 +233,123 @@ void main() {
 
       // The ref.listen in TodayFeedScreen should have re-fetched dailyGoalsProvider.
       expect(dailyGoalsFetchCount, greaterThan(initialFetchCount));
+    });
+
+    // ── Health Score 3-state branching tests ──────────────────────────────
+
+    testWidgets('shows HealthScoreZeroState when dataDays == 0',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 0, trend: [], dataDays: 0),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(insights: [], streak: null),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => TodayLogSummary.empty,
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(HealthScoreZeroState), findsOneWidget);
+      expect(find.byType(HealthScoreBuildingState), findsNothing);
+    });
+
+    testWidgets('shows HealthScoreBuildingState when dataDays is 1–6',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 30, trend: [], dataDays: 4),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(insights: [], streak: null),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => TodayLogSummary.empty,
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(HealthScoreBuildingState), findsOneWidget);
+      expect(find.text('4/7'), findsOneWidget);
+      expect(find.text('3 more days'), findsOneWidget);
+    });
+
+    testWidgets('shows full HealthScoreWidget when dataDays >= 7',
+        (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          userPreferencesProvider
+              .overrideWith(() => _StubUserPreferencesNotifier()),
+          healthScoreProvider.overrideWith(
+            (ref) async =>
+                const HealthScoreData(score: 82, trend: [80, 82], dataDays: 10),
+          ),
+          todayFeedProvider.overrideWith(
+            (ref) async => TodayFeedData(insights: [], streak: null),
+          ),
+          todayLogSummaryProvider.overrideWith(
+            (ref) async => TodayLogSummary.empty,
+          ),
+          userLoggedTypesProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+          goalsProvider.overrideWith(
+            (ref) async => const GoalList(goals: []),
+          ),
+          dailyGoalsProvider.overrideWith((ref) async => const <DailyGoal>[]),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: _router()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(HealthScoreZeroState), findsNothing);
+      expect(find.byType(HealthScoreBuildingState), findsNothing);
     });
   });
 }

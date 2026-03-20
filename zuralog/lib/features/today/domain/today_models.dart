@@ -65,6 +65,7 @@ class HealthScoreData {
     this.commentary,
     this.dataDays = 0,
     this.inputs = const [],
+    this.weekChange,
   });
 
   /// Current health score (0–100).
@@ -83,6 +84,10 @@ class HealthScoreData {
   /// Weighted input breakdown for the composite score.
   /// Empty when the backend does not yet return input data.
   final List<HealthScoreInput> inputs;
+
+  /// Week-over-week score change (e.g. +6 or -3). Null when the backend
+  /// does not yet return this field or when not enough data exists.
+  final int? weekChange;
 
   /// Deserializes from a JSON map.
   factory HealthScoreData.fromJson(Map<String, dynamic> json) {
@@ -112,6 +117,7 @@ class HealthScoreData {
       inputs: rawInputs
           .map((e) => HealthScoreInput.fromJson(e as Map<String, dynamic>))
           .toList(),
+      weekChange: (json['week_change'] as num?)?.toInt(),
     );
   }
 }

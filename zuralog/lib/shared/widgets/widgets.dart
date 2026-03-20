@@ -30,6 +30,7 @@ export 'metric_grid/metric_tile.dart';
 export 'profile_side_panel.dart';
 export 'sheets/z_log_grid_cell.dart';
 export 'sheets/z_log_grid_sheet.dart';
+export 'health_score_building_state.dart';
 export 'health_score_zero_state.dart';
 export 'streak_hero_card.dart';
 export 'states/z_empty_insights_state.dart';
