@@ -455,8 +455,10 @@ class _MetricGridSection extends ConsumerWidget {
     final summaryAsync = ref.watch(todayLogSummaryProvider);
 
     return pinnedAsync.when(
-      loading: () => const SizedBox(height: 60),
-      error: (e, _) => const SizedBox.shrink(),
+      loading: () => const _MetricGridSkeleton(),
+      error: (e, _) => _MetricGridError(
+        onRetry: () => ref.invalidate(pinnedMetricsProvider),
+      ),
       data: (pinned) {
         final summary = summaryAsync.valueOrNull ?? TodayLogSummary.empty;
 
@@ -809,8 +811,23 @@ class _DailyGoalsSection extends ConsumerWidget {
   }
 
   String _formatGoalValue(double value) {
-    if (value == value.roundToDouble()) return value.toInt().toString();
+    if (value == value.roundToDouble()) {
+      final intVal = value.toInt();
+      if (intVal >= 1000) return _formatWithCommas(intVal);
+      return intVal.toString();
+    }
     return value.toStringAsFixed(1);
+  }
+
+  /// Formats an integer with thousand separators (e.g. 10000 → "10,000").
+  static String _formatWithCommas(int n) {
+    final str = n.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) buf.write(',');
+      buf.write(str[i]);
+    }
+    return buf.toString();
   }
 }
 
@@ -826,6 +843,106 @@ class _GoalsSkeleton extends StatelessWidget {
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
         border: Border.all(color: colors.border),
+      ),
+    );
+  }
+}
+
+// ── _MetricGridSkeleton ───────────────────────────────────────────────────────
+
+/// Loading placeholder for the metric grid — two rows of three rounded rects.
+class _MetricGridSkeleton extends StatelessWidget {
+  const _MetricGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header placeholder
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
+          child: Container(
+            width: 80,
+            height: 12,
+            decoration: BoxDecoration(
+              color: colors.border,
+              borderRadius: BorderRadius.circular(AppDimens.shapeXs),
+            ),
+          ),
+        ),
+        // Row 1: 3 tiles
+        for (int row = 0; row < 2; row++) ...[
+          Row(
+            children: [
+              for (int col = 0; col < 3; col++) ...[
+                Expanded(
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: colors.cardBackground,
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.shapeSm),
+                      border: Border.all(color: colors.border),
+                    ),
+                  ),
+                ),
+                if (col < 2) const SizedBox(width: AppDimens.spaceXs),
+              ],
+            ],
+          ),
+          if (row < 1) const SizedBox(height: AppDimens.spaceXs),
+        ],
+      ],
+    );
+  }
+}
+
+// ── _MetricGridError ─────────────────────────────────────────────────────────
+
+/// Compact error state shown when the metric grid fails to load.
+class _MetricGridError extends StatelessWidget {
+  const _MetricGridError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceSm),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline_rounded,
+            size: AppDimens.iconSm,
+            color: colors.textTertiary,
+          ),
+          const SizedBox(width: AppDimens.spaceXs),
+          Text(
+            "Couldn't load metrics",
+            style: AppTextStyles.bodySmall.copyWith(
+              color: colors.textTertiary,
+            ),
+          ),
+          const SizedBox(width: AppDimens.spaceSm),
+          GestureDetector(
+            onTap: onRetry,
+            child: Semantics(
+              button: true,
+              label: 'Retry loading metrics',
+              child: Text(
+                'Retry',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
