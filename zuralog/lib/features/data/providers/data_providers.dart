@@ -10,14 +10,22 @@
 /// - [categoryDetailProvider]       — async family: detail for one category
 /// - [metricDetailProvider]         — async family: deep-dive for one metric
 /// - [dashboardLayoutProvider]      — mutable dashboard card order/visibility
+/// - [tileFilterProvider]           — active category chip filter (null = All)
+/// - [dashboardTimeRangeProvider]   — global time range selection
+/// - [customDateRangeProvider]      — session-only custom date range
+/// - [tileOrderingProvider]         — computed display order of TileIds
+/// - [dashboardTilesProvider]       — async full tile list for the dashboard grid
 library;
 
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/data/data/data_repository.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/domain/time_range.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
@@ -158,5 +166,121 @@ final dashboardLayoutLoaderProvider = FutureProvider<DashboardLayout?>((ref) asy
   } catch (e) {
     debugPrint('[DashboardLayout] Could not restore layout: $e');
     return null;
+  }
+});
+
+// ── Tile Filter ───────────────────────────────────────────────────────────────
+
+/// Which category chip is active on the dashboard. `null` means "All".
+final tileFilterProvider = StateProvider<HealthCategory?>((ref) => null);
+
+// ── Dashboard Time Range ──────────────────────────────────────────────────────
+
+/// Global time range selection for the dashboard grid (default: 7D per spec §3.4).
+final dashboardTimeRangeProvider =
+    StateProvider<TimeRange>((ref) => TimeRange.sevenDays);
+
+// ── Custom Date Range ─────────────────────────────────────────────────────────
+
+/// Session-only custom date range. Null when time range is not [TimeRange.custom].
+final customDateRangeProvider = StateProvider<DateTimeRange?>((ref) => null);
+
+// ── Tile Ordering ─────────────────────────────────────────────────────────────
+
+/// Computes the ordered list of visible TileIds for the dashboard.
+///
+/// When [DashboardLayout.tileOrder] is non-empty (user set a custom order),
+/// that order is used directly, with unknown IDs filtered out and any new
+/// tiles not in the persisted order appended at the end.
+///
+/// When tileOrder is empty (first launch or old layout), tiles are sorted
+/// by data recency: tiles with a non-null [TileData.lastUpdated] sort first
+/// (most recent first), tiles with no data sort last.
+///
+/// This provider is recomputed when [dashboardLayoutProvider] or
+/// [dashboardTilesProvider] changes.
+///
+/// Note: Hidden tiles (per [DashboardLayout.tileVisibility]) are included in
+/// this list — filtering hidden tiles is the grid widget's responsibility.
+/// Smart ordering is stable within a session (spec §12.3); the sort runs
+/// once per [dashboardTilesProvider] resolution, not on every data update.
+final tileOrderingProvider = Provider<List<TileId>>((ref) {
+  final layout = ref.watch(dashboardLayoutProvider);
+  final tilesAsync = ref.watch(dashboardTilesProvider);
+  final tiles = tilesAsync.valueOrNull ?? [];
+
+  // Build a map for O(1) lookup of TileData by TileId.
+  final tileMap = {for (final t in tiles) t.tileId: t};
+
+  if (layout.tileOrder.isNotEmpty) {
+    // User has a custom order — respect it, filter unknown IDs, append new tiles.
+    final persisted = layout.tileOrder
+        .map(TileId.fromString)
+        .whereType<TileId>()
+        .toList();
+    final persistedSet = persisted.toSet();
+    final newTiles = TileId.values.where((id) => !persistedSet.contains(id));
+    return [...persisted, ...newTiles];
+  }
+
+  // Smart ordering: sort by recency of lastUpdated, nulls last.
+  final sorted = List<TileId>.from(TileId.values)
+    ..sort((a, b) {
+      final aDate = tileMap[a]?.lastUpdated;
+      final bDate = tileMap[b]?.lastUpdated;
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1; // a has no data → sink
+      if (bDate == null) return -1; // b has no data → sink
+      return bDate.compareTo(aDate); // most recent first
+    });
+  return sorted;
+});
+
+// ── Dashboard Tiles ───────────────────────────────────────────────────────────
+
+/// Async provider producing the full tile list for the dashboard grid.
+///
+/// Combines data from multiple sources:
+/// - [dashboardProvider] for category-level summaries (primary values, trends)
+///
+/// On first load or when data is unavailable, produces tiles in [TileDataState.noSource]
+/// state. The [dashboardTimeRangeProvider] is watched so a range change triggers re-fetch.
+///
+/// Never throws — errors resolve to empty/noSource tiles.
+final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
+  ref.watch(dashboardTimeRangeProvider);
+  try {
+    final dashAsync = await ref.watch(dashboardProvider.future);
+    final categoryMap = {
+      for (final s in dashAsync.categories) s.category: s,
+    };
+    return TileId.values.map((tileId) {
+      final summary = categoryMap[tileId.category];
+      if (summary == null) {
+        return TileData(
+          tileId: tileId,
+          dataState: TileDataState.noSource,
+          lastUpdated: null,
+        );
+      }
+      final viz = ValueData(
+        primaryValue: summary.primaryValue,
+        secondaryLabel: summary.unit,
+      );
+      return TileData(
+        tileId: tileId,
+        dataState: TileDataState.loaded,
+        lastUpdated: summary.lastUpdated,
+        visualization: viz,
+      );
+    }).toList();
+  } catch (_) {
+    return TileId.values
+        .map((id) => TileData(
+              tileId: id,
+              dataState: TileDataState.noSource,
+              lastUpdated: null,
+            ))
+        .toList();
   }
 });
