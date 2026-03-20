@@ -1,9 +1,124 @@
-Copyright (c) 2026 Hyo Won Bernabe and Fernando Leano. All Rights Reserved.
+# ZURALOG PROPRIETARY SOFTWARE LICENSE
 
-NOTICE:  All information contained herein is, and remains
-the property of Hyo Won Bernabe. The intellectual and technical concepts contained
-herein are proprietary to Hyo Won Bernabe and may be covered by U.S. and Foreign Patents,
-patents in process, and are protected by trade secret or copyright law.
-Dissemination of this information or reproduction of this material
-is strictly forbidden unless prior written permission is obtained
-from Hyo Won Bernabe.
+**Copyright (c) 2026 ZuraLog LLC. All Rights Reserved.**  
+**Founders:** Fernando Leano and Hyowon Bernabe
+
+---
+
+> **IMPORTANT — READ CAREFULLY BEFORE ACCESSING, CLONING, FORKING, OR OTHERWISE USING THIS REPOSITORY OR ANY PORTION OF ITS CONTENTS.**
+
+This software, including all source code, object code, algorithms, data structures, interfaces, documentation, assets, configuration files, and any other materials contained in or derived from this repository (collectively, the **"Software"**), is the exclusive proprietary property of **ZuraLog LLC** and its founders, Fernando Leano and Hyowon Bernabe (collectively, **"ZuraLog"**).
+
+**BY ACCESSING THIS REPOSITORY IN ANY MANNER, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THE TERMS OF THIS LICENSE. IF YOU DO NOT AGREE, YOU MUST IMMEDIATELY CEASE ALL ACCESS AND DESTROY ANY COPIES IN YOUR POSSESSION.**
+
+---
+
+## 1. Ownership and Reservation of Rights
+
+All right, title, and interest in and to the Software — including all intellectual property rights therein — are and shall remain the exclusive property of ZuraLog LLC. This License does not convey to you any ownership interest, license, or any other right in or to the Software except as expressly set forth herein. **All rights not expressly granted are reserved.**
+
+The Software may incorporate trade secrets, patented or patent-pending inventions, copyrighted works, and other proprietary intellectual property of ZuraLog. No right, title, or interest in any trademark, service mark, logo, or trade name of ZuraLog is granted under this License.
+
+---
+
+## 2. Restrictions — Prohibited Uses
+
+Unless you have received the prior, express, **written permission** of ZuraLog LLC (signed by an authorized representative), you are strictly prohibited from doing any of the following, in whole or in part:
+
+- **(a) COPYING** — Reproducing, duplicating, or making copies of the Software or any portion thereof, in any form or medium, whether electronic, mechanical, photographic, or otherwise;
+
+- **(b) DISTRIBUTION** — Distributing, publishing, transmitting, broadcasting, or otherwise making the Software available to any third party, whether for commercial or non-commercial purposes, whether for free or for consideration;
+
+- **(c) MODIFICATION** — Modifying, adapting, translating, editing, or creating derivative works based on or derived from the Software or any portion thereof;
+
+- **(d) REVERSE ENGINEERING** — Decompiling, disassembling, reverse engineering, or otherwise attempting to reconstruct, identify, or derive the source code, underlying ideas, algorithms, structure, or organization of the Software from its object code or any other compiled or minified form;
+
+- **(e) SUBLICENSING** — Sublicensing, renting, leasing, lending, selling, reselling, or otherwise transferring rights to the Software to any third party;
+
+- **(f) COMMERCIAL EXPLOITATION** — Using the Software, in whole or in part, to build, train, or improve any competing product or service, to generate revenue, or to obtain any commercial advantage without ZuraLog's express written consent;
+
+- **(g) INCORPORATION** — Incorporating, embedding, or bundling the Software or any portion thereof into another software product, system, or service;
+
+- **(h) AI/ML TRAINING** — Using the Software, its architecture, or any portion of its code as training data, fine-tuning data, or evaluation data for any machine learning model, large language model, code generation system, or artificial intelligence system of any kind;
+
+- **(i) CIRCUMVENTION** — Removing, altering, or obscuring any proprietary notices, copyright notices, labels, or legends affixed to or contained within the Software.
+
+---
+
+## 3. Limited Viewing Permission
+
+This repository is made accessible on a public-facing platform solely for purposes of transparency, portfolio demonstration, and investor or partner review. Such access constitutes a limited, revocable, non-exclusive, non-transferable permission to **VIEW** the Software's source code for personal, non-commercial evaluation only.
+
+This viewing permission does not constitute an open-source license and does not grant any rights enumerated in Section 2 above. ZuraLog may revoke this viewing permission at any time without notice.
+
+---
+
+## 4. Intellectual Property Protection
+
+The Software and all components thereof constitute valuable **trade secrets** and proprietary information of ZuraLog LLC. ZuraLog actively monitors for unauthorized reproduction, distribution, or use of its intellectual property and reserves the right to employ technical, legal, and equitable means to detect and pursue all instances of infringement, misappropriation, or unauthorized use.
+
+Any ideas, concepts, techniques, methods, or inventions embodied in the Software that are not otherwise publicly known constitute trade secrets of ZuraLog under applicable state and federal law, including without limitation:
+
+- The **Defend Trade Secrets Act of 2016** (18 U.S.C. § 1836 et seq.)
+- The **Florida Uniform Trade Secrets Act** (Fla. Stat. § 688.001 et seq.)
+
+---
+
+## 5. Enforcement and Remedies
+
+> **ANY UNAUTHORIZED COPYING, DISTRIBUTION, MODIFICATION, OR USE OF THIS SOFTWARE CONSTITUTES INFRINGEMENT OF ZURALOG'S INTELLECTUAL PROPERTY RIGHTS AND WILL BE PROSECUTED TO THE MAXIMUM EXTENT PERMITTED BY LAW.**
+
+ZuraLog LLC expressly reserves all rights and remedies available at law and in equity, including without limitation:
+
+- **(a)** Injunctive and other equitable relief to prevent or restrain unauthorized use, without the requirement of posting a bond;
+
+- **(b)** Monetary damages, including all actual damages, lost profits, unjust enrichment, and disgorgement of profits obtained through unauthorized use;
+
+- **(c)** Statutory damages under applicable copyright law (17 U.S.C. § 504), including enhanced damages for **willful infringement of up to $150,000 per work infringed**;
+
+- **(d)** Recovery of attorneys' fees, litigation costs, and investigative expenses under applicable law;
+
+- **(e)** Criminal referral where appropriate under:
+  - 18 U.S.C. § 1030 — Computer Fraud and Abuse Act
+  - 18 U.S.C. § 1832 — Theft of Trade Secrets
+  - Other applicable federal and state statutes
+
+ZuraLog's decision not to pursue enforcement in any particular instance shall not constitute a waiver of any right or remedy.
+
+---
+
+## 6. No Warranties
+
+THE SOFTWARE IS PROVIDED **"AS IS,"** WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. ZURALOG MAKES NO REPRESENTATIONS OR WARRANTIES WITH RESPECT TO THE SOFTWARE, INCLUDING WITHOUT LIMITATION ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, OR NON-INFRINGEMENT. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF ANY AUTHORIZED USE OF THE SOFTWARE IS WITH YOU.
+
+---
+
+## 7. Limitation of Liability
+
+IN NO EVENT SHALL ZURALOG LLC, ITS FOUNDERS, OFFICERS, EMPLOYEES, AGENTS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING WITHOUT LIMITATION LOSS OF DATA, REVENUE, OR PROFITS) ARISING OUT OF OR RELATED TO YOUR AUTHORIZED OR UNAUTHORIZED USE OF OR ACCESS TO THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+---
+
+## 8. Governing Law and Jurisdiction
+
+This License shall be governed by and construed in accordance with the laws of the **State of Florida**, without regard to its conflict of laws principles. Any dispute, claim, or proceeding arising out of or relating to this License or the Software shall be subject to the exclusive jurisdiction of the state and federal courts located in **Orange County, Florida**, and you hereby irrevocably consent to the personal jurisdiction of such courts.
+
+---
+
+## 9. Severability and Entire Agreement
+
+If any provision of this License is held to be invalid, illegal, or unenforceable, such provision shall be modified to the minimum extent necessary to make it enforceable, and the remaining provisions shall continue in full force and effect. This License constitutes the entire agreement between you and ZuraLog with respect to the subject matter hereof and supersedes all prior or contemporaneous understandings, agreements, or representations, whether oral or written.
+
+---
+
+## 10. Contact
+
+To request written permission for any use not expressly authorized by this License, or to report suspected infringement, contact:
+
+**ZuraLog LLC — Legal & Intellectual Property**  
+📧 hello@zuralog.com  
+🌐 https://zuralog.com
+
+---
+
+*Copyright (c) 2026 ZuraLog LLC. Fernando Leano and Hyowon Bernabe. All Rights Reserved. Unauthorized use is a violation of applicable law.*
