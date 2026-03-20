@@ -58,6 +58,10 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   /// Set when a category chip is activated; cleared when filter is cleared.
   TimeRange? _categoryTimeRange;
 
+  /// Snapshot of the global time range when a category filter is activated.
+  /// Restored when the filter is cleared so the global selector stays consistent.
+  TimeRange? _globalTimeRangeSnapshot;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -358,15 +362,22 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                     child: CategoryFilterChips(
                       selected: activeFilter,
                       onSelected: (cat) {
-                        final globalRange =
-                            ref.read(dashboardTimeRangeProvider);
                         ref.read(tileFilterProvider.notifier).state = cat;
-                        // Collapse expanded tile when filter changes.
-                        // Initialise (or clear) the per-category time range.
                         setState(() {
                           _expandedTileId = null;
-                          _categoryTimeRange =
-                              cat != null ? globalRange : null;
+                          if (cat != null) {
+                            // Snapshot the global range so we can restore it when filter is cleared.
+                            _globalTimeRangeSnapshot = ref.read(dashboardTimeRangeProvider);
+                            _categoryTimeRange = _globalTimeRangeSnapshot;
+                          } else {
+                            // Restore global range when filter is cleared.
+                            if (_globalTimeRangeSnapshot != null) {
+                              ref.read(dashboardTimeRangeProvider.notifier).state =
+                                  _globalTimeRangeSnapshot!;
+                            }
+                            _globalTimeRangeSnapshot = null;
+                            _categoryTimeRange = null;
+                          }
                         });
                       },
                     ),
@@ -393,8 +404,11 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                       child: _CategoryTimeRangeSelector(
                         selected: _categoryTimeRange ??
                             ref.watch(dashboardTimeRangeProvider),
-                        onChanged: (range) =>
-                            setState(() => _categoryTimeRange = range),
+                        onChanged: (range) {
+                          setState(() => _categoryTimeRange = range);
+                          // Write to dashboardTimeRangeProvider so tiles re-fetch with the new range.
+                          ref.read(dashboardTimeRangeProvider.notifier).state = range;
+                        },
                       ),
                     ),
                   ),
