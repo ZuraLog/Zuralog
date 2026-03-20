@@ -32,35 +32,6 @@ void main() {
       expect(fetchCount, 2);
     });
 
-    test('snapshotProvider rebuilds after todayLogSummaryProvider invalidation',
-        () async {
-      var summaryData = TodayLogSummary.empty;
-
-      final container = ProviderContainer(
-        overrides: [
-          todayLogSummaryProvider.overrideWith((ref) async => summaryData),
-          userLoggedTypesProvider.overrideWith(
-            (ref) async => const {'water'},
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      // Initial state: water card is empty.
-      final snapBefore = await container.read(snapshotProvider.future);
-      expect(snapBefore.first.isEmpty, isTrue);
-
-      // Simulate a successful water log.
-      summaryData = const TodayLogSummary(
-        loggedTypes: {'water'},
-        latestValues: {'water': 500.0},
-      );
-      container.invalidate(todayLogSummaryProvider);
-
-      // After re-fetch: water card should have data.
-      final snapAfter = await container.read(snapshotProvider.future);
-      expect(snapAfter.first.isEmpty, isFalse);
-      expect(snapAfter.first.value, '500');
-    });
+    // snapshotProvider rebuild test removed — provider was deleted as dead code.
   });
 }

@@ -15,15 +15,7 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/cards/z_daily_goals_card.dart';
 import 'package:zuralog/shared/widgets/streak_hero_card.dart';
 
-// ── Stub notifiers ────────────────────────────────────────────────────────────
 
-/// Returns a fixed snapshot card list without hitting real data sources.
-class _StubSnapshotNotifier extends SnapshotNotifier {
-  _StubSnapshotNotifier(this._value);
-  final List<SnapshotCardData> _value;
-  @override
-  Future<List<SnapshotCardData>> build() async => _value;
-}
 
 /// Returns null profile without making any network calls.
 class _StubUserProfileNotifier extends UserProfileNotifier {
@@ -81,9 +73,6 @@ ProviderContainer _container({
         ),
         todayLogSummaryProvider.overrideWith(
           (ref) async => TodayLogSummary.empty,
-        ),
-        snapshotProvider.overrideWith(
-          () => _StubSnapshotNotifier(const []),
         ),
         userLoggedTypesProvider.overrideWith(
           (ref) async => const <String>{},
@@ -211,9 +200,6 @@ void main() {
           ),
           todayLogSummaryProvider.overrideWith(
             (ref) async => TodayLogSummary.empty,
-          ),
-          snapshotProvider.overrideWith(
-            () => _StubSnapshotNotifier(const []),
           ),
           userLoggedTypesProvider.overrideWith(
             (ref) async => const <String>{},

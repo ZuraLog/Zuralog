@@ -27,7 +27,6 @@ import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/data_maturity_banner.dart';
 import 'package:zuralog/shared/widgets/health_score_widget.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
-import 'package:zuralog/shared/widgets/streak_badge.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── TodayFeedScreen ───────────────────────────────────────────────────────────
@@ -109,7 +108,6 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
           ref.invalidate(healthScoreProvider);
           ref.invalidate(todayFeedProvider);
           ref.invalidate(todayLogSummaryProvider);
-          ref.invalidate(userLoggedTypesProvider);
           ref.invalidate(pinnedMetricsProvider);
           ref.invalidate(dailyGoalsProvider);
           await Future.wait([
@@ -172,6 +170,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                               feed.streak!.currentStreak > 0 &&
                               feed.streak!.currentStreak >=
                                   (feed.streak!.longestStreak ?? 0),
+                          isFrozen: feed.streak?.isFrozen ?? false,
                         ),
                       ),
                     ),
@@ -202,7 +201,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 ),
               ),
 
-            // ── Greeting + Streak ────────────────────────────────────────────
+            // ── Greeting ────────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppDimens.spaceMd,
@@ -212,14 +211,6 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
               ),
               child: SectionHeader(
                 title: _timeOfDayGreeting(profile?.aiName),
-                trailing: feedAsync.whenOrNull(
-                  data: (feed) => feed.streak != null
-                      ? StreakBadge.inline(
-                          count: feed.streak!.currentStreak,
-                          isFrozen: feed.streak!.isFrozen,
-                        )
-                      : null,
-                ),
               ),
             ),
 
@@ -241,7 +232,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
 
             const SizedBox(height: AppDimens.spaceLg),
 
-            // ── Section: AI Insights ─────────────────────────────────────────
+            // ── Section: Your Briefing ────────────────────────────────────────
             const Padding(
               padding: EdgeInsets.fromLTRB(
                 AppDimens.spaceMd,
@@ -249,7 +240,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 AppDimens.spaceMd,
                 AppDimens.spaceSm,
               ),
-              child: SectionHeader(title: 'AI Insights'),
+              child: SectionHeader(title: 'Your Briefing'),
             ),
 
             // Provider never errors — only loading and data branches needed.

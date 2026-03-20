@@ -180,9 +180,9 @@ class MetricTile extends StatelessWidget {
                         color: AppColors.statusError,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.close_rounded,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onError,
                         size: 12,
                       ),
                     ),

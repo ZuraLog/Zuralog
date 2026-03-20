@@ -27,6 +27,7 @@ class StreakHeroCard extends StatelessWidget {
     super.key,
     required this.streakDays,
     this.isPersonalBest = false,
+    this.isFrozen = false,
   });
 
   /// The user's current streak in days. 0 shows the inviting zero state.
@@ -36,6 +37,10 @@ class StreakHeroCard extends StatelessWidget {
   /// subtitle reads "Personal best 🏆" instead of "Keep it up!".
   /// Ignored when [streakDays] is 0.
   final bool isPersonalBest;
+
+  /// Whether the streak is currently frozen (streak freeze active).
+  /// When true, shows a shield indicator. Ignored when [streakDays] is 0.
+  final bool isFrozen;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +62,7 @@ class StreakHeroCard extends StatelessWidget {
           : _ActiveState(
               streakDays: streakDays,
               isPersonalBest: isPersonalBest,
+              isFrozen: isFrozen,
             ),
     );
   }
@@ -116,22 +122,41 @@ class _ActiveState extends StatelessWidget {
   const _ActiveState({
     required this.streakDays,
     required this.isPersonalBest,
+    required this.isFrozen,
   });
 
   final int streakDays;
   final bool isPersonalBest;
+  final bool isFrozen;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    final subtitle = isPersonalBest ? 'Personal best 🏆' : 'Keep it up!';
+    final subtitle = isFrozen
+        ? 'Streak frozen'
+        : isPersonalBest
+            ? 'Personal best 🏆'
+            : 'Keep it up!';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Full-colour flame
-        Text('🔥', style: TextStyle(fontSize: AppDimens.emojiMd)),
+        // Flame — frozen shows a shield overlay
+        if (isFrozen)
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              Text('🔥', style: TextStyle(fontSize: AppDimens.emojiMd)),
+              Icon(
+                Icons.shield_rounded,
+                size: 14,
+                color: colors.primary,
+              ),
+            ],
+          )
+        else
+          Text('🔥', style: TextStyle(fontSize: AppDimens.emojiMd)),
         const SizedBox(height: AppDimens.spaceXs),
         // Large streak number
         Text(
@@ -152,7 +177,7 @@ class _ActiveState extends StatelessWidget {
         Text(
           subtitle,
           style: AppTextStyles.bodySmall.copyWith(
-            color: colors.textTertiary,
+            color: isFrozen ? colors.primary : colors.textTertiary,
           ),
           textAlign: TextAlign.center,
         ),

@@ -13,7 +13,6 @@
 /// - [todayBannerSessionDismissed]    — whether the "still building" banner was dismissed this session
 /// - [todayLogSummaryProvider]        — aggregated summary of today's logged data
 /// - [userLoggedTypesProvider]        — set of metric types user has ever logged
-/// - [snapshotProvider]               — list of snapshot card data
 /// - [dailyGoalsProvider]             — user's daily goals with today's progress
 /// - [supplementsListProvider]        — user's saved supplement and medication list
 /// - [stepsLogModeProvider]           — persisted steps log mode (add vs override)
@@ -30,7 +29,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/domain/log_summary_models.dart';
-import 'package:zuralog/features/today/domain/metric_format_utils.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -148,9 +146,7 @@ final todayLogSummaryProvider = FutureProvider<TodayLogSummary>((ref) async {
 
 /// The set of metric type strings the user has *ever* logged (not just today).
 ///
-/// Used by [snapshotProvider] to determine which snapshot cards to display.
-/// On failure: returns an empty set — the UI shows no snapshot cards rather
-/// than crashing.
+/// On failure: returns an empty set.
 ///
 /// Cached until a new metric type is submitted for the first time.
 final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
@@ -162,164 +158,6 @@ final userLoggedTypesProvider = FutureProvider<Set<String>>((ref) async {
     return const <String>{};
   }
 });
-
-// ── Snapshot Cards ────────────────────────────────────────────────────────────
-
-/// Notifier for the snapshot card list.
-///
-/// Watches both [todayLogSummaryProvider] and [userLoggedTypesProvider].
-/// Shows one card per metric type the user has ever logged, ordered to
-/// match the log grid. Cards with no data today show an empty state.
-class SnapshotNotifier extends AsyncNotifier<List<SnapshotCardData>> {
-  @override
-  Future<List<SnapshotCardData>> build() async {
-    final summary = await ref.watch(todayLogSummaryProvider.future);
-    final allTypes = await ref.watch(userLoggedTypesProvider.future);
-
-    // Ordered list matching the log grid tile order.
-    const orderedTypes = [
-      'mood', 'energy', 'stress', 'water', 'sleep', 'weight',
-      'steps', 'run', 'meal', 'supplement', 'symptom',
-    ];
-
-    return orderedTypes
-        .where((type) => allTypes.contains(type))
-        .map((type) => _buildSnapshotCard(type, summary))
-        .toList();
-  }
-}
-
-/// Provider for snapshot card data. Rebuilds automatically when
-/// [todayLogSummaryProvider] or [userLoggedTypesProvider] change.
-final snapshotProvider =
-    AsyncNotifierProvider<SnapshotNotifier, List<SnapshotCardData>>(
-  SnapshotNotifier.new,
-);
-
-// ── Snapshot card builder ─────────────────────────────────────────────────────
-
-SnapshotCardData _buildSnapshotCard(String metricType, TodayLogSummary summary) {
-  final value = summary.latestValues[metricType];
-  final hasData = summary.loggedTypes.contains(metricType);
-
-  return switch (metricType) {
-    'mood' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Mood',
-        icon: '😊',
-        value: hasData
-            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
-            : null,
-        unit: hasData ? '/10' : null,
-        isEmpty: !hasData,
-      ),
-    'energy' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Energy',
-        icon: '⚡',
-        value: hasData
-            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
-            : null,
-        unit: hasData ? '/10' : null,
-        isEmpty: !hasData,
-      ),
-    'stress' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Stress',
-        icon: '😤',
-        value: hasData
-            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
-            : null,
-        unit: hasData ? '/10' : null,
-        isEmpty: !hasData,
-      ),
-    'water' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Water',
-        icon: '💧',
-        value: hasData
-            ? (value as num?)?.toDouble().toStringAsFixed(0) ?? '—'
-            : null,
-        unit: hasData ? 'ml' : null,
-        isEmpty: !hasData,
-      ),
-    // unit is null — the formatted string '7h 30m' is self-describing
-    'sleep' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Sleep',
-        icon: '😴',
-        value: hasData
-            ? (value != null ? formatSleepMinutes((value as num).toDouble()) : null)
-            : null,
-        isEmpty: !hasData,
-      ),
-    'weight' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Weight',
-        icon: '⚖️',
-        value: hasData
-            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
-            : null,
-        unit: hasData ? 'kg' : null,
-        isEmpty: !hasData,
-      ),
-    'steps' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Steps',
-        icon: '👟',
-        value: hasData
-            ? (value != null ? formatSteps((value as num).toInt()) : null)
-            : null,
-        isEmpty: !hasData,
-      ),
-    'run' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Run',
-        icon: '🏃',
-        value: hasData
-            ? (value as num?)?.toDouble().toStringAsFixed(1) ?? '—'
-            : null,
-        unit: hasData ? 'km' : null,
-        isEmpty: !hasData,
-      ),
-    'meal' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Calories',
-        icon: '🍽️',
-        value: hasData
-            ? (value as num?)?.toDouble().toStringAsFixed(0) ?? '—'
-            : null,
-        unit: hasData ? 'kcal' : null,
-        isEmpty: !hasData,
-      ),
-    'supplement' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Supplements',
-        icon: '💊',
-        value: hasData
-            ? (value as num?)?.toInt().toString() ?? '—'
-            : null,
-        unit: hasData ? 'taken' : null,
-        isEmpty: !hasData,
-      ),
-    // reads from 'symptom_severity' key, not 'symptom' — severity is a string, not a numeric value
-    'symptom' => SnapshotCardData(
-        metricType: metricType,
-        label: 'Symptom',
-        icon: '🩹',
-        value: hasData
-            ? (summary.latestValues['symptom_severity'] as String?) ?? '—'
-            : null,
-        isEmpty: !hasData,
-      ),
-    _ => SnapshotCardData(
-        metricType: metricType,
-        label: metricType,
-        icon: '📊',
-        isEmpty: true,
-      ),
-  };
-}
 
 // ── Daily Goals ───────────────────────────────────────────────────────────────
 

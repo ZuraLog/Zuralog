@@ -111,28 +111,7 @@ void main() {
     });
   });
 
-  group('snapshotProvider', () {
-    test('returns empty list when no types ever logged', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-      final cards = await container.read(snapshotProvider.future);
-      expect(cards, isEmpty);
-    });
-
-    test('returns cards in grid order when types exist', () async {
-      final container = _container(overrides: [
-        userLoggedTypesProvider.overrideWith(
-          (ref) async => {'water', 'mood'},
-        ),
-      ]);
-      addTearDown(container.dispose);
-      final cards = await container.read(snapshotProvider.future);
-      // mood comes before water in the ordered list
-      expect(cards.length, 2);
-      expect(cards[0].metricType, 'mood');
-      expect(cards[1].metricType, 'water');
-    });
-  });
+  // snapshotProvider tests removed — provider was deleted as dead code.
 }
 
 // Helper mock for latestLogValuesProvider tests.
