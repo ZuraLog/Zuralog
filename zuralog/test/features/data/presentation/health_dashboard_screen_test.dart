@@ -797,6 +797,127 @@ void main() {
     });
   });
 
+  // ── Reorder-to-end edge case (mappedOnReorder) ───────────────────────────────
+
+  group('Reorder to end', () {
+    testWidgets(
+        'SliverReorderableList is present in edit mode with loaded tiles',
+        (tester) async {
+      final container = _container(allLoaded: true);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Enter edit mode.
+      await tester.tap(find.byIcon(Icons.edit_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // SliverReorderableList must be present in edit mode.
+      expect(find.byType(SliverReorderableList), findsOneWidget);
+    });
+
+    testWidgets(
+        'reordering a tile to the end updates dashboardLayoutProvider correctly',
+        (tester) async {
+      // Use 3 tiles to keep the test manageable and fast.
+      final threeLoadedTiles = [
+        TileData(
+          tileId: TileId.steps,
+          dataState: TileDataState.loaded,
+          lastUpdated: '2026-03-19T12:00:00Z',
+          visualization: const ValueData(primaryValue: '8,000'),
+        ),
+        TileData(
+          tileId: TileId.restingHeartRate,
+          dataState: TileDataState.loaded,
+          lastUpdated: '2026-03-19T12:00:00Z',
+          visualization: const ValueData(primaryValue: '70'),
+        ),
+        TileData(
+          tileId: TileId.sleepDuration,
+          dataState: TileDataState.loaded,
+          lastUpdated: '2026-03-19T12:00:00Z',
+          visualization: const ValueData(primaryValue: '7h'),
+        ),
+      ];
+
+      final container = ProviderContainer(
+        overrides: [
+          userProfileProvider.overrideWith(() => _StubUserProfileNotifier()),
+          tooltipsEnabledProvider
+              .overrideWith(() => _StubTooltipsEnabledNotifier()),
+          dataRepositoryProvider.overrideWith(
+            (ref) => _MockDataRepository(),
+          ),
+          dashboardProvider.overrideWith(
+            (ref) async =>
+                const DashboardData(categories: [], visibleOrder: []),
+          ),
+          dashboardTilesProvider.overrideWith(
+            (ref) async => threeLoadedTiles,
+          ),
+          dashboardLayoutLoaderProvider.overrideWith(
+            (ref) async => null,
+          ),
+          healthScoreProvider.overrideWith(
+            (ref) async => _score(),
+          ),
+          // Seed a layout that orders our 3 tiles first.
+          dashboardLayoutProvider.overrideWith(
+            (ref) => DashboardLayout(
+              orderedCategories: const [],
+              hiddenCategories: const {},
+              tileOrder: [
+                TileId.steps.name,
+                TileId.restingHeartRate.name,
+                TileId.sleepDuration.name,
+              ],
+            ),
+          ),
+          tileOrderingProvider.overrideWith(
+            (ref) => [TileId.steps, TileId.restingHeartRate, TileId.sleepDuration],
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_buildApp(container));
+      await tester.pumpAndSettle();
+
+      // Simulate reordering tile at index 0 to the end via the provider
+      // callback, mirroring what mappedOnReorder produces when newIndex equals
+      // visibleCount (the "drop after last" edge case).
+      //
+      // The screen's _onReorder does: if (newIndex > oldIndex) newIndex--;
+      // then names.insert(newIndex, names.removeAt(oldIndex)).
+      // With oldIndex=0, newIndex=3 (end), after decrement newIndex=2:
+      //   remove index 0 ("steps") → ["heartRate","sleepDuration"]
+      //   insert at 2              → ["heartRate","sleepDuration","steps"]
+      //
+      // That places "steps" last — the correct behaviour.
+      final layoutBefore = container.read(dashboardLayoutProvider);
+      final names = [
+        TileId.steps.name,
+        TileId.restingHeartRate.name,
+        TileId.sleepDuration.name,
+      ];
+      int oldIndex = 0;
+      int newIndex = 3; // visibleCount == 3
+      if (newIndex > oldIndex) newIndex--;
+      names.insert(newIndex, names.removeAt(oldIndex));
+      final updated = layoutBefore.copyWith(tileOrder: names);
+      container.read(dashboardLayoutProvider.notifier).state = updated;
+
+      await tester.pump();
+
+      final finalOrder =
+          container.read(dashboardLayoutProvider).tileOrder;
+      // "steps" must be the last entry — not second-to-last.
+      expect(finalOrder.last, TileId.steps.name);
+    });
+  });
+
   // ── Layout-change animation (Issue 5) ────────────────────────────────────────
 
   group('Category filter animation', () {

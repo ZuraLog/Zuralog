@@ -470,6 +470,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                 _expandedTileId = tileId;
                 // Clear category filter so the tile is visible.
                 ref.read(tileFilterProvider.notifier).state = null;
+                _categoryTimeRange = null;
               });
             },
           ),
@@ -625,6 +626,11 @@ class _TileGridBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // shrinkWrap: true is intentional here. AnimatedSwitcher requires a box
+    // widget, so TileGrid (a sliver) must be wrapped in a CustomScrollView.
+    // With only 20 tiles this eagerly-measured scroll view has negligible
+    // performance cost. NeverScrollableScrollPhysics prevents scroll conflicts
+    // with the outer CustomScrollView.
     return CustomScrollView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
