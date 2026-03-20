@@ -105,8 +105,7 @@ class MetricTile extends StatelessWidget {
         '${tileId.displayName}: syncing',
       TileDataState.noDataForRange =>
         '${tileId.displayName}: no data for selected range',
-      TileDataState.hidden =>
-        '${tileId.displayName}: hidden',
+      _ => tileId.displayName,
     };
 
     return Semantics(

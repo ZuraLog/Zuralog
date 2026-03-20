@@ -35,8 +35,19 @@ class HealthScoreStrip extends ConsumerWidget {
     final scoreAsync = ref.watch(healthScoreProvider);
     final colors = AppColorsOf(context);
 
+    final semanticLabel = scoreAsync.when(
+      loading: () => 'Health score. Loading.',
+      error: (_, __) => 'Health score: not enough data yet. Tap to view breakdown.',
+      data: (scoreData) {
+        if (scoreData.score == 0) {
+          return 'Health score: not enough data yet. Tap to view breakdown.';
+        }
+        return 'Health score: ${scoreData.score} out of 100. Tap to view breakdown.';
+      },
+    );
+
     return Semantics(
-      label: 'Health score. Tap to view breakdown.',
+      label: semanticLabel,
       button: true,
       child: GestureDetector(
         onTap: () => context.push('/data/score'),
