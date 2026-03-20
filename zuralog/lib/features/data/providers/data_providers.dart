@@ -5,16 +5,17 @@
 /// and trigger invalidations via [ref.invalidate].
 ///
 /// Provider inventory:
-/// - [dataRepositoryProvider]       — singleton repository
-/// - [dashboardProvider]            — async aggregated dashboard data
-/// - [categoryDetailProvider]       — async family: detail for one category
-/// - [metricDetailProvider]         — async family: deep-dive for one metric
-/// - [dashboardLayoutProvider]      — mutable dashboard card order/visibility
-/// - [tileFilterProvider]           — active category chip filter (null = All)
-/// - [dashboardTimeRangeProvider]   — global time range selection
-/// - [customDateRangeProvider]      — session-only custom date range
-/// - [tileOrderingProvider]         — computed display order of TileIds
-/// - [dashboardTilesProvider]       — async full tile list for the dashboard grid
+/// - [dataRepositoryProvider]           — singleton repository
+/// - [dashboardProvider]                — async aggregated dashboard data
+/// - [dashboardHasNetworkErrorProvider] — true when last fetch failed (network error)
+/// - [categoryDetailProvider]           — async family: detail for one category
+/// - [metricDetailProvider]             — async family: deep-dive for one metric
+/// - [dashboardLayoutProvider]          — mutable dashboard card order/visibility
+/// - [tileFilterProvider]               — active category chip filter (null = All)
+/// - [dashboardTimeRangeProvider]       — global time range selection
+/// - [customDateRangeProvider]          — session-only custom date range
+/// - [tileOrderingProvider]             — computed display order of TileIds
+/// - [dashboardTilesProvider]           — async full tile list for the dashboard grid
 library;
 
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -26,6 +27,8 @@ import 'package:zuralog/features/data/data/data_repository.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/domain/time_range.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
@@ -51,8 +54,21 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
   try {
     return await repo.getDashboard();
   } catch (_) {
-    return const DashboardData(categories: [], visibleOrder: []);
+    return const DashboardData(
+      categories: [],
+      visibleOrder: [],
+      isNetworkError: true,
+    );
   }
+});
+
+/// True when [dashboardProvider] resolved but the fetch failed (network error).
+/// False when the API returned successfully or while loading.
+/// Used by [HealthDashboardScreen] to distinguish a disconnected returning user
+/// from a first-time user with no connected devices.
+final dashboardHasNetworkErrorProvider = Provider<bool>((ref) {
+  final dash = ref.watch(dashboardProvider);
+  return dash.valueOrNull?.isNetworkError == true;
 });
 
 // ── Category Detail ───────────────────────────────────────────────────────────
@@ -185,6 +201,208 @@ final dashboardTimeRangeProvider =
 /// Session-only custom date range. Null when time range is not [TimeRange.custom].
 final customDateRangeProvider = StateProvider<DateTimeRange?>((ref) => null);
 
+// ── Tile Visualization Builder ────────────────────────────────────────────────
+
+/// Day-of-week abbreviations for bar chart labels (Mon–Sun).
+const _kDayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+/// Formats a double for a stats label using compact notation for large numbers.
+String _fmtStat(double v) {
+  if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}k';
+  return v.toStringAsFixed(v == v.truncateToDouble() ? 0 : 1);
+}
+
+/// Formats a delta percentage with sign prefix and arrow.
+String _fmtDelta(double delta) {
+  final sign = delta >= 0 ? '↑' : '↓';
+  return '$sign ${delta.abs().toStringAsFixed(1)}%';
+}
+
+/// Pre-computed stats derived from a 7-day trend array.
+class _TileStats {
+  const _TileStats({
+    required this.avgLabel,
+    required this.deltaLabel,
+    required this.avgValue,
+    required this.bestValue,
+    required this.worstValue,
+    required this.changeValue,
+  });
+
+  final String avgLabel;
+  final String deltaLabel;
+  final String avgValue;
+  final String bestValue;
+  final String worstValue;
+  final String changeValue;
+
+  /// Returns null when [trend] is null or empty.
+  static _TileStats? fromSummary(List<double>? trend, double? deltaPercent) {
+    if (trend == null || trend.isEmpty) return null;
+    final avg = trend.reduce((a, b) => a + b) / trend.length;
+    final best = trend.reduce((a, b) => a > b ? a : b);
+    final worst = trend.reduce((a, b) => a < b ? a : b);
+    final delta = deltaPercent;
+    return _TileStats(
+      avgLabel: 'Avg ${_fmtStat(avg)}',
+      deltaLabel: delta != null ? _fmtDelta(delta) : '—',
+      avgValue: _fmtStat(avg),
+      bestValue: _fmtStat(best),
+      worstValue: _fmtStat(worst),
+      changeValue: delta != null ? _fmtDelta(delta) : '—',
+    );
+  }
+}
+
+/// Maps a [TileId] to the best [TileVisualizationData] subtype given the
+/// available [CategorySummary] data and optional [DailyGoal] list.
+///
+/// Falls back to [ValueData] when insufficient data is available for the
+/// ideal subtype (e.g. [StackedBarData] for sleepStages requires per-stage
+/// data not present in [CategorySummary]).
+TileVisualizationData _buildTileViz(
+  TileId id,
+  CategorySummary summary,
+  List<DailyGoal> goals,
+) {
+  final trend = summary.trend;
+  final primary = summary.primaryValue;
+  final unit = summary.unit;
+  final delta = summary.deltaPercent;
+
+  TileVisualizationData barOrValue() {
+    if (trend != null && trend.isNotEmpty) {
+      return BarChartData(
+        dailyValues: trend,
+        dayLabels: _kDayLabels.take(trend.length).toList(),
+        average: trend.reduce((a, b) => a + b) / trend.length,
+        delta: delta,
+      );
+    }
+    return ValueData(primaryValue: primary, secondaryLabel: unit);
+  }
+
+  TileVisualizationData lineOrValue() {
+    if (trend != null && trend.isNotEmpty) {
+      return LineChartData(values: trend, delta: delta);
+    }
+    return ValueData(primaryValue: primary, secondaryLabel: unit);
+  }
+
+  TileVisualizationData dotsOrValue() {
+    if (trend != null && trend.isNotEmpty) {
+      return DotsData(values: trend, todayLabel: primary);
+    }
+    return ValueData(primaryValue: primary, secondaryLabel: unit);
+  }
+
+  switch (id) {
+    case TileId.steps:
+      final stepsGoal = goals
+          .where((g) =>
+              g.id.contains('steps') ||
+              g.label.toLowerCase().contains('steps'))
+          .firstOrNull;
+      if (stepsGoal != null && stepsGoal.target > 0) {
+        final current =
+            double.tryParse(primary.replaceAll(',', '')) ?? 0;
+        return RingData(
+          value: current.clamp(0, stepsGoal.target),
+          max: stepsGoal.target,
+          goalLabel: '/ ${_fmtStat(stepsGoal.target)} goal',
+        );
+      }
+      return barOrValue();
+
+    case TileId.activeCalories:
+      return barOrValue();
+
+    case TileId.workouts:
+      final count =
+          int.tryParse(primary.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      return CountBadgeData(count: count);
+
+    case TileId.sleepDuration:
+      return barOrValue();
+
+    case TileId.sleepStages:
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+
+    case TileId.restingHeartRate:
+    case TileId.hrv:
+      return lineOrValue();
+
+    case TileId.vo2Max:
+      final v = double.tryParse(primary.replaceAll(',', ''));
+      if (v != null) {
+        return GaugeData(
+            percent: (v / 70.0).clamp(0.0, 1.0), label: primary);
+      }
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+
+    case TileId.weight:
+    case TileId.bodyFat:
+      return lineOrValue();
+
+    case TileId.bloodPressure:
+      final parts = primary.split('/');
+      if (parts.length == 2) {
+        return DualValueData(
+          topValue: parts[0].trim(),
+          bottomValue: parts[1].trim(),
+          topLabel: 'SYS',
+          bottomLabel: 'DIA',
+        );
+      }
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+
+    case TileId.spo2:
+      return lineOrValue();
+
+    case TileId.calories:
+      if (trend != null && trend.isNotEmpty) {
+        return AreaChartData(values: trend, delta: delta);
+      }
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+
+    case TileId.water:
+      final waterGoal = goals
+          .where((g) =>
+              g.id.contains('water') ||
+              g.label.toLowerCase().contains('water'))
+          .firstOrNull;
+      final current =
+          double.tryParse(primary.replaceAll(',', '')) ?? 0;
+      if (waterGoal != null && waterGoal.target > 0) {
+        return FillGaugeData(
+          current: current,
+          goal: waterGoal.target,
+          unit: unit,
+        );
+      }
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+
+    case TileId.mood:
+    case TileId.energy:
+    case TileId.stress:
+      return dotsOrValue();
+
+    case TileId.cycle:
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+
+    case TileId.environment:
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+
+    case TileId.mobility:
+      final v = double.tryParse(primary.replaceAll(RegExp(r'[^0-9.]'), ''));
+      if (v != null) {
+        return GaugeData(
+            percent: (v / 100.0).clamp(0.0, 1.0), label: primary);
+      }
+      return ValueData(primaryValue: primary, secondaryLabel: unit);
+  }
+}
+
 // ── Tile Ordering ─────────────────────────────────────────────────────────────
 
 /// Computes the ordered list of visible TileIds for the dashboard.
@@ -242,6 +460,10 @@ final tileOrderingProvider = Provider<List<TileId>>((ref) {
 ///
 /// Combines data from multiple sources:
 /// - [dashboardProvider] for category-level summaries (primary values, trends)
+/// - [dailyGoalsProvider] for goal-progress visualization (steps ring, water gauge)
+///
+/// Each tile receives the most appropriate [TileVisualizationData] subtype for its
+/// metric type, with pre-computed stats from the 7-day trend data.
 ///
 /// On first load or when data is unavailable, produces tiles in [TileDataState.noSource]
 /// state. The [dashboardTimeRangeProvider] is watched so a range change triggers re-fetch.
@@ -251,6 +473,8 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
   ref.watch(dashboardTimeRangeProvider);
   try {
     final dashAsync = await ref.watch(dashboardProvider.future);
+    // Watch daily goals for goal-progress visualization (steps ring, water gauge).
+    final goals = await ref.watch(dailyGoalsProvider.future);
     final categoryMap = {
       for (final s in dashAsync.categories) s.category: s,
     };
@@ -263,15 +487,19 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
           lastUpdated: null,
         );
       }
-      final viz = ValueData(
-        primaryValue: summary.primaryValue,
-        secondaryLabel: summary.unit,
-      );
+      final viz = _buildTileViz(tileId, summary, goals);
+      final stats = _TileStats.fromSummary(summary.trend, summary.deltaPercent);
       return TileData(
         tileId: tileId,
         dataState: TileDataState.loaded,
         lastUpdated: summary.lastUpdated,
         visualization: viz,
+        avgLabel: stats?.avgLabel,
+        deltaLabel: stats?.deltaLabel,
+        avgValue: stats?.avgValue,
+        bestValue: stats?.bestValue,
+        worstValue: stats?.worstValue,
+        changeValue: stats?.changeValue,
       );
     }).toList();
   } catch (_) {

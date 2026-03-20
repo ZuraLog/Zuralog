@@ -150,6 +150,7 @@ class DashboardData {
   const DashboardData({
     required this.categories,
     required this.visibleOrder,
+    this.isNetworkError = false,
   });
 
   /// All category summaries (all 10 categories, including hidden ones).
@@ -157,6 +158,10 @@ class DashboardData {
 
   /// Ordered list of category names representing dashboard layout.
   final List<String> visibleOrder;
+
+  /// True when the last fetch failed due to a network/server error.
+  /// False when the API returned successfully (even with 0 categories).
+  final bool isNetworkError;
 
   /// Deserializes from a JSON map.
   factory DashboardData.fromJson(Map<String, dynamic> json) {

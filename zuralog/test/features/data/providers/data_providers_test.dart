@@ -7,6 +7,8 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/domain/time_range.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
+import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/features/today/domain/today_models.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -41,13 +43,16 @@ DashboardData _fullDashboard() {
 }
 
 /// Creates a [ProviderContainer] with [dashboardProvider] overridden to return
-/// [data] without hitting the network.
-ProviderContainer _containerWithDashboard(DashboardData data) {
+/// [data] without hitting the network, and [dailyGoalsProvider] overridden to
+/// return [goals] (default empty) so tests never hit the real API.
+ProviderContainer _containerWithDashboard(
+  DashboardData data, {
+  List<DailyGoal> goals = const [],
+}) {
   return ProviderContainer(
     overrides: [
-      dashboardProvider.overrideWith(
-        (ref) async => data,
-      ),
+      dashboardProvider.overrideWith((ref) async => data),
+      dailyGoalsProvider.overrideWith((ref) async => goals),
     ],
   );
 }
@@ -388,6 +393,179 @@ void main() {
         expect(tile.lastUpdated, isNotNull,
             reason: '${tile.tileId.name} should have lastUpdated');
       }
+    });
+  });
+
+  // ── dashboardTilesProvider — typed visualizations ───────────────────────────
+
+  group('dashboardTilesProvider — typed visualizations', () {
+    test('steps tile builds BarChartData when trend is available', () async {
+      final data = DashboardData(
+        categories: [
+          CategorySummary(
+            category: HealthCategory.activity,
+            primaryValue: '8,432',
+            unit: 'steps',
+            deltaPercent: 12.0,
+            trend: [7000, 8000, 9000, 6000, 8432, 7500, 8200],
+            lastUpdated: '2026-03-19T12:00:00Z',
+          ),
+        ],
+        visibleOrder: ['activity'],
+      );
+      final container = _containerWithDashboard(data);
+      addTearDown(container.dispose);
+
+      final tiles = await container.read(dashboardTilesProvider.future);
+      final stepsTile = tiles.firstWhere((t) => t.tileId == TileId.steps);
+
+      expect(stepsTile.dataState, TileDataState.loaded);
+      expect(stepsTile.visualization, isA<BarChartData>());
+      final viz = stepsTile.visualization as BarChartData;
+      expect(viz.dailyValues, [7000, 8000, 9000, 6000, 8432, 7500, 8200]);
+      expect(viz.delta, 12.0);
+    });
+
+    test('steps tile builds ValueData when trend is absent', () async {
+      final data = DashboardData(
+        categories: [
+          CategorySummary(
+            category: HealthCategory.activity,
+            primaryValue: '8,432',
+            unit: 'steps',
+            lastUpdated: '2026-03-19T12:00:00Z',
+          ),
+        ],
+        visibleOrder: ['activity'],
+      );
+      final container = _containerWithDashboard(data);
+      addTearDown(container.dispose);
+
+      final tiles = await container.read(dashboardTilesProvider.future);
+      final stepsTile = tiles.firstWhere((t) => t.tileId == TileId.steps);
+      expect(stepsTile.visualization, isA<ValueData>());
+    });
+
+    test('mood tile builds DotsData when trend is available', () async {
+      final data = DashboardData(
+        categories: [
+          CategorySummary(
+            category: HealthCategory.wellness,
+            primaryValue: '7',
+            unit: '',
+            trend: [6, 7, 5, 8, 7, 6, 7],
+            lastUpdated: '2026-03-19T12:00:00Z',
+          ),
+        ],
+        visibleOrder: ['wellness'],
+      );
+      final container = _containerWithDashboard(data);
+      addTearDown(container.dispose);
+
+      final tiles = await container.read(dashboardTilesProvider.future);
+      final moodTile = tiles.firstWhere((t) => t.tileId == TileId.mood);
+      expect(moodTile.visualization, isA<DotsData>());
+      final viz = moodTile.visualization as DotsData;
+      expect(viz.values.length, 7);
+    });
+
+    test('restingHeartRate tile builds LineChartData when trend is available', () async {
+      final data = DashboardData(
+        categories: [
+          CategorySummary(
+            category: HealthCategory.heart,
+            primaryValue: '62',
+            unit: 'bpm',
+            trend: [64, 63, 62, 65, 61, 62, 62],
+            lastUpdated: '2026-03-19T12:00:00Z',
+          ),
+        ],
+        visibleOrder: ['heart'],
+      );
+      final container = _containerWithDashboard(data);
+      addTearDown(container.dispose);
+
+      final tiles = await container.read(dashboardTilesProvider.future);
+      final hrTile = tiles.firstWhere((t) => t.tileId == TileId.restingHeartRate);
+      expect(hrTile.visualization, isA<LineChartData>());
+    });
+
+    test('bloodPressure tile builds DualValueData for "120/80" format', () async {
+      final data = DashboardData(
+        categories: [
+          CategorySummary(
+            category: HealthCategory.vitals,
+            primaryValue: '120/80',
+            unit: 'mmHg',
+            lastUpdated: '2026-03-19T12:00:00Z',
+          ),
+        ],
+        visibleOrder: ['vitals'],
+      );
+      final container = _containerWithDashboard(data);
+      addTearDown(container.dispose);
+
+      final tiles = await container.read(dashboardTilesProvider.future);
+      final bpTile = tiles.firstWhere((t) => t.tileId == TileId.bloodPressure);
+      expect(bpTile.visualization, isA<DualValueData>());
+      final viz = bpTile.visualization as DualValueData;
+      expect(viz.topValue, '120');
+      expect(viz.bottomValue, '80');
+    });
+  });
+
+  // ── dashboardTilesProvider — stats population ───────────────────────────────
+
+  group('dashboardTilesProvider — stats population', () {
+    test('avgLabel and deltaLabel populated from trend + deltaPercent', () async {
+      final data = DashboardData(
+        categories: [
+          CategorySummary(
+            category: HealthCategory.activity,
+            primaryValue: '8,432',
+            unit: 'steps',
+            deltaPercent: 12.3,
+            trend: [7000, 8000, 9000, 6000, 8432, 7500, 8200],
+            lastUpdated: '2026-03-19T12:00:00Z',
+          ),
+        ],
+        visibleOrder: ['activity'],
+      );
+      final container = _containerWithDashboard(data);
+      addTearDown(container.dispose);
+
+      final tiles = await container.read(dashboardTilesProvider.future);
+      final stepsTile = tiles.firstWhere((t) => t.tileId == TileId.steps);
+
+      expect(stepsTile.avgLabel, isNotNull);
+      expect(stepsTile.deltaLabel, isNotNull);
+      expect(stepsTile.avgValue, isNotNull);
+      expect(stepsTile.bestValue, isNotNull);
+      expect(stepsTile.worstValue, isNotNull);
+      expect(stepsTile.changeValue, isNotNull);
+      expect(stepsTile.deltaLabel, contains('12'));
+      expect(stepsTile.changeValue, contains('12'));
+    });
+
+    test('stats are null when trend is absent', () async {
+      final data = DashboardData(
+        categories: [
+          CategorySummary(
+            category: HealthCategory.activity,
+            primaryValue: '8,432',
+            unit: 'steps',
+          ),
+        ],
+        visibleOrder: ['activity'],
+      );
+      final container = _containerWithDashboard(data);
+      addTearDown(container.dispose);
+
+      final tiles = await container.read(dashboardTilesProvider.future);
+      final stepsTile = tiles.firstWhere((t) => t.tileId == TileId.steps);
+
+      expect(stepsTile.avgLabel, isNull);
+      expect(stepsTile.avgValue, isNull);
     });
   });
 }
