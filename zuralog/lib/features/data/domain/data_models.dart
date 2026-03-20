@@ -15,6 +15,11 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+// ── TileSize ──────────────────────────────────────────────────────────────────
+
+/// The three supported tile sizes for the data dashboard grid.
+enum TileSize { square, tall, wide }
+
 // ── HealthCategory ────────────────────────────────────────────────────────────
 
 /// The 10 supported health categories.
@@ -325,6 +330,10 @@ class DashboardLayout {
     required this.hiddenCategories,
     this.categoryColorOverrides = const {},
     this.bannerDismissed = false,
+    this.tileOrder = const [],
+    this.tileVisibility = const {},
+    this.tileSizes = const {},
+    this.tileColorOverrides = const {},
   });
 
   /// Category names in display order (all categories, including hidden).
@@ -340,6 +349,19 @@ class DashboardLayout {
   /// Whether the user has dismissed the [DataMaturityBanner].
   final bool bannerDismissed;
 
+  /// Ordered list of tile IDs (TileId.name strings). Empty = smart ordering.
+  final List<String> tileOrder;
+
+  /// Per-tile visibility overrides. Key: TileId.name. Absent = visible.
+  final Map<String, bool> tileVisibility;
+
+  /// Per-tile size overrides. Key: TileId.name. Absent = use TileId.defaultSize.
+  final Map<String, TileSize> tileSizes;
+
+  /// Per-tile ARGB color overrides (separate from category color overrides).
+  /// Key: TileId.name, Value: ARGB int (Color.value).
+  final Map<String, int> tileColorOverrides;
+
   /// Default layout: all 10 categories visible in canonical order.
   static DashboardLayout get defaultLayout => const DashboardLayout(
         orderedCategories: [],
@@ -348,25 +370,54 @@ class DashboardLayout {
       );
 
   /// Deserializes from the user preferences JSON.
+  ///
+  /// **Backward migration:** If `tile_order` key is absent this is an old
+  /// layout — tileOrder is left as `[]` (smart ordering will apply).
   factory DashboardLayout.fromJson(Map<String, dynamic> json) {
     final rawOrder = json['ordered_categories'] as List<dynamic>? ?? [];
     final rawHidden = json['hidden_categories'] as List<dynamic>? ?? [];
     final rawColors =
         json['category_color_overrides'] as Map<String, dynamic>? ?? {};
+
+    // Tile order — absent key means old format, leave empty.
+    final rawTileOrder = json['tile_order'] as List<dynamic>?;
+    final tileOrder =
+        rawTileOrder != null ? rawTileOrder.map((e) => e as String).toList() : <String>[];
+
+    final rawTileVisibility =
+        json['tile_visibility'] as Map<String, dynamic>? ?? {};
+    final rawTileSizes = json['tile_sizes'] as Map<String, dynamic>? ?? {};
+    final rawTileColorOverrides =
+        json['tile_color_overrides'] as Map<String, dynamic>? ?? {};
+
     return DashboardLayout(
       orderedCategories: rawOrder.map((e) => e as String).toList(),
       hiddenCategories: rawHidden.map((e) => e as String).toSet(),
-      categoryColorOverrides: rawColors.map((k, v) => MapEntry(k, (v as num).toInt())),
+      categoryColorOverrides:
+          rawColors.map((k, v) => MapEntry(k, (v as num).toInt())),
       bannerDismissed: json['banner_dismissed'] as bool? ?? false,
+      tileOrder: tileOrder,
+      tileVisibility:
+          rawTileVisibility.map((k, v) => MapEntry(k, v as bool)),
+      tileSizes: rawTileSizes.map(
+          (k, v) => MapEntry(k, TileSize.values.byName(v as String))),
+      tileColorOverrides: rawTileColorOverrides
+          .map((k, v) => MapEntry(k, (v as num).toInt())),
     );
   }
 
   /// Serializes to JSON for the preferences API.
+  ///
+  /// [tileSizes] values are serialized as string names (e.g. `'tall'`).
   Map<String, dynamic> toJson() => {
         'ordered_categories': orderedCategories,
         'hidden_categories': hiddenCategories.toList(),
         'category_color_overrides': categoryColorOverrides,
         'banner_dismissed': bannerDismissed,
+        'tile_order': tileOrder,
+        'tile_visibility': tileVisibility,
+        'tile_sizes': tileSizes.map((k, v) => MapEntry(k, v.name)),
+        'tile_color_overrides': tileColorOverrides,
       };
 
   /// Returns a copy with the given fields replaced.
@@ -375,6 +426,10 @@ class DashboardLayout {
     Set<String>? hiddenCategories,
     Map<String, int>? categoryColorOverrides,
     bool? bannerDismissed,
+    List<String>? tileOrder,
+    Map<String, bool>? tileVisibility,
+    Map<String, TileSize>? tileSizes,
+    Map<String, int>? tileColorOverrides,
   }) =>
       DashboardLayout(
         orderedCategories: orderedCategories ?? this.orderedCategories,
@@ -382,5 +437,9 @@ class DashboardLayout {
         categoryColorOverrides:
             categoryColorOverrides ?? this.categoryColorOverrides,
         bannerDismissed: bannerDismissed ?? this.bannerDismissed,
+        tileOrder: tileOrder ?? this.tileOrder,
+        tileVisibility: tileVisibility ?? this.tileVisibility,
+        tileSizes: tileSizes ?? this.tileSizes,
+        tileColorOverrides: tileColorOverrides ?? this.tileColorOverrides,
       );
 }

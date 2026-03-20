@@ -114,11 +114,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
           } else {
             overrides[cat.name] = picked.toARGB32();
           }
-          final updated = DashboardLayout(
-            orderedCategories: layout.orderedCategories,
-            hiddenCategories: layout.hiddenCategories,
-            categoryColorOverrides: overrides,
-          );
+          final updated = layout.copyWith(categoryColorOverrides: overrides);
           ref.read(dashboardLayoutProvider.notifier).state = updated;
           unawaited(Future(() async {
             try {
@@ -420,11 +416,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final names = items.map((s) => s.category.name).toList();
     if (newIdx > oldIdx) newIdx--;
     names.insert(newIdx, names.removeAt(oldIdx));
-    final updated = DashboardLayout(
-      orderedCategories: names,
-      hiddenCategories: layout.hiddenCategories,
-      categoryColorOverrides: layout.categoryColorOverrides,
-    );
+    final updated = layout.copyWith(orderedCategories: names);
     ref.read(dashboardLayoutProvider.notifier).state = updated;
     // Persist to API (fire-and-forget).
     unawaited(Future(() async {
@@ -448,11 +440,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     } else {
       hidden.add(catName);
     }
-    final updated = DashboardLayout(
-      orderedCategories: layout.orderedCategories,
-      hiddenCategories: hidden,
-      categoryColorOverrides: layout.categoryColorOverrides,
-    );
+    final updated = layout.copyWith(hiddenCategories: hidden);
     ref.read(dashboardLayoutProvider.notifier).state = updated;
     unawaited(Future(() async {
       try {
