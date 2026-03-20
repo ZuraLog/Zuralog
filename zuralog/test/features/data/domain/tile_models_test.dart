@@ -180,4 +180,40 @@ void main() {
       expect(data.values.last, 7.0);
     });
   });
+
+  // ── TileData stats fields ──────────────────────────────────────────────────
+
+  group('TileData stats fields', () {
+    test('TileData accepts stats fields and exposes them', () {
+      const td = TileData(
+        tileId: TileId.steps,
+        dataState: TileDataState.loaded,
+        avgLabel: 'Avg 8.2k',
+        deltaLabel: '↑ 12%',
+        avgValue: '8,200',
+        bestValue: '12,450',
+        worstValue: '3,100',
+        changeValue: '+12%',
+      );
+      expect(td.avgLabel, 'Avg 8.2k');
+      expect(td.deltaLabel, '↑ 12%');
+      expect(td.avgValue, '8,200');
+      expect(td.bestValue, '12,450');
+      expect(td.worstValue, '3,100');
+      expect(td.changeValue, '+12%');
+    });
+
+    test('TileData stats fields default to null', () {
+      const td = TileData(
+        tileId: TileId.hrv,
+        dataState: TileDataState.noSource,
+      );
+      expect(td.avgLabel, isNull);
+      expect(td.deltaLabel, isNull);
+      expect(td.avgValue, isNull);
+      expect(td.bestValue, isNull);
+      expect(td.worstValue, isNull);
+      expect(td.changeValue, isNull);
+    });
+  });
 }

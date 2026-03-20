@@ -264,15 +264,20 @@ final class EnvironmentData extends TileVisualizationData {
 
 // ── TileData ──────────────────────────────────────────────────────────────────
 
-/// Full tile data: identity, state, last-updated timestamp, and visualization.
-///
-/// [visualization] is null when [dataState] != [TileDataState.loaded].
+/// Full tile data: identity, state, last-updated timestamp, visualization,
+/// and optional pre-computed stats for footer/expanded-view display.
 class TileData {
   const TileData({
     required this.tileId,
     required this.dataState,
     this.lastUpdated,
     this.visualization,
+    this.avgLabel,
+    this.deltaLabel,
+    this.avgValue,
+    this.bestValue,
+    this.worstValue,
+    this.changeValue,
   });
 
   final TileId tileId;
@@ -283,6 +288,28 @@ class TileData {
 
   /// Visualization payload — null unless [dataState] == [TileDataState.loaded].
   final TileVisualizationData? visualization;
+
+  // ── Stats footer (MetricTile, tall/wide only) ──────────────────────────────
+
+  /// Formatted average label (e.g. "Avg 8.2k"). Null if no trend data.
+  final String? avgLabel;
+
+  /// Formatted delta label (e.g. "↑ 12%"). Null if no delta available.
+  final String? deltaLabel;
+
+  // ── Stats row (TileExpandedView) ───────────────────────────────────────────
+
+  /// Formatted average value string. Null if no trend data.
+  final String? avgValue;
+
+  /// Formatted best (max) value string. Null if no trend data.
+  final String? bestValue;
+
+  /// Formatted worst (min) value string. Null if no trend data.
+  final String? worstValue;
+
+  /// Formatted change value string (e.g. "+12%"). Null if no delta.
+  final String? changeValue;
 }
 
 // ── TileConfig ────────────────────────────────────────────────────────────────
