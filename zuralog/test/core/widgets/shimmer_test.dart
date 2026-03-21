@@ -23,6 +23,15 @@ void main() {
       expect(find.byType(AppShimmer), findsOneWidget);
     });
 
+    testWidgets('wraps child in ShaderMask with srcIn blend mode', (tester) async {
+      await tester.pumpWidget(
+        _wrap(AppShimmer(child: ShimmerBox(height: 20, width: 80))),
+      );
+      await tester.pump();
+      final mask = tester.widget<ShaderMask>(find.byType(ShaderMask));
+      expect(mask.blendMode, BlendMode.srcIn);
+    });
+
     testWidgets('animation progresses — pumping frames does not throw',
         (tester) async {
       await tester.pumpWidget(

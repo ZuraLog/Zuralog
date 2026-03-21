@@ -43,8 +43,6 @@ class _AppShimmerState extends State<AppShimmer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
-  late final Animation<double> _animation;
-
   @override
   void initState() {
     super.initState();
@@ -52,7 +50,6 @@ class _AppShimmerState extends State<AppShimmer>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
   }
 
   @override
@@ -67,9 +64,9 @@ class _AppShimmerState extends State<AppShimmer>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final t = _animation.value; // 0.0 → 1.0, eased
-        // Sweep gradient from left-off-screen (-2) to right-off-screen (+2)
-        final begin = Alignment(-2.0 + 4.0 * t, 0);
+        final t = _controller.value; // 0.0 → 1.0, linear
+        // Sweep gradient from left-off-screen (-3) to right-off-screen (+1)
+        final begin = Alignment(-3.0 + 4.0 * t, 0);
         final end = Alignment(-1.0 + 4.0 * t, 0);
         return ShaderMask(
           blendMode: BlendMode.srcIn,
@@ -106,7 +103,10 @@ class ShimmerBox extends StatelessWidget {
     this.widthFraction,
     this.borderRadius,
     this.isCircle = false,
-  });
+  }) : assert(
+          widthFraction == null || width == null,
+          'Provide widthFraction or width, not both.',
+        );
 
   /// Fixed height. Omit when inside [Expanded] (fills available space).
   final double? height;
