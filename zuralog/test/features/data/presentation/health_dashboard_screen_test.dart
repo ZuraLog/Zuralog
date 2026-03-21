@@ -368,6 +368,13 @@ void main() {
       await tester.tap(find.text('Sleep').first);
       await tester.pumpAndSettle();
 
+      // AspectRatio tiles can push the CTA below the viewport; scroll to it.
+      await tester.dragUntilVisible(
+        find.text('Ask Coach about Sleep'),
+        find.byType(CustomScrollView).first,
+        const Offset(0, -300),
+      );
+
       expect(find.text('Ask Coach about Sleep'), findsOneWidget);
     });
   });
@@ -510,6 +517,13 @@ void main() {
       // Select activity filter to show Ask Coach CTA.
       await tester.tap(find.text('Activity').first);
       await tester.pumpAndSettle();
+
+      // AspectRatio tiles can push the CTA below the viewport; scroll to it.
+      await tester.dragUntilVisible(
+        find.text('Ask Coach about Activity'),
+        find.byType(CustomScrollView).first,
+        const Offset(0, -300),
+      );
 
       await tester.tap(find.text('Ask Coach about Activity'));
       await tester.pumpAndSettle();
