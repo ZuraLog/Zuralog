@@ -1,7 +1,7 @@
 /// Zuralog — HealthDashboardScreen Integration Tests (Phase 8).
 ///
 /// Tests for the full dashboard screen: tile grid rendering, category filter,
-/// time range selector, edit mode, tile expand/collapse, Ask Coach navigation,
+/// time range selector, edit mode, tile tap navigation, Ask Coach navigation,
 /// pull-to-refresh, onboarding empty state, and search overlay.
 library;
 
