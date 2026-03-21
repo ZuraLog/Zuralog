@@ -5,7 +5,6 @@
 /// Model overview:
 /// - [TileId]                 — enum of 31 supported metric tiles
 /// - [TileDataState]          — enum of 5 tile data states
-/// - [TileVisualizationData]  — sealed class hierarchy for tile visualizations
 /// - [TileData]               — full tile data including state and visualization
 /// - [TileConfig]             — extension on TileId for display/layout metadata
 library;
@@ -83,198 +82,6 @@ enum TileDataState {
   hidden,
 }
 
-// ── TileVisualizationData ─────────────────────────────────────────────────────
-
-/// Sealed base class for all tile visualization data.
-///
-/// Each subtype carries exactly the data needed for one visualization variant.
-/// Callers should use pattern matching (switch/when) to handle all subtypes.
-sealed class TileVisualizationData {
-  const TileVisualizationData();
-}
-
-/// Bar chart with daily values and optional average/delta.
-final class BarChartData extends TileVisualizationData {
-  BarChartData({
-    required this.dailyValues,
-    required this.dayLabels,
-    this.average,
-    this.delta,
-  });
-
-  final List<double> dailyValues;
-  final List<String> dayLabels;
-  final double? average;
-  final double? delta;
-}
-
-/// Ring/donut chart with a current value and max.
-final class RingData extends TileVisualizationData {
-  const RingData({
-    required this.value,
-    required this.max,
-    this.goalLabel,
-  });
-
-  final double value;
-  final double max;
-  final String? goalLabel;
-}
-
-/// Line chart with optional range bands and delta.
-final class LineChartData extends TileVisualizationData {
-  const LineChartData({
-    required this.values,
-    this.rangeLow,
-    this.rangeHigh,
-    this.delta,
-  });
-
-  final List<double> values;
-  final double? rangeLow;
-  final double? rangeHigh;
-  final double? delta;
-}
-
-/// Stacked bar representing segments (e.g. sleep stages).
-final class StackedBarData extends TileVisualizationData {
-  const StackedBarData({required this.segments});
-
-  final List<({String label, double hours})> segments;
-}
-
-/// Area chart with optional target line and delta.
-final class AreaChartData extends TileVisualizationData {
-  const AreaChartData({
-    required this.values,
-    this.targetValue,
-    this.delta,
-  });
-
-  final List<double> values;
-  final double? targetValue;
-  final double? delta;
-}
-
-/// Gauge with a normalized percentage (0.0–1.0) and optional label.
-final class GaugeData extends TileVisualizationData {
-  const GaugeData({required this.percent, this.label})
-      : assert(percent >= 0.0 && percent <= 1.0,
-            'GaugeData.percent must be in [0.0, 1.0], got $percent');
-
-  /// Normalized value between 0.0 and 1.0.
-  final double percent;
-  final String? label;
-}
-
-/// Single primary value with optional secondary label and status color.
-final class ValueData extends TileVisualizationData {
-  const ValueData({
-    required this.primaryValue,
-    this.secondaryLabel,
-    this.statusColor,
-  });
-
-  final String primaryValue;
-  final String? secondaryLabel;
-
-  /// ARGB color int, or null to use the default theme color.
-  final int? statusColor;
-}
-
-/// Two values side-by-side (e.g. systolic/diastolic blood pressure).
-final class DualValueData extends TileVisualizationData {
-  const DualValueData({
-    required this.topValue,
-    required this.bottomValue,
-    required this.topLabel,
-    required this.bottomLabel,
-  });
-
-  final String topValue;
-  final String bottomValue;
-  final String topLabel;
-  final String bottomLabel;
-}
-
-/// Macro nutrition bars with calorie total and per-macro progress.
-final class MacroBarsData extends TileVisualizationData {
-  const MacroBarsData({
-    required this.totalCalories,
-    required this.macros,
-  });
-
-  final String totalCalories;
-  final List<({String label, double current, double goal})> macros;
-}
-
-/// Fill gauge showing current vs goal (e.g. water intake).
-final class FillGaugeData extends TileVisualizationData {
-  const FillGaugeData({
-    required this.current,
-    required this.goal,
-    this.unit,
-  });
-
-  final double current;
-  final double goal;
-  final String? unit;
-}
-
-/// Row of dots representing a 7-day pattern (e.g. mood/energy/stress).
-///
-/// Not const because [List] is not a compile-time constant.
-final class DotsData extends TileVisualizationData {
-  DotsData({
-    required this.values,
-    this.todayLabel,
-  });
-
-  final List<double> values;
-  final String? todayLabel;
-}
-
-/// Count badge showing total workouts with last workout metadata.
-final class CountBadgeData extends TileVisualizationData {
-  const CountBadgeData({
-    required this.count,
-    this.lastWorkoutType,
-    this.lastWorkoutDuration,
-  });
-
-  final int count;
-  final String? lastWorkoutType;
-  final String? lastWorkoutDuration;
-}
-
-/// Cycle calendar with phase label and dot states.
-final class CalendarDotsData extends TileVisualizationData {
-  const CalendarDotsData({
-    required this.cycleDay,
-    required this.phaseLabel,
-    required this.dotStates,
-  });
-
-  final int cycleDay;
-  final String phaseLabel;
-  final List<bool> dotStates;
-}
-
-/// Air quality and UV index for the environment tile.
-final class EnvironmentData extends TileVisualizationData {
-  const EnvironmentData({
-    required this.aqiValue,
-    required this.aqiLabel,
-    required this.uvIndex,
-    required this.uvLabel,
-  });
-
-  final int aqiValue;
-  final String aqiLabel;
-  final int uvIndex;
-  final String uvLabel;
-}
-
 // ── TileData ──────────────────────────────────────────────────────────────────
 
 /// Full tile data: identity, state, last-updated timestamp, visualization,
@@ -286,7 +93,6 @@ class TileData {
     this.lastUpdated,
     this.primaryValue,
     this.unit,
-    this.visualization,
     this.vizConfig,
     this.avgLabel,
     this.deltaLabel,
@@ -308,10 +114,7 @@ class TileData {
   /// Unit label (e.g. "steps", "bpm"). Null when not applicable or embedded in value.
   final String? unit;
 
-  /// Visualization payload (legacy) — null unless [dataState] == [TileDataState.loaded].
-  final TileVisualizationData? visualization;
-
-  /// New typed visualization config — null unless [dataState] == [TileDataState.loaded].
+  /// Typed visualization config — null unless [dataState] == [TileDataState.loaded].
   final TileVisualizationConfig? vizConfig;
 
   // ── Stats footer (MetricTile, tall/wide only) ──────────────────────────────

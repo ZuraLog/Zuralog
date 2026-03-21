@@ -162,36 +162,6 @@ void main() {
     });
   });
 
-  // ── TileVisualizationData subtypes ─────────────────────────────────────────
-
-  group('BarChartData', () {
-    test('stores dailyValues and dayLabels correctly', () {
-      final data = BarChartData(
-        dailyValues: [100.0, 200.0, 300.0],
-        dayLabels: ['Mon', 'Tue', 'Wed'],
-      );
-      expect(data.dailyValues, [100.0, 200.0, 300.0]);
-      expect(data.dayLabels, ['Mon', 'Tue', 'Wed']);
-    });
-  });
-
-  group('RingData', () {
-    test('stores value and max', () {
-      const data = RingData(value: 0.75, max: 1.0);
-      expect(data.value, 0.75);
-      expect(data.max, 1.0);
-    });
-  });
-
-  group('DotsData', () {
-    test('stores 7 values', () {
-      final data = DotsData(values: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
-      expect(data.values.length, 7);
-      expect(data.values.first, 1.0);
-      expect(data.values.last, 7.0);
-    });
-  });
-
   // ── TileData stats fields ──────────────────────────────────────────────────
 
   group('TileData stats fields', () {
