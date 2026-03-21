@@ -127,9 +127,6 @@ class MetricTile extends StatelessWidget {
     final isSquare = size == TileSize.square;
 
     return Container(
-      constraints: BoxConstraints(
-        minHeight: isSquare ? 120 : 0,
-      ),
       decoration: BoxDecoration(
         color: colors.cardBackground,
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -177,7 +174,7 @@ class MetricTile extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: [
         // ── Metric header row ────────────────────────────────────────────────
         _MetricHeader(
