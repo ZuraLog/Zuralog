@@ -140,7 +140,7 @@ Each type is a stateless widget with three named constructors or a `size` parame
 
 **Metrics:** Steps (% of goal), Active Calories (% of goal), Sleep Duration (% of 8h goal), Water (% of daily goal), Exercise Minutes (% of goal), Stand Hours.
 
-**Config fields:** `value: double`, `maxValue: double`, `unit: String`, `showWeeklyBars: bool`.
+**Config fields:** `value: double`, `maxValue: double`, `unit: String`, `weeklyBars: List<BarPoint>?` (non-null enables the 7-day bar row below the ring on 1×2 tiles; null means no bars rendered — there is no separate boolean flag).
 
 ---
 
@@ -559,7 +559,7 @@ return switch (config) {
 
 **UI:** `TileId.wristTemperature` → `LineChartConfig` (7-day overnight deviation trend). `allowedSizes`: square only (trend is compact).
 
-### 9.10 Mindful Minutes (Not requested)
+### 9.9 Mindful Minutes (Not requested)
 
 **Apple Health:** Add `HKCategoryType(.mindfulSession)` to `readTypes`. Add `getMindfulMinutes(DateTime date) → double?`.
 
