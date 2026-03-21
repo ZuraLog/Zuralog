@@ -3,7 +3,7 @@
 /// Domain models for the tile-based data dashboard.
 ///
 /// Model overview:
-/// - [TileId]                 — enum of 20 supported metric tiles
+/// - [TileId]                 — enum of 31 supported metric tiles
 /// - [TileDataState]          — enum of 5 tile data states
 /// - [TileVisualizationData]  — sealed class hierarchy for tile visualizations
 /// - [TileData]               — full tile data including state and visualization

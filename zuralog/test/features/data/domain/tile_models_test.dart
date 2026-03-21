@@ -23,7 +23,7 @@ void main() {
       }
     });
 
-    test('fromString round-trips all 20 slugs', () {
+    test('fromString round-trips all 31 slugs', () {
       for (final id in TileId.values) {
         expect(TileId.fromString(id.name), id,
             reason: 'slug "${id.name}" should round-trip');
