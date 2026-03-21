@@ -19,7 +19,9 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_empty_states.dart';
+import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
 
 // ── MetricTile ────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,7 @@ class MetricTile extends StatelessWidget {
     required this.dataState,
     required this.size,
     this.visualization,
+    this.vizConfig,
     this.primaryValue,
     this.unit,
     this.avgLabel,
@@ -58,6 +61,10 @@ class MetricTile extends StatelessWidget {
 
   /// Chart/graphic widget. Non-null only when [dataState] == [TileDataState.loaded].
   final Widget? visualization;
+
+  /// Visualization configuration. When provided, [buildTileVisualization] is
+  /// called inside the tile to render the chart. Takes precedence over [visualization].
+  final TileVisualizationConfig? vizConfig;
 
   /// Primary metric value (e.g. "8,432"). Falls back to "—" when null.
   final String? primaryValue;
@@ -204,7 +211,18 @@ class MetricTile extends StatelessWidget {
         ],
 
         // ── Visualization area ───────────────────────────────────────────────
-        if (visualization != null) ...[
+        if (vizConfig != null)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: buildTileVisualization(
+                config: vizConfig!,
+                categoryColor: effectiveColor,
+                size: size,
+              ),
+            ),
+          )
+        else if (visualization != null) ...[
           const SizedBox(height: 8),
           visualization!,
         ],

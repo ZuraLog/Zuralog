@@ -133,23 +133,12 @@ class TileGrid extends StatelessWidget {
     }
 
     // Otherwise render MetricTile.
-    final vizConfig = tileData?.vizConfig;
-    final effectiveColor = colorOverride != null
-        ? Color(colorOverride)
-        : categoryColor(id.category);
-
     return MetricTile(
       key: ValueKey('tile_${id.name}'),
       tileId: id,
       dataState: tileData?.dataState ?? TileDataState.noSource,
       size: size,
-      visualization: vizConfig != null
-          ? buildTileVisualization(
-              config: vizConfig,
-              categoryColor: effectiveColor,
-              size: size,
-            )
-          : null,
+      vizConfig: tileData?.vizConfig,
       primaryValue: tileData?.primaryValue,
       avgLabel: tileData?.avgLabel,
       deltaLabel: tileData?.deltaLabel,
