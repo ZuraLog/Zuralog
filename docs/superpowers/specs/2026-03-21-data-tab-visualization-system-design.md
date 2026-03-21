@@ -89,7 +89,7 @@ Each type is a stateless widget with three named constructors or a `size` parame
 
 ### 5.1 LineChart
 
-**Shape:** Single line (or dual line for paired metrics) over a time range. Optional shaded range band between min/max. Optional dashed reference/target line.
+**Shape:** Single line over a time range. Optional shaded range band between min/max. Optional dashed reference/target line. For paired metrics (e.g. blood pressure), use `DualValue` (Section 5.12) — `LineChartConfig` is always single-line.
 
 **Size behavior:**
 - **1×1:** Compact sparkline, no axes, today dot only. 36px height.
@@ -520,15 +520,48 @@ return switch (config) {
 
 **Sync:** Add `water_liters` to the daily metrics payload in `HealthSyncService`.
 
-### 9.4 Walking Metrics — Mobility (Missing)
+### 9.4 Activity Tiles — Distance, Floors, Exercise Minutes (Collected, not surfaced)
 
-**Apple Health:** Add `walkingAsymmetryPercentage`, `walkingSpeed`, `walkingDoubleSupportPercentage`, `sixMinuteWalkTestDistance` to `readTypes`. Add `getWalkingMetrics()` → `Map<String, double?>`.
+**Status:** All three metrics are already collected by the native bridges (`distanceWalkingRunning`, `FloorsClimbedRecord`, `appleExerciseTime` / `ExerciseSessionRecord`). Bridge methods and sync payload keys exist.
 
-**Android:** `FloorsClimbedRecord` already collected. No direct walking asymmetry equivalent in Health Connect; omit on Android.
+**Fix — `distance`:**
+- iOS: `HKQuantityType(.distanceWalkingRunning)` already in `readTypes`. Bridge returns meters; convert to user's preferred unit (km/mi) in the dashboard builder.
+- Android: `DistanceRecord` already collected.
+- Sync payload key: `distance_meters` (already present — no change).
+- UI: `_buildTileViz` returns `BarChartConfig(bars: last7DaysKm, goalValue: null)` for `TileId.distance` at all sizes.
 
-**UI:** `TileId.mobility` maps to a `GaugeConfig` built from `walkingAsymmetryPercentage` (lower = better) or `sixMinuteWalkTestDistance`.
+**Fix — `floorsClimbed`:**
+- iOS: `HKQuantityType(.flightsClimbed)` already in `readTypes`.
+- Android: `FloorsClimbedRecord` already collected.
+- Sync payload key: `floors_climbed` (already present — no change).
+- UI: `_buildTileViz` returns `BarChartConfig(bars: last7DaysFloors, goalValue: null)` for `TileId.floorsClimbed`.
 
-### 9.5 Cycle / Menstrual (Missing)
+**Fix — `exerciseMinutes`:**
+- iOS: `HKQuantityType(.appleExerciseTime)` already in `readTypes`.
+- Android: Derived from `ExerciseSessionRecord` durations.
+- Sync payload key: `exercise_minutes` (already present — no change).
+- UI: `_buildTileViz` returns `RingConfig(value: todayMinutes, maxValue: 30, unit: 'min')` for `TileId.exerciseMinutes` at 1×1; `BarChartConfig` at wider sizes.
+
+### 9.5 Walking Speed and Running Pace (Collected, not surfaced as tiles)
+
+**`TileId.walkingSpeed`:**
+- iOS: Add `HKQuantityType(.walkingSpeed)` to `readTypes`. Add `getWalkingSpeed(DateTime date) → double?` returning m/s.
+- Android: No `WalkingSpeedRecord` in Health Connect; tile is ghost state on Android.
+- Sync payload key: `walking_speed_mps` (flat scalar).
+- UI: `_buildTileViz` returns `LineChartConfig(points: last7DaysSpeed, positiveIsUp: true)` for `TileId.walkingSpeed`.
+
+**`TileId.runningPace`:**
+- iOS: Derived from `HKWorkout` sessions with workout type `running`. Aggregate `totalDistance / duration` for each running session. Bridge method: extend `getWorkouts()` response to include `runningPaceMps` on sessions of type `running`.
+- Android: Derived from `ExerciseSessionRecord` with type `RUNNING`. Same aggregation.
+- Sync payload key: `running_pace_mps` (latest running session pace, flat scalar).
+- UI: `_buildTileViz` returns `LineChartConfig(points: recentRunPaces, positiveIsUp: false)` (lower pace = faster = better; set `positiveIsUp: false` so decreasing pace is shown in green).
+
+**`TileId.mobility` (existing tile — walking asymmetry pipeline):**
+- iOS: Add `walkingAsymmetryPercentage`, `walkingDoubleSupportPercentage`, `sixMinuteWalkTestDistance` to `readTypes`. Add `getWalkingMetrics()` → `Map<String, double?>`.
+- Android: No direct walking asymmetry equivalent in Health Connect; omit on Android.
+- UI: `_buildTileViz` returns `GaugeConfig` for `TileId.mobility` built from `walkingAsymmetryPercentage` (lower = better, zones: Excellent <2%, Good 2–5%, Fair 5–10%, Poor >10%) or `sixMinuteWalkTestDistance` if asymmetry unavailable.
+
+### 9.6 Cycle / Menstrual (Missing)
 
 **Apple Health:** Add `HKCategoryType(.menstrualFlow)`, `HKCategoryType(.intermenstrualBleeding)`, `HKCategoryType(.ovulationTestResult)`, `HKCategoryType(.basalBodyTemperature)` to `readTypes`. Add `getCycleData(DateTime startDate, DateTime endDate) → List<Map>`.
 
@@ -536,13 +569,13 @@ return switch (config) {
 
 **UI:** `TileId.cycle` maps to a `CalendarGridConfig` with phase coloring.
 
-### 9.6 Respiratory Rate (Already collected, not surfaced)
+### 9.7 Respiratory Rate (Already collected, not surfaced)
 
 **Status:** Collected and synced. No `TileId` exists.
 
 **Fix:** Add `TileId.respiratoryRate`. Map to `StatCardConfig` (point-in-time value + "Normal" status) or `LineChartConfig` if 7-day trend available.
 
-### 9.7 Nutrition Macros (Calories only, macros dropped)
+### 9.8 Nutrition Macros (Calories only, macros dropped)
 
 **Apple Health:** `HKQuantityType(.dietaryProtein)`, `(.dietaryCarbohydrates)`, `(.dietaryFatTotal)`, `(.dietaryFiber)` to `readTypes`. Extend `getNutritionCalories()` → `getNutrition()` returning a map with `calories`, `protein`, `carbs`, `fat`, `fiber`.
 
@@ -550,7 +583,17 @@ return switch (config) {
 
 **UI:** `TileId.calories` at 1×1 shows `Ring`. At 1×2 or 2×1, appends a `SegmentedBarConfig` for macros below.
 
-### 9.8 Wrist Temperature (Apple Watch Series 8+ only)
+### 9.9 Body Temperature (Not surfaced)
+
+**Apple Health:** Add `HKQuantityType(.bodyTemperature)` to `readTypes` in `HealthKitBridge.swift`. Add `getBodyTemperature(DateTime date) → double?` returning degrees Celsius (the bridge layer does not convert units — the UI layer or backend handles user preference).
+
+**Android:** Add `BodyTemperatureRecord` to `REQUIRED_PERMISSIONS` in `HealthConnectBridge.kt`. Implement `readBodyTemperature(date)`. Body temperature in Health Connect is typically written by connected Withings/Oura/etc. devices.
+
+**Sync:** Add `body_temperature_celsius` (flat scalar) to the daily metrics payload.
+
+**UI:** `TileId.bodyTemperature` → `LineChartConfig` (7-day trend, `positiveIsUp: false` — elevated temperature is clinically significant). `StatCardConfig` as fallback at 1×1 if fewer than 3 data points.
+
+### 9.10 Wrist Temperature (Apple Watch Series 8+ only)
 
 **Apple Health:** Add `HKQuantityType(.appleSleepingWristTemperature)` to `readTypes` in `HealthKitBridge.swift`. This type records overnight wrist temperature deviation from baseline (degrees Celsius, relative). Add `getWristTemperature() → double?` to `HealthBridge` and `HealthRepository`.
 
@@ -560,7 +603,7 @@ return switch (config) {
 
 **UI:** `TileId.wristTemperature` → `LineChartConfig` (7-day overnight deviation trend). `allowedSizes`: square only (trend is compact).
 
-### 9.9 Blood Glucose (Ghost tile — entitlement required)
+### 9.11 Blood Glucose (Ghost tile — entitlement required)
 
 **Status:** `TileId.bloodGlucose` is added to the enum and to the Section 6 mapping table. No data is wired.
 
@@ -572,7 +615,7 @@ return switch (config) {
 
 **Sync:** Add `blood_glucose_mmol` to the daily metrics payload when data is present.
 
-### 9.10 Mindful Minutes (Not requested)
+### 9.12 Mindful Minutes (Not requested)
 
 **Apple Health:** Add `HKCategoryType(.mindfulSession)` to `readTypes`. Add `getMindfulMinutes(DateTime date) → double?`.
 
@@ -618,11 +661,11 @@ The `cycle`, `mobility`, `water`, `environment` tiles are already in the enum. `
 | `tile_visualizations.dart` | Replace 14 existing subtypes with 12 `TileVisualizationConfig` sealed classes + updated factory |
 | `tile_expanded_view.dart` | Update `buildTileVisualization()` call site to new signature `(config:, categoryColor:, size:)`. The `size` argument must be the tile's effective expanded size — pass `tile.defaultSize == TileSize.square ? TileSize.tall : tile.defaultSize` (expanded square tiles display as tall). Never pass `TileSize.square` to the expanded view. |
 | `data_providers.dart` | Update `_buildTileViz()` to produce `TileVisualizationConfig` objects; add new tile IDs |
-| `tile_models.dart` | Add 9 new `TileId` values; update all four exhaustive `switch` getters — `displayName`, `category`, `defaultSize`, `allowedSizes` — for all 9 new values. These switches have no `default` case and will produce a Dart compile error if any new `TileId` is omitted. Update `cycle`'s `allowedSizes` from `[square]` to `[wide, tall]`. Update `allowedSizes` for any metric using `HeatmapConfig` to exclude `TileSize.square`. |
-| `health_bridge.dart` | Add `getWater()`, `getWalkingMetrics()`, `getCycleData()`, `getMindfulMinutes()`, extend `getNutrition()` |
-| `health_sync_service.dart` | Add blood pressure, water, mindful minutes to sync payload |
-| `HealthKitBridge.swift` | Add 12 new `readTypes`; add `blood_pressure` observer case; new read methods |
-| `HealthConnectBridge.kt` | Add `HydrationRecord`, `MenstruationFlowRecord`, `MindfulnessSessionRecord` to permissions + read methods |
+| `tile_models.dart` | Add 11 new `TileId` values; update all four exhaustive `switch` getters — `displayName`, `category`, `defaultSize`, `allowedSizes` — for all 11 new values. These switches have no `default` case and will produce a Dart compile error if any new `TileId` is omitted. Update `cycle`'s `allowedSizes` from `[square]` to `[wide, tall]`. Update `allowedSizes` for any metric using `HeatmapConfig` to exclude `TileSize.square`. |
+| `health_bridge.dart` | Add `getWater()`, `getWalkingMetrics()`, `getWalkingSpeed()`, `getCycleData()`, `getMindfulMinutes()`, `getBodyTemperature()`, `getWristTemperature()`; extend `getNutrition()` |
+| `health_sync_service.dart` | Add blood pressure, water, body temperature, wrist temperature deviation, walking speed, running pace, mindful minutes to sync payload |
+| `HealthKitBridge.swift` | Add `walkingSpeed`, `bodyTemperature`, `appleSleepingWristTemperature`, `dietaryWater`, `menstrualFlow`, `ovulationTestResult`, `basalBodyTemperature`, `intermenstrualBleeding`, `walkingAsymmetryPercentage`, `walkingDoubleSupportPercentage`, `sixMinuteWalkTestDistance`, `dietaryProtein`, `dietaryCarbohydrates`, `dietaryFatTotal`, `mindfulSession` to `readTypes`; add `blood_pressure` observer case; add read methods for each new type |
+| `HealthConnectBridge.kt` | Add `HydrationRecord`, `MenstruationFlowRecord`, `OvulationTestRecord`, `BodyTemperatureRecord`, `MindfulnessSessionRecord` to permissions + read methods; extend `NutritionRecord` parsing for macros |
 
 ### New Files
 
@@ -652,7 +695,7 @@ Each file contains a single widget class with a `size` parameter that switches i
 - Nutrition micronutrients (vitamins, minerals) — supported by the viz system (SegmentedBar) but no API endpoint surfaces them yet; add when backend supports it
 - Garmin, WHOOP, Polar wearable integrations — OAuth not yet complete; tiles will show ghost state until connected
 - Real-time / live streaming heart rate — tile shows latest reading; live stream is a workout feature
-- CGM continuous glucose integration — `TileId.bloodGlucose` is added but `BloodGlucoseRecord` on Android and `bloodGlucose` on iOS require medical device entitlements; shipped as ghost tile until entitlement approved (see Section 9.9 for bridge stub details)
+- CGM continuous glucose integration — `TileId.bloodGlucose` is added but `BloodGlucoseRecord` on Android and `bloodGlucose` on iOS require medical device entitlements; shipped as ghost tile until entitlement approved (see Section 9.11 for bridge stub details)
 - **Environment tile data pipeline** — `TileId.environment` is already in the enum. Its data (AQI, UV index) comes from an external weather/air-quality API that is not yet integrated. No bridge method or sync payload entry is added in this release. The tile will remain in `noSource` ghost state. A separate spec will cover the external API integration when that work is prioritized.
 - **Heatmap viz is scaffolded but unassigned** — `HeatmapViz` and `HeatmapConfig` are implemented as part of the 12-type reusable system, but no `TileId` is mapped to `HeatmapConfig` in the Section 6 table for this release. The widget will be exercised when a future metric (e.g., step density calendar, HRV pattern) is assigned to it. The `heatmap_viz.dart` file will exist but have no active code path at launch.
 
