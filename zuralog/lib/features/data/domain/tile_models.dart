@@ -14,7 +14,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 
 // ── TileId ────────────────────────────────────────────────────────────────────
 
-/// The 20 supported metric tile identifiers.
+/// The 31 supported metric tile identifiers.
 enum TileId {
   steps,
   activeCalories,
@@ -35,7 +35,19 @@ enum TileId {
   stress,
   cycle,
   environment,
-  mobility;
+  mobility,
+  // ── New tiles (Phase 8 expansion) ─────────────────────────────────────────
+  distance,
+  floorsClimbed,
+  exerciseMinutes,
+  walkingSpeed,
+  runningPace,
+  respiratoryRate,
+  bodyTemperature,
+  wristTemperature,
+  macros,
+  bloodGlucose,
+  mindfulMinutes;
 
   /// Deserializes from a raw string slug.
   ///
@@ -359,6 +371,17 @@ extension TileConfig on TileId {
         return 'Environment';
       case TileId.mobility:
         return 'Mobility';
+      case TileId.distance:         return 'Distance';
+      case TileId.floorsClimbed:    return 'Floors Climbed';
+      case TileId.exerciseMinutes:  return 'Exercise Minutes';
+      case TileId.walkingSpeed:     return 'Walking Speed';
+      case TileId.runningPace:      return 'Running Pace';
+      case TileId.respiratoryRate:  return 'Respiratory Rate';
+      case TileId.bodyTemperature:  return 'Body Temperature';
+      case TileId.wristTemperature: return 'Wrist Temperature';
+      case TileId.macros:           return 'Macros';
+      case TileId.bloodGlucose:     return 'Blood Glucose';
+      case TileId.mindfulMinutes:   return 'Mindful Minutes';
     }
   }
 
@@ -395,6 +418,23 @@ extension TileConfig on TileId {
         return HealthCategory.environment;
       case TileId.mobility:
         return HealthCategory.mobility;
+      case TileId.distance:
+      case TileId.floorsClimbed:
+      case TileId.exerciseMinutes:
+      case TileId.walkingSpeed:
+      case TileId.runningPace:
+        return HealthCategory.activity;
+      case TileId.respiratoryRate:
+        return HealthCategory.heart;
+      case TileId.bodyTemperature:
+      case TileId.wristTemperature:
+        return HealthCategory.body;
+      case TileId.macros:
+        return HealthCategory.nutrition;
+      case TileId.bloodGlucose:
+        return HealthCategory.vitals;
+      case TileId.mindfulMinutes:
+        return HealthCategory.wellness;
     }
   }
 
@@ -412,6 +452,9 @@ extension TileConfig on TileId {
         return TileSize.wide;
       case TileId.weight:
         return TileSize.wide;
+      case TileId.cycle:
+        return TileSize.wide;
+      // All 11 new IDs default to square (handled by default:)
       default:
         return TileSize.square;
     }
@@ -435,6 +478,22 @@ extension TileConfig on TileId {
       case TileId.energy:
       case TileId.stress:
         return const [TileSize.square, TileSize.wide];
+      case TileId.cycle:
+        return const [TileSize.wide, TileSize.tall];
+      case TileId.wristTemperature:
+        return const [TileSize.square];
+      case TileId.walkingSpeed:
+      case TileId.runningPace:
+      case TileId.bodyTemperature:
+      case TileId.respiratoryRate:
+        return const [TileSize.square, TileSize.wide];
+      case TileId.distance:
+      case TileId.floorsClimbed:
+      case TileId.exerciseMinutes:
+      case TileId.macros:
+      case TileId.bloodGlucose:
+      case TileId.mindfulMinutes:
+        return const [TileSize.square, TileSize.tall];
       default:
         return const [TileSize.square];
     }

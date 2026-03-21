@@ -8,8 +8,19 @@ void main() {
   // ── TileId ─────────────────────────────────────────────────────────────────
 
   group('TileId', () {
-    test('has exactly 20 values', () {
-      expect(TileId.values.length, 20);
+    test('has exactly 31 values', () {
+      expect(TileId.values.length, 31);
+    });
+
+    test('new TileId slugs round-trip via fromString', () {
+      const newIds = [
+        'distance', 'floorsClimbed', 'exerciseMinutes', 'walkingSpeed',
+        'runningPace', 'respiratoryRate', 'bodyTemperature', 'wristTemperature',
+        'macros', 'bloodGlucose', 'mindfulMinutes',
+      ];
+      for (final slug in newIds) {
+        expect(TileId.fromString(slug), isNotNull, reason: 'slug "$slug" should be valid');
+      }
     });
 
     test('fromString round-trips all 20 slugs', () {
