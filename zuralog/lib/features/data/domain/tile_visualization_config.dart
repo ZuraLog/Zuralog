@@ -78,6 +78,13 @@ class HeatmapCell {
 
 sealed class TileVisualizationConfig {
   const TileVisualizationConfig();
+
+  /// Whether this config has sufficient data to render a chart.
+  ///
+  /// [buildTileVisualization] checks this before dispatching — returning
+  /// [_VizEmptyPlaceholder] when false. Default is `true` (value-based configs
+  /// always render).
+  bool get hasChartData => true;
 }
 
 class LineChartConfig extends TileVisualizationConfig {
@@ -93,6 +100,9 @@ class LineChartConfig extends TileVisualizationConfig {
   final double? rangeMin;
   final double? rangeMax;
   final bool positiveIsUp;
+
+  @override
+  bool get hasChartData => points.isNotEmpty;
 }
 // LineChartConfig is always single-line. Paired metrics use DualValueConfig.
 
@@ -105,6 +115,9 @@ class BarChartConfig extends TileVisualizationConfig {
   final List<BarPoint> bars;
   final double? goalValue;
   final bool showAvgLine;
+
+  @override
+  bool get hasChartData => bars.isNotEmpty;
 }
 
 class AreaChartConfig extends TileVisualizationConfig {
@@ -120,6 +133,9 @@ class AreaChartConfig extends TileVisualizationConfig {
   final double fillOpacity;
   final double? delta; // e.g. -0.03 = ↓ 3%
   final bool positiveIsUp;
+
+  @override
+  bool get hasChartData => points.isNotEmpty;
 }
 
 class RingConfig extends TileVisualizationConfig {
@@ -153,6 +169,9 @@ class SegmentedBarConfig extends TileVisualizationConfig {
   const SegmentedBarConfig({required this.segments, required this.totalLabel});
   final List<Segment> segments;
   final String totalLabel;
+
+  @override
+  bool get hasChartData => segments.isNotEmpty;
 }
 
 class FillGaugeConfig extends TileVisualizationConfig {
@@ -174,12 +193,18 @@ class DotRowConfig extends TileVisualizationConfig {
   const DotRowConfig({required this.points, this.invertedScale = false});
   final List<DotPoint> points;
   final bool invertedScale; // true for Stress — lower is better
+
+  @override
+  bool get hasChartData => points.isNotEmpty;
 }
 
 class CalendarGridConfig extends TileVisualizationConfig {
   const CalendarGridConfig({required this.days, required this.totalDays});
   final List<CalendarDay> days;
   final int totalDays; // 28 for cycle, 30/31 for month
+
+  @override
+  bool get hasChartData => days.isNotEmpty;
 }
 
 class HeatmapConfig extends TileVisualizationConfig {
@@ -193,6 +218,9 @@ class HeatmapConfig extends TileVisualizationConfig {
   final Color colorLow;
   final Color colorHigh;
   final String legendLabel;
+
+  @override
+  bool get hasChartData => cells.isNotEmpty;
 }
 
 class StatCardConfig extends TileVisualizationConfig {

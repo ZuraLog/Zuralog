@@ -7,6 +7,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/bar_chart_viz.dart';
+import 'package:zuralog/features/data/presentation/widgets/viz/line_chart_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/stat_card_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/ring_viz.dart';
 import 'package:zuralog/features/data/presentation/widgets/viz/dual_value_viz.dart';
@@ -14,7 +15,11 @@ import 'package:zuralog/features/data/presentation/widgets/viz/dual_value_viz.da
 void main() {
   group('buildTileVisualization factory', () {
     test('returns BarChartViz for BarChartConfig', () {
-      final config = BarChartConfig(bars: [], showAvgLine: false);
+      // Non-empty bars required — empty bars → hasChartData=false → _VizEmptyPlaceholder
+      final config = BarChartConfig(
+        bars: [BarPoint(label: 'Mon', value: 8000, isToday: false)],
+        showAvgLine: false,
+      );
       final widget = buildTileVisualization(
         config: config,
         categoryColor: Colors.blue,
@@ -51,6 +56,27 @@ void main() {
         size: TileSize.square,
       );
       expect(widget, isA<DualValueViz>());
+    });
+
+    test('returns _VizEmptyPlaceholder for empty LineChartConfig', () {
+      const config = LineChartConfig(points: []);
+      final widget = buildTileVisualization(
+        config: config,
+        categoryColor: Colors.blue,
+        size: TileSize.square,
+      );
+      // The exact type is private, so we check it is NOT a LineChartViz
+      expect(widget, isNot(isA<LineChartViz>()));
+    });
+
+    test('returns _VizEmptyPlaceholder for empty BarChartConfig', () {
+      const config = BarChartConfig(bars: []);
+      final widget = buildTileVisualization(
+        config: config,
+        categoryColor: Colors.blue,
+        size: TileSize.square,
+      );
+      expect(widget, isNot(isA<BarChartViz>()));
     });
   });
 }

@@ -111,7 +111,7 @@ class MetricTile extends StatelessWidget {
       TileDataState.syncing =>
         '${tileId.displayName}: syncing',
       TileDataState.noDataForRange =>
-        '${tileId.displayName}: no data for selected range',
+        '${tileId.displayName}: last known value ${primaryValue ?? '—'}, data may be outdated',
       _ => tileId.displayName,
     };
 

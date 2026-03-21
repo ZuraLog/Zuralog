@@ -17,6 +17,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
@@ -432,8 +433,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                       onLogManually: () => context.go('/today'),
                     ),
                   )
-                else if (tilesAsync.isLoading)
-                  _buildLoadingSlivers()
                 else
                   SliverToBoxAdapter(
                     child: AnimatedSwitcher(
@@ -442,18 +441,20 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                         opacity: animation,
                         child: child,
                       ),
-                      child: _TileGridBox(
-                        key: ValueKey(activeFilter),
-                        orderedTileIds: filteredTileIds,
-                        tiles: tileMap,
-                        layout: layout,
-                        isEditMode: _isEditMode,
-                        onTileTap: _onTileTap,
-                        onSizeChanged: _onSizeChanged,
-                        onVisibilityToggled: _onVisibilityToggled,
-                        onColorPick: _onColorPick,
-                        onReorder: _onReorder,
-                      ),
+                      child: tilesAsync.isLoading
+                          ? const _DashboardSkeletonBox(key: ValueKey('loading'))
+                          : _TileGridBox(
+                              key: ValueKey(activeFilter),
+                              orderedTileIds: filteredTileIds,
+                              tiles: tileMap,
+                              layout: layout,
+                              isEditMode: _isEditMode,
+                              onTileTap: _onTileTap,
+                              onSizeChanged: _onSizeChanged,
+                              onVisibilityToggled: _onVisibilityToggled,
+                              onColorPick: _onColorPick,
+                              onReorder: _onReorder,
+                            ),
                     ),
                   ),
 
@@ -503,24 +504,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     );
   }
 
-  Widget _buildLoadingSlivers() {
-    return SliverMainAxisGroup(
-      slivers: [
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, i) => const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd,
-                vertical: AppDimens.spaceXs,
-              ),
-              child: _CardSkeleton(),
-            ),
-            childCount: 6,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 // ── _CategoryTimeRangeSelector ────────────────────────────────────────────────
@@ -813,18 +796,76 @@ class _ColorPickerSheet extends StatelessWidget {
 
 // ── Skeleton widgets ──────────────────────────────────────────────────────────
 
+/// Animated layout-aware skeleton for a single metric tile card.
+///
+/// Internal structure mirrors [MetricTile]'s loaded layout:
+/// header row → value → unit → chart area.
 class _CardSkeleton extends StatelessWidget {
   const _CardSkeleton();
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-    return Container(
-      height: 120,
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+    return Semantics(
+      label: 'Loading dashboard metrics',
+      excludeSemantics: true,
+      child: Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          boxShadow: colors.isDark ? null : AppDimens.cardShadowLight,
+        ),
+        padding: const EdgeInsets.all(12),
+        child: AppShimmer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row: dot + name + spacer + icon slot
+              Row(
+                children: [
+                  ShimmerBox(height: 8, width: 8, isCircle: true),
+                  const SizedBox(width: 6),
+                  ShimmerBox(height: 8, width: 64),
+                  const Spacer(),
+                  ShimmerBox(height: 14, width: 14),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Primary value
+              ShimmerBox(height: 28, width: 56),
+              const SizedBox(height: 4),
+              // Unit label
+              ShimmerBox(height: 8, width: 36),
+              const SizedBox(height: 8),
+              // Chart area — fills remaining height
+              Expanded(
+                child: ShimmerBox(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+/// Box widget wrapping 6 [_CardSkeleton]s — used in [AnimatedSwitcher].
+class _DashboardSkeletonBox extends StatelessWidget {
+  const _DashboardSkeletonBox({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(6, (_) => const Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceXs,
+        ),
+        child: _CardSkeleton(),
+      )),
     );
   }
 }
