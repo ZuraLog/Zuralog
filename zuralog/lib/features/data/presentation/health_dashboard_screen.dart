@@ -858,18 +858,14 @@ class _DashboardSkeletonBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Loading dashboard metrics',
-      excludeSemantics: true,
-      child: Column(
-        children: List.generate(6, (_) => const Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppDimens.spaceMd,
-            vertical: AppDimens.spaceXs,
-          ),
-          child: _CardSkeleton(),
-        )),
-      ),
+    return Column(
+      children: List.generate(6, (_) => const Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppDimens.spaceMd,
+          vertical: AppDimens.spaceXs,
+        ),
+        child: _CardSkeleton(),
+      )),
     );
   }
 }
