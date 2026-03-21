@@ -144,7 +144,8 @@ class HealthBridge {
   ///
   /// Returns an empty list if no data exists or on error.
   /// Each sample is a Map with keys:
-  /// `value` (HKCategoryValueSleepAnalysis), `startDate`, `endDate`, `source`.
+  /// `value` (HKCategoryValueSleepAnalysis), `startDate`, `endDate`, `source`,
+  /// and a normalized `stage` key (one of: 'deep', 'rem', 'light', 'awake', 'inBed').
   Future<List<Map<String, dynamic>>> getSleep(
     DateTime startDate,
     DateTime endDate,
@@ -155,10 +156,14 @@ class HealthBridge {
         'endDate': endDate.millisecondsSinceEpoch,
       });
       if (result == null) return [];
-      return result
-          .cast<Map<dynamic, dynamic>>()
-          .map((m) => Map<String, dynamic>.from(m))
-          .toList();
+      final segments = result.cast<Map<dynamic, dynamic>>();
+      return segments.map((s) {
+        final map = Map<String, dynamic>.from(s);
+        // Normalize stage from iOS int or Android string
+        final rawValue = map['value'];
+        map['stage'] = _parseSleepStage(rawValue);
+        return map;
+      }).toList();
     } on PlatformException catch (e) {
       assert(() {
         // ignore: avoid_print
@@ -167,6 +172,37 @@ class HealthBridge {
       }());
       return [];
     }
+  }
+
+  /// Normalizes a raw sleep stage value from native platforms into a
+  /// canonical string label.
+  ///
+  /// - **iOS:** [value] is an `int` (HKCategoryValueSleepAnalysis):
+  ///   5 = awake, 6 = light, 7 = deep, 8 = rem, other = inBed.
+  /// - **Android:** [value] is a `String` (e.g. "deep", "rem", "light", "awake").
+  ///
+  /// Returns one of: `'deep'`, `'rem'`, `'light'`, `'awake'`, `'inBed'`.
+  String _parseSleepStage(dynamic value) {
+    if (value is String) {
+      return switch (value.toLowerCase()) {
+        'deep'  => 'deep',
+        'rem'   => 'rem',
+        'light' => 'light',
+        'awake' => 'awake',
+        _       => 'inBed',
+      };
+    }
+    if (value is int) {
+      // iOS HKCategoryValueSleepAnalysis: 5=awake, 6=light, 7=deep, 8=rem
+      return switch (value) {
+        5 => 'awake',
+        6 => 'light',
+        7 => 'deep',
+        8 => 'rem',
+        _ => 'inBed',
+      };
+    }
+    return 'inBed';
   }
 
   /// Fetches the most recent body weight in kilograms.
