@@ -71,7 +71,7 @@ class RingViz extends StatelessWidget {
 
   Widget _buildTall() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: [
         _buildRing(110),
         if (config.weeklyBars != null) ...[

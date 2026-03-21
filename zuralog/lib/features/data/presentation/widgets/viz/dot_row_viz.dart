@@ -86,7 +86,7 @@ class DotRowViz extends StatelessWidget {
 
   Widget _buildTall() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,

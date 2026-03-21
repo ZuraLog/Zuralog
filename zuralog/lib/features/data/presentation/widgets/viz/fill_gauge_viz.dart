@@ -116,7 +116,7 @@ class FillGaugeViz extends StatelessWidget {
     final iconCount = config.unitSize != null ? (config.value / config.unitSize!).floor() : 0;
     final totalIcons = config.unitSize != null ? (config.maxValue / config.unitSize!).ceil() : 0;
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: [
         _buildTank(34, 90),
         const SizedBox(height: 8),
