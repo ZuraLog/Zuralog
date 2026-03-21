@@ -169,6 +169,9 @@ class SegmentedBarConfig extends TileVisualizationConfig {
   const SegmentedBarConfig({required this.segments, required this.totalLabel});
   final List<Segment> segments;
   final String totalLabel;
+
+  @override
+  bool get hasChartData => segments.isNotEmpty;
 }
 
 class FillGaugeConfig extends TileVisualizationConfig {

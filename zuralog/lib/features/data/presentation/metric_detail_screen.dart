@@ -931,7 +931,10 @@ class MetricDetailEmptyState extends StatelessWidget {
     super.key,
     required this.pointCount,
     required this.onExpandRange,
-  });
+  }) : assert(
+    pointCount == 0 || pointCount == 1,
+    'MetricDetailEmptyState: pointCount must be 0 or 1.',
+  );
 
   final int pointCount;
   final VoidCallback onExpandRange;

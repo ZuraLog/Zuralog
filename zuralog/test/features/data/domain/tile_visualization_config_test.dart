@@ -124,5 +124,10 @@ void main() {
       );
       expect(config.hasChartData, isFalse);
     });
+
+    test('SegmentedBarConfig: false when segments empty', () {
+      const config = SegmentedBarConfig(segments: [], totalLabel: '0 h');
+      expect(config.hasChartData, isFalse);
+    });
   });
 }
