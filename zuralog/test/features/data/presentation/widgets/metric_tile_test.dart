@@ -164,6 +164,40 @@ group('NoDataForRangeTileContent', () {
     expect(find.textContaining('Last:'), findsOneWidget);
     // Don't assert exact "2d ago" — clock-dependent
   });
+
+  testWidgets('shows history icon for staleness signal', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        NoDataForRangeTileContent(
+          lastKnownValue: '8,432',
+          lastUpdated: DateTime.now()
+              .subtract(const Duration(days: 2))
+              .toIso8601String(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.history_rounded), findsOneWidget);
+  });
+
+  testWidgets('"Last:" label uses amber statusConnecting color', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        NoDataForRangeTileContent(
+          lastKnownValue: '8,432',
+          lastUpdated: DateTime.now()
+              .subtract(const Duration(days: 2))
+              .toIso8601String(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // The "Last:" text should be rendered with statusConnecting (amber) color.
+    final lastText = tester.widgetList<Text>(
+      find.textContaining('Last:'),
+    ).first;
+    expect(lastText.style?.color, equals(AppColors.statusConnecting));
+  });
 });
 
 // ── MetricTile — loaded state ─────────────────────────────────────────────────

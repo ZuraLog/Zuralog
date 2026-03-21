@@ -208,17 +208,37 @@ class NoDataForRangeTileContent extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          lastKnownValue,
-          style: AppTextStyles.displayMedium.copyWith(
-            color: colors.textPrimary,
+        // Value at reduced opacity — signals "this is not live data"
+        Opacity(
+          opacity: 0.65,
+          child: Text(
+            lastKnownValue,
+            style: AppTextStyles.displayMedium.copyWith(
+              color: colors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          'Last: $relTime',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: colors.textTertiary,
+        // Amber history row — signals staleness.
+        // ExcludeSemantics: the icon is decorative; the tile's Semantics label
+        // (updated in Step 5.4) already communicates staleness to screen readers.
+        ExcludeSemantics(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.history_rounded,
+                size: 11,
+                color: AppColors.statusConnecting,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                'Last: $relTime',
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.statusConnecting,
+                ),
+              ),
+            ],
           ),
         ),
       ],
