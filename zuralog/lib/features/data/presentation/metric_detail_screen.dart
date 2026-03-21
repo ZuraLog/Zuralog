@@ -280,27 +280,17 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
           ),
         ],
 
-        if (spots.length == 1) ...[
-          const SizedBox(height: AppDimens.spaceLg),
-          Center(
-            child: Text(
-              'Only one data point available',
-              style: AppTextStyles.bodyLarge.copyWith(
-                  color: colors.textSecondary),
-            ),
+        if (spots.length == 1)
+          MetricDetailEmptyState(
+            pointCount: 1,
+            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
           ),
-        ],
 
-        if (spots.isEmpty) ...[
-          const SizedBox(height: AppDimens.spaceLg),
-          Center(
-            child: Text(
-              'No data for this period',
-              style: AppTextStyles.bodyLarge.copyWith(
-                  color: colors.textSecondary),
-            ),
+        if (spots.isEmpty)
+          MetricDetailEmptyState(
+            pointCount: 0,
+            onExpandRange: () => widget.onRangeChanged(TimeRange.days30),
           ),
-        ],
 
         const SizedBox(height: AppDimens.spaceMd),
 
@@ -871,12 +861,126 @@ class MetricDetailSkeleton extends StatelessWidget {
   }
 }
 
-// STUB — replaced in Task 7
+// ── MetricDetailErrorBody ─────────────────────────────────────────────────────
+
+/// Error state for [MetricDetailScreen] with a retry button.
+///
+/// Exposed without underscore so widget tests can reference it directly.
 class MetricDetailErrorBody extends StatelessWidget {
   const MetricDetailErrorBody({super.key, required this.onRetry});
+
   final VoidCallback onRetry;
+
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Semantics(
+      liveRegion: true,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.cloud_off_rounded,
+                size: 48,
+                color: AppColors.textTertiary,
+              ),
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                'Could not load metric',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: colors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppDimens.spaceXs),
+              Text(
+                'Check your connection and try again.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: colors.textTertiary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Try Again'),
+                onPressed: onRetry,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── MetricDetailEmptyState ────────────────────────────────────────────────────
+
+/// Empty/single-data-point state inside [_MetricDetailBody].
+///
+/// [pointCount] == 0 → "No data for this period"
+/// [pointCount] == 1 → "Only one data point available"
+///
+/// Both variants include a "Try 30 days" CTA via [onExpandRange].
+/// Exposed without underscore for testability.
+class MetricDetailEmptyState extends StatelessWidget {
+  const MetricDetailEmptyState({
+    super.key,
+    required this.pointCount,
+    required this.onExpandRange,
+  });
+
+  final int pointCount;
+  final VoidCallback onExpandRange;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final isZero = pointCount == 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceLg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isZero
+                ? Icons.show_chart_rounded
+                : Icons.radio_button_checked_rounded,
+            size: isZero ? 48 : 36,
+            color: colors.textTertiary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            isZero
+                ? 'No data for this period'
+                : 'Only one data point available',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceXs),
+          Text(
+            isZero
+                ? 'Try a different time range to see your data.'
+                : 'Expand the time range to see trends.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: colors.textTertiary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          OutlinedButton(
+            onPressed: onExpandRange,
+            child: const Text('Try 30 days'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── _AskCoachButton ───────────────────────────────────────────────────────────
