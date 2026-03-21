@@ -22,6 +22,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/time_range_selector.dart';
 
@@ -32,6 +33,19 @@ const int _kRawTableMaxRows = 30;
 
 /// Maximum character length for the coach prefill string.
 const int _kCoachPrefillMaxLength = 500;
+
+// ── MetricId formatter ────────────────────────────────────────────────────────
+
+/// Formats a snake_case [metricId] slug as human-readable Title Case.
+///
+/// Exposed as [formatMetricIdForDisplay] (without underscore) so widget tests
+/// can assert it directly.
+///
+/// Examples: `"steps"` → `"Steps"`, `"heart_rate_resting"` → `"Heart Rate Resting"`.
+String formatMetricIdForDisplay(String metricId) => metricId
+    .split('_')
+    .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+    .join(' ');
 
 // ── Source attribution label ──────────────────────────────────────────────────
 
@@ -79,7 +93,6 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
     final timeRangeKey =
         _selectedRange == TimeRange.custom && _customRange != null
             ? 'custom:${_customRange!.start.toIso8601String()}|${_customRange!.end.toIso8601String()}'
@@ -90,46 +103,43 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
     );
     final detailAsync = ref.watch(metricDetailProvider(params));
 
+    // Format metric ID immediately for AppBar — shown during loading, replaced when data arrives.
+    final formattedId = formatMetricIdForDisplay(widget.metricId);
+
     return ZuralogScaffold(
       appBar: AppBar(
         title: detailAsync.when(
           data: (d) => Text(d.series.displayName, style: AppTextStyles.displaySmall),
-          loading: () => const SizedBox.shrink(),
-          error: (err, stack) => Text(widget.metricId, style: AppTextStyles.displaySmall),
+          loading: () => Text(formattedId, style: AppTextStyles.displaySmall),
+          error: (_, __) => Text(formattedId, style: AppTextStyles.displaySmall),
         ),
       ),
-      body: detailAsync.when(
-        loading: () => Center(
-          child: CircularProgressIndicator(color: colors.primary),
-        ),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cloud_off_rounded,
-                  size: 40, color: AppColors.textTertiary),
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                'Could not load metric',
-                style:
-                    AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
-              ),
-            ],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: detailAsync.when(
+          loading: () => MetricDetailSkeleton(
+            key: const ValueKey('loading'),
+            metricId: widget.metricId,
           ),
-        ),
-        data: (detail) => _MetricDetailBody(
-          detail: detail,
-          selectedRange: _selectedRange,
-          customRange: _customRange,
-          showRawTable: _showRawTable,
-          onRangeChanged: (r) =>
-              setState(() => _selectedRange = r),
-          onCustomRangePicked: (range) => setState(() {
-            _customRange = range;
-            _selectedRange = TimeRange.custom;
-          }),
-          onToggleRawTable: () =>
-              setState(() => _showRawTable = !_showRawTable),
+          error: (e, _) => MetricDetailErrorBody(
+            key: const ValueKey('error'),
+            onRetry: () => ref.invalidate(metricDetailProvider(params)),
+          ),
+          data: (detail) => _MetricDetailBody(
+            key: const ValueKey('data'),
+            detail: detail,
+            selectedRange: _selectedRange,
+            customRange: _customRange,
+            showRawTable: _showRawTable,
+            onRangeChanged: (r) =>
+                setState(() => _selectedRange = r),
+            onCustomRangePicked: (range) => setState(() {
+              _customRange = range;
+              _selectedRange = TimeRange.custom;
+            }),
+            onToggleRawTable: () =>
+                setState(() => _showRawTable = !_showRawTable),
+          ),
         ),
       ),
     );
@@ -147,6 +157,7 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
 ///    Consumer.
 class _MetricDetailBody extends ConsumerStatefulWidget {
   const _MetricDetailBody({
+    super.key,
     required this.detail,
     required this.selectedRange,
     required this.showRawTable,
@@ -778,6 +789,94 @@ class _RawTableToggle extends StatelessWidget {
       return iso;
     }
   }
+}
+
+// ── MetricDetailSkeleton ──────────────────────────────────────────────────────
+
+/// Layout skeleton for [MetricDetailScreen] while data is loading.
+///
+/// Mirrors the real screen structure: time-range chips → stats row → chart card
+/// → source attribution. Animated via [AppShimmer].
+///
+/// Exposed without underscore prefix so widget tests can reference it directly.
+class MetricDetailSkeleton extends StatelessWidget {
+  const MetricDetailSkeleton({super.key, required this.metricId});
+
+  final String metricId;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Semantics(
+      label: 'Loading ${formatMetricIdForDisplay(metricId)} data',
+      excludeSemantics: true,
+      child: AppShimmer(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppDimens.spaceMd,
+            AppDimens.spaceSm,
+            AppDimens.spaceMd,
+            AppDimens.bottomNavHeight + AppDimens.spaceMd,
+          ),
+          children: [
+            // Time range selector row — 4 pill placeholders
+            Row(
+              children: [
+                for (int i = 0; i < 4; i++) ...[
+                  ShimmerBox(
+                    height: 28, width: 52,
+                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                  ),
+                  const SizedBox(width: AppDimens.spaceSm),
+                ],
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            // Stats row card
+            Container(
+              height: 88,
+              decoration: BoxDecoration(
+                color: colors.cardBackground,
+                borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+              ),
+              child: const ShimmerBox(
+                borderRadius: BorderRadius.zero,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            // Chart card
+            Container(
+              height: 220,
+              decoration: BoxDecoration(
+                color: colors.cardBackground,
+                borderRadius: BorderRadius.circular(AppDimens.shapeMd),
+              ),
+              child: const ShimmerBox(
+                borderRadius: BorderRadius.zero,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            // Source attribution row
+            Row(
+              children: [
+                ShimmerBox(height: 14, width: 14, isCircle: true),
+                const SizedBox(width: AppDimens.spaceXs),
+                ShimmerBox(height: 12, width: 120),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// STUB — replaced in Task 7
+class MetricDetailErrorBody extends StatelessWidget {
+  const MetricDetailErrorBody({super.key, required this.onRetry});
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 // ── _AskCoachButton ───────────────────────────────────────────────────────────
