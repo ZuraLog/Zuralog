@@ -18,14 +18,15 @@
 /// - [dashboardTilesProvider]           — async full tile list for the dashboard grid
 library;
 
-import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter/material.dart' show DateTimeRange;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
+import 'package:flutter/material.dart' show Color, DateTimeRange;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/features/data/data/data_repository.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/features/data/domain/time_range.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
@@ -254,153 +255,234 @@ class _TileStats {
   }
 }
 
-/// Maps a [TileId] to the best [TileVisualizationData] subtype given the
-/// available [CategorySummary] data and optional [DailyGoal] list.
-///
-/// Falls back to [ValueData] when insufficient data is available for the
-/// ideal subtype (e.g. [StackedBarData] for sleepStages requires per-stage
-/// data not present in [CategorySummary]).
-TileVisualizationData _buildTileViz(
+/// Visible-for-testing wrapper around [_buildTileViz].
+@visibleForTesting
+TileVisualizationConfig buildTileVizForTest(
   TileId id,
   CategorySummary summary,
   List<DailyGoal> goals,
+  TileSize size,
+) =>
+    _buildTileViz(id, summary, goals, size);
+
+/// Maps a [TileId] to the best [TileVisualizationConfig] subtype given the
+/// available [CategorySummary] data and optional [DailyGoal] list.
+///
+/// Returns an exhaustive config for all 31 [TileId] values.
+TileVisualizationConfig _buildTileViz(
+  TileId id,
+  CategorySummary summary,
+  List<DailyGoal> goals,
+  TileSize size,
 ) {
-  final trend = summary.trend;
-  final primary = summary.primaryValue;
-  final unit = summary.unit;
-  final delta = summary.deltaPercent;
+  return switch (id) {
+    TileId.steps => switch (size) {
+      TileSize.square => BarChartConfig(
+          bars: _toBars(summary.trend),
+          goalValue: _goalFor(id, goals),
+        ),
+      _ => BarChartConfig(
+          bars: _toBars(summary.trend),
+          goalValue: _goalFor(id, goals),
+          showAvgLine: true,
+        ),
+    },
 
-  TileVisualizationData barOrValue() {
-    if (trend != null && trend.isNotEmpty) {
-      return BarChartData(
-        dailyValues: trend,
-        dayLabels: _kDayLabels.take(trend.length).toList(),
-        average: trend.reduce((a, b) => a + b) / trend.length,
-        delta: delta,
-      );
-    }
-    return ValueData(primaryValue: primary, secondaryLabel: unit);
+    TileId.activeCalories =>
+      BarChartConfig(bars: _toBars(summary.trend), goalValue: _goalFor(id, goals)),
+
+    TileId.workouts => BarChartConfig(bars: _toBars(summary.trend)),
+
+    TileId.sleepDuration =>
+      StatCardConfig(value: summary.primaryValue, unit: summary.unit ?? 'hrs'),
+
+    TileId.sleepStages =>
+      StatCardConfig(value: summary.primaryValue, unit: summary.unit ?? 'hrs'),
+
+    TileId.restingHeartRate =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: false),
+
+    TileId.hrv =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: true),
+
+    TileId.vo2Max => GaugeConfig(
+        value: _parseDouble(summary.primaryValue),
+        minValue: 0,
+        maxValue: 70,
+        zones: const [
+          GaugeZone(min: 0, max: 25, label: 'Poor', color: Color(0xFFFF5252)),
+          GaugeZone(min: 25, max: 35, label: 'Fair', color: Color(0xFFFF9800)),
+          GaugeZone(min: 35, max: 45, label: 'Good', color: Color(0xFF4CAF50)),
+          GaugeZone(
+              min: 45, max: 55, label: 'Excellent', color: Color(0xFF2196F3)),
+          GaugeZone(
+              min: 55, max: 70, label: 'Superior', color: Color(0xFF9C27B0)),
+        ],
+      ),
+
+    TileId.weight =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: false),
+
+    TileId.bodyFat =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: false),
+
+    TileId.bloodPressure => _buildBloodPressureConfig(summary),
+
+    TileId.spo2 => LineChartConfig(
+        points: _toPoints(summary.trend),
+        rangeMin: 90,
+        rangeMax: 100,
+        positiveIsUp: true,
+      ),
+
+    TileId.calories => AreaChartConfig(
+        points: _toPoints(summary.trend),
+        targetLine: null,
+        positiveIsUp: false,
+      ),
+
+    TileId.water => FillGaugeConfig(
+        value: _parseDouble(summary.primaryValue),
+        maxValue: 2.5,
+        unit: 'L',
+        unitIcon: '💧',
+        unitSize: 0.3,
+      ),
+
+    TileId.mood => DotRowConfig(
+        points: _toDots(summary.trend),
+        invertedScale: false,
+      ),
+
+    TileId.energy => DotRowConfig(
+        points: _toDots(summary.trend),
+        invertedScale: false,
+      ),
+
+    TileId.stress => DotRowConfig(
+        points: _toDots(summary.trend),
+        invertedScale: true,
+      ),
+
+    TileId.cycle =>
+      StatCardConfig(value: summary.primaryValue, unit: summary.unit ?? ''),
+
+    TileId.environment =>
+      StatCardConfig(value: summary.primaryValue, unit: summary.unit ?? ''),
+
+    TileId.mobility =>
+      StatCardConfig(value: summary.primaryValue, unit: summary.unit ?? ''),
+
+    // ── New tiles (Phase 8 expansion) ─────────────────────────────────────────
+
+    TileId.distance => BarChartConfig(bars: _toBars(summary.trend)),
+
+    TileId.floorsClimbed => BarChartConfig(bars: _toBars(summary.trend)),
+
+    TileId.exerciseMinutes => switch (size) {
+      TileSize.square => RingConfig(
+          value: _parseDouble(summary.primaryValue),
+          maxValue: 30,
+          unit: 'min',
+        ),
+      _ => BarChartConfig(bars: _toBars(summary.trend), goalValue: 30),
+    },
+
+    TileId.walkingSpeed =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: true),
+
+    TileId.runningPace =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: false),
+
+    TileId.respiratoryRate => StatCardConfig(
+        value: summary.primaryValue,
+        unit: summary.unit ?? 'breaths/min',
+      ),
+
+    TileId.bodyTemperature =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: false),
+
+    TileId.wristTemperature =>
+      LineChartConfig(points: _toPoints(summary.trend), positiveIsUp: false),
+
+    TileId.macros =>
+      StatCardConfig(value: summary.primaryValue, unit: summary.unit ?? ''),
+
+    TileId.bloodGlucose => switch (size) {
+      TileSize.square => GaugeConfig(
+          value: _parseDouble(summary.primaryValue),
+          minValue: 2.8,
+          maxValue: 11.1,
+          zones: const [
+            GaugeZone(
+                min: 2.8, max: 3.9, label: 'Low', color: Color(0xFFFF5252)),
+            GaugeZone(
+                min: 3.9, max: 7.8, label: 'Normal', color: Color(0xFF4CAF50)),
+            GaugeZone(
+                min: 7.8, max: 11.1, label: 'High', color: Color(0xFFFF9800)),
+          ],
+        ),
+      _ => LineChartConfig(points: _toPoints(summary.trend), referenceLine: 7.8),
+    },
+
+    TileId.mindfulMinutes => BarChartConfig(bars: _toBars(summary.trend)),
+  };
+}
+
+TileVisualizationConfig _buildBloodPressureConfig(CategorySummary summary) {
+  final parts = summary.primaryValue.split('/');
+  if (parts.length == 2) {
+    return DualValueConfig(
+      value1: parts[0].trim(),
+      label1: 'SYS',
+      value2: parts[1].trim(),
+      label2: 'DIA',
+    );
   }
+  return StatCardConfig(value: summary.primaryValue, unit: summary.unit ?? 'mmHg');
+}
 
-  TileVisualizationData lineOrValue() {
-    if (trend != null && trend.isNotEmpty) {
-      return LineChartData(values: trend, delta: delta);
-    }
-    return ValueData(primaryValue: primary, secondaryLabel: unit);
+double _parseDouble(String? s) =>
+    double.tryParse(s?.replaceAll(RegExp(r'[^0-9.]'), '') ?? '') ?? 0;
+
+double? _goalFor(TileId id, List<DailyGoal> goals) {
+  try {
+    return goals
+        .firstWhere((g) =>
+            g.id.contains(id.name) || g.label.toLowerCase().contains(id.name))
+        .target;
+  } catch (_) {
+    return null;
   }
+}
 
-  TileVisualizationData dotsOrValue() {
-    if (trend != null && trend.isNotEmpty) {
-      return DotsData(values: trend, todayLabel: primary);
-    }
-    return ValueData(primaryValue: primary, secondaryLabel: unit);
-  }
+List<BarPoint> _toBars(List<double>? trend) {
+  if (trend == null || trend.isEmpty) return [];
+  return List.generate(
+    trend.length,
+    (i) => BarPoint(
+      label: _kDayLabels[i % _kDayLabels.length],
+      value: trend[i],
+      isToday: i == trend.length - 1,
+    ),
+  );
+}
 
-  switch (id) {
-    case TileId.steps:
-      final stepsGoal = goals
-          .where((g) =>
-              g.id.contains('steps') ||
-              g.label.toLowerCase().contains('steps'))
-          .firstOrNull;
-      if (stepsGoal != null && stepsGoal.target > 0) {
-        final current =
-            double.tryParse(primary.replaceAll(',', '')) ?? 0;
-        return RingData(
-          value: current.clamp(0, stepsGoal.target),
-          max: stepsGoal.target,
-          goalLabel: '/ ${_fmtStat(stepsGoal.target)} goal',
-        );
-      }
-      return barOrValue();
+List<ChartPoint> _toPoints(List<double>? trend) {
+  if (trend == null || trend.isEmpty) return [];
+  final now = DateTime.now();
+  return List.generate(
+    trend.length,
+    (i) => ChartPoint(
+      date: now.subtract(Duration(days: trend.length - 1 - i)),
+      value: trend[i],
+    ),
+  );
+}
 
-    case TileId.activeCalories:
-      return barOrValue();
-
-    case TileId.workouts:
-      final count =
-          int.tryParse(primary.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-      return CountBadgeData(count: count);
-
-    case TileId.sleepDuration:
-      return barOrValue();
-
-    case TileId.sleepStages:
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-
-    case TileId.restingHeartRate:
-    case TileId.hrv:
-      return lineOrValue();
-
-    case TileId.vo2Max:
-      final v = double.tryParse(primary.replaceAll(',', ''));
-      if (v != null) {
-        return GaugeData(
-            percent: (v / 70.0).clamp(0.0, 1.0), label: primary);
-      }
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-
-    case TileId.weight:
-    case TileId.bodyFat:
-      return lineOrValue();
-
-    case TileId.bloodPressure:
-      final parts = primary.split('/');
-      if (parts.length == 2) {
-        return DualValueData(
-          topValue: parts[0].trim(),
-          bottomValue: parts[1].trim(),
-          topLabel: 'SYS',
-          bottomLabel: 'DIA',
-        );
-      }
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-
-    case TileId.spo2:
-      return lineOrValue();
-
-    case TileId.calories:
-      if (trend != null && trend.isNotEmpty) {
-        return AreaChartData(values: trend, delta: delta);
-      }
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-
-    case TileId.water:
-      final waterGoal = goals
-          .where((g) =>
-              g.id.contains('water') ||
-              g.label.toLowerCase().contains('water'))
-          .firstOrNull;
-      final current =
-          double.tryParse(primary.replaceAll(',', '')) ?? 0;
-      if (waterGoal != null && waterGoal.target > 0) {
-        return FillGaugeData(
-          current: current,
-          goal: waterGoal.target,
-          unit: unit,
-        );
-      }
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-
-    case TileId.mood:
-    case TileId.energy:
-    case TileId.stress:
-      return dotsOrValue();
-
-    case TileId.cycle:
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-
-    case TileId.environment:
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-
-    case TileId.mobility:
-      final v = double.tryParse(primary.replaceAll(RegExp(r'[^0-9.]'), ''));
-      if (v != null) {
-        return GaugeData(
-            percent: (v / 100.0).clamp(0.0, 1.0), label: primary);
-      }
-      return ValueData(primaryValue: primary, secondaryLabel: unit);
-  }
+List<DotPoint> _toDots(List<double>? trend) {
+  if (trend == null || trend.isEmpty) return [];
+  return trend.map((v) => DotPoint(value: v)).toList();
 }
 
 // ── Tile Ordering ─────────────────────────────────────────────────────────────
@@ -462,8 +544,8 @@ final tileOrderingProvider = Provider<List<TileId>>((ref) {
 /// - [dashboardProvider] for category-level summaries (primary values, trends)
 /// - [dailyGoalsProvider] for goal-progress visualization (steps ring, water gauge)
 ///
-/// Each tile receives the most appropriate [TileVisualizationData] subtype for its
-/// metric type, with pre-computed stats from the 7-day trend data.
+/// Each tile receives the most appropriate [TileVisualizationConfig] subtype for
+/// its metric type, with pre-computed stats from the 7-day trend data.
 ///
 /// On first load or when data is unavailable, produces tiles in [TileDataState.noSource]
 /// state. The [dashboardTimeRangeProvider] is watched so a range change triggers re-fetch.
@@ -478,6 +560,7 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
     final categoryMap = {
       for (final s in dashAsync.categories) s.category: s,
     };
+    final layout = ref.read(dashboardLayoutProvider);
     return TileId.values.map((tileId) {
       final summary = categoryMap[tileId.category];
       if (summary == null) {
@@ -487,13 +570,16 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
           lastUpdated: null,
         );
       }
-      final viz = _buildTileViz(tileId, summary, goals);
+      // Resolve effective tile size from layout overrides, falling back to default.
+      final effectiveSize =
+          layout.tileSizes[tileId.name] ?? tileId.defaultSize;
+      final vizConfig = _buildTileViz(tileId, summary, goals, effectiveSize);
       final stats = _TileStats.fromSummary(summary.trend, summary.deltaPercent);
       return TileData(
         tileId: tileId,
         dataState: TileDataState.loaded,
         lastUpdated: summary.lastUpdated,
-        visualization: viz,
+        vizConfig: vizConfig,
         avgLabel: stats?.avgLabel,
         deltaLabel: stats?.deltaLabel,
         avgValue: stats?.avgValue,

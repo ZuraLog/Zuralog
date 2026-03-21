@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 import 'package:zuralog/features/data/domain/time_range.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
@@ -567,5 +568,233 @@ void main() {
       expect(stepsTile.avgLabel, isNull);
       expect(stepsTile.avgValue, isNull);
     });
+  });
+
+  // ── _buildTileViz produces correct config types ──────────────────────────────
+
+  group('_buildTileViz produces correct config types', () {
+    // Minimal summary with no trend data.
+    CategorySummary emptySummary(HealthCategory category) => CategorySummary(
+          category: category,
+          primaryValue: '0',
+        );
+
+    test('steps → returns a TileVisualizationConfig', () {
+      final config = buildTileVizForTest(
+        TileId.steps,
+        emptySummary(HealthCategory.activity),
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<TileVisualizationConfig>());
+    });
+
+    test('steps square → BarChartConfig without showAvgLine', () {
+      final config = buildTileVizForTest(
+        TileId.steps,
+        emptySummary(HealthCategory.activity),
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<BarChartConfig>());
+      expect((config as BarChartConfig).showAvgLine, isFalse);
+    });
+
+    test('steps tall → BarChartConfig with showAvgLine', () {
+      final config = buildTileVizForTest(
+        TileId.steps,
+        emptySummary(HealthCategory.activity),
+        [],
+        TileSize.tall,
+      );
+      expect(config, isA<BarChartConfig>());
+      expect((config as BarChartConfig).showAvgLine, isTrue);
+    });
+
+    test('bloodPressure → DualValueConfig when primaryValue has slash', () {
+      final summary = CategorySummary(
+        category: HealthCategory.vitals,
+        primaryValue: '120/78',
+      );
+      final config = buildTileVizForTest(
+        TileId.bloodPressure,
+        summary,
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<DualValueConfig>());
+      final dual = config as DualValueConfig;
+      expect(dual.value1, '120');
+      expect(dual.value2, '78');
+      expect(dual.label1, 'SYS');
+      expect(dual.label2, 'DIA');
+    });
+
+    test('bloodPressure → StatCardConfig when primaryValue has no slash', () {
+      final summary = CategorySummary(
+        category: HealthCategory.vitals,
+        primaryValue: '120',
+        unit: 'mmHg',
+      );
+      final config = buildTileVizForTest(
+        TileId.bloodPressure,
+        summary,
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<StatCardConfig>());
+    });
+
+    test('vo2Max → GaugeConfig', () {
+      final summary = CategorySummary(
+        category: HealthCategory.heart,
+        primaryValue: '45',
+      );
+      final config = buildTileVizForTest(
+        TileId.vo2Max,
+        summary,
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<GaugeConfig>());
+      final gauge = config as GaugeConfig;
+      expect(gauge.value, 45.0);
+      expect(gauge.zones.length, 5);
+    });
+
+    test('restingHeartRate → LineChartConfig', () {
+      final config = buildTileVizForTest(
+        TileId.restingHeartRate,
+        emptySummary(HealthCategory.heart),
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<LineChartConfig>());
+    });
+
+    test('hrv → LineChartConfig with positiveIsUp true', () {
+      final config = buildTileVizForTest(
+        TileId.hrv,
+        emptySummary(HealthCategory.heart),
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<LineChartConfig>());
+      expect((config as LineChartConfig).positiveIsUp, isTrue);
+    });
+
+    test('water → FillGaugeConfig', () {
+      final config = buildTileVizForTest(
+        TileId.water,
+        emptySummary(HealthCategory.nutrition),
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<FillGaugeConfig>());
+    });
+
+    test('stress → DotRowConfig with invertedScale true', () {
+      final config = buildTileVizForTest(
+        TileId.stress,
+        emptySummary(HealthCategory.wellness),
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<DotRowConfig>());
+      expect((config as DotRowConfig).invertedScale, isTrue);
+    });
+
+    test('mood → DotRowConfig', () {
+      final config = buildTileVizForTest(
+        TileId.mood,
+        emptySummary(HealthCategory.wellness),
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<DotRowConfig>());
+    });
+
+    test('exerciseMinutes square → RingConfig', () {
+      final summary = CategorySummary(
+        category: HealthCategory.activity,
+        primaryValue: '20',
+      );
+      final config = buildTileVizForTest(
+        TileId.exerciseMinutes,
+        summary,
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<RingConfig>());
+    });
+
+    test('exerciseMinutes tall → BarChartConfig with goalValue 30', () {
+      final summary = CategorySummary(
+        category: HealthCategory.activity,
+        primaryValue: '20',
+      );
+      final config = buildTileVizForTest(
+        TileId.exerciseMinutes,
+        summary,
+        [],
+        TileSize.tall,
+      );
+      expect(config, isA<BarChartConfig>());
+      expect((config as BarChartConfig).goalValue, 30.0);
+    });
+
+    test('bloodGlucose square → GaugeConfig', () {
+      final summary = CategorySummary(
+        category: HealthCategory.vitals,
+        primaryValue: '5.5',
+      );
+      final config = buildTileVizForTest(
+        TileId.bloodGlucose,
+        summary,
+        [],
+        TileSize.square,
+      );
+      expect(config, isA<GaugeConfig>());
+    });
+
+    test('bloodGlucose wide → LineChartConfig', () {
+      final summary = CategorySummary(
+        category: HealthCategory.vitals,
+        primaryValue: '5.5',
+      );
+      final config = buildTileVizForTest(
+        TileId.bloodGlucose,
+        summary,
+        [],
+        TileSize.wide,
+      );
+      expect(config, isA<LineChartConfig>());
+    });
+
+    // New tile IDs all return a TileVisualizationConfig subtype.
+    for (final id in [
+      TileId.distance,
+      TileId.floorsClimbed,
+      TileId.walkingSpeed,
+      TileId.runningPace,
+      TileId.respiratoryRate,
+      TileId.bodyTemperature,
+      TileId.wristTemperature,
+      TileId.macros,
+      TileId.mindfulMinutes,
+    ]) {
+      test('$id returns a TileVisualizationConfig', () {
+        final config = buildTileVizForTest(
+          id,
+          CategorySummary(
+            category: id.category,
+            primaryValue: '0',
+          ),
+          [],
+          TileSize.square,
+        );
+        expect(config, isA<TileVisualizationConfig>());
+      });
+    }
   });
 }

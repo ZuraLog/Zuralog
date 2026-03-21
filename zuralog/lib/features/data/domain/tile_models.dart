@@ -11,6 +11,7 @@
 library;
 
 import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
 // ── TileId ────────────────────────────────────────────────────────────────────
 
@@ -284,6 +285,7 @@ class TileData {
     required this.dataState,
     this.lastUpdated,
     this.visualization,
+    this.vizConfig,
     this.avgLabel,
     this.deltaLabel,
     this.avgValue,
@@ -298,8 +300,11 @@ class TileData {
   /// ISO-8601 timestamp of last successful data sync. Null if never synced.
   final String? lastUpdated;
 
-  /// Visualization payload — null unless [dataState] == [TileDataState.loaded].
+  /// Visualization payload (legacy) — null unless [dataState] == [TileDataState.loaded].
   final TileVisualizationData? visualization;
+
+  /// New typed visualization config — null unless [dataState] == [TileDataState.loaded].
+  final TileVisualizationConfig? vizConfig;
 
   // ── Stats footer (MetricTile, tall/wide only) ──────────────────────────────
 
