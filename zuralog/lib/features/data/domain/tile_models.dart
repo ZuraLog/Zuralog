@@ -499,6 +499,43 @@ extension TileConfig on TileId {
     }
   }
 
+  /// Emoji icon representing this metric tile.
+  String get icon {
+    return switch (this) {
+      TileId.steps            => '👟',
+      TileId.activeCalories   => '🔥',
+      TileId.workouts         => '💪',
+      TileId.sleepDuration    => '🌙',
+      TileId.sleepStages      => '😴',
+      TileId.restingHeartRate => '❤️',
+      TileId.hrv              => '💓',
+      TileId.vo2Max           => '🫁',
+      TileId.weight           => '⚖️',
+      TileId.bodyFat          => '📉',
+      TileId.bloodPressure    => '🩺',
+      TileId.spo2             => '🫧',
+      TileId.calories         => '🥗',
+      TileId.water            => '💧',
+      TileId.mood             => '😊',
+      TileId.energy           => '⚡',
+      TileId.stress           => '🧠',
+      TileId.cycle            => '🌸',
+      TileId.environment      => '🌿',
+      TileId.mobility         => '🦵',
+      TileId.distance         => '📍',
+      TileId.floorsClimbed    => '🏢',
+      TileId.exerciseMinutes  => '⏱️',
+      TileId.walkingSpeed     => '🚶',
+      TileId.runningPace      => '🏃',
+      TileId.respiratoryRate  => '🫀',
+      TileId.bodyTemperature  => '🌡️',
+      TileId.wristTemperature => '⌚',
+      TileId.macros           => '🥦',
+      TileId.bloodGlucose     => '🩸',
+      TileId.mindfulMinutes   => '🧘',
+    };
+  }
+
   /// Returns the next [TileSize] in [allowedSizes], cycling back to the first.
   TileSize nextSize(TileSize current) {
     final sizes = allowedSizes;

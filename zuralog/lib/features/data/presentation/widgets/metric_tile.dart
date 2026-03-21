@@ -172,9 +172,9 @@ class MetricTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Category header row ──────────────────────────────────────────────
-        _CategoryHeader(
-          categoryName: tileId.category.displayName,
+        // ── Metric header row ────────────────────────────────────────────────
+        _MetricHeader(
+          tileId: tileId,
           color: effectiveColor,
         ),
         const SizedBox(height: 8),
@@ -219,41 +219,69 @@ class MetricTile extends StatelessWidget {
   }
 }
 
-// ── _CategoryHeader ───────────────────────────────────────────────────────────
+// ── _MetricHeader ─────────────────────────────────────────────────────────────
 
-class _CategoryHeader extends StatelessWidget {
-  const _CategoryHeader({
-    required this.categoryName,
-    required this.color,
-  });
-
-  final String categoryName;
+class _MetricHeader extends StatelessWidget {
+  const _MetricHeader({required this.tileId, required this.color});
+  final TileId tileId;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
-
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          key: const Key('category_color_dot'),
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tileId.displayName.toUpperCase(),
+                style: AppTextStyles.labelSmall.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 3),
+              _CategoryPill(category: tileId.category, color: color),
+            ],
           ),
         ),
-        const SizedBox(width: 6),
         Text(
-          categoryName,
-          style: AppTextStyles.bodySmall.copyWith(
-            fontSize: 12,
-            color: colors.textSecondary,
-          ),
+          tileId.icon,
+          style: const TextStyle(fontSize: 14),
         ),
       ],
+    );
+  }
+}
+
+// ── _CategoryPill ─────────────────────────────────────────────────────────────
+
+class _CategoryPill extends StatelessWidget {
+  const _CategoryPill({required this.category, required this.color});
+  final HealthCategory category;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        '● ${category.displayName}',
+        style: TextStyle(
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }

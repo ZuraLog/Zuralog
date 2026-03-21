@@ -173,7 +173,7 @@ group('NoDataForRangeTileContent', () {
 // ── MetricTile — loaded state ─────────────────────────────────────────────────
 
 group('MetricTile — loaded state', () {
-  testWidgets('renders category name in header', (tester) async {
+  testWidgets('renders category pill in header', (tester) async {
     await tester.pumpWidget(
       _wrap(
         MetricTile(
@@ -188,7 +188,7 @@ group('MetricTile — loaded state', () {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Activity'), findsOneWidget);
+    expect(find.text('● Activity'), findsOneWidget);
   });
 
   testWidgets('renders primaryValue text', (tester) async {
@@ -409,7 +409,7 @@ group('MetricTile — noDataForRange state', () {
 // ── MetricTile — colorOverride ────────────────────────────────────────────────
 
 group('MetricTile — colorOverride', () {
-  testWidgets('category dot uses the override color', (tester) async {
+  testWidgets('category pill uses the override color', (tester) async {
     // Override color: pure red = 0xFFFF0000
     const overrideColor = 0xFFFF0000;
 
@@ -427,17 +427,51 @@ group('MetricTile — colorOverride', () {
     );
     await tester.pumpAndSettle();
 
-    // The category dot Container with the override color should be present.
-    // We verify via the key 'category_color_dot'.
-    expect(find.byKey(const Key('category_color_dot')), findsOneWidget);
-
-    final dot = tester.widget<Container>(
-      find.byKey(const Key('category_color_dot')),
-    );
-    final decoration = dot.decoration as BoxDecoration;
-    expect(decoration.color, equals(const Color(overrideColor)));
+    // The category pill should be present (Option C replaced the dot).
+    expect(find.text('● Activity'), findsOneWidget);
+    // The pill text should use the override color.
+    final pillText = tester.widget<Text>(find.text('● Activity'));
+    expect(pillText.style?.color, equals(const Color(overrideColor)));
   });
 });
+// ── MetricTile — Option C anatomy ────────────────────────────────────────────
+
+Widget _buildTile({
+  required TileId tileId,
+  TileDataState dataState = TileDataState.loaded,
+  TileSize size = TileSize.square,
+}) {
+  return MaterialApp(
+    home: Scaffold(
+      body: MetricTile(
+        tileId: tileId,
+        dataState: dataState,
+        size: size,
+        primaryValue: '8,432',
+        unit: 'steps today',
+      ),
+    ),
+  );
+}
+
+group('MetricTile — Option C anatomy', () {
+  testWidgets('shows tileId.displayName not category name', (tester) async {
+    await tester.pumpWidget(_buildTile(tileId: TileId.steps, dataState: TileDataState.loaded));
+    expect(find.text('STEPS'), findsOneWidget);
+    expect(find.text('ACTIVITY'), findsNothing);
+  });
+
+  testWidgets('shows category pill with category name', (tester) async {
+    await tester.pumpWidget(_buildTile(tileId: TileId.steps, dataState: TileDataState.loaded));
+    expect(find.text('● Activity'), findsOneWidget);
+  });
+
+  testWidgets('does not show _CategoryHeader dot', (tester) async {
+    await tester.pumpWidget(_buildTile(tileId: TileId.steps, dataState: TileDataState.loaded));
+    expect(find.byKey(const Key('category_color_dot')), findsNothing);
+  });
+});
+
 // ── OnboardingEmptyState ──────────────────────────────────────────────────────
 
 group('OnboardingEmptyState', () {
