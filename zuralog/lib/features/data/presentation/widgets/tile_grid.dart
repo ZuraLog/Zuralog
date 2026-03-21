@@ -20,9 +20,6 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/presentation/widgets/metric_tile.dart';
 import 'package:zuralog/features/data/presentation/widgets/tile_edit_overlay.dart';
-import 'package:zuralog/features/data/presentation/widgets/tile_expanded_view.dart';
-import 'package:zuralog/features/data/presentation/widgets/tile_visualizations.dart';
-import 'package:zuralog/features/data/domain/category_color.dart';
 
 // ── TileGrid ──────────────────────────────────────────────────────────────────
 
@@ -37,10 +34,7 @@ class TileGrid extends StatelessWidget {
     required this.tiles,
     required this.layout,
     required this.isEditMode,
-    required this.expandedTileId,
     required this.onTileTap,
-    required this.onViewDetails,
-    required this.onAskCoach,
     required this.onSizeChanged,
     required this.onVisibilityToggled,
     required this.onColorPick,
@@ -59,17 +53,8 @@ class TileGrid extends StatelessWidget {
   /// Whether the dashboard is in edit (customise) mode.
   final bool isEditMode;
 
-  /// Which tile is currently inline-expanded (`null` = none).
-  final TileId? expandedTileId;
-
-  /// Called when a tile is tapped (toggle expand).
+  /// Called when a tile is tapped.
   final void Function(TileId) onTileTap;
-
-  /// Called when "View Details ›" is tapped in an expanded tile.
-  final void Function(TileId) onViewDetails;
-
-  /// Called when "Ask Coach" is tapped in an expanded tile.
-  final void Function(TileId, String primaryValue) onAskCoach;
 
   /// Called when the size badge is tapped in edit mode.
   final void Function(TileId, TileSize) onSizeChanged;
@@ -104,41 +89,8 @@ class TileGrid extends StatelessWidget {
     final tileData = tiles[id];
     final size = _effectiveSize(id);
     final colorOverride = _colorOverride(id);
-    final isExpanded = expandedTileId == id;
 
-    // If the tile is expanded, render TileExpandedView.
-    if (isExpanded && tileData != null && tileData.dataState == TileDataState.loaded) {
-      final vizConfig = tileData.vizConfig;
-      final effectiveColor = colorOverride != null
-          ? Color(colorOverride)
-          : categoryColor(id.category);
-      // Expanded view never uses square size — promote square → tall.
-      final effectiveExpandedSize =
-          size == TileSize.square ? TileSize.tall : size;
-
-      return TileExpandedView(
-        key: ValueKey('expanded_${id.name}'),
-        tileId: id,
-        size: effectiveExpandedSize,
-        visualization: vizConfig != null
-            ? buildTileVisualization(
-                config: vizConfig,
-                categoryColor: effectiveColor,
-                size: effectiveExpandedSize,
-              )
-            : null,
-        primaryValue: tileData.primaryValue ?? '—',
-        colorOverride: colorOverride,
-        avgValue: tileData.avgValue,
-        bestValue: tileData.bestValue,
-        worstValue: tileData.worstValue,
-        changeValue: tileData.changeValue,
-        onViewDetails: () => onViewDetails(id),
-        onAskCoach: () => onAskCoach(id, tileData.primaryValue ?? '—'),
-      );
-    }
-
-    // Otherwise render MetricTile.
+    // Render MetricTile.
     return MetricTile(
       key: ValueKey('tile_${id.name}'),
       tileId: id,

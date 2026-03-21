@@ -50,7 +50,6 @@ class HealthDashboardScreen extends ConsumerStatefulWidget {
 class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     with AutomaticKeepAliveClientMixin {
   bool _isEditMode = false;
-  TileId? _expandedTileId;
   bool _showSearch = false;
   bool _reorderedDuringEdit = false;
 
@@ -93,7 +92,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     ref.read(hapticServiceProvider).medium();
     setState(() {
       _isEditMode = true;
-      _expandedTileId = null; // collapse any expanded tile
       _reorderedDuringEdit = false;
     });
   }
@@ -113,23 +111,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
 
   void _onTileTap(TileId tileId) {
     if (_isEditMode) return;
-    setState(() {
-      if (_expandedTileId == tileId) {
-        _expandedTileId = null; // collapse
-      } else {
-        _expandedTileId = tileId; // expand
-      }
-    });
-  }
-
-  void _onViewDetails(TileId tileId) {
     context.push('/data/metric/${tileId.name}');
-  }
-
-  void _onAskCoach(TileId tileId, String primaryValue) {
-    ref.read(coachPrefillProvider.notifier).state =
-        'Tell me about my ${tileId.displayName}: $primaryValue';
-    context.go('/coach');
   }
 
   // ── Layout mutations ─────────────────────────────────────────────────────────
@@ -364,7 +346,6 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                       onSelected: (cat) {
                         ref.read(tileFilterProvider.notifier).state = cat;
                         setState(() {
-                          _expandedTileId = null;
                           if (cat != null) {
                             // Snapshot the global range so we can restore it when filter is cleared.
                             _globalTimeRangeSnapshot = ref.read(dashboardTimeRangeProvider);
@@ -468,10 +449,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                         tiles: tileMap,
                         layout: layout,
                         isEditMode: _isEditMode,
-                        expandedTileId: _expandedTileId,
                         onTileTap: _onTileTap,
-                        onViewDetails: _onViewDetails,
-                        onAskCoach: _onAskCoach,
                         onSizeChanged: _onSizeChanged,
                         onVisibilityToggled: _onVisibilityToggled,
                         onColorPick: _onColorPick,
@@ -518,13 +496,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
             tiles: tilesAsync.valueOrNull ?? [],
             onClose: () => setState(() => _showSearch = false),
             onTileSelected: (tileId) {
-              setState(() {
-                _showSearch = false;
-                _expandedTileId = tileId;
-                // Clear category filter so the tile is visible.
-                ref.read(tileFilterProvider.notifier).state = null;
-                _categoryTimeRange = null;
-              });
+              setState(() => _showSearch = false);
+              context.push('/data/metric/${tileId.name}');
             },
           ),
       ],
@@ -654,10 +627,7 @@ class _TileGridBox extends StatelessWidget {
     required this.tiles,
     required this.layout,
     required this.isEditMode,
-    required this.expandedTileId,
     required this.onTileTap,
-    required this.onViewDetails,
-    required this.onAskCoach,
     required this.onSizeChanged,
     required this.onVisibilityToggled,
     required this.onColorPick,
@@ -668,10 +638,7 @@ class _TileGridBox extends StatelessWidget {
   final Map<TileId, TileData> tiles;
   final DashboardLayout layout;
   final bool isEditMode;
-  final TileId? expandedTileId;
   final void Function(TileId) onTileTap;
-  final void Function(TileId) onViewDetails;
-  final void Function(TileId, String) onAskCoach;
   final void Function(TileId, TileSize) onSizeChanged;
   final void Function(TileId) onVisibilityToggled;
   final void Function(TileId) onColorPick;
@@ -693,10 +660,7 @@ class _TileGridBox extends StatelessWidget {
           tiles: tiles,
           layout: layout,
           isEditMode: isEditMode,
-          expandedTileId: expandedTileId,
           onTileTap: onTileTap,
-          onViewDetails: onViewDetails,
-          onAskCoach: onAskCoach,
           onSizeChanged: onSizeChanged,
           onVisibilityToggled: onVisibilityToggled,
           onColorPick: onColorPick,
