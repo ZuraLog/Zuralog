@@ -56,7 +56,7 @@ class LineChartViz extends StatelessWidget {
 
   Widget _buildTall() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: [
         Expanded(
           child: CustomPaint(
