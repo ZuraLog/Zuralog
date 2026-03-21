@@ -190,7 +190,22 @@ final dashboardLayoutProvider =
 final dashboardLayoutLoaderProvider = FutureProvider<DashboardLayout?>((ref) async {
   final repo = ref.watch(dataRepositoryProvider);
   try {
-    return await repo.getPersistedLayout();
+    final layout = await repo.getPersistedLayout();
+    if (layout == null) return null;
+    // Drop persisted tile-size overrides that are no longer in the tile's
+    // allowedSizes (e.g. a tile that was resizable in an older build but is
+    // now fixed to a single size). Without this guard a stale override can
+    // render a tile at a size the grid algorithm doesn't expect.
+    final validSizes = Map<String, TileSize>.from(layout.tileSizes)
+      ..removeWhere((name, size) {
+        final id = TileId.fromString(name);
+        return id == null || !id.allowedSizes.contains(size);
+      });
+    if (validSizes.length == layout.tileSizes.length) return layout;
+    debugPrint('[DashboardLayout] Dropped ${layout.tileSizes.length - validSizes.length} '
+        'stale tile-size override(s): '
+        '${layout.tileSizes.keys.where((k) => !validSizes.containsKey(k)).join(', ')}');
+    return layout.copyWith(tileSizes: validSizes);
   } catch (e) {
     debugPrint('[DashboardLayout] Could not restore layout: $e');
     return null;
