@@ -284,6 +284,8 @@ class TileData {
     required this.tileId,
     required this.dataState,
     this.lastUpdated,
+    this.primaryValue,
+    this.unit,
     this.visualization,
     this.vizConfig,
     this.avgLabel,
@@ -299,6 +301,12 @@ class TileData {
 
   /// ISO-8601 timestamp of last successful data sync. Null if never synced.
   final String? lastUpdated;
+
+  /// Primary display value string (e.g. "8,432", "7h 22m"). Null when not loaded.
+  final String? primaryValue;
+
+  /// Unit label (e.g. "steps", "bpm"). Null when not applicable or embedded in value.
+  final String? unit;
 
   /// Visualization payload (legacy) — null unless [dataState] == [TileDataState.loaded].
   final TileVisualizationData? visualization;

@@ -579,6 +579,8 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
         tileId: tileId,
         dataState: TileDataState.loaded,
         lastUpdated: summary.lastUpdated,
+        primaryValue: summary.primaryValue,
+        unit: summary.unit,
         vizConfig: vizConfig,
         avgLabel: stats?.avgLabel,
         deltaLabel: stats?.deltaLabel,

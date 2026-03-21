@@ -271,20 +271,21 @@ class _SearchResultTile extends StatelessWidget {
           // MetricTile content for loaded tiles; otherwise a small placeholder
           if (tile.dataState == TileDataState.loaded)
             Builder(builder: (context) {
-              final viz = tile.visualization;
+              final vizConfig = tile.vizConfig;
               final effectiveColor = categoryColor(tile.tileId.category);
               return MetricTile(
                 tileId: tile.tileId,
                 dataState: tile.dataState,
                 size: TileSize.square,
-                visualization: viz != null
+                visualization: vizConfig != null
                     ? buildTileVisualization(
-                        data: viz,
+                        config: vizConfig,
                         categoryColor: effectiveColor,
+                        size: TileSize.square,
                       )
                     : null,
-                primaryValue: viz is ValueData ? viz.primaryValue : null,
-                unit: viz is ValueData ? viz.secondaryLabel : null,
+                primaryValue: tile.primaryValue,
+                unit: tile.unit,
               );
             })
           else

@@ -159,7 +159,7 @@ ProviderContainer _container({
                   tileId: id,
                   dataState: TileDataState.loaded,
                   lastUpdated: '2026-03-19T12:00:00Z',
-                  visualization: const ValueData(primaryValue: '42'),
+                  primaryValue: '42',
                 ),
               )
               .toList()
@@ -475,7 +475,7 @@ void main() {
           tileId: TileId.steps,
           dataState: TileDataState.loaded,
           lastUpdated: '2026-03-19T12:00:00Z',
-          visualization: const ValueData(primaryValue: '8,432'),
+          primaryValue: '8,432',
         ),
         ...TileId.values
             .where((id) => id != TileId.steps)
@@ -504,7 +504,7 @@ void main() {
           tileId: TileId.steps,
           dataState: TileDataState.loaded,
           lastUpdated: '2026-03-19T12:00:00Z',
-          visualization: const ValueData(primaryValue: '8,432'),
+          primaryValue: '8,432',
         ),
         ...TileId.values
             .where((id) => id != TileId.steps)
@@ -535,7 +535,7 @@ void main() {
           tileId: TileId.steps,
           dataState: TileDataState.loaded,
           lastUpdated: '2026-03-19T12:00:00Z',
-          visualization: const ValueData(primaryValue: '8,432'),
+          primaryValue: '8,432',
         ),
         ...TileId.values
             .where((id) => id != TileId.steps)
@@ -571,7 +571,7 @@ void main() {
           tileId: TileId.steps,
           dataState: TileDataState.loaded,
           lastUpdated: '2026-03-19T12:00:00Z',
-          visualization: const ValueData(primaryValue: '8,432'),
+          primaryValue: '8,432',
         ),
         ...TileId.values
             .where((id) => id != TileId.steps)
@@ -870,19 +870,19 @@ void main() {
           tileId: TileId.steps,
           dataState: TileDataState.loaded,
           lastUpdated: '2026-03-19T12:00:00Z',
-          visualization: const ValueData(primaryValue: '8,000'),
+          primaryValue: '8,000',
         ),
         TileData(
           tileId: TileId.restingHeartRate,
           dataState: TileDataState.loaded,
           lastUpdated: '2026-03-19T12:00:00Z',
-          visualization: const ValueData(primaryValue: '70'),
+          primaryValue: '70',
         ),
         TileData(
           tileId: TileId.sleepDuration,
           dataState: TileDataState.loaded,
           lastUpdated: '2026-03-19T12:00:00Z',
-          visualization: const ValueData(primaryValue: '7h'),
+          primaryValue: '7h',
         ),
       ];
 
