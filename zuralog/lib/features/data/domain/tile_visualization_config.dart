@@ -1,3 +1,23 @@
+/// Zuralog — TileVisualizationConfig sealed class hierarchy.
+///
+/// Defines the data models that drive the 12 reusable visualization widgets.
+///
+/// Model overview:
+/// - [TileVisualizationConfig]  — sealed base class
+/// - [LineChartConfig]          — sparkline trend chart
+/// - [BarChartConfig]           — vertical bar chart with optional goal line
+/// - [AreaChartConfig]          — filled area chart with optional delta
+/// - [RingConfig]               — circular progress ring with optional week bars
+/// - [GaugeConfig]              — semicircular gauge with color zones
+/// - [SegmentedBarConfig]       — horizontal bar split into colored segments
+/// - [FillGaugeConfig]          — vertical fill gauge (e.g. water intake)
+/// - [DotRowConfig]             — row of colored dots for categorical data
+/// - [CalendarGridConfig]       — month-view calendar grid
+/// - [HeatmapConfig]            — contribution heatmap grid
+/// - [StatCardConfig]           — large value + optional status label
+/// - [DualValueConfig]          — paired values (e.g. blood pressure)
+/// Supporting models: [ChartPoint], [BarPoint], [GaugeZone], [Segment],
+/// [DotPoint], [CalendarDay], [HeatmapCell].
 library;
 
 import 'package:flutter/material.dart';
