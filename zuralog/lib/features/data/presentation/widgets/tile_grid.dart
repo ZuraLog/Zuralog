@@ -196,6 +196,8 @@ class TileGrid extends StatelessWidget {
                 childCount: band.ids.length,
                 itemBuilder: (context, i) {
                   final id = band.ids[i];
+                  // Render null spacers as an invisible square slot so the masonry grid
+                  // accounts for the full column height.
                   if (id == null) {
                     return const AspectRatio(
                       aspectRatio: 1.0,
@@ -377,14 +379,14 @@ List<Band> buildBands(List<TileId> ids, TileSize Function(TileId) sizeOf) {
 
   /// Flushes [pending] as a masonry band, padding to even count if needed.
   ///
-  /// When [pullUp] is true (before a wide tile), the next square tile from
+  /// When [allowPullUp] is true (before a wide tile), the next square tile from
   /// [remaining] is pulled into the band to fill the odd slot. When false
   /// (before a tall tile), a null spacer is always used so that tall-band
   /// companions are not consumed prematurely.
-  void flushPending({bool pullUp = true}) {
+  void flushPending({bool allowPullUp = true}) {
     if (pending.isEmpty) return;
     if (pending.length.isOdd) {
-      if (pullUp) {
+      if (allowPullUp) {
         final nextSqIdx = remaining.indexWhere(
           (r) => sizeOf(r) == TileSize.square,
         );
@@ -410,8 +412,8 @@ List<Band> buildBands(List<TileId> ids, TileSize Function(TileId) sizeOf) {
       bands.add(Band.wide(id));
     } else if (size == TileSize.tall) {
       // Flush any accumulated square tiles before the tall band.
-      // Use pullUp:false so square companions are not consumed by the flush.
-      flushPending(pullUp: false);
+      // Use allowPullUp:false so square companions are not consumed by the flush.
+      flushPending(allowPullUp: false);
 
       // Pull up to 2 square companions from remaining.
       final companions = <TileId?>[];
@@ -433,9 +435,9 @@ List<Band> buildBands(List<TileId> ids, TileSize Function(TileId) sizeOf) {
   }
 
   // Flush remaining non-wide, non-tall tiles.
-  if (pending.isNotEmpty) {
-    bands.add(Band.masonry(List.from(pending)));
-  }
+  // Use allowPullUp:true; remaining is empty at this point so a null spacer
+  // will be used if pending has an odd count, keeping the masonry grid even.
+  flushPending(allowPullUp: true);
 
   return bands;
 }

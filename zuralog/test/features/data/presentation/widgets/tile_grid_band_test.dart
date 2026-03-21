@@ -103,9 +103,10 @@ void main() {
       expect(bands[0].ids, [TileId.steps, TileId.hrv, TileId.vo2Max]);
       expect(bands[1].isWide, isTrue);
       expect(bands[1].singleId, TileId.sleepStages);
+      expect(bands.length, 2);
     });
 
-    test('even pending flushed before tall without padding', () {
+    test('even pending flushed before tall: no null padding added to pre-flush band', () {
       final ids = [
         TileId.activeCalories,
         TileId.workouts,
@@ -115,6 +116,24 @@ void main() {
       expect(bands[0].ids, [TileId.activeCalories, TileId.workouts]);
       expect(bands[1].ids.length, 3);
       expect(bands[1].ids[0], TileId.steps);
+    });
+
+    test('two consecutive tall tiles each get their own 3-item band', () {
+      // Helper that treats both steps AND distance as tall.
+      TileSize sizeOfMultiTall(TileId id) => switch (id) {
+        TileId.steps       => TileSize.tall,
+        TileId.distance    => TileSize.tall,
+        TileId.sleepStages => TileSize.wide,
+        _                  => TileSize.square,
+      };
+
+      final ids = [TileId.steps, TileId.distance];
+      final bands = buildBands(ids, sizeOfMultiTall);
+      // steps is tall; distance is also tall so no square companions available.
+      expect(bands[0].ids, [TileId.steps, null, null]);
+      // distance is tall; no remaining square companions.
+      expect(bands[1].ids, [TileId.distance, null, null]);
+      expect(bands.length, 2);
     });
   });
 }
