@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/presentation/widgets/metric_tile.dart';
@@ -77,47 +78,42 @@ group('GhostTileContent', () {
 // ── SyncingTileContent ────────────────────────────────────────────────────────
 
 group('SyncingTileContent', () {
-  testWidgets('renders "Syncing..." text', (tester) async {
+  testWidgets('renders without error', (tester) async {
     await tester.pumpWidget(
-      _wrap(const SyncingTileContent()),
-    );
-    await tester.pump(); // allow AnimationController to initialize
-
-    expect(find.text('Syncing...'), findsOneWidget);
-  });
-
-  testWidgets('renders shimmer bar containers', (tester) async {
-    await tester.pumpWidget(
-      _wrap(const SyncingTileContent()),
+      _wrap(const SizedBox(
+        width: 150, height: 150,
+        child: SyncingTileContent(),
+      )),
     );
     await tester.pump();
-
-    // The shimmer bars are Containers inside a Column.
-    // Find by key for precision.
-    expect(find.byKey(const Key('shimmer_bar_0')), findsOneWidget);
-    expect(find.byKey(const Key('shimmer_bar_1')), findsOneWidget);
-    expect(find.byKey(const Key('shimmer_bar_2')), findsOneWidget);
+    expect(find.byType(SyncingTileContent), findsOneWidget);
   });
 
-  testWidgets('animation runs — shimmer color changes after pumping frames',
+  testWidgets('contains AppShimmer', (tester) async {
+    await tester.pumpWidget(
+      _wrap(const SizedBox(
+        width: 150, height: 150,
+        child: SyncingTileContent(),
+      )),
+    );
+    await tester.pump();
+    expect(find.byType(AppShimmer), findsOneWidget);
+  });
+
+  testWidgets('animation runs — pumping frames does not throw',
       (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(body: const SyncingTileContent()),
-      ),
+      _wrap(const SizedBox(
+        width: 150, height: 150,
+        child: SyncingTileContent(),
+      )),
     );
-    // Capture initial state
     await tester.pump();
-    // Pump forward 300ms — the AnimationController should have progressed
-    await tester.pump(const Duration(milliseconds: 300));
-    // If we get here without exception and the widget is still present, animation is live
-    expect(find.text('Syncing...'), findsOneWidget);
-    // Pump a few more discrete frames to confirm the controller keeps ticking
-    // without a "ticker after dispose" error. Do NOT use pumpAndSettle — the
-    // AnimationController repeats forever and would cause a timeout.
-    await tester.pump(const Duration(milliseconds: 600));
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Syncing...'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    // AppShimmer repeats indefinitely — do NOT pumpAndSettle.
+    expect(find.byType(SyncingTileContent), findsOneWidget);
   });
 });
 

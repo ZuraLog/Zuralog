@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/widgets/shimmer.dart';
 
 // ── GhostTileContent ──────────────────────────────────────────────────────────
 
@@ -122,111 +123,42 @@ class _DashedBorderPainter extends CustomPainter {
 
 /// Content area for a tile in the [TileDataState.syncing] state.
 ///
-/// Shows three pulsing shimmer skeleton bars and a "Syncing..." label.
-class SyncingTileContent extends StatefulWidget {
+/// Shows an animated shimmer skeleton whose layout mirrors a loaded tile:
+/// header row → primary value → unit → chart area.
+/// Uses [AppShimmer] for the sweep animation — no own [AnimationController].
+class SyncingTileContent extends StatelessWidget {
   const SyncingTileContent({super.key});
 
   @override
-  State<SyncingTileContent> createState() => _SyncingTileContentState();
-}
-
-class _SyncingTileContentState extends State<SyncingTileContent>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, _) {
-        final base =
-            isDark ? AppColors.shimmerBase : AppColors.shimmerBaseLight;
-        final highlight = isDark
-            ? AppColors.shimmerHighlight
-            : AppColors.shimmerHighlightLight;
-        final shimmerColor = Color.lerp(base, highlight, _animation.value)!;
-
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ShimmerBar(
-              key: const Key('shimmer_bar_0'),
-              height: 12,
-              color: shimmerColor,
+    return AppShimmer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row: category dot + metric name + spacer + emoji icon
+          Row(
+            children: [
+              ShimmerBox(height: 8, width: 8, isCircle: true),
+              const SizedBox(width: 6),
+              ShimmerBox(height: 8, width: 80),
+              const Spacer(),
+              ShimmerBox(height: 14, width: 14),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Primary value
+          ShimmerBox(height: 28, width: 60),
+          const SizedBox(height: 4),
+          // Unit label
+          ShimmerBox(height: 8, width: 40),
+          const SizedBox(height: 8),
+          // Chart area — fills remaining height
+          Expanded(
+            child: ShimmerBox(
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 6),
-            _ShimmerBar(
-              key: const Key('shimmer_bar_1'),
-              height: 8,
-              color: shimmerColor,
-            ),
-            const SizedBox(height: 6),
-            _ShimmerBar(
-              key: const Key('shimmer_bar_2'),
-              height: 8,
-              color: shimmerColor,
-              widthFraction: 0.65,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Syncing...',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-// ── _ShimmerBar ───────────────────────────────────────────────────────────────
-
-class _ShimmerBar extends StatelessWidget {
-  const _ShimmerBar({
-    super.key,
-    required this.height,
-    required this.color,
-    this.widthFraction = 1.0,
-  });
-
-  final double height;
-  final Color color;
-  final double widthFraction;
-
-  @override
-  Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      widthFactor: widthFraction,
-      alignment: Alignment.centerLeft,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(4),
-        ),
+          ),
+        ],
       ),
     );
   }
