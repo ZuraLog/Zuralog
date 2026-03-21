@@ -606,7 +606,7 @@ class HealthBridge {
   Future<Map<String, dynamic>?> getNutritionMacros(DateTime date) async {
     try {
       final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
-        'getNutritionMacros',
+        'getNutrition',
         {'date': date.millisecondsSinceEpoch},
       );
       return result?.map((k, v) => MapEntry(k.toString(), v));
