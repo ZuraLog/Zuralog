@@ -41,4 +41,80 @@ void main() {
       expect(bands[0].ids.last, isNull); // null = transparent spacer
     });
   });
+
+  group('buildBands tall tile handling', () {
+    TileSize sizeOf(TileId id) => switch (id) {
+      TileId.steps       => TileSize.tall,
+      TileId.sleepStages => TileSize.wide,
+      _                  => TileSize.square,
+    };
+
+    test('tall tile emits a 3-item band with two companions', () {
+      final ids = [
+        TileId.activeCalories,
+        TileId.workouts,
+        TileId.steps,
+        TileId.hrv,
+        TileId.vo2Max,
+      ];
+      final bands = buildBands(ids, sizeOf);
+      expect(bands[0].isWide, isFalse);
+      expect(bands[0].ids, [TileId.activeCalories, TileId.workouts]);
+      expect(bands[1].isWide, isFalse);
+      expect(bands[1].ids, [TileId.steps, TileId.hrv, TileId.vo2Max]);
+      expect(bands.length, 2);
+    });
+
+    test('tall tile with odd pending flushes pending first with padding', () {
+      final ids = [
+        TileId.activeCalories,
+        TileId.steps,
+        TileId.hrv,
+        TileId.vo2Max,
+      ];
+      final bands = buildBands(ids, sizeOf);
+      expect(bands[0].ids.length, 2);
+      expect(bands[0].ids[0], TileId.activeCalories);
+      expect(bands[0].ids[1], isNull); // odd pending gets null spacer
+      expect(bands[1].ids, [TileId.steps, TileId.hrv, TileId.vo2Max]);
+      expect(bands.length, 2);
+    });
+
+    test('tall tile with zero companions gets null spacers', () {
+      final ids = [TileId.steps];
+      final bands = buildBands(ids, sizeOf);
+      expect(bands[0].ids, [TileId.steps, null, null]);
+    });
+
+    test('tall tile with one companion gets one null spacer', () {
+      final ids = [TileId.steps, TileId.hrv];
+      final bands = buildBands(ids, sizeOf);
+      expect(bands[0].ids, [TileId.steps, TileId.hrv, null]);
+    });
+
+    test('tall tile skips wide/tall tiles when pulling companions', () {
+      final ids = [
+        TileId.steps,
+        TileId.sleepStages,
+        TileId.hrv,
+        TileId.vo2Max,
+      ];
+      final bands = buildBands(ids, sizeOf);
+      expect(bands[0].ids, [TileId.steps, TileId.hrv, TileId.vo2Max]);
+      expect(bands[1].isWide, isTrue);
+      expect(bands[1].singleId, TileId.sleepStages);
+    });
+
+    test('even pending flushed before tall without padding', () {
+      final ids = [
+        TileId.activeCalories,
+        TileId.workouts,
+        TileId.steps,
+      ];
+      final bands = buildBands(ids, sizeOf);
+      expect(bands[0].ids, [TileId.activeCalories, TileId.workouts]);
+      expect(bands[1].ids.length, 3);
+      expect(bands[1].ids[0], TileId.steps);
+    });
+  });
 }

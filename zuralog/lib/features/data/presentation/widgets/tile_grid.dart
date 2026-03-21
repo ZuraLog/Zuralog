@@ -196,7 +196,12 @@ class TileGrid extends StatelessWidget {
                 childCount: band.ids.length,
                 itemBuilder: (context, i) {
                   final id = band.ids[i];
-                  if (id == null) return const SizedBox.shrink();
+                  if (id == null) {
+                    return const AspectRatio(
+                      aspectRatio: 1.0,
+                      child: SizedBox.shrink(),
+                    );
+                  }
                   return _buildTappableTile(context, id);
                 },
               ),
@@ -370,31 +375,64 @@ List<Band> buildBands(List<TileId> ids, TileSize Function(TileId) sizeOf) {
   final remaining = ids.toList();
   final pending = <TileId?>[];
 
+  /// Flushes [pending] as a masonry band, padding to even count if needed.
+  ///
+  /// When [pullUp] is true (before a wide tile), the next square tile from
+  /// [remaining] is pulled into the band to fill the odd slot. When false
+  /// (before a tall tile), a null spacer is always used so that tall-band
+  /// companions are not consumed prematurely.
+  void flushPending({bool pullUp = true}) {
+    if (pending.isEmpty) return;
+    if (pending.length.isOdd) {
+      if (pullUp) {
+        final nextSqIdx = remaining.indexWhere(
+          (r) => sizeOf(r) == TileSize.square,
+        );
+        if (nextSqIdx != -1) {
+          pending.add(remaining.removeAt(nextSqIdx));
+        } else {
+          pending.add(null); // transparent spacer
+        }
+      } else {
+        pending.add(null); // transparent spacer — keep companions for tall band
+      }
+    }
+    bands.add(Band.masonry(List.from(pending)));
+    pending.clear();
+  }
+
   while (remaining.isNotEmpty) {
     final id = remaining.removeAt(0);
     final size = sizeOf(id);
 
     if (size == TileSize.wide) {
-      if (pending.length.isOdd) {
-        final nextNonWideIdx =
-            remaining.indexWhere((r) => sizeOf(r) != TileSize.wide);
-        if (nextNonWideIdx != -1) {
-          pending.add(remaining.removeAt(nextNonWideIdx));
+      flushPending();
+      bands.add(Band.wide(id));
+    } else if (size == TileSize.tall) {
+      // Flush any accumulated square tiles before the tall band.
+      // Use pullUp:false so square companions are not consumed by the flush.
+      flushPending(pullUp: false);
+
+      // Pull up to 2 square companions from remaining.
+      final companions = <TileId?>[];
+      for (var i = 0; i < 2; i++) {
+        final idx = remaining.indexWhere(
+          (r) => sizeOf(r) == TileSize.square,
+        );
+        if (idx != -1) {
+          companions.add(remaining.removeAt(idx));
         } else {
-          pending.add(null); // transparent spacer
+          companions.add(null); // transparent spacer
         }
       }
-      if (pending.isNotEmpty) {
-        bands.add(Band.masonry(List.from(pending)));
-        pending.clear();
-      }
-      bands.add(Band.wide(id));
+
+      bands.add(Band.masonry([id, ...companions]));
     } else {
       pending.add(id);
     }
   }
 
-  // Flush remaining non-wide tiles.
+  // Flush remaining non-wide, non-tall tiles.
   if (pending.isNotEmpty) {
     bands.add(Band.masonry(List.from(pending)));
   }
