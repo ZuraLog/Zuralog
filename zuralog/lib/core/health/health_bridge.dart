@@ -479,6 +479,170 @@ class HealthBridge {
     }
   }
 
+  /// Fetches total water consumed for a specific [date] in liters.
+  ///
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getWater(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getWater', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getWater PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent body temperature for a specific [date] in Celsius.
+  ///
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getBodyTemperature(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getBodyTemperature', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getBodyTemperature PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches the most recent wrist temperature deviation in Celsius (Apple Watch only).
+  ///
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getWristTemperature() async {
+    try {
+      final result = await _channel.invokeMethod<num>('getWristTemperature');
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getWristTemperature PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches average walking speed for a specific [date] in meters per second.
+  ///
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getWalkingSpeed(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getWalkingSpeed', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getWalkingSpeed PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches total mindful minutes for a specific [date].
+  ///
+  /// Returns `null` if no data exists or on error.
+  Future<double?> getMindfulMinutes(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<num>('getMindfulMinutes', {
+        'date': date.millisecondsSinceEpoch,
+      });
+      return result?.toDouble();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getMindfulMinutes PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches menstrual cycle data within a date range.
+  ///
+  /// Returns an empty list if no data exists or on error.
+  /// Each entry is a Map with keys such as `cycle_phase`, `cycle_flow_intensity`, and `date`.
+  Future<List<Map<String, dynamic>>> getCycleData(
+    DateTime start,
+    DateTime end,
+  ) async {
+    try {
+      final result = await _channel.invokeMethod<List<dynamic>>('getCycleData', {
+        'startDate': start.millisecondsSinceEpoch,
+        'endDate': end.millisecondsSinceEpoch,
+      });
+      return (result ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getCycleData PlatformException: ${e.message}');
+        return true;
+      }());
+      return [];
+    }
+  }
+
+  /// Fetches detailed nutrition macros for a specific [date].
+  ///
+  /// Returns a Map with keys such as `nutrition_calories`, `nutrition_protein_g`,
+  /// `nutrition_carbs_g`, `nutrition_fat_g`, and `nutrition_fiber_g`.
+  /// Returns `null` if no data exists or on error.
+  Future<Map<String, dynamic>?> getNutritionMacros(DateTime date) async {
+    try {
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+        'getNutritionMacros',
+        {'date': date.millisecondsSinceEpoch},
+      );
+      return result?.map((k, v) => MapEntry(k.toString(), v));
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getNutritionMacros PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
+  /// Fetches a collection of walking-related metrics (no date arg — most recent).
+  ///
+  /// Returns a Map with double? values for keys such as `walking_asymmetry_percentage`,
+  /// `walking_double_support_percentage`, `walking_step_length`, etc.
+  /// Returns `null` if no data exists or on error.
+  Future<Map<String, double?>?> getWalkingMetrics() async {
+    try {
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+        'getWalkingMetrics',
+      );
+      return result?.map(
+        (k, v) => MapEntry(k.toString(), (v as num?)?.toDouble()),
+      );
+    } on PlatformException catch (e) {
+      assert(() {
+        // ignore: avoid_print
+        print('HealthBridge.getWalkingMetrics PlatformException: ${e.message}');
+        return true;
+      }());
+      return null;
+    }
+  }
+
   /// Manually triggers a native background sync for a specific [type].
   /// Used by FCM 'read_health' action.
   Future<bool> triggerSync(String type) async {

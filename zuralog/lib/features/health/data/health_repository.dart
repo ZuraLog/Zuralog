@@ -130,6 +130,38 @@ class HealthRepository {
   /// Returns a Map with `systolic`, `diastolic`, and `date` (ms).
   Future<Map<String, dynamic>?> getBloodPressure() => _bridge.getBloodPressure();
 
+  /// Fetches total water consumed for a specific [date] in liters.
+  Future<double?> getWater(DateTime date) => _bridge.getWater(date);
+
+  /// Fetches the most recent body temperature for a specific [date] in Celsius.
+  Future<double?> getBodyTemperature(DateTime date) =>
+      _bridge.getBodyTemperature(date);
+
+  /// Fetches the most recent wrist temperature deviation in Celsius (Apple Watch only).
+  Future<double?> getWristTemperature() => _bridge.getWristTemperature();
+
+  /// Fetches average walking speed for a specific [date] in meters per second.
+  Future<double?> getWalkingSpeed(DateTime date) =>
+      _bridge.getWalkingSpeed(date);
+
+  /// Fetches total mindful minutes for a specific [date].
+  Future<double?> getMindfulMinutes(DateTime date) =>
+      _bridge.getMindfulMinutes(date);
+
+  /// Fetches menstrual cycle data within a date range.
+  Future<List<Map<String, dynamic>>> getCycleData(
+    DateTime start,
+    DateTime end,
+  ) => _bridge.getCycleData(start, end);
+
+  /// Fetches detailed nutrition macros for a specific [date].
+  Future<Map<String, dynamic>?> getNutritionMacros(DateTime date) =>
+      _bridge.getNutritionMacros(date);
+
+  /// Fetches a collection of walking-related metrics (most recent).
+  Future<Map<String, double?>?> getWalkingMetrics() =>
+      _bridge.getWalkingMetrics();
+
   /// Starts native background observers for health data changes.
   ///
   /// On iOS, registers [HKObserverQuery] instances for all tracked data types.

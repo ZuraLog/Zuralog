@@ -101,6 +101,43 @@ class HealthSyncService {
       final workouts = await _healthRepo.getWorkouts(rangeStart, now);
       final sleepSegments = await _healthRepo.getSleep(rangeStart, now);
 
+      // New scalar daily metrics
+      final water = await _healthRepo.getWater(today);
+      final bodyTemp = await _healthRepo.getBodyTemperature(today);
+      final wristTemp = await _healthRepo.getWristTemperature();
+      final walkingSpeed = await _healthRepo.getWalkingSpeed(today);
+      final mindfulMin = await _healthRepo.getMindfulMinutes(today);
+
+      // Blood pressure (most recent reading, no date arg)
+      final bp = await _healthRepo.getBloodPressure();
+
+      // Nutrition macros for today
+      final nutritionMacros = await _healthRepo.getNutritionMacros(today);
+
+      // Cycle data over a 30-day window
+      final cycleRangeStart = today.subtract(const Duration(days: 30));
+      final cycleData = await _healthRepo.getCycleData(cycleRangeStart, today);
+
+      // Derive running pace from most recent qualifying run in the existing
+      // workouts list (already fetched above).
+      double? runningPaceMps;
+      final latestRun = workouts
+          .where(
+            (w) =>
+                (w['activityType'] as String?)
+                    ?.toLowerCase()
+                    .contains('run') ==
+                true &&
+                (w['totalDistance'] as num?) != null &&
+                (w['duration'] as num?) != null,
+          )
+          .lastOrNull;
+      if (latestRun != null) {
+        final distM = (latestRun['totalDistance'] as num).toDouble();
+        final durS = (latestRun['duration'] as num).toDouble();
+        if (durS > 0) runningPaceMps = distM / durS;
+      }
+
       final todayStr = _isoDate(today);
 
       // Use the correct source name for each platform so the Cloud Brain
@@ -126,6 +163,50 @@ class HealthSyncService {
             if (oxygenSaturation != null && oxygenSaturation > 0)
               'oxygen_saturation': oxygenSaturation,
             if (heartRate != null && heartRate > 0) 'heart_rate_avg': heartRate,
+            // Blood pressure (flat keys, bug fix — was fetched but never sent)
+            if (bp != null && bp['systolic'] != null)
+              'blood_pressure_systolic': bp['systolic'],
+            if (bp != null && bp['diastolic'] != null)
+              'blood_pressure_diastolic': bp['diastolic'],
+            // Water
+            if (water != null && water > 0) 'water_liters': water,
+            // Body temperature
+            if (bodyTemp != null && bodyTemp > 0)
+              'body_temperature_celsius': bodyTemp,
+            // Wrist temperature (Apple Watch only)
+            'wrist_temperature_deviation': ?wristTemp,
+            // Walking speed
+            if (walkingSpeed != null && walkingSpeed > 0)
+              'walking_speed_mps': walkingSpeed,
+            // Mindful minutes
+            if (mindfulMin != null && mindfulMin > 0)
+              'mindful_minutes': mindfulMin,
+            // Nutrition macros
+            if (nutritionMacros != null &&
+                nutritionMacros['nutrition_calories'] != null)
+              'nutrition_calories': nutritionMacros['nutrition_calories'],
+            if (nutritionMacros != null &&
+                nutritionMacros['nutrition_protein_g'] != null)
+              'nutrition_protein_g': nutritionMacros['nutrition_protein_g'],
+            if (nutritionMacros != null &&
+                nutritionMacros['nutrition_carbs_g'] != null)
+              'nutrition_carbs_g': nutritionMacros['nutrition_carbs_g'],
+            if (nutritionMacros != null &&
+                nutritionMacros['nutrition_fat_g'] != null)
+              'nutrition_fat_g': nutritionMacros['nutrition_fat_g'],
+            if (nutritionMacros != null &&
+                nutritionMacros['nutrition_fiber_g'] != null)
+              'nutrition_fiber_g': nutritionMacros['nutrition_fiber_g'],
+            // Cycle data (most recent entry from the 30-day window)
+            if (cycleData.isNotEmpty)
+              'cycle_phase': cycleData.last['cycle_phase'] ?? 'unknown',
+            if (cycleData.isNotEmpty)
+              'cycle_flow_intensity':
+                  cycleData.last['cycle_flow_intensity'] ?? 0,
+            if (cycleData.isNotEmpty) 'cycle_day': cycleData.length,
+            // Running pace derived from most recent qualifying run
+            if (runningPaceMps != null && runningPaceMps > 0)
+              'running_pace_mps': runningPaceMps,
           },
         ],
         'workouts': workouts.map((w) {
