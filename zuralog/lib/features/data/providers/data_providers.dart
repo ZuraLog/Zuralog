@@ -53,8 +53,19 @@ final dataRepositoryProvider = Provider<DataRepositoryInterface>((ref) {
 final dashboardProvider = FutureProvider<DashboardData>((ref) async {
   final repo = ref.watch(dataRepositoryProvider);
   try {
-    return await repo.getDashboard();
-  } catch (_) {
+    final data = await repo.getDashboard();
+    debugPrint('[Dashboard] API returned ${data.categories.length} categories: '
+        '${data.categories.map((c) => c.category.name).join(', ')}');
+    for (final cat in data.categories) {
+      debugPrint('[Dashboard]   ${cat.category.name}: '
+          'primaryValue="${cat.primaryValue}", '
+          'trend=${cat.trend?.length ?? 0} points, '
+          'lastUpdated=${cat.lastUpdated}');
+    }
+    return data;
+  } catch (e, st) {
+    debugPrint('[Dashboard] ERROR fetching dashboard: $e');
+    debugPrint('[Dashboard] Stack trace: $st');
     return const DashboardData(
       categories: [],
       visibleOrder: [],
@@ -561,7 +572,11 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
       for (final s in dashAsync.categories) s.category: s,
     };
     final layout = ref.read(dashboardLayoutProvider);
-    return TileId.values.map((tileId) {
+
+    debugPrint('[DashboardTiles] Building tiles. '
+        'categoryMap keys: ${categoryMap.keys.map((c) => c.name).join(', ')}');
+
+    final tiles = TileId.values.map((tileId) {
       final summary = categoryMap[tileId.category];
       if (summary == null) {
         return TileData(
@@ -590,7 +605,16 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
         changeValue: stats?.changeValue,
       );
     }).toList();
-  } catch (_) {
+
+    final loaded = tiles.where((t) => t.dataState == TileDataState.loaded).length;
+    final noSource = tiles.where((t) => t.dataState == TileDataState.noSource).length;
+    debugPrint('[DashboardTiles] Result: $loaded loaded, $noSource noSource '
+        '(total ${tiles.length})');
+
+    return tiles;
+  } catch (e, st) {
+    debugPrint('[DashboardTiles] ERROR building tiles: $e');
+    debugPrint('[DashboardTiles] Stack trace: $st');
     return TileId.values
         .map((id) => TileData(
               tileId: id,
