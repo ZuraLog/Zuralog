@@ -567,6 +567,8 @@ return switch (config) {
 
 **Android:** Add `MenstruationFlowRecord`, `OvulationTestRecord` to permissions. Implement `readCycleData()`.
 
+**Sync:** Cycle data is multi-field. Add flat scalar keys to the daily metrics payload: `cycle_phase` (string: `"menstrual"`, `"follicular"`, `"ovulation"`, `"luteal"`, `"unknown"`), `cycle_flow_intensity` (int 0–4: none/light/medium/heavy/unspecified), `cycle_day` (int 1-N, day of current cycle). These map to the structure returned by `getCycleData()`.
+
 **UI:** `TileId.cycle` maps to a `CalendarGridConfig` with phase coloring.
 
 ### 9.7 Respiratory Rate (Already collected, not surfaced)
@@ -580,6 +582,8 @@ return switch (config) {
 **Apple Health:** `HKQuantityType(.dietaryProtein)`, `(.dietaryCarbohydrates)`, `(.dietaryFatTotal)`, `(.dietaryFiber)` to `readTypes`. Extend `getNutritionCalories()` → `getNutrition()` returning a map with `calories`, `protein`, `carbs`, `fat`, `fiber`.
 
 **Android:** `NutritionRecord` already imported. Parse protein/carbs/fat/fiber fields instead of calories-only.
+
+**Sync:** Add flat scalar keys to the daily metrics payload for the new macro fields: `nutrition_protein_g`, `nutrition_carbs_g`, `nutrition_fat_g`, `nutrition_fiber_g` (all in grams). The existing `nutrition_calories` key is unchanged.
 
 **UI:** `TileId.calories` at 1×1 shows `Ring`. At 1×2 or 2×1, appends a `SegmentedBarConfig` for macros below.
 
@@ -620,6 +624,8 @@ return switch (config) {
 **Apple Health:** Add `HKCategoryType(.mindfulSession)` to `readTypes`. Add `getMindfulMinutes(DateTime date) → double?`.
 
 **Android:** `MindfulnessSessionRecord` available in Health Connect. Add to permissions.
+
+**Sync:** Add `mindful_minutes` (flat scalar, total minutes of mindfulness sessions for the day) to the daily metrics payload.
 
 **UI:** New `TileId.mindfulMinutes` → `BarChartConfig`.
 
