@@ -30,6 +30,12 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
+import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.MenstruationFlowRecord
+import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
+import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -54,6 +60,7 @@ class HealthConnectBridge(private val context: Context) {
          * Must match the <uses-permission> tags in AndroidManifest.xml.
          * Used by MainActivity to launch the permission request contract.
          */
+        @OptIn(ExperimentalMindfulnessSessionApi::class)
         val REQUIRED_PERMISSIONS: Set<String> = setOf(
             HealthPermission.getReadPermission(StepsRecord::class),
             HealthPermission.getWritePermission(StepsRecord::class),
@@ -80,6 +87,12 @@ class HealthConnectBridge(private val context: Context) {
             HealthPermission.getReadPermission(OxygenSaturationRecord::class),
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(BloodPressureRecord::class),
+            // Phase 4 additions
+            HealthPermission.getReadPermission(HydrationRecord::class),
+            HealthPermission.getReadPermission(MenstruationFlowRecord::class),
+            HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+            HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+            HealthPermission.getReadPermission(BloodGlucoseRecord::class),
         )
 
         /**
@@ -571,6 +584,158 @@ class HealthConnectBridge(private val context: Context) {
             )
         } catch (e: Exception) {
             Log.e(TAG, "readBloodPressure failed", e)
+            null
+        }
+    }
+
+    /// Reads total water intake for a given date (midnight to midnight).
+    ///
+    /// Sums all `HydrationRecord` volume entries within the day window.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Total hydration in liters, or null if no data.
+    suspend fun readWater(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = HydrationRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            val total = response.records.sumOf { it.volume.inLiters }
+            if (total == 0.0) null else total
+        } catch (e: Exception) {
+            Log.e(TAG, "readWater failed", e)
+            null
+        }
+    }
+
+    /// Reads the most recent body temperature record for a given date.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Temperature in Celsius, or null if no data.
+    suspend fun readBodyTemperature(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = BodyTemperatureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            response.records.lastOrNull()?.temperature?.inCelsius
+        } catch (e: Exception) {
+            Log.e(TAG, "readBodyTemperature failed", e)
+            null
+        }
+    }
+
+    /// Reads total mindful minutes for a given date (midnight to midnight).
+    ///
+    /// Sums durations of all `MindfulnessSessionRecord` entries within the day window.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Total mindful minutes as Double, or null if no data.
+    @OptIn(ExperimentalMindfulnessSessionApi::class)
+    suspend fun readMindfulMinutes(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = MindfulnessSessionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            val totalSeconds = response.records.sumOf {
+                java.time.Duration.between(it.startTime, it.endTime).seconds
+            }
+            if (totalSeconds > 0) totalSeconds / 60.0 else null
+        } catch (e: Exception) {
+            Log.e(TAG, "readMindfulMinutes failed", e)
+            null
+        }
+    }
+
+    /// Reads menstruation flow records within a time range.
+    ///
+    /// Parameters:
+    ///   - startTimeMillis: Start of range (epoch millis).
+    ///   - endTimeMillis: End of range (epoch millis).
+    ///
+    /// Returns: List of cycle maps with keys: date (epoch millis), cycle_flow_intensity.
+    suspend fun readCycleData(startTimeMillis: Long, endTimeMillis: Long): List<Map<String, Any>> {
+        val hcClient = client ?: return emptyList()
+        return try {
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = MenstruationFlowRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(
+                        Instant.ofEpochMilli(startTimeMillis),
+                        Instant.ofEpochMilli(endTimeMillis)
+                    )
+                )
+            )
+            response.records.map { record ->
+                mapOf(
+                    "date" to record.time.toEpochMilli(),
+                    "cycle_flow_intensity" to (record.flow ?: 0),
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "readCycleData failed", e)
+            emptyList()
+        }
+    }
+
+    /// Reads the most recent blood glucose record for a given date.
+    ///
+    /// Parameters:
+    ///   - dateMillis: Milliseconds since epoch representing the target date.
+    ///
+    /// Returns: Blood glucose in mmol/L, or null if no data.
+    suspend fun readBloodGlucose(dateMillis: Long): Double? {
+        val hcClient = client ?: return null
+        return try {
+            val date = Instant.ofEpochMilli(dateMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+            val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            val response = hcClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = BloodGlucoseRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+                )
+            )
+            response.records.lastOrNull()?.level?.inMillimolesPerLiter
+        } catch (e: Exception) {
+            Log.e(TAG, "readBloodGlucose failed", e)
             null
         }
     }

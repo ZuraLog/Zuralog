@@ -475,6 +475,99 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
 
+                "getWater" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val liters = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readWater(dateMillis)
+                            }
+                            result.success(liters)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getWater failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getBodyTemperature" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val celsius = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readBodyTemperature(dateMillis)
+                            }
+                            result.success(celsius)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getBodyTemperature failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getMindfulMinutes" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val minutes = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readMindfulMinutes(dateMillis)
+                            }
+                            result.success(minutes)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getMindfulMinutes failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getCycleData" -> {
+                    val startDate = call.argument<Long>("startDate")
+                        ?: call.argument<Number>("startDate")?.toLong()
+                        ?: 0L
+                    val endDate = call.argument<Long>("endDate")
+                        ?: call.argument<Number>("endDate")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val cycleData = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readCycleData(startDate, endDate)
+                            }
+                            result.success(cycleData)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getCycleData failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
+                "getBloodGlucose" -> {
+                    val dateMillis = call.argument<Long>("date")
+                        ?: call.argument<Number>("date")?.toLong()
+                        ?: System.currentTimeMillis()
+
+                    lifecycleScope.launch {
+                        try {
+                            val mmol = withContext(Dispatchers.IO) {
+                                healthConnectBridge.readBloodGlucose(dateMillis)
+                            }
+                            result.success(mmol)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "getBloodGlucose failed", e)
+                            result.error("HEALTH_CONNECT_ERROR", e.message, null)
+                        }
+                    }
+                }
+
                 "configureBackgroundSync" -> {
                     // Called after the user grants Health Connect permissions in the
                     // connect flow. Stores the Cloud Brain credentials in
