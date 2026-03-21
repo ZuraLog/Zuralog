@@ -218,32 +218,7 @@ class TileGrid extends StatelessWidget {
   ///
   /// Each band is either a list of non-wide tile IDs (for a masonry section)
   /// or a single wide tile ID (for a full-width band).
-  List<_Band> _buildBands(List<TileId> ids) {
-    final bands = <_Band>[];
-    final pending = <TileId>[];
-
-    for (final id in ids) {
-      final size = _effectiveSize(id);
-      if (size == TileSize.wide) {
-        // Flush any pending non-wide tiles first.
-        if (pending.isNotEmpty) {
-          bands.add(_Band.masonry(List.from(pending)));
-          pending.clear();
-        }
-        // Add the wide tile as a full-width band.
-        bands.add(_Band.wide(id));
-      } else {
-        pending.add(id);
-      }
-    }
-
-    // Flush remaining non-wide tiles.
-    if (pending.isNotEmpty) {
-      bands.add(_Band.masonry(List.from(pending)));
-    }
-
-    return bands;
-  }
+  List<Band> _buildBands(List<TileId> ids) => buildBands(ids, _effectiveSize);
 
   // ── Build ────────────────────────────────────────────────────────────────────
 
@@ -290,6 +265,7 @@ class TileGrid extends StatelessWidget {
                 childCount: band.ids.length,
                 itemBuilder: (context, i) {
                   final id = band.ids[i];
+                  if (id == null) return const SizedBox.shrink();
                   return _buildTappableTile(context, id);
                 },
               ),
@@ -420,30 +396,77 @@ class TileGrid extends StatelessWidget {
   }
 }
 
-// ── _Band ─────────────────────────────────────────────────────────────────────
+// ── Band ──────────────────────────────────────────────────────────────────────
 
 /// Represents one layout band in the masonry grid.
 ///
 /// Either a list of non-wide tiles (masonry section) or a single wide tile
-/// (full-width band).
-class _Band {
-  const _Band._({
+/// (full-width band). A null entry in [ids] represents a transparent spacer
+/// used to fill an odd column gap before a wide tile.
+class Band {
+  const Band._({
     required this.ids,
     required this.isWide,
   });
 
-  factory _Band.masonry(List<TileId> ids) =>
-      _Band._(ids: ids, isWide: false);
+  factory Band.masonry(List<TileId?> ids) =>
+      Band._(ids: ids, isWide: false);
 
-  factory _Band.wide(TileId id) =>
-      _Band._(ids: [id], isWide: true);
+  factory Band.wide(TileId id) =>
+      Band._(ids: [id], isWide: true);
 
-  /// All tile IDs in this band.
-  final List<TileId> ids;
+  /// All tile IDs in this band. A null entry is a transparent spacer.
+  final List<TileId?> ids;
 
   /// Whether this is a full-width wide tile band.
   final bool isWide;
 
   /// The single tile ID for a wide band. Null for masonry bands.
   TileId? get singleId => isWide ? ids.first : null;
+}
+
+// ── buildBands ────────────────────────────────────────────────────────────────
+
+/// Extracted for testability.
+///
+/// Breaks [ids] into alternating masonry and wide [Band]s.
+/// When a wide tile is encountered and the pending non-wide count is odd,
+/// the next non-wide tile is pulled up (or a null spacer inserted) so the
+/// masonry grid always has an even count and avoids an empty column gap.
+@visibleForTesting
+List<Band> buildBands(List<TileId> ids, TileSize Function(TileId) sizeOf) {
+  final bands = <Band>[];
+  final remaining = ids.toList();
+  final pending = <TileId?>[];
+
+  while (remaining.isNotEmpty) {
+    final id = remaining.removeAt(0);
+    final size = sizeOf(id);
+
+    if (size == TileSize.wide) {
+      if (pending.length.isOdd) {
+        final nextNonWideIdx =
+            remaining.indexWhere((r) => sizeOf(r) != TileSize.wide);
+        if (nextNonWideIdx != -1) {
+          pending.add(remaining.removeAt(nextNonWideIdx));
+        } else {
+          pending.add(null); // transparent spacer
+        }
+      }
+      if (pending.isNotEmpty) {
+        bands.add(Band.masonry(List.from(pending)));
+        pending.clear();
+      }
+      bands.add(Band.wide(id));
+    } else {
+      pending.add(id);
+    }
+  }
+
+  // Flush remaining non-wide tiles.
+  if (pending.isNotEmpty) {
+    bands.add(Band.masonry(List.from(pending)));
+  }
+
+  return bands;
 }
