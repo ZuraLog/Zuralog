@@ -466,105 +466,10 @@ void main() {
     });
   });
 
-  // ── Tile expand / collapse ───────────────────────────────────────────────────
+  // ── Tile tap navigation ──────────────────────────────────────────────────────
 
-  group('Tile expand/collapse', () {
-    testWidgets('tapping a loaded tile shows TileExpandedView', (tester) async {
-      final tiles = [
-        TileData(
-          tileId: TileId.steps,
-          dataState: TileDataState.loaded,
-          lastUpdated: '2026-03-19T12:00:00Z',
-          primaryValue: '8,432',
-        ),
-        ...TileId.values
-            .where((id) => id != TileId.steps)
-            .map((id) => TileData(
-                  tileId: id,
-                  dataState: TileDataState.noSource,
-                )),
-      ];
-      final container = _container(tiles: tiles);
-      addTearDown(container.dispose);
-      await tester.pumpWidget(_buildApp(container));
-      await tester.pumpAndSettle();
-
-      // Steps tile value should be in the tree via MetricTile.
-      // Tap the steps tile card to expand it.
-      await tester.tap(find.text('8,432').first);
-      await tester.pumpAndSettle();
-
-      // After expansion, TileExpandedView with action buttons should appear.
-      expect(find.text('View Details ›'), findsOneWidget);
-    });
-
-    testWidgets('"View Details ›" navigates to /data/metric/:id', (tester) async {
-      final tiles = [
-        TileData(
-          tileId: TileId.steps,
-          dataState: TileDataState.loaded,
-          lastUpdated: '2026-03-19T12:00:00Z',
-          primaryValue: '8,432',
-        ),
-        ...TileId.values
-            .where((id) => id != TileId.steps)
-            .map((id) => TileData(
-                  tileId: id,
-                  dataState: TileDataState.noSource,
-                )),
-      ];
-      final container = _container(tiles: tiles);
-      addTearDown(container.dispose);
-      await tester.pumpWidget(_buildApp(container));
-      await tester.pumpAndSettle();
-
-      // Expand the steps tile.
-      await tester.tap(find.text('8,432').first);
-      await tester.pumpAndSettle();
-
-      // Tap "View Details ›".
-      await tester.tap(find.text('View Details ›'));
-      await tester.pumpAndSettle();
-
-      expect(_lastRoute, '/data/metric/steps');
-    });
-
-    testWidgets('tapping the expanded tile again collapses it', (tester) async {
-      final tiles = [
-        TileData(
-          tileId: TileId.steps,
-          dataState: TileDataState.loaded,
-          lastUpdated: '2026-03-19T12:00:00Z',
-          primaryValue: '8,432',
-        ),
-        ...TileId.values
-            .where((id) => id != TileId.steps)
-            .map((id) => TileData(
-                  tileId: id,
-                  dataState: TileDataState.noSource,
-                )),
-      ];
-      final container = _container(tiles: tiles);
-      addTearDown(container.dispose);
-      await tester.pumpWidget(_buildApp(container));
-      await tester.pumpAndSettle();
-
-      // Expand.
-      await tester.tap(find.text('8,432').first);
-      await tester.pumpAndSettle();
-      expect(find.text('View Details ›'), findsOneWidget);
-
-      // Collapse by tapping the expanded view.
-      await tester.tap(find.text('8,432').first);
-      await tester.pumpAndSettle();
-      expect(find.text('View Details ›'), findsNothing);
-    });
-  });
-
-  // ── Ask Coach ────────────────────────────────────────────────────────────────
-
-  group('Ask Coach', () {
-    testWidgets('Ask Coach from expanded tile sets coachPrefillProvider',
+  group('Tile tap navigation', () {
+    testWidgets('tapping a loaded tile navigates to MetricDetailScreen',
         (tester) async {
       final tiles = [
         TileData(
@@ -585,21 +490,16 @@ void main() {
       await tester.pumpWidget(_buildApp(container));
       await tester.pumpAndSettle();
 
-      // Expand steps tile.
       await tester.tap(find.text('8,432').first);
       await tester.pumpAndSettle();
 
-      // Tap Ask Coach.
-      await tester.tap(find.text('Ask Coach').first);
-      await tester.pumpAndSettle();
-
-      expect(
-        container.read(coachPrefillProvider),
-        contains('Steps'),
-      );
-      expect(_lastRoute, '/coach');
+      expect(_lastRoute, '/data/metric/steps');
     });
+  });
 
+  // ── Ask Coach ────────────────────────────────────────────────────────────────
+
+  group('Ask Coach', () {
     testWidgets('Ask Coach category CTA navigates to /coach with prefill',
         (tester) async {
       final container = _container(allLoaded: true);

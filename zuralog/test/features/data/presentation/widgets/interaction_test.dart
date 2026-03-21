@@ -1,26 +1,16 @@
 /// Zuralog — Phase 6 Interaction Widgets Tests.
 ///
-/// Tests for [TileExpandedView] and [SearchOverlay].
+/// Tests for [SearchOverlay].
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/presentation/widgets/search_overlay.dart';
-import 'package:zuralog/features/data/presentation/widgets/tile_expanded_view.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Wraps [child] in a plain [MaterialApp] for widget tests.
-Widget _wrap(Widget child) {
-  return MaterialApp(
-    theme: ThemeData.light(),
-    home: Scaffold(body: child),
-  );
-}
 
 /// Wraps [child] in a [ProviderScope] + [MaterialApp].
 Widget _wrapWithProviders(Widget child) {
@@ -44,136 +34,7 @@ List<TileData> _allTiles() {
       .toList();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// TileExpandedView tests
-// ══════════════════════════════════════════════════════════════════════════════
-
 void main() {
-  group('TileExpandedView', () {
-    testWidgets('renders primary value text', (tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          SingleChildScrollView(
-            child: TileExpandedView(
-              tileId: TileId.steps,
-              size: TileSize.square,
-              visualization: null,
-              primaryValue: '8,432',
-              onViewDetails: () {},
-              onAskCoach: () {},
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('8,432'), findsOneWidget);
-    });
-
-    testWidgets('renders stats row with 4 stat chips (Avg, Best, Worst, Change)',
-        (tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          SingleChildScrollView(
-            child: TileExpandedView(
-              tileId: TileId.steps,
-              size: TileSize.square,
-              visualization: null,
-              primaryValue: '8,432',
-              avgValue: '7,900',
-              bestValue: '12,000',
-              worstValue: '4,200',
-              changeValue: '↑ 12%',
-              onViewDetails: () {},
-              onAskCoach: () {},
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Avg'), findsOneWidget);
-      expect(find.text('Best'), findsOneWidget);
-      expect(find.text('Worst'), findsOneWidget);
-      expect(find.text('Change'), findsOneWidget);
-
-      expect(find.text('7,900'), findsOneWidget);
-      expect(find.text('12,000'), findsOneWidget);
-      expect(find.text('4,200'), findsOneWidget);
-      expect(find.text('↑ 12%'), findsOneWidget);
-    });
-
-    testWidgets('stats show "—" when values are null', (tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          SingleChildScrollView(
-            child: TileExpandedView(
-              tileId: TileId.steps,
-              size: TileSize.square,
-              visualization: null,
-              primaryValue: '8,432',
-              // avgValue, bestValue, worstValue, changeValue all null
-              onViewDetails: () {},
-              onAskCoach: () {},
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // There should be 4 "—" fallback values shown
-      expect(find.text('—'), findsNWidgets(4));
-    });
-
-    testWidgets('"View Details ›" button calls onViewDetails', (tester) async {
-      var called = false;
-      await tester.pumpWidget(
-        _wrap(
-          SingleChildScrollView(
-            child: TileExpandedView(
-              tileId: TileId.steps,
-              size: TileSize.square,
-              visualization: null,
-              primaryValue: '8,432',
-              onViewDetails: () => called = true,
-              onAskCoach: () {},
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('View Details ›'));
-      await tester.pumpAndSettle();
-
-      expect(called, isTrue);
-    });
-
-    testWidgets('"Ask Coach" button calls onAskCoach', (tester) async {
-      var called = false;
-      await tester.pumpWidget(
-        _wrap(
-          SingleChildScrollView(
-            child: TileExpandedView(
-              tileId: TileId.steps,
-              size: TileSize.square,
-              visualization: null,
-              primaryValue: '8,432',
-              onViewDetails: () {},
-              onAskCoach: () => called = true,
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Ask Coach'));
-      await tester.pumpAndSettle();
-
-      expect(called, isTrue);
-    });
-  });
-
   // ════════════════════════════════════════════════════════════════════════════
   // SearchOverlay tests
   // ════════════════════════════════════════════════════════════════════════════

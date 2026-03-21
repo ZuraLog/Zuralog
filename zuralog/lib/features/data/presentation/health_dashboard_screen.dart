@@ -2,8 +2,7 @@
 ///
 /// Phase 8 rewrite: integrates the full masonry tile grid with all Phase 3-7
 /// widgets — [HealthScoreStrip], [CategoryFilterChips],
-/// [GlobalTimeRangeSelector], [TileGrid], [TileExpandedView],
-/// [SearchOverlay], and [TileEditOverlay] — into a single cohesive screen.
+/// [GlobalTimeRangeSelector], [TileGrid], [SearchOverlay], and [TileEditOverlay] — into a single cohesive screen.
 library;
 
 import 'dart:async';
