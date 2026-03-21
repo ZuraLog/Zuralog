@@ -94,6 +94,12 @@ class TileGrid extends StatelessWidget {
 
   int? _colorOverride(TileId id) => layout.tileColorOverrides[id.name];
 
+  double _tileAspectRatio(TileSize size) => switch (size) {
+    TileSize.square => 1.0,
+    TileSize.tall   => 0.5,   // height = 2 × column width
+    TileSize.wide   => 2.0,   // height = full-row-width ÷ 2
+  };
+
   Widget _buildTileContent(BuildContext context, TileId id) {
     final tileData = tiles[id];
     final size = _effectiveSize(id);
@@ -148,9 +154,13 @@ class TileGrid extends StatelessWidget {
   }
 
   Widget _buildTappableTile(BuildContext context, TileId id) {
+    final size = _effectiveSize(id);
     return GestureDetector(
       onTap: () => onTileTap(id),
-      child: _buildTileContent(context, id),
+      child: AspectRatio(
+        aspectRatio: _tileAspectRatio(size),
+        child: _buildTileContent(context, id),
+      ),
     );
   }
 
