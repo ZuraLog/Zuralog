@@ -18,25 +18,46 @@ class HealthKitBridge: NSObject {
     private let healthStore = HKHealthStore()
 
     /// All data types we request read access for.
-    private let readTypes: Set<HKObjectType> = [
-        HKQuantityType(.stepCount),
-        HKQuantityType(.activeEnergyBurned),
-        HKQuantityType(.dietaryEnergyConsumed),
-        HKQuantityType(.bodyMass),
-        HKCategoryType(.sleepAnalysis),
-        HKWorkoutType.workoutType(),
-        HKQuantityType(.restingHeartRate),
-        HKQuantityType(.heartRateVariabilitySDNN),
-        HKQuantityType(.vo2Max),
-        HKQuantityType(.distanceWalkingRunning),
-        HKQuantityType(.flightsClimbed),
-        HKQuantityType(.bodyFatPercentage),
-        HKQuantityType(.respiratoryRate),
-        HKQuantityType(.oxygenSaturation),
-        HKQuantityType(.heartRate),
-        HKQuantityType(.bloodPressureSystolic),
-        HKQuantityType(.bloodPressureDiastolic),
-    ]
+    private var readTypes: Set<HKObjectType> {
+        var types: Set<HKObjectType> = [
+            HKQuantityType(.stepCount),
+            HKQuantityType(.activeEnergyBurned),
+            HKQuantityType(.dietaryEnergyConsumed),
+            HKQuantityType(.bodyMass),
+            HKCategoryType(.sleepAnalysis),
+            HKWorkoutType.workoutType(),
+            HKQuantityType(.restingHeartRate),
+            HKQuantityType(.heartRateVariabilitySDNN),
+            HKQuantityType(.vo2Max),
+            HKQuantityType(.distanceWalkingRunning),
+            HKQuantityType(.flightsClimbed),
+            HKQuantityType(.bodyFatPercentage),
+            HKQuantityType(.respiratoryRate),
+            HKQuantityType(.oxygenSaturation),
+            HKQuantityType(.heartRate),
+            HKQuantityType(.bloodPressureSystolic),
+            HKQuantityType(.bloodPressureDiastolic),
+            // New types for additional tiles
+            HKQuantityType(.walkingSpeed),
+            HKQuantityType(.bodyTemperature),
+            HKQuantityType(.dietaryWater),
+            HKCategoryType(.menstrualFlow),
+            HKCategoryType(.intermenstrualBleeding),
+            HKCategoryType(.ovulationTestResult),
+            HKQuantityType(.basalBodyTemperature),
+            HKQuantityType(.walkingAsymmetryPercentage),
+            HKQuantityType(.walkingDoubleSupportPercentage),
+            HKQuantityType(.sixMinuteWalkTestDistance),
+            HKQuantityType(.dietaryProtein),
+            HKQuantityType(.dietaryCarbohydrates),
+            HKQuantityType(.dietaryFatTotal),
+            HKCategoryType(.mindfulSession),
+        ]
+        if #available(iOS 16, *) {
+            types.insert(HKQuantityType(.appleSleepingWristTemperature))
+        }
+        return types
+    }
 
     /// Data types we request write access for.
     private let writeTypes: Set<HKSampleType> = [
@@ -539,6 +560,160 @@ class HealthKitBridge: NSObject {
             DispatchQueue.main.async { completion(data, nil) }
         }
         healthStore.execute(query)
+    }
+
+    // MARK: - Read: Walking Speed
+
+    /// Fetches the average walking speed for a specific day (m/s).
+    func fetchWalkingSpeed(date: Date, completion: @escaping ([String: Any]?) -> Void) {
+        let type = HKQuantityType(.walkingSpeed)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        let query = HKStatisticsQuery(
+            quantityType: type,
+            quantitySamplePredicate: predicate,
+            options: .discreteAverage
+        ) { _, result, _ in
+            guard let avg = result?.averageQuantity() else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+            let mps = avg.doubleValue(for: HKUnit.meter().unitDivided(by: .second()))
+            DispatchQueue.main.async { completion(["walking_speed_mps": mps]) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Body Temperature
+
+    /// Fetches the most recent body temperature sample (°C).
+    func fetchBodyTemperature(date: Date, completion: @escaping ([String: Any]?) -> Void) {
+        let type = HKQuantityType(.bodyTemperature)
+        let query = HKSampleQuery(
+            sampleType: type,
+            predicate: nil,
+            limit: 1,
+            sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+        ) { _, samples, _ in
+            guard let sample = samples?.first as? HKQuantitySample else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+            let celsius = sample.quantity.doubleValue(for: .degreeCelsius())
+            DispatchQueue.main.async { completion(["body_temperature_celsius": celsius]) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Wrist Temperature (iOS 16+)
+
+    /// Fetches the most recent Apple sleeping wrist temperature deviation (°C).
+    func fetchWristTemperature(completion: @escaping ([String: Any]?) -> Void) {
+        if #available(iOS 16, *) {
+            let type = HKQuantityType(.appleSleepingWristTemperature)
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
+            ) { _, samples, _ in
+                guard let sample = samples?.first as? HKQuantitySample else {
+                    DispatchQueue.main.async { completion(nil) }
+                    return
+                }
+                let celsius = sample.quantity.doubleValue(for: .degreeCelsius())
+                DispatchQueue.main.async { completion(["wrist_temperature_deviation": celsius]) }
+            }
+            healthStore.execute(query)
+        } else {
+            completion(nil)
+        }
+    }
+
+    // MARK: - Read: Water
+
+    /// Fetches cumulative dietary water consumed for a specific day (liters).
+    func fetchWater(date: Date, completion: @escaping ([String: Any]?) -> Void) {
+        let type = HKQuantityType(.dietaryWater)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        let query = HKStatisticsQuery(
+            quantityType: type,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum
+        ) { _, result, _ in
+            guard let sum = result?.sumQuantity() else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+            let liters = sum.doubleValue(for: .liter())
+            DispatchQueue.main.async { completion(["water_liters": liters]) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Mindful Minutes
+
+    /// Fetches total mindful session duration (minutes) for a specific day.
+    func fetchMindfulMinutes(date: Date, completion: @escaping ([String: Any]?) -> Void) {
+        let type = HKCategoryType(.mindfulSession)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        let query = HKSampleQuery(
+            sampleType: type,
+            predicate: predicate,
+            limit: HKObjectQueryNoLimit,
+            sortDescriptors: nil
+        ) { _, samples, _ in
+            guard let categorySamples = samples as? [HKCategorySample] else {
+                DispatchQueue.main.async { completion(nil) }
+                return
+            }
+            let totalMinutes = categorySamples.reduce(0.0) { acc, s in
+                acc + s.endDate.timeIntervalSince(s.startDate) / 60.0
+            }
+            DispatchQueue.main.async { completion(["mindful_minutes": totalMinutes]) }
+        }
+        healthStore.execute(query)
+    }
+
+    // MARK: - Read: Nutrition (macros)
+
+    /// Fetches daily nutrition totals (calories, protein, carbs, fat, fiber).
+    func fetchNutrition(date: Date, completion: @escaping ([String: Any?]) -> Void) {
+        let types: [(HKQuantityTypeIdentifier, String, HKUnit)] = [
+            (.dietaryEnergyConsumed,  "nutrition_calories",   .kilocalorie()),
+            (.dietaryProtein,         "nutrition_protein_g",  .gram()),
+            (.dietaryCarbohydrates,   "nutrition_carbs_g",    .gram()),
+            (.dietaryFatTotal,        "nutrition_fat_g",      .gram()),
+            (.dietaryFiber,           "nutrition_fiber_g",    .gram()),
+        ]
+
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+
+        var result: [String: Any?] = [:]
+        let group = DispatchGroup()
+
+        for (typeId, key, unit) in types {
+            group.enter()
+            let quantityType = HKQuantityType(typeId)
+            let query = HKStatisticsQuery(
+                quantityType: quantityType,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum
+            ) { _, stats, _ in
+                result[key] = stats?.sumQuantity()?.doubleValue(for: unit)
+                group.leave()
+            }
+            healthStore.execute(query)
+        }
+
+        group.notify(queue: .main) { completion(result) }
     }
 
     // MARK: - Write: Workout

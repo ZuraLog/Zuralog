@@ -193,20 +193,6 @@ import UIKit
                 }
             }
 
-        case "getNutrition":
-            guard let args = call.arguments as? [String: Any],
-                  let date = dateFromMs(args["date"]) else {
-                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
-                return
-            }
-            healthKitBridge.fetchNutritionCalories(date: date) { kcal, error in
-                if let error = error {
-                    result(FlutterError(code: "NUTRITION_ERROR", message: error.localizedDescription, details: nil))
-                } else {
-                    result(kcal)
-                }
-            }
-
         case "getRestingHeartRate":
             healthKitBridge.fetchRestingHeartRate { bpm, error in
                 if let error = error {
@@ -397,6 +383,61 @@ import UIKit
                 result(FlutterError(code: "UNKNOWN_TYPE",
                                    message: "Unknown backgroundWrite type: \(dataType)",
                                    details: nil))
+            }
+
+        case "getWalkingSpeed":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchWalkingSpeed(date: date) { data in
+                result(data)
+            }
+
+        case "getBodyTemperature":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchBodyTemperature(date: date) { data in
+                result(data)
+            }
+
+        case "getWristTemperature":
+            healthKitBridge.fetchWristTemperature { data in
+                result(data)
+            }
+
+        case "getWater":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchWater(date: date) { data in
+                result(data)
+            }
+
+        case "getMindfulMinutes":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchMindfulMinutes(date: date) { data in
+                result(data)
+            }
+
+        case "getNutrition":
+            guard let args = call.arguments as? [String: Any],
+                  let date = dateFromMs(args["date"]) else {
+                result(FlutterError(code: "BAD_ARGS", message: "Missing 'date' argument", details: nil))
+                return
+            }
+            healthKitBridge.fetchNutrition(date: date) { data in
+                result(data)
             }
 
         case "triggerSync":
