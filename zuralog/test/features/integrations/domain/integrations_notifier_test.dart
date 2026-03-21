@@ -152,6 +152,24 @@ class _FakeHealthRepository implements HealthRepository {
   Future<Map<String, double>?> getBloodPressure() async => null;
   @override
   Future<bool> triggerSync(String type) async => false;
+
+  // Phase 8 stubs — new bridge methods added in data-tab-viz-system.
+  @override
+  Future<double?> getWater(DateTime date) async => null;
+  @override
+  Future<double?> getBodyTemperature(DateTime date) async => null;
+  @override
+  Future<double?> getWristTemperature() async => null;
+  @override
+  Future<double?> getWalkingSpeed(DateTime date) async => null;
+  @override
+  Future<double?> getMindfulMinutes(DateTime date) async => null;
+  @override
+  Future<List<Map<String, dynamic>>> getCycleData(DateTime start, DateTime end) async => [];
+  @override
+  Future<Map<String, dynamic>?> getNutritionMacros(DateTime date) async => null;
+  @override
+  Future<Map<String, double?>?> getWalkingMetrics() async => null;
 }
 
 /// A [OAuthRepository] fake.
