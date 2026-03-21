@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 
@@ -235,63 +236,31 @@ class _SkeletonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final base = colors.shimmerBase;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: base,
-            shape: BoxShape.circle,
+    return AppShimmer(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Score ring circle
+          ShimmerBox(height: 36, width: 36, isCircle: true),
+          const SizedBox(width: 10),
+          // Score number + "Health Score" label
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ShimmerBox(height: 18, width: 32),
+              const SizedBox(height: 4),
+              ShimmerBox(height: 12, width: 72),
+            ],
           ),
-        ),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32,
-              height: 18,
-              decoration: BoxDecoration(
-                color: base,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              width: 72,
-              height: 12,
-              decoration: BoxDecoration(
-                color: base,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        Container(
-          width: 80,
-          height: 12,
-          decoration: BoxDecoration(
-            color: base,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            color: base,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-      ],
+          const Spacer(),
+          // Stats text area
+          ShimmerBox(height: 12, width: 80),
+          const SizedBox(width: 12),
+          // Chevron placeholder
+          ShimmerBox(height: 18, width: 18),
+        ],
+      ),
     );
   }
 }
