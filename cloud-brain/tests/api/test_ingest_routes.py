@@ -161,6 +161,76 @@ def test_bulk_status_returns_200(client):
     assert resp.json()["status"] == "complete"
 
 
+def test_delete_manual_event_returns_200(client, mock_db):
+    event_id = str(uuid.uuid4())
+    mock_event = SimpleNamespace(
+        id=uuid.UUID(event_id),
+        user_id=uuid.UUID(TEST_USER_ID),
+        source="manual",
+        metric_type="water_ml",
+        local_date=date(2026, 3, 22),
+        deleted_at=None,
+        unit="mL",
+    )
+    # Override mock_db execute for this test: first call returns mock_event,
+    # subsequent calls return generic results.
+    call_count_del = {"n": 0}
+    event_result = MagicMock()
+    event_result.scalar_one_or_none = MagicMock(return_value=mock_event)
+    generic = MagicMock()
+    generic.scalar_one_or_none = MagicMock(return_value=None)
+    generic.fetchall = MagicMock(return_value=[])
+
+    async def del_execute_side_effect(*args, **kwargs):
+        idx = call_count_del["n"]
+        call_count_del["n"] += 1
+        if idx == 0:
+            return event_result
+        return generic
+
+    mock_db.execute = AsyncMock(side_effect=del_execute_side_effect)
+
+    resp = client.delete(f"/api/v1/events/{event_id}", headers=AUTH_HEADER)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["event_id"] == event_id
+
+
+def test_delete_device_event_returns_422(client, mock_db):
+    event_id = str(uuid.uuid4())
+    mock_event = SimpleNamespace(
+        id=uuid.UUID(event_id),
+        user_id=uuid.UUID(TEST_USER_ID),
+        source="apple_health",
+        metric_type="steps",
+        local_date=date(2026, 3, 22),
+        deleted_at=None,
+    )
+    event_result = MagicMock()
+    event_result.scalar_one_or_none = MagicMock(return_value=mock_event)
+
+    async def del_execute_side_effect(*args, **kwargs):
+        return event_result
+
+    mock_db.execute = AsyncMock(side_effect=del_execute_side_effect)
+
+    resp = client.delete(f"/api/v1/events/{event_id}", headers=AUTH_HEADER)
+    assert resp.status_code == 422
+
+
+def test_delete_nonexistent_event_returns_404(client, mock_db):
+    not_found_result = MagicMock()
+    not_found_result.scalar_one_or_none = MagicMock(return_value=None)
+
+    async def del_execute_side_effect(*args, **kwargs):
+        return not_found_result
+
+    mock_db.execute = AsyncMock(side_effect=del_execute_side_effect)
+
+    resp = client.delete(f"/api/v1/events/{uuid.uuid4()}", headers=AUTH_HEADER)
+    assert resp.status_code == 404
+
+
 def test_single_ingest_no_auth_returns_401():
     payload = {
         "metric_type": "steps", "value": 5000, "unit": "steps",

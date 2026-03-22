@@ -459,3 +459,52 @@ async def bulk_ingest_status(
         }
     except ImportError:
         return {"task_id": task_id, "status": "processing", "detail": None}
+
+
+# ── Events Router (soft-delete) ─────────────────────────────────────────────
+
+events_router = APIRouter(prefix="/events", tags=["events"])
+
+
+@limiter.limit("60/minute")
+@events_router.delete("/{event_id}", response_model=DeleteEventResponse)
+async def delete_event(
+    request: Request,
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> DeleteEventResponse:
+    """Soft-delete a manual event (user correction)."""
+    result = await db.execute(
+        select(HealthEvent).where(HealthEvent.id == uuid.UUID(event_id))
+    )
+    event = result.scalar_one_or_none()
+
+    if not event or str(event.user_id) != str(user_id):
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if event.source != "manual":
+        raise HTTPException(status_code=422, detail="Device events cannot be deleted by users.")
+
+    if event.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Event already deleted")
+
+    event.deleted_at = datetime.now(tz=timezone.utc)
+    await db.flush()
+
+    # Fetch metric def for aggregation
+    metric_def = await _get_metric_def(db, event.metric_type)
+    agg_fn = metric_def.aggregation_fn if metric_def else "sum"
+    unit = metric_def.unit if metric_def else event.unit
+
+    daily_total = await _recompute_daily_summary(
+        db, str(user_id), event.local_date,
+        event.metric_type, unit, agg_fn,
+    )
+    await db.commit()
+
+    return DeleteEventResponse(
+        event_id=str(event.id),
+        deleted_at=event.deleted_at.isoformat(),
+        updated_daily_total=daily_total,
+    )

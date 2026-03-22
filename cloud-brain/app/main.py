@@ -40,7 +40,7 @@ from app.api.v1.goal_routes import router as goals_router
 from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
 from app.api.v1.health_ingest import router as health_ingest_router
-from app.api.v1.ingest_routes import router as ingest_router
+from app.api.v1.ingest_routes import router as ingest_router, events_router
 from app.api.v1.health_score_history_routes import router as health_score_history_router
 from app.api.v1.health_score_routes import router as health_score_router
 from app.api.v1.insight_routes import router as insight_router
@@ -383,6 +383,7 @@ app.include_router(progress_router, prefix="/api/v1")  # Phase 3 — progress ho
 app.include_router(trends_router, prefix="/api/v1")  # Phase 3 — trends home
 app.include_router(data_sources_router, prefix="/api/v1")  # Phase 3 — data sources
 app.include_router(ingest_router, prefix="/api/v1")  # Unified health data ingest
+app.include_router(events_router, prefix="/api/v1")  # Soft-delete events
 
 
 @app.get("/health")
