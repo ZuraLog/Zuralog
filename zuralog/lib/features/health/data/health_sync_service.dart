@@ -1,5 +1,5 @@
 /// Service that reads local HealthKit/Health Connect data and pushes it
-/// to the Cloud Brain's `/health/ingest` endpoint.
+/// to the Cloud Brain's unified `/api/v1/ingest/bulk` endpoint.
 ///
 /// This is the core device-to-cloud pipeline. Called on:
 /// - App launch (if Apple Health is connected)
@@ -16,10 +16,11 @@ import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/monitoring/sentry_breadcrumbs.dart';
 import 'package:zuralog/core/network/api_client.dart';
+import 'package:zuralog/core/utils/idempotency_key.dart';
 import 'package:zuralog/features/health/data/health_repository.dart';
 
 /// Reads all available HealthKit/Health Connect data and pushes it to the
-/// Cloud Brain via the `/api/v1/health/ingest` REST endpoint.
+/// Cloud Brain via the unified `POST /api/v1/ingest/bulk` endpoint.
 ///
 /// Callers should `await` the result only when they need to know success/failure.
 /// For background triggers, call without awaiting.
@@ -43,7 +44,7 @@ class HealthSyncService {
   final AnalyticsService? _analytics;
 
   /// Reads all available HealthKit data for the last [days] and pushes it
-  /// to the Cloud Brain ingest endpoint.
+  /// to the Cloud Brain bulk ingest endpoint.
   ///
   /// Reads for today:
   /// - Steps, active calories, nutrition calories (single-date API)
@@ -139,118 +140,179 @@ class HealthSyncService {
       }
 
       final todayStr = _isoDate(today);
+      final nowStr = _isoDateTimeWithTz(now);
 
       // Use the correct source name for each platform so the Cloud Brain
       // DB and deduplication engine know the origin of the data.
       final source = Platform.isAndroid ? 'health_connect' : 'apple_health';
 
-      final payload = <String, dynamic>{
-        'source': source,
-        'daily_metrics': [
-          {
-            'date': todayStr,
-            'steps': steps.round(),
-            'active_calories': (activeCalories ?? 0.0).round(),
-            if (rhr != null && rhr > 0) 'resting_heart_rate': rhr,
-            if (hrv != null && hrv > 0) 'hrv_ms': hrv,
-            if (vo2 != null && vo2 > 0) 'vo2_max': vo2,
-            // Phase 6 new types
-            if (distance > 0) 'distance_meters': distance,
-            if (flights > 0) 'flights_climbed': flights.round(),
-            if (bodyFat != null && bodyFat > 0) 'body_fat_percentage': bodyFat,
-            if (respiratoryRate != null && respiratoryRate > 0)
-              'respiratory_rate': respiratoryRate,
-            if (oxygenSaturation != null && oxygenSaturation > 0)
-              'oxygen_saturation': oxygenSaturation,
-            if (heartRate != null && heartRate > 0) 'heart_rate_avg': heartRate,
-            // Blood pressure (flat keys, bug fix — was fetched but never sent)
-            if (bp != null && bp['systolic'] != null)
-              'blood_pressure_systolic': bp['systolic'],
-            if (bp != null && bp['diastolic'] != null)
-              'blood_pressure_diastolic': bp['diastolic'],
-            // Water
-            if (water != null && water > 0) 'water_liters': water,
-            // Body temperature
-            if (bodyTemp != null && bodyTemp > 0)
-              'body_temperature_celsius': bodyTemp,
-            // Wrist temperature (Apple Watch only)
-            'wrist_temperature_deviation': ?wristTemp,
-            // Walking speed
-            if (walkingSpeed != null && walkingSpeed > 0)
-              'walking_speed_mps': walkingSpeed,
-            // Mindful minutes
-            if (mindfulMin != null && mindfulMin > 0)
-              'mindful_minutes': mindfulMin,
-            // Nutrition macros
-            if (nutritionMacros != null &&
-                nutritionMacros['nutrition_calories'] != null)
-              'nutrition_calories': nutritionMacros['nutrition_calories'],
-            if (nutritionMacros != null &&
-                nutritionMacros['nutrition_protein_g'] != null)
-              'nutrition_protein_g': nutritionMacros['nutrition_protein_g'],
-            if (nutritionMacros != null &&
-                nutritionMacros['nutrition_carbs_g'] != null)
-              'nutrition_carbs_g': nutritionMacros['nutrition_carbs_g'],
-            if (nutritionMacros != null &&
-                nutritionMacros['nutrition_fat_g'] != null)
-              'nutrition_fat_g': nutritionMacros['nutrition_fat_g'],
-            if (nutritionMacros != null &&
-                nutritionMacros['nutrition_fiber_g'] != null)
-              'nutrition_fiber_g': nutritionMacros['nutrition_fiber_g'],
-            // Cycle data (most recent entry from the 30-day window)
-            if (cycleData.isNotEmpty)
-              'cycle_phase': cycleData.last['cycle_phase'] ?? 'unknown',
-            if (cycleData.isNotEmpty)
-              'cycle_flow_intensity':
-                  cycleData.last['cycle_flow_intensity'] ?? 0,
-            if (cycleData.isNotEmpty) 'cycle_day': cycleData.length,
-            // Running pace derived from most recent qualifying run
-            if (runningPaceMps != null && runningPaceMps > 0)
-              'running_pace_mps': runningPaceMps,
-          },
-        ],
-        'workouts': workouts.map((w) {
-          return <String, dynamic>{
-            'original_id':
-                (w['uuid'] as String?) ??
-                '${w['activityType']}_${w['startDate']}',
-            'activity_type': (w['activityType'] as String?) ?? 'unknown',
-            'duration_seconds': (w['duration'] as num?)?.round() ?? 0,
-            'distance_meters': (w['totalDistance'] as num?)?.toDouble() ?? 0.0,
-            'calories': (w['totalEnergyBurned'] as num?)?.round() ?? 0,
-            'start_time': (w['startDate'] as String?) ?? now.toIso8601String(),
-          };
-        }).toList(),
-        'sleep': _aggregateSleep(sleepSegments, todayStr),
-        'nutrition': (nutritionCalories != null && nutritionCalories > 0)
-            ? [
-                {'date': todayStr, 'calories': nutritionCalories.round()},
-              ]
-            : <Map<String, dynamic>>[],
-        'weight': (weight != null && weight > 0)
-            ? [
-                {'date': todayStr, 'weight_kg': weight},
-              ]
-            : <Map<String, dynamic>>[],
-      };
+      // Build a flat list of bulk event payloads from all health data.
+      final events = <Map<String, dynamic>>[];
 
-      await _apiClient.post('/api/v1/health/ingest', data: payload);
+      // ── Daily aggregate metrics ──────────────────────────────────────────
+      void addDaily(String metricType, num? value, String unit) {
+        if (value != null && value > 0) {
+          events.add({
+            'metric_type': metricType,
+            'value': value.toDouble(),
+            'unit': unit,
+            'recorded_at': '${todayStr}T00:00:00${_localTzSuffix(now)}',
+            'granularity': 'daily_aggregate',
+            'idempotency_key': generateIdempotencyKey(),
+          });
+        }
+      }
+
+      addDaily('steps', steps.round(), 'steps');
+      addDaily('active_calories', (activeCalories ?? 0.0).round(), 'kcal');
+      addDaily('distance_meters', distance > 0 ? distance : null, 'm');
+      addDaily('flights_climbed', flights > 0 ? flights.round() : null, 'flights');
+      addDaily('water_liters', water, 'L');
+      addDaily('mindful_minutes', mindfulMin, 'min');
+
+      // ── Nutrition macros (daily aggregate) ────────────────────────────────
+      if (nutritionCalories != null && nutritionCalories > 0) {
+        addDaily('nutrition_calories', nutritionCalories.round(), 'kcal');
+      }
+      if (nutritionMacros != null) {
+        addDaily('nutrition_protein_g', nutritionMacros['nutrition_protein_g'] as num?, 'g');
+        addDaily('nutrition_carbs_g', nutritionMacros['nutrition_carbs_g'] as num?, 'g');
+        addDaily('nutrition_fat_g', nutritionMacros['nutrition_fat_g'] as num?, 'g');
+        addDaily('nutrition_fiber_g', nutritionMacros['nutrition_fiber_g'] as num?, 'g');
+      }
+
+      // ── Point-in-time metrics ─────────────────────────────────────────────
+      void addPoint(String metricType, num? value, String unit) {
+        if (value != null && value > 0) {
+          events.add({
+            'metric_type': metricType,
+            'value': value.toDouble(),
+            'unit': unit,
+            'recorded_at': nowStr,
+            'granularity': 'point_in_time',
+            'idempotency_key': generateIdempotencyKey(),
+          });
+        }
+      }
+
+      addPoint('resting_heart_rate', rhr, 'bpm');
+      addPoint('hrv_ms', hrv, 'ms');
+      addPoint('vo2_max', vo2, 'mL/kg/min');
+      addPoint('weight', weight, 'kg');
+      addPoint('body_fat_percentage', bodyFat, '%');
+      addPoint('respiratory_rate', respiratoryRate, 'breaths/min');
+      addPoint('oxygen_saturation', oxygenSaturation, '%');
+      addPoint('heart_rate_avg', heartRate, 'bpm');
+      addPoint('body_temperature_celsius', bodyTemp, 'C');
+      addPoint('walking_speed_mps', walkingSpeed, 'm/s');
+      addPoint('running_pace_mps', runningPaceMps, 'm/s');
+
+      // Wrist temperature deviation (can be negative, so check for null only)
+      if (wristTemp != null) {
+        events.add({
+          'metric_type': 'wrist_temperature_deviation',
+          'value': wristTemp.toDouble(),
+          'unit': 'C',
+          'recorded_at': nowStr,
+          'granularity': 'point_in_time',
+          'idempotency_key': generateIdempotencyKey(),
+        });
+      }
+
+      // Blood pressure (two separate events)
+      if (bp != null && bp['systolic'] != null) {
+        addPoint('blood_pressure_systolic', bp['systolic'] as num?, 'mmHg');
+      }
+      if (bp != null && bp['diastolic'] != null) {
+        addPoint('blood_pressure_diastolic', bp['diastolic'] as num?, 'mmHg');
+      }
+
+      // ── Sleep (daily aggregate from segment summation) ───────────────────
+      final sleepHours = _aggregateSleepHours(sleepSegments);
+      if (sleepHours > 0) {
+        events.add({
+          'metric_type': 'sleep_hours',
+          'value': double.parse(sleepHours.toStringAsFixed(2)),
+          'unit': 'hrs',
+          'recorded_at': '${todayStr}T00:00:00${_localTzSuffix(now)}',
+          'granularity': 'daily_aggregate',
+          'idempotency_key': generateIdempotencyKey(),
+        });
+      }
+
+      // ── Workouts (each as a point-in-time event) ─────────────────────────
+      for (final w in workouts) {
+        final startTime = (w['startDate'] as String?) ?? now.toIso8601String();
+        final durationSec = (w['duration'] as num?)?.round() ?? 0;
+        final distanceM = (w['totalDistance'] as num?)?.toDouble() ?? 0.0;
+        final calories = (w['totalEnergyBurned'] as num?)?.round() ?? 0;
+        final activityType = (w['activityType'] as String?) ?? 'unknown';
+
+        // Duration as minutes is the primary value for workout events
+        if (durationSec > 0) {
+          events.add({
+            'metric_type': 'workout_${activityType.toLowerCase()}',
+            'value': durationSec / 60.0,
+            'unit': 'min',
+            'recorded_at': startTime,
+            'granularity': 'point_in_time',
+            'idempotency_key': generateIdempotencyKey(),
+            'metadata': {
+              'activity_type': activityType,
+              'duration_seconds': durationSec,
+              'distance_meters': distanceM,
+              'calories': calories,
+              'original_id': (w['uuid'] as String?) ??
+                  '${activityType}_$startTime',
+            },
+          });
+        }
+      }
+
+      // ── Cycle data ──────────────────────────────────────────────────────
+      if (cycleData.isNotEmpty) {
+        final lastCycle = cycleData.last;
+        events.add({
+          'metric_type': 'cycle_day',
+          'value': cycleData.length.toDouble(),
+          'unit': 'day',
+          'recorded_at': '${todayStr}T00:00:00${_localTzSuffix(now)}',
+          'granularity': 'daily_aggregate',
+          'idempotency_key': generateIdempotencyKey(),
+          'metadata': {
+            'cycle_phase': lastCycle['cycle_phase'] ?? 'unknown',
+            'cycle_flow_intensity': lastCycle['cycle_flow_intensity'] ?? 0,
+          },
+        });
+      }
+
+      // Only send if we have events to submit
+      if (events.isEmpty) {
+        debugPrint('[HealthSync] No health data to sync');
+        return true;
+      }
+
+      await _apiClient.post('/api/v1/ingest/bulk', data: {
+        'source': source,
+        'events': events,
+      });
+
       debugPrint(
-        '[HealthSync] Sync complete: ${workouts.length} workouts, '
-        '${steps.round()} steps',
+        '[HealthSync] Sync complete: ${events.length} events '
+        '(${workouts.length} workouts, ${steps.round()} steps)',
       );
       // Analytics: track sync success (fire-and-forget).
       _analytics?.capture(
         event: AnalyticsEvents.healthSyncCompleted,
         properties: {
           'platform': platform,
-          'record_count': workouts.length,
+          'record_count': events.length,
         },
       );
       SentryBreadcrumbs.healthSync(
         platform: platform,
         status: 'completed',
-        recordCount: workouts.length,
+        recordCount: events.length,
       );
       return true;
     } catch (e, st) {
@@ -272,19 +334,15 @@ class HealthSyncService {
     }
   }
 
-  /// Aggregates sleep segments into a single nightly record.
+  /// Aggregates sleep segments into total hours.
   ///
   /// Each [segment] may use either `startDate`/`endDate` or
   /// `startTime`/`endTime` key names. Total hours are summed across
-  /// all segments and capped to a single payload entry for [date].
+  /// all segments.
   ///
-  /// Returns:
-  ///   An empty list if [segments] is empty or total duration is zero.
-  List<Map<String, dynamic>> _aggregateSleep(
-    List<Map<String, dynamic>> segments,
-    String date,
-  ) {
-    if (segments.isEmpty) return [];
+  /// Returns 0.0 if [segments] is empty or total duration is zero.
+  double _aggregateSleepHours(List<Map<String, dynamic>> segments) {
+    if (segments.isEmpty) return 0.0;
     double totalHours = 0;
     for (final seg in segments) {
       final startStr = (seg['startDate'] ?? seg['startTime']) as String?;
@@ -297,10 +355,7 @@ class HealthSyncService {
         }
       }
     }
-    if (totalHours <= 0) return [];
-    return [
-      {'date': date, 'hours': double.parse(totalHours.toStringAsFixed(2))},
-    ];
+    return totalHours;
   }
 
   /// Formats a [DateTime] as an ISO date string (YYYY-MM-DD).
@@ -308,4 +363,20 @@ class HealthSyncService {
       '${dt.year.toString().padLeft(4, '0')}-'
       '${dt.month.toString().padLeft(2, '0')}-'
       '${dt.day.toString().padLeft(2, '0')}';
+
+  /// Formats a [DateTime] as an ISO 8601 datetime string with timezone offset.
+  String _isoDateTimeWithTz(DateTime dt) {
+    final local = dt.toLocal();
+    final base = local.toIso8601String().split('.').first;
+    return '$base${_localTzSuffix(dt)}';
+  }
+
+  /// Returns the local timezone offset suffix (e.g. "+05:00" or "-08:00").
+  String _localTzSuffix(DateTime dt) {
+    final offset = dt.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final hh = offset.inHours.abs().toString().padLeft(2, '0');
+    final mm = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    return '$sign$hh:$mm';
+  }
 }
