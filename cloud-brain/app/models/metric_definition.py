@@ -1,5 +1,4 @@
 """MetricDefinition ORM model — metric registry."""
-import uuid
 from datetime import datetime
 
 import sqlalchemy as sa
