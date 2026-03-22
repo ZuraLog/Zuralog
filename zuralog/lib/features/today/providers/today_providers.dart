@@ -383,3 +383,112 @@ final pinnedMetricsProvider =
     AsyncNotifierProvider<PinnedMetricsNotifier, List<String>>(
   PinnedMetricsNotifier.new,
 );
+
+// ── Today Timeline ────────────────────────────────────────────────────────
+
+/// State for the paginated today timeline.
+class TodayTimelineState {
+  const TodayTimelineState({
+    this.events = const [],
+    this.nextCursor,
+    this.isLoading = false,
+    this.isLoadingMore = false,
+    this.hasMore = true,
+    this.error,
+  });
+
+  final List<TodayEvent> events;
+  final String? nextCursor;
+  final bool isLoading;
+  final bool isLoadingMore;
+  final bool hasMore;
+  final String? error;
+
+  TodayTimelineState copyWith({
+    List<TodayEvent>? events,
+    String? Function()? nextCursor,
+    bool? isLoading,
+    bool? isLoadingMore,
+    bool? hasMore,
+    String? Function()? error,
+  }) =>
+      TodayTimelineState(
+        events: events ?? this.events,
+        nextCursor: nextCursor != null ? nextCursor() : this.nextCursor,
+        isLoading: isLoading ?? this.isLoading,
+        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+        hasMore: hasMore ?? this.hasMore,
+        error: error != null ? error() : this.error,
+      );
+}
+
+/// StateNotifier for the paginated Today timeline.
+///
+/// Provides [load] (initial fetch) and [loadMore] (pagination) methods.
+/// Call [removeEvent] after a successful deletion to optimistically
+/// remove the event from the local list.
+class TodayTimelineNotifier extends StateNotifier<TodayTimelineState> {
+  TodayTimelineNotifier(this._repo) : super(const TodayTimelineState());
+
+  final TodayRepositoryInterface _repo;
+
+  /// Fetches the first page of today's timeline.
+  Future<void> load() async {
+    state = state.copyWith(
+      isLoading: true,
+      error: () => null,
+    );
+    try {
+      final timeline = await _repo.getTodayTimeline(limit: 50);
+      state = TodayTimelineState(
+        events: timeline.events,
+        nextCursor: timeline.nextCursor,
+        hasMore: timeline.nextCursor != null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: () => e.toString(),
+      );
+    }
+  }
+
+  /// Fetches the next page using the current cursor.
+  Future<void> loadMore() async {
+    if (state.isLoadingMore || !state.hasMore || state.nextCursor == null) {
+      return;
+    }
+    state = state.copyWith(isLoadingMore: true);
+    try {
+      final timeline = await _repo.getTodayTimeline(
+        limit: 50,
+        before: state.nextCursor,
+      );
+      state = state.copyWith(
+        events: [...state.events, ...timeline.events],
+        nextCursor: () => timeline.nextCursor,
+        isLoadingMore: false,
+        hasMore: timeline.nextCursor != null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingMore: false,
+        error: () => e.toString(),
+      );
+    }
+  }
+
+  /// Optimistically removes an event from the local list.
+  void removeEvent(String eventId) {
+    state = state.copyWith(
+      events: state.events.where((e) => e.eventId != eventId).toList(),
+    );
+  }
+}
+
+/// Provider for the Today timeline state.
+final todayTimelineProvider =
+    StateNotifierProvider<TodayTimelineNotifier, TodayTimelineState>((ref) {
+  final repo = ref.read(todayRepositoryProvider);
+  return TodayTimelineNotifier(repo);
+});
