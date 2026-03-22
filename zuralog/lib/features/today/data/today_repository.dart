@@ -48,7 +48,25 @@ abstract interface class TodayRepositoryInterface {
   Future<void> dismissInsight(String id);
 
   /// Submits a quick-log payload.
+  @Deprecated('Use submitIngest instead')
   Future<void> submitQuickLog(Map<String, dynamic> payload);
+
+  /// Submits a single health event via the unified ingest API.
+  Future<IngestResult> submitIngest({
+    required String metricType,
+    required double value,
+    required String unit,
+    required String source,
+    required DateTime recordedAt,
+    String? idempotencyKey,
+    Map<String, dynamic>? metadata,
+  });
+
+  /// Fetches the paginated today timeline.
+  Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before});
+
+  /// Soft-deletes a health event by ID.
+  Future<void> deleteEvent(String eventId);
 
   /// Fetches the paginated notification history.
   Future<NotificationPage> getNotifications({int page = 1});
@@ -298,6 +316,59 @@ class TodayRepository implements TodayRepositoryInterface {
   Future<void> submitQuickLog(Map<String, dynamic> payload) async {
     await _api.post('/api/v1/quick-log', data: payload);
     invalidateFeedCache();
+  }
+
+  // ── Unified Ingest ─────────────────────────────────────────────────────────
+
+  @override
+  Future<IngestResult> submitIngest({
+    required String metricType,
+    required double value,
+    required String unit,
+    required String source,
+    required DateTime recordedAt,
+    String? idempotencyKey,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final offset = recordedAt.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final hh = offset.inHours.abs().toString().padLeft(2, '0');
+    final mm = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final recordedAtStr =
+        '${recordedAt.toLocal().toIso8601String().split('.').first}$sign$hh:$mm';
+
+    final resp = await _api.post('/api/v1/ingest', data: {
+      'metric_type': metricType,
+      'value': value,
+      'unit': unit,
+      'source': source,
+      'recorded_at': recordedAtStr,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      if (metadata != null) 'metadata': metadata,
+    });
+    invalidateFeedCache();
+    return IngestResult.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  // ── Today Timeline ────────────────────────────────────────────────────────
+
+  @override
+  Future<TodayTimeline> getTodayTimeline({
+    int limit = 50,
+    String? before,
+  }) async {
+    final resp = await _api.get('/api/v1/today/timeline', queryParameters: {
+      'limit': limit,
+      if (before != null) 'before': before,
+    });
+    return TodayTimeline.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  // ── Delete Event ──────────────────────────────────────────────────────────
+
+  @override
+  Future<void> deleteEvent(String eventId) async {
+    await _api.delete('/api/v1/events/$eventId');
   }
 
   // ── Notifications ──────────────────────────────────────────────────────────

@@ -474,6 +474,76 @@ class SupplementEntry {
   final String? timing;
 }
 
+// ── IngestResult ──────────────────────────────────────────────────────────
+
+/// Response from POST /api/v1/ingest
+class IngestResult {
+  const IngestResult({
+    required this.eventId,
+    this.dailyTotal,
+    required this.unit,
+    required this.date,
+  });
+
+  final String eventId;
+  final double? dailyTotal;
+  final String unit;
+  final String date;
+
+  factory IngestResult.fromJson(Map<String, dynamic> json) => IngestResult(
+    eventId: json['event_id'] as String,
+    dailyTotal: (json['daily_total'] as num?)?.toDouble(),
+    unit: json['unit'] as String,
+    date: json['date'] as String,
+  );
+}
+
+// ── TodayEvent ────────────────────────────────────────────────────────────
+
+/// A single raw health event from GET /api/v1/today/timeline
+class TodayEvent {
+  const TodayEvent({
+    required this.eventId,
+    required this.metricType,
+    required this.value,
+    required this.unit,
+    required this.source,
+    required this.recordedAt,
+  });
+
+  final String eventId;
+  final String metricType;
+  final double value;
+  final String unit;
+  final String source;
+  final DateTime recordedAt;
+
+  factory TodayEvent.fromJson(Map<String, dynamic> json) => TodayEvent(
+    eventId: json['event_id'] as String,
+    metricType: json['metric_type'] as String,
+    value: (json['value'] as num).toDouble(),
+    unit: json['unit'] as String,
+    source: json['source'] as String,
+    recordedAt: DateTime.parse(json['recorded_at'] as String),
+  );
+}
+
+// ── TodayTimeline ─────────────────────────────────────────────────────────
+
+/// Paginated response from GET /api/v1/today/timeline
+class TodayTimeline {
+  const TodayTimeline({required this.events, this.nextCursor});
+  final List<TodayEvent> events;
+  final String? nextCursor;
+
+  factory TodayTimeline.fromJson(Map<String, dynamic> json) => TodayTimeline(
+    events: (json['events'] as List)
+        .map((e) => TodayEvent.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    nextCursor: json['next_cursor'] as String?,
+  );
+}
+
 // ── NotificationPage ──────────────────────────────────────────────────────────
 
 /// Paginated notification history response.

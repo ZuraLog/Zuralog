@@ -91,6 +91,42 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     // No-op in mock — pretend submission succeeded.
   }
 
+  // ── Unified Ingest ─────────────────────────────────────────────────────────
+
+  @override
+  Future<IngestResult> submitIngest({
+    required String metricType,
+    required double value,
+    required String unit,
+    required String source,
+    required DateTime recordedAt,
+    String? idempotencyKey,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return IngestResult(
+      eventId: 'mock-event-id',
+      dailyTotal: value,
+      unit: unit,
+      date: '${recordedAt.year}-${recordedAt.month.toString().padLeft(2, '0')}-${recordedAt.day.toString().padLeft(2, '0')}',
+    );
+  }
+
+  @override
+  Future<TodayTimeline> getTodayTimeline({
+    int limit = 50,
+    String? before,
+  }) async {
+    await Future<void>.delayed(_delay);
+    return const TodayTimeline(events: [], nextCursor: null);
+  }
+
+  @override
+  Future<void> deleteEvent(String eventId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // No-op in mock.
+  }
+
   // ── Notifications ─────────────────────────────────────────────────────────
 
   @override
