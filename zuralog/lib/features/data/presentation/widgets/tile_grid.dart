@@ -109,10 +109,22 @@ class TileGrid extends StatelessWidget {
     final size = _effectiveSize(id);
     return GestureDetector(
       onTap: () => onTileTap(id),
-      child: AspectRatio(
-        aspectRatio: _tileAspectRatio(size),
-        child: _buildTileContent(context, id),
-      ),
+      // Tall tiles span exactly 2 square heights + 1 mainAxisSpacing gap so
+      // their bottom edge aligns with the bottom of the two companion squares
+      // stacked in the right column. A plain AspectRatio(0.5) gives 2W, but
+      // the right column totals 2W + spaceSm; LayoutBuilder corrects for this.
+      child: size == TileSize.tall
+          ? LayoutBuilder(
+              builder: (_, constraints) => SizedBox(
+                width: constraints.maxWidth,
+                height: 2 * constraints.maxWidth + AppDimens.spaceSm,
+                child: _buildTileContent(context, id),
+              ),
+            )
+          : AspectRatio(
+              aspectRatio: _tileAspectRatio(size),
+              child: _buildTileContent(context, id),
+            ),
     );
   }
 
