@@ -544,6 +544,103 @@ class TodayTimeline {
   );
 }
 
+// ── SessionMetricPayload ──────────────────────────────────────────────────
+
+/// A single metric within a session ingest request.
+class SessionMetricPayload {
+  const SessionMetricPayload({
+    required this.metricType,
+    required this.value,
+    required this.unit,
+    this.idempotencyKey,
+    this.metadata,
+  });
+  final String metricType;
+  final double value;
+  final String unit;
+  final String? idempotencyKey;
+  final Map<String, dynamic>? metadata;
+
+  Map<String, dynamic> toJson() => {
+    'metric_type': metricType,
+    'value': value,
+    'unit': unit,
+    if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+    if (metadata != null) 'metadata': metadata,
+  };
+}
+
+// ── BulkEventPayload ─────────────────────────────────────────────────────
+
+/// A single event within a bulk ingest request.
+class BulkEventPayload {
+  const BulkEventPayload({
+    required this.metricType,
+    required this.value,
+    required this.unit,
+    required this.recordedAt,
+    this.granularity = 'point_in_time',
+    this.idempotencyKey,
+  });
+  final String metricType;
+  final double value;
+  final String unit;
+  final String recordedAt;
+  final String granularity;
+  final String? idempotencyKey;
+
+  Map<String, dynamic> toJson() => {
+    'metric_type': metricType,
+    'value': value,
+    'unit': unit,
+    'recorded_at': recordedAt,
+    'granularity': granularity,
+    if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+  };
+}
+
+// ── SessionIngestResult ──────────────────────────────────────────────────
+
+/// Response from POST /api/v1/ingest/session
+class SessionIngestResult {
+  const SessionIngestResult({
+    required this.sessionId,
+    required this.eventIds,
+    required this.date,
+  });
+  final String sessionId;
+  final List<String> eventIds;
+  final String date;
+
+  factory SessionIngestResult.fromJson(Map<String, dynamic> json) =>
+      SessionIngestResult(
+        sessionId: json['session_id'] as String,
+        eventIds: (json['event_ids'] as List).cast<String>(),
+        date: json['date'] as String,
+      );
+}
+
+// ── BulkIngestResult ─────────────────────────────────────────────────────
+
+/// Response from POST /api/v1/ingest/bulk
+class BulkIngestResult {
+  const BulkIngestResult({
+    required this.taskId,
+    required this.eventCount,
+    required this.status,
+  });
+  final String taskId;
+  final int eventCount;
+  final String status;
+
+  factory BulkIngestResult.fromJson(Map<String, dynamic> json) =>
+      BulkIngestResult(
+        taskId: json['task_id'] as String,
+        eventCount: json['event_count'] as int,
+        status: json['status'] as String,
+      );
+}
+
 // ── NotificationPage ──────────────────────────────────────────────────────────
 
 /// Paginated notification history response.

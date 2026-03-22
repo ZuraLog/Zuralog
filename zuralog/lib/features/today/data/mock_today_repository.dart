@@ -127,6 +127,35 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     // No-op in mock.
   }
 
+  @override
+  Future<SessionIngestResult> submitSession({
+    required String sessionType,
+    required String source,
+    required DateTime recordedAt,
+    required List<SessionMetricPayload> metrics,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return SessionIngestResult(
+      sessionId: 'mock-session-id',
+      eventIds: List.generate(metrics.length, (i) => 'mock-event-$i'),
+      date: '${recordedAt.year}-${recordedAt.month.toString().padLeft(2, '0')}-${recordedAt.day.toString().padLeft(2, '0')}',
+    );
+  }
+
+  @override
+  Future<BulkIngestResult> bulkIngest({
+    required String source,
+    required List<BulkEventPayload> events,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return BulkIngestResult(
+      taskId: 'mock-task-id',
+      eventCount: events.length,
+      status: 'accepted',
+    );
+  }
+
   // ── Notifications ─────────────────────────────────────────────────────────
 
   @override

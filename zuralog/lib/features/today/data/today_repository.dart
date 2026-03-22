@@ -68,6 +68,21 @@ abstract interface class TodayRepositoryInterface {
   /// Soft-deletes a health event by ID.
   Future<void> deleteEvent(String eventId);
 
+  /// Submits a session of related metrics via POST /api/v1/ingest/session.
+  Future<SessionIngestResult> submitSession({
+    required String sessionType,
+    required String source,
+    required DateTime recordedAt,
+    required List<SessionMetricPayload> metrics,
+    Map<String, dynamic>? metadata,
+  });
+
+  /// Submits a batch of events via POST /api/v1/ingest/bulk.
+  Future<BulkIngestResult> bulkIngest({
+    required String source,
+    required List<BulkEventPayload> events,
+  });
+
   /// Fetches the paginated notification history.
   Future<NotificationPage> getNotifications({int page = 1});
 
@@ -369,6 +384,49 @@ class TodayRepository implements TodayRepositoryInterface {
   @override
   Future<void> deleteEvent(String eventId) async {
     await _api.delete('/api/v1/events/$eventId');
+  }
+
+  // ── Session Ingest ─────────────────────────────────────────────────────────
+
+  @override
+  Future<SessionIngestResult> submitSession({
+    required String sessionType,
+    required String source,
+    required DateTime recordedAt,
+    required List<SessionMetricPayload> metrics,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final offset = recordedAt.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final hh = offset.inHours.abs().toString().padLeft(2, '0');
+    final mm = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final recordedAtStr =
+        '${recordedAt.toLocal().toIso8601String().split('.').first}$sign$hh:$mm';
+
+    final resp = await _api.post('/api/v1/ingest/session', data: {
+      'session_type': sessionType,
+      'source': source,
+      'recorded_at': recordedAtStr,
+      'metrics': metrics.map((m) => m.toJson()).toList(),
+      if (metadata != null) 'metadata': metadata,
+    });
+    invalidateFeedCache();
+    return SessionIngestResult.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  // ── Bulk Ingest ───────────────────────────────────────────────────────────
+
+  @override
+  Future<BulkIngestResult> bulkIngest({
+    required String source,
+    required List<BulkEventPayload> events,
+  }) async {
+    final resp = await _api.post('/api/v1/ingest/bulk', data: {
+      'source': source,
+      'events': events.map((e) => e.toJson()).toList(),
+    });
+    invalidateFeedCache();
+    return BulkIngestResult.fromJson(resp.data as Map<String, dynamic>);
   }
 
   // ── Notifications ──────────────────────────────────────────────────────────
