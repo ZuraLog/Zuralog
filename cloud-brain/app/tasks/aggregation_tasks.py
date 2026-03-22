@@ -44,11 +44,10 @@ async def _recompute_batch(batch: list[dict]) -> dict:
                     continue  # Unknown metric — skip aggregation
 
                 # Get all non-deleted events
-                import uuid as _uuid
                 events_result = await db.execute(
                     select(HealthEvent.value, HealthEvent.recorded_at, HealthEvent.created_at)
                     .where(
-                        HealthEvent.user_id == _uuid.UUID(user_id),
+                        HealthEvent.user_id == user_id,
                         HealthEvent.local_date == local_date,
                         HealthEvent.metric_type == metric_type,
                         HealthEvent.deleted_at.is_(None),
@@ -67,7 +66,7 @@ async def _recompute_batch(batch: list[dict]) -> dict:
                     )
                 else:
                     stmt = pg_insert(DailySummary).values(
-                        user_id=_uuid.UUID(user_id), date=local_date,
+                        user_id=user_id, date=local_date,
                         metric_type=metric_type, value=result.value,
                         unit=result.unit, event_count=result.event_count,
                         is_stale=False, computed_at=datetime.now(tz=timezone.utc),

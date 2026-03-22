@@ -116,7 +116,8 @@ class _TileEditOverlayState extends State<TileEditOverlay>
   // ── Semantic actions ────────────────────────────────────────────────────────
 
   Map<CustomSemanticsAction, VoidCallback> get _semanticActions => {
-        const CustomSemanticsAction(label: 'Change Size'): _handleSizeChanged,
+        if (widget.tileId.allowedSizes.length > 1)
+          const CustomSemanticsAction(label: 'Change Size'): _handleSizeChanged,
         const CustomSemanticsAction(label: 'Toggle Visibility'):
             widget.onVisibilityToggled,
       };
@@ -141,40 +142,37 @@ class _TileEditOverlayState extends State<TileEditOverlay>
           // ── Underlying tile ─────────────────────────────────────────────────
           widget.child,
 
-          // ── Top-left: Size badge ────────────────────────────────────────────
-          Positioned(
-            top: 6,
-            left: 6,
-            child: GestureDetector(
-              onTap: _handleSizeChanged,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.primary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _sizeLabel(widget.currentSize),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // ── Top-right: Palette + Eye ────────────────────────────────────────
+          // ── Top-right: Size badge + Palette + Eye ──────────────────────────
           Positioned(
             top: 2,
             right: 2,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (widget.tileId.allowedSizes.length > 1) ...[
+                  GestureDetector(
+                    onTap: _handleSizeChanged,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.primary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _sizeLabel(widget.currentSize),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 _ControlIconButton(
                   icon: Icons.palette_rounded,
                   onTap: widget.onColorPick,
@@ -203,8 +201,10 @@ class _TileEditOverlayState extends State<TileEditOverlay>
             child: content,
           ),
           Positioned.fill(
-            child: CustomPaint(
-              painter: _StrikethroughPainter(color: colors.textTertiary),
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _StrikethroughPainter(color: colors.textTertiary),
+              ),
             ),
           ),
         ],

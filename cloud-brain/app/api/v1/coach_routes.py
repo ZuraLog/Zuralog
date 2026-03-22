@@ -1,5 +1,4 @@
 """Coach context endpoints — provides AI coach with structured health context."""
-import uuid
 import logging
 from datetime import timedelta
 
@@ -12,26 +11,10 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models.daily_summary import DailySummary
 from app.models.health_event import HealthEvent
+from app.utils.user_date import get_user_local_date
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/coach", tags=["coach"])
-
-
-async def _get_user_local_date(db: AsyncSession, user_id: str):
-    """Return the user's current local date based on their IANA timezone preference."""
-    import zoneinfo
-    from datetime import datetime, timezone as tz
-
-    row = await db.execute(
-        text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
-        {"uid": user_id},
-    )
-    iana_tz = row.scalar_one_or_none() or "UTC"
-    try:
-        user_tz = zoneinfo.ZoneInfo(iana_tz)
-    except Exception:
-        user_tz = zoneinfo.ZoneInfo("UTC")
-    return datetime.now(tz=user_tz).date()
 
 
 @limiter.limit("30/minute")
@@ -43,14 +26,14 @@ async def coach_context(
     user_id: str = Depends(get_authenticated_user_id),
 ) -> dict:
     """Structured health context for AI coach — daily summaries, recent events, sessions."""
-    local_date = await _get_user_local_date(db, user_id)
+    local_date = await get_user_local_date(db, user_id)
     start_date = local_date - timedelta(days=days)
 
     # Daily summaries for the past N days
     summary_rows = await db.execute(
         select(DailySummary.date, DailySummary.metric_type, DailySummary.value, DailySummary.unit)
         .where(
-            DailySummary.user_id == uuid.UUID(str(user_id)),
+            DailySummary.user_id == user_id,
             DailySummary.date >= start_date,
         )
         .order_by(DailySummary.date.desc())
@@ -64,7 +47,7 @@ async def coach_context(
     event_rows = await db.execute(
         select(HealthEvent)
         .where(
-            HealthEvent.user_id == uuid.UUID(str(user_id)),
+            HealthEvent.user_id == user_id,
             HealthEvent.local_date >= start_date,
             HealthEvent.deleted_at.is_(None),
         )
@@ -89,8 +72,8 @@ async def coach_context(
     session_rows = await db.execute(
         select(ActivitySession)
         .where(
-            ActivitySession.user_id == uuid.UUID(str(user_id)),
-            ActivitySession.started_at >= text(f"'{start_date}'::date"),
+            ActivitySession.user_id == user_id,
+            ActivitySession.started_at >= start_date,
         )
         .order_by(ActivitySession.started_at.desc())
         .limit(50)
@@ -119,13 +102,13 @@ async def coach_events(
     user_id: str = Depends(get_authenticated_user_id),
 ) -> dict:
     """Filtered health events for a specific metric."""
-    local_date = await _get_user_local_date(db, user_id)
+    local_date = await get_user_local_date(db, user_id)
     start_date = local_date - timedelta(days=days)
 
     rows = await db.execute(
         select(HealthEvent)
         .where(
-            HealthEvent.user_id == uuid.UUID(str(user_id)),
+            HealthEvent.user_id == user_id,
             HealthEvent.metric_type == metric_type,
             HealthEvent.local_date >= start_date,
             HealthEvent.deleted_at.is_(None),

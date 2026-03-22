@@ -47,25 +47,33 @@ def mock_db():
     #   5. Delete daily_summaries (text SQL) → no result needed
     # We use side_effect to return fresh result mocks for each call.
     call_count = {"n": 0}
-    idempotency_result = MagicMock()
-    idempotency_result.scalar_one_or_none = MagicMock(return_value=None)
-
-    metric_def_result = MagicMock()
-    metric_def_result.scalar_one_or_none = MagicMock(return_value=metric_row)
-
-    events_result = MagicMock()
-    events_result.fetchall = MagicMock(return_value=[])
-
-    generic_result = MagicMock()
-    generic_result.scalar_one_or_none = MagicMock(return_value=None)
-    generic_result.fetchall = MagicMock(return_value=[])
-
-    results = [idempotency_result, metric_def_result, events_result, generic_result, generic_result]
+    # Smart mock: inspect the compiled query to decide what to return.
+    from sqlalchemy.sql import Select
 
     async def execute_side_effect(*args, **kwargs):
-        idx = min(call_count["n"], len(results) - 1)
-        call_count["n"] += 1
-        return results[idx]
+        query = args[0] if args else None
+        result = MagicMock()
+
+        # Detect MetricDefinition queries by inspecting the Select's columns
+        is_metric_def = False
+        if isinstance(query, Select):
+            try:
+                cols = query.columns_clause_froms
+                for frm in cols:
+                    tname = getattr(frm, "name", "") or ""
+                    if "metric_def" in tname:
+                        is_metric_def = True
+                        break
+            except Exception:
+                pass
+
+        if is_metric_def:
+            result.scalar_one_or_none = MagicMock(return_value=metric_row)
+        else:
+            result.scalar_one_or_none = MagicMock(return_value=None)
+        result.fetchall = MagicMock(return_value=[])
+        result.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+        return result
 
     db.execute = AsyncMock(side_effect=execute_side_effect)
 

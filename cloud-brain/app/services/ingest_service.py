@@ -23,6 +23,14 @@ def compute_local_date(recorded_at_str: str) -> date:
             f"Got: {recorded_at_str!r}"
         )
 
+    # Temporal bounds: reject timestamps too far in the future or past
+    now_utc = datetime.now(timezone.utc)
+    dt_utc = dt.astimezone(timezone.utc)
+    if dt_utc > now_utc + timedelta(hours=48):
+        raise ValueError("recorded_at must not be more than 48 hours in the future")
+    if dt_utc < now_utc - timedelta(days=730):
+        raise ValueError("recorded_at must not be more than 2 years in the past")
+
     # dt is already in the local timezone implied by the offset.
     # Extract the date directly — it IS the user's local date.
     return dt.date()

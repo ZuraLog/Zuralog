@@ -8,18 +8,21 @@ Updates existing user_goals.metric column values to match the canonical
 slugs defined in metric_definitions (created in the previous migration).
 
 Slug mapping applied:
-  water    -> water_ml
-  sleep    -> sleep_duration
-  weight   -> weight_kg
-  run      -> exercise_minutes
-  meal     -> calories
-  workout  -> exercise_minutes
-  pain     -> stress           (closest available mapping)
+  water       -> water_ml
+  sleep       -> sleep_duration
+  sleep_hours -> sleep_duration
+  weight      -> weight_kg
+  run         -> exercise_minutes
+  meal        -> calories
+  workout     -> exercise_minutes
+  workouts    -> exercise_minutes
+  pain        -> stress           (closest available mapping)
 
 Already-canonical values (steps, mood, energy, stress) are left untouched.
 """
 
 from alembic import op
+from sqlalchemy import text
 
 
 revision = "x9y0z1a2b3c4"
@@ -34,10 +37,12 @@ depends_on = None
 SLUG_MAP = {
     "water": "water_ml",
     "sleep": "sleep_duration",
+    "sleep_hours": "sleep_duration",
     "weight": "weight_kg",
     "run": "exercise_minutes",
     "meal": "calories",
     "workout": "exercise_minutes",
+    "workouts": "exercise_minutes",
     "pain": "stress",
 }
 
@@ -56,12 +61,12 @@ for old, new in sorted(SLUG_MAP.items()):
 def upgrade() -> None:
     for old_slug, new_slug in SLUG_MAP.items():
         op.execute(
-            f"UPDATE user_goals SET metric = '{new_slug}' WHERE metric = '{old_slug}'"
+            text("UPDATE user_goals SET metric = :new_slug WHERE metric = :old_slug").bindparams(new_slug=new_slug, old_slug=old_slug)
         )
 
 
 def downgrade() -> None:
     for new_slug, old_slug in REVERSE_MAP.items():
         op.execute(
-            f"UPDATE user_goals SET metric = '{old_slug}' WHERE metric = '{new_slug}'"
+            text("UPDATE user_goals SET metric = :old_slug WHERE metric = :new_slug").bindparams(old_slug=old_slug, new_slug=new_slug)
         )

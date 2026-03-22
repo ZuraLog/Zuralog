@@ -1,10 +1,11 @@
 """Today tab endpoints."""
-from datetime import date
-import uuid
+from datetime import date, datetime
 import logging
+import uuid as uuid_mod
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
+import sqlalchemy as sa
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,26 +14,10 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models.daily_summary import DailySummary
 from app.models.health_event import HealthEvent
+from app.utils.user_date import get_user_local_date
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/today", tags=["today"])
-
-
-async def _get_user_local_date(db: AsyncSession, user_id: str) -> date:
-    """Return the user's current local date based on their IANA timezone preference."""
-    import zoneinfo
-    from datetime import datetime, timezone as tz
-
-    row = await db.execute(
-        text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
-        {"uid": user_id}
-    )
-    iana_tz = (row.scalar_one_or_none() or "UTC")
-    try:
-        user_tz = zoneinfo.ZoneInfo(iana_tz)
-    except Exception:
-        user_tz = zoneinfo.ZoneInfo("UTC")
-    return datetime.now(tz=user_tz).date()
 
 
 class TodayMetric(BaseModel):
@@ -75,11 +60,12 @@ async def today_summary(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_authenticated_user_id),
 ) -> TodaySummaryResponse:
-    local_date = await _get_user_local_date(db, user_id)
+    local_date = await get_user_local_date(db, user_id)
     rows = await db.execute(
         select(DailySummary.metric_type, DailySummary.value, DailySummary.unit).where(
-            DailySummary.user_id == uuid.UUID(str(user_id)),
+            DailySummary.user_id == user_id,
             DailySummary.date == local_date,
+            DailySummary.is_stale.is_(False),
         )
     )
     metrics = [
@@ -98,20 +84,35 @@ async def today_timeline(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_authenticated_user_id),
 ) -> TodayTimelineResponse:
-    local_date = await _get_user_local_date(db, user_id)
+    local_date = await get_user_local_date(db, user_id)
 
     query = (
         select(HealthEvent)
         .where(
-            HealthEvent.user_id == uuid.UUID(str(user_id)),
+            HealthEvent.user_id == user_id,
             HealthEvent.local_date == local_date,
             HealthEvent.deleted_at.is_(None),
         )
-        .order_by(HealthEvent.recorded_at.desc())
+        .order_by(HealthEvent.recorded_at.desc(), HealthEvent.id.desc())
         .limit(limit + 1)
     )
     if before:
-        query = query.where(HealthEvent.id < uuid.UUID(before))
+        try:
+            # Composite cursor: "ISO_TIMESTAMP_UUID"
+            cursor_parts = before.rsplit("_", 1)
+            cursor_time = datetime.fromisoformat(cursor_parts[0])
+            cursor_id = uuid_mod.UUID(cursor_parts[1])
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="Invalid cursor format")
+        query = query.where(
+            sa.or_(
+                HealthEvent.recorded_at < cursor_time,
+                sa.and_(
+                    HealthEvent.recorded_at == cursor_time,
+                    HealthEvent.id < cursor_id,
+                ),
+            )
+        )
 
     rows = await db.execute(query)
     events = rows.scalars().all()
@@ -119,7 +120,7 @@ async def today_timeline(
     next_cursor = None
     if len(events) > limit:
         events = events[:limit]
-        next_cursor = str(events[-1].id)
+        next_cursor = f"{events[-1].recorded_at.isoformat()}_{events[-1].id}"
 
     return TodayTimelineResponse(
         events=[
@@ -144,13 +145,13 @@ async def today_goals_progress(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_authenticated_user_id),
 ) -> list[GoalProgressItem]:
-    local_date = await _get_user_local_date(db, user_id)
+    local_date = await get_user_local_date(db, user_id)
     rows = await db.execute(
         text("""
             SELECT ds.metric_type, ds.value AS current_value, ug.target_value, ds.unit,
                    ROUND(CAST(ds.value / NULLIF(ug.target_value, 0) * 100 AS numeric), 1) AS percentage
             FROM daily_summaries ds
-            JOIN user_goals ug ON ds.user_id = ug.user_id AND ds.metric_type = ug.metric_type
+            JOIN user_goals ug ON ds.user_id = ug.user_id AND ds.metric_type = ug.metric
             WHERE ds.user_id = :uid AND ds.date = :d
         """),
         {"uid": str(user_id), "d": str(local_date)},

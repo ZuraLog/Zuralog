@@ -36,7 +36,7 @@ HKObserverQuery fires (native iOS, app may be in background)
   ↓
 Native Swift code reads JWT from iOS Keychain
   ↓
-POST /api/v1/health/ingest (without Flutter engine)
+POST /api/v1/ingest/bulk (without Flutter engine)
   ↓
 Cloud Brain stores new health records
 ```
@@ -73,7 +73,7 @@ The native Swift code reads the JWT **directly from the iOS Keychain** so the ba
 cloud-brain/
   app/
     mcp_servers/apple_health_server.py   # MCP tools for reading/writing
-    api/v1/health_ingest.py              # POST endpoint receiving data from native bridge
+    api/v1/ingest_routes.py              # POST endpoint receiving data from native bridge
 
 zuralog/
   lib/

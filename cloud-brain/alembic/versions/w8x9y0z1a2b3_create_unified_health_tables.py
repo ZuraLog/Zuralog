@@ -13,7 +13,7 @@ Creates the four canonical tables for the unified health data architecture:
 
 Also:
   - Enables RLS on all four tables with per-user SELECT policies.
-  - Seeds metric_definitions with 35 initial rows.
+  - Seeds metric_definitions with 38 initial rows.
 """
 
 from typing import Sequence, Union
@@ -35,7 +35,7 @@ def upgrade() -> None:
     op.create_table(
         "activity_sessions",
         sa.Column("id", sa.dialects.postgresql.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column("user_id", sa.dialects.postgresql.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("activity_type", sa.Text(), nullable=False),
         sa.Column("source", sa.Text(), nullable=False),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
@@ -86,7 +86,7 @@ def upgrade() -> None:
     op.create_table(
         "health_events",
         sa.Column("id", sa.dialects.postgresql.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column("user_id", sa.dialects.postgresql.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("metric_type", sa.Text(), nullable=False),
         sa.Column("value", sa.Float(precision=53), nullable=False),
         sa.Column("unit", sa.Text(), nullable=False),
@@ -151,7 +151,7 @@ def upgrade() -> None:
     op.create_table(
         "daily_summaries",
         sa.Column("id", sa.dialects.postgresql.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column("user_id", sa.dialects.postgresql.UUID(), nullable=False),
+        sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("date", sa.Date(), nullable=False),
         sa.Column("metric_type", sa.Text(), nullable=False),
         sa.Column("value", sa.Float(precision=53), nullable=False),
@@ -209,7 +209,7 @@ def upgrade() -> None:
     )
 
     # ------------------------------------------------------------------
-    # 6. Seed metric_definitions (35 rows)
+    # 6. Seed metric_definitions (38 rows)
     # ------------------------------------------------------------------
     op.execute("""
         INSERT INTO metric_definitions

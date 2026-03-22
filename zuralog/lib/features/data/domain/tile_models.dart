@@ -60,6 +60,20 @@ enum TileId {
       return null;
     }
   }
+
+  /// Resolves a snake_case metric slug or camelCase enum name to a [TileId].
+  ///
+  /// Tries camelCase enum name first (via [fromString]), then matches against
+  /// each value's [metricSlug]. Returns `null` for unrecognised slugs.
+  static TileId? fromSlug(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final direct = fromString(raw);
+    if (direct != null) return direct;
+    for (final id in TileId.values) {
+      if (id.metricSlug == raw) return id;
+    }
+    return null;
+  }
 }
 
 // ── TileDataState ─────────────────────────────────────────────────────────────
@@ -144,6 +158,18 @@ class TileData {
 
 /// Display and layout metadata for each [TileId].
 extension TileConfig on TileId {
+  /// Snake_case metric slug for API calls.
+  ///
+  /// Converts the camelCase Dart enum name to snake_case so it matches the
+  /// API / mock repository key format.
+  ///
+  /// Examples: `sleepDuration` → `sleep_duration`, `vo2Max` → `vo2_max`,
+  /// `spo2` → `spo2`, `hrv` → `hrv`.
+  String get metricSlug => name.replaceAllMapped(
+        RegExp(r'[A-Z]'),
+        (m) => '_${m.group(0)!.toLowerCase()}',
+      );
+
   /// Human-readable display name for the tile.
   String get displayName {
     switch (this) {
@@ -276,44 +302,9 @@ extension TileConfig on TileId {
     }
   }
 
-  /// Allowed sizes for this tile (per spec §5.4).
-  List<TileSize> get allowedSizes {
-    switch (this) {
-      case TileId.steps:
-        return const [TileSize.square, TileSize.tall];
-      case TileId.sleepStages:
-        return const [TileSize.wide, TileSize.tall];
-      case TileId.restingHeartRate:
-      case TileId.hrv:
-        return const [TileSize.square, TileSize.wide];
-      case TileId.weight:
-        return const [TileSize.wide, TileSize.tall];
-      case TileId.calories:
-        return const [TileSize.square, TileSize.tall];
-      case TileId.mood:
-      case TileId.energy:
-      case TileId.stress:
-        return const [TileSize.square, TileSize.wide];
-      case TileId.cycle:
-        return const [TileSize.wide, TileSize.tall];
-      case TileId.wristTemperature:
-        return const [TileSize.square];
-      case TileId.walkingSpeed:
-      case TileId.runningPace:
-      case TileId.bodyTemperature:
-      case TileId.respiratoryRate:
-        return const [TileSize.square, TileSize.wide];
-      case TileId.distance:
-      case TileId.floorsClimbed:
-      case TileId.exerciseMinutes:
-      case TileId.macros:
-      case TileId.bloodGlucose:
-      case TileId.mindfulMinutes:
-        return const [TileSize.square, TileSize.tall];
-      default:
-        return const [TileSize.square];
-    }
-  }
+  /// Allowed sizes for this tile — all tiles support all three sizes.
+  List<TileSize> get allowedSizes =>
+      const [TileSize.square, TileSize.wide, TileSize.tall];
 
   /// Emoji icon representing this metric tile.
   String get icon {

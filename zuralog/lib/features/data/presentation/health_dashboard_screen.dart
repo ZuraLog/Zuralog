@@ -111,7 +111,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
 
   void _onTileTap(TileId tileId) {
     if (_isEditMode) return;
-    context.push('/data/metric/${tileId.name}');
+    context.push('/data/metric/${tileId.metricSlug}');
   }
 
   // ── Layout mutations ─────────────────────────────────────────────────────────
@@ -177,7 +177,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final layout = ref.read(dashboardLayoutProvider);
     final orderedIds = ref.read(tileOrderingProvider);
     final names = orderedIds.map((id) => id.name).toList();
-    if (newIndex > oldIndex) newIndex--;
+    // DragTarget delivers the exact target index — no off-by-one adjustment.
     names.insert(newIndex, names.removeAt(oldIndex));
     final updated = layout.copyWith(tileOrder: names);
     ref.read(dashboardLayoutProvider.notifier).state = updated;
@@ -497,7 +497,7 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
             onClose: () => setState(() => _showSearch = false),
             onTileSelected: (tileId) {
               setState(() => _showSearch = false);
-              context.push('/data/metric/${tileId.name}');
+              context.push('/data/metric/${tileId.metricSlug}');
             },
           ),
       ],

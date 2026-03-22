@@ -165,20 +165,19 @@ class HealthSyncService {
 
       addDaily('steps', steps.round(), 'steps');
       addDaily('active_calories', (activeCalories ?? 0.0).round(), 'kcal');
-      addDaily('distance_meters', distance > 0 ? distance : null, 'm');
-      addDaily('flights_climbed', flights > 0 ? flights.round() : null, 'flights');
-      addDaily('water_liters', water, 'L');
+      addDaily('distance', distance > 0 ? distance : null, 'm');
+      addDaily('floors_climbed', flights > 0 ? flights.round() : null, 'floors');
+      addDaily('water_ml', water, 'mL');
       addDaily('mindful_minutes', mindfulMin, 'min');
 
       // ── Nutrition macros (daily aggregate) ────────────────────────────────
       if (nutritionCalories != null && nutritionCalories > 0) {
-        addDaily('nutrition_calories', nutritionCalories.round(), 'kcal');
+        addDaily('calories', nutritionCalories.round(), 'kcal');
       }
       if (nutritionMacros != null) {
-        addDaily('nutrition_protein_g', nutritionMacros['nutrition_protein_g'] as num?, 'g');
-        addDaily('nutrition_carbs_g', nutritionMacros['nutrition_carbs_g'] as num?, 'g');
-        addDaily('nutrition_fat_g', nutritionMacros['nutrition_fat_g'] as num?, 'g');
-        addDaily('nutrition_fiber_g', nutritionMacros['nutrition_fiber_g'] as num?, 'g');
+        addDaily('protein_grams', nutritionMacros['nutrition_protein_g'] as num?, 'g');
+        addDaily('carbs_grams', nutritionMacros['nutrition_carbs_g'] as num?, 'g');
+        addDaily('fat_grams', nutritionMacros['nutrition_fat_g'] as num?, 'g');
       }
 
       // ── Point-in-time metrics ─────────────────────────────────────────────
@@ -198,21 +197,24 @@ class HealthSyncService {
       addPoint('resting_heart_rate', rhr, 'bpm');
       addPoint('hrv_ms', hrv, 'ms');
       addPoint('vo2_max', vo2, 'mL/kg/min');
-      addPoint('weight', weight, 'kg');
+      addPoint('weight_kg', weight, 'kg');
       addPoint('body_fat_percentage', bodyFat, '%');
-      addPoint('respiratory_rate', respiratoryRate, 'breaths/min');
-      addPoint('oxygen_saturation', oxygenSaturation, '%');
+      addPoint('respiratory_rate', respiratoryRate, 'brpm');
+      addPoint('spo2', oxygenSaturation, '%');
       addPoint('heart_rate_avg', heartRate, 'bpm');
-      addPoint('body_temperature_celsius', bodyTemp, 'C');
-      addPoint('walking_speed_mps', walkingSpeed, 'm/s');
-      addPoint('running_pace_mps', runningPaceMps, 'm/s');
+      addPoint('body_temperature', bodyTemp, '\u00B0C');
+      addPoint('walking_speed', walkingSpeed, 'm/s');
+      // Convert m/s → s/km (seconds per kilometer); guard against division by zero.
+      if (runningPaceMps != null && runningPaceMps > 0) {
+        addPoint('running_pace', 1000.0 / runningPaceMps, 's/km');
+      }
 
       // Wrist temperature deviation (can be negative, so check for null only)
       if (wristTemp != null) {
         events.add({
-          'metric_type': 'wrist_temperature_deviation',
+          'metric_type': 'wrist_temperature',
           'value': wristTemp.toDouble(),
-          'unit': 'C',
+          'unit': '\u00B0C',
           'recorded_at': nowStr,
           'granularity': 'point_in_time',
           'idempotency_key': generateIdempotencyKey(),
@@ -231,9 +233,9 @@ class HealthSyncService {
       final sleepHours = _aggregateSleepHours(sleepSegments);
       if (sleepHours > 0) {
         events.add({
-          'metric_type': 'sleep_hours',
-          'value': double.parse(sleepHours.toStringAsFixed(2)),
-          'unit': 'hrs',
+          'metric_type': 'sleep_duration',
+          'value': double.parse((sleepHours * 60).toStringAsFixed(2)),
+          'unit': 'min',
           'recorded_at': '${todayStr}T00:00:00${_localTzSuffix(now)}',
           'granularity': 'daily_aggregate',
           'idempotency_key': generateIdempotencyKey(),
@@ -251,7 +253,7 @@ class HealthSyncService {
         // Duration as minutes is the primary value for workout events
         if (durationSec > 0) {
           events.add({
-            'metric_type': 'workout_${activityType.toLowerCase()}',
+            'metric_type': 'exercise_minutes',
             'value': durationSec / 60.0,
             'unit': 'min',
             'recorded_at': startTime,

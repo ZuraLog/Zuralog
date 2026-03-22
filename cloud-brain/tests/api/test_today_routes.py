@@ -56,7 +56,7 @@ def test_today_timeline_returns_200_with_pagination(client):
 def test_today_timeline_limit_enforced(client):
     # limit > 200 should be capped or rejected
     resp = client.get("/api/v1/today/timeline?limit=500", headers=AUTH_HEADER)
-    assert resp.status_code in (200, 422)
+    assert resp.status_code == 422
 
 
 def test_today_goals_progress_returns_200(client):

@@ -23,7 +23,7 @@ def test_metric_definition_instantiation():
 
 def test_health_event_instantiation():
     event = HealthEvent(
-        user_id=uuid.uuid4(),
+        user_id=str(uuid.uuid4()),
         metric_type="water_ml",
         value=250.0,
         unit="mL",
@@ -39,7 +39,7 @@ def test_health_event_instantiation():
 
 def test_daily_summary_instantiation():
     ds = DailySummary(
-        user_id=uuid.uuid4(),
+        user_id=str(uuid.uuid4()),
         date=date.today(),
         metric_type="steps",
         value=8500.0,
@@ -51,7 +51,7 @@ def test_daily_summary_instantiation():
 
 def test_health_event_granularity_default():
     event = HealthEvent(
-        user_id=uuid.uuid4(),
+        user_id=str(uuid.uuid4()),
         metric_type="steps",
         value=100.0,
         unit="steps",
@@ -64,7 +64,7 @@ def test_health_event_granularity_default():
 
 def test_activity_session_instantiation():
     session = ActivitySession(
-        user_id=uuid.uuid4(),
+        user_id=str(uuid.uuid4()),
         activity_type="run",
         source="manual",
         started_at=datetime.now(tz=timezone.utc),

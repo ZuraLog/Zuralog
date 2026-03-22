@@ -8,13 +8,15 @@ GET /api/v1/ingest/status/{id} — bulk sync status poll
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 import logging
 from datetime import date, datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,15 +35,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
 
+# ── Shared validators ────────────────────────────────────────────────────────
+
+def _validate_metadata_size(v: dict | None) -> dict | None:
+    if v is not None and len(json.dumps(v)) > 4096:
+        raise ValueError("metadata must be under 4 KB when serialized")
+    return v
+
+
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
 
 class SingleIngestRequest(BaseModel):
-    metric_type: str
+    metric_type: str = Field(max_length=100)
     value: float
-    unit: str
-    source: str
+    unit: str = Field(max_length=50)
+    source: str = Field(max_length=100)
     recorded_at: str          # ISO 8601 with UTC offset — REQUIRED
-    idempotency_key: str | None = None
+    idempotency_key: str | None = Field(default=None, max_length=200)
     metadata: dict | None = None
 
     @field_validator("recorded_at")
@@ -50,6 +60,11 @@ class SingleIngestRequest(BaseModel):
         from app.services.ingest_service import compute_local_date
         compute_local_date(v)   # raises ValueError if no offset
         return v
+
+    @field_validator("metadata")
+    @classmethod
+    def check_metadata_size(cls, v: dict | None) -> dict | None:
+        return _validate_metadata_size(v)
 
 
 class SingleIngestResponse(BaseModel):
@@ -60,20 +75,40 @@ class SingleIngestResponse(BaseModel):
 
 
 class MetricPayload(BaseModel):
-    metric_type: str
+    metric_type: str = Field(max_length=100)
     value: float
-    unit: str
-    idempotency_key: str | None = None
+    unit: str = Field(max_length=50)
+    idempotency_key: str | None = Field(default=None, max_length=200)
     metadata: dict | None = None
+
+    @field_validator("metadata")
+    @classmethod
+    def check_metadata_size(cls, v: dict | None) -> dict | None:
+        return _validate_metadata_size(v)
 
 
 class SessionIngestRequest(BaseModel):
-    activity_type: str
-    source: str
+    activity_type: str = Field(max_length=100)
+    source: str = Field(max_length=100)
     started_at: str
     ended_at: str | None = None
-    idempotency_key: str | None = None
-    metrics: list[MetricPayload]
+    idempotency_key: str | None = Field(default=None, max_length=200)
+    metrics: list[MetricPayload] = Field(max_length=50)
+
+    @field_validator("started_at")
+    @classmethod
+    def must_have_started_at_offset(cls, v: str) -> str:
+        from app.services.ingest_service import compute_local_date
+        compute_local_date(v)
+        return v
+
+    @field_validator("ended_at")
+    @classmethod
+    def must_have_ended_at_offset(cls, v: str | None) -> str | None:
+        if v is not None:
+            from app.services.ingest_service import compute_local_date
+            compute_local_date(v)
+        return v
 
 
 class SessionIngestResponse(BaseModel):
@@ -83,12 +118,12 @@ class SessionIngestResponse(BaseModel):
 
 
 class BulkEventPayload(BaseModel):
-    metric_type: str
+    metric_type: str = Field(max_length=100)
     value: float
-    unit: str
+    unit: str = Field(max_length=50)
     recorded_at: str
-    granularity: str = "point_in_time"
-    idempotency_key: str | None = None
+    granularity: Literal["point_in_time", "daily_aggregate"] = "point_in_time"
+    idempotency_key: str | None = Field(default=None, max_length=200)
     metadata: dict | None = None
 
     @field_validator("recorded_at")
@@ -98,10 +133,15 @@ class BulkEventPayload(BaseModel):
         compute_local_date(v)
         return v
 
+    @field_validator("metadata")
+    @classmethod
+    def check_metadata_size(cls, v: dict | None) -> dict | None:
+        return _validate_metadata_size(v)
+
 
 class BulkIngestRequest(BaseModel):
-    source: str
-    events: list[BulkEventPayload]
+    source: str = Field(max_length=100)
+    events: list[BulkEventPayload] = Field(max_length=500)
 
 
 class BulkIngestResponse(BaseModel):
@@ -136,10 +176,14 @@ async def _recompute_daily_summary(
     aggregation_fn: str,
 ) -> float | None:
     """Re-aggregate all non-deleted events and upsert daily_summaries."""
+    # Acquire advisory lock to serialize concurrent recomputes for same tuple
+    lock_key = int(hashlib.md5(f"{user_id}:{local_date}:{metric_type}".encode()).hexdigest()[:8], 16) & 0x7FFFFFFF
+    await db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_key})
+
     rows = await db.execute(
         select(HealthEvent.value, HealthEvent.recorded_at, HealthEvent.created_at)
         .where(
-            HealthEvent.user_id == uuid.UUID(str(user_id)),
+            HealthEvent.user_id == user_id,
             HealthEvent.local_date == local_date,
             HealthEvent.metric_type == metric_type,
             HealthEvent.deleted_at.is_(None),
@@ -164,22 +208,23 @@ async def _recompute_daily_summary(
         )
         return None
 
+    now = datetime.now(tz=timezone.utc)
     stmt = pg_insert(DailySummary).values(
-        user_id=uuid.UUID(str(user_id)),
+        user_id=user_id,
         date=local_date,
         metric_type=metric_type,
         value=result.value,
         unit=result.unit,
         event_count=result.event_count,
         is_stale=False,
-        computed_at=datetime.now(tz=timezone.utc),
+        computed_at=now,
     ).on_conflict_do_update(
         constraint="uq_daily_summaries_user_date_metric",
         set_={
             "value": result.value,
             "event_count": result.event_count,
             "is_stale": False,
-            "computed_at": datetime.now(tz=timezone.utc),
+            "computed_at": now,
         },
     )
     await db.execute(stmt)
@@ -203,7 +248,7 @@ async def ingest_single(
     if body.idempotency_key:
         existing = await db.execute(
             select(HealthEvent).where(
-                HealthEvent.user_id == uuid.UUID(str(user_id)),
+                HealthEvent.user_id == user_id,
                 HealthEvent.idempotency_key == body.idempotency_key,
             )
         )
@@ -212,7 +257,7 @@ async def ingest_single(
             # Return original event data — idempotent success
             summary = await db.execute(
                 select(DailySummary.value).where(
-                    DailySummary.user_id == uuid.UUID(str(user_id)),
+                    DailySummary.user_id == user_id,
                     DailySummary.date == local_date,
                     DailySummary.metric_type == body.metric_type,
                 )
@@ -236,32 +281,10 @@ async def ingest_single(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
     else:
-        # Unknown metric: auto-insert placeholder, store event
-        await db.execute(
-            pg_insert(MetricDefinition)
-            .values(
-                metric_type=body.metric_type,
-                display_name=body.metric_type,
-                unit=body.unit,
-                category="unknown",
-                aggregation_fn="sum",
-                data_type="float",
-                is_active=False,
-            )
-            .on_conflict_do_nothing()
-        )
-        metric_def = MetricDefinition(
-            metric_type=body.metric_type,
-            display_name=body.metric_type,
-            unit=body.unit,
-            category="unknown",
-            aggregation_fn="sum",
-            data_type="float",
-            is_active=False,
-        )
+        raise HTTPException(status_code=422, detail=f"Unknown metric type: '{body.metric_type}'")
 
     event = HealthEvent(
-        user_id=uuid.UUID(str(user_id)),
+        user_id=user_id,
         metric_type=body.metric_type,
         value=body.value,
         unit=body.unit,
@@ -306,7 +329,7 @@ async def ingest_session(
         from app.models.activity_session import ActivitySession
         existing = await db.execute(
             select(ActivitySession).where(
-                ActivitySession.user_id == uuid.UUID(str(user_id)),
+                ActivitySession.user_id == user_id,
                 ActivitySession.idempotency_key == body.idempotency_key,
             )
         )
@@ -325,7 +348,7 @@ async def ingest_session(
 
     from app.models.activity_session import ActivitySession
     session = ActivitySession(
-        user_id=uuid.UUID(str(user_id)),
+        user_id=user_id,
         activity_type=body.activity_type,
         source=body.source,
         started_at=datetime.fromisoformat(body.started_at),
@@ -345,7 +368,7 @@ async def ingest_session(
                 raise HTTPException(status_code=422, detail=str(exc))
 
         event = HealthEvent(
-            user_id=uuid.UUID(str(user_id)),
+            user_id=user_id,
             metric_type=m.metric_type,
             value=m.value,
             unit=m.unit,
@@ -383,18 +406,19 @@ async def ingest_bulk(
     for ev in body.events:
         local_date = compute_local_date(ev.recorded_at)
         metric_def = await _get_metric_def(db, ev.metric_type)
-        if metric_def:
-            try:
-                validate_metric_value(ev.metric_type, ev.value, metric_def.min_value, metric_def.max_value)
-            except ValueError as exc:
-                raise HTTPException(status_code=422, detail=str(exc))
+        if not metric_def:
+            raise HTTPException(status_code=422, detail=f"Unknown metric type: '{ev.metric_type}'")
+        try:
+            validate_metric_value(ev.metric_type, ev.value, metric_def.min_value, metric_def.max_value)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
         affected_combos.add((str(user_id), local_date, ev.metric_type))
 
     # Insert all events
     for ev in body.events:
         local_date = compute_local_date(ev.recorded_at)
         event = HealthEvent(
-            user_id=uuid.UUID(str(user_id)),
+            user_id=user_id,
             metric_type=ev.metric_type,
             value=ev.value,
             unit=ev.unit,
@@ -407,9 +431,8 @@ async def ingest_bulk(
         )
         db.add(event)
 
-    await db.commit()
-
-    # Mark affected daily_summaries as stale and enqueue aggregation
+    # Mark affected daily_summaries as stale BEFORE commit so both
+    # event inserts and stale-marking are atomic in one transaction.
     from app.models.daily_summary import DailySummary as DS
     for uid, ld, mt in affected_combos:
         await db.execute(
@@ -419,14 +442,17 @@ async def ingest_bulk(
             ),
             {"uid": uid, "d": str(ld), "mt": mt},
         )
+
     await db.commit()
 
     # Enqueue Celery aggregation task
     try:
-        from app.tasks.aggregation_tasks import reaggregate_stale_summaries
-        task = reaggregate_stale_summaries.delay(str(user_id))
+        from app.tasks.aggregation_tasks import recompute_daily_summaries_for_batch
+        batch = [{"user_id": uid, "local_date": str(ld), "metric_type": mt} for uid, ld, mt in affected_combos]
+        task = recompute_daily_summaries_for_batch.delay(batch=batch)
         task_id = task.id
-    except Exception:
+    except Exception as exc:
+        logger.error("Failed to enqueue aggregation task for user %s: %s", user_id, exc)
         # If Celery isn't available, generate a placeholder task_id
         task_id = str(uuid.uuid4())
 
@@ -452,10 +478,12 @@ async def bulk_ingest_status(
             "RETRY": "processing",
             "REVOKED": "failed",
         }
+        if result.state == "FAILURE":
+            logger.error("Celery task %s failed: %s", task_id, result.info)
         return {
             "task_id": task_id,
             "status": status_map.get(result.state, "processing"),
-            "detail": str(result.info) if result.state == "FAILURE" else None,
+            "detail": "Aggregation failed" if result.state == "FAILURE" else None,
         }
     except ImportError:
         return {"task_id": task_id, "status": "processing", "detail": None}
@@ -476,11 +504,11 @@ async def delete_event(
 ) -> DeleteEventResponse:
     """Soft-delete a manual event (user correction)."""
     result = await db.execute(
-        select(HealthEvent).where(HealthEvent.id == uuid.UUID(event_id))
+        select(HealthEvent).where(HealthEvent.id == uuid.UUID(event_id), HealthEvent.user_id == user_id)
     )
     event = result.scalar_one_or_none()
 
-    if not event or str(event.user_id) != str(user_id):
+    if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
     if event.source != "manual":

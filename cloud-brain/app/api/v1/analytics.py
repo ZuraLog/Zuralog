@@ -44,6 +44,7 @@ from app.api.deps import get_authenticated_user_id
 from app.database import async_session, get_db
 from app.models.user_goal import GoalPeriod, UserGoal
 from app.services.cache_service import cached
+from app.utils.user_date import get_user_local_date
 
 
 # ── Module-level formatting helpers ──────────────────────────────────────────
@@ -67,20 +68,6 @@ def _trend(rows: list[tuple[str, float]], days: int = 7) -> list[float] | None:
     return vals if len(vals) >= 2 else None
 
 
-async def _get_user_local_date(db: AsyncSession, user_id: str) -> date:
-    """Return the user's current local date based on their IANA timezone preference."""
-    import zoneinfo
-    from datetime import datetime, timezone as tz
-    row = await db.execute(
-        sql_text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
-        {"uid": user_id}
-    )
-    iana_tz = (row.scalar_one_or_none() or "UTC")
-    try:
-        user_tz = zoneinfo.ZoneInfo(iana_tz)
-    except Exception:
-        user_tz = zoneinfo.ZoneInfo("UTC")
-    return datetime.now(tz=user_tz).date()
 
 
 def _fmt_steps(v: float) -> str:
@@ -88,8 +75,9 @@ def _fmt_steps(v: float) -> str:
 
 
 def _fmt_hours(v: float) -> str:
-    h = int(v)
-    m = round((v - h) * 60)
+    """Format a duration stored in *minutes* as 'Xh YYm'."""
+    total_min = round(v)
+    h, m = divmod(total_min, 60)
     return f"{h}h {m:02d}m"
 
 
@@ -153,6 +141,7 @@ router = APIRouter(
 _analytics_service = AnalyticsService()
 
 
+@limiter.limit("60/minute")
 @router.get("/daily-summary", response_model=DailySummaryResponse)
 @cached(prefix="analytics.daily_summary", ttl=300, key_params=["user_id", "date_str"])
 async def daily_summary(
@@ -189,12 +178,13 @@ async def daily_summary(
                 detail=f"Invalid date format: '{date_str}'. Use YYYY-MM-DD.",
             ) from exc
     else:
-        target_date = await _get_user_local_date(db, user_id)
+        target_date = await get_user_local_date(db, user_id)
 
     result = await _analytics_service.get_daily_summary(db, user_id, target_date)
     return DailySummaryResponse(**result)
 
 
+@limiter.limit("60/minute")
 @router.get("/weekly-trends", response_model=WeeklyTrendsResponse)
 @cached(prefix="analytics.weekly_trends", ttl=300, key_params=["user_id"])
 async def weekly_trends(
@@ -218,6 +208,7 @@ async def weekly_trends(
     return WeeklyTrendsResponse(**result)
 
 
+@limiter.limit("60/minute")
 @router.get("/correlation/sleep-activity", response_model=CorrelationResponse)
 @cached(prefix="analytics.correlation", ttl=900, key_params=["user_id", "days"])
 async def sleep_activity_correlation(
@@ -251,6 +242,7 @@ async def sleep_activity_correlation(
     return CorrelationResponse(**result)
 
 
+@limiter.limit("60/minute")
 @router.get("/trend/{metric}", response_model=TrendResponse)
 @cached(prefix="analytics.trend", ttl=300, key_params=["user_id", "metric"])
 async def metric_trend(
@@ -382,6 +374,7 @@ async def create_or_update_goal(
     return GoalProgressResponse(**progress)
 
 
+@limiter.limit("60/minute")
 @router.get("/dashboard-insight", response_model=DashboardInsightResponse)
 @cached(prefix="analytics.dashboard_insight", ttl=300, key_params=["user_id"])
 async def dashboard_insight(
@@ -423,9 +416,9 @@ async def dashboard_insight(
     )
 
 
-@cached(prefix="analytics.dashboard_summary", ttl=300, key_params=["user_id"])
 @limiter.limit("60/minute")
 @router.get("/dashboard-summary", response_model=DashboardSummaryResponse)
+@cached(prefix="analytics.dashboard_summary", ttl=300, key_params=["user_id"])
 async def dashboard_summary(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
@@ -443,7 +436,7 @@ async def dashboard_summary(
         DashboardSummaryResponse with category summaries and visible order.
     """
     async with async_session() as temp_db:
-        today = await _get_user_local_date(temp_db, user_id)
+        today = await get_user_local_date(temp_db, user_id)
     day14_ago_iso = (today - timedelta(days=14)).isoformat()
     day7_ago_iso = (today - timedelta(days=7)).isoformat()
 
@@ -559,6 +552,7 @@ async def dashboard_summary(
     return DashboardSummaryResponse(categories=categories, visible_order=visible_order)
 
 
+@limiter.limit("60/minute")
 @router.get("/category", response_model=CategoryDetailResponse)
 async def category_detail(
     request: Request,
@@ -599,7 +593,7 @@ async def category_detail(
 
     days_map = {"7D": 7, "30D": 30, "90D": 90}
     days = days_map[time_range.upper()]
-    today = await _get_user_local_date(db, user_id)
+    today = await get_user_local_date(db, user_id)
     since = (today - timedelta(days=days)).isoformat()
 
     def _make_series(
@@ -669,7 +663,7 @@ async def category_detail(
 
     elif category == "sleep":
         for mt, mid, dn, unit in [
-            ("sleep_duration",      "sleep_duration",   "Sleep Duration",   "hours"),
+            ("sleep_duration",      "sleep_duration",   "Sleep Duration",   "min"),
             ("deep_sleep_minutes",  "sleep_stages",     "Deep Sleep",       "min"),
             ("rem_sleep_minutes",   "rem_sleep",        "REM Sleep",        "min"),
             ("sleep_efficiency",    "sleep_efficiency", "Sleep Efficiency", "%"),
@@ -694,7 +688,7 @@ async def category_detail(
     elif category == "body":
         for mt, mid, dn, unit in [
             ("weight_kg",           "weight",            "Weight",            "kg"),
-            ("muscle_mass_kg",      "weight",            "Muscle Mass",       "kg"),
+            ("muscle_mass_kg",      "muscle_mass",       "Muscle Mass",       "kg"),
             ("body_fat_percentage", "body_fat",          "Body Fat",          "%"),
             ("body_temperature",    "body_temperature",  "Body Temperature",  "°C"),
             ("wrist_temperature",   "wrist_temperature", "Wrist Temperature", "°C"),
@@ -768,6 +762,7 @@ async def category_detail(
     )
 
 
+@limiter.limit("60/minute")
 @router.get("/metric", response_model=MetricDetailResponse)
 async def metric_detail(
     request: Request,
@@ -807,7 +802,7 @@ async def metric_detail(
 
     days_map = {"7D": 7, "30D": 30, "90D": 90}
     days = days_map[time_range.upper()]
-    today = await _get_user_local_date(db, user_id)
+    today = await get_user_local_date(db, user_id)
     since = (today - timedelta(days=days)).isoformat()
 
     # Map metric_id slug (matches Flutter TileId.metricSlug) →
@@ -822,7 +817,7 @@ async def metric_detail(
         "running_pace":     ("running_pace",     "Running Pace",     "s/km",        "apple_health", "activity"),
         "floors_climbed":   ("floors_climbed",   "Floors Climbed",   "floors",      "apple_health", "activity"),
         # Sleep
-        "sleep_duration":   ("sleep_duration",      "Sleep Duration",   "hours",   "apple_health", "sleep"),
+        "sleep_duration":   ("sleep_duration",      "Sleep Duration",   "min",   "apple_health", "sleep"),
         "sleep_stages":     ("deep_sleep_minutes",  "Sleep Stages",     "min deep","apple_health", "sleep"),
         # Heart
         "resting_heart_rate": ("resting_heart_rate", "Resting Heart Rate", "bpm",       "apple_health", "heart"),

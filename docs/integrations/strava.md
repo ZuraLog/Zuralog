@@ -58,7 +58,7 @@
 1. Strava sends `POST /api/v1/webhooks/strava` on new activity
 2. Handler responds 200 immediately
 3. Dispatches `sync_strava_activity_task` Celery task
-4. Task fetches full activity data and upserts to `UnifiedActivity`
+4. Task fetches full activity data and writes to `health_events` (via unified ingest service)
 
 ## Deep Link Support
 

@@ -5,9 +5,8 @@
 /// Layout modes:
 /// - Normal mode: explicit 2-column layout interleaved with full-width bands
 ///   for wide (2×1) tiles. Only visible tiles shown.
-/// - Edit mode: falls back to a [SliverReorderableList] (vertical list) for
-///   drag-reorder support. All tiles shown (hidden tiles appear dimmed via
-///   [TileEditOverlay] with isVisible=false).
+/// - Edit mode: same WYSIWYG band layout with [TileEditOverlay] wrappers and
+///   [LongPressDraggable] + [DragTarget] per slot for drag-to-reorder.
 library;
 
 import 'package:flutter/material.dart';
@@ -25,9 +24,9 @@ import 'package:zuralog/features/data/presentation/widgets/tile_edit_overlay.dar
 /// Sliver widget that renders the masonry grid of metric tiles.
 ///
 /// In normal mode it interleaves explicit 2-column band sections with
-/// full-width bands for wide tiles. In edit mode it renders a reorderable
-/// vertical list.
-class TileGrid extends StatelessWidget {
+/// full-width bands for wide tiles. In edit mode it renders the identical
+/// WYSIWYG grid with [TileEditOverlay] wrappers and drag-to-reorder support.
+class TileGrid extends StatefulWidget {
   const TileGrid({
     super.key,
     required this.orderedTileIds,
@@ -68,19 +67,42 @@ class TileGrid extends StatelessWidget {
   /// Called when a tile is reordered in edit mode.
   final void Function(int oldIndex, int newIndex) onReorder;
 
+  @override
+  State<TileGrid> createState() => _TileGridState();
+}
+
+class _TileGridState extends State<TileGrid> {
+  /// The tile currently being dragged, or null.
+  TileId? _draggedId;
+
+  /// The tile slot currently being hovered over during a drag, or null.
+  TileId? _hoverTargetId;
+
+  @override
+  void didUpdateWidget(TileGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset drag state whenever the ordering or layout changes externally
+    // (e.g. after onReorder propagates back through the provider).
+    if (oldWidget.orderedTileIds != widget.orderedTileIds ||
+        oldWidget.layout != widget.layout) {
+      _draggedId = null;
+      _hoverTargetId = null;
+    }
+  }
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   TileSize _effectiveSize(TileId id) {
-    final sizeOverride = layout.tileSizes[id.name];
+    final sizeOverride = widget.layout.tileSizes[id.name];
     return sizeOverride ?? id.defaultSize;
   }
 
-  bool _isVisible(TileId id) => layout.tileVisibility[id.name] != false;
+  bool _isVisible(TileId id) => widget.layout.tileVisibility[id.name] != false;
 
-  int? _colorOverride(TileId id) => layout.tileColorOverrides[id.name];
+  int? _colorOverride(TileId id) => widget.layout.tileColorOverrides[id.name];
 
   Widget _buildTileContent(BuildContext context, TileId id) {
-    final tileData = tiles[id];
+    final tileData = widget.tiles[id];
     final size = _effectiveSize(id);
     final colorOverride = _colorOverride(id);
 
@@ -102,35 +124,8 @@ class TileGrid extends StatelessWidget {
   /// explicit [SizedBox] constraints — this method only adds the tap gesture.
   Widget _buildTappableTile(BuildContext context, TileId id) {
     return GestureDetector(
-      onTap: () => onTileTap(id),
+      onTap: () => widget.onTileTap(id),
       child: _buildTileContent(context, id),
-    );
-  }
-
-  Widget _buildEditTile(BuildContext context, TileId id, int index) {
-    final size = _effectiveSize(id);
-    final isVisible = _isVisible(id);
-    final colorOverride = _colorOverride(id);
-
-    return ReorderableDragStartListener(
-      key: ValueKey('reorder_${id.name}'),
-      index: index,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceMd,
-          vertical: AppDimens.spaceXs,
-        ),
-        child: TileEditOverlay(
-          tileId: id,
-          currentSize: size,
-          isVisible: isVisible,
-          currentColorOverride: colorOverride,
-          onSizeChanged: (newSize) => onSizeChanged(id, newSize),
-          onVisibilityToggled: () => onVisibilityToggled(id),
-          onColorPick: () => onColorPick(id),
-          child: _buildTileContent(context, id),
-        ),
-      ),
     );
   }
 
@@ -139,7 +134,7 @@ class TileGrid extends StatelessWidget {
   /// Breaks [ids] into alternating "non-wide" and "wide" bands.
   List<Band> _buildBands(List<TileId> ids) => buildBands(ids, _effectiveSize);
 
-  // ── Band rendering ──────────────────────────────────────────────────────────
+  // ── Normal-mode band rendering ──────────────────────────────────────────────
 
   /// Renders a non-wide [Band] as a [SliverToBoxAdapter] with an explicit
   /// 2-column layout.
@@ -154,12 +149,6 @@ class TileGrid extends StatelessWidget {
   /// square companions are stacked with one gap between them
   /// (colWidth + spaceSm + colWidth = 2×colWidth + spaceSm), so both column
   /// bottom edges are always flush.
-  ///
-  /// Column assignment follows the same deterministic rule as [buildBands]:
-  /// - If [Band.ids[0]] is a tall tile → left col gets [ids[0]], right col
-  ///   gets [ids[1]] and [ids[2]].
-  /// - Otherwise (all-square band) → left col gets even-index items
-  ///   (0, 2, …), right col gets odd-index items (1, 3, …).
   Widget _buildBandSliver(BuildContext context, Band band) {
     return SliverToBoxAdapter(
       child: Padding(
@@ -171,7 +160,6 @@ class TileGrid extends StatelessWidget {
 
             final ids = band.ids;
 
-            // Determine column contents.
             List<TileId?> leftIds;
             List<TileId?> rightIds;
 
@@ -180,11 +168,9 @@ class TileGrid extends StatelessWidget {
                 _effectiveSize(firstId) == TileSize.tall;
 
             if (firstIsTall) {
-              // Tall band: left = [tall], right = [companion1, companion2]
               leftIds = [ids[0]];
               rightIds = ids.length > 1 ? ids.sublist(1) : [];
             } else {
-              // Square band: interleave even→left, odd→right
               leftIds = [for (int i = 0; i < ids.length; i += 2) ids[i]];
               rightIds = [for (int i = 1; i < ids.length; i += 2) ids[i]];
             }
@@ -203,10 +189,7 @@ class TileGrid extends StatelessWidget {
     );
   }
 
-  /// Builds one column of a band as a [Column] of sized tile slots.
-  ///
-  /// [isTallColumn] is true only for the left column when it holds a single
-  /// tall tile — in that case the tile receives the corrected tall height.
+  /// Builds one column of a normal-mode band as a [Column] of sized tile slots.
   Widget _buildColumn(
     BuildContext context,
     List<TileId?> ids,
@@ -220,12 +203,10 @@ class TileGrid extends StatelessWidget {
 
       final id = ids[i];
       final tileHeight = isTallColumn
-          ? 2 * colWidth + AppDimens.spaceSm // tall: spans 2 squares + 1 gap
-          : colWidth;                        // square / null spacer
+          ? 2 * colWidth + AppDimens.spaceSm
+          : colWidth;
 
       if (id == null) {
-        // Transparent spacer — occupies the same footprint as a square tile
-        // so the companion column aligns correctly.
         children.add(SizedBox(width: colWidth, height: tileHeight));
       } else {
         children.add(SizedBox(
@@ -243,19 +224,221 @@ class TileGrid extends StatelessWidget {
     );
   }
 
+  // ── Edit-mode band rendering ─────────────────────────────────────────────────
+
+  /// Edit-mode variant of [_buildBandSliver]: same layout, draggable slots.
+  Widget _buildEditBandSliver(BuildContext context, Band band) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final colWidth =
+                (constraints.maxWidth - AppDimens.spaceSm) / 2;
+
+            final ids = band.ids;
+
+            List<TileId?> leftIds;
+            List<TileId?> rightIds;
+
+            final firstId = ids.isNotEmpty ? ids[0] : null;
+            final firstIsTall = firstId != null &&
+                _effectiveSize(firstId) == TileSize.tall;
+
+            if (firstIsTall) {
+              leftIds = [ids[0]];
+              rightIds = ids.length > 1 ? ids.sublist(1) : [];
+            } else {
+              leftIds = [for (int i = 0; i < ids.length; i += 2) ids[i]];
+              rightIds = [for (int i = 1; i < ids.length; i += 2) ids[i]];
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildEditColumn(context, leftIds, colWidth, firstIsTall),
+                const SizedBox(width: AppDimens.spaceSm),
+                _buildEditColumn(context, rightIds, colWidth, false),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Builds one column of an edit-mode band as a [Column] of draggable slots.
+  Widget _buildEditColumn(
+    BuildContext context,
+    List<TileId?> ids,
+    double colWidth,
+    bool isTallColumn,
+  ) {
+    final children = <Widget>[];
+
+    for (int i = 0; i < ids.length; i++) {
+      if (i > 0) children.add(const SizedBox(height: AppDimens.spaceSm));
+
+      final id = ids[i];
+      final tileHeight = isTallColumn
+          ? 2 * colWidth + AppDimens.spaceSm
+          : colWidth;
+
+      if (id == null) {
+        children.add(SizedBox(width: colWidth, height: tileHeight));
+      } else {
+        children.add(
+          _buildDraggableSlot(context, id, colWidth, tileHeight),
+        );
+      }
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  /// Edit-mode variant of wide-band rendering.
+  Widget _buildEditWideBandSliver(BuildContext context, TileId id) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final height = width / 2; // AspectRatio 2:1
+            return _buildDraggableSlot(context, id, width, height);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Builds a single tile slot with [LongPressDraggable] and [DragTarget].
+  ///
+  /// While dragging, the original slot shows at reduced opacity so the user can
+  /// see the gap. On hover, a primary-colour border highlights the drop target.
+  Widget _buildDraggableSlot(
+    BuildContext context,
+    TileId id,
+    double width,
+    double height,
+  ) {
+    final colors = AppColorsOf(context);
+    final isBeingDragged = _draggedId == id;
+    final isHoverTarget = _hoverTargetId == id;
+
+    return DragTarget<TileId>(
+      onWillAcceptWithDetails: (details) {
+        if (details.data != id) {
+          setState(() => _hoverTargetId = id);
+        }
+        return details.data != id;
+      },
+      onLeave: (_) {
+        if (_hoverTargetId == id) {
+          setState(() => _hoverTargetId = null);
+        }
+      },
+      onAcceptWithDetails: (details) {
+        final draggedId = details.data;
+        setState(() {
+          _hoverTargetId = null;
+          _draggedId = null;
+        });
+        final oldIndex = widget.orderedTileIds.indexOf(draggedId);
+        final newIndex = widget.orderedTileIds.indexOf(id);
+        if (oldIndex != -1 && newIndex != -1 && oldIndex != newIndex) {
+          widget.onReorder(oldIndex, newIndex);
+        }
+      },
+      builder: (context, candidateData, rejectedData) {
+        Widget slot = SizedBox(
+          width: width,
+          height: height,
+          child: AnimatedOpacity(
+            opacity: isBeingDragged ? 0.3 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            child: _buildEditTileContent(context, id),
+          ),
+        );
+
+        if (isHoverTarget) {
+          slot = Stack(
+            children: [
+              slot,
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: colors.primary, width: 2.5),
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusCard),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return LongPressDraggable<TileId>(
+          data: id,
+          delay: const Duration(milliseconds: 350),
+          onDragStarted: () => setState(() {
+            _draggedId = id;
+            _hoverTargetId = null;
+          }),
+          onDragEnd: (_) => setState(() => _draggedId = null),
+          onDraggableCanceled: (_, _) => setState(() => _draggedId = null),
+          feedback: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            elevation: 8,
+            child: SizedBox(
+              width: width,
+              height: height,
+              child: _buildEditTileContent(context, id),
+            ),
+          ),
+          child: slot,
+        );
+      },
+    );
+  }
+
+  /// Wraps [_buildTileContent] with a [TileEditOverlay] for edit controls.
+  Widget _buildEditTileContent(BuildContext context, TileId id) {
+    final isVisible = _isVisible(id);
+    final size = _effectiveSize(id);
+    final colorOverride = _colorOverride(id);
+
+    return TileEditOverlay(
+      tileId: id,
+      currentSize: size,
+      isVisible: isVisible,
+      currentColorOverride: colorOverride,
+      onSizeChanged: (newSize) => widget.onSizeChanged(id, newSize),
+      onVisibilityToggled: () => widget.onVisibilityToggled(id),
+      onColorPick: () => widget.onColorPick(id),
+      child: _buildTileContent(context, id),
+    );
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    if (isEditMode) {
+    if (widget.isEditMode) {
       return _buildEditMode(context);
     }
     return _buildNormalMode(context);
   }
 
   Widget _buildNormalMode(BuildContext context) {
-    // Filter to visible tiles only.
-    final visibleIds = orderedTileIds.where(_isVisible).toList();
+    final visibleIds = widget.orderedTileIds.where(_isVisible).toList();
 
     if (visibleIds.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -266,15 +449,13 @@ class TileGrid extends StatelessWidget {
     return SliverMainAxisGroup(
       slivers: [
         for (int i = 0; i < bands.length; i++) ...[
-          // Consistent gap between every pair of consecutive bands.
           if (i > 0)
             const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceSm)),
           if (bands[i].isWide)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                // Wide tiles are not sized by _buildColumn, so AspectRatio(2.0)
-                // sets their height explicitly (width / 2).
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd),
                 child: AspectRatio(
                   aspectRatio: 2.0,
                   child: _buildTappableTile(context, bands[i].singleId!),
@@ -288,87 +469,30 @@ class TileGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildEditHiddenTile(BuildContext context, TileId id) {
-    final size = _effectiveSize(id);
-    final colorOverride = _colorOverride(id);
-
-    return Padding(
-      key: ValueKey('hidden_${id.name}'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: AppDimens.spaceXs,
-      ),
-      child: Opacity(
-        opacity: AppDimens.disabledOpacity,
-        child: TileEditOverlay(
-          tileId: id,
-          currentSize: size,
-          isVisible: false,
-          currentColorOverride: colorOverride,
-          onSizeChanged: (newSize) => onSizeChanged(id, newSize),
-          onVisibilityToggled: () => onVisibilityToggled(id),
-          onColorPick: () => onColorPick(id),
-          child: _buildTileContent(context, id),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEditMode(BuildContext context) {
-    // Split tiles into visible and hidden.
     final visibleIds =
-        orderedTileIds.where(_isVisible).toList();
+        widget.orderedTileIds.where(_isVisible).toList();
     final hiddenIds =
-        orderedTileIds.where((id) => !_isVisible(id)).toList();
+        widget.orderedTileIds.where((id) => !_isVisible(id)).toList();
 
     if (visibleIds.isEmpty && hiddenIds.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    // Map visible-list indices to full orderedTileIds indices for onReorder.
-    void mappedOnReorder(int visibleOld, int visibleNew) {
-      final visiblePositions = <int>[];
-      for (var i = 0; i < orderedTileIds.length; i++) {
-        if (_isVisible(orderedTileIds[i])) visiblePositions.add(i);
-      }
-      if (visibleOld >= visiblePositions.length ||
-          visibleNew > visiblePositions.length) {
-        return;
-      }
-      final fullOld = visiblePositions[visibleOld];
-      final int fullNew;
-      if (visibleNew >= visiblePositions.length) {
-        fullNew = orderedTileIds.length - hiddenIds.length;
-      } else {
-        fullNew = visiblePositions[visibleNew];
-      }
-      onReorder(fullOld, fullNew);
-    }
+    final bands = _buildBands(visibleIds);
 
     return SliverMainAxisGroup(
       slivers: [
-        // ── Visible tiles — reorderable ─────────────────────────────────
-        SliverReorderableList(
-          itemCount: visibleIds.length,
-          onReorder: mappedOnReorder,
-          proxyDecorator: (child, index, animation) {
-            return AnimatedBuilder(
-              animation: animation,
-              builder: (context, animChild) => Material(
-                elevation: 4 * animation.value,
-                borderRadius:
-                    BorderRadius.circular(AppDimens.radiusCard),
-                color: Colors.transparent,
-                child: animChild,
-              ),
-              child: child,
-            );
-          },
-          itemBuilder: (context, i) {
-            final id = visibleIds[i];
-            return _buildEditTile(context, id, i);
-          },
-        ),
+        // ── Visible tiles — WYSIWYG grid with drag-to-reorder ───────────
+        for (int i = 0; i < bands.length; i++) ...[
+          if (i > 0)
+            const SliverToBoxAdapter(
+                child: SizedBox(height: AppDimens.spaceSm)),
+          if (bands[i].isWide)
+            _buildEditWideBandSliver(context, bands[i].singleId!)
+          else
+            _buildEditBandSliver(context, bands[i]),
+        ],
 
         // ── "Hidden" section header ─────────────────────────────────────
         if (hiddenIds.isNotEmpty)
@@ -390,17 +514,108 @@ class TileGrid extends StatelessWidget {
             ),
           ),
 
-        // ── Hidden tiles — non-reorderable, dimmed ──────────────────────
-        if (hiddenIds.isNotEmpty)
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) =>
-                  _buildEditHiddenTile(context, hiddenIds[i]),
-              childCount: hiddenIds.length,
-            ),
-          ),
-
+        // ── Hidden tiles — same grid layout, non-draggable ──────────────
+        if (hiddenIds.isNotEmpty) ..._buildHiddenGrid(context, hiddenIds),
       ],
+    );
+  }
+
+  /// Renders hidden tiles in the same band-grid layout as normal mode, but
+  /// wrapped with [TileEditOverlay] (no drag). Returns a list of slivers.
+  List<Widget> _buildHiddenGrid(
+      BuildContext context, List<TileId> hiddenIds) {
+    if (hiddenIds.isEmpty) return [];
+    final bands = _buildBands(hiddenIds);
+    final slivers = <Widget>[];
+    for (int i = 0; i < bands.length; i++) {
+      if (i > 0) {
+        slivers.add(const SliverToBoxAdapter(
+            child: SizedBox(height: AppDimens.spaceSm)));
+      }
+      if (bands[i].isWide) {
+        slivers.add(_buildHiddenWideBandSliver(context, bands[i].singleId!));
+      } else {
+        slivers.add(_buildHiddenBandSliver(context, bands[i]));
+      }
+    }
+    return slivers;
+  }
+
+  Widget _buildHiddenBandSliver(BuildContext context, Band band) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final colWidth =
+                (constraints.maxWidth - AppDimens.spaceSm) / 2;
+            final ids = band.ids;
+            final firstId = ids.isNotEmpty ? ids[0] : null;
+            final firstIsTall = firstId != null &&
+                _effectiveSize(firstId) == TileSize.tall;
+            final List<TileId?> leftIds;
+            final List<TileId?> rightIds;
+            if (firstIsTall) {
+              leftIds = [ids[0]];
+              rightIds = ids.length > 1 ? ids.sublist(1) : [];
+            } else {
+              leftIds = [for (int i = 0; i < ids.length; i += 2) ids[i]];
+              rightIds = [for (int i = 1; i < ids.length; i += 2) ids[i]];
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHiddenColumn(context, leftIds, colWidth, firstIsTall),
+                const SizedBox(width: AppDimens.spaceSm),
+                _buildHiddenColumn(context, rightIds, colWidth, false),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHiddenColumn(
+    BuildContext context,
+    List<TileId?> ids,
+    double colWidth,
+    bool isTallColumn,
+  ) {
+    final children = <Widget>[];
+    for (int i = 0; i < ids.length; i++) {
+      if (i > 0) children.add(const SizedBox(height: AppDimens.spaceSm));
+      final id = ids[i];
+      final tileHeight = isTallColumn
+          ? 2 * colWidth + AppDimens.spaceSm
+          : colWidth;
+      if (id == null) {
+        children.add(SizedBox(width: colWidth, height: tileHeight));
+      } else {
+        children.add(SizedBox(
+          width: colWidth,
+          height: tileHeight,
+          child: _buildEditTileContent(context, id),
+        ));
+      }
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _buildHiddenWideBandSliver(BuildContext context, TileId id) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: AspectRatio(
+          aspectRatio: 2.0,
+          child: _buildEditTileContent(context, id),
+        ),
+      ),
     );
   }
 }
@@ -508,8 +723,6 @@ List<Band> buildBands(List<TileId> ids, TileSize Function(TileId) sizeOf) {
   }
 
   // Flush remaining non-wide, non-tall tiles.
-  // Use allowPullUp:true; remaining is empty at this point so a null spacer
-  // will be used if pending has an odd count, keeping the masonry grid even.
   flushPending(allowPullUp: true);
 
   return bands;

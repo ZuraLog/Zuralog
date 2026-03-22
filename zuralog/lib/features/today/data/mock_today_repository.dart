@@ -83,14 +83,6 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     // No-op in mock.
   }
 
-  // ── Quick Log ─────────────────────────────────────────────────────────────
-
-  @override
-  Future<void> submitQuickLog(Map<String, dynamic> payload) async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    // No-op in mock — pretend submission succeeded.
-  }
-
   // ── Unified Ingest ─────────────────────────────────────────────────────────
 
   @override

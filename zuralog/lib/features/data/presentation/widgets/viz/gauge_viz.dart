@@ -32,8 +32,7 @@ class GaugeViz extends StatelessWidget {
       TileSize.tall   => 120.0,
     };
 
-    return SingleChildScrollView(
-      child: Column(
+    return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
@@ -66,7 +65,6 @@ class GaugeViz extends StatelessWidget {
             )),
           ],
         ],
-      ),
     );
   }
 }

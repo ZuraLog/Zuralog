@@ -164,7 +164,7 @@ class _TimelineEventTile extends ConsumerWidget {
       ),
       decoration: BoxDecoration(
         color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+        borderRadius: BorderRadius.circular(AppDimens.shapeSm),
       ),
       child: Row(
         children: [
@@ -228,7 +228,7 @@ class _TimelineEventTile extends ConsumerWidget {
           ),
           decoration: BoxDecoration(
             color: Colors.red.shade700,
-            borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
           ),
           alignment: Alignment.centerRight,
           padding: const EdgeInsets.only(right: AppDimens.spaceMd),

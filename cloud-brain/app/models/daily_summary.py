@@ -17,11 +17,11 @@ class DailySummary(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    user_id: Mapped[str] = mapped_column(sa.String, nullable=False)
     date: Mapped[date] = mapped_column(sa.Date, nullable=False)
-    metric_type: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    metric_type: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     value: Mapped[float] = mapped_column(sa.Float(precision=53), nullable=False)
-    unit: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    unit: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     event_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
     is_stale: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     computed_at: Mapped[datetime] = mapped_column(

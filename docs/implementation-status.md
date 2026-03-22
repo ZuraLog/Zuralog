@@ -2793,7 +2793,7 @@ All 24 Phase 2 tasks complete on branch `feat/backend-mvp-services`:
 - Analytics API endpoints
 
 **Database Models**
-`User`, `Conversation`, `HealthData` (UnifiedActivity, SleepRecord, HealthMetric), `Integration`, `DailyMetrics`, `UserGoal`, `UserDevice`, `UsageLog`
+`User`, `Conversation`, `HealthEvent`, `ActivitySession`, `DailySummary`, `MetricDefinition`, `UserSupplement`, `Integration`, `UserGoal`, `UserDevice`, `UsageLog`
 
 ### Key Deviations from Original Plan
 

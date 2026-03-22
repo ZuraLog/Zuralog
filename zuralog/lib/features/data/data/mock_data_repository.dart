@@ -8,8 +8,11 @@
 /// that exercises every Data-tab widget path.
 library;
 
+import 'dart:math' as math;
+
 import 'package:zuralog/features/data/data/data_repository.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/tile_models.dart';
 
 // ── MockDataRepository ────────────────────────────────────────────────────────
 
@@ -58,10 +61,13 @@ final class MockDataRepository implements DataRepositoryInterface {
     required String timeRange,
   }) async {
     await Future<void>.delayed(_delay);
+    final tileId = TileId.fromSlug(metricId);
+    final displayName = tileId?.displayName ?? _displayNameForMetric(metricId);
+    final category = tileId?.category ?? HealthCategory.activity;
     return MetricDetailData(
       series: MetricSeries(
         metricId: metricId,
-        displayName: _displayNameForMetric(metricId),
+        displayName: displayName,
         unit: _unitForMetric(metricId),
         dataPoints: _mockDataPoints(metricId),
         sourceIntegration: 'apple_health',
@@ -69,9 +75,9 @@ final class MockDataRepository implements DataRepositoryInterface {
         deltaPercent: 3.2,
         average: null,
       ),
-      category: HealthCategory.activity,
+      category: category,
       aiInsight:
-          'Your ${_displayNameForMetric(metricId)} has been consistently trending '
+          'Your $displayName has been consistently trending '
           'upward over the past 7 days. Keep up the great work!',
     );
   }
@@ -98,76 +104,76 @@ final class MockDataRepository implements DataRepositoryInterface {
   // ── Fixture Builders ──────────────────────────────────────────────────────
 
   List<CategorySummary> _mockCategories() {
-    return const [
+    return [
       CategorySummary(
         category: HealthCategory.activity,
         primaryValue: '8,432',
         unit: 'steps',
         deltaPercent: 4.2,
-        trend: [7200.0, 7800.0, 8100.0, 6900.0, 8500.0, 7600.0, 8432.0],
+        trend: _trendForMetric('steps'),
       ),
       CategorySummary(
         category: HealthCategory.sleep,
         primaryValue: '7h 22m',
         unit: null,
         deltaPercent: 2.1,
-        trend: [6.5, 7.0, 7.2, 6.8, 7.5, 7.1, 7.4],
+        trend: _trendForMetric('sleep_duration'),
       ),
       CategorySummary(
         category: HealthCategory.heart,
         primaryValue: '62',
         unit: 'bpm RHR',
         deltaPercent: -3.1,
-        trend: [66.0, 65.0, 64.0, 64.0, 63.0, 63.0, 62.0],
+        trend: _trendForMetric('resting_heart_rate'),
       ),
       CategorySummary(
         category: HealthCategory.nutrition,
         primaryValue: '1,840',
         unit: 'kcal',
         deltaPercent: -1.5,
-        trend: [1950.0, 1820.0, 1760.0, 1900.0, 1830.0, 1790.0, 1840.0],
+        trend: _trendForMetric('calories'),
       ),
       CategorySummary(
         category: HealthCategory.body,
         primaryValue: '78.2',
         unit: 'kg',
         deltaPercent: -0.5,
-        trend: [78.8, 78.7, 78.6, 78.5, 78.4, 78.3, 78.2],
+        trend: _trendForMetric('weight'),
       ),
       CategorySummary(
         category: HealthCategory.vitals,
         primaryValue: '98%',
         unit: 'SpO₂',
         deltaPercent: 0.0,
-        trend: [97.0, 98.0, 98.0, 97.0, 98.0, 98.0, 98.0],
+        trend: _trendForMetric('spo2'),
       ),
       CategorySummary(
         category: HealthCategory.wellness,
-        primaryValue: '54',
-        unit: 'ms HRV',
-        deltaPercent: 5.9,
-        trend: [48.0, 50.0, 51.0, 53.0, 52.0, 53.0, 54.0],
+        primaryValue: '7',
+        unit: 'mood',
+        deltaPercent: 4.5,
+        trend: _trendForMetric('mood'),
       ),
       CategorySummary(
         category: HealthCategory.mobility,
-        primaryValue: '—',
-        unit: null,
-        deltaPercent: null,
-        trend: null,
+        primaryValue: '8',
+        unit: 'floors',
+        deltaPercent: 14.3,
+        trend: _trendForMetric('floors_climbed'),
       ),
       CategorySummary(
         category: HealthCategory.cycle,
-        primaryValue: '—',
+        primaryValue: 'Day 14',
         unit: null,
         deltaPercent: null,
-        trend: null,
+        trend: _trendForMetric('cycle'),
       ),
       CategorySummary(
         category: HealthCategory.environment,
-        primaryValue: '—',
-        unit: null,
-        deltaPercent: null,
-        trend: null,
+        primaryValue: '68',
+        unit: 'dB',
+        deltaPercent: -2.8,
+        trend: _trendForMetric('environment'),
       ),
     ];
   }
@@ -184,16 +190,80 @@ final class MockDataRepository implements DataRepositoryInterface {
             displayName: 'Steps',
             unit: 'steps',
             dataPoints: _mockDataPoints('steps'),
+            sourceIntegration: 'apple_health',
             currentValue: '8,432',
             deltaPercent: 4.2,
+            average: 7800,
           ),
           MetricSeries(
             metricId: 'active_calories',
             displayName: 'Active Calories',
             unit: 'kcal',
             dataPoints: _mockDataPoints('active_calories'),
+            sourceIntegration: 'apple_health',
             currentValue: '420',
             deltaPercent: 2.8,
+            average: 390,
+          ),
+          MetricSeries(
+            metricId: 'workouts',
+            displayName: 'Workouts',
+            unit: 'sessions',
+            dataPoints: _mockDataPoints('workouts'),
+            sourceIntegration: 'apple_health',
+            currentValue: '1',
+            deltaPercent: null,
+            average: null,
+          ),
+          MetricSeries(
+            metricId: 'distance',
+            displayName: 'Distance',
+            unit: 'km',
+            dataPoints: _mockDataPoints('distance'),
+            sourceIntegration: 'apple_health',
+            currentValue: '6.2',
+            deltaPercent: 3.5,
+            average: 5.9,
+          ),
+          MetricSeries(
+            metricId: 'floors_climbed',
+            displayName: 'Floors Climbed',
+            unit: 'floors',
+            dataPoints: _mockDataPoints('floors_climbed'),
+            sourceIntegration: 'apple_health',
+            currentValue: '8',
+            deltaPercent: 14.3,
+            average: 7,
+          ),
+          MetricSeries(
+            metricId: 'exercise_minutes',
+            displayName: 'Exercise Minutes',
+            unit: 'min',
+            dataPoints: _mockDataPoints('exercise_minutes'),
+            sourceIntegration: 'apple_health',
+            currentValue: '45',
+            deltaPercent: 12.5,
+            average: 40,
+          ),
+          MetricSeries(
+            metricId: 'walking_speed',
+            displayName: 'Walking Speed',
+            unit: 'm/s',
+            dataPoints: _mockDataPoints('walking_speed'),
+            sourceIntegration: 'apple_health',
+            currentValue: '1.4',
+            deltaPercent: 1.2,
+            average: 1.38,
+          ),
+          MetricSeries(
+            metricId: 'running_pace',
+            displayName: 'Running Pace',
+            unit: 'min/km',
+            dataPoints: _mockDataPoints('running_pace'),
+            sourceIntegration: 'apple_health',
+            currentValue: '5:30',
+            deltaPercent: -2.1,
+            average: null,
           ),
         ];
       case HealthCategory.sleep:
@@ -203,37 +273,63 @@ final class MockDataRepository implements DataRepositoryInterface {
             displayName: 'Sleep Duration',
             unit: 'hours',
             dataPoints: _mockDataPoints('sleep_duration'),
+            sourceIntegration: 'apple_health',
             currentValue: '7.4',
             deltaPercent: 2.1,
+            average: 7.1,
           ),
           MetricSeries(
-            metricId: 'deep_sleep',
-            displayName: 'Deep Sleep',
-            unit: 'min',
-            dataPoints: _mockDataPoints('deep_sleep'),
+            metricId: 'sleep_stages',
+            displayName: 'Sleep Stages',
+            unit: 'min deep',
+            dataPoints: _mockDataPoints('sleep_stages'),
+            sourceIntegration: 'apple_health',
             currentValue: '76',
             deltaPercent: 12.0,
+            average: 68,
           ),
         ];
       case HealthCategory.heart:
         return [
           MetricSeries(
-            metricId: 'heart_rate_resting',
+            metricId: 'resting_heart_rate',
             displayName: 'Resting Heart Rate',
             unit: 'bpm',
-            dataPoints: _mockDataPoints('heart_rate_resting'),
+            dataPoints: _mockDataPoints('resting_heart_rate'),
             sourceIntegration: 'apple_health',
             currentValue: '62',
             deltaPercent: -3.1,
+            average: 64,
           ),
           MetricSeries(
             metricId: 'hrv',
-            displayName: 'Heart Rate Variability',
+            displayName: 'HRV',
             unit: 'ms',
             dataPoints: _mockDataPoints('hrv'),
             sourceIntegration: 'apple_health',
             currentValue: '54',
             deltaPercent: 5.9,
+            average: 51,
+          ),
+          MetricSeries(
+            metricId: 'vo2_max',
+            displayName: 'VO₂ Max',
+            unit: 'mL/kg/min',
+            dataPoints: _mockDataPoints('vo2_max'),
+            sourceIntegration: 'apple_health',
+            currentValue: '48.2',
+            deltaPercent: 0.8,
+            average: 47.8,
+          ),
+          MetricSeries(
+            metricId: 'respiratory_rate',
+            displayName: 'Respiratory Rate',
+            unit: 'brpm',
+            dataPoints: _mockDataPoints('respiratory_rate'),
+            sourceIntegration: 'apple_health',
+            currentValue: '14.2',
+            deltaPercent: -1.4,
+            average: 14.5,
           ),
         ];
       case HealthCategory.nutrition:
@@ -249,14 +345,24 @@ final class MockDataRepository implements DataRepositoryInterface {
             average: 1870,
           ),
           MetricSeries(
-            metricId: 'protein',
-            displayName: 'Protein',
-            unit: 'g',
-            dataPoints: _mockDataPoints('protein'),
+            metricId: 'water',
+            displayName: 'Water',
+            unit: 'mL',
+            dataPoints: _mockDataPoints('water'),
             sourceIntegration: 'apple_health',
-            currentValue: '132',
-            deltaPercent: 3.2,
-            average: 128,
+            currentValue: '2,100',
+            deltaPercent: 5.0,
+            average: 1950,
+          ),
+          MetricSeries(
+            metricId: 'macros',
+            displayName: 'Macros',
+            unit: '% carbs',
+            dataPoints: _mockDataPoints('macros'),
+            sourceIntegration: 'apple_health',
+            currentValue: '45',
+            deltaPercent: null,
+            average: null,
           ),
         ];
       case HealthCategory.body:
@@ -281,6 +387,26 @@ final class MockDataRepository implements DataRepositoryInterface {
             deltaPercent: -2.1,
             average: 19.6,
           ),
+          MetricSeries(
+            metricId: 'body_temperature',
+            displayName: 'Body Temperature',
+            unit: '°C',
+            dataPoints: _mockDataPoints('body_temperature'),
+            sourceIntegration: 'apple_health',
+            currentValue: '36.8',
+            deltaPercent: null,
+            average: 36.7,
+          ),
+          MetricSeries(
+            metricId: 'wrist_temperature',
+            displayName: 'Wrist Temperature',
+            unit: '°C',
+            dataPoints: _mockDataPoints('wrist_temperature'),
+            sourceIntegration: 'apple_health',
+            currentValue: '35.2',
+            deltaPercent: null,
+            average: 35.1,
+          ),
         ];
       case HealthCategory.vitals:
         return [
@@ -295,61 +421,91 @@ final class MockDataRepository implements DataRepositoryInterface {
             average: 97.8,
           ),
           MetricSeries(
-            metricId: 'respiratory_rate',
-            displayName: 'Respiratory Rate',
-            unit: 'brpm',
-            dataPoints: _mockDataPoints('respiratory_rate'),
+            metricId: 'blood_pressure',
+            displayName: 'Blood Pressure',
+            unit: 'mmHg',
+            dataPoints: _mockDataPoints('blood_pressure'),
             sourceIntegration: 'apple_health',
-            currentValue: '14.2',
-            deltaPercent: -1.4,
-            average: 14.5,
+            currentValue: '118',
+            deltaPercent: -1.2,
+            average: 120,
+          ),
+          MetricSeries(
+            metricId: 'blood_glucose',
+            displayName: 'Blood Glucose',
+            unit: 'mmol/L',
+            dataPoints: _mockDataPoints('blood_glucose'),
+            sourceIntegration: 'apple_health',
+            currentValue: '5.2',
+            deltaPercent: -3.7,
+            average: 5.4,
           ),
         ];
       case HealthCategory.wellness:
         return [
           MetricSeries(
-            metricId: 'hrv',
-            displayName: 'HRV',
-            unit: 'ms',
-            dataPoints: _mockDataPoints('hrv'),
+            metricId: 'mood',
+            displayName: 'Mood',
+            unit: '/10',
+            dataPoints: _mockDataPoints('mood'),
             sourceIntegration: 'apple_health',
-            currentValue: '54',
-            deltaPercent: 5.9,
-            average: 51,
+            currentValue: '7',
+            deltaPercent: 4.5,
+            average: 6.7,
+          ),
+          MetricSeries(
+            metricId: 'energy',
+            displayName: 'Energy',
+            unit: '/10',
+            dataPoints: _mockDataPoints('energy'),
+            sourceIntegration: 'apple_health',
+            currentValue: '6',
+            deltaPercent: -2.0,
+            average: 6.2,
           ),
           MetricSeries(
             metricId: 'stress',
-            displayName: 'Stress Level',
-            unit: '',
+            displayName: 'Stress',
+            unit: '/100',
             dataPoints: _mockDataPoints('stress'),
             sourceIntegration: 'apple_health',
             currentValue: '32',
             deltaPercent: -8.0,
             average: 38,
           ),
+          MetricSeries(
+            metricId: 'mindful_minutes',
+            displayName: 'Mindful Minutes',
+            unit: 'min',
+            dataPoints: _mockDataPoints('mindful_minutes'),
+            sourceIntegration: 'apple_health',
+            currentValue: '15',
+            deltaPercent: 25.0,
+            average: 12,
+          ),
         ];
       case HealthCategory.mobility:
         return [
           MetricSeries(
-            metricId: 'flights_climbed',
-            displayName: 'Flights Climbed',
-            unit: 'flights',
-            dataPoints: _mockDataPoints('flights_climbed'),
+            metricId: 'mobility',
+            displayName: 'Mobility',
+            unit: 'score',
+            dataPoints: _mockDataPoints('mobility'),
             sourceIntegration: 'apple_health',
-            currentValue: '8',
-            deltaPercent: 14.3,
-            average: 7,
+            currentValue: '72',
+            deltaPercent: 3.1,
+            average: 70,
           ),
         ];
       case HealthCategory.cycle:
         return [
           MetricSeries(
-            metricId: 'cycle_phase',
-            displayName: 'Cycle Phase',
-            unit: '',
-            dataPoints: _mockDataPoints('cycle_phase'),
+            metricId: 'cycle',
+            displayName: 'Cycle',
+            unit: 'day',
+            dataPoints: _mockDataPoints('cycle'),
             sourceIntegration: 'apple_health',
-            currentValue: 'Follicular',
+            currentValue: 'Day 14',
             deltaPercent: null,
             average: null,
           ),
@@ -357,13 +513,13 @@ final class MockDataRepository implements DataRepositoryInterface {
       case HealthCategory.environment:
         return [
           MetricSeries(
-            metricId: 'noise_exposure',
-            displayName: 'Noise Exposure',
+            metricId: 'environment',
+            displayName: 'Environment',
             unit: 'dB',
-            dataPoints: _mockDataPoints('noise_exposure'),
+            dataPoints: _mockDataPoints('environment'),
             sourceIntegration: 'apple_health',
-            currentValue: '72',
-            deltaPercent: 2.8,
+            currentValue: '68',
+            deltaPercent: -2.8,
             average: 70,
           ),
         ];
@@ -373,9 +529,10 @@ final class MockDataRepository implements DataRepositoryInterface {
   List<MetricDataPoint> _mockDataPoints(String metricId) {
     final now = DateTime.now();
     final base = _baseValueForMetric(metricId);
+    final rng = math.Random(metricId.hashCode);
     return List.generate(7, (i) {
       final day = now.subtract(Duration(days: 6 - i));
-      final variation = (i % 3 - 1) * (base * 0.05);
+      final variation = (rng.nextDouble() * 2 - 1) * (base * 0.20);
       return MetricDataPoint(
         timestamp: day.toIso8601String().split('T').first,
         value: (base + variation).clamp(0.0, double.infinity),
@@ -383,79 +540,87 @@ final class MockDataRepository implements DataRepositoryInterface {
     });
   }
 
+  List<double> _trendForMetric(String metricId) =>
+      _mockDataPoints(metricId).map((p) => p.value).toList();
+
   double _baseValueForMetric(String metricId) {
     switch (metricId) {
-      case 'steps':
-        return 8432.0;
-      case 'active_calories':
-        return 420.0;
-      case 'sleep_duration':
-        return 7.4;
-      case 'deep_sleep':
-        return 76.0;
-      case 'heart_rate_resting':
-        return 62.0;
-      case 'hrv':
-        return 54.0;
-      case 'calories':
-        return 1840.0;
-      case 'protein':
-        return 132.0;
-      case 'weight':
-        return 78.2;
-      case 'body_fat':
-        return 19.2;
-      case 'spo2':
-        return 98.0;
-      case 'respiratory_rate':
-        return 14.2;
-      case 'stress':
-        return 32.0;
-      case 'flights_climbed':
-        return 8.0;
-      case 'cycle_phase':
-        return 14.0;
-      case 'noise_exposure':
-        return 72.0;
-      default:
-        return 100.0;
+      // Activity
+      case 'steps':             return 8432.0;
+      case 'active_calories':   return 420.0;
+      case 'workouts':          return 1.0;
+      case 'distance':          return 6.2;
+      case 'floors_climbed':    return 8.0;
+      case 'exercise_minutes':  return 45.0;
+      case 'walking_speed':     return 1.4;
+      case 'running_pace':      return 330.0; // seconds per km
+      // Sleep
+      case 'sleep_duration':    return 7.4;
+      case 'sleep_stages':      return 76.0; // deep sleep minutes
+      // Heart
+      case 'resting_heart_rate': return 62.0;
+      case 'hrv':               return 54.0;
+      case 'vo2_max':           return 48.2;
+      case 'respiratory_rate':  return 14.2;
+      // Nutrition
+      case 'calories':          return 1840.0;
+      case 'water':             return 2100.0;
+      case 'macros':            return 45.0; // % carbs
+      // Body
+      case 'weight':            return 78.2;
+      case 'body_fat':          return 19.2;
+      case 'body_temperature':  return 36.8;
+      case 'wrist_temperature': return 35.2;
+      // Vitals
+      case 'spo2':              return 98.0;
+      case 'blood_pressure':    return 118.0;
+      case 'blood_glucose':     return 5.2;
+      // Wellness
+      case 'mood':              return 7.0;
+      case 'energy':            return 6.0;
+      case 'stress':            return 32.0;
+      case 'mindful_minutes':   return 15.0;
+      // Mobility / Cycle / Environment
+      case 'mobility':          return 72.0;
+      case 'cycle':             return 14.0;
+      case 'environment':       return 68.0;
+      default:                  return 100.0;
     }
   }
 
   String _displayNameForMetric(String metricId) {
     switch (metricId) {
-      case 'steps':
-        return 'Steps';
-      case 'active_calories':
-        return 'Active Calories';
-      case 'sleep_duration':
-        return 'Sleep Duration';
-      case 'deep_sleep':
-        return 'Deep Sleep';
-      case 'heart_rate_resting':
-        return 'Resting Heart Rate';
-      case 'hrv':
-        return 'HRV';
-      case 'calories':
-        return 'Calories';
-      case 'protein':
-        return 'Protein';
-      case 'weight':
-        return 'Weight';
-      case 'body_fat':
-        return 'Body Fat';
-      case 'spo2':
-        return 'Blood Oxygen';
-      case 'respiratory_rate':
-        return 'Respiratory Rate';
-      case 'stress':
-        return 'Stress Level';
-      case 'flights_climbed':
-        return 'Flights Climbed';
-      case 'cycle_phase':
-        return 'Cycle Phase';
-      case 'noise_exposure':
-        return 'Noise Exposure';
+      case 'steps':             return 'Steps';
+      case 'active_calories':   return 'Active Calories';
+      case 'workouts':          return 'Workouts';
+      case 'distance':          return 'Distance';
+      case 'floors_climbed':    return 'Floors Climbed';
+      case 'exercise_minutes':  return 'Exercise Minutes';
+      case 'walking_speed':     return 'Walking Speed';
+      case 'running_pace':      return 'Running Pace';
+      case 'sleep_duration':    return 'Sleep Duration';
+      case 'sleep_stages':      return 'Sleep Stages';
+      case 'resting_heart_rate': return 'Resting Heart Rate';
+      case 'hrv':               return 'HRV';
+      case 'vo2_max':           return 'VO₂ Max';
+      case 'respiratory_rate':  return 'Respiratory Rate';
+      case 'calories':          return 'Calories';
+      case 'water':             return 'Water';
+      case 'macros':            return 'Macros';
+      case 'weight':            return 'Weight';
+      case 'body_fat':          return 'Body Fat';
+      case 'body_temperature':  return 'Body Temperature';
+      case 'wrist_temperature': return 'Wrist Temperature';
+      case 'spo2':              return 'Blood Oxygen';
+      case 'blood_pressure':    return 'Blood Pressure';
+      case 'blood_glucose':     return 'Blood Glucose';
+      case 'mood':              return 'Mood';
+      case 'energy':            return 'Energy';
+      case 'stress':            return 'Stress';
+      case 'mindful_minutes':   return 'Mindful Minutes';
+      case 'mobility':          return 'Mobility';
+      case 'cycle':             return 'Cycle';
+      case 'environment':       return 'Environment';
       default:
         return metricId
             .split('_')
@@ -466,79 +631,75 @@ final class MockDataRepository implements DataRepositoryInterface {
 
   String _unitForMetric(String metricId) {
     switch (metricId) {
-      case 'steps':
-        return 'steps';
-      case 'active_calories':
-        return 'kcal';
-      case 'sleep_duration':
-        return 'hours';
-      case 'deep_sleep':
-        return 'min';
-      case 'heart_rate_resting':
-        return 'bpm';
-      case 'hrv':
-        return 'ms';
-      case 'calories':
-        return 'kcal';
-      case 'protein':
-        return 'g';
-      case 'weight':
-        return 'kg';
-      case 'body_fat':
-        return '%';
-      case 'spo2':
-        return '%';
-      case 'respiratory_rate':
-        return 'brpm';
-      case 'stress':
-        return '';
-      case 'flights_climbed':
-        return 'flights';
-      case 'cycle_phase':
-        return '';
-      case 'noise_exposure':
-        return 'dB';
-      default:
-        return '';
+      case 'steps':             return 'steps';
+      case 'active_calories':   return 'kcal';
+      case 'workouts':          return 'sessions';
+      case 'distance':          return 'km';
+      case 'floors_climbed':    return 'floors';
+      case 'exercise_minutes':  return 'min';
+      case 'walking_speed':     return 'm/s';
+      case 'running_pace':      return 'min/km';
+      case 'sleep_duration':    return 'hours';
+      case 'sleep_stages':      return 'min deep';
+      case 'resting_heart_rate': return 'bpm';
+      case 'hrv':               return 'ms';
+      case 'vo2_max':           return 'mL/kg/min';
+      case 'respiratory_rate':  return 'brpm';
+      case 'calories':          return 'kcal';
+      case 'water':             return 'mL';
+      case 'macros':            return '% carbs';
+      case 'weight':            return 'kg';
+      case 'body_fat':          return '%';
+      case 'body_temperature':  return '°C';
+      case 'wrist_temperature': return '°C';
+      case 'spo2':              return '%';
+      case 'blood_pressure':    return 'mmHg';
+      case 'blood_glucose':     return 'mmol/L';
+      case 'mood':              return '/10';
+      case 'energy':            return '/10';
+      case 'stress':            return '/100';
+      case 'mindful_minutes':   return 'min';
+      case 'mobility':          return 'score';
+      case 'cycle':             return 'day';
+      case 'environment':       return 'dB';
+      default:                  return '';
     }
   }
 
   String _currentValueForMetric(String metricId) {
     switch (metricId) {
-      case 'steps':
-        return '8,432';
-      case 'active_calories':
-        return '420';
-      case 'sleep_duration':
-        return '7.4';
-      case 'deep_sleep':
-        return '76';
-      case 'heart_rate_resting':
-        return '62';
-      case 'hrv':
-        return '54';
-      case 'calories':
-        return '1,840';
-      case 'protein':
-        return '132';
-      case 'weight':
-        return '78.2';
-      case 'body_fat':
-        return '19.2';
-      case 'spo2':
-        return '98';
-      case 'respiratory_rate':
-        return '14.2';
-      case 'stress':
-        return '32';
-      case 'flights_climbed':
-        return '8';
-      case 'cycle_phase':
-        return 'Follicular';
-      case 'noise_exposure':
-        return '72';
-      default:
-        return '—';
+      case 'steps':             return '8,432';
+      case 'active_calories':   return '420';
+      case 'workouts':          return '1';
+      case 'distance':          return '6.2';
+      case 'floors_climbed':    return '8';
+      case 'exercise_minutes':  return '45';
+      case 'walking_speed':     return '1.4';
+      case 'running_pace':      return '5:30';
+      case 'sleep_duration':    return '7.4';
+      case 'sleep_stages':      return '76';
+      case 'resting_heart_rate': return '62';
+      case 'hrv':               return '54';
+      case 'vo2_max':           return '48.2';
+      case 'respiratory_rate':  return '14.2';
+      case 'calories':          return '1,840';
+      case 'water':             return '2,100';
+      case 'macros':            return '45';
+      case 'weight':            return '78.2';
+      case 'body_fat':          return '19.2';
+      case 'body_temperature':  return '36.8';
+      case 'wrist_temperature': return '35.2';
+      case 'spo2':              return '98';
+      case 'blood_pressure':    return '118/76';
+      case 'blood_glucose':     return '5.2';
+      case 'mood':              return '7';
+      case 'energy':            return '6';
+      case 'stress':            return '32';
+      case 'mindful_minutes':   return '15';
+      case 'mobility':          return '72';
+      case 'cycle':             return 'Day 14';
+      case 'environment':       return '68';
+      default:                  return '—';
     }
   }
 }
