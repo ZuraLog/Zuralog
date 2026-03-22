@@ -288,3 +288,82 @@ async def ingest_single(
         unit=body.unit,
         date=str(local_date),
     )
+
+
+@limiter.limit("30/minute")
+@router.post("/session", status_code=201, response_model=SessionIngestResponse)
+async def ingest_session(
+    request: Request,
+    body: SessionIngestRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> SessionIngestResponse:
+    """Log an activity session with linked metric events."""
+    local_date = compute_local_date(body.started_at)
+
+    # Idempotency: check activity_sessions
+    if body.idempotency_key:
+        from app.models.activity_session import ActivitySession
+        existing = await db.execute(
+            select(ActivitySession).where(
+                ActivitySession.user_id == uuid.UUID(str(user_id)),
+                ActivitySession.idempotency_key == body.idempotency_key,
+            )
+        )
+        existing_session = existing.scalar_one_or_none()
+        if existing_session:
+            # Fetch event IDs linked to this session
+            linked = await db.execute(
+                select(HealthEvent.id).where(HealthEvent.session_id == existing_session.id)
+            )
+            event_ids = [str(r.id) for r in linked.fetchall()]
+            return SessionIngestResponse(
+                session_id=str(existing_session.id),
+                event_ids=event_ids,
+                date=str(local_date),
+            )
+
+    from app.models.activity_session import ActivitySession
+    session = ActivitySession(
+        user_id=uuid.UUID(str(user_id)),
+        activity_type=body.activity_type,
+        source=body.source,
+        started_at=datetime.fromisoformat(body.started_at),
+        ended_at=datetime.fromisoformat(body.ended_at) if body.ended_at else None,
+        idempotency_key=body.idempotency_key,
+    )
+    db.add(session)
+    await db.flush()
+
+    event_ids: list[str] = []
+    for m in body.metrics:
+        metric_def = await _get_metric_def(db, m.metric_type)
+        if metric_def:
+            try:
+                validate_metric_value(m.metric_type, m.value, metric_def.min_value, metric_def.max_value)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc))
+
+        event = HealthEvent(
+            user_id=uuid.UUID(str(user_id)),
+            metric_type=m.metric_type,
+            value=m.value,
+            unit=m.unit,
+            source=body.source,
+            recorded_at=datetime.fromisoformat(body.started_at),
+            local_date=local_date,
+            granularity="point_in_time",
+            session_id=session.id,
+            idempotency_key=m.idempotency_key,
+            metadata_=m.metadata,
+        )
+        db.add(event)
+        await db.flush()
+        event_ids.append(str(event.id))
+
+        agg_fn = metric_def.aggregation_fn if metric_def else "sum"
+        unit = metric_def.unit if metric_def else m.unit
+        await _recompute_daily_summary(db, user_id, local_date, m.metric_type, unit, agg_fn)
+
+    await db.commit()
+    return SessionIngestResponse(session_id=str(session.id), event_ids=event_ids, date=str(local_date))

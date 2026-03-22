@@ -57,6 +57,8 @@ def mock_db():
     events_result.fetchall = MagicMock(return_value=[])
 
     generic_result = MagicMock()
+    generic_result.scalar_one_or_none = MagicMock(return_value=None)
+    generic_result.fetchall = MagicMock(return_value=[])
 
     results = [idempotency_result, metric_def_result, events_result, generic_result, generic_result]
 
@@ -98,6 +100,26 @@ def test_single_ingest_missing_offset_returns_422(client):
     }
     resp = client.post("/api/v1/ingest", json=payload, headers=AUTH_HEADER)
     assert resp.status_code == 422
+
+
+def test_session_ingest_returns_201(client):
+    payload = {
+        "activity_type": "run",
+        "source": "manual",
+        "started_at": "2026-03-22T07:00:00+05:00",
+        "ended_at": "2026-03-22T07:30:00+05:00",
+        "idempotency_key": str(uuid.uuid4()),
+        "metrics": [
+            {"metric_type": "distance", "value": 5000, "unit": "m", "idempotency_key": str(uuid.uuid4())},
+            {"metric_type": "exercise_minutes", "value": 30, "unit": "min", "idempotency_key": str(uuid.uuid4())},
+        ]
+    }
+    resp = client.post("/api/v1/ingest/session", json=payload, headers=AUTH_HEADER)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "session_id" in data
+    assert len(data["event_ids"]) == 2
+    assert data["date"] == "2026-03-22"
 
 
 def test_single_ingest_no_auth_returns_401():
