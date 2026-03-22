@@ -30,3 +30,15 @@ class HealthEvent(Base):
     session_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
+
+    def __init__(self, **kwargs: object) -> None:
+        for attr, col in self.__table__.c.items():
+            if (
+                col.default is not None
+                and not col.primary_key
+                and attr not in kwargs
+                and hasattr(col.default, "arg")
+                and not callable(col.default.arg)
+            ):
+                kwargs[attr] = col.default.arg
+        super().__init__(**kwargs)

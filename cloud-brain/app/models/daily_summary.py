@@ -12,6 +12,9 @@ from app.database import Base
 
 class DailySummary(Base):
     __tablename__ = "daily_summaries"
+    __table_args__ = (
+        sa.UniqueConstraint("user_id", "date", "metric_type", name="uq_daily_summaries_user_date_metric"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)

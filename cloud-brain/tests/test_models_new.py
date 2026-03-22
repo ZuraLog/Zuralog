@@ -49,6 +49,19 @@ def test_daily_summary_instantiation():
     assert ds.event_count == 1
 
 
+def test_health_event_granularity_default():
+    event = HealthEvent(
+        user_id=uuid.uuid4(),
+        metric_type="steps",
+        value=100.0,
+        unit="steps",
+        source="manual",
+        recorded_at=datetime.now(tz=timezone.utc),
+        local_date=date.today(),
+    )
+    assert event.granularity == "point_in_time"
+
+
 def test_activity_session_instantiation():
     session = ActivitySession(
         user_id=uuid.uuid4(),
