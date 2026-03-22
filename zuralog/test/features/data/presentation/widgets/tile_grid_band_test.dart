@@ -65,7 +65,9 @@ void main() {
       expect(bands.length, 2);
     });
 
-    test('tall tile with odd pending flushes pending first with padding', () {
+    test('tall tile with odd pending: last pending square becomes first companion, no null spacer', () {
+      // 1 pending square (activeCalories) before tall — it is popped and becomes
+      // the first companion of the tall band instead of being padded with null.
       final ids = [
         TileId.activeCalories,
         TileId.steps,
@@ -73,10 +75,10 @@ void main() {
         TileId.vo2Max,
       ];
       final bands = buildBands(ids, sizeOf);
-      expect(bands[0].ids.length, 2);
-      expect(bands[0].ids[0], TileId.activeCalories);
-      expect(bands[0].ids[1], isNull); // odd pending gets null spacer
-      expect(bands[1].ids, [TileId.steps, TileId.hrv, TileId.vo2Max]);
+      // No pre-flush band: the odd pending square is absorbed into the tall band.
+      expect(bands[0].ids, [TileId.steps, TileId.activeCalories, TileId.hrv]);
+      // vo2Max flushes at end — odd count, null spacer added (no more squares).
+      expect(bands[1].ids, [TileId.vo2Max, null]);
       expect(bands.length, 2);
     });
 

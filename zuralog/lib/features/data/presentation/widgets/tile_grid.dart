@@ -173,41 +173,42 @@ class TileGrid extends StatelessWidget {
 
     return SliverMainAxisGroup(
       slivers: [
-        for (final band in bands)
-          if (band.isWide)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppDimens.spaceMd,
-                  AppDimens.spaceXs,
-                  AppDimens.spaceMd,
-                  AppDimens.spaceXs,
+        for (int i = 0; i < bands.length; i++) ...[
+            // Add a consistent gap between every pair of consecutive bands so
+            // tiles from adjacent masonry sections (or wide tiles) are never
+            // touching.
+            if (i > 0)
+              const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceSm)),
+            if (bands[i].isWide)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                  child: _buildTappableTile(context, bands[i].singleId!),
                 ),
-                child: _buildTappableTile(context, band.singleId!),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                sliver: SliverMasonryGrid.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: AppDimens.spaceSm,
+                  crossAxisSpacing: AppDimens.spaceSm,
+                  childCount: bands[i].ids.length,
+                  itemBuilder: (context, j) {
+                    final id = bands[i].ids[j];
+                    // Render null spacers as an invisible square slot so the masonry
+                    // grid accounts for the full column height.
+                    if (id == null) {
+                      return const AspectRatio(
+                        aspectRatio: 1.0,
+                        child: SizedBox.shrink(),
+                      );
+                    }
+                    return _buildTappableTile(context, id);
+                  },
+                ),
               ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              sliver: SliverMasonryGrid.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: AppDimens.spaceSm,
-                crossAxisSpacing: AppDimens.spaceSm,
-                childCount: band.ids.length,
-                itemBuilder: (context, i) {
-                  final id = band.ids[i];
-                  // Render null spacers as an invisible square slot so the masonry grid
-                  // accounts for the full column height.
-                  if (id == null) {
-                    return const AspectRatio(
-                      aspectRatio: 1.0,
-                      child: SizedBox.shrink(),
-                    );
-                  }
-                  return _buildTappableTile(context, id);
-                },
-              ),
-            ),
+          ],
       ],
     );
   }
@@ -411,21 +412,23 @@ List<Band> buildBands(List<TileId> ids, TileSize Function(TileId) sizeOf) {
       flushPending();
       bands.add(Band.wide(id));
     } else if (size == TileSize.tall) {
-      // Flush any accumulated square tiles before the tall band.
-      // Use allowPullUp:false so square companions are not consumed by the flush.
+      // If pending has an odd count, pop the last square and use it as the
+      // first companion of the tall band. This keeps the pre-tall flush even
+      // (no null spacer needed) and avoids an empty slot in the grid.
+      TileId? poppedCompanion;
+      if (pending.isNotEmpty && pending.length.isOdd) {
+        poppedCompanion = pending.removeLast();
+      }
+
+      // Flush any remaining accumulated square tiles (now always even).
       flushPending(allowPullUp: false);
 
-      // Pull up to 2 square companions from remaining.
+      // Build companion list: popped square first (if any), then pull from remaining.
       final companions = <TileId?>[];
-      for (var i = 0; i < 2; i++) {
-        final idx = remaining.indexWhere(
-          (r) => sizeOf(r) == TileSize.square,
-        );
-        if (idx != -1) {
-          companions.add(remaining.removeAt(idx));
-        } else {
-          companions.add(null); // transparent spacer
-        }
+      if (poppedCompanion != null) companions.add(poppedCompanion);
+      while (companions.length < 2) {
+        final idx = remaining.indexWhere((r) => sizeOf(r) == TileSize.square);
+        companions.add(idx != -1 ? remaining.removeAt(idx) : null);
       }
 
       bands.add(Band.masonry([id, ...companions]));
