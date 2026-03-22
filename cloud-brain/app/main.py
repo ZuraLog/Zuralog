@@ -32,6 +32,7 @@ from app.api.v1.analytics import router as analytics_router
 from app.api.v1.attachments import attachments_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.coach_routes import router as coach_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.emergency_card_routes import router as emergency_card_router
@@ -386,6 +387,7 @@ app.include_router(data_sources_router, prefix="/api/v1")  # Phase 3 — data so
 app.include_router(ingest_router, prefix="/api/v1")  # Unified health data ingest
 app.include_router(events_router, prefix="/api/v1")  # Soft-delete events
 app.include_router(today_router, prefix="/api/v1")  # Today tab
+app.include_router(coach_router, prefix="/api/v1")  # Coach context endpoints
 
 
 @app.get("/health")
