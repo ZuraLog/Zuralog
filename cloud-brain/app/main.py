@@ -57,7 +57,6 @@ from app.api.v1.preferences_routes import router as preferences_router
 from app.api.v1.progress_routes import router as progress_router
 from app.api.v1.prompt_suggestions import router as prompt_suggestions_router
 from app.api.v1.quick_actions import router as quick_actions_router
-from app.api.v1.quick_log_routes import router as quick_log_router
 from app.api.v1.report_routes import router as report_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.streak_routes import router as streak_router
@@ -375,7 +374,6 @@ app.include_router(quick_actions_router, prefix="/api/v1")  # Phase 2.9 — quic
 app.include_router(achievement_router, prefix="/api/v1")  # Phase 2.10 — achievements
 app.include_router(streak_router, prefix="/api/v1")  # Phase 2.11 — streaks
 app.include_router(journal_router, prefix="/api/v1")  # Phase 2.12 — journal
-app.include_router(quick_log_router, prefix="/api/v1")  # Phase 2.13 — quick log
 app.include_router(emergency_card_router, prefix="/api/v1")  # Phase 2.14 — emergency card
 app.include_router(notification_router, prefix="/api/v1")  # Phase 2.15 — notification centre
 app.include_router(report_router, prefix="/api/v1")  # Phase 2.18 — health reports
