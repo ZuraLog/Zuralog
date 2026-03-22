@@ -251,8 +251,13 @@ async def ingest_single(
             .on_conflict_do_nothing()
         )
         metric_def = MetricDefinition(
-            metric_type=body.metric_type, unit=body.unit,
-            aggregation_fn="sum", is_active=False,
+            metric_type=body.metric_type,
+            display_name=body.metric_type,
+            unit=body.unit,
+            category="unknown",
+            aggregation_fn="sum",
+            data_type="float",
+            is_active=False,
         )
 
     event = HealthEvent(
