@@ -37,6 +37,9 @@ dependencies:
   # Lightweight key-value storage (sync status timestamps)
   shared_preferences: ^2.5.4
 
+  # UUID generation (idempotency keys for ingest API)
+  uuid: ^4.5.1
+
   # Utilities
   url_launcher: ^6.3.2
   app_links: ^7.0.0  # Deep link / custom URL scheme interception (Phase 1.6)
