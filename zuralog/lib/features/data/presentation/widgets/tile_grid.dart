@@ -273,7 +273,12 @@ class TileGrid extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                child: _buildTappableTile(context, bands[i].singleId!),
+                // Wide tiles are not sized by _buildColumn, so AspectRatio(2.0)
+                // sets their height explicitly (width / 2).
+                child: AspectRatio(
+                  aspectRatio: 2.0,
+                  child: _buildTappableTile(context, bands[i].singleId!),
+                ),
               ),
             )
           else
