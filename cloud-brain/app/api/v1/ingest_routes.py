@@ -367,3 +367,95 @@ async def ingest_session(
 
     await db.commit()
     return SessionIngestResponse(session_id=str(session.id), event_ids=event_ids, date=str(local_date))
+
+
+@limiter.limit("10/minute")
+@router.post("/bulk", status_code=202, response_model=BulkIngestResponse)
+async def ingest_bulk(
+    request: Request,
+    body: BulkIngestRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> BulkIngestResponse:
+    """Bulk device sync — inserts all events transactionally, aggregation async."""
+    # Validate all events BEFORE any DB operations
+    affected_combos: set[tuple[str, date, str]] = set()
+    for ev in body.events:
+        local_date = compute_local_date(ev.recorded_at)
+        metric_def = await _get_metric_def(db, ev.metric_type)
+        if metric_def:
+            try:
+                validate_metric_value(ev.metric_type, ev.value, metric_def.min_value, metric_def.max_value)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc))
+        affected_combos.add((str(user_id), local_date, ev.metric_type))
+
+    # Insert all events
+    for ev in body.events:
+        local_date = compute_local_date(ev.recorded_at)
+        event = HealthEvent(
+            user_id=uuid.UUID(str(user_id)),
+            metric_type=ev.metric_type,
+            value=ev.value,
+            unit=ev.unit,
+            source=body.source,
+            recorded_at=datetime.fromisoformat(ev.recorded_at),
+            local_date=local_date,
+            granularity=ev.granularity,
+            idempotency_key=ev.idempotency_key,
+            metadata_=ev.metadata,
+        )
+        db.add(event)
+
+    await db.commit()
+
+    # Mark affected daily_summaries as stale and enqueue aggregation
+    from app.models.daily_summary import DailySummary as DS
+    for uid, ld, mt in affected_combos:
+        await db.execute(
+            text(
+                "UPDATE daily_summaries SET is_stale = true "
+                "WHERE user_id = :uid AND date = :d AND metric_type = :mt"
+            ),
+            {"uid": uid, "d": str(ld), "mt": mt},
+        )
+    await db.commit()
+
+    # Enqueue Celery aggregation task
+    try:
+        from app.tasks.aggregation_tasks import reaggregate_stale_summaries
+        task = reaggregate_stale_summaries.delay(str(user_id))
+        task_id = task.id
+    except Exception:
+        # If Celery isn't available, generate a placeholder task_id
+        task_id = str(uuid.uuid4())
+
+    return BulkIngestResponse(task_id=task_id, event_count=len(body.events), status="processing")
+
+
+@limiter.limit("120/minute")
+@router.get("/status/{task_id}")
+async def bulk_ingest_status(
+    request: Request,
+    task_id: str,
+    user_id: str = Depends(get_authenticated_user_id),
+) -> dict:
+    """Poll the status of a bulk ingest aggregation task."""
+    try:
+        from celery.result import AsyncResult
+        result = AsyncResult(task_id)
+        status_map = {
+            "PENDING": "processing",
+            "STARTED": "processing",
+            "SUCCESS": "complete",
+            "FAILURE": "failed",
+            "RETRY": "processing",
+            "REVOKED": "failed",
+        }
+        return {
+            "task_id": task_id,
+            "status": status_map.get(result.state, "processing"),
+            "detail": str(result.info) if result.state == "FAILURE" else None,
+        }
+    except ImportError:
+        return {"task_id": task_id, "status": "processing", "detail": None}

@@ -122,6 +122,45 @@ def test_session_ingest_returns_201(client):
     assert data["date"] == "2026-03-22"
 
 
+def test_bulk_ingest_returns_202(client):
+    payload = {
+        "source": "apple_health",
+        "events": [
+            {"metric_type": "steps", "value": 10000, "unit": "steps",
+             "recorded_at": "2026-03-22T23:59:00-05:00", "granularity": "daily_aggregate"},
+            {"metric_type": "resting_heart_rate", "value": 58, "unit": "bpm",
+             "recorded_at": "2026-03-22T06:30:00-05:00", "granularity": "point_in_time"},
+        ]
+    }
+    resp = client.post("/api/v1/ingest/bulk", json=payload, headers=AUTH_HEADER)
+    assert resp.status_code == 202
+    data = resp.json()
+    assert data["event_count"] == 2
+    assert data["status"] == "processing"
+    assert "task_id" in data
+
+
+def test_bulk_ingest_rejects_missing_offset(client):
+    payload = {
+        "source": "apple_health",
+        "events": [
+            {"metric_type": "steps", "value": 10000, "unit": "steps",
+             "recorded_at": "2026-03-22T23:59:00"},  # no offset
+        ]
+    }
+    resp = client.post("/api/v1/ingest/bulk", json=payload, headers=AUTH_HEADER)
+    assert resp.status_code == 422
+
+
+def test_bulk_status_returns_200(client):
+    with patch("celery.result.AsyncResult") as mock_result:
+        mock_result.return_value.state = "SUCCESS"
+        mock_result.return_value.info = None
+        resp = client.get("/api/v1/ingest/status/some-task-id", headers=AUTH_HEADER)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "complete"
+
+
 def test_single_ingest_no_auth_returns_401():
     payload = {
         "metric_type": "steps", "value": 5000, "unit": "steps",
