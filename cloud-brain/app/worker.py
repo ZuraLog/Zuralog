@@ -166,6 +166,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.insight_tasks.fan_out_daily_insights",
         "schedule": crontab(minute=0),  # top of every UTC hour
     },
+    "recompute-stale-summaries": {
+        "task": "app.tasks.aggregation_tasks.recompute_stale_summaries",
+        "schedule": 300.0,  # every 5 minutes
+    },
 }
 
 # Auto-discover tasks in services and tasks modules
