@@ -80,7 +80,6 @@ dependencies:
   # Brand logo icon packs (no bundled image assets needed)
   simple_icons: ^14.6.1          # Strava, Garmin, Fitbit, Google, Apple icons
   font_awesome_flutter: ^10.12.0 # Apple, additional brand icons
-  flutter_staggered_grid_view: ^0.7.0
 
 dev_dependencies:
   flutter_test:

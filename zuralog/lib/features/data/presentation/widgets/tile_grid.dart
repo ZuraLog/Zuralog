@@ -3,15 +3,14 @@
 /// Renders the masonry grid of metric tiles inside a [CustomScrollView].
 ///
 /// Layout modes:
-/// - Normal mode: masonry layout using [SliverMasonryGrid.count] interleaved
-///   with full-width bands for wide (2×1) tiles. Only visible tiles shown.
+/// - Normal mode: explicit 2-column layout interleaved with full-width bands
+///   for wide (2×1) tiles. Only visible tiles shown.
 /// - Edit mode: falls back to a [SliverReorderableList] (vertical list) for
 ///   drag-reorder support. All tiles shown (hidden tiles appear dimmed via
 ///   [TileEditOverlay] with isVisible=false).
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -25,8 +24,9 @@ import 'package:zuralog/features/data/presentation/widgets/tile_edit_overlay.dar
 
 /// Sliver widget that renders the masonry grid of metric tiles.
 ///
-/// In normal mode it interleaves masonry sections with full-width bands for
-/// wide tiles. In edit mode it renders a reorderable vertical list.
+/// In normal mode it interleaves explicit 2-column band sections with
+/// full-width bands for wide tiles. In edit mode it renders a reorderable
+/// vertical list.
 class TileGrid extends StatelessWidget {
   const TileGrid({
     super.key,
@@ -79,18 +79,11 @@ class TileGrid extends StatelessWidget {
 
   int? _colorOverride(TileId id) => layout.tileColorOverrides[id.name];
 
-  double _tileAspectRatio(TileSize size) => switch (size) {
-    TileSize.square => 1.0,
-    TileSize.tall   => 0.5,   // height = 2 × column width
-    TileSize.wide   => 2.0,   // height = full-row-width ÷ 2
-  };
-
   Widget _buildTileContent(BuildContext context, TileId id) {
     final tileData = tiles[id];
     final size = _effectiveSize(id);
     final colorOverride = _colorOverride(id);
 
-    // Render MetricTile.
     return MetricTile(
       key: ValueKey('tile_${id.name}'),
       tileId: id,
@@ -105,26 +98,12 @@ class TileGrid extends StatelessWidget {
     );
   }
 
+  /// Builds a tappable tile. Sizing is handled by the parent band renderer via
+  /// explicit [SizedBox] constraints — this method only adds the tap gesture.
   Widget _buildTappableTile(BuildContext context, TileId id) {
-    final size = _effectiveSize(id);
     return GestureDetector(
       onTap: () => onTileTap(id),
-      // Tall tiles span exactly 2 square heights + 1 mainAxisSpacing gap so
-      // their bottom edge aligns with the bottom of the two companion squares
-      // stacked in the right column. A plain AspectRatio(0.5) gives 2W, but
-      // the right column totals 2W + spaceSm; LayoutBuilder corrects for this.
-      child: size == TileSize.tall
-          ? LayoutBuilder(
-              builder: (_, constraints) => SizedBox(
-                width: constraints.maxWidth,
-                height: 2 * constraints.maxWidth + AppDimens.spaceSm,
-                child: _buildTileContent(context, id),
-              ),
-            )
-          : AspectRatio(
-              aspectRatio: _tileAspectRatio(size),
-              child: _buildTileContent(context, id),
-            ),
+      child: _buildTileContent(context, id),
     );
   }
 
@@ -158,10 +137,111 @@ class TileGrid extends StatelessWidget {
   // ── Masonry band algorithm ──────────────────────────────────────────────────
 
   /// Breaks [ids] into alternating "non-wide" and "wide" bands.
-  ///
-  /// Each band is either a list of non-wide tile IDs (for a masonry section)
-  /// or a single wide tile ID (for a full-width band).
   List<Band> _buildBands(List<TileId> ids) => buildBands(ids, _effectiveSize);
+
+  // ── Band rendering ──────────────────────────────────────────────────────────
+
+  /// Renders a non-wide [Band] as a [SliverToBoxAdapter] with an explicit
+  /// 2-column layout.
+  ///
+  /// All tile heights are derived from the actual column width obtained via
+  /// [LayoutBuilder], ensuring pixel-perfect alignment regardless of tile order:
+  ///
+  /// - Square / null spacer → height = colWidth
+  /// - Tall tile            → height = 2 × colWidth + [AppDimens.spaceSm]
+  ///
+  /// The tall tile formula exactly matches the right column's height when two
+  /// square companions are stacked with one gap between them
+  /// (colWidth + spaceSm + colWidth = 2×colWidth + spaceSm), so both column
+  /// bottom edges are always flush.
+  ///
+  /// Column assignment follows the same deterministic rule as [buildBands]:
+  /// - If [Band.ids[0]] is a tall tile → left col gets [ids[0]], right col
+  ///   gets [ids[1]] and [ids[2]].
+  /// - Otherwise (all-square band) → left col gets even-index items
+  ///   (0, 2, …), right col gets odd-index items (1, 3, …).
+  Widget _buildBandSliver(BuildContext context, Band band) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final colWidth =
+                (constraints.maxWidth - AppDimens.spaceSm) / 2;
+
+            final ids = band.ids;
+
+            // Determine column contents.
+            List<TileId?> leftIds;
+            List<TileId?> rightIds;
+
+            final firstId = ids.isNotEmpty ? ids[0] : null;
+            final firstIsTall = firstId != null &&
+                _effectiveSize(firstId) == TileSize.tall;
+
+            if (firstIsTall) {
+              // Tall band: left = [tall], right = [companion1, companion2]
+              leftIds = [ids[0]];
+              rightIds = ids.length > 1 ? ids.sublist(1) : [];
+            } else {
+              // Square band: interleave even→left, odd→right
+              leftIds = [for (int i = 0; i < ids.length; i += 2) ids[i]];
+              rightIds = [for (int i = 1; i < ids.length; i += 2) ids[i]];
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildColumn(context, leftIds, colWidth, firstIsTall),
+                const SizedBox(width: AppDimens.spaceSm),
+                _buildColumn(context, rightIds, colWidth, false),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Builds one column of a band as a [Column] of sized tile slots.
+  ///
+  /// [isTallColumn] is true only for the left column when it holds a single
+  /// tall tile — in that case the tile receives the corrected tall height.
+  Widget _buildColumn(
+    BuildContext context,
+    List<TileId?> ids,
+    double colWidth,
+    bool isTallColumn,
+  ) {
+    final children = <Widget>[];
+
+    for (int i = 0; i < ids.length; i++) {
+      if (i > 0) children.add(const SizedBox(height: AppDimens.spaceSm));
+
+      final id = ids[i];
+      final tileHeight = isTallColumn
+          ? 2 * colWidth + AppDimens.spaceSm // tall: spans 2 squares + 1 gap
+          : colWidth;                        // square / null spacer
+
+      if (id == null) {
+        // Transparent spacer — occupies the same footprint as a square tile
+        // so the companion column aligns correctly.
+        children.add(SizedBox(width: colWidth, height: tileHeight));
+      } else {
+        children.add(SizedBox(
+          width: colWidth,
+          height: tileHeight,
+          child: _buildTappableTile(context, id),
+        ));
+      }
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
 
   // ── Build ────────────────────────────────────────────────────────────────────
 
@@ -186,41 +266,19 @@ class TileGrid extends StatelessWidget {
     return SliverMainAxisGroup(
       slivers: [
         for (int i = 0; i < bands.length; i++) ...[
-            // Add a consistent gap between every pair of consecutive bands so
-            // tiles from adjacent masonry sections (or wide tiles) are never
-            // touching.
-            if (i > 0)
-              const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceSm)),
-            if (bands[i].isWide)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                  child: _buildTappableTile(context, bands[i].singleId!),
-                ),
-              )
-            else
-              SliverPadding(
+          // Consistent gap between every pair of consecutive bands.
+          if (i > 0)
+            const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceSm)),
+          if (bands[i].isWide)
+            SliverToBoxAdapter(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-                sliver: SliverMasonryGrid.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: AppDimens.spaceSm,
-                  crossAxisSpacing: AppDimens.spaceSm,
-                  childCount: bands[i].ids.length,
-                  itemBuilder: (context, j) {
-                    final id = bands[i].ids[j];
-                    // Render null spacers as an invisible square slot so the masonry
-                    // grid accounts for the full column height.
-                    if (id == null) {
-                      return const AspectRatio(
-                        aspectRatio: 1.0,
-                        child: SizedBox.shrink(),
-                      );
-                    }
-                    return _buildTappableTile(context, id);
-                  },
-                ),
+                child: _buildTappableTile(context, bands[i].singleId!),
               ),
-          ],
+            )
+          else
+            _buildBandSliver(context, bands[i]),
+        ],
       ],
     );
   }
@@ -264,7 +322,6 @@ class TileGrid extends StatelessWidget {
 
     // Map visible-list indices to full orderedTileIds indices for onReorder.
     void mappedOnReorder(int visibleOld, int visibleNew) {
-      // Find the positions of visible tiles within the full ordered list.
       final visiblePositions = <int>[];
       for (var i = 0; i < orderedTileIds.length; i++) {
         if (_isVisible(orderedTileIds[i])) visiblePositions.add(i);
@@ -274,10 +331,6 @@ class TileGrid extends StatelessWidget {
         return;
       }
       final fullOld = visiblePositions[visibleOld];
-      // When newIndex equals visibleIds.length the item is dropped after the
-      // last visible tile. In that case insert after the last visible position
-      // (i.e. orderedTileIds.length - hiddenIds.length) rather than clamping
-      // to second-to-last.
       final int fullNew;
       if (visibleNew >= visiblePositions.length) {
         fullNew = orderedTileIds.length - hiddenIds.length;
