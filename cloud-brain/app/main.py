@@ -60,6 +60,7 @@ from app.api.v1.quick_log_routes import router as quick_log_router
 from app.api.v1.report_routes import router as report_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.streak_routes import router as streak_router
+from app.api.v1.today_routes import router as today_router
 from app.api.v1.trends_routes import router as trends_router
 from app.api.v1.users import router as users_router
 from app.api.v1.webhooks import router as webhooks_router
@@ -384,6 +385,7 @@ app.include_router(trends_router, prefix="/api/v1")  # Phase 3 — trends home
 app.include_router(data_sources_router, prefix="/api/v1")  # Phase 3 — data sources
 app.include_router(ingest_router, prefix="/api/v1")  # Unified health data ingest
 app.include_router(events_router, prefix="/api/v1")  # Soft-delete events
+app.include_router(today_router, prefix="/api/v1")  # Today tab
 
 
 @app.get("/health")
