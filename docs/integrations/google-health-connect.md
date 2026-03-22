@@ -38,7 +38,7 @@ WorkManager periodic task fires (on schedule or data change)
   ↓
 Native Kotlin code reads JWT from EncryptedSharedPreferences
   ↓
-POST /api/v1/health/ingest (without Flutter engine)
+POST /api/v1/ingest/bulk (without Flutter engine)
   ↓
 Cloud Brain stores new health records
 ```
@@ -74,7 +74,7 @@ WorkManager is the Android equivalent of iOS's `HKObserverQuery` but is schedule
 cloud-brain/
   app/
     mcp_servers/health_connect_server.py  # MCP tools for reading/writing
-    api/v1/health_ingest.py               # POST endpoint receiving data
+    api/v1/ingest_routes.py               # POST endpoint receiving data
 
 zuralog/
   lib/

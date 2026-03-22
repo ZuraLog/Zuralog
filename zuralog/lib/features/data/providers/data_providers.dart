@@ -368,7 +368,10 @@ TileVisualizationConfig _buildTileViz(
       ),
 
     TileId.water => FillGaugeConfig(
-        value: _parseDouble(summary.primaryValue),
+        // Backend stores water in mL; gauge expects litres.
+        value: summary.unit == 'mL'
+            ? _parseDouble(summary.primaryValue) / 1000.0
+            : _parseDouble(summary.primaryValue),
         maxValue: 2.5,
         unit: 'L',
         unitIcon: '💧',
@@ -567,39 +570,73 @@ final tileOrderingProvider = Provider<List<TileId>>((ref) {
 /// Async provider producing the full tile list for the dashboard grid.
 ///
 /// Combines data from multiple sources:
-/// - [dashboardProvider] for category-level summaries (primary values, trends)
+/// - [dashboardProvider] for category-level summaries (health score, fallback data)
+/// - Per-category detail fetches for per-metric series data (one fetch per category)
 /// - [dailyGoalsProvider] for goal-progress visualization (steps ring, water gauge)
 ///
-/// Each tile receives the most appropriate [TileVisualizationConfig] subtype for
-/// its metric type, with pre-computed stats from the 7-day trend data.
+/// Each tile receives its own [MetricSeries] data from the category detail
+/// endpoint, so tiles within the same category show different values.
+/// Falls back to the category-level [CategorySummary] when no per-metric
+/// series is available (e.g. workouts, blood pressure).
 ///
 /// On first load or when data is unavailable, produces tiles in [TileDataState.noSource]
 /// state. The [dashboardTimeRangeProvider] is watched so a range change triggers re-fetch.
 ///
 /// Never throws — errors resolve to empty/noSource tiles.
 final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
-  ref.watch(dashboardTimeRangeProvider);
+  final timeRange = ref.watch(dashboardTimeRangeProvider);
   try {
     final dashAsync = await ref.watch(dashboardProvider.future);
     // Watch daily goals for goal-progress visualization (steps ring, water gauge).
     final goals = await ref.watch(dailyGoalsProvider.future);
+    final repo = ref.read(dataRepositoryProvider);
+    final layout = ref.read(dashboardLayoutProvider);
+
+    // Category detail only supports 7D/30D/90D — map 'today' to '7D'.
+    final detailTimeRange = timeRange == TimeRange.today ? '7D' : timeRange.apiKey;
+
+    // Fetch all 10 category details in parallel for per-metric data.
+    final detailResults = await Future.wait(
+      HealthCategory.values.map((cat) => repo.getCategoryDetail(
+            categoryId: cat.name,
+            timeRange: detailTimeRange,
+          )),
+    );
+
+    // Build metricSlug → MetricSeries lookup from all category detail responses.
+    // Later entries overwrite earlier ones if metric IDs collide.
+    final metricSeriesMap = <String, MetricSeries>{};
+    for (final detail in detailResults) {
+      for (final series in detail.metrics) {
+        metricSeriesMap[series.metricId] = series;
+      }
+    }
+
+    // Category-level summaries as fallback for tiles without per-metric data.
     final categoryMap = {
       for (final s in dashAsync.categories) s.category: s,
     };
-    final layout = ref.read(dashboardLayoutProvider);
 
     debugPrint('[DashboardTiles] Building tiles. '
-        'categoryMap keys: ${categoryMap.keys.map((c) => c.name).join(', ')}');
+        'metricSeriesMap keys: ${metricSeriesMap.keys.join(', ')}');
 
     final tiles = TileId.values.map((tileId) {
-      final summary = categoryMap[tileId.category];
-      if (summary == null) {
+      final series = metricSeriesMap[tileId.metricSlug];
+      final catSummary = categoryMap[tileId.category];
+
+      if (series == null && catSummary == null) {
         return TileData(
           tileId: tileId,
           dataState: TileDataState.noSource,
           lastUpdated: null,
         );
       }
+
+      // Use per-metric series data if available, otherwise fall back to category summary.
+      final summary = series != null
+          ? _summaryFromSeries(series, tileId.category)
+          : catSummary!;
+
       // Resolve effective tile size from layout overrides, falling back to default.
       final effectiveSize =
           layout.tileSizes[tileId.name] ?? tileId.defaultSize;
@@ -639,3 +676,22 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
         .toList();
   }
 });
+
+/// Converts a [MetricSeries] into a [CategorySummary] for use with [_buildTileViz].
+///
+/// Maps [MetricSeries.currentValue] → [CategorySummary.primaryValue],
+/// [MetricSeries.dataPoints] → [CategorySummary.trend], etc.
+CategorySummary _summaryFromSeries(MetricSeries series, HealthCategory category) {
+  final values = series.dataPoints.map((p) => p.value).toList();
+  return CategorySummary(
+    category: category,
+    primaryValue: series.currentValue ??
+        (values.isNotEmpty ? _fmtStat(values.last) : '—'),
+    unit: series.unit.isNotEmpty ? series.unit : null,
+    deltaPercent: series.deltaPercent,
+    trend: values.isNotEmpty ? values : null,
+    lastUpdated: series.dataPoints.isNotEmpty
+        ? series.dataPoints.last.timestamp
+        : null,
+  );
+}

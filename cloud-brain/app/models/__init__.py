@@ -7,10 +7,13 @@ Alembic's env.py imports from here to discover all models.
 
 from app.database import Base
 from app.models.achievement import Achievement  # noqa: F401
+from app.models.activity_session import ActivitySession  # noqa: F401
 from app.models.blood_pressure import BloodPressureRecord  # noqa: F401
 from app.models.conversation import Conversation, Message  # noqa: F401
 from app.models.daily_metrics import DailyHealthMetrics  # noqa: F401
+from app.models.daily_summary import DailySummary  # noqa: F401
 from app.models.emergency_card import EmergencyCard  # noqa: F401
+from app.models.health_event import HealthEvent  # noqa: F401
 from app.models.health_data import (  # noqa: F401
     ActivityType,
     NutritionEntry,
@@ -19,6 +22,7 @@ from app.models.health_data import (  # noqa: F401
     WeightMeasurement,
 )
 from app.models.insight import Insight, INSIGHT_TYPES  # noqa: F401
+from app.models.metric_definition import MetricDefinition  # noqa: F401
 from app.models.integration import Integration  # noqa: F401
 from app.models.journal_entry import JournalEntry  # noqa: F401
 from app.models.notification_log import NotificationLog, NOTIFICATION_TYPES  # noqa: F401
@@ -40,6 +44,7 @@ __all__ = [
     "NOTIFICATION_TYPES",
     "VALID_METRIC_TYPES",
     "Achievement",
+    "ActivitySession",
     "ActivityType",
     "AppTheme",
     "Base",
@@ -47,12 +52,15 @@ __all__ = [
     "CoachPersona",
     "Conversation",
     "DailyHealthMetrics",
+    "DailySummary",
     "EmergencyCard",
     "GoalPeriod",
+    "HealthEvent",
     "Insight",
     "Integration",
     "JournalEntry",
     "Message",
+    "MetricDefinition",
     "NotificationLog",
     "NutritionEntry",
     "ProactivityLevel",

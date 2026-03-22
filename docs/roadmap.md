@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-18 (Today Tab Redesign polish: metric picker full-screen, tile uniformity, tap-to-log, nav bar fix)
+**Last Updated:** 2026-03-22 (Phase 12: Unified Health Data Architecture — event sourcing + CQRS, replaces quick_log_routes.py)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -230,7 +230,7 @@
 | P0 | Onboarding Flow (6-step rebuild) | ✅ Complete | feat/onboarding-rebuild — replaces ProfileQuestionnaire; Welcome, Goals, Persona, Connect Apps, Notifications, Discovery steps |
 | P0 | Emergency Health Card | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
 | P0 | Emergency Health Card Edit | 🔜 Planned | Spec complete in screens.md — awaiting implementation phase |
-| P1 | Quick Log Bottom Sheet | ✅ Done | Phase 10 — OnboardingTooltip, haptics (submit, water, chips), ConsumerStatefulWidget |
+| P1 | Quick Log Bottom Sheet | ✅ Done | Phase 10 — OnboardingTooltip, haptics (submit, water, chips), ConsumerStatefulWidget (Backend superseded by Unified Health Data Architecture) |
 
 ### Phase 9 — Mock Data Layer (`--dart-define=USE_MOCK=true`)
 
@@ -428,6 +428,8 @@ Established a centralized shared component library, eliminating duplicated UI co
 ## Today Tab Part 4 — Quick Log Real Data & Steps Mode Toggle (2026-03-16)
 
 > **Branch:** `feat/today-tab-part4-real-data` → merged to main (2026-03-16)
+>
+> **Note:** The `quick-log` backend endpoints in this section have been superseded by the Unified Health Data Architecture (event sourcing + CQRS). See Phase 12 below.
 
 Completed real data wiring for quick-log endpoints (water, wellness, weight, steps) and added steps log mode toggle (add vs. override).
 
@@ -475,8 +477,8 @@ Completed 5 backend hardening tasks: composite index verification, Redis storage
 |----------|------|--------|-------|
 | P0 | Composite index verification | ✅ Done | `ix_quick_logs_user_type_logged` on `(user_id, metric_type, logged_at DESC)` already existed in migration `o0p1q2r3s4t5` |
 | P0 | slowapi Redis storage for rate-limit counters | ✅ Done | `cloud-brain/app/limiter.py` passes `storage_uri=os.getenv("REDIS_URL")` to Limiter; counters shared across all server instances |
-| P0 | `logged_at` UTC normalization | ✅ Done | `_resolve_logged_at()` in `quick_log_routes.py` normalizes non-UTC offsets to UTC before returning string; tests added |
-| P0 | Empty supplement IDs guard | ✅ Done | `POST /quick-log/supplements` returns 422 when `taken_supplement_ids` is empty; dead ownership-check wrapper removed; tests added |
+| P0 | `logged_at` UTC normalization | ✅ Done | `_resolve_logged_at()` in `quick_log_routes.py` normalizes non-UTC offsets to UTC before returning string; tests added (Superseded by Unified Health Data Architecture) |
+| P0 | Empty supplement IDs guard | ✅ Done | `POST /quick-log/supplements` returns 422 when `taken_supplement_ids` is empty; dead ownership-check wrapper removed; tests added (Superseded by Unified Health Data Architecture) |
 | P0 | CORS production guard | ✅ Done | `_resolve_cors_origins()` helper in `main.py` raises `RuntimeError` in production when `ALLOWED_ORIGINS` unset or empty; falls back to `*` in dev with warning; 4 tests added |
 
 ---
@@ -612,7 +614,7 @@ Completed 5 full-screen log screens for Sleep, Run, Meal, Supplements, and Sympt
 | P0 | Add RLS policies on `quick_logs` and `user_supplements` | ✅ Done | Critical security fix — RLS was never enabled on `quick_logs` |
 | P0 | Add `UserSupplement` ORM model | ✅ Done | SQLAlchemy model for supplements |
 | P0 | Extend `VALID_METRIC_TYPES` to include sleep, run, meal, supplement, symptom, workout | ✅ Done | Metric type validation |
-| P0 | Add 7 new endpoints to `quick_log_routes.py` | ✅ Done | `/sleep`, `/run`, `/meal`, `/supplements`, `/symptom`, `/user/supplements-list` (GET + POST) |
+| P0 | Add 7 new endpoints to `quick_log_routes.py` | ✅ Done | `/sleep`, `/run`, `/meal`, `/supplements`, `/symptom`, `/user/supplements-list` (GET + POST) (Superseded by Unified Health Data Architecture) |
 | P0 | Rate limit all endpoints via slowapi | ✅ Done | Per-user rate limiting |
 
 ---
@@ -962,7 +964,7 @@ Added floating action button (FAB) for quick log entry and a modal bottom sheet 
 
 | Priority | Task | Status | Notes |
 |----------|------|--------|-------|
-| P0 | Extend `quick_log_routes.py` with new log endpoints | ✅ Done | Water, wellness, weight, steps endpoints added |
+| P0 | Extend `quick_log_routes.py` with new log endpoints | ✅ Done | Water, wellness, weight, steps endpoints added (Superseded by Unified Health Data Architecture) |
 | P0 | Wire `todayLogSummaryProvider` to real backend data | ✅ Done | Wired to `GET /api/v1/quick-log/summary/today` |
 | P0 | Wire `userLoggedTypesProvider` to real backend data | ✅ Done | Wired to `GET /api/v1/quick-log/my-metric-types` |
 | P0 | Wire `logRingProvider` to compute ring fill from real data | ✅ Done | Derived from `todayLogSummaryProvider` |
@@ -1008,3 +1010,29 @@ Completed the Today tab visual redesign with three major UI changes: Health Scor
 - `logRingProvider` / `LogRingNotifier` — removed from `today_providers.dart`
 
 **Result:** Today tab redesigned with new visual hierarchy, user-configurable metric grid, and improved zero-state UX. All tests passing, ready for production.
+
+---
+
+## Phase 12 — Unified Health Data Architecture (Event Sourcing + CQRS)
+
+> **Branch:** `feat/unified-health-data-architecture`
+>
+> Replaces the `quick_logs` table and `quick_log_routes.py` with a fully normalized, event-sourced health data system. All health data now flows through a single append-only event log (`health_events`), with pre-aggregated read caches (`daily_summaries`) following the CQRS pattern. The legacy quick-log endpoints are deprecated and removed.
+
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Created `health_events` table (append-only event log with soft-delete) | ✅ Done | Core event store; all health data funnels through this table |
+| P0 | Created `daily_summaries` table (pre-aggregated read cache, CQRS pattern) | ✅ Done | Materialized daily aggregates for fast dashboard reads |
+| P0 | Created `metric_definitions` table (dynamic registry of 38 metric types with aggregation rules) | ✅ Done | Defines slug, display name, unit, category, and aggregation method per metric |
+| P0 | Created `activity_sessions` table (workout/sleep session grouping) | ✅ Done | Groups related health events into logical sessions |
+| P0 | Built unified ingest API: `POST /api/v1/ingest` (single), `/ingest/session`, `/ingest/bulk` | ✅ Done | Single entry point for all health data; replaces 9+ typed quick-log endpoints |
+| P0 | Built Today API: `GET /api/v1/today/summary`, `/today/timeline`, `/today/goals-progress` | ✅ Done | Reads from `daily_summaries` for fast response times |
+| P0 | Built Analytics API: `GET /api/v1/analytics/dashboard-summary`, `/category/{cat}`, `/metric/{type}` | ✅ Done | Category and metric drill-down from pre-aggregated data |
+| P0 | Built Supplements API: `GET/POST /api/v1/supplements` | ✅ Done | Dedicated supplements management endpoints |
+| P0 | Migrated Flutter Today Tab to unified ingest (`today_repository.dart`) | ✅ Done | All log calls now route through `/api/v1/ingest` |
+| P0 | Migrated Apple Health sync to `POST /api/v1/ingest/bulk` (`health_sync_service.dart`) | ✅ Done | Batch health data upload via unified bulk endpoint |
+| P0 | Deprecated and removed `quick_log_routes.py` (replaced by unified ingest) | ✅ Done | Legacy router unregistered from `main.py` and file deleted |
+| P0 | Alembic migrations: create unified tables, seed 38 metrics, migrate legacy slugs | ✅ Done | 3 migrations: schema creation, metric seeding, slug migration |
+| P0 | Advisory locks (`pg_advisory_xact_lock`) for safe concurrent aggregation | ✅ Done | Prevents race conditions during daily summary recalculation |
+| P0 | Composite cursor pagination for timeline | ✅ Done | Efficient keyset pagination for `/today/timeline` |
+| P0 | Security hardening: input validation, rate limiting, parameterized queries | ✅ Done | All new endpoints validated, rate-limited, and injection-safe |

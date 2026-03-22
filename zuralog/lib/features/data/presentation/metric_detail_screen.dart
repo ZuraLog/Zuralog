@@ -19,6 +19,7 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/data/domain/category_color.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
+import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -36,16 +37,29 @@ const int _kCoachPrefillMaxLength = 500;
 
 // ── MetricId formatter ────────────────────────────────────────────────────────
 
-/// Formats a snake_case [metricId] slug as human-readable Title Case.
+/// Formats a metric ID slug as human-readable Title Case.
 ///
-/// Exposed as [formatMetricIdForDisplay] (without underscore) so widget tests
-/// can assert it directly.
+/// Handles both snake_case (`"sleep_duration"`) and camelCase (`"sleepDuration"`)
+/// inputs. Prefers resolving via [TileId.fromSlug] → [TileId.displayName] for
+/// canonical names; falls back to string splitting as a last resort.
 ///
-/// Examples: `"steps"` → `"Steps"`, `"heart_rate_resting"` → `"Heart Rate Resting"`.
-String formatMetricIdForDisplay(String metricId) => metricId
-    .split('_')
-    .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
-    .join(' ');
+/// Examples:
+///   `"sleep_duration"` → `"Sleep Duration"`
+///   `"sleepDuration"`  → `"Sleep Duration"`
+///   `"steps"`          → `"Steps"`
+String formatMetricIdForDisplay(String metricId) {
+  final tileId = TileId.fromSlug(metricId);
+  if (tileId != null) return tileId.displayName;
+  // Fallback: insert spaces before uppercase letters (camelCase), then split underscores.
+  final spaced = metricId.replaceAllMapped(
+    RegExp(r'(?<=[a-z0-9])[A-Z]'),
+    (m) => ' ${m.group(0)}',
+  );
+  return spaced
+      .split('_')
+      .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+      .join(' ');
+}
 
 // ── Source attribution label ──────────────────────────────────────────────────
 
@@ -103,16 +117,12 @@ class _MetricDetailScreenState extends ConsumerState<MetricDetailScreen> {
     );
     final detailAsync = ref.watch(metricDetailProvider(params));
 
-    // Format metric ID immediately for AppBar — shown during loading, replaced when data arrives.
-    final formattedId = formatMetricIdForDisplay(widget.metricId);
+    // Resolve canonical display name from TileId — works in all async states.
+    final displayName = formatMetricIdForDisplay(widget.metricId);
 
     return ZuralogScaffold(
       appBar: AppBar(
-        title: detailAsync.when(
-          data: (d) => Text(d.series.displayName, style: AppTextStyles.displaySmall),
-          loading: () => Text(formattedId, style: AppTextStyles.displaySmall),
-          error: (_, __) => Text(formattedId, style: AppTextStyles.displaySmall),
-        ),
+        title: Text(displayName, style: AppTextStyles.displaySmall),
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),

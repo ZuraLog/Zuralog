@@ -83,12 +83,69 @@ final class MockTodayRepository implements TodayRepositoryInterface {
     // No-op in mock.
   }
 
-  // ── Quick Log ─────────────────────────────────────────────────────────────
+  // ── Unified Ingest ─────────────────────────────────────────────────────────
 
   @override
-  Future<void> submitQuickLog(Map<String, dynamic> payload) async {
+  Future<IngestResult> submitIngest({
+    required String metricType,
+    required double value,
+    required String unit,
+    required String source,
+    required DateTime recordedAt,
+    String? idempotencyKey,
+    Map<String, dynamic>? metadata,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
-    // No-op in mock — pretend submission succeeded.
+    return IngestResult(
+      eventId: 'mock-event-id',
+      dailyTotal: value,
+      unit: unit,
+      date: '${recordedAt.year}-${recordedAt.month.toString().padLeft(2, '0')}-${recordedAt.day.toString().padLeft(2, '0')}',
+    );
+  }
+
+  @override
+  Future<TodayTimeline> getTodayTimeline({
+    int limit = 50,
+    String? before,
+  }) async {
+    await Future<void>.delayed(_delay);
+    return const TodayTimeline(events: [], nextCursor: null);
+  }
+
+  @override
+  Future<void> deleteEvent(String eventId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // No-op in mock.
+  }
+
+  @override
+  Future<SessionIngestResult> submitSession({
+    required String sessionType,
+    required String source,
+    required DateTime recordedAt,
+    required List<SessionMetricPayload> metrics,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return SessionIngestResult(
+      sessionId: 'mock-session-id',
+      eventIds: List.generate(metrics.length, (i) => 'mock-event-$i'),
+      date: '${recordedAt.year}-${recordedAt.month.toString().padLeft(2, '0')}-${recordedAt.day.toString().padLeft(2, '0')}',
+    );
+  }
+
+  @override
+  Future<BulkIngestResult> bulkIngest({
+    required String source,
+    required List<BulkEventPayload> events,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return BulkIngestResult(
+      taskId: 'mock-task-id',
+      eventCount: events.length,
+      status: 'accepted',
+    );
   }
 
   // ── Notifications ─────────────────────────────────────────────────────────

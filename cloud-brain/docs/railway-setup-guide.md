@@ -82,7 +82,7 @@ APP_DEBUG=false
    - ✅ Builder stage: uv installs dependencies
    - ✅ Runtime stage: copies app code
 3. Watch the **Deploy Logs**:
-   - ✅ Pre-deploy: `alembic upgrade head` runs all 6 migrations
+   - ✅ Pre-deploy: `alembic upgrade head` runs all migrations
    - ✅ `Uvicorn running on 0.0.0.0:PORT (Press CTRL+C to quit)`
 4. Health check passes → deployment goes live
 
@@ -116,41 +116,26 @@ open https://api.zuralog.com/docs
 
 ---
 
-## Step 6: Add Celery Worker Service
+## Step 6: Add Celery Worker Service (includes Beat)
 
-The AI background sync and token refresh tasks require a Celery worker.
+The AI background sync, token refresh, and periodic tasks all run in a single Celery service.
+Beat is embedded in the worker process via the `--beat` flag, so no separate Beat service is needed.
 
 1. Railway canvas → **"+ New"** → **"GitHub Repo"** → same `life-logger` repo
 2. Rename service to **`celery-worker`**
 3. Service → **Settings**:
    - **Root Directory:** `cloud-brain`
-   - **Start Command:** `celery -A app.worker worker --loglevel=info --concurrency=2`
+   - **Start Command:** `celery -A app.worker worker --beat --loglevel=info --concurrency=2`
 4. Service → **Variables**: Add the same variables as the web service (use Shared Variables)
 5. **No networking** needed (workers don't serve HTTP)
 
-Check logs for: `celery@hostname ready.`
+> ⚠️ **Only run ONE instance of the worker.** The embedded Beat scheduler means multiple replicas will cause duplicate periodic task execution.
+
+Check logs for: `celery@hostname ready.` and `beat: Starting...`
 
 ---
 
-## Step 7: Add Celery Beat Scheduler
-
-The periodic tasks (15-min sync, 1-hour token refresh) require Celery Beat.
-
-1. Railway canvas → **"+ New"** → **"GitHub Repo"** → same `life-logger` repo
-2. Rename service to **`celery-beat`**
-3. Service → **Settings**:
-   - **Root Directory:** `cloud-brain`
-   - **Start Command:** `celery -A app.worker beat --loglevel=info`
-4. Service → **Variables**: Same shared variables
-5. **No networking** needed
-
-> ⚠️ **Only run ONE instance of celery-beat.** Running multiple beat schedulers will cause duplicate task execution.
-
-Check logs for: `beat: Starting...`
-
----
-
-## Step 8: Register Strava Webhook (Post-Deploy)
+## Step 7: Register Strava Webhook (Post-Deploy)
 
 After `api.zuralog.com` is live, register the Strava webhook subscription:
 
@@ -166,7 +151,7 @@ Expected response: `{"id": 12345}` — save this ID.
 
 ---
 
-## Step 9: Update Mobile App Production URL
+## Step 8: Update Mobile App Production URL
 
 For production builds of the Flutter app:
 
@@ -188,8 +173,7 @@ After full setup:
 - [ ] `GET https://api.zuralog.com/health` returns `{"status":"healthy"}`
 - [ ] `GET https://api.zuralog.com/docs` loads Swagger UI
 - [ ] Alembic migrations ran (check deploy logs for "Running upgrade...")
-- [ ] Celery worker logs show `ready`
-- [ ] Celery beat logs show `Starting...`
+- [ ] Celery worker logs show `ready` and `beat: Starting...`
 - [ ] SSL certificate is valid (green lock in browser)
 - [ ] Strava webhook registered (if using Strava)
 

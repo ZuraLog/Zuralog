@@ -6,7 +6,7 @@
 ///   - Single insight detail        (`GET /api/v1/insights/:id`)
 ///   - Mark insight read/dismissed  (`PATCH /api/v1/insights/:id`)
 ///   - Current streak               (`GET /api/v1/streaks`)
-///   - Quick log submit             (`POST /api/v1/quick-log`)
+///   - Unified ingest               (`POST /api/v1/ingest`)
 ///   - Notifications history        (`GET /api/v1/notifications`)
 ///   - Mark notification read       (`PATCH /api/v1/notifications/:id`)
 ///
@@ -47,8 +47,37 @@ abstract interface class TodayRepositoryInterface {
   /// Dismisses insight [id].
   Future<void> dismissInsight(String id);
 
-  /// Submits a quick-log payload.
-  Future<void> submitQuickLog(Map<String, dynamic> payload);
+  /// Submits a single health event via the unified ingest API.
+  Future<IngestResult> submitIngest({
+    required String metricType,
+    required double value,
+    required String unit,
+    required String source,
+    required DateTime recordedAt,
+    String? idempotencyKey,
+    Map<String, dynamic>? metadata,
+  });
+
+  /// Fetches the paginated today timeline.
+  Future<TodayTimeline> getTodayTimeline({int limit = 50, String? before});
+
+  /// Soft-deletes a health event by ID.
+  Future<void> deleteEvent(String eventId);
+
+  /// Submits a session of related metrics via POST /api/v1/ingest/session.
+  Future<SessionIngestResult> submitSession({
+    required String sessionType,
+    required String source,
+    required DateTime recordedAt,
+    required List<SessionMetricPayload> metrics,
+    Map<String, dynamic>? metadata,
+  });
+
+  /// Submits a batch of events via POST /api/v1/ingest/bulk.
+  Future<BulkIngestResult> bulkIngest({
+    required String source,
+    required List<BulkEventPayload> events,
+  });
 
   /// Fetches the paginated notification history.
   Future<NotificationPage> getNotifications({int page = 1});
@@ -289,15 +318,100 @@ class TodayRepository implements TodayRepositoryInterface {
     }
   }
 
-  // ── Quick Log ──────────────────────────────────────────────────────────────
+  // ── Unified Ingest ─────────────────────────────────────────────────────────
 
-  /// Submits a quick-log payload to the API.
-  ///
-  /// The keys and values in [payload] are determined by the caller.
   @override
-  Future<void> submitQuickLog(Map<String, dynamic> payload) async {
-    await _api.post('/api/v1/quick-log', data: payload);
+  Future<IngestResult> submitIngest({
+    required String metricType,
+    required double value,
+    required String unit,
+    required String source,
+    required DateTime recordedAt,
+    String? idempotencyKey,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final offset = recordedAt.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final hh = offset.inHours.abs().toString().padLeft(2, '0');
+    final mm = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final recordedAtStr =
+        '${recordedAt.toLocal().toIso8601String().split('.').first}$sign$hh:$mm';
+
+    final resp = await _api.post('/api/v1/ingest', data: {
+      'metric_type': metricType,
+      'value': value,
+      'unit': unit,
+      'source': source,
+      'recorded_at': recordedAtStr,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      if (metadata != null) 'metadata': metadata,
+    });
     invalidateFeedCache();
+    return IngestResult.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  // ── Today Timeline ────────────────────────────────────────────────────────
+
+  @override
+  Future<TodayTimeline> getTodayTimeline({
+    int limit = 50,
+    String? before,
+  }) async {
+    final resp = await _api.get('/api/v1/today/timeline', queryParameters: {
+      'limit': limit,
+      if (before != null) 'before': before,
+    });
+    return TodayTimeline.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  // ── Delete Event ──────────────────────────────────────────────────────────
+
+  @override
+  Future<void> deleteEvent(String eventId) async {
+    await _api.delete('/api/v1/events/$eventId');
+  }
+
+  // ── Session Ingest ─────────────────────────────────────────────────────────
+
+  @override
+  Future<SessionIngestResult> submitSession({
+    required String sessionType,
+    required String source,
+    required DateTime recordedAt,
+    required List<SessionMetricPayload> metrics,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final offset = recordedAt.timeZoneOffset;
+    final sign = offset.isNegative ? '-' : '+';
+    final hh = offset.inHours.abs().toString().padLeft(2, '0');
+    final mm = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final recordedAtStr =
+        '${recordedAt.toLocal().toIso8601String().split('.').first}$sign$hh:$mm';
+
+    final resp = await _api.post('/api/v1/ingest/session', data: {
+      'activity_type': sessionType,
+      'source': source,
+      'started_at': recordedAtStr,
+      'metrics': metrics.map((m) => m.toJson()).toList(),
+      if (metadata != null) 'metadata': metadata,
+    });
+    invalidateFeedCache();
+    return SessionIngestResult.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  // ── Bulk Ingest ───────────────────────────────────────────────────────────
+
+  @override
+  Future<BulkIngestResult> bulkIngest({
+    required String source,
+    required List<BulkEventPayload> events,
+  }) async {
+    final resp = await _api.post('/api/v1/ingest/bulk', data: {
+      'source': source,
+      'events': events.map((e) => e.toJson()).toList(),
+    });
+    invalidateFeedCache();
+    return BulkIngestResult.fromJson(resp.data as Map<String, dynamic>);
   }
 
   // ── Notifications ──────────────────────────────────────────────────────────
@@ -373,31 +487,25 @@ class TodayRepository implements TodayRepositoryInterface {
 
   @override
   Future<TodayLogSummary> getTodayLogSummary() async {
-    final tzOffset = DateTime.now().timeZoneOffset.inMinutes;
-    final response = await _api.get(
-      '/api/v1/quick-log/summary/today',
-      queryParameters: {'tz_offset': tzOffset},
-    );
+    final response = await _api.get('/api/v1/today/summary');
     final data = response.data as Map<String, dynamic>;
-    final loggedTypes = (data['logged_types'] as List<dynamic>? ?? [])
-        .map((e) => e as String)
-        .toSet();
-    final rawValues =
-        (data['latest_values'] as Map<String, dynamic>?) ?? {};
+    final metrics = (data['metrics'] as List<dynamic>? ?? [])
+        .cast<Map<String, dynamic>>();
+    final loggedTypes =
+        metrics.map((m) => m['metric_type'] as String).toSet();
+    final latestValues = <String, dynamic>{
+      for (final m in metrics) m['metric_type'] as String: m['value'],
+    };
     return TodayLogSummary(
       loggedTypes: loggedTypes,
-      latestValues: rawValues,
+      latestValues: latestValues,
     );
   }
 
   @override
   Future<Set<String>> getUserLoggedTypes() async {
-    final response =
-        await _api.get('/api/v1/quick-log/my-metric-types');
-    final data = response.data as Map<String, dynamic>;
-    return (data['metric_types'] as List<dynamic>? ?? [])
-        .map((e) => e as String)
-        .toSet();
+    final summary = await getTodayLogSummary();
+    return summary.loggedTypes;
   }
 
   // ── Log Submission ─────────────────────────────────────────────────────────
@@ -412,17 +520,22 @@ class TodayRepository implements TodayRepositoryInterface {
     List<String> factors = const [],
     String? notes,
   }) async {
-    await _api.post('/api/v1/quick-log/sleep', data: {
-      'bedtime': bedtime.toUtc().toIso8601String(),
-      'wake_time': wakeTime.toUtc().toIso8601String(),
-      'duration_minutes': durationMinutes,
-      'quality_rating': ?qualityRating,
-      'interruptions': ?interruptions,
-      if (factors.isNotEmpty) 'factors': factors,
-      'notes': ?notes,
-      'source': 'manual',
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    await submitSession(
+      sessionType: 'sleep',
+      source: 'manual',
+      recordedAt: bedtime,
+      metrics: [
+        SessionMetricPayload(
+            metricType: 'sleep_duration',
+            value: durationMinutes.toDouble(),
+            unit: 'min'),
+        if (qualityRating != null)
+          SessionMetricPayload(
+              metricType: 'sleep_quality',
+              value: qualityRating.toDouble(),
+              unit: 'score'),
+      ],
+    );
   }
 
   @override
@@ -434,16 +547,26 @@ class TodayRepository implements TodayRepositoryInterface {
     String? effortLevel,
     String? notes,
   }) async {
-    await _api.post('/api/v1/quick-log/run', data: {
-      'activity_type': activityType,
-      'distance_km': distanceKm,
-      'duration_seconds': durationSeconds,
-      'avg_pace_seconds_per_km': ?avgPaceSecondsPerKm,
-      'effort_level': ?effortLevel,
-      'notes': ?notes,
-      'source': 'manual',
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    await submitSession(
+      sessionType: activityType,
+      source: 'manual',
+      recordedAt: DateTime.now().subtract(Duration(seconds: durationSeconds)),
+      metrics: [
+        SessionMetricPayload(
+            metricType: 'distance',
+            value: distanceKm * 1000,
+            unit: 'm'),
+        SessionMetricPayload(
+            metricType: 'exercise_minutes',
+            value: (durationSeconds / 60).roundToDouble(),
+            unit: 'min'),
+        if (avgPaceSecondsPerKm != null)
+          SessionMetricPayload(
+              metricType: 'running_pace',
+              value: avgPaceSecondsPerKm.toDouble(),
+              unit: 's/km'),
+      ],
+    );
   }
 
   @override
@@ -456,16 +579,22 @@ class TodayRepository implements TodayRepositoryInterface {
     List<String> tags = const [],
     String? notes,
   }) async {
-    await _api.post('/api/v1/quick-log/meal', data: {
-      'meal_type': mealType,
-      'quick_mode': quickMode,
-      'description': ?description,
-      'calories_kcal': ?caloriesKcal,
-      if (feelChips.isNotEmpty) 'feel_chips': feelChips,
-      if (tags.isNotEmpty) 'tags': tags,
-      'notes': ?notes,
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    if (caloriesKcal != null) {
+      await submitIngest(
+        metricType: 'calories',
+        value: caloriesKcal.toDouble(),
+        unit: 'kcal',
+        source: 'manual',
+        recordedAt: DateTime.now(),
+        metadata: {
+          'meal_type': mealType,
+          if (description != null) 'description': description,
+          if (feelChips.isNotEmpty) 'feel_chips': feelChips,
+          if (tags.isNotEmpty) 'tags': tags,
+          if (notes != null) 'notes': notes,
+        },
+      );
+    }
   }
 
   @override
@@ -473,11 +602,17 @@ class TodayRepository implements TodayRepositoryInterface {
     required List<String> takenIds,
     String? notes,
   }) async {
-    await _api.post('/api/v1/quick-log/supplements', data: {
-      'taken_supplement_ids': takenIds,
-      'notes': ?notes,
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    // Log each supplement as an individual event
+    for (final id in takenIds) {
+      await submitIngest(
+        metricType: 'supplement_taken',
+        value: 1.0,
+        unit: 'dose',
+        source: 'manual',
+        recordedAt: DateTime.now(),
+        metadata: {'supplement_id': id, if (notes != null) 'notes': notes},
+      );
+    }
   }
 
   @override
@@ -488,14 +623,20 @@ class TodayRepository implements TodayRepositoryInterface {
     String? timing,
     String? notes,
   }) async {
-    await _api.post('/api/v1/quick-log/symptom', data: {
-      'body_areas': bodyAreas,
-      'severity': severity,
-      'symptom_type': ?symptomType,
-      'timing': ?timing,
-      'notes': ?notes,
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    await submitIngest(
+      metricType: 'symptom',
+      value: _severityToValue(severity),
+      unit: 'severity',
+      source: 'manual',
+      recordedAt: DateTime.now(),
+      metadata: {
+        'body_areas': bodyAreas,
+        'severity': severity,
+        if (symptomType != null) 'symptom_type': symptomType,
+        if (timing != null) 'timing': timing,
+        if (notes != null) 'notes': notes,
+      },
+    );
   }
 
   @override
@@ -504,12 +645,13 @@ class TodayRepository implements TodayRepositoryInterface {
     String mode = 'add',
     String source = 'manual',
   }) async {
-    await _api.post('/api/v1/quick-log/steps', data: {
-      'steps': steps,
-      'mode': mode,
-      'source': source,
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    await submitIngest(
+      metricType: 'steps',
+      value: steps.toDouble(),
+      unit: 'steps',
+      source: source,
+      recordedAt: DateTime.now(),
+    );
   }
 
   @override
@@ -517,11 +659,14 @@ class TodayRepository implements TodayRepositoryInterface {
     required double amountMl,
     String? vesselKey,
   }) async {
-    await _api.post('/api/v1/quick-log/water', data: {
-      'amount_ml': amountMl,
-      'vessel_key': ?vesselKey,
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    await submitIngest(
+      metricType: 'water_ml',
+      value: amountMl,
+      unit: 'mL',
+      source: 'manual',
+      recordedAt: DateTime.now(),
+      metadata: vesselKey != null ? {'vessel_key': vesselKey} : null,
+    );
   }
 
   @override
@@ -531,70 +676,103 @@ class TodayRepository implements TodayRepositoryInterface {
     double? stress,
     String? notes,
   }) async {
-    await _api.post('/api/v1/quick-log/wellness', data: {
-      'mood': ?mood,
-      'energy': ?energy,
-      'stress': ?stress,
-      'notes': ?notes,
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    final now = DateTime.now();
+    if (mood != null) {
+      await submitIngest(
+          metricType: 'mood',
+          value: mood,
+          unit: '/10',
+          source: 'manual',
+          recordedAt: now);
+    }
+    if (energy != null) {
+      await submitIngest(
+          metricType: 'energy',
+          value: energy,
+          unit: '/10',
+          source: 'manual',
+          recordedAt: now);
+    }
+    if (stress != null) {
+      await submitIngest(
+          metricType: 'stress',
+          value: stress,
+          unit: '/100',
+          source: 'manual',
+          recordedAt: now);
+    }
   }
 
   @override
   Future<void> logWeight({required double valueKg}) async {
-    await _api.post('/api/v1/quick-log/weight', data: {
-      'value_kg': valueKg,
-      'logged_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    await submitIngest(
+      metricType: 'weight_kg',
+      value: valueKg,
+      unit: 'kg',
+      source: 'manual',
+      recordedAt: DateTime.now(),
+    );
   }
 
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
     if (types.isEmpty) return const {};
-    final typesParam = types.join(',');
-    final response = await _api.get(
-      '/api/v1/quick-log/latest',
-      queryParameters: {'types': typesParam},
+    final summary = await getTodayLogSummary();
+    return Map.fromEntries(
+      summary.latestValues.entries.where((e) => types.contains(e.key)),
     );
-    return (response.data as Map<String, dynamic>?) ?? const {};
   }
 
   // ── Supplements List ───────────────────────────────────────────────────────
 
   @override
   Future<List<SupplementEntry>> getSupplementsList() async {
-    final response = await _api.get('/api/v1/quick-log/user/supplements-list');
-    final data = response.data as Map<String, dynamic>;
-    final items = (data['supplements'] as List<dynamic>?) ?? [];
-    return items.map((item) => SupplementEntry(
-      id: item['id'] as String,
-      name: item['name'] as String,
-      dose: item['dose'] as String?,
-      timing: item['timing'] as String?,
-    )).toList();
+    final response = await _api.get('/api/v1/supplements');
+    final list = response.data['supplements'] as List<dynamic>? ?? [];
+    return list
+        .map((e) => SupplementEntry(
+              id: e['id'] as String,
+              name: e['name'] as String,
+              dose: e['dose'] as String?,
+              timing: e['timing'] as String?,
+            ))
+        .toList();
   }
 
   @override
   Future<List<SupplementEntry>> updateSupplementsList(
       List<SupplementEntry> supplements) async {
-    final response = await _api.post(
-      '/api/v1/quick-log/user/supplements-list',
-      data: {
-        'supplements': supplements.map((s) => {
-          'name': s.name,
-          'dose': ?s.dose,
-          'timing': ?s.timing,
-        }).toList(),
-      },
-    );
-    final data = response.data as Map<String, dynamic>;
-    final items = (data['supplements'] as List<dynamic>?) ?? [];
-    return items.map((item) => SupplementEntry(
-      id: item['id'] as String,
-      name: item['name'] as String,
-      dose: item['dose'] as String?,
-      timing: item['timing'] as String?,
-    )).toList();
+    final response = await _api.post('/api/v1/supplements', data: {
+      'supplements': supplements
+          .map((s) => {
+                'name': s.name,
+                if (s.dose != null) 'dose': s.dose,
+                if (s.timing != null) 'timing': s.timing,
+              })
+          .toList(),
+    });
+    final list = response.data['supplements'] as List<dynamic>? ?? [];
+    return list
+        .map((e) => SupplementEntry(
+              id: e['id'] as String,
+              name: e['name'] as String,
+              dose: e['dose'] as String?,
+              timing: e['timing'] as String?,
+            ))
+        .toList();
+  }
+
+  static double _severityToValue(String severity) {
+    switch (severity) {
+      case 'mild':
+        return 1.0;
+      case 'moderate':
+        return 2.0;
+      case 'severe':
+        return 3.0;
+      default:
+        return 1.0;
+    }
   }
 }
 

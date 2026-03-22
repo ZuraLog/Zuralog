@@ -1,7 +1,7 @@
 # Zuralog — Technical Architecture
 
-**Version:** 2.0  
-**Last Updated:** 2026-03-01  
+**Version:** 3.0
+**Last Updated:** 2026-03-22  
 **Status:** Living Document
 
 ---
@@ -93,14 +93,17 @@ cloud-brain/
 │   ├── api/v1/              # REST API routes
 │   │   ├── auth.py          # Supabase auth integration
 │   │   ├── chat.py          # Chat endpoint (SSE streaming)
-│   │   ├── health_ingest.py # Push health data from Edge Agent
+│   │   ├── ingest_routes.py    # Unified event ingest (single, session, bulk)
+│   │   ├── today_routes.py    # Today summary, timeline, goals
+│   │   ├── coach_routes.py    # AI coach context
+│   │   ├── supplements_routes.py # Supplement list management
 │   │   ├── integrations.py  # OAuth orchestration (all providers)
 │   │   ├── strava_webhooks.py   # Strava webhook handler
 │   │   ├── fitbit_routes.py     # Fitbit OAuth + status endpoints
 │   │   ├── fitbit_webhooks.py   # Fitbit webhook handler
 │   │   ├── oura_routes.py       # Oura OAuth + status endpoints
 │   │   ├── oura_webhooks.py     # Oura webhook handler (per-app subscription, 90-day renewal)
-│   │   ├── analytics.py     # Correlation engine endpoints
+│   │   ├── analytics.py     # Data tab dashboard, categories, metrics
 │   │   ├── users.py         # User profile management
 │   │   ├── devices.py       # Device registration (FCM tokens)
 │   │   └── dev.py           # Dev-only debug endpoints
@@ -123,14 +126,16 @@ cloud-brain/
 │   │   └── usage_tracker.py         # API usage tracking per user tier
 │   │
 │   ├── models/              # SQLAlchemy ORM models
-│   │   ├── user.py          # User (Supabase-linked)
-│   │   ├── conversation.py  # Chat conversation + messages
-│   │   ├── health_data.py   # UnifiedActivity, SleepRecord, HealthMetric
-│   │   ├── integration.py   # OAuth integration per provider
-│   │   ├── daily_metrics.py # Aggregated daily health summaries
-│   │   ├── user_goal.py     # User fitness goals
-│   │   ├── user_device.py   # FCM device tokens
-│   │   └── usage_log.py     # API usage logs for billing
+│   │   ├── health_event.py      # HealthEvent (append-only event log)
+│   │   ├── activity_session.py  # ActivitySession (workout/sleep sessions)
+│   │   ├── daily_summary.py     # DailySummary (pre-aggregated read cache)
+│   │   ├── metric_definition.py # MetricDefinition (dynamic metric registry)
+│   │   ├── user.py              # User (Supabase-linked)
+│   │   ├── conversation.py      # Chat conversation + messages
+│   │   ├── integration.py       # OAuth integration per provider
+│   │   ├── user_goal.py         # User fitness goals
+│   │   ├── user_device.py       # FCM device tokens
+│   │   └── usage_log.py         # API usage logs for billing
 │   │
 │   ├── analytics/           # AI reasoning engine
 │   │   └── (correlation, trend detection, insight generation)
@@ -252,9 +257,9 @@ Native Observer fires (HKObserverQuery / WorkManager)
   ↓
 Native bridge reads new records
   ↓
-POST /api/v1/health/ingest (with JWT)
+POST /api/v1/ingest/bulk (with JWT)
   ↓
-Cloud Brain processes and stores data
+Cloud Brain writes to health_events + recomputes daily_summaries
   ↓
 FCM push notification to user (optional insight)
 ```
@@ -353,9 +358,46 @@ Strava fires webhook → POST /api/v1/webhooks/strava
   ↓
 Celery task: sync_strava_activity_task
   ↓
-Data stored in UnifiedActivity table
+Data stored in health_events + daily_summaries tables
   ↓
 FCM push: "Great run! 5.2K in 28 min. You've hit your weekly goal."
+```
+
+### 5.4 CQRS Health Data Flow
+
+The health data layer follows a **CQRS (Command Query Responsibility Segregation)** pattern, separating the write path from the read path.
+
+**Write Path — `health_events` (append-only log):**
+- All incoming health data is written to the `health_events` table as immutable records.
+- Two event classes exist:
+  - **`point_in_time`** — discrete events from manual logs, workouts, supplement intake, and similar one-off actions.
+  - **`daily_aggregate`** — device-level daily totals pushed from Apple Health / Health Connect (e.g., total steps, total calories). These are upsertable: a second sync for the same metric + date replaces the previous value.
+- Writes enter via `POST /api/v1/ingest/single`, `POST /api/v1/ingest/session`, or `POST /api/v1/ingest/bulk`.
+
+**Read Cache — `daily_summaries` (materialized view):**
+- `daily_summaries` is a pre-aggregated read cache, recomputed from `health_events` whenever new data arrives.
+- Both the **Today Tab** (`today_routes.py`) and the **Data Tab** (`analytics.py`) query `daily_summaries` for fast reads, avoiding expensive event-level aggregation at query time.
+
+**Metric Registry — `metric_definitions`:**
+- A dynamic registry of 38+ metric types (steps, heart_rate, sleep_duration, body_weight, etc.).
+- Each definition specifies the aggregation rule used when rolling up events into daily summaries: **sum** (steps, calories), **avg** (heart rate, HRV), or **latest** (body weight, body fat).
+- New metric types can be added to the registry without code changes.
+
+```
+Edge Agent / Webhook                Cloud Brain
+─────────────────────              ─────────────────────────────────
+  POST /ingest/bulk   ──────────→  health_events (append-only)
+                                        │
+                                        ▼
+                                   Recompute aggregation
+                                        │
+                                        ▼
+                                   daily_summaries (read cache)
+                                        │
+                       ┌────────────────┤
+                       ▼                ▼
+                  Today Tab        Data Tab
+                (today_routes)    (analytics)
 ```
 
 ---

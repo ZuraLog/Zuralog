@@ -44,6 +44,7 @@ from app.api.deps import get_authenticated_user_id
 from app.database import async_session, get_db
 from app.models.user_goal import GoalPeriod, UserGoal
 from app.services.cache_service import cached
+from app.utils.user_date import get_user_local_date
 
 
 # ── Module-level formatting helpers ──────────────────────────────────────────
@@ -67,67 +68,26 @@ def _trend(rows: list[tuple[str, float]], days: int = 7) -> list[float] | None:
     return vals if len(vals) >= 2 else None
 
 
+
+
 def _fmt_steps(v: float) -> str:
     return f"{int(v):,}"
 
 
 def _fmt_hours(v: float) -> str:
-    h = int(v)
-    m = round((v - h) * 60)
+    """Format a duration stored in *minutes* as 'Xh YYm'."""
+    total_min = round(v)
+    h, m = divmod(total_min, 60)
     return f"{h}h {m:02d}m"
 
 
 # ── Per-category parallel fetch helpers ──────────────────────────────────────
 
 # Order of categories in dashboard_summary — must match the asyncio.gather call order.
-_CATEGORY_ORDER: list[str] = ["activity", "sleep", "heart", "body", "vitals", "nutrition", "wellness", "mobility"]
-
-# ── category_detail and metric_detail dynamic SQL allowlists ─────────────────
-# Shared by both endpoints — add new columns/tables here only.
-ALLOWED_COLUMNS: frozenset[str] = frozenset(
-    {
-        "steps",
-        "active_calories",
-        "distance_meters",
-        "resting_heart_rate",
-        "hrv_ms",
-        "heart_rate_avg",
-        "body_fat_percentage",
-        "oxygen_saturation",
-        "respiratory_rate",
-        "vo2_max",
-        "flights_climbed",
-        "hours",
-        "quality_score",
-        "weight_kg",
-        "calories",
-        "protein_grams",
-        "carbs_grams",
-        "fat_grams",
-    }
-)
-ALLOWED_TABLES: frozenset[str] = frozenset(
-    {
-        "daily_health_metrics",
-        "sleep_records",
-        "weight_measurements",
-        "nutrition_entries",
-    }
-)
-
-# Allowlist of permitted (table, column) pairs — prevents SQL injection
-_ALLOWED_CATEGORY_QUERIES: frozenset[tuple[str, str]] = frozenset(
-    {
-        ("daily_health_metrics", "steps"),
-        ("sleep_records", "hours"),
-        ("daily_health_metrics", "resting_heart_rate"),
-        ("weight_measurements", "weight_kg"),
-        ("daily_health_metrics", "oxygen_saturation"),
-        ("nutrition_entries", "calories"),
-        ("daily_health_metrics", "hrv_ms"),
-        ("daily_health_metrics", "flights_climbed"),
-    }
-)
+_CATEGORY_ORDER: list[str] = [
+    "activity", "sleep", "heart", "body", "vitals",
+    "nutrition", "wellness", "mobility", "cycle", "environment",
+]
 
 
 async def _fetch_category_data(
@@ -136,41 +96,19 @@ async def _fetch_category_data(
     day7_ago_iso: str,
     *,
     category: str,
-    table: str,
-    column: str,
+    metric_type: str,
     unit: str | None,
     fmt: Callable[[float], str],
 ) -> "CategorySummaryItem":
-    """Fetch 14-day history for one health category and return a summary card.
-
-    Args:
-        user_id: Authenticated user ID.
-        day14_ago_iso: ISO date string for 14 days ago.
-        day7_ago_iso: ISO date string for 7 days ago.
-        category: Category name (e.g. "activity").
-        table: Database table name — must be in _ALLOWED_CATEGORY_QUERIES.
-        column: Column name to query — must be in _ALLOWED_CATEGORY_QUERIES.
-        unit: Unit label for the primary value (e.g. "steps", "bpm RHR"). None for sleep.
-        fmt: Callable that formats the primary float value into a display string.
-
-    Returns:
-        CategorySummaryItem with data if rows exist, has_data=False otherwise.
-
-    Raises:
-        ValueError: If (table, column) pair is not in the allowlist.
-    """
-    if (table, column) not in _ALLOWED_CATEGORY_QUERIES:
-        raise ValueError(
-            f"Query against ({table!r}, {column!r}) is not permitted. Add it to _ALLOWED_CATEGORY_QUERIES to enable it."
-        )
+    """Fetch 14-day history for one health category from daily_summaries."""
     async with async_session() as db:
         result = await db.execute(
             sql_text(
-                f"SELECT date, {column} FROM {table} "  # noqa: S608  (table/column are allowlisted above)
-                f"WHERE user_id = :uid AND date >= :d14 AND {column} IS NOT NULL "
+                "SELECT date, value FROM daily_summaries "
+                "WHERE user_id = :uid AND metric_type = :mt AND date >= :d14 "
                 "ORDER BY date"
             ),
-            {"uid": user_id, "d14": day14_ago_iso},
+            {"uid": user_id, "mt": metric_type, "d14": day14_ago_iso},
         )
         rows = [(r[0], float(r[1])) for r in result.fetchall()]
     recent_rows = [(d, v) for d, v in rows if d >= day7_ago_iso]
@@ -203,6 +141,7 @@ router = APIRouter(
 _analytics_service = AnalyticsService()
 
 
+@limiter.limit("60/minute")
 @router.get("/daily-summary", response_model=DailySummaryResponse)
 @cached(prefix="analytics.daily_summary", ttl=300, key_params=["user_id", "date_str"])
 async def daily_summary(
@@ -239,12 +178,13 @@ async def daily_summary(
                 detail=f"Invalid date format: '{date_str}'. Use YYYY-MM-DD.",
             ) from exc
     else:
-        target_date = date.today()
+        target_date = await get_user_local_date(db, user_id)
 
     result = await _analytics_service.get_daily_summary(db, user_id, target_date)
     return DailySummaryResponse(**result)
 
 
+@limiter.limit("60/minute")
 @router.get("/weekly-trends", response_model=WeeklyTrendsResponse)
 @cached(prefix="analytics.weekly_trends", ttl=300, key_params=["user_id"])
 async def weekly_trends(
@@ -268,6 +208,7 @@ async def weekly_trends(
     return WeeklyTrendsResponse(**result)
 
 
+@limiter.limit("60/minute")
 @router.get("/correlation/sleep-activity", response_model=CorrelationResponse)
 @cached(prefix="analytics.correlation", ttl=900, key_params=["user_id", "days"])
 async def sleep_activity_correlation(
@@ -301,6 +242,7 @@ async def sleep_activity_correlation(
     return CorrelationResponse(**result)
 
 
+@limiter.limit("60/minute")
 @router.get("/trend/{metric}", response_model=TrendResponse)
 @cached(prefix="analytics.trend", ttl=300, key_params=["user_id", "metric"])
 async def metric_trend(
@@ -432,6 +374,7 @@ async def create_or_update_goal(
     return GoalProgressResponse(**progress)
 
 
+@limiter.limit("60/minute")
 @router.get("/dashboard-insight", response_model=DashboardInsightResponse)
 @cached(prefix="analytics.dashboard_insight", ttl=300, key_params=["user_id"])
 async def dashboard_insight(
@@ -473,9 +416,9 @@ async def dashboard_insight(
     )
 
 
-@cached(prefix="analytics.dashboard_summary", ttl=300, key_params=["user_id"])
 @limiter.limit("60/minute")
 @router.get("/dashboard-summary", response_model=DashboardSummaryResponse)
+@cached(prefix="analytics.dashboard_summary", ttl=300, key_params=["user_id"])
 async def dashboard_summary(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
@@ -492,7 +435,8 @@ async def dashboard_summary(
     Returns:
         DashboardSummaryResponse with category summaries and visible order.
     """
-    today = date.today()
+    async with async_session() as temp_db:
+        today = await get_user_local_date(temp_db, user_id)
     day14_ago_iso = (today - timedelta(days=14)).isoformat()
     day7_ago_iso = (today - timedelta(days=7)).isoformat()
 
@@ -502,8 +446,7 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="activity",
-            table="daily_health_metrics",
-            column="steps",
+            metric_type="steps",
             unit="steps",
             fmt=_fmt_steps,
         ),
@@ -512,8 +455,7 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="sleep",
-            table="sleep_records",
-            column="hours",
+            metric_type="sleep_duration",
             unit=None,
             fmt=_fmt_hours,
         ),
@@ -522,8 +464,7 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="heart",
-            table="daily_health_metrics",
-            column="resting_heart_rate",
+            metric_type="resting_heart_rate",
             unit="bpm RHR",
             fmt=lambda v: str(int(v)),
         ),
@@ -532,8 +473,7 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="body",
-            table="weight_measurements",
-            column="weight_kg",
+            metric_type="weight_kg",
             unit="kg",
             fmt=lambda v: f"{v:.1f}",
         ),
@@ -542,8 +482,7 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="vitals",
-            table="daily_health_metrics",
-            column="oxygen_saturation",
+            metric_type="spo2",
             unit="SpO₂",
             fmt=lambda v: f"{v:.0f}%",
         ),
@@ -552,8 +491,7 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="nutrition",
-            table="nutrition_entries",
-            column="calories",
+            metric_type="calories",
             unit="kcal",
             fmt=lambda v: f"{int(v):,}",
         ),
@@ -562,9 +500,8 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="wellness",
-            table="daily_health_metrics",
-            column="hrv_ms",
-            unit="ms HRV",
+            metric_type="mood",
+            unit="/10 mood",
             fmt=lambda v: f"{v:.0f}",
         ),
         _fetch_category_data(
@@ -572,10 +509,27 @@ async def dashboard_summary(
             day14_ago_iso,
             day7_ago_iso,
             category="mobility",
-            table="daily_health_metrics",
-            column="flights_climbed",
-            unit="flights",
+            metric_type="floors_climbed",
+            unit="floors",
             fmt=lambda v: str(int(v)),
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="cycle",
+            metric_type="cycle_day",
+            unit="day",
+            fmt=lambda v: f"Day {int(v)}",
+        ),
+        _fetch_category_data(
+            user_id,
+            day14_ago_iso,
+            day7_ago_iso,
+            category="environment",
+            metric_type="noise_exposure",
+            unit="dB",
+            fmt=lambda v: f"{v:.0f}",
         ),
         return_exceptions=True,
     )
@@ -592,15 +546,13 @@ async def dashboard_summary(
             categories.append(CategorySummaryItem(category=category_name, has_data=False))
         else:
             categories.append(cast(CategorySummaryItem, result))
-    # ── Cycle & Environment — no data tables yet ──────────────────────────────
-    categories.append(CategorySummaryItem(category="cycle", has_data=False))
-    categories.append(CategorySummaryItem(category="environment", has_data=False))
 
     visible_order = [c.category for c in categories if c.has_data]
 
     return DashboardSummaryResponse(categories=categories, visible_order=visible_order)
 
 
+@limiter.limit("60/minute")
 @router.get("/category", response_model=CategoryDetailResponse)
 async def category_detail(
     request: Request,
@@ -641,7 +593,8 @@ async def category_detail(
 
     days_map = {"7D": 7, "30D": 30, "90D": 90}
     days = days_map[time_range.upper()]
-    since = (date.today() - timedelta(days=days)).isoformat()
+    today = await get_user_local_date(db, user_id)
+    since = (today - timedelta(days=days)).isoformat()
 
     def _make_series(
         metric_id: str,
@@ -682,179 +635,122 @@ async def category_detail(
 
     metrics: list[MetricSeriesItem] = []
 
+    async def _query_daily_summaries(metric_type: str) -> list[tuple]:
+        """Query a single metric_type from daily_summaries."""
+        r = await db.execute(
+            sql_text(
+                "SELECT date, value FROM daily_summaries "
+                "WHERE user_id = :uid AND metric_type = :mt AND date >= :since "
+                "ORDER BY date"
+            ),
+            {"uid": user_id, "mt": metric_type, "since": since},
+        )
+        return [(row[0], float(row[1])) for row in r.fetchall()]
+
     if category == "activity":
-        for col, mid, dn, unit in [
-            ("steps", "steps", "Steps", "steps"),
-            ("active_calories", "active_calories", "Active Calories", "kcal"),
-            ("distance_meters", "distance", "Distance", "m"),
+        for mt, mid, dn, unit in [
+            ("steps",           "steps",            "Steps",            "steps"),
+            ("active_calories", "active_calories",  "Active Calories",  "kcal"),
+            ("distance",        "distance",         "Distance",         "m"),
+            ("exercise_minutes","exercise_minutes",  "Exercise Minutes", "min"),
+            ("walking_speed",   "walking_speed",    "Walking Speed",    "m/s"),
+            ("running_pace",    "running_pace",     "Running Pace",     "s/km"),
+            ("floors_climbed",  "floors_climbed",   "Floors Climbed",   "floors"),
         ]:
-            if col not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unknown column: {col!r}",
-                )
-            result = await db.execute(
-                sql_text(
-                    f"SELECT date, {col} FROM daily_health_metrics "
-                    "WHERE user_id = :uid AND date >= :since AND "
-                    f"{col} IS NOT NULL ORDER BY date"
-                ),
-                {"uid": user_id, "since": since},
-            )
-            rows = [(r[0], float(r[1])) for r in result.fetchall()]
+            rows = await _query_daily_summaries(mt)
             if rows:
                 metrics.append(_make_series(mid, dn, unit, rows))
 
     elif category == "sleep":
-        result = await db.execute(
-            sql_text(
-                "SELECT date, hours FROM sleep_records "
-                "WHERE user_id = :uid AND date >= :since AND hours IS NOT NULL ORDER BY date"
-            ),
-            {"uid": user_id, "since": since},
-        )
-        rows = [(r[0], float(r[1])) for r in result.fetchall()]
-        if rows:
-            metrics.append(_make_series("sleep_duration", "Sleep Duration", "hours", rows))
-        result = await db.execute(
-            sql_text(
-                "SELECT date, quality_score FROM sleep_records "
-                "WHERE user_id = :uid AND date >= :since AND quality_score IS NOT NULL ORDER BY date"
-            ),
-            {"uid": user_id, "since": since},
-        )
-        rows = [(r[0], float(r[1])) for r in result.fetchall()]
-        if rows:
-            metrics.append(_make_series("sleep_quality", "Sleep Quality", "score", rows))
+        for mt, mid, dn, unit in [
+            ("sleep_duration",      "sleep_duration",   "Sleep Duration",   "min"),
+            ("deep_sleep_minutes",  "sleep_stages",     "Deep Sleep",       "min"),
+            ("rem_sleep_minutes",   "rem_sleep",        "REM Sleep",        "min"),
+            ("sleep_efficiency",    "sleep_efficiency", "Sleep Efficiency", "%"),
+            ("sleep_quality",       "sleep_quality",    "Sleep Quality",    "score"),
+        ]:
+            rows = await _query_daily_summaries(mt)
+            if rows:
+                metrics.append(_make_series(mid, dn, unit, rows))
 
     elif category == "heart":
-        for col, mid, dn, unit in [
-            ("resting_heart_rate", "heart_rate_resting", "Resting Heart Rate", "bpm"),
-            ("hrv_ms", "hrv", "Heart Rate Variability", "ms"),
-            ("heart_rate_avg", "heart_rate_avg", "Avg Heart Rate", "bpm"),
+        for mt, mid, dn, unit in [
+            ("resting_heart_rate", "resting_heart_rate", "Resting Heart Rate",    "bpm"),
+            ("hrv_ms",             "hrv",                "HRV",                   "ms"),
+            ("vo2_max",            "vo2_max",            "VO₂ Max",               "mL/kg/min"),
+            ("respiratory_rate",   "respiratory_rate",   "Respiratory Rate",      "brpm"),
+            ("heart_rate_avg",     "heart_rate_avg",     "Avg Heart Rate",        "bpm"),
         ]:
-            if col not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unknown column: {col!r}",
-                )
-            result = await db.execute(
-                sql_text(
-                    f"SELECT date, {col} FROM daily_health_metrics "
-                    "WHERE user_id = :uid AND date >= :since AND "
-                    f"{col} IS NOT NULL ORDER BY date"
-                ),
-                {"uid": user_id, "since": since},
-            )
-            rows = [(r[0], float(r[1])) for r in result.fetchall()]
+            rows = await _query_daily_summaries(mt)
             if rows:
                 metrics.append(_make_series(mid, dn, unit, rows))
 
     elif category == "body":
-        result = await db.execute(
-            sql_text(
-                "SELECT date, weight_kg FROM weight_measurements "
-                "WHERE user_id = :uid AND date >= :since AND weight_kg IS NOT NULL ORDER BY date"
-            ),
-            {"uid": user_id, "since": since},
-        )
-        rows = [(r[0], float(r[1])) for r in result.fetchall()]
-        if rows:
-            metrics.append(_make_series("weight", "Weight", "kg", rows))
-        result = await db.execute(
-            sql_text(
-                "SELECT date, body_fat_percentage FROM daily_health_metrics "
-                "WHERE user_id = :uid AND date >= :since AND body_fat_percentage IS NOT NULL ORDER BY date"
-            ),
-            {"uid": user_id, "since": since},
-        )
-        rows = [(r[0], float(r[1])) for r in result.fetchall()]
-        if rows:
-            metrics.append(_make_series("body_fat", "Body Fat", "%", rows))
+        for mt, mid, dn, unit in [
+            ("weight_kg",           "weight",            "Weight",            "kg"),
+            ("muscle_mass_kg",      "muscle_mass",       "Muscle Mass",       "kg"),
+            ("body_fat_percentage", "body_fat",          "Body Fat",          "%"),
+            ("body_temperature",    "body_temperature",  "Body Temperature",  "°C"),
+            ("wrist_temperature",   "wrist_temperature", "Wrist Temperature", "°C"),
+        ]:
+            rows = await _query_daily_summaries(mt)
+            if rows:
+                metrics.append(_make_series(mid, dn, unit, rows))
 
     elif category == "vitals":
-        for col, mid, dn, unit in [
-            ("oxygen_saturation", "spo2", "Blood Oxygen", "%"),
-            ("respiratory_rate", "respiratory_rate", "Respiratory Rate", "brpm"),
+        for mt, mid, dn, unit in [
+            ("spo2",          "spo2",          "Blood Oxygen",  "%"),
+            ("blood_glucose", "blood_glucose",  "Blood Glucose", "mmol/L"),
         ]:
-            if col not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unknown column: {col!r}",
-                )
-            result = await db.execute(
-                sql_text(
-                    f"SELECT date, {col} FROM daily_health_metrics "
-                    "WHERE user_id = :uid AND date >= :since AND "
-                    f"{col} IS NOT NULL ORDER BY date"
-                ),
-                {"uid": user_id, "since": since},
-            )
-            rows = [(r[0], float(r[1])) for r in result.fetchall()]
+            rows = await _query_daily_summaries(mt)
             if rows:
                 metrics.append(_make_series(mid, dn, unit, rows))
 
     elif category == "nutrition":
-        for col, mid, dn, unit in [
-            ("calories", "calories", "Calories", "kcal"),
-            ("protein_grams", "protein", "Protein", "g"),
-            ("carbs_grams", "carbs", "Carbohydrates", "g"),
-            ("fat_grams", "fat", "Fat", "g"),
+        for mt, mid, dn, unit in [
+            ("calories",      "calories", "Calories", "kcal"),
+            ("protein_grams", "protein",  "Protein",  "g"),
+            ("carbs_grams",   "macros",   "Carbs",    "g"),
+            ("fat_grams",     "fat",      "Fat",      "g"),
+            ("water_ml",      "water",    "Water",    "mL"),
         ]:
-            if col not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unknown column: {col!r}",
-                )
-            result = await db.execute(
-                sql_text(
-                    f"SELECT date, {col} FROM nutrition_entries "
-                    "WHERE user_id = :uid AND date >= :since AND "
-                    f"{col} IS NOT NULL ORDER BY date"
-                ),
-                {"uid": user_id, "since": since},
-            )
-            rows = [(r[0], float(r[1])) for r in result.fetchall()]
+            rows = await _query_daily_summaries(mt)
             if rows:
                 metrics.append(_make_series(mid, dn, unit, rows))
 
     elif category == "wellness":
-        for col, mid, dn, unit in [
-            ("hrv_ms", "hrv", "HRV", "ms"),
-            ("vo2_max", "vo2max", "VO₂ Max", "ml/kg/min"),
+        for mt, mid, dn, unit in [
+            ("mood",            "mood",            "Mood",            "/10"),
+            ("energy",          "energy",          "Energy",          "/10"),
+            ("stress",          "stress",          "Stress",          "/100"),
+            ("mindful_minutes", "mindful_minutes", "Mindful Minutes", "min"),
         ]:
-            if col not in ALLOWED_COLUMNS:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unknown column: {col!r}",
-                )
-            result = await db.execute(
-                sql_text(
-                    f"SELECT date, {col} FROM daily_health_metrics "
-                    "WHERE user_id = :uid AND date >= :since AND "
-                    f"{col} IS NOT NULL ORDER BY date"
-                ),
-                {"uid": user_id, "since": since},
-            )
-            rows = [(r[0], float(r[1])) for r in result.fetchall()]
+            rows = await _query_daily_summaries(mt)
             if rows:
                 metrics.append(_make_series(mid, dn, unit, rows))
 
     elif category == "mobility":
-        result = await db.execute(
-            sql_text(
-                "SELECT date, flights_climbed FROM daily_health_metrics "
-                "WHERE user_id = :uid AND date >= :since AND flights_climbed IS NOT NULL ORDER BY date"
-            ),
-            {"uid": user_id, "since": since},
-        )
-        rows = [(r[0], float(r[1])) for r in result.fetchall()]
-        if rows:
-            metrics.append(_make_series("flights_climbed", "Flights Climbed", "flights", rows))
+        for mt, mid, dn, unit in [
+            ("floors_climbed", "floors_climbed", "Floors Climbed", "floors"),
+            ("walking_speed",  "walking_speed",  "Walking Speed",  "m/s"),
+        ]:
+            rows = await _query_daily_summaries(mt)
+            if rows:
+                metrics.append(_make_series(mid, dn, unit, rows))
 
-    elif category in ("cycle", "environment"):
-        # No data tables yet — return empty
-        pass
+    elif category == "cycle":
+        rows = await _query_daily_summaries("cycle_day")
+        if rows:
+            metrics.append(_make_series("cycle", "Cycle", "day", rows))
+
+    elif category == "environment":
+        for mt, mid, dn, unit in [
+            ("noise_exposure", "environment", "Noise Exposure", "dB"),
+            ("uv_index",       "uv_index",   "UV Index",       "UV"),
+        ]:
+            rows = await _query_daily_summaries(mt)
+            if rows:
+                metrics.append(_make_series(mid, dn, unit, rows))
 
     else:
         raise HTTPException(status_code=400, detail="Invalid category")
@@ -866,6 +762,7 @@ async def category_detail(
     )
 
 
+@limiter.limit("60/minute")
 @router.get("/metric", response_model=MetricDetailResponse)
 async def metric_detail(
     request: Request,
@@ -905,82 +802,65 @@ async def metric_detail(
 
     days_map = {"7D": 7, "30D": 30, "90D": 90}
     days = days_map[time_range.upper()]
-    since = (date.today() - timedelta(days=days)).isoformat()
+    today = await get_user_local_date(db, user_id)
+    since = (today - timedelta(days=days)).isoformat()
 
-    # Map metric_id → (table, column, display_name, unit, source, category)
-    METRIC_MAP: dict[str, tuple[str, str, str, str, str, str]] = {
-        "steps": ("daily_health_metrics", "steps", "Steps", "steps", "apple_health", "activity"),
-        "active_calories": (
-            "daily_health_metrics",
-            "active_calories",
-            "Active Calories",
-            "kcal",
-            "apple_health",
-            "activity",
-        ),
-        "distance": ("daily_health_metrics", "distance_meters", "Distance", "m", "apple_health", "activity"),
-        "sleep_duration": ("sleep_records", "hours", "Sleep Duration", "hours", "apple_health", "sleep"),
-        "sleep_quality": ("sleep_records", "quality_score", "Sleep Quality", "score", "apple_health", "sleep"),
-        "heart_rate_resting": (
-            "daily_health_metrics",
-            "resting_heart_rate",
-            "Resting Heart Rate",
-            "bpm",
-            "apple_health",
-            "heart",
-        ),
-        "hrv": ("daily_health_metrics", "hrv_ms", "Heart Rate Variability", "ms", "apple_health", "heart"),
-        "heart_rate_avg": ("daily_health_metrics", "heart_rate_avg", "Avg Heart Rate", "bpm", "apple_health", "heart"),
-        "weight": ("weight_measurements", "weight_kg", "Weight", "kg", "apple_health", "body"),
-        "body_fat": ("daily_health_metrics", "body_fat_percentage", "Body Fat", "%", "apple_health", "body"),
-        "spo2": ("daily_health_metrics", "oxygen_saturation", "Blood Oxygen", "%", "apple_health", "vitals"),
-        "respiratory_rate": (
-            "daily_health_metrics",
-            "respiratory_rate",
-            "Respiratory Rate",
-            "brpm",
-            "apple_health",
-            "vitals",
-        ),
-        "calories": ("nutrition_entries", "calories", "Calories", "kcal", "apple_health", "nutrition"),
-        "protein": ("nutrition_entries", "protein_grams", "Protein", "g", "apple_health", "nutrition"),
-        "carbs": ("nutrition_entries", "carbs_grams", "Carbohydrates", "g", "apple_health", "nutrition"),
-        "fat": ("nutrition_entries", "fat_grams", "Fat", "g", "apple_health", "nutrition"),
-        "vo2max": ("daily_health_metrics", "vo2_max", "VO₂ Max", "ml/kg/min", "apple_health", "wellness"),
-        "flights_climbed": (
-            "daily_health_metrics",
-            "flights_climbed",
-            "Flights Climbed",
-            "flights",
-            "apple_health",
-            "mobility",
-        ),
+    # Map metric_id slug (matches Flutter TileId.metricSlug) →
+    #   (metric_type, display_name, unit, source, category)
+    METRIC_MAP: dict[str, tuple[str, str, str, str, str]] = {
+        # Activity
+        "steps":            ("steps",            "Steps",            "steps",       "apple_health", "activity"),
+        "active_calories":  ("active_calories",  "Active Calories",  "kcal",        "apple_health", "activity"),
+        "distance":         ("distance",         "Distance",         "m",           "apple_health", "activity"),
+        "exercise_minutes": ("exercise_minutes", "Exercise Minutes", "min",         "apple_health", "activity"),
+        "walking_speed":    ("walking_speed",    "Walking Speed",    "m/s",         "apple_health", "activity"),
+        "running_pace":     ("running_pace",     "Running Pace",     "s/km",        "apple_health", "activity"),
+        "floors_climbed":   ("floors_climbed",   "Floors Climbed",   "floors",      "apple_health", "activity"),
+        # Sleep
+        "sleep_duration":   ("sleep_duration",      "Sleep Duration",   "min",   "apple_health", "sleep"),
+        "sleep_stages":     ("deep_sleep_minutes",  "Sleep Stages",     "min deep","apple_health", "sleep"),
+        # Heart
+        "resting_heart_rate": ("resting_heart_rate", "Resting Heart Rate", "bpm",       "apple_health", "heart"),
+        "hrv":              ("hrv_ms",             "HRV",               "ms",        "apple_health", "heart"),
+        "vo2_max":          ("vo2_max",            "VO₂ Max",           "mL/kg/min", "apple_health", "heart"),
+        "respiratory_rate": ("respiratory_rate",   "Respiratory Rate",  "brpm",      "apple_health", "heart"),
+        # Body
+        "weight":               ("weight_kg",           "Weight",            "kg",  "apple_health", "body"),
+        "body_fat":             ("body_fat_percentage", "Body Fat",          "%",   "apple_health", "body"),
+        "body_temperature":     ("body_temperature",    "Body Temperature",  "°C",  "apple_health", "body"),
+        "wrist_temperature":    ("wrist_temperature",   "Wrist Temperature", "°C",  "apple_health", "body"),
+        # Vitals
+        "spo2":          ("spo2",          "Blood Oxygen",  "%",       "apple_health", "vitals"),
+        "blood_glucose": ("blood_glucose", "Blood Glucose", "mmol/L",  "apple_health", "vitals"),
+        # Nutrition
+        "calories": ("calories",      "Calories", "kcal", "apple_health", "nutrition"),
+        "water":    ("water_ml",      "Water",    "mL",   "apple_health", "nutrition"),
+        "macros":   ("carbs_grams",   "Macros",   "g",    "apple_health", "nutrition"),
+        # Wellness
+        "mood":            ("mood",            "Mood",            "/10", "apple_health", "wellness"),
+        "energy":          ("energy",          "Energy",          "/10", "apple_health", "wellness"),
+        "stress":          ("stress",          "Stress",          "/100","apple_health", "wellness"),
+        "mindful_minutes": ("mindful_minutes", "Mindful Minutes", "min", "apple_health", "wellness"),
+        # Mobility
+        "mobility": ("floors_climbed",   "Mobility",      "floors", "apple_health", "mobility"),
+        # Cycle
+        "cycle":       ("cycle_day",        "Cycle",         "day", "apple_health", "cycle"),
+        # Environment
+        "environment": ("noise_exposure",   "Environment",   "dB",  "apple_health", "environment"),
     }
 
     if metric_id not in METRIC_MAP:
-        raise HTTPException(status_code=404, detail="Invalid metric")
+        raise HTTPException(status_code=404, detail=f"Unknown metric: {metric_id!r}")
 
-    table, col, display_name, unit, source, category = METRIC_MAP[metric_id]
-
-    # HIGH-01: guard dynamic identifiers against the allowlists
-    if col not in ALLOWED_COLUMNS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown column: {col!r}",
-        )
-    if table not in ALLOWED_TABLES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown table: {table!r}",
-        )
+    metric_type, display_name, unit, source, category = METRIC_MAP[metric_id]
 
     result = await db.execute(
         sql_text(
-            f"SELECT date, {col} FROM {table} "
-            "WHERE user_id = :uid AND date >= :since AND "
-            f"{col} IS NOT NULL ORDER BY date"
+            "SELECT date, value FROM daily_summaries "
+            "WHERE user_id = :uid AND metric_type = :mt AND date >= :since "
+            "ORDER BY date"
         ),
-        {"uid": user_id, "since": since},
+        {"uid": user_id, "mt": metric_type, "since": since},
     )
     rows = [(r[0], float(r[1])) for r in result.fetchall()]
 

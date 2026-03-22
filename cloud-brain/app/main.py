@@ -32,6 +32,8 @@ from app.api.v1.analytics import router as analytics_router
 from app.api.v1.attachments import attachments_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.coach_routes import router as coach_router
+from app.api.v1.supplements_routes import router as supplements_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.emergency_card_routes import router as emergency_card_router
@@ -39,7 +41,7 @@ from app.api.v1.data_sources_routes import router as data_sources_router
 from app.api.v1.goal_routes import router as goals_router
 from app.api.v1.fitbit_routes import router as fitbit_router
 from app.api.v1.fitbit_webhooks import router as fitbit_webhook_router
-from app.api.v1.health_ingest import router as health_ingest_router
+from app.api.v1.ingest_routes import router as ingest_router, events_router
 from app.api.v1.health_score_history_routes import router as health_score_history_router
 from app.api.v1.health_score_routes import router as health_score_router
 from app.api.v1.insight_routes import router as insight_router
@@ -55,10 +57,10 @@ from app.api.v1.preferences_routes import router as preferences_router
 from app.api.v1.progress_routes import router as progress_router
 from app.api.v1.prompt_suggestions import router as prompt_suggestions_router
 from app.api.v1.quick_actions import router as quick_actions_router
-from app.api.v1.quick_log_routes import router as quick_log_router
 from app.api.v1.report_routes import router as report_router
 from app.api.v1.strava_webhooks import router as strava_webhook_router
 from app.api.v1.streak_routes import router as streak_router
+from app.api.v1.today_routes import router as today_router
 from app.api.v1.trends_routes import router as trends_router
 from app.api.v1.users import router as users_router
 from app.api.v1.webhooks import router as webhooks_router
@@ -354,7 +356,7 @@ app.include_router(dev_router, prefix="/api/v1")  # Phase 1.10 (dev-only)
 app.include_router(analytics_router, prefix="/api/v1")  # Phase 1.11
 app.include_router(webhooks_router, prefix="/api/v1")  # Phase 1.13
 app.include_router(strava_webhook_router, prefix="/api/v1")  # Phase 1.7
-app.include_router(health_ingest_router, prefix="/api/v1")  # Apple Health Full Integration
+# health_ingest_router removed — replaced by ingest_router (unified ingest)
 app.include_router(fitbit_router, prefix="/api/v1")  # Phase 5.1
 app.include_router(fitbit_webhook_router, prefix="/api/v1")  # Phase 5.1
 app.include_router(oura_router, prefix="/api/v1")  # Phase 5.2
@@ -372,7 +374,6 @@ app.include_router(quick_actions_router, prefix="/api/v1")  # Phase 2.9 — quic
 app.include_router(achievement_router, prefix="/api/v1")  # Phase 2.10 — achievements
 app.include_router(streak_router, prefix="/api/v1")  # Phase 2.11 — streaks
 app.include_router(journal_router, prefix="/api/v1")  # Phase 2.12 — journal
-app.include_router(quick_log_router, prefix="/api/v1")  # Phase 2.13 — quick log
 app.include_router(emergency_card_router, prefix="/api/v1")  # Phase 2.14 — emergency card
 app.include_router(notification_router, prefix="/api/v1")  # Phase 2.15 — notification centre
 app.include_router(report_router, prefix="/api/v1")  # Phase 2.18 — health reports
@@ -381,6 +382,11 @@ app.include_router(goals_router, prefix="/api/v1")  # Phase 3 — goals CRUD
 app.include_router(progress_router, prefix="/api/v1")  # Phase 3 — progress home
 app.include_router(trends_router, prefix="/api/v1")  # Phase 3 — trends home
 app.include_router(data_sources_router, prefix="/api/v1")  # Phase 3 — data sources
+app.include_router(ingest_router, prefix="/api/v1")  # Unified health data ingest
+app.include_router(events_router, prefix="/api/v1")  # Soft-delete events
+app.include_router(today_router, prefix="/api/v1")  # Today tab
+app.include_router(coach_router, prefix="/api/v1")  # Coach context endpoints
+app.include_router(supplements_router, prefix="/api/v1")  # Supplements list management
 
 
 @app.get("/health")

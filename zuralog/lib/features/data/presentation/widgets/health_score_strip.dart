@@ -51,7 +51,7 @@ class HealthScoreStrip extends ConsumerWidget {
       label: semanticLabel,
       button: true,
       child: GestureDetector(
-        onTap: () => context.push('/data/score'),
+        onTap: () => context.push('/data/score-breakdown'),
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
