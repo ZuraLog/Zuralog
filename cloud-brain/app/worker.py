@@ -68,6 +68,21 @@ celery_app = Celery(
     "zuralog",
     broker=settings.redis_url,
     backend=settings.redis_url,
+    include=[
+        "app.tasks.aggregation_tasks",
+        "app.tasks.anomaly_tasks",
+        "app.tasks.background_alerts",
+        "app.tasks.fitbit_sync",
+        "app.tasks.health_score_tasks",
+        "app.tasks.insight_tasks",
+        "app.tasks.morning_briefing_task",
+        "app.tasks.oura_sync",
+        "app.tasks.polar_sync",
+        "app.tasks.report_tasks",
+        "app.tasks.smart_reminder_tasks",
+        "app.tasks.withings_sync",
+        "app.services.sync_scheduler",
+    ],
 )
 
 celery_app.conf.update(
@@ -172,5 +187,6 @@ celery_app.conf.beat_schedule = {
     },
 }
 
-# Auto-discover tasks in services and tasks modules
-celery_app.autodiscover_tasks(["app.services", "app.tasks"])
+# Task modules are explicitly listed in the Celery(..., include=[...]) call above.
+# autodiscover_tasks was removed because it only looks for modules named "tasks.py"
+# inside each package, which doesn't match our naming convention.
