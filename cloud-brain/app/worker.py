@@ -125,23 +125,23 @@ celery_app.conf.beat_schedule = {
         "schedule": 3600.0,  # 1 hour
     },
     "sync-oura-users-1h": {
-        "task": "app.tasks.oura_sync.sync_oura_periodic_task",
+        "task": "oura.sync_periodic",
         "schedule": 3600.0,  # 1 hour (was 15 min)
     },
     "refresh-oura-tokens-4h": {
-        "task": "app.tasks.oura_sync.refresh_oura_tokens_task",
+        "task": "oura.refresh_tokens",
         "schedule": 14400.0,  # 4 hours
     },
     "renew-oura-webhooks-daily": {
-        "task": "app.tasks.oura_sync.renew_oura_webhook_subscriptions_task",
+        "task": "oura.renew_webhooks",
         "schedule": 86400.0,  # 24 hours
     },
     "sync-withings-users-1h": {
-        "task": "app.tasks.withings_sync.sync_withings_periodic_task",
+        "task": "withings.sync_periodic",
         "schedule": 3600.0,  # 1 hour (was 15 min)
     },
     "refresh-withings-tokens-1h": {
-        "task": "app.tasks.withings_sync.refresh_withings_tokens_task",
+        "task": "withings.refresh_tokens",
         "schedule": 3600.0,  # 1 hour (tokens expire in 3h, refresh buffer is 30min)
     },
     "sync-polar-users-1h": {
