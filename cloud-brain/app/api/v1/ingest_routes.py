@@ -204,7 +204,7 @@ async def _recompute_daily_summary(
                 "DELETE FROM daily_summaries "
                 "WHERE user_id = :uid AND date = :d AND metric_type = :mt"
             ),
-            {"uid": str(user_id), "d": str(local_date), "mt": metric_type},
+            {"uid": str(user_id), "d": local_date, "mt": metric_type},
         )
         return None
 
@@ -440,7 +440,7 @@ async def ingest_bulk(
                 "UPDATE daily_summaries SET is_stale = true "
                 "WHERE user_id = :uid AND date = :d AND metric_type = :mt"
             ),
-            {"uid": uid, "d": str(ld), "mt": mt},
+            {"uid": uid, "d": ld, "mt": mt},
         )
 
     await db.commit()

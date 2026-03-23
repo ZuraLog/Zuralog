@@ -29,8 +29,7 @@ from datetime import date, timedelta
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.daily_metrics import DailyHealthMetrics
-from app.models.health_data import SleepRecord
+from app.models.daily_summary import DailySummary
 
 logger = logging.getLogger(__name__)
 
@@ -106,10 +105,10 @@ def _classify_severity(deviation: float) -> str:
 class AnomalyDetector:
     """Detects health metric anomalies using rolling population statistics.
 
-    The detector queries ``DailyHealthMetrics`` and ``SleepRecord`` tables
-    for the 30 days preceding (and including) *target_date*. It computes a
-    rolling mean and stddev for each metric and flags observations that
-    deviate more than 2 stddevs from the baseline.
+    The detector queries the ``daily_summaries`` table for the 30 days
+    preceding (and including) *target_date*. It computes a rolling mean
+    and stddev for each metric and flags observations that deviate more
+    than 2 stddevs from the baseline.
 
     Usage::
 
@@ -146,13 +145,13 @@ class AnomalyDetector:
 
         results: list[AnomalyResult] = []
 
-        # --- DailyHealthMetrics-backed metrics ---
+        # --- daily_summaries-backed metrics ---
         for metric in ("resting_heart_rate", "hrv_ms", "steps", "active_calories"):
             anomaly = self._analyse_daily_metric(metric, daily_rows, target_date)
             if anomaly is not None:
                 results.append(anomaly)
 
-        # --- SleepRecord-backed metrics ---
+        # --- Sleep metrics from daily_summaries ---
         sleep_hours_anomaly = self._analyse_sleep_metric("sleep_hours", "hours", sleep_rows, target_date)
         if sleep_hours_anomaly is not None:
             results.append(sleep_hours_anomaly)
@@ -172,21 +171,23 @@ class AnomalyDetector:
         user_id: str,
         db: AsyncSession,
         target_date: date,
-    ) -> list[DailyHealthMetrics]:
-        """Return up to 30 days of DailyHealthMetrics rows for *user_id*.
+    ) -> list[DailySummary]:
+        """Return up to 30 days of daily summary rows for *user_id*.
 
-        Includes the target date and the preceding ``_LOOKBACK_DAYS - 1`` days.
-        When a user has multiple sources for the same day, all rows are
-        returned; the per-metric analysis picks values on a first-valid basis.
+        Fetches ``daily_summaries`` rows whose ``metric_type`` is one of
+        ``resting_heart_rate``, ``hrv_ms``, ``steps``, or
+        ``active_calories``.
         """
-        start_date = (target_date - timedelta(days=_LOOKBACK_DAYS - 1)).isoformat()
-        end_date = target_date.isoformat()
+        start_date = target_date - timedelta(days=_LOOKBACK_DAYS - 1)
 
-        stmt = select(DailyHealthMetrics).where(
+        stmt = select(DailySummary).where(
             and_(
-                DailyHealthMetrics.user_id == user_id,
-                DailyHealthMetrics.date >= start_date,
-                DailyHealthMetrics.date <= end_date,
+                DailySummary.user_id == user_id,
+                DailySummary.date >= start_date,
+                DailySummary.date <= target_date,
+                DailySummary.metric_type.in_(
+                    ["resting_heart_rate", "hrv_ms", "steps", "active_calories"]
+                ),
             )
         )
         result = await db.execute(stmt)
@@ -197,16 +198,20 @@ class AnomalyDetector:
         user_id: str,
         db: AsyncSession,
         target_date: date,
-    ) -> list[SleepRecord]:
-        """Return up to 30 days of SleepRecord rows for *user_id*."""
-        start_date = (target_date - timedelta(days=_LOOKBACK_DAYS - 1)).isoformat()
-        end_date = target_date.isoformat()
+    ) -> list[DailySummary]:
+        """Return up to 30 days of sleep summary rows for *user_id*.
 
-        stmt = select(SleepRecord).where(
+        Fetches ``daily_summaries`` rows whose ``metric_type`` is
+        ``sleep_duration`` or ``sleep_quality``.
+        """
+        start_date = target_date - timedelta(days=_LOOKBACK_DAYS - 1)
+
+        stmt = select(DailySummary).where(
             and_(
-                SleepRecord.user_id == user_id,
-                SleepRecord.date >= start_date,
-                SleepRecord.date <= end_date,
+                DailySummary.user_id == user_id,
+                DailySummary.date >= start_date,
+                DailySummary.date <= target_date,
+                DailySummary.metric_type.in_(["sleep_duration", "sleep_quality"]),
             )
         )
         result = await db.execute(stmt)
@@ -219,13 +224,13 @@ class AnomalyDetector:
     def _analyse_daily_metric(
         self,
         metric: str,
-        rows: list[DailyHealthMetrics],
+        rows: list[DailySummary],
         target_date: date,
     ) -> AnomalyResult | None:
-        """Analyse one daily metric column and return an anomaly if found.
+        """Analyse one daily metric and return an anomaly if found.
 
-        Builds a date-keyed map from the fetched rows, taking the first
-        non-null value encountered per day (in case multiple sources exist).
+        Filters *rows* to those matching *metric* as ``metric_type``,
+        builds a date-keyed map, taking the first value per day.
         Returns ``None`` when there is insufficient data or no anomaly.
         """
         target_date_str = target_date.isoformat()
@@ -233,11 +238,12 @@ class AnomalyDetector:
         # Build date → value map; keep first non-null per date.
         date_values: dict[str, float] = {}
         for row in rows:
-            if row.date in date_values:
+            if row.metric_type != metric:
+                continue
+            date_key = row.date.isoformat() if isinstance(row.date, date) else str(row.date)
+            if date_key in date_values:
                 continue  # already have a value for this day
-            raw = getattr(row, metric, None)
-            if raw is not None:
-                date_values[row.date] = float(raw)
+            date_values[date_key] = float(row.value)
 
         return self._compute_anomaly(metric, date_values, target_date_str)
 
@@ -245,19 +251,36 @@ class AnomalyDetector:
         self,
         metric_name: str,
         column: str,
-        rows: list[SleepRecord],
+        rows: list[DailySummary],
         target_date: date,
     ) -> AnomalyResult | None:
-        """Analyse a SleepRecord column and return an anomaly if found."""
+        """Analyse a sleep metric from daily_summaries and return an anomaly if found.
+
+        *column* maps the old SleepRecord column names to metric_types:
+        ``"hours"`` → ``sleep_duration`` (value in minutes, converted to hours),
+        ``"quality_score"`` → ``sleep_quality``.
+        """
         target_date_str = target_date.isoformat()
+
+        # Map old column names to new metric_types
+        _column_to_metric_type = {
+            "hours": "sleep_duration",
+            "quality_score": "sleep_quality",
+        }
+        metric_type = _column_to_metric_type.get(column, column)
 
         date_values: dict[str, float] = {}
         for row in rows:
-            if row.date in date_values:
+            if row.metric_type != metric_type:
                 continue
-            raw = getattr(row, column, None)
-            if raw is not None:
-                date_values[row.date] = float(raw)
+            date_key = row.date.isoformat() if isinstance(row.date, date) else str(row.date)
+            if date_key in date_values:
+                continue
+            val = float(row.value)
+            # sleep_duration is stored in minutes; convert to hours
+            if metric_type == "sleep_duration":
+                val = val / 60.0
+            date_values[date_key] = val
 
         return self._compute_anomaly(metric_name, date_values, target_date_str)
 

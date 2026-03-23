@@ -158,7 +158,7 @@ async def trends_correlation(
               AND a.date >= :start
             ORDER BY a.date
         """),
-        {"uid": str(user_id), "ma": metric_a, "mb": metric_b, "start": str(start_date)},
+        {"uid": str(user_id), "ma": metric_a, "mb": metric_b, "start": start_date},
     )
     data_points = [
         {"date": str(r.date), metric_a: r.metric_a_value, metric_b: r.metric_b_value}

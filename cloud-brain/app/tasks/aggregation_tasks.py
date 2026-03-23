@@ -62,7 +62,7 @@ async def _recompute_batch(batch: list[dict]) -> dict:
                 if result is None:
                     await db.execute(
                         text("DELETE FROM daily_summaries WHERE user_id=:uid AND date=:d AND metric_type=:mt"),
-                        {"uid": user_id, "d": str(local_date), "mt": metric_type},
+                        {"uid": user_id, "d": local_date, "mt": metric_type},
                     )
                 else:
                     stmt = pg_insert(DailySummary).values(

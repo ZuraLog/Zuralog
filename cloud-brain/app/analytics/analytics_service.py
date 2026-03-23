@@ -5,33 +5,39 @@ High-level facade that composes all four analytics modules
 (CorrelationAnalyzer, TrendDetector, GoalTracker, InsightGenerator)
 and provides database-backed methods for the analytics API router.
 
-This service handles data fetching via SQLAlchemy async queries and
-delegates computation to the pure-logic analytics modules.
+This service handles data fetching via raw SQL against the
+``daily_summaries`` table and delegates computation to the pure-logic
+analytics modules.
 """
 
 import logging
 from datetime import date, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.correlation_analyzer import CorrelationAnalyzer
 from app.analytics.goal_tracker import GoalTracker
 from app.analytics.insight_generator import InsightGenerator
 from app.analytics.trend_detector import TrendDetector
-from app.models.health_data import (
-    NutritionEntry,
-    SleepRecord,
-    UnifiedActivity,
-    WeightMeasurement,
-)
 from app.models.user_goal import UserGoal
 
 logger = logging.getLogger(__name__)
 
-# Conversion factor: average stride length in meters.
-_METERS_PER_STEP = 0.762
+# Mapping from public metric names to metric_type values stored in
+# the ``daily_summaries`` table.
+_METRIC_TYPE_MAP: dict[str, str] = {
+    "steps": "steps",
+    "calories_consumed": "calories",
+    "calories_burned": "active_calories",
+    "sleep_hours": "sleep_duration",
+    "weight_kg": "weight_kg",
+    "workouts": "exercise_minutes",
+    "resting_heart_rate": "resting_heart_rate",
+    "exercise_minutes": "exercise_minutes",
+    "active_calories": "active_calories",
+}
 
 
 class AnalyticsService:
@@ -64,9 +70,8 @@ class AnalyticsService:
     ) -> dict[str, Any]:
         """Aggregate health data for a single day.
 
-        Queries activity calories/distance, nutrition intake, sleep
-        duration, weight measurement, and workout count, then combines
-        them into a single summary dict.
+        Queries the ``daily_summaries`` table for all metric types on
+        the given date and maps them to the summary response keys.
 
         Args:
             db: Async database session.
@@ -77,58 +82,26 @@ class AnalyticsService:
             A dict with keys: date, steps, calories_consumed,
             calories_burned, workouts_count, sleep_hours, weight_kg.
         """
-        date_str = target_date.isoformat()
-
-        # Activity aggregates — filter by date portion of start_time.
-        activity_stmt = select(
-            func.coalesce(func.sum(UnifiedActivity.calories), 0).label("calories_burned"),
-            func.coalesce(func.sum(UnifiedActivity.distance_meters), 0).label("total_distance"),
-            func.count(UnifiedActivity.id).label("workouts_count"),
-        ).where(
-            UnifiedActivity.user_id == user_id,
-            func.date(UnifiedActivity.start_time) == target_date,
+        stmt = sql_text(
+            "SELECT metric_type, value "
+            "FROM daily_summaries "
+            "WHERE user_id = :user_id AND date = :target_date"
         )
-        activity_row = (await db.execute(activity_stmt)).one()
+        rows = (await db.execute(stmt, {"user_id": user_id, "target_date": target_date})).all()
 
-        calories_burned: int = int(activity_row.calories_burned)
-        total_distance: float = float(activity_row.total_distance)
-        workouts_count: int = int(activity_row.workouts_count)
-        steps: int = int(total_distance / _METERS_PER_STEP)
+        # Build a lookup: metric_type -> value
+        metrics: dict[str, float] = {row.metric_type: float(row.value) for row in rows}
 
-        # Nutrition aggregate — filter by date string.
-        nutrition_stmt = select(
-            func.coalesce(func.sum(NutritionEntry.calories), 0).label("calories_consumed"),
-        ).where(
-            NutritionEntry.user_id == user_id,
-            NutritionEntry.date == date_str,
-        )
-        nutrition_row = (await db.execute(nutrition_stmt)).one()
-        calories_consumed: int = int(nutrition_row.calories_consumed)
-
-        # Sleep aggregate — filter by date string.
-        sleep_stmt = select(
-            func.coalesce(func.avg(SleepRecord.hours), 0.0).label("sleep_hours"),
-        ).where(
-            SleepRecord.user_id == user_id,
-            SleepRecord.date == date_str,
-        )
-        sleep_row = (await db.execute(sleep_stmt)).one()
-        sleep_hours: float = round(float(sleep_row.sleep_hours), 1)
-
-        # Weight — most recent measurement for the date.
-        weight_stmt = (
-            select(WeightMeasurement.weight_kg)
-            .where(
-                WeightMeasurement.user_id == user_id,
-                WeightMeasurement.date == date_str,
-            )
-            .limit(1)
-        )
-        weight_row = (await db.execute(weight_stmt)).first()
-        weight_kg: float | None = float(weight_row.weight_kg) if weight_row else None
+        steps = int(metrics.get("steps", 0))
+        calories_burned = int(metrics.get("active_calories", 0))
+        calories_consumed = int(metrics.get("calories", 0))
+        # sleep_duration is stored in minutes; convert to hours
+        sleep_hours = round(metrics.get("sleep_duration", 0) / 60.0, 1)
+        weight_kg: float | None = metrics.get("weight_kg")
+        workouts_count = int(metrics.get("exercise_minutes", 0))
 
         return {
-            "date": date_str,
+            "date": target_date.isoformat(),
             "steps": steps,
             "calories_consumed": calories_consumed,
             "calories_burned": calories_burned,
@@ -144,8 +117,8 @@ class AnalyticsService:
     ) -> dict[str, Any]:
         """Build 7-day trend arrays for dashboard charts.
 
-        Calls ``get_daily_summary`` for each of the last 7 days and
-        collects the results into parallel lists.
+        Performs a single query for the last 7 days of daily_summaries
+        and pivots the results into parallel lists.
 
         Args:
             db: Async database session.
@@ -156,27 +129,47 @@ class AnalyticsService:
             sleep_hours — each a list of 7 values (oldest first).
         """
         today = date.today()
+        start_date = today - timedelta(days=6)
+
+        stmt = sql_text(
+            "SELECT date, metric_type, value "
+            "FROM daily_summaries "
+            "WHERE user_id = :user_id "
+            "  AND date >= :start_date "
+            "  AND date <= :end_date "
+            "ORDER BY date"
+        )
+        rows = (
+            await db.execute(stmt, {"user_id": user_id, "start_date": start_date, "end_date": today})
+        ).all()
+
+        # Group values by date
+        day_metrics: dict[date, dict[str, float]] = {}
+        for row in rows:
+            d = row.date if isinstance(row.date, date) else date.fromisoformat(str(row.date))
+            day_metrics.setdefault(d, {})[row.metric_type] = float(row.value)
+
         dates: list[str] = []
         steps: list[int] = []
         calories_in: list[int] = []
         calories_out: list[int] = []
-        sleep_hours: list[float] = []
+        sleep_list: list[float] = []
 
         for days_ago in range(6, -1, -1):
             day = today - timedelta(days=days_ago)
-            summary = await self.get_daily_summary(db, user_id, day)
-            dates.append(summary["date"])
-            steps.append(summary["steps"])
-            calories_in.append(summary["calories_consumed"])
-            calories_out.append(summary["calories_burned"])
-            sleep_hours.append(summary["sleep_hours"])
+            m = day_metrics.get(day, {})
+            dates.append(day.isoformat())
+            steps.append(int(m.get("steps", 0)))
+            calories_in.append(int(m.get("calories", 0)))
+            calories_out.append(int(m.get("active_calories", 0)))
+            sleep_list.append(round(m.get("sleep_duration", 0) / 60.0, 1))
 
         return {
             "dates": dates,
             "steps": steps,
             "calories_in": calories_in,
             "calories_out": calories_out,
-            "sleep_hours": sleep_hours,
+            "sleep_hours": sleep_list,
         }
 
     async def get_sleep_activity_correlation(
@@ -188,8 +181,9 @@ class AnalyticsService:
     ) -> dict[str, Any]:
         """Compute correlation between sleep and activity.
 
-        Fetches sleep and activity data for the requested window and
-        delegates to CorrelationAnalyzer for Pearson coefficient.
+        Fetches sleep_duration and active_calories from daily_summaries
+        for the requested window and delegates to CorrelationAnalyzer
+        for the Pearson coefficient.
 
         Args:
             db: Async database session.
@@ -201,36 +195,34 @@ class AnalyticsService:
             A dict with keys: metric_x, metric_y, score, message,
             lag, data_points.
         """
-        cutoff = (date.today() - timedelta(days=days)).isoformat()
+        cutoff = date.today() - timedelta(days=days)
 
-        # Fetch sleep data.
-        sleep_stmt = (
-            select(SleepRecord.date, SleepRecord.hours)
-            .where(
-                SleepRecord.user_id == user_id,
-                SleepRecord.date >= cutoff,
-            )
-            .order_by(SleepRecord.date)
+        stmt = sql_text(
+            "SELECT date, metric_type, value "
+            "FROM daily_summaries "
+            "WHERE user_id = :user_id "
+            "  AND date >= :cutoff "
+            "  AND metric_type IN ('sleep_duration', 'active_calories') "
+            "ORDER BY date"
         )
-        sleep_rows = (await db.execute(sleep_stmt)).all()
-        sleep_data: list[dict[str, Any]] = [{"date": row.date, "hours": row.hours} for row in sleep_rows]
+        rows = (await db.execute(stmt, {"user_id": user_id, "cutoff": cutoff})).all()
 
-        # Fetch activity data — aggregate calories per day.
-        activity_stmt = (
-            select(
-                func.date(UnifiedActivity.start_time).label("activity_date"),
-                func.sum(UnifiedActivity.calories).label("daily_calories"),
-            )
-            .where(
-                UnifiedActivity.user_id == user_id,
-                func.date(UnifiedActivity.start_time) >= cutoff,
-            )
-            .group_by(func.date(UnifiedActivity.start_time))
-            .order_by(func.date(UnifiedActivity.start_time))
-        )
-        activity_rows = (await db.execute(activity_stmt)).all()
+        # Separate into per-date dicts
+        sleep_by_date: dict[str, float] = {}
+        activity_by_date: dict[str, float] = {}
+        for row in rows:
+            d = str(row.date)
+            if row.metric_type == "sleep_duration":
+                # Convert minutes to hours
+                sleep_by_date[d] = float(row.value) / 60.0
+            elif row.metric_type == "active_calories":
+                activity_by_date[d] = float(row.value)
+
+        sleep_data: list[dict[str, Any]] = [
+            {"date": d, "hours": h} for d, h in sorted(sleep_by_date.items())
+        ]
         activity_data: list[dict[str, Any]] = [
-            {"date": str(row.activity_date), "calories": int(row.daily_calories)} for row in activity_rows
+            {"date": d, "calories": int(c)} for d, c in sorted(activity_by_date.items())
         ]
 
         result = self._correlation.analyze_sleep_impact_on_activity(
@@ -371,7 +363,7 @@ class AnalyticsService:
 
         Determines the date range based on the period (daily = today,
         weekly = last 7 days, long_term = most recent value) and queries
-        the appropriate table.
+        the ``daily_summaries`` table.
 
         Args:
             db: Async database session.
@@ -383,6 +375,11 @@ class AnalyticsService:
             The accumulated or most recent metric value as a float.
             Returns 0.0 if no data is found.
         """
+        metric_type = _METRIC_TYPE_MAP.get(metric)
+        if metric_type is None:
+            logger.warning("Unknown metric '%s'; returning 0.0", metric)
+            return 0.0
+
         today = date.today()
 
         if period == "daily":
@@ -393,80 +390,77 @@ class AnalyticsService:
             # long_term — return most recent value.
             start_date = today - timedelta(days=365)
 
-        date_str_start = start_date.isoformat()
-        date_str_end = today.isoformat()
+        is_avg_metric = metric in ("sleep_hours", "weight_kg")
+        is_latest_metric = metric == "weight_kg"
 
-        if metric == "steps":
-            stmt = select(
-                func.coalesce(func.sum(UnifiedActivity.distance_meters), 0),
-            ).where(
-                UnifiedActivity.user_id == user_id,
-                func.date(UnifiedActivity.start_time) >= start_date,
-                func.date(UnifiedActivity.start_time) <= today,
+        if is_latest_metric:
+            # For weight, return the most recent measurement.
+            stmt = sql_text(
+                "SELECT value FROM daily_summaries "
+                "WHERE user_id = :user_id "
+                "  AND metric_type = :metric_type "
+                "  AND date >= :start_date "
+                "  AND date <= :end_date "
+                "ORDER BY date DESC LIMIT 1"
             )
-            row = (await db.execute(stmt)).one()
-            return float(int(float(row[0]) / _METERS_PER_STEP))
-
-        if metric == "calories_consumed":
-            stmt = select(
-                func.coalesce(func.sum(NutritionEntry.calories), 0),
-            ).where(
-                NutritionEntry.user_id == user_id,
-                NutritionEntry.date >= date_str_start,
-                NutritionEntry.date <= date_str_end,
-            )
-            row = (await db.execute(stmt)).one()
-            return float(row[0])
-
-        if metric == "calories_burned":
-            stmt = select(
-                func.coalesce(func.sum(UnifiedActivity.calories), 0),
-            ).where(
-                UnifiedActivity.user_id == user_id,
-                func.date(UnifiedActivity.start_time) >= start_date,
-                func.date(UnifiedActivity.start_time) <= today,
-            )
-            row = (await db.execute(stmt)).one()
-            return float(row[0])
-
-        if metric == "sleep_hours":
-            stmt = select(
-                func.coalesce(func.avg(SleepRecord.hours), 0.0),
-            ).where(
-                SleepRecord.user_id == user_id,
-                SleepRecord.date >= date_str_start,
-                SleepRecord.date <= date_str_end,
-            )
-            row = (await db.execute(stmt)).one()
-            return round(float(row[0]), 1)
-
-        if metric == "weight_kg":
-            stmt = (
-                select(WeightMeasurement.weight_kg)
-                .where(
-                    WeightMeasurement.user_id == user_id,
-                    WeightMeasurement.date >= date_str_start,
-                    WeightMeasurement.date <= date_str_end,
+            row = (
+                await db.execute(
+                    stmt,
+                    {
+                        "user_id": user_id,
+                        "metric_type": metric_type,
+                        "start_date": start_date,
+                        "end_date": today,
+                    },
                 )
-                .order_by(WeightMeasurement.date.desc())
-                .limit(1)
-            )
-            row = (await db.execute(stmt)).first()
-            return float(row[0]) if row else 0.0
+            ).first()
+            return float(row.value) if row else 0.0
 
-        if metric == "workouts":
-            stmt = select(
-                func.count(UnifiedActivity.id),
-            ).where(
-                UnifiedActivity.user_id == user_id,
-                func.date(UnifiedActivity.start_time) >= start_date,
-                func.date(UnifiedActivity.start_time) <= today,
+        if is_avg_metric:
+            # For sleep, average over the range and convert minutes to hours.
+            stmt = sql_text(
+                "SELECT COALESCE(AVG(value), 0) AS agg "
+                "FROM daily_summaries "
+                "WHERE user_id = :user_id "
+                "  AND metric_type = :metric_type "
+                "  AND date >= :start_date "
+                "  AND date <= :end_date"
             )
-            row = (await db.execute(stmt)).one()
-            return float(row[0])
+            row = (
+                await db.execute(
+                    stmt,
+                    {
+                        "user_id": user_id,
+                        "metric_type": metric_type,
+                        "start_date": start_date,
+                        "end_date": today,
+                    },
+                )
+            ).one()
+            # sleep_duration stored in minutes, convert to hours
+            return round(float(row.agg) / 60.0, 1)
 
-        logger.warning("Unknown metric '%s'; returning 0.0", metric)
-        return 0.0
+        # Default: SUM over the range.
+        stmt = sql_text(
+            "SELECT COALESCE(SUM(value), 0) AS agg "
+            "FROM daily_summaries "
+            "WHERE user_id = :user_id "
+            "  AND metric_type = :metric_type "
+            "  AND date >= :start_date "
+            "  AND date <= :end_date"
+        )
+        row = (
+            await db.execute(
+                stmt,
+                {
+                    "user_id": user_id,
+                    "metric_type": metric_type,
+                    "start_date": start_date,
+                    "end_date": today,
+                },
+            )
+        ).one()
+        return float(row.agg)
 
     async def _fetch_metric_series(
         self,
@@ -489,78 +483,29 @@ class AnalyticsService:
         Returns:
             A list of daily float values, oldest first.
         """
+        metric_type = _METRIC_TYPE_MAP.get(metric)
+        if metric_type is None:
+            logger.warning("Unknown metric '%s' for series fetch; returning empty list", metric)
+            return []
+
         cutoff = date.today() - timedelta(days=lookback_days)
-        cutoff_str = cutoff.isoformat()
 
-        if metric == "steps":
-            stmt = (
-                select(
-                    func.date(UnifiedActivity.start_time).label("day"),
-                    func.sum(UnifiedActivity.distance_meters).label("total_dist"),
-                )
-                .where(
-                    UnifiedActivity.user_id == user_id,
-                    func.date(UnifiedActivity.start_time) >= cutoff,
-                )
-                .group_by(func.date(UnifiedActivity.start_time))
-                .order_by(func.date(UnifiedActivity.start_time))
+        stmt = sql_text(
+            "SELECT date, value "
+            "FROM daily_summaries "
+            "WHERE user_id = :user_id "
+            "  AND metric_type = :metric_type "
+            "  AND date >= :cutoff "
+            "ORDER BY date"
+        )
+        rows = (
+            await db.execute(
+                stmt, {"user_id": user_id, "metric_type": metric_type, "cutoff": cutoff}
             )
-            rows = (await db.execute(stmt)).all()
-            return [float(int((row.total_dist or 0) / _METERS_PER_STEP)) for row in rows]
-
-        if metric == "calories_consumed":
-            stmt = (
-                select(NutritionEntry.date, func.sum(NutritionEntry.calories).label("total"))
-                .where(
-                    NutritionEntry.user_id == user_id,
-                    NutritionEntry.date >= cutoff_str,
-                )
-                .group_by(NutritionEntry.date)
-                .order_by(NutritionEntry.date)
-            )
-            rows = (await db.execute(stmt)).all()
-            return [float(row.total) for row in rows]
-
-        if metric == "calories_burned":
-            stmt = (
-                select(
-                    func.date(UnifiedActivity.start_time).label("day"),
-                    func.sum(UnifiedActivity.calories).label("total"),
-                )
-                .where(
-                    UnifiedActivity.user_id == user_id,
-                    func.date(UnifiedActivity.start_time) >= cutoff,
-                )
-                .group_by(func.date(UnifiedActivity.start_time))
-                .order_by(func.date(UnifiedActivity.start_time))
-            )
-            rows = (await db.execute(stmt)).all()
-            return [float(row.total) for row in rows]
+        ).all()
 
         if metric == "sleep_hours":
-            stmt = (
-                select(SleepRecord.date, func.avg(SleepRecord.hours).label("avg_hours"))
-                .where(
-                    SleepRecord.user_id == user_id,
-                    SleepRecord.date >= cutoff_str,
-                )
-                .group_by(SleepRecord.date)
-                .order_by(SleepRecord.date)
-            )
-            rows = (await db.execute(stmt)).all()
-            return [round(float(row.avg_hours), 1) for row in rows]
+            # Convert minutes to hours
+            return [round(float(row.value) / 60.0, 1) for row in rows]
 
-        if metric == "weight_kg":
-            stmt = (
-                select(WeightMeasurement.date, WeightMeasurement.weight_kg)
-                .where(
-                    WeightMeasurement.user_id == user_id,
-                    WeightMeasurement.date >= cutoff_str,
-                )
-                .order_by(WeightMeasurement.date)
-            )
-            rows = (await db.execute(stmt)).all()
-            return [float(row.weight_kg) for row in rows]
-
-        logger.warning("Unknown metric '%s' for series fetch; returning empty list", metric)
-        return []
+        return [float(row.value) for row in rows]

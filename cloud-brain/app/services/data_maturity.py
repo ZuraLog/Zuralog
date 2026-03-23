@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import MIN_DATA_DAYS_FOR_MATURITY
-from app.models.daily_metrics import DailyHealthMetrics
+from app.models.daily_summary import DailySummary
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class DataMaturityService:
             - ``features``: Feature gate dict from :meth:`get_feature_gates`.
         """
         try:
-            stmt = select(func.count(DailyHealthMetrics.date.distinct())).where(DailyHealthMetrics.user_id == user_id)
+            stmt = select(func.count(func.distinct(DailySummary.date))).where(DailySummary.user_id == user_id)
             result = await db.execute(stmt)
             days: int = result.scalar_one() or 0
         except Exception:

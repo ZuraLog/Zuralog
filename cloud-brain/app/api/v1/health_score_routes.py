@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import check_rate_limit, get_current_user
 from app.database import get_db
-from app.models.daily_metrics import DailyHealthMetrics
+from app.models.daily_summary import DailySummary
 from app.models.health_score_cache import HealthScoreCache
 from app.models.user import User
 from app.services.health_score import HealthScoreCalculator, HealthScoreResult
@@ -93,7 +93,7 @@ async def _count_data_days(user_id: str, db: AsyncSession) -> int:
         return cache_count
 
     # Fallback: count distinct dates with raw metric data.
-    stmt = select(func.count(func.distinct(DailyHealthMetrics.date))).where(DailyHealthMetrics.user_id == user_id)
+    stmt = select(func.count(func.distinct(DailySummary.date))).where(DailySummary.user_id == user_id)
     result = await db.execute(stmt)
     return result.scalar() or 0
 

@@ -31,15 +31,9 @@ from typing import Any, Coroutine
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.daily_metrics import DailyHealthMetrics
-from app.models.health_data import (
-    NutritionEntry,
-    SleepRecord,
-    UnifiedActivity,
-    WeightMeasurement,
-)
+from app.models.daily_summary import DailySummary
+from app.models.health_event import HealthEvent
 from app.models.integration import Integration
-from app.models.quick_log import QuickLog
 from app.models.user_goal import UserGoal
 from app.models.user_preferences import UserPreferences
 from app.models.user_streak import UserStreak
@@ -412,144 +406,159 @@ class HealthBriefBuilder:
     # ------------------------------------------------------------------
 
     async def _fetch_daily_metrics(self) -> list[DailyMetricsRow]:
-        """Fetch last 30 days of daily health metrics, deduped by source."""
-        cutoff = (self.target_date - timedelta(days=_LOOKBACK_DAILY)).isoformat()
+        """Fetch last 30 days of daily health metrics from daily_summaries.
+
+        Pivots the EAV rows (one row per metric_type per date) back into a
+        single ``DailyMetricsRow`` per calendar date.
+        """
+        cutoff = self.target_date - timedelta(days=_LOOKBACK_DAILY)
         result = await self.db.execute(
-            select(DailyHealthMetrics).where(
-                DailyHealthMetrics.user_id == self.user_id,
-                DailyHealthMetrics.date >= cutoff,
+            select(DailySummary).where(
+                DailySummary.user_id == self.user_id,
+                DailySummary.date >= cutoff,
             )
         )
         rows = result.scalars().all()
-        daily_rows = [
-            DailyMetricsRow(
-                date=r.date,
-                steps=_float(r, "steps"),
-                active_calories=_float(r, "active_calories"),
-                distance_meters=_float(r, "distance_meters"),
-                flights_climbed=_float(r, "flights_climbed"),
-                resting_heart_rate=_float(r, "resting_heart_rate"),
-                hrv_ms=_float(r, "hrv_ms"),
-                heart_rate_avg=_float(r, "heart_rate_avg"),
-                vo2_max=_float(r, "vo2_max"),
-                respiratory_rate=_float(r, "respiratory_rate"),
-                oxygen_saturation=_float(r, "oxygen_saturation"),
-                body_fat_percentage=_float(r, "body_fat_percentage"),
-                source=getattr(r, "source", "unknown") or "unknown",
-            )
-            for r in rows
-        ]
-        return _dedup_by_source(daily_rows)
+
+        # Map metric_type -> DailyMetricsRow attribute name
+        _METRIC_ATTR = {
+            "steps": "steps",
+            "active_calories": "active_calories",
+            "distance_meters": "distance_meters",
+            "flights_climbed": "flights_climbed",
+            "resting_heart_rate": "resting_heart_rate",
+            "hrv_ms": "hrv_ms",
+            "heart_rate_avg": "heart_rate_avg",
+            "vo2_max": "vo2_max",
+            "respiratory_rate": "respiratory_rate",
+            "oxygen_saturation": "oxygen_saturation",
+            "body_fat_percentage": "body_fat_percentage",
+        }
+
+        by_date: dict[str, DailyMetricsRow] = {}
+        for r in rows:
+            d = r.date.isoformat() if isinstance(r.date, date) else str(r.date)
+            attr = _METRIC_ATTR.get(r.metric_type)
+            if attr is None:
+                continue
+            if d not in by_date:
+                by_date[d] = DailyMetricsRow(date=d)
+            setattr(by_date[d], attr, float(r.value))
+
+        return sorted(by_date.values(), key=lambda r: r.date)
 
     async def _fetch_sleep_records(self) -> list[SleepRow]:
-        """Fetch last 30 days of sleep records, deduped by source."""
-        cutoff = (self.target_date - timedelta(days=_LOOKBACK_DAILY)).isoformat()
+        """Fetch last 30 days of sleep data from daily_summaries.
+
+        ``sleep_duration`` values are stored in minutes; convert to hours.
+        ``sleep_quality`` values are used as-is for the quality score.
+        """
+        cutoff = self.target_date - timedelta(days=_LOOKBACK_DAILY)
         result = await self.db.execute(
-            select(SleepRecord).where(
-                SleepRecord.user_id == self.user_id,
-                SleepRecord.date >= cutoff,
+            select(DailySummary).where(
+                DailySummary.user_id == self.user_id,
+                DailySummary.date >= cutoff,
+                DailySummary.metric_type.in_(["sleep_duration", "sleep_quality"]),
             )
         )
         rows = result.scalars().all()
-        sleep_rows = [
-            SleepRow(
-                date=r.date,
-                hours=_float(r, "hours"),
-                quality_score=_float(r, "quality_score"),
-                source=getattr(r, "source", "unknown") or "unknown",
-            )
-            for r in rows
-        ]
-        return _dedup_by_source(sleep_rows)
+
+        by_date: dict[str, SleepRow] = {}
+        for r in rows:
+            d = r.date.isoformat() if isinstance(r.date, date) else str(r.date)
+            if d not in by_date:
+                by_date[d] = SleepRow(date=d)
+            if r.metric_type == "sleep_duration":
+                by_date[d].hours = float(r.value) / 60.0
+            elif r.metric_type == "sleep_quality":
+                by_date[d].quality_score = float(r.value)
+
+        return sorted(by_date.values(), key=lambda r: r.date)
 
     async def _fetch_activities(self) -> list[ActivityRow]:
-        """Fetch last 30 days of workout activities."""
-        cutoff = datetime(
-            self.target_date.year,
-            self.target_date.month,
-            self.target_date.day,
-            tzinfo=timezone.utc,
-        ) - timedelta(days=_LOOKBACK_DAILY)
+        """Fetch last 30 days of activity data from daily_summaries.
+
+        Uses ``active_calories`` and ``exercise_minutes`` summary rows to
+        build simplified ``ActivityRow`` objects (one per date).
+        """
+        cutoff = self.target_date - timedelta(days=_LOOKBACK_DAILY)
         result = await self.db.execute(
-            select(UnifiedActivity)
-            .where(
-                UnifiedActivity.user_id == self.user_id,
-                UnifiedActivity.start_time >= cutoff,
+            select(DailySummary).where(
+                DailySummary.user_id == self.user_id,
+                DailySummary.date >= cutoff,
+                DailySummary.metric_type.in_(["active_calories", "exercise_minutes"]),
             )
-            .limit(200)
         )
         rows = result.scalars().all()
-        return [
-            ActivityRow(
-                date=r.start_time.date().isoformat() if r.start_time else "",
-                activity_type=str(r.activity_type.value)
-                if hasattr(r.activity_type, "value")
-                else str(r.activity_type or ""),
-                duration_seconds=_float(r, "duration_seconds"),
-                distance_meters=_float(r, "distance_meters"),
-                calories=_float(r, "calories"),
-                start_time=r.start_time.isoformat() if r.start_time else None,
-            )
-            for r in rows
-        ]
+
+        by_date: dict[str, ActivityRow] = {}
+        for r in rows:
+            d = r.date.isoformat() if isinstance(r.date, date) else str(r.date)
+            if d not in by_date:
+                by_date[d] = ActivityRow(date=d, activity_type="daily_summary")
+            if r.metric_type == "active_calories":
+                by_date[d].calories = float(r.value)
+            elif r.metric_type == "exercise_minutes":
+                by_date[d].duration_seconds = float(r.value) * 60.0
+
+        return sorted(by_date.values(), key=lambda r: r.date)
 
     async def _fetch_nutrition(self) -> list[NutritionRow]:
-        """Fetch last 30 days of nutrition entries, aggregated by date."""
-        cutoff = (self.target_date - timedelta(days=_LOOKBACK_DAILY)).isoformat()
+        """Fetch last 30 days of nutrition data from daily_summaries.
+
+        Each macro is a separate ``metric_type`` row; pivot them back into
+        one ``NutritionRow`` per calendar date.
+        """
+        cutoff = self.target_date - timedelta(days=_LOOKBACK_DAILY)
         result = await self.db.execute(
-            select(NutritionEntry).where(
-                NutritionEntry.user_id == self.user_id,
-                NutritionEntry.date >= cutoff,
+            select(DailySummary).where(
+                DailySummary.user_id == self.user_id,
+                DailySummary.date >= cutoff,
+                DailySummary.metric_type.in_(["calories", "protein_grams", "carbs_grams", "fat_grams"]),
             )
         )
         rows = result.scalars().all()
 
-        # Aggregate all entries for the same day (sum macros)
+        _METRIC_ATTR = {
+            "calories": "calories",
+            "protein_grams": "protein_grams",
+            "carbs_grams": "carbs_grams",
+            "fat_grams": "fat_grams",
+        }
+
         by_date: dict[str, NutritionRow] = {}
         for r in rows:
-            d = r.date
+            d = r.date.isoformat() if isinstance(r.date, date) else str(r.date)
             if d not in by_date:
                 by_date[d] = NutritionRow(date=d)
-            agg = by_date[d]
-
-            cal = _float(r, "calories")
-            agg.calories = (agg.calories or 0.0) + (cal or 0.0)
-
-            prot = _float(r, "protein_grams")
-            if prot is not None:
-                agg.protein_grams = (agg.protein_grams or 0.0) + prot
-
-            carbs = _float(r, "carbs_grams")
-            if carbs is not None:
-                agg.carbs_grams = (agg.carbs_grams or 0.0) + carbs
-
-            fat = _float(r, "fat_grams")
-            if fat is not None:
-                agg.fat_grams = (agg.fat_grams or 0.0) + fat
+            attr = _METRIC_ATTR.get(r.metric_type)
+            if attr is not None:
+                setattr(by_date[d], attr, float(r.value))
 
         return sorted(by_date.values(), key=lambda r: r.date)
 
     async def _fetch_weight(self) -> list[WeightRow]:
-        """Fetch last 90 days of weight measurements, sorted by date."""
-        cutoff = (self.target_date - timedelta(days=_LOOKBACK_WEIGHT)).isoformat()
+        """Fetch last 90 days of weight data from daily_summaries."""
+        cutoff = self.target_date - timedelta(days=_LOOKBACK_WEIGHT)
         result = await self.db.execute(
-            select(WeightMeasurement).where(
-                WeightMeasurement.user_id == self.user_id,
-                WeightMeasurement.date >= cutoff,
+            select(DailySummary).where(
+                DailySummary.user_id == self.user_id,
+                DailySummary.date >= cutoff,
+                DailySummary.metric_type == "weight_kg",
             )
         )
         rows = result.scalars().all()
         weight_rows = [
             WeightRow(
-                date=r.date,
-                weight_kg=_float(r, "weight_kg"),
+                date=r.date.isoformat() if isinstance(r.date, date) else str(r.date),
+                weight_kg=float(r.value),
             )
             for r in rows
         ]
         return sorted(weight_rows, key=lambda r: r.date)
 
     async def _fetch_quick_logs(self) -> list[QuickLogRow]:
-        """Fetch last 14 days of quick-log entries."""
+        """Fetch last 14 days of quick-log entries from health_events."""
         cutoff = datetime(
             self.target_date.year,
             self.target_date.month,
@@ -557,21 +566,23 @@ class HealthBriefBuilder:
             tzinfo=timezone.utc,
         ) - timedelta(days=_LOOKBACK_QUICK_LOGS)
         result = await self.db.execute(
-            select(QuickLog)
+            select(HealthEvent)
             .where(
-                QuickLog.user_id == self.user_id,
-                QuickLog.logged_at >= cutoff,
+                HealthEvent.user_id == self.user_id,
+                HealthEvent.recorded_at >= cutoff,
+                HealthEvent.deleted_at.is_(None),
             )
+            .order_by(HealthEvent.recorded_at.desc())
             .limit(500)
         )
         rows = result.scalars().all()
         return [
             QuickLogRow(
                 metric_type=r.metric_type,
-                value=_float(r, "value"),
-                text_value=getattr(r, "text_value", None),
-                data=r.data if isinstance(r.data, dict) else {},
-                logged_at=r.logged_at.isoformat() if r.logged_at else "",
+                value=float(r.value) if r.value is not None else None,
+                text_value=(r.metadata_ or {}).get("text_value") if r.metadata_ else None,
+                data=r.metadata_ if isinstance(r.metadata_, dict) else {},
+                logged_at=r.recorded_at.isoformat() if r.recorded_at else "",
             )
             for r in rows
         ]

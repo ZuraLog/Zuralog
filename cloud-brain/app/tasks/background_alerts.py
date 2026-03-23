@@ -9,9 +9,9 @@ Events checked
 1. **Anomaly alert** — ``insights`` rows of type ``anomaly_alert`` created
    in the last hour signal an unusual metric that warrants immediate user
    attention.
-2. **Goal reached** — ``daily_health_metrics`` for today vs ``user_goals``
+2. **Goal reached** — ``daily_summaries`` for today vs ``user_goals``
    for the ``steps`` metric.  Generalised to any ``daily`` goal metric
-   that maps to a column on ``DailyHealthMetrics``.
+   that maps to a ``metric_type`` in ``daily_summaries``.
 3. **Streak milestone** — ``user_streaks.current_count`` matching one of
    the canonical milestone counts (7, 14, 30, 60, 90, 180, 365 days).
 4. **Stale integration** — any ``Integration`` whose ``last_synced_at``
@@ -207,19 +207,19 @@ def check_user_events(user_id: str) -> dict[str, Any]:
         # ==================================================================
         if _notifications_enabled(notification_settings, _NOTIF_KEY_GOAL):
             try:
-                from sqlalchemy import select
+                from sqlalchemy import func, select
 
-                from app.models.daily_metrics import DailyHealthMetrics
+                from app.models.daily_summary import DailySummary
                 from app.models.user_goal import GoalPeriod, UserGoal
 
-                today_str = datetime.now(timezone.utc).date().isoformat()
+                today = datetime.now(timezone.utc).date()
 
-                # Map goal metric names to DailyHealthMetrics column names
-                _metric_column_map: dict[str, str] = {
+                # Map goal metric names to daily_summaries metric_type values
+                _metric_type_map: dict[str, str] = {
                     "steps": "steps",
                     "active_calories": "active_calories",
-                    "distance_meters": "distance_meters",
-                    "flights_climbed": "flights_climbed",
+                    "distance_meters": "distance",
+                    "flights_climbed": "floors_climbed",
                 }
 
                 async with async_session() as db:
@@ -234,19 +234,16 @@ def check_user_events(user_id: str) -> dict[str, Any]:
                     daily_goals = goals_result.scalars().all()
 
                     for goal in daily_goals:
-                        col_name = _metric_column_map.get(goal.metric)
-                        if col_name is None:
-                            continue  # metric not tracked in daily_metrics
+                        metric_type = _metric_type_map.get(goal.metric)
+                        if metric_type is None:
+                            continue  # metric not tracked in daily_summaries
 
-                        # Fetch today's metric — aggregate across sources
-                        from sqlalchemy import func
-
-                        col_attr = getattr(DailyHealthMetrics, col_name)
+                        # Fetch today's metric value from daily_summaries
                         today_result = await db.execute(
-                            select(func.sum(col_attr)).where(
-                                DailyHealthMetrics.user_id == user_id,
-                                DailyHealthMetrics.date == today_str,
-                                col_attr.isnot(None),
+                            select(func.sum(DailySummary.value)).where(
+                                DailySummary.user_id == user_id,
+                                DailySummary.date == today,
+                                DailySummary.metric_type == metric_type,
                             )
                         )
                         actual_value = today_result.scalar_one_or_none() or 0.0

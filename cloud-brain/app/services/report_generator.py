@@ -2,7 +2,7 @@
 Zuralog Cloud Brain — Report Generator Service.
 
 Generates weekly and monthly health summary reports by aggregating data
-from ``daily_health_metrics``.  AI highlights in this service are
+from ``daily_summaries``.  AI highlights in this service are
 rule-based text templates; LLM-enhanced highlights are added by the
 Celery task layer that calls this service.
 
@@ -19,7 +19,7 @@ from typing import Any
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.daily_metrics import DailyHealthMetrics
+from app.models.daily_summary import DailySummary
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class ReportGenerator:
     """Generates weekly and monthly health summary reports.
 
     All aggregation is performed via async SQLAlchemy queries against the
-    ``daily_health_metrics`` table.  No external APIs are called — this
+    ``daily_summaries`` table.  No external APIs are called — this
     service is purely database-driven.
 
     Usage::
@@ -49,7 +49,7 @@ class ReportGenerator:
     ) -> dict[str, Any]:
         """Generate a weekly health summary report.
 
-        Aggregates ``daily_health_metrics`` for the 7-day window starting
+        Aggregates ``daily_summaries`` for the 7-day window starting
         at ``week_start`` (inclusive) through ``week_start + 6 days``
         (inclusive).
 
@@ -106,7 +106,7 @@ class ReportGenerator:
     ) -> dict[str, Any]:
         """Generate a monthly health summary report.
 
-        Aggregates ``daily_health_metrics`` for the entire calendar month
+        Aggregates ``daily_summaries`` for the entire calendar month
         starting at ``month_start``.
 
         Also computes month-over-month deltas against the preceding month.
@@ -173,6 +173,9 @@ class ReportGenerator:
     ) -> dict[str, Any]:
         """Aggregate health metrics for a calendar period.
 
+        Queries ``daily_summaries`` for the relevant metric_types and
+        computes averages / sums / counts in SQL.
+
         Args:
             user_id: User to aggregate for.
             db: Active async database session.
@@ -184,57 +187,72 @@ class ReportGenerator:
             ``active_days``, ``avg_sleep_hours``, ``avg_steps``,
             ``avg_resting_hr``, ``avg_hrv``, ``total_steps``.
         """
-        start_str = start.isoformat()
-        end_str = end.isoformat()
+        _METRIC_TYPES = [
+            "steps", "active_calories", "resting_heart_rate",
+            "hrv_ms", "sleep_duration", "weight_kg",
+        ]
 
+        # Pivot aggregation: one query pulling AVG/SUM per metric_type
         stmt = select(
-            func.count(DailyHealthMetrics.date.distinct()).label("day_count"),
-            func.avg(DailyHealthMetrics.steps).label("avg_steps"),
-            func.sum(DailyHealthMetrics.steps).label("total_steps"),
-            func.avg(DailyHealthMetrics.resting_heart_rate).label("avg_rhr"),
-            func.avg(DailyHealthMetrics.hrv_ms).label("avg_hrv"),
-            # Count of days with active_calories > 0 as workout proxy
-            func.count(DailyHealthMetrics.id).label("active_days_raw"),
+            DailySummary.metric_type,
+            func.avg(DailySummary.value).label("avg_val"),
+            func.sum(DailySummary.value).label("sum_val"),
+            func.count(DailySummary.date.distinct()).label("day_count"),
         ).where(
             and_(
-                DailyHealthMetrics.user_id == user_id,
-                DailyHealthMetrics.date >= start_str,
-                DailyHealthMetrics.date <= end_str,
+                DailySummary.user_id == user_id,
+                DailySummary.date >= start,
+                DailySummary.date <= end,
+                DailySummary.metric_type.in_(_METRIC_TYPES),
             )
-        )
+        ).group_by(DailySummary.metric_type)
 
-        # Separate query for active days (calories > 0)
+        # Separate query: active days (days with active_calories > 0)
         active_days_stmt = select(
-            func.count(DailyHealthMetrics.date.distinct())
+            func.count(DailySummary.date.distinct())
         ).where(
             and_(
-                DailyHealthMetrics.user_id == user_id,
-                DailyHealthMetrics.date >= start_str,
-                DailyHealthMetrics.date <= end_str,
-                DailyHealthMetrics.active_calories > 0,
+                DailySummary.user_id == user_id,
+                DailySummary.date >= start,
+                DailySummary.date <= end,
+                DailySummary.metric_type == "active_calories",
+                DailySummary.value > 0,
             )
         )
 
         try:
             result = await db.execute(stmt)
-            row = result.one()
+            rows = result.all()
             active_result = await db.execute(active_days_stmt)
             active_days: int = active_result.scalar_one() or 0
 
+            # Build a lookup by metric_type
+            agg: dict[str, Any] = {}
+            for row in rows:
+                agg[row.metric_type] = {
+                    "avg": float(row.avg_val or 0),
+                    "sum": float(row.sum_val or 0),
+                    "days": int(row.day_count or 0),
+                }
+
+            avg_sleep_minutes = agg.get("sleep_duration", {}).get("avg", 0.0)
+
             return {
                 "active_days": active_days,
-                "avg_sleep_hours": 0.0,  # Sleep stored separately; placeholder for now
-                "avg_steps": round(float(row.avg_steps or 0)),
-                "total_steps": int(row.total_steps or 0),
-                "avg_resting_hr": round(float(row.avg_rhr or 0), 1),
-                "avg_hrv": round(float(row.avg_hrv or 0), 1),
+                "avg_sleep_hours": round(avg_sleep_minutes / 60.0, 1),
+                "avg_steps": round(agg.get("steps", {}).get("avg", 0)),
+                "total_steps": int(agg.get("steps", {}).get("sum", 0)),
+                "avg_resting_hr": round(
+                    agg.get("resting_heart_rate", {}).get("avg", 0), 1
+                ),
+                "avg_hrv": round(agg.get("hrv_ms", {}).get("avg", 0), 1),
             }
         except Exception:
             logger.exception(
                 "report_generator: aggregation failed for user=%s %s–%s",
                 user_id,
-                start_str,
-                end_str,
+                start.isoformat(),
+                end.isoformat(),
             )
             return {
                 "active_days": 0,

@@ -1,23 +1,20 @@
 """HealthScoreCalculator — composite daily health score (0-100).
 
 Computes a weighted, percentile-ranked health score from up to six
-metrics sourced from ``DailyHealthMetrics`` and ``SleepRecord``.
+metrics sourced from ``daily_summaries``.
 Each sub-score is the user's percentile rank within their own 30-day
 history so the score is personal and improves as more data accumulates.
 """
 
 import json
 import logging
-import math
 import statistics
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.daily_metrics import DailyHealthMetrics
-from app.models.health_data import SleepRecord, UnifiedActivity
 from app.models.health_score_cache import HealthScoreCache
 
 logger = logging.getLogger(__name__)
@@ -328,7 +325,11 @@ class HealthScoreCalculator:
         window_start: str,
         window_end: str,
     ) -> list[dict]:
-        """Fetch DailyHealthMetrics rows within the given date window.
+        """Fetch daily_summaries rows within the given date window.
+
+        Queries ``daily_summaries`` for metric_types: steps,
+        active_calories, resting_heart_rate, hrv_ms and pivots them
+        into one dict per date.
 
         Args:
             db: Async database session.
@@ -339,28 +340,29 @@ class HealthScoreCalculator:
         Returns:
             List of dicts with metric fields keyed by name.
         """
-        stmt = select(DailyHealthMetrics).where(
-            and_(
-                DailyHealthMetrics.user_id == user_id,
-                DailyHealthMetrics.date >= window_start,
-                DailyHealthMetrics.date <= window_end,
-            )
-        )
-        result = await db.execute(stmt)
-        rows = result.scalars().all()
+        start_date = date.fromisoformat(window_start)
+        end_date = date.fromisoformat(window_end)
 
-        # Aggregate by date — take best non-null value per date across sources
+        result = await db.execute(
+            sql_text("""
+                SELECT date, metric_type, value
+                FROM daily_summaries
+                WHERE user_id = :user_id
+                  AND date >= :start
+                  AND date <= :end
+                  AND metric_type IN ('steps', 'active_calories', 'resting_heart_rate', 'hrv_ms')
+            """),
+            {"user_id": user_id, "start": start_date, "end": end_date},
+        )
+        rows = result.fetchall()
+
+        # Pivot rows into one dict per date
         by_date: dict[str, dict] = {}
         for row in rows:
-            d = row.date
-            existing = by_date.get(d, {})
-            by_date[d] = {
-                "date": d,
-                "steps": _coalesce(existing.get("steps"), row.steps),
-                "active_calories": _coalesce(existing.get("active_calories"), row.active_calories),
-                "resting_heart_rate": _coalesce(existing.get("resting_heart_rate"), row.resting_heart_rate),
-                "hrv_ms": _coalesce(existing.get("hrv_ms"), row.hrv_ms),
-            }
+            d = row.date if isinstance(row.date, str) else row.date.isoformat()
+            if d not in by_date:
+                by_date[d] = {"date": d, "steps": None, "active_calories": None, "resting_heart_rate": None, "hrv_ms": None}
+            by_date[d][row.metric_type] = row.value
 
         return list(by_date.values())
 
@@ -371,7 +373,10 @@ class HealthScoreCalculator:
         window_start: str,
         window_end: str,
     ) -> list[dict]:
-        """Fetch SleepRecord rows within the given date window.
+        """Fetch sleep data from daily_summaries within the given date window.
+
+        Queries ``daily_summaries`` for ``sleep_duration`` (minutes, converted
+        to hours) and optionally ``sleep_quality``.
 
         Args:
             db: Async database session.
@@ -382,29 +387,35 @@ class HealthScoreCalculator:
         Returns:
             List of dicts with ``date``, ``hours``, and ``quality_score``.
         """
-        stmt = select(SleepRecord).where(
-            and_(
-                SleepRecord.user_id == user_id,
-                SleepRecord.date >= window_start,
-                SleepRecord.date <= window_end,
-            )
-        )
-        result = await db.execute(stmt)
-        rows = result.scalars().all()
+        start_date = date.fromisoformat(window_start)
+        end_date = date.fromisoformat(window_end)
 
-        # Aggregate by date — prefer highest hours across sources
+        result = await db.execute(
+            sql_text("""
+                SELECT date, metric_type, value
+                FROM daily_summaries
+                WHERE user_id = :user_id
+                  AND date >= :start
+                  AND date <= :end
+                  AND metric_type IN ('sleep_duration', 'sleep_quality')
+            """),
+            {"user_id": user_id, "start": start_date, "end": end_date},
+        )
+        rows = result.fetchall()
+
+        # Pivot into one dict per date
         by_date: dict[str, dict] = {}
         for row in rows:
-            d = row.date
-            existing = by_date.get(d)
-            if existing is None or row.hours > existing["hours"]:
-                by_date[d] = {
-                    "date": d,
-                    "hours": row.hours,
-                    "quality_score": row.quality_score,
-                }
+            d = row.date if isinstance(row.date, str) else row.date.isoformat()
+            if d not in by_date:
+                by_date[d] = {"date": d, "hours": None, "quality_score": None}
+            if row.metric_type == "sleep_duration":
+                by_date[d]["hours"] = row.value / 60.0  # minutes → hours
+            elif row.metric_type == "sleep_quality":
+                by_date[d]["quality_score"] = row.value
 
-        return list(by_date.values())
+        # Only return dates that actually have sleep duration
+        return [entry for entry in by_date.values() if entry["hours"] is not None]
 
     async def _fetch_activity_history(
         self,
@@ -412,7 +423,7 @@ class HealthScoreCalculator:
         user_id: str,
         target_date: date,
     ) -> list[dict]:
-        """Fetch UnifiedActivity rows for the 30-day window ending on target_date.
+        """Fetch active_calories from daily_summaries for the 30-day window.
 
         Args:
             db: Async database session.
@@ -422,33 +433,26 @@ class HealthScoreCalculator:
         Returns:
             List of dicts with ``date``, ``calories``, and ``duration_seconds``.
         """
-        window_start_dt = datetime(
-            *(target_date - timedelta(days=30)).timetuple()[:3],
-            tzinfo=timezone.utc,
-        )
-        window_end_dt = datetime(
-            *target_date.timetuple()[:3],
-            23,
-            59,
-            59,
-            tzinfo=timezone.utc,
-        )
+        start_date = target_date - timedelta(days=30)
 
-        stmt = select(UnifiedActivity).where(
-            and_(
-                UnifiedActivity.user_id == user_id,
-                UnifiedActivity.start_time >= window_start_dt,
-                UnifiedActivity.start_time <= window_end_dt,
-            )
+        result = await db.execute(
+            sql_text("""
+                SELECT date, value
+                FROM daily_summaries
+                WHERE user_id = :user_id
+                  AND date >= :start
+                  AND date <= :end
+                  AND metric_type = 'active_calories'
+            """),
+            {"user_id": user_id, "start": start_date, "end": target_date},
         )
-        result = await db.execute(stmt)
-        rows = result.scalars().all()
+        rows = result.fetchall()
 
         return [
             {
-                "date": row.start_time.date().isoformat(),
-                "calories": row.calories,
-                "duration_seconds": row.duration_seconds,
+                "date": row.date if isinstance(row.date, str) else row.date.isoformat(),
+                "calories": row.value,
+                "duration_seconds": 0,
             }
             for row in rows
         ]
@@ -459,9 +463,9 @@ class HealthScoreCalculator:
         user_id: str,
         target_date: date,
     ) -> float | None:
-        """Compute stddev of sleep record dates over the 7 days ending on target_date.
+        """Compute stddev of sleep_duration dates over the 7 days ending on target_date.
 
-        Uses the date string of each sleep record as a proxy for sleep timing
+        Uses the date of each sleep_duration summary as a proxy for sleep timing
         (actual bedtime is not stored).  Lower stddev means more consistent sleep.
 
         Args:
@@ -472,24 +476,29 @@ class HealthScoreCalculator:
         Returns:
             Standard deviation in days, or ``None`` if fewer than 3 records.
         """
-        window_start = (target_date - timedelta(days=6)).isoformat()
-        window_end = target_date.isoformat()
+        start_date = target_date - timedelta(days=6)
 
-        stmt = select(SleepRecord).where(
-            and_(
-                SleepRecord.user_id == user_id,
-                SleepRecord.date >= window_start,
-                SleepRecord.date <= window_end,
-            )
+        result = await db.execute(
+            sql_text("""
+                SELECT date
+                FROM daily_summaries
+                WHERE user_id = :user_id
+                  AND date >= :start
+                  AND date <= :end
+                  AND metric_type = 'sleep_duration'
+            """),
+            {"user_id": user_id, "start": start_date, "end": target_date},
         )
-        result = await db.execute(stmt)
-        rows = result.scalars().all()
+        rows = result.fetchall()
 
         if len(rows) < 3:
             return None
 
-        # Convert date strings to ordinal numbers for stddev computation
-        ordinals = [date.fromisoformat(r.date).toordinal() for r in rows]
+        # Convert dates to ordinal numbers for stddev computation
+        ordinals = [
+            (r.date if isinstance(r.date, date) else date.fromisoformat(r.date)).toordinal()
+            for r in rows
+        ]
         try:
             return statistics.stdev(ordinals)
         except statistics.StatisticsError:
@@ -505,9 +514,8 @@ class HealthScoreCalculator:
 
         Used to rank today's consistency against recent history.
 
-        Fetches the full 37-day sleep window in a single query, then computes
-        all rolling 7-day stddevs in Python — replacing the previous
-        implementation that issued up to 30 separate database queries.
+        Fetches the full 37-day sleep_duration window in a single query,
+        then computes all rolling 7-day stddevs in Python.
 
         Args:
             db: Async database session.
@@ -515,32 +523,38 @@ class HealthScoreCalculator:
             target_date: The day being scored.
 
         Returns:
-            List of stddev values (one per rolling window with ≥3 records).
+            List of stddev values (one per rolling window with >= 3 records).
         """
-        # Fetch the full 37-day window once (30 rolling windows × 7-day span,
+        # Fetch the full 37-day window once (30 rolling windows x 7-day span,
         # anchored 1 day before target so we don't overlap today's window).
-        window_start = (target_date - timedelta(days=36)).isoformat()
-        window_end = (target_date - timedelta(days=1)).isoformat()
+        start_date = target_date - timedelta(days=36)
+        end_date = target_date - timedelta(days=1)
 
-        stmt = select(SleepRecord.date).where(
-            and_(
-                SleepRecord.user_id == user_id,
-                SleepRecord.date >= window_start,
-                SleepRecord.date <= window_end,
-            )
+        result = await db.execute(
+            sql_text("""
+                SELECT date
+                FROM daily_summaries
+                WHERE user_id = :user_id
+                  AND date >= :start
+                  AND date <= :end
+                  AND metric_type = 'sleep_duration'
+            """),
+            {"user_id": user_id, "start": start_date, "end": end_date},
         )
-        result = await db.execute(stmt)
-        all_dates: set[str] = {row[0] for row in result.fetchall()}
+        all_dates: set[date] = set()
+        for row in result.fetchall():
+            d = row.date if isinstance(row.date, date) else date.fromisoformat(row.date)
+            all_dates.add(d)
 
         # Compute rolling 7-day stddev for each of the 30 historical windows.
         stddevs: list[float] = []
         for offset in range(1, 31):
             past_date = target_date - timedelta(days=offset)
             window_start_d = past_date - timedelta(days=6)
-            dates_in_window = [d for d in all_dates if window_start_d.isoformat() <= d <= past_date.isoformat()]
+            dates_in_window = [d for d in all_dates if window_start_d <= d <= past_date]
             if len(dates_in_window) < 3:
                 continue
-            ordinals = [date.fromisoformat(d).toordinal() for d in dates_in_window]
+            ordinals = [d.toordinal() for d in dates_in_window]
             try:
                 stddevs.append(statistics.stdev(ordinals))
             except statistics.StatisticsError:

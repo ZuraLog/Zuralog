@@ -154,7 +154,7 @@ async def today_goals_progress(
             JOIN user_goals ug ON ds.user_id = ug.user_id AND ds.metric_type = ug.metric
             WHERE ds.user_id = :uid AND ds.date = :d
         """),
-        {"uid": str(user_id), "d": str(local_date)},
+        {"uid": str(user_id), "d": local_date},
     )
     return [
         GoalProgressItem(

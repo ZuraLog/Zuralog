@@ -8,21 +8,19 @@ Covers the five required scenarios:
 4. ``test_insufficient_data_skipped``         — <14 days → no anomaly check
 5. ``test_direction_high_and_low``            — detects both high and low anomalies
 
-All tests use a mocked AsyncSession populated with synthetic
-``DailyHealthMetrics`` and ``SleepRecord`` instances so that no real
-database connection is required.
+All tests use a mocked AsyncSession and synthetic ``DailySummary`` instances
+so that no real database connection is required.
 """
 
 from __future__ import annotations
 
 import math
 from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.daily_metrics import DailyHealthMetrics
-from app.models.health_data import SleepRecord
 from app.services.anomaly_detector import (
     AnomalyDetector,
     AnomalyResult,
@@ -36,24 +34,13 @@ from app.services.anomaly_detector import (
 # ---------------------------------------------------------------------------
 
 
-def _make_daily_row(date_str: str, resting_hr: float | None = None, steps: int | None = None) -> DailyHealthMetrics:
-    """Build a minimal DailyHealthMetrics object without a database."""
-    row = DailyHealthMetrics.__new__(DailyHealthMetrics)
-    row.date = date_str
-    row.resting_heart_rate = resting_hr
-    row.hrv_ms = None
-    row.steps = steps
-    row.active_calories = None
-    return row
-
-
-def _make_sleep_row(date_str: str, hours: float | None = None, quality: int | None = None) -> SleepRecord:
-    """Build a minimal SleepRecord object without a database."""
-    row = SleepRecord.__new__(SleepRecord)
-    row.date = date_str
-    row.hours = hours
-    row.quality_score = quality
-    return row
+def _make_daily_summary(date_val: str | date, metric_type: str, value: float) -> SimpleNamespace:
+    """Build a minimal DailySummary-like object without touching the ORM."""
+    return SimpleNamespace(
+        date=date_val if isinstance(date_val, date) else date.fromisoformat(date_val),
+        metric_type=metric_type,
+        value=value,
+    )
 
 
 def _build_baseline(
@@ -77,28 +64,19 @@ def _build_baseline(
     return values
 
 
-def _make_mock_db(daily_rows: list[DailyHealthMetrics], sleep_rows: list[SleepRecord]) -> AsyncMock:
-    """Return an AsyncMock AsyncSession whose execute() yields the given rows."""
-    db = AsyncMock()
-
-    async def _execute(stmt):
-        # Inspect the stmt to determine which table is being queried.
-        # We use the compiled string as a heuristic; a real app would use
-        # SQLAlchemy's inspection API or separate call tracking.
-        stmt_str = str(stmt)
-        mock_result = MagicMock()
-        if "daily_health_metrics" in stmt_str or "DailyHealthMetrics" in str(type(stmt)):
-            mock_result.scalars.return_value.all.return_value = daily_rows
-        else:
-            mock_result.scalars.return_value.all.return_value = sleep_rows
-        return mock_result
-
-    db.execute = _execute
-    return db
+def _build_rhr_rows(target: date, baseline_values: list[float], current_val: float | None = None):
+    """Build a list of DailySummary-like rows for resting_heart_rate."""
+    rows = []
+    for i, val in enumerate(baseline_values):
+        d = target - timedelta(days=len(baseline_values) - i)
+        rows.append(_make_daily_summary(d, "resting_heart_rate", val))
+    if current_val is not None:
+        rows.append(_make_daily_summary(target, "resting_heart_rate", current_val))
+    return rows
 
 
 # ---------------------------------------------------------------------------
-# A simpler approach: mock the private fetch methods directly
+# Fixtures
 # ---------------------------------------------------------------------------
 
 
@@ -122,18 +100,10 @@ async def test_no_anomaly_when_within_threshold(detector: AnomalyDetector, targe
     """A current value 1.5 stddevs from the mean should produce an empty result."""
     baseline_mean = 70.0
     baseline_stddev = 5.0
-    target_date_str = target.isoformat()
 
-    # Build 20 baseline rows (alternating around mean).
     baseline_values = _build_baseline(target, baseline_mean, baseline_stddev, n_days=20)
-    daily_rows: list[DailyHealthMetrics] = []
-    for i, val in enumerate(baseline_values):
-        d = (target - timedelta(days=len(baseline_values) - i)).isoformat()
-        daily_rows.append(_make_daily_row(d, resting_hr=val))
-
-    # Current value = mean + 1.5 * stddev (below the 2.0 threshold)
     current_val = baseline_mean + 1.5 * baseline_stddev
-    daily_rows.append(_make_daily_row(target_date_str, resting_hr=current_val))
+    daily_rows = _build_rhr_rows(target, baseline_values, current_val)
 
     async def _fake_fetch_daily(user_id, db, td):
         return daily_rows
@@ -160,17 +130,10 @@ async def test_elevated_anomaly_detected(detector: AnomalyDetector, target: date
     """A current value 2.5 stddevs above the mean should be 'elevated'."""
     baseline_mean = 70.0
     baseline_stddev = 5.0
-    target_date_str = target.isoformat()
 
     baseline_values = _build_baseline(target, baseline_mean, baseline_stddev, n_days=20)
-    daily_rows: list[DailyHealthMetrics] = []
-    for i, val in enumerate(baseline_values):
-        d = (target - timedelta(days=len(baseline_values) - i)).isoformat()
-        daily_rows.append(_make_daily_row(d, resting_hr=val))
-
-    # 2.5 stddevs above mean
     current_val = baseline_mean + 2.5 * baseline_stddev
-    daily_rows.append(_make_daily_row(target_date_str, resting_hr=current_val))
+    daily_rows = _build_rhr_rows(target, baseline_values, current_val)
 
     async def _fake_fetch_daily(user_id, db, td):
         return daily_rows
@@ -203,17 +166,10 @@ async def test_critical_anomaly_detected(detector: AnomalyDetector, target: date
     """A current value 3.5 stddevs above the mean should be 'critical'."""
     baseline_mean = 70.0
     baseline_stddev = 5.0
-    target_date_str = target.isoformat()
 
     baseline_values = _build_baseline(target, baseline_mean, baseline_stddev, n_days=20)
-    daily_rows: list[DailyHealthMetrics] = []
-    for i, val in enumerate(baseline_values):
-        d = (target - timedelta(days=len(baseline_values) - i)).isoformat()
-        daily_rows.append(_make_daily_row(d, resting_hr=val))
-
-    # 3.5 stddevs above mean
     current_val = baseline_mean + 3.5 * baseline_stddev
-    daily_rows.append(_make_daily_row(target_date_str, resting_hr=current_val))
+    daily_rows = _build_rhr_rows(target, baseline_values, current_val)
 
     async def _fake_fetch_daily(user_id, db, td):
         return daily_rows
@@ -244,20 +200,13 @@ async def test_critical_anomaly_detected(detector: AnomalyDetector, target: date
 @pytest.mark.asyncio
 async def test_insufficient_data_skipped(detector: AnomalyDetector, target: date) -> None:
     """Fewer than 14 days of data should yield no anomaly results."""
-    target_date_str = target.isoformat()
     baseline_mean = 70.0
     baseline_stddev = 5.0
 
     # Only 10 baseline days — below _MIN_DATA_POINTS (14).
     baseline_values = _build_baseline(target, baseline_mean, baseline_stddev, n_days=10)
-    daily_rows: list[DailyHealthMetrics] = []
-    for i, val in enumerate(baseline_values):
-        d = (target - timedelta(days=len(baseline_values) - i)).isoformat()
-        daily_rows.append(_make_daily_row(d, resting_hr=val))
-
-    # Even an extreme current value should not trigger an anomaly.
     current_val = baseline_mean + 10.0 * baseline_stddev
-    daily_rows.append(_make_daily_row(target_date_str, resting_hr=current_val))
+    daily_rows = _build_rhr_rows(target, baseline_values, current_val)
 
     async def _fake_fetch_daily(user_id, db, td):
         return daily_rows
@@ -290,13 +239,8 @@ async def test_direction_high_and_low(detector: AnomalyDetector, target: date) -
 
     # --- HIGH anomaly: current > mean by 2.5 stddevs ---
     high_target = target
-    high_target_str = high_target.isoformat()
     baseline_values = _build_baseline(high_target, baseline_mean, baseline_stddev, n_days=20)
-    high_rows: list[DailyHealthMetrics] = []
-    for i, val in enumerate(baseline_values):
-        d = (high_target - timedelta(days=len(baseline_values) - i)).isoformat()
-        high_rows.append(_make_daily_row(d, resting_hr=val))
-    high_rows.append(_make_daily_row(high_target_str, resting_hr=baseline_mean + 2.5 * baseline_stddev))
+    high_rows = _build_rhr_rows(high_target, baseline_values, baseline_mean + 2.5 * baseline_stddev)
 
     async def _fake_fetch_daily_high(user_id, db, td):
         return high_rows
@@ -317,12 +261,7 @@ async def test_direction_high_and_low(detector: AnomalyDetector, target: date) -
 
     # --- LOW anomaly: current < mean by 2.5 stddevs ---
     low_target = target - timedelta(days=1)
-    low_target_str = low_target.isoformat()
-    low_rows: list[DailyHealthMetrics] = []
-    for i, val in enumerate(baseline_values):
-        d = (low_target - timedelta(days=len(baseline_values) - i)).isoformat()
-        low_rows.append(_make_daily_row(d, resting_hr=val))
-    low_rows.append(_make_daily_row(low_target_str, resting_hr=baseline_mean - 2.5 * baseline_stddev))
+    low_rows = _build_rhr_rows(low_target, baseline_values, baseline_mean - 2.5 * baseline_stddev)
 
     async def _fake_fetch_daily_low(user_id, db, td):
         return low_rows

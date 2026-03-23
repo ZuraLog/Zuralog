@@ -92,8 +92,8 @@ _CATEGORY_ORDER: list[str] = [
 
 async def _fetch_category_data(
     user_id: str,
-    day14_ago_iso: str,
-    day7_ago_iso: str,
+    day14_ago: date,
+    day7_ago: date,
     *,
     category: str,
     metric_type: str,
@@ -108,11 +108,11 @@ async def _fetch_category_data(
                 "WHERE user_id = :uid AND metric_type = :mt AND date >= :d14 "
                 "ORDER BY date"
             ),
-            {"uid": user_id, "mt": metric_type, "d14": day14_ago_iso},
+            {"uid": user_id, "mt": metric_type, "d14": day14_ago},
         )
         rows = [(r[0], float(r[1])) for r in result.fetchall()]
-    recent_rows = [(d, v) for d, v in rows if d >= day7_ago_iso]
-    prior_rows = [(d, v) for d, v in rows if d < day7_ago_iso]
+    recent_rows = [(d, v) for d, v in rows if d >= day7_ago]
+    prior_rows = [(d, v) for d, v in rows if d < day7_ago]
     if recent_rows:
         primary = recent_rows[-1][1]
         return CategorySummaryItem(
@@ -437,14 +437,14 @@ async def dashboard_summary(
     """
     async with async_session() as temp_db:
         today = await get_user_local_date(temp_db, user_id)
-    day14_ago_iso = (today - timedelta(days=14)).isoformat()
-    day7_ago_iso = (today - timedelta(days=7)).isoformat()
+    day14_ago = today - timedelta(days=14)
+    day7_ago = today - timedelta(days=7)
 
     raw_results = await asyncio.gather(
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="activity",
             metric_type="steps",
             unit="steps",
@@ -452,8 +452,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="sleep",
             metric_type="sleep_duration",
             unit=None,
@@ -461,8 +461,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="heart",
             metric_type="resting_heart_rate",
             unit="bpm RHR",
@@ -470,8 +470,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="body",
             metric_type="weight_kg",
             unit="kg",
@@ -479,8 +479,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="vitals",
             metric_type="spo2",
             unit="SpO₂",
@@ -488,8 +488,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="nutrition",
             metric_type="calories",
             unit="kcal",
@@ -497,8 +497,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="wellness",
             metric_type="mood",
             unit="/10 mood",
@@ -506,8 +506,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="mobility",
             metric_type="floors_climbed",
             unit="floors",
@@ -515,8 +515,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="cycle",
             metric_type="cycle_day",
             unit="day",
@@ -524,8 +524,8 @@ async def dashboard_summary(
         ),
         _fetch_category_data(
             user_id,
-            day14_ago_iso,
-            day7_ago_iso,
+            day14_ago,
+            day7_ago,
             category="environment",
             metric_type="noise_exposure",
             unit="dB",
@@ -594,7 +594,7 @@ async def category_detail(
     days_map = {"7D": 7, "30D": 30, "90D": 90}
     days = days_map[time_range.upper()]
     today = await get_user_local_date(db, user_id)
-    since = (today - timedelta(days=days)).isoformat()
+    since = today - timedelta(days=days)
 
     def _make_series(
         metric_id: str,
@@ -803,7 +803,7 @@ async def metric_detail(
     days_map = {"7D": 7, "30D": 30, "90D": 90}
     days = days_map[time_range.upper()]
     today = await get_user_local_date(db, user_id)
-    since = (today - timedelta(days=days)).isoformat()
+    since = today - timedelta(days=days)
 
     # Map metric_id slug (matches Flutter TileId.metricSlug) →
     #   (metric_type, display_name, unit, source, category)
