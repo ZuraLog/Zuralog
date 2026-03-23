@@ -346,7 +346,7 @@ The Cloud Brain sends errors and performance traces to Sentry. The DSN is alread
 uv run alembic upgrade head
 ```
 
-This creates the `users`, `integrations`, and related tables in your local PostgreSQL.
+This creates all tables (`users`, `integrations`, `health_events`, `daily_summaries`, `metric_definitions`, `activity_sessions`, and related tables) in your local PostgreSQL.
 
 ### 2e. Start the Dev Server
 
@@ -749,6 +749,38 @@ All tokens are defined as CSS variables in `src/app/globals.css` using Tailwind 
 
 The Cloud Brain backend deploys to Railway at `api.zuralog.com`. All deployment configuration is in `cloud-brain/`.
 
+### Architecture
+
+| Railway Service | Config File | Purpose |
+|---|---|---|
+| **Zuralog** | `railway.toml` | FastAPI web server (`uvicorn`) — handles all API requests |
+| **Celery_Worker** | `railway.celery-worker.toml` | Background task processor + Beat scheduler (single process) |
+| **Redis** | Railway-managed | Message broker for Celery, rate limiter cache, RedBeat scheduler state |
+
+The database is hosted on **Supabase** (PostgreSQL, project `enccjffwpnwkxfkhargr`, region `us-east-1`). Railway services connect via the Supabase connection pooler (`aws-1-us-east-1.pooler.supabase.com:5432`).
+
+### Data Architecture
+
+The backend uses a **unified health data schema** (Event Sourcing + CQRS):
+
+| Table | Purpose |
+|---|---|
+| `health_events` | Append-only event log — every health data point (steps, sleep, weight, etc.) |
+| `daily_summaries` | Pre-aggregated daily rollups (read cache) — one row per user/date/metric |
+| `metric_definitions` | Registry of 40 canonical metric types with aggregation functions and units |
+| `activity_sessions` | Workout/activity sessions with start/end times |
+
+The Celery worker runs `recompute_stale_summaries` every 5 minutes to keep `daily_summaries` in sync with `health_events`.
+
+### Auto-deploy
+
+Both **Zuralog** and **Celery_Worker** auto-deploy on every push to `main`. The deploy sequence:
+
+1. Docker multi-stage build (`python:3.12-slim` + `uv` for deps)
+2. Pre-deploy: `alembic upgrade head` (Zuralog service only — runs migrations before the new version goes live)
+3. Health check: `GET /health` must return 200 within 120s (Zuralog service only)
+4. Zero-downtime cutover
+
 ### One-time deploy
 
 1. Connect the `ZuraLog/Zuralog` GitHub repo to Railway
@@ -757,14 +789,17 @@ The Cloud Brain backend deploys to Railway at `api.zuralog.com`. All deployment 
    - Builder: Dockerfile
    - Pre-deploy: `alembic upgrade head` (runs migrations before the new deployment goes live)
    - Start: `uvicorn app.main:app --host 0.0.0.0 --port ${PORT}`
-   - Health check: `/health`
+   - Health check: `/health` (120s timeout)
+   - Restart policy: on_failure, max 5 retries
 4. Add all environment variables (see `cloud-brain/RAILWAY_ENV_VARS.md`)
 5. Add a separate service for `Celery_Worker`:
    - Same GitHub repo + root directory (`cloud-brain`) as the web service
    - In the service: **Settings → Source → Config File Path** → `cloud-brain/railway.celery-worker.toml`
    - The config file sets the start command (`celery -A app.worker worker --beat --loglevel=info --concurrency=2`) and disables the HTTP healthcheck automatically — no dashboard overrides needed
    - **Note:** Celery Beat is merged into the Worker process (`--beat` flag). No separate `Celery_Beat` service is needed. If you ever need to scale Worker to 2+ replicas, you must split Beat back into a dedicated service first to avoid duplicate task execution.
-6. Add CNAME `api → <railway-domain>.railway.app` in your DNS provider
+6. Add a **Redis** service from the Railway marketplace
+   - Both Zuralog and Celery_Worker reference it via the `REDIS_URL` variable (internal network: `redis://default:...@redis.railway.internal:6379`)
+7. Add CNAME `api → <railway-domain>.railway.app` in your DNS provider
 
 For the full step-by-step guide including domain setup, Celery services, and Strava webhook registration, see:
 - **[`cloud-brain/docs/railway-setup-guide.md`](./cloud-brain/docs/railway-setup-guide.md)** — step-by-step Railway setup
@@ -791,10 +826,13 @@ make build-prod-ios
 
 | Concern | Local | Production (Railway) |
 |---------|-------|----------------------|
+| Database | Local Docker Postgres (`localhost:5432`) | Supabase pooler (`aws-1-us-east-1.pooler.supabase.com:5432`) |
+| Redis | Local Docker Redis (`localhost:6379`) | Railway-managed Redis (`redis.railway.internal:6379`) |
 | Firebase credentials | `FCM_CREDENTIALS_PATH=firebase-service-account.json` (file) | `FIREBASE_CREDENTIALS_JSON={"type":"service_account",...}` (JSON string) |
 | CORS origins | `ALLOWED_ORIGINS=*` | `ALLOWED_ORIGINS=https://zuralog.com,https://www.zuralog.com` |
 | Debug mode | `APP_DEBUG=true` | `APP_DEBUG=false` |
-| Migrations | `make migrate` (manual) | Auto-run as pre-deploy command |
+| Migrations | `make migrate` (manual) | Auto-run as pre-deploy command (`alembic upgrade head`) |
+| Auth | Supabase GoTrue (shared cloud instance) | Same Supabase GoTrue instance |
 
 ---
 
@@ -886,9 +924,19 @@ gh run list
 
 | MCP Server | Purpose | When to Enable |
 |---|---|---|
-| **Supabase** | Schema inspection, migration validation, RLS verification | Always enabled during backend work |
+| **Supabase** | Schema inspection, migration validation, RLS verification, SQL queries | Always enabled during backend work |
+| **Railway** | Deployment management, service logs, environment variables | When deploying or debugging production issues |
 | **GitHub** | GitHub API (PR reviews, Actions, issue automation) | Only when `git`/`gh` CLI cannot accomplish the task |
+| **Playwright** | Browser automation, screenshot capture, E2E testing | When testing web UI flows |
 | **Filesystem** | File read/write/edit | Built into Claude Code — always available |
+
+**Installing Railway MCP (local):**
+
+```bash
+claude mcp add Railway -- npx @railway/mcp-server
+```
+
+Then link the project: run `railway link` in `cloud-brain/` and select the **ZuraLog** project.
 
 ---
 
