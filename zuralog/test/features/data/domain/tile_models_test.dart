@@ -154,6 +154,30 @@ void main() {
     });
   });
 
+  // ── TileConfig.backendMetricId ─────────────────────────────────────────────
+
+  group('TileId.backendMetricId', () {
+    test('workouts maps to exercise_minutes', () {
+      expect(TileId.workouts.backendMetricId, 'exercise_minutes');
+    });
+
+    test('mobility maps to floors_climbed', () {
+      expect(TileId.mobility.backendMetricId, 'floors_climbed');
+    });
+
+    test('bloodPressure still uses metricSlug (handled specially in provider)', () {
+      expect(TileId.bloodPressure.backendMetricId, 'blood_pressure');
+    });
+
+    test('steps keeps its default slug', () {
+      expect(TileId.steps.backendMetricId, 'steps');
+    });
+
+    test('sleepDuration keeps its default slug', () {
+      expect(TileId.sleepDuration.backendMetricId, 'sleep_duration');
+    });
+  });
+
   // ── TileDataState ──────────────────────────────────────────────────────────
 
   group('TileDataState', () {

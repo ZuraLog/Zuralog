@@ -22,7 +22,7 @@ import 'package:zuralog/features/data/domain/data_models.dart';
 /// Implemented by [DataRepository] (real) and [MockDataRepository] (debug).
 abstract interface class DataRepositoryInterface {
   /// Fetches the aggregated dashboard data — all category summaries.
-  Future<DashboardData> getDashboard();
+  Future<DashboardData> getDashboard({bool forceRefresh = false});
 
   /// Fetches all metrics for a [categoryId] over the given [timeRange].
   Future<CategoryDetailData> getCategoryDetail({
@@ -84,14 +84,22 @@ class DataRepository implements DataRepositoryInterface {
 
   /// Fetches the aggregated dashboard data — all category summaries.
   ///
+  /// When [forceRefresh] is `true`, the Flutter-side in-memory cache is evicted
+  /// and `?force_refresh=true` is forwarded to the server so the server-side
+  /// cache is also bypassed. Use this on pull-to-refresh.
+  ///
   /// Falls back to stale cache on network error if available.
   @override
-  Future<DashboardData> getDashboard() async {
-    if (_dashboardCache != null && !_dashboardCache!.isExpired) {
+  Future<DashboardData> getDashboard({bool forceRefresh = false}) async {
+    if (!forceRefresh && _dashboardCache != null && !_dashboardCache!.isExpired) {
       return _dashboardCache!.value;
     }
+    if (forceRefresh) _dashboardCache = null; // Evict stale Flutter-side cache entry.
     try {
-      final response = await _api.get('/api/v1/analytics/dashboard-summary');
+      final response = await _api.get(
+        '/api/v1/analytics/dashboard-summary',
+        queryParameters: forceRefresh ? {'force_refresh': 'true'} : null,
+      );
       final data = DashboardData.fromJson(
         response.data as Map<String, dynamic>,
       );

@@ -422,6 +422,7 @@ async def dashboard_insight(
 async def dashboard_summary(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
+    force_refresh: bool = Query(False, description="Bypass server cache for this request"),
 ) -> DashboardSummaryResponse:
     """Return aggregated dashboard data for the Data tab Health Dashboard.
 
@@ -431,10 +432,13 @@ async def dashboard_summary(
     Args:
         request: Incoming FastAPI request.
         user_id: Authenticated user ID from JWT.
+        force_refresh: When True, the @cached decorator skips the cached result
+            and re-fetches fresh data, then re-populates the cache.
 
     Returns:
         DashboardSummaryResponse with category summaries and visible order.
     """
+    _ = force_refresh  # consumed by @cached
     async with async_session() as temp_db:
         today = await get_user_local_date(temp_db, user_id)
     day14_ago = today - timedelta(days=14)

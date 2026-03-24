@@ -59,6 +59,65 @@ ProviderContainer _containerWithDashboard(
 }
 
 void main() {
+  // ── combineBloodPressureForTest ─────────────────────────────────────────────
+
+  group('combineBloodPressureForTest', () {
+    test('returns null when both series are absent', () {
+      expect(combineBloodPressureForTest({}), isNull);
+    });
+
+    test('combines sys and dia into "120/80" format', () {
+      final map = {
+        'blood_pressure_systolic': MetricSeries(
+          metricId: 'blood_pressure_systolic',
+          displayName: 'Systolic',
+          unit: 'mmHg',
+          dataPoints: [],
+          currentValue: '120',
+        ),
+        'blood_pressure_diastolic': MetricSeries(
+          metricId: 'blood_pressure_diastolic',
+          displayName: 'Diastolic',
+          unit: 'mmHg',
+          dataPoints: [],
+          currentValue: '80',
+        ),
+      };
+      final result = combineBloodPressureForTest(map);
+      expect(result, isNotNull);
+      expect(result!.currentValue, '120/80');
+      expect(result.unit, 'mmHg');
+    });
+
+    test('uses — for missing diastolic', () {
+      final map = {
+        'blood_pressure_systolic': MetricSeries(
+          metricId: 'blood_pressure_systolic',
+          displayName: 'Systolic',
+          unit: 'mmHg',
+          dataPoints: [],
+          currentValue: '118',
+        ),
+      };
+      final result = combineBloodPressureForTest(map);
+      expect(result!.currentValue, '118/—');
+    });
+
+    test('uses — for missing systolic', () {
+      final map = {
+        'blood_pressure_diastolic': MetricSeries(
+          metricId: 'blood_pressure_diastolic',
+          displayName: 'Diastolic',
+          unit: 'mmHg',
+          dataPoints: [],
+          currentValue: '80',
+        ),
+      };
+      final result = combineBloodPressureForTest(map);
+      expect(result!.currentValue, '—/80');
+    });
+  });
+
   // ── TimeRange ───────────────────────────────────────────────────────────────
 
   group('TimeRange', () {

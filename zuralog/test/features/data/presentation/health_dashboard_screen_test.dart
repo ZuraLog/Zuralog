@@ -46,7 +46,7 @@ class _MockDataRepository implements DataRepositoryInterface {
   final DashboardData _dashboard;
 
   @override
-  Future<DashboardData> getDashboard() async => _dashboard;
+  Future<DashboardData> getDashboard({bool forceRefresh = false}) async => _dashboard;
 
   @override
   Future<CategoryDetailData> getCategoryDetail({

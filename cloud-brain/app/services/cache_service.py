@@ -137,6 +137,13 @@ def cached(
         key_params: List of parameter names to include in the cache key.
                     These must match argument names of the decorated function.
 
+    Convention:
+        If a kwarg named `force_refresh=True` is present when the wrapped
+        function is called, the cache hit is skipped and the handler re-runs,
+        but the fresh result is still written back to cache. Endpoints that
+        want to expose this capability should declare `force_refresh` as a
+        Query parameter — do not reuse this kwarg name for other purposes.
+
     Usage:
         @router.get("/daily-summary")
         @cached(prefix="analytics.daily_summary", ttl=300, key_params=["user_id", "date_str"])
@@ -166,8 +173,9 @@ def cached(
             if request and hasattr(request, "app"):
                 cache_service = getattr(request.app.state, "cache_service", None)
 
-            # Attempt cache hit
-            if cache_service:
+            # Attempt cache hit — skipped when caller passes force_refresh=True
+            force_refresh = kwargs.get("force_refresh", False)
+            if cache_service and not force_refresh:
                 cached_value = await cache_service.get(cache_key)
                 if cached_value is not None:
                     logger.debug("Cache HIT: %s", cache_key)
