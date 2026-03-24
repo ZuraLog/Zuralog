@@ -29,7 +29,7 @@ final class MockDataRepository implements DataRepositoryInterface {
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
   @override
-  Future<DashboardData> getDashboard() async {
+  Future<DashboardData> getDashboard({bool forceRefresh = false}) async {
     await Future<void>.delayed(_delay);
     return DashboardData(
       categories: _mockCategories(),
