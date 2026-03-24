@@ -560,7 +560,9 @@ class TodayRepository implements TodayRepositoryInterface {
             metricType: 'exercise_minutes',
             value: (durationSeconds / 60).roundToDouble(),
             unit: 'min'),
-        if (avgPaceSecondsPerKm != null)
+        if (avgPaceSecondsPerKm != null &&
+            avgPaceSecondsPerKm >= 60 &&
+            avgPaceSecondsPerKm <= 1800)
           SessionMetricPayload(
               metricType: 'running_pace',
               value: avgPaceSecondsPerKm.toDouble(),
