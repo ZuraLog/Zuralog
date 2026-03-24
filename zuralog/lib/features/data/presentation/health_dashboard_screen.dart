@@ -204,6 +204,12 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
   /// SharedPreferences key for the last successful sync timestamp (ms since epoch).
   static const _kLastSyncKey = 'health_last_sync_at';
 
+  /// SharedPreferences key for the Apple Health integration connection flag.
+  static const _kAppleHealthKey = 'integration_connected_apple_health';
+
+  /// SharedPreferences key for the Google Health Connect integration connection flag.
+  static const _kHealthConnectKey = 'integration_connected_google_health_connect';
+
   /// Minimum gap between automatic app-launch syncs (prevents hammering the server).
   static const _kSyncThrottleHours = 1;
 
@@ -218,9 +224,9 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     final prefs = await SharedPreferences.getInstance();
 
     final appleConnected =
-        prefs.getBool('integration_connected_apple_health') ?? false;
+        prefs.getBool(_kAppleHealthKey) ?? false;
     final hcConnected =
-        prefs.getBool('integration_connected_google_health_connect') ?? false;
+        prefs.getBool(_kHealthConnectKey) ?? false;
     if (!appleConnected && !hcConnected) return;
 
     final lastSyncMs = prefs.getInt(_kLastSyncKey);
@@ -230,8 +236,10 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
       if (elapsed.inHours < _kSyncThrottleHours) return;
     }
 
-    // Record attempt time BEFORE firing to prevent parallel syncs on rapid
-    // tab switching.
+    // Write the timestamp BEFORE dispatching the sync (not after) so that
+    // rapid tab switches or concurrent screen lifecycles cannot fire
+    // multiple parallel syncs. A failed sync will extend the throttle
+    // window by up to 1 hour, which is an acceptable trade-off.
     await prefs.setInt(_kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
 
     final syncService = ref.read(healthSyncServiceProvider);
@@ -334,10 +342,9 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
               // Sync latest health data to the server before refreshing tiles.
               final prefs = await SharedPreferences.getInstance();
               final appleConnected =
-                  prefs.getBool('integration_connected_apple_health') ?? false;
+                  prefs.getBool(_kAppleHealthKey) ?? false;
               final hcConnected =
-                  prefs.getBool('integration_connected_google_health_connect') ??
-                      false;
+                  prefs.getBool(_kHealthConnectKey) ?? false;
 
               if (appleConnected || hcConnected) {
                 final syncService = ref.read(healthSyncServiceProvider);
@@ -346,8 +353,9 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   await prefs.setInt(
                       _kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
                 }
-                // Bypass both Flutter-side and server-side caches so the user
-                // sees data from the sync that just completed.
+                // Prime the server cache with fresh data before invalidating providers.
+                // Without this, ref.invalidate(dashboardProvider) would trigger a
+                // getDashboard() call that hits the server's stale in-memory cache.
                 await ref
                     .read(dataRepositoryProvider)
                     .getDashboard(forceRefresh: true);

@@ -321,6 +321,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
     // Sync timestamps.
     await prefs.remove('last_sync_timestamp');
     await prefs.remove('sync_in_progress');
+    await prefs.remove('health_last_sync_at');
 
     // Analytics first-action flags (should fire per user, not per device).
     await prefs.remove('analytics_first_quick_log');
