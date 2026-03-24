@@ -14,7 +14,10 @@ export function ManageCookiesButton() {
   return (
     <button
       type="button"
-      className="text-xs font-medium text-black/30 transition-colors hover:text-[#2D2D2D]"
+      className="text-xs font-medium transition-colors duration-300"
+      style={{ color: "rgba(52, 78, 65, 0.30)" }}
+      onMouseOver={(e) => { e.currentTarget.style.color = "#344E41"; }}
+      onMouseOut={(e) => { e.currentTarget.style.color = "rgba(52, 78, 65, 0.30)"; }}
       onClick={() => {
         // TODO: trigger cookie consent modal
       }}

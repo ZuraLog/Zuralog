@@ -3,6 +3,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ScrollProgress } from "@/components/layout/ScrollProgress";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { MobileSection } from "@/components/sections/MobileSection";
+import { HowItWorksSection } from "@/components/sections/HowItWorksSection";
 import { BentoSection } from "@/components/sections/BentoSection";
 import { WaitlistSection } from "@/components/sections/WaitlistSection";
 import { PhoneMockupSection } from "@/components/sections/PhoneMockupSection";
@@ -20,6 +21,7 @@ export default function Home() {
                 <Navbar />
                 <HeroSection />
                 <MobileSection />
+                <HowItWorksSection />
                 <BentoSection />
                 <PhoneMockupSection />
                 <WaitlistSection />

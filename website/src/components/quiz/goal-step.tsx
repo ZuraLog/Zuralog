@@ -79,7 +79,7 @@ export function GoalStep({ selected, onSelect, onNext, onBack, canProceed }: Goa
         <Button
           disabled={!canProceed}
           onClick={onNext}
-          className="flex-1 rounded-full bg-peach py-4 text-base font-semibold text-white hover:bg-peach-dim disabled:opacity-30"
+          className="flex-1 rounded-full py-4 text-base font-semibold disabled:opacity-30"
         >
           Get my spot
         </Button>

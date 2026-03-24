@@ -3,7 +3,7 @@
 @theme {
   --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
-  
+
   --color-primary-lime: #E8F5A8;
   --color-cream: #FAFAF5;
   --color-dark-charcoal: #2D2D2D;
@@ -12,10 +12,22 @@
   --color-sage-dim: #b3d18f;
   --color-peach: #CFE1B9;
   --color-peach-dim: #b3d18f;
-  
+
+  /* Brand bible v4.0 — Dark Anchor palette */
+  --color-ink-green: #141E18;
+  --color-deep-forest: #344E41;
+  --color-surface-1: #1E2E24;
+  --color-surface-2: #253A2C;
+  --color-surface-3: #2C4534;
+  --color-text-dark-primary: #E8EDE0;
+  --color-text-dark-secondary: #CFE1B9;
+  --color-text-dark-muted: rgba(207, 225, 185, 0.40);
+  --color-border-dark: rgba(207, 225, 185, 0.06);
+  --color-border-dark-strong: rgba(207, 225, 185, 0.12);
+
   --color-background: var(--color-cream);
   --color-foreground: var(--color-dark-charcoal);
-  
+
   --container-max-width: 1280px;
 }
 
@@ -107,21 +119,21 @@ body {
 ───────────────────────────────────────────────────────────── */
 @keyframes pillPulse {
   0%, 30% {
-    background-color: #F3F4F6;
-    border-color: #E5E7EB;
-    color: #6B7280;
+    background-color: rgba(52, 78, 65, 0.04);
+    border-color: rgba(52, 78, 65, 0.10);
+    color: rgba(52, 78, 65, 0.40);
     box-shadow: none;
   }
   45%, 60% {
-    background-color: #E8F5A8;
-    border-color: #D4F291;
-    color: #1A1A1A;
-    box-shadow: 0 0 12px rgba(212, 242, 145, 0.55);
+    background-color: rgba(207, 225, 185, 0.25);
+    border-color: rgba(207, 225, 185, 0.45);
+    color: #344E41;
+    box-shadow: 0 0 12px rgba(207, 225, 185, 0.20);
   }
   75%, 100% {
-    background-color: #F3F4F6;
-    border-color: #E5E7EB;
-    color: #6B7280;
+    background-color: rgba(52, 78, 65, 0.04);
+    border-color: rgba(52, 78, 65, 0.10);
+    color: rgba(52, 78, 65, 0.40);
     box-shadow: none;
   }
 }
@@ -461,6 +473,226 @@ body {
 /* Disable phone float animation on mobile (no 3D phone shown) */
 @media (max-width: 767px) {
   .phone-float {
+    animation: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium UI — Topographic pattern overlay (static)
+   Used on dark chrome (navbar, footer).
+───────────────────────────────────────────────────────────── */
+.topo-pattern {
+  position: relative;
+}
+.topo-pattern::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/pattern-sm.jpg");
+  background-size: 400px auto;
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.06;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium UI — Animated topographic pattern button
+   Slow diagonal drift of the pattern across the button surface.
+   All buttons share a single /pattern-sm.jpg via CSS.
+   GPU-accelerated via background-position animation.
+───────────────────────────────────────────────────────────── */
+@keyframes patternDrift {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 200% 100%; }
+}
+
+/* Dark variant — Deep Forest bg, pattern on top */
+.btn-pattern {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-pattern::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("/pattern-sm.jpg");
+  background-size: 300px auto;
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.12;
+  pointer-events: none;
+  animation: patternDrift 20s linear infinite;
+  z-index: 1;
+}
+.btn-pattern > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Light variant — sage/lime bg, darker pattern */
+.btn-pattern-light {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-pattern-light::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("/pattern-sm.jpg");
+  background-size: 300px auto;
+  background-repeat: repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.08;
+  pointer-events: none;
+  animation: patternDrift 25s linear infinite;
+  z-index: 1;
+}
+.btn-pattern-light > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Hover intensify — pattern becomes more visible on hover */
+.btn-pattern:hover::before {
+  opacity: 0.20;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-pattern-light:hover::before {
+  opacity: 0.14;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .btn-pattern::before,
+  .btn-pattern-light::before {
+    animation: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium UI — Nav link sliding underline
+───────────────────────────────────────────────────────────── */
+.nav-link-underline {
+  position: relative;
+}
+.nav-link-underline::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: #CFE1B9;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-link-underline:hover::after {
+  width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium UI — Navbar CTA pattern button glow (sage)
+───────────────────────────────────────────────────────────── */
+@keyframes sage-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(207, 225, 185, 0); }
+  50%       { box-shadow: 0 0 16px 4px rgba(207, 225, 185, 0.25); }
+}
+.animate-sage-glow {
+  animation: sage-glow 3s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium UI — Footer topographic background
+───────────────────────────────────────────────────────────── */
+.footer-topo {
+  position: relative;
+  overflow: hidden;
+}
+.footer-topo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/brand-pattern-hd.jpg");
+  background-size: 600px auto;
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium UI — Social icon hover glow
+───────────────────────────────────────────────────────────── */
+.social-icon-glow {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.social-icon-glow:hover {
+  border-color: rgba(207, 225, 185, 0.30);
+  background: rgba(207, 225, 185, 0.10);
+  box-shadow: 0 0 12px rgba(207, 225, 185, 0.15);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Premium UI — Bento card glow + depth
+   Ambient colored shadow, gradient border on hover, shine sweep.
+───────────────────────────────────────────────────────────── */
+.bento-card-premium {
+  position: relative;
+  box-shadow:
+    0 4px 24px rgba(52, 78, 65, 0.08),
+    0 1px 3px rgba(52, 78, 65, 0.06);
+  transition: box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bento-card-premium:hover {
+  box-shadow:
+    0 8px 40px rgba(52, 78, 65, 0.12),
+    0 2px 12px rgba(52, 78, 65, 0.08),
+    0 0 0 1px rgba(207, 225, 185, 0.25);
+}
+
+/* Shine sweep — light streak on hover */
+.bento-card-premium::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(207, 225, 185, 0.06) 45%,
+    rgba(207, 225, 185, 0.12) 50%,
+    rgba(207, 225, 185, 0.06) 55%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 30;
+  border-radius: inherit;
+  transition: none;
+}
+.bento-card-premium:hover::after {
+  animation: cardShine 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardShine {
+  0%   { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .bento-card-premium:hover::after {
     animation: none;
   }
 }

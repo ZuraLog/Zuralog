@@ -370,10 +370,10 @@ export function MobileSection() {
                             </div>
 
                             <button
-                                className="pointer-events-auto mt-10 bg-gray-900 text-white px-8 py-4 rounded-full text-base md:text-lg font-semibold hover:bg-gray-800 transition-colors shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
+                                className="pointer-events-auto mt-10 btn-pattern-light bg-[#CFE1B9] text-[#141E18] px-8 py-4 rounded-full text-base md:text-lg font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(207,225,185,0.45)] hover:shadow-[0_6px_35px_rgba(207,225,185,0.6)] hover:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.97]"
                                 onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                             >
-                                Join the Waitlist
+                                <span className="relative z-2">Join the Waitlist</span>
                             </button>
                         </div>
 

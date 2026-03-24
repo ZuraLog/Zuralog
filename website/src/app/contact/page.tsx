@@ -232,11 +232,11 @@ export default function ContactPage() {
                     <button
                       type="submit"
                       disabled={status === 'loading'}
-                      className="inline-flex items-center justify-center gap-2 rounded-full bg-[#E8F5A8] px-8 py-2.5 text-sm font-semibold text-[#2D2D2D] transition-opacity hover:opacity-80 disabled:opacity-50"
+                      className="btn-pattern-light inline-flex items-center justify-center gap-2 rounded-full bg-[#CFE1B9] px-8 py-2.5 text-sm font-semibold text-[#141E18] shadow-[0_2px_16px_rgba(207,225,185,0.35)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_4px_30px_rgba(207,225,185,0.55)] active:scale-[0.97] disabled:opacity-50"
                     >
                       {status === 'loading' ? (
                         <>
-                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#2D2D2D]/30 border-t-[#2D2D2D]" />
+                          <span className="relative z-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#141E18]/30 border-t-[#141E18]" />
                           Sending...
                         </>
                       ) : (

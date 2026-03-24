@@ -83,14 +83,79 @@ export function PageBackground() {
                 });
             }
 
-            // ── BentoSection waypoint ──
+            // ── HowItWorksSection waypoint ──
+            // Transition from MobileSection's green through sage tones
+            const howSection = document.getElementById("how-it-works-section");
+            if (howSection) {
+                const howTop = howSection.offsetTop;
+                const howHeight = howSection.offsetHeight;
+                waypoints.push({
+                    scrollY: howTop + howHeight * 0.05,
+                    color: "#D6E0C8",
+                });
+                waypoints.push({
+                    scrollY: howTop + howHeight * 0.25,
+                    color: "#E4ECD8",
+                });
+                waypoints.push({
+                    scrollY: howTop + howHeight * 0.50,
+                    color: "#EBF0E2",
+                });
+                waypoints.push({
+                    scrollY: howTop + howHeight * 0.75,
+                    color: "#E4ECD8",
+                });
+                waypoints.push({
+                    scrollY: howTop + howHeight * 0.95,
+                    color: "#E0E8D2",
+                });
+            }
+
+            // ── BentoSection (Master Your Metrics) waypoint ──
+            // Continues sage from HowItWorks, holds through cards, eases out
             const bentoSection = document.getElementById("bento-section");
             if (bentoSection) {
                 const bentoTop = bentoSection.offsetTop;
                 const bentoHeight = bentoSection.offsetHeight;
                 waypoints.push({
-                    scrollY: bentoTop + bentoHeight * 0.4,
-                    color: "#2D2D2D",
+                    scrollY: bentoTop + bentoHeight * 0.10,
+                    color: "#E4ECD8",
+                });
+                waypoints.push({
+                    scrollY: bentoTop + bentoHeight * 0.40,
+                    color: "#EBF0E2",
+                });
+                waypoints.push({
+                    scrollY: bentoTop + bentoHeight * 0.70,
+                    color: "#F0F3EA",
+                });
+                waypoints.push({
+                    scrollY: bentoTop + bentoHeight * 0.95,
+                    color: "#EEF2E6",
+                });
+            }
+
+            // ── PhoneMockupSection waypoint ──
+            // Continue the sage atmosphere, peak in the middle, then ease to cream
+            const phoneSection = document.getElementById("phone-mockup-section");
+            if (phoneSection) {
+                const phoneTop = phoneSection.offsetTop;
+                const phoneHeight = phoneSection.offsetHeight;
+                waypoints.push({
+                    scrollY: phoneTop + phoneHeight * 0.10,
+                    color: "#E8EDD9",
+                });
+                waypoints.push({
+                    scrollY: phoneTop + phoneHeight * 0.40,
+                    color: "#E0E8D2",
+                });
+                waypoints.push({
+                    scrollY: phoneTop + phoneHeight * 0.70,
+                    color: "#EBF0E2",
+                });
+                waypoints.push({
+                    scrollY: phoneTop + phoneHeight * 0.95,
+                    color: "#FAFAF5",
                 });
             }
 

@@ -120,7 +120,7 @@ export function AppsStep({ selected, onToggle, onNext, canProceed }: AppsStepPro
       <Button
         disabled={!canProceed}
         onClick={onNext}
-        className="w-full rounded-full bg-peach py-4 text-base font-semibold text-white hover:bg-peach-dim disabled:opacity-30"
+        className="w-full rounded-full py-4 text-base font-semibold disabled:opacity-30"
       >
         Continue
       </Button>
