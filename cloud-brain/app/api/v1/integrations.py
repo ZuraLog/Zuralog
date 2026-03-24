@@ -106,7 +106,7 @@ async def strava_exchange(
                 "https://www.strava.com/oauth/token",
                 data={
                     "client_id": settings.strava_client_id,
-                    "client_secret": settings.strava_client_secret,
+                    "client_secret": settings.strava_client_secret.get_secret_value(),
                     "code": code,
                     "grant_type": "authorization_code",
                 },

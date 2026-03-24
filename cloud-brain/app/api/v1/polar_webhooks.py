@@ -71,7 +71,7 @@ async def polar_webhook_event(request: Request) -> Response:
     # expected. An absent header is treated as a verification failure — the
     # payload is discarded (but we still return 200 to avoid triggering
     # Polar's 7-day auto-deactivation on consecutive non-200 responses).
-    signature_key = settings.polar_webhook_signature_key
+    signature_key = settings.polar_webhook_signature_key.get_secret_value()
     if signature_key:
         signature = request.headers.get("Polar-Webhook-Signature", "")
         if not signature:

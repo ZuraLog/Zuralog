@@ -19,6 +19,7 @@ the client in real time.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import TYPE_CHECKING, Any, AsyncGenerator
@@ -30,6 +31,7 @@ from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.prompts.system import build_system_prompt
 from app.agent.response import AgentResponse
+from app.config import settings
 from app.services.usage_tracker import UsageTracker
 
 if TYPE_CHECKING:
@@ -44,9 +46,8 @@ Prevents infinite loops if the model continuously requests tools
 without generating a final text response.
 """
 
-# Lightweight model used only for auto-generating conversation titles.
-# A small, cheap model is preferred since this is a one-shot, low-stakes call.
-_TITLE_MODEL = "openai/gpt-4.1-nano"
+# Fix 5.1 (H-12): Title model from config instead of hardcoded string
+_TITLE_MODEL = settings.openrouter_title_model
 
 
 class Orchestrator:
@@ -149,9 +150,9 @@ class Orchestrator:
     async def generate_title(self, first_user_message: str) -> str:
         """Generate a short, descriptive conversation title.
 
-        Uses a lightweight model (gpt-4.1-nano) to produce a concise title
-        from the user's first message. Falls back to a truncated version of
-        the message if the LLM call fails.
+        Uses a lightweight model to produce a concise title from the user's
+        first message. Falls back to a truncated version of the message if
+        the LLM call fails. Passes max_tokens=50 to bound cost (Fix H-12).
 
         Args:
             first_user_message: The user's opening message in the conversation.
@@ -174,6 +175,7 @@ class Orchestrator:
                     {"role": "user", "content": first_user_message[:300]},
                 ],
                 temperature=0.3,
+                max_tokens=50,  # Fix H-12: bound title generation cost
             )
             title = (response.choices[0].message.content or "").strip().strip('"').strip("'")
             # Fallback if the model returns something odd.
@@ -230,11 +232,21 @@ class Orchestrator:
             context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
             memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
 
+            # Fix 5.4 (H-15): Cap memory length before injecting into system prompt
+            capped_memories: list[str] = []
+            total_mem_chars = 0
+            for mem in memory_texts:
+                truncated = mem[:500]
+                if total_mem_chars + len(truncated) > 2500:
+                    break
+                capped_memories.append(truncated)
+                total_mem_chars += len(truncated)
+
             # Build system prompt with persona, proactivity, and memory context
             system_prompt = build_system_prompt(
                 persona=persona,
                 proactivity=proactivity,
-                memories=memory_texts if memory_texts else None,
+                memories=capped_memories if capped_memories else None,
                 user_context_suffix=user_context_suffix,
             )
 
@@ -252,7 +264,7 @@ class Orchestrator:
             logger.info(
                 "Processing message for user '%s': %d memory items, %d tools (%s)",
                 user_id,
-                len(memory_texts),
+                len(capped_memories),
                 len(tools),
                 injection_mode,
             )
@@ -266,6 +278,7 @@ class Orchestrator:
                         response = await self.llm_client.chat(
                             messages,
                             tools=tools if tools else None,
+                            max_tokens=4096,
                         )
                     except Exception as llm_exc:
                         sentry_sdk.set_tag("ai.error_type", "llm_failure")
@@ -318,9 +331,14 @@ class Orchestrator:
 
                     for tool_call in assistant_message.tool_calls:
                         func_name = tool_call.function.name
+                        raw_args = tool_call.function.arguments
                         try:
-                            arguments = json.loads(tool_call.function.arguments)
+                            arguments = json.loads(raw_args)
                         except json.JSONDecodeError:
+                            # Fix 5.7 (M-12): Log tool arg parse failures
+                            logger.warning(
+                                f"tool_args_parse_failed: tool={func_name}, raw={raw_args[:200]}"
+                            )
                             arguments = {}
 
                         logger.info(
@@ -334,7 +352,21 @@ class Orchestrator:
                             tool_span.set_tag("tool.name", func_name)
                             tool_span.set_tag("turn", turn + 1)
                             try:
-                                result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
+                                # Fix 5.3 (H-14): Per-tool timeout
+                                result = await asyncio.wait_for(
+                                    self.mcp_client.execute_tool(func_name, arguments, user_id),
+                                    timeout=30.0,
+                                )
+                            except asyncio.TimeoutError:
+                                logger.warning("tool_timeout: tool=%s user=%s", func_name, user_id)
+                                messages.append(
+                                    {
+                                        "role": "tool",
+                                        "tool_call_id": tool_call.id,
+                                        "content": json.dumps({"error": "Tool timed out"}),
+                                    }
+                                )
+                                continue
                             except Exception as tool_exc:
                                 sentry_sdk.set_tag("ai.error_type", "tool_call_failure")
                                 with sentry_sdk.push_scope() as scope:
@@ -346,7 +378,8 @@ class Orchestrator:
                             last_client_action = result.data
 
                         if result.success:
-                            result_content = json.dumps(result.data)
+                            # Fix 5.5 (C-8): Cap tool result at 8000 chars to prevent prompt injection
+                            result_content = json.dumps(result.data)[:8000]  # prompt injection prevention
                         else:
                             result_content = json.dumps({"error": result.error or "Tool execution failed"})
 
@@ -395,10 +428,9 @@ class Orchestrator:
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Process a user message and stream the final response token-by-token.
 
-        Identical to :meth:`process_message` for the ReAct tool-call turns
-        (non-streaming, to support function-calling). Once the LLM produces a
-        final text response with no tool calls, the response is streamed back
-        as individual ``stream_token`` events followed by a ``stream_end`` event.
+        Fix 5.2 (H-13): Eliminates the double LLM call. Uses a single streaming
+        call per turn and accumulates tool_calls from stream deltas. If tool calls
+        are detected, they are buffered and executed; otherwise tokens stream directly.
 
         Yields:
             - ``{"type": "tool_start", "tool_name": str}`` — tool execution begins.
@@ -426,10 +458,20 @@ class Orchestrator:
                 context_entries_raw = await self.memory_store.query(user_id, query_text=message, limit=5)
                 memory_texts = [e.get("text", "") for e in context_entries_raw if e.get("text")]
 
+                # Fix 5.4 (H-15): Cap memory length before injecting into system prompt
+                capped_memories: list[str] = []
+                total_mem_chars = 0
+                for mem in memory_texts:
+                    truncated = mem[:500]
+                    if total_mem_chars + len(truncated) > 2500:
+                        break
+                    capped_memories.append(truncated)
+                    total_mem_chars += len(truncated)
+
                 system_prompt = build_system_prompt(
                     persona=persona,
                     proactivity=proactivity,
-                    memories=memory_texts if memory_texts else None,
+                    memories=capped_memories if capped_memories else None,
                     user_context_suffix=user_context_suffix,
                 )
 
@@ -443,108 +485,128 @@ class Orchestrator:
 
                 last_client_action: dict[str, Any] | None = None
 
-                for turn in range(MAX_TOOL_TURNS):
-                    # Check if we should stream this turn.
-                    # We use non-streaming for all tool-call turns and only
-                    # stream the final text response.
-                    with sentry_sdk.start_span(op="ai.llm_call", description=f"Stream turn {turn + 1}") as llm_span:
+                # Fix 5.2 (H-13): Unified streaming loop — single LLM call per turn.
+                # Tool calls are detected from delta.tool_calls during streaming.
+                for turn in range(MAX_TOOL_TURNS + 1):
+                    accumulated_content = ""
+                    # Dict mapping tool_call index → accumulated call data
+                    accumulated_tool_calls: dict[int, dict[str, Any]] = {}
+
+                    with sentry_sdk.start_span(
+                        op="ai.llm_call", description=f"Stream turn {turn + 1}"
+                    ) as llm_span:
                         llm_span.set_tag("turn", turn + 1)
-                        response = await self.llm_client.chat(
-                            messages,
-                            tools=tools if tools else None,
-                        )
-
-                    if self.usage_tracker:
-                        try:
-                            await self.usage_tracker.track_from_response(user_id, response)
-                        except Exception:
-                            pass
-
-                    if not response.choices:
-                        break
-
-                    assistant_message = response.choices[0].message
-
-                    if assistant_message.tool_calls:
-                        # Tool-call turn: emit progress events, execute tools.
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": assistant_message.content,
-                                "tool_calls": [
-                                    {
-                                        "id": tc.id,
-                                        "type": "function",
-                                        "function": {
-                                            "name": tc.function.name,
-                                            "arguments": tc.function.arguments,
-                                        },
-                                    }
-                                    for tc in assistant_message.tool_calls
-                                ],
-                            }
-                        )
-
-                        for tool_call in assistant_message.tool_calls:
-                            func_name = tool_call.function.name
-                            try:
-                                arguments = json.loads(tool_call.function.arguments)
-                            except json.JSONDecodeError:
-                                arguments = {}
-
-                            yield {"type": "tool_start", "tool_name": func_name}
-
-                            with sentry_sdk.start_span(op="ai.tool_call", description=func_name):
-                                try:
-                                    result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
-                                except Exception as tool_exc:
-                                    sentry_sdk.capture_exception(tool_exc)
-                                    yield {"type": "tool_end", "tool_name": func_name}
-                                    yield {"type": "error", "content": f"Tool error: {tool_exc!s}"}
-                                    return
-
-                            yield {"type": "tool_end", "tool_name": func_name}
-
-                            if result.success and isinstance(result.data, dict) and "client_action" in result.data:
-                                last_client_action = result.data
-
-                            result_content = (
-                                json.dumps(result.data)
-                                if result.success
-                                else json.dumps({"error": result.error or "Tool execution failed"})
-                            )
-
-                            messages.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": tool_call.id,
-                                    "content": result_content,
-                                }
-                            )
-
-                        continue  # Next ReAct turn
-
-                    # No tool calls — this is the final response; stream it.
-                    # Re-invoke the LLM in streaming mode with the accumulated messages.
-                    with sentry_sdk.start_span(op="ai.stream_final", description="streaming final response"):
                         stream = await self.llm_client.stream_chat(
                             messages,
-                            tools=None,  # No tools on final streaming turn
+                            tools=tools if tools else None,
+                            max_tokens=4096,
                         )
 
-                        full_content = ""
                         async for chunk in stream:
-                            delta = chunk.choices[0].delta if chunk.choices else None
-                            if delta and delta.content:
-                                full_content += delta.content
+                            if not chunk.choices:
+                                continue
+                            delta = chunk.choices[0].delta
+
+                            # Accumulate text content and yield tokens
+                            if delta.content:
+                                accumulated_content += delta.content
                                 yield {"type": "stream_token", "content": delta.content}
 
-                    yield {
-                        "type": "stream_end",
-                        "content": full_content or (assistant_message.content or ""),
-                        "client_action": last_client_action,
-                    }
-                    return
+                            # Accumulate tool call fragments by index
+                            if delta.tool_calls:
+                                for tc_delta in delta.tool_calls:
+                                    idx = tc_delta.index
+                                    if idx not in accumulated_tool_calls:
+                                        accumulated_tool_calls[idx] = {
+                                            "id": "",
+                                            "type": "function",
+                                            "function": {"name": "", "arguments": ""},
+                                        }
+                                    entry = accumulated_tool_calls[idx]
+                                    if tc_delta.id:
+                                        entry["id"] = tc_delta.id
+                                    if tc_delta.function:
+                                        if tc_delta.function.name:
+                                            entry["function"]["name"] += tc_delta.function.name
+                                        if tc_delta.function.arguments:
+                                            entry["function"]["arguments"] += tc_delta.function.arguments
+
+                    # No tool calls — streaming is complete, this is the final response
+                    if not accumulated_tool_calls:
+                        yield {
+                            "type": "stream_end",
+                            "content": accumulated_content,
+                            "client_action": last_client_action,
+                        }
+                        return
+
+                    # Tool calls detected — execute them and loop for next turn
+                    tool_calls_list = [accumulated_tool_calls[i] for i in sorted(accumulated_tool_calls.keys())]
+
+                    # Append assistant message with tool calls
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": accumulated_content or None,
+                            "tool_calls": tool_calls_list,
+                        }
+                    )
+
+                    for tool_call_dict in tool_calls_list:
+                        func_name = tool_call_dict["function"]["name"]
+                        raw_args = tool_call_dict["function"]["arguments"]
+                        tool_call_id = tool_call_dict["id"]
+
+                        try:
+                            arguments = json.loads(raw_args)
+                        except json.JSONDecodeError:
+                            # Fix 5.7 (M-12): Log tool arg parse failures
+                            logger.warning(
+                                f"tool_args_parse_failed: tool={func_name}, raw={raw_args[:200]}"
+                            )
+                            arguments = {}
+
+                        yield {"type": "tool_start", "tool_name": func_name}
+
+                        with sentry_sdk.start_span(op="ai.tool_call", description=func_name):
+                            try:
+                                # Fix 5.3 (H-14): Per-tool timeout
+                                result = await asyncio.wait_for(
+                                    self.mcp_client.execute_tool(func_name, arguments, user_id),
+                                    timeout=30.0,
+                                )
+                            except asyncio.TimeoutError:
+                                logger.warning("tool_timeout: tool=%s user=%s", func_name, user_id)
+                                yield {"type": "tool_end", "tool_name": func_name}
+                                yield {"type": "error", "content": f"Tool '{func_name}' timed out"}
+                                # Fix 5.6 (C-9): Return from generator on tool error
+                                return
+                            except Exception as tool_exc:
+                                # Fix 5.6 (C-9): Yield StreamError and return cleanly
+                                logger.exception("tool_execution_failed")
+                                sentry_sdk.capture_exception(tool_exc)
+                                yield {"type": "tool_end", "tool_name": func_name}
+                                yield {"type": "error", "content": "Tool execution failed"}
+                                return
+
+                        yield {"type": "tool_end", "tool_name": func_name}
+
+                        if result.success and isinstance(result.data, dict) and "client_action" in result.data:
+                            last_client_action = result.data
+
+                        if result.success:
+                            # Fix 5.5 (C-8): Cap tool result at 8000 chars for prompt injection prevention
+                            result_content = json.dumps(result.data)[:8000]  # prompt injection prevention
+                        else:
+                            result_content = json.dumps({"error": result.error or "Tool execution failed"})
+
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call_id,
+                                "content": result_content,
+                            }
+                        )
 
                 # Max turns exceeded
                 yield {
@@ -556,4 +618,4 @@ class Orchestrator:
             except Exception as exc:
                 sentry_sdk.capture_exception(exc)
                 logger.exception("process_message_stream error for user '%s'", user_id)
-                yield {"type": "error", "content": f"Processing error: {exc!s}"}
+                yield {"type": "error", "content": "An error occurred processing your message."}

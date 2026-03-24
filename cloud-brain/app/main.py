@@ -109,21 +109,22 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_cors_origins() -> list[str]:
-    """Resolve allowed CORS origins from the environment.
+    """Resolve allowed CORS origins from settings (Fix 9.1 / C-12).
 
     In production, ALLOWED_ORIGINS must be set — refuses to start with wildcard (*).
     In development/staging, falls back to wildcard with a logged warning.
+    Safe default is empty string (no origins), not "*".
 
     Returns:
         List of allowed origin strings.
 
     Raises:
-        RuntimeError: if APP_ENV is 'production' and ALLOWED_ORIGINS is not set.
+        RuntimeError: if app_env is 'production' and allowed_origins is not set.
     """
-    raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+    # Fix 9.1 (C-12): Use settings.allowed_origins instead of os.getenv
+    raw = settings.allowed_origins.strip()
     if not raw:
-        app_env = os.getenv("APP_ENV", "development").lower()
-        if app_env == "production":
+        if settings.app_env == "production":
             raise RuntimeError(
                 "ALLOWED_ORIGINS environment variable must be set in production. "
                 "Refusing to start with CORS wildcard (*) enabled."
@@ -134,8 +135,7 @@ def _resolve_cors_origins() -> list[str]:
         return ["*"]
     result = [o.strip() for o in raw.split(",") if o.strip()]
     if not result:
-        app_env = os.getenv("APP_ENV", "development").lower()
-        if app_env == "production":
+        if settings.app_env == "production":
             raise RuntimeError(
                 "ALLOWED_ORIGINS is set but contains no valid origins. "
                 "Check for extra commas or whitespace-only values."
@@ -258,7 +258,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.withings_client_id:
         withings_signature_service = WithingsSignatureService(
             client_id=settings.withings_client_id,
-            client_secret=settings.withings_client_secret,
+            client_secret=settings.withings_client_secret.get_secret_value(),
         )
         withings_token_service = WithingsTokenService()
         withings_rate_limiter = WithingsRateLimiter(redis_url=settings.redis_url)
@@ -297,13 +297,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     tool_resolver = UserToolResolver(registry=registry)
     app.state.mcp_client = MCPClient(registry=registry, tool_resolver=tool_resolver)
     # Use Pinecone for long-term memory when configured, fall back to in-memory
-    if settings.pinecone_api_key:
+    if settings.pinecone_api_key.get_secret_value():
         _pinecone_store = PineconeMemoryStore()
         app.state.memory_store = _pinecone_store if _pinecone_store.is_available else InMemoryStore()
     else:
         app.state.memory_store = InMemoryStore()
     # LLM client: only initialize when API key is configured
-    if settings.openrouter_api_key:
+    if settings.openrouter_api_key.get_secret_value():
         app.state.llm_client = LLMClient()
     else:
         app.state.llm_client = None

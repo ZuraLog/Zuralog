@@ -954,7 +954,7 @@ def register_fitbit_webhook_task() -> dict[str, Any]:
         logger.error("register_fitbit_webhook_task: FITBIT_WEBHOOK_SUBSCRIBER_ID not set — aborting")
         return {"status": "error", "reason": "FITBIT_WEBHOOK_SUBSCRIBER_ID not configured"}
 
-    if not _settings.fitbit_client_id or not _settings.fitbit_client_secret:
+    if not _settings.fitbit_client_id or not _settings.fitbit_client_secret.get_secret_value():
         logger.error("register_fitbit_webhook_task: Fitbit OAuth credentials not set — aborting")
         return {"status": "error", "reason": "FITBIT_CLIENT_ID or FITBIT_CLIENT_SECRET not configured"}
 
@@ -967,7 +967,7 @@ def register_fitbit_webhook_task() -> dict[str, Any]:
         import base64  # noqa: PLC0415
 
         credentials = base64.b64encode(
-            f"{_settings.fitbit_client_id}:{_settings.fitbit_client_secret}".encode()
+            f"{_settings.fitbit_client_id}:{_settings.fitbit_client_secret.get_secret_value()}".encode()
         ).decode()
 
         async with httpx.AsyncClient(timeout=30.0) as client:

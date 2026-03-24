@@ -363,7 +363,7 @@ class FitbitTokenService:
             The new access token string, or ``None`` if refresh failed.
         """
         credentials = base64.b64encode(
-            f"{settings.fitbit_client_id}:{settings.fitbit_client_secret}".encode()
+            f"{settings.fitbit_client_id}:{settings.fitbit_client_secret.get_secret_value()}".encode()
         ).decode()
 
         try:
@@ -470,7 +470,7 @@ class FitbitTokenService:
             return False
 
         credentials = base64.b64encode(
-            f"{settings.fitbit_client_id}:{settings.fitbit_client_secret}".encode()
+            f"{settings.fitbit_client_id}:{settings.fitbit_client_secret.get_secret_value()}".encode()
         ).decode()
 
         # Best-effort revoke on Fitbit's side

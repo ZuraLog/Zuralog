@@ -5,8 +5,12 @@ Type-safe settings management using Pydantic v2 BaseSettings.
 All values are loaded from environment variables or a .env file.
 """
 
-from pydantic import model_validator
+import logging
+
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -44,23 +48,25 @@ class Settings(BaseSettings):
     """
 
     database_url: str = "postgresql+asyncpg://zuralog:zuralog@localhost:5432/zuralog"
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = ""
     supabase_url: str = ""
-    supabase_anon_key: str = ""
-    supabase_service_key: str = ""
-    pinecone_api_key: str = ""
-    openai_api_key: str = ""
-    openrouter_api_key: str = ""
+    supabase_anon_key: SecretStr = SecretStr("")
+    supabase_service_key: SecretStr = SecretStr("")
+    pinecone_api_key: SecretStr = SecretStr("")
+    openai_api_key: SecretStr = SecretStr("")
+    openrouter_api_key: SecretStr = SecretStr("")
     openrouter_referer: str = "https://zuralog.app"
     openrouter_title: str = "Zuralog"
     openrouter_model: str = "moonshotai/kimi-k2.5"
     openrouter_insight_model: str = "google/gemini-3.1-flash-lite-preview"
     # OPENROUTER_INSIGHT_MODEL — cheap fast model for daily insight generation.
     # Separate from openrouter_model (Kimi K2.5) which is the Coach tab model.
+    openrouter_title_model: str = "openai/gpt-4.1-nano"
+    openrouter_fallback_model: str = "openai/gpt-4o-mini"
     google_web_client_id: str = ""
-    google_web_client_secret: str = ""
+    google_web_client_secret: SecretStr = SecretStr("")
     strava_client_id: str = ""
-    strava_client_secret: str = ""
+    strava_client_secret: SecretStr = SecretStr("")
     strava_redirect_uri: str = "zuralog://oauth/strava"
     fcm_credentials_path: str = ""
     # Firebase credentials as a JSON string (for Railway/production).
@@ -70,24 +76,24 @@ class Settings(BaseSettings):
     revenuecat_api_key: str = ""
     # Comma-separated list of allowed CORS origins.
     # Use "*" for development; lock down for production.
-    allowed_origins: str = "*"
+    allowed_origins: str = ""
     strava_webhook_verify_token: str = ""
     strava_webhook_subscription_id: int = 0  # STRAVA_WEBHOOK_SUBSCRIPTION_ID — set after first webhook registration
     # Fitbit OAuth 2.0
     fitbit_client_id: str = ""
-    fitbit_client_secret: str = ""
+    fitbit_client_secret: SecretStr = SecretStr("")
     fitbit_redirect_uri: str = "zuralog://oauth/fitbit"
     fitbit_webhook_verify_code: str = ""
     fitbit_webhook_subscriber_id: str = ""
     # Oura Ring OAuth 2.0
     oura_client_id: str = ""  # OURA_CLIENT_ID
-    oura_client_secret: str = ""  # OURA_CLIENT_SECRET
+    oura_client_secret: SecretStr = SecretStr("")  # OURA_CLIENT_SECRET
     oura_redirect_uri: str = "zuralog://oauth/oura"  # OURA_REDIRECT_URI
     oura_webhook_verification_token: str = ""  # OURA_WEBHOOK_VERIFICATION_TOKEN
     oura_use_sandbox: bool = False  # OURA_USE_SANDBOX
     # Withings OAuth 2.0
     withings_client_id: str = ""  # WITHINGS_CLIENT_ID
-    withings_client_secret: str = ""  # WITHINGS_CLIENT_SECRET
+    withings_client_secret: SecretStr = SecretStr("")  # WITHINGS_CLIENT_SECRET
     withings_redirect_uri: str = ""  # WITHINGS_REDIRECT_URI
     # Base URL of the Cloud Brain API (used to construct webhook callback URLs).
     # Must be explicitly set when WITHINGS_CLIENT_ID is configured — no default.
@@ -98,13 +104,13 @@ class Settings(BaseSettings):
     withings_webhook_secret: str = ""  # WITHINGS_WEBHOOK_SECRET
     # Polar AccessLink
     polar_client_id: str = ""  # POLAR_CLIENT_ID
-    polar_client_secret: str = ""  # POLAR_CLIENT_SECRET
+    polar_client_secret: SecretStr = SecretStr("")  # POLAR_CLIENT_SECRET
     polar_redirect_uri: str = "zuralog://oauth/polar"  # POLAR_REDIRECT_URI
-    polar_webhook_signature_key: str = ""  # POLAR_WEBHOOK_SIGNATURE_KEY
+    polar_webhook_signature_key: SecretStr = SecretStr("")  # POLAR_WEBHOOK_SIGNATURE_KEY
     # Base URL of the Cloud Brain API used to construct the Polar webhook callback URL.
     # Must be explicitly set when POLAR_CLIENT_ID is configured — no default.
     polar_api_base_url: str = ""  # POLAR_API_BASE_URL — must be set when POLAR_CLIENT_ID is configured
-    app_env: str = "production"
+    app_env: str = "development"
     app_debug: bool = False
     # Sentry
     sentry_dsn: str = ""
@@ -117,10 +123,24 @@ class Settings(BaseSettings):
     # PostHog
     posthog_api_key: str = ""
     posthog_host: str = "https://us.i.posthog.com"
+    # Rate limits (Fix 1.5 / M-7)
+    rate_limit_free_daily: int = 50
+    rate_limit_premium_daily: int = 500
+    rate_limit_burst_per_minute: int = 10
 
     @model_validator(mode="after")
-    def _validate_integration_config(self) -> "Settings":
-        """Fail fast if any integration credential is set but a required companion value is missing."""
+    def _validate_config(self) -> "Settings":
+        """Fail fast on invalid configuration combinations."""
+        # H-11: Validate required secrets are set in production
+        if self.app_env == "production":
+            if self.openrouter_api_key.get_secret_value() == "":
+                logger.error("OPENROUTER_API_KEY must be set in production")
+                raise ValueError("OPENROUTER_API_KEY must be set in production")
+            if self.supabase_service_key.get_secret_value() == "":
+                logger.error("SUPABASE_SERVICE_KEY must be set in production")
+                raise ValueError("SUPABASE_SERVICE_KEY must be set in production")
+
+        # Fail fast if any integration credential is set but a required companion value is missing.
         if self.withings_client_id and not self.withings_redirect_uri.strip():
             raise ValueError(
                 "WITHINGS_REDIRECT_URI must be set when WITHINGS_CLIENT_ID is provided. "

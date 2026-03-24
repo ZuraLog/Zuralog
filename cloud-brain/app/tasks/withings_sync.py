@@ -105,7 +105,7 @@ def _get_webhook_callback_url() -> str:
 def _get_sig_service() -> WithingsSignatureService:
     return WithingsSignatureService(
         client_id=settings.withings_client_id,
-        client_secret=settings.withings_client_secret,
+        client_secret=settings.withings_client_secret.get_secret_value(),
     )
 
 

@@ -41,7 +41,7 @@ class AuthService:
         self._client = client
         # Strip whitespace/newlines — common copy-paste issue from dashboards.
         self._base_url = settings.supabase_url.strip().rstrip("/")
-        self._api_key = settings.supabase_anon_key.strip()
+        self._api_key = settings.supabase_anon_key.get_secret_value().strip()
 
         if not self._base_url:
             logger.warning(

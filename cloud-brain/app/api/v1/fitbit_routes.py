@@ -154,7 +154,7 @@ async def fitbit_exchange(
             code=code,
             code_verifier=code_verifier,
             client_id=settings.fitbit_client_id,
-            client_secret=settings.fitbit_client_secret,
+            client_secret=settings.fitbit_client_secret.get_secret_value(),
             redirect_uri=settings.fitbit_redirect_uri,
         )
     except httpx.HTTPStatusError as exc:

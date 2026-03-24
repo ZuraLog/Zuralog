@@ -39,7 +39,7 @@ class StorageService:
         """
         self._client = client
         self._base_url = settings.supabase_url.strip().rstrip("/")
-        self._service_key = settings.supabase_service_key.strip()
+        self._service_key = settings.supabase_service_key.get_secret_value().strip()
 
         if not self._base_url:
             logger.warning(

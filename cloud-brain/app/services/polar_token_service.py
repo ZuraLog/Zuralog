@@ -144,7 +144,7 @@ class PolarTokenService:
             httpx.RequestError: On network-level failures.
         """
         client_id = settings.polar_client_id
-        client_secret = settings.polar_client_secret
+        client_secret = settings.polar_client_secret.get_secret_value()
 
         # Build Basic auth header: base64(client_id:client_secret)
         credentials = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()

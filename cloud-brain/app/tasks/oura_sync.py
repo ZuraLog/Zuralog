@@ -656,7 +656,7 @@ def renew_oura_webhook_subscriptions_task(self) -> dict[str, Any]:
         from app.config import settings as _settings  # noqa: PLC0415
 
         client_id = _settings.oura_client_id
-        client_secret = _settings.oura_client_secret
+        client_secret = _settings.oura_client_secret.get_secret_value()
 
         if not client_id or not client_secret:
             logger.warning("renew_oura_webhook_subscriptions_task: missing Oura client credentials, skipping")

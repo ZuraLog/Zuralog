@@ -181,7 +181,7 @@ class WithingsTokenService:
 
         sig_service = WithingsSignatureService(
             client_id=settings.withings_client_id,
-            client_secret=settings.withings_client_secret,
+            client_secret=settings.withings_client_secret.get_secret_value(),
         )
 
         try:

@@ -51,7 +51,7 @@ POLAR_API_BASE = "https://www.polaraccesslink.com"
 
 def _basic_auth_header() -> str:
     """Build Basic auth header for client-level endpoints (webhooks)."""
-    credentials = base64.b64encode(f"{settings.polar_client_id}:{settings.polar_client_secret}".encode()).decode()
+    credentials = base64.b64encode(f"{settings.polar_client_id}:{settings.polar_client_secret.get_secret_value()}".encode()).decode()
     return f"Basic {credentials}"
 
 

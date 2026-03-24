@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 
+import filetype  # Fix 7.4 (C-10): Server-side MIME type detection from magic bytes
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from sqlalchemy import func, select
@@ -32,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import check_rate_limit, get_current_user
 from app.database import get_db
+from app.limiter import limiter
 from app.models.conversation import Conversation
 from app.models.user import User
 from app.services.attachment_processor import AttachmentProcessor
@@ -54,6 +56,7 @@ attachments_router = APIRouter(
 # ---------------------------------------------------------------------------
 
 
+@limiter.limit("10/minute")  # Fix 7.1 (H-16): Rate limit on upload endpoint
 @attachments_router.post(
     "/{conversation_id}/attachments",
     summary="Upload a file attachment for a conversation",
@@ -99,6 +102,7 @@ async def upload_attachment(
         HTTPException 404: Conversation not found or does not belong to user.
         HTTPException 400: File type not allowed, or file exceeds size limit,
             or no file was provided.
+        HTTPException 413: File exceeds 10 MB size limit.
         HTTPException 500: Unexpected processing error.
     """
     sentry_sdk.set_tag("api.module", "attachments")
@@ -112,12 +116,13 @@ async def upload_attachment(
         await check_rate_limit({"id": str(user.id)}, rate_limiter, db)
 
     # ------------------------------------------------------------------
-    # 1. Verify conversation ownership
+    # 1. Verify conversation ownership (Fix 7.3 H-18: filter deleted)
     # ------------------------------------------------------------------
     result = await db.execute(
         select(Conversation).where(
             Conversation.id == conversation_id,
             Conversation.user_id == str(user.id),
+            Conversation.deleted_at.is_(None),  # Fix 7.3 (H-18): Filter deleted conversations
         )
     )
     conversation = result.scalar_one_or_none()
@@ -142,6 +147,10 @@ async def upload_attachment(
             detail="No file provided.",
         )
 
+    # Fix 7.2 (H-17): Check file size before reading (if available from header)
+    if file.size and file.size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large (max 10 MB)")
+
     try:
         file_bytes = await file.read()
     except Exception:
@@ -155,14 +164,56 @@ async def upload_attachment(
             detail="Failed to read uploaded file.",
         )
 
+    # Fix 7.2 (H-17): Also check after reading (Starlette may not populate file.size)
+    if len(file_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File too large (max 10 MB)",
+        )
+
     if not file_bytes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Uploaded file is empty.",
         )
 
-    content_type: str = file.content_type or "application/octet-stream"
+    declared_mime: str = file.content_type or "application/octet-stream"
     filename: str = file.filename or "upload"
+
+    # ------------------------------------------------------------------
+    # Fix 7.4 (C-10): Detect MIME type from file content (magic bytes)
+    # ------------------------------------------------------------------
+    kind = filetype.guess(file_bytes[:262])  # Only needs first 262 bytes
+    actual_mime = kind.mime if kind else None
+
+    # For text/plain and text/csv: verify content is valid UTF-8
+    if declared_mime in ("text/plain", "text/csv"):
+        try:
+            file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File content is not valid UTF-8 text",
+            )
+
+    # For binary types: verify actual_mime matches declared prefix
+    if actual_mime and declared_mime.split("/")[0] in ("image", "application"):
+        declared_maintype = declared_mime.split("/")[0]
+        actual_maintype = actual_mime.split("/")[0] if actual_mime else None
+        if actual_maintype and actual_maintype != declared_maintype:
+            logger.warning(
+                "upload_attachment: MIME mismatch for user=%s: declared=%s actual=%s",
+                user.id,
+                declared_mime,
+                actual_mime,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File content does not match declared type '{declared_mime}'.",
+            )
+
+    # Use the actual detected MIME if available and declared is generic
+    content_type = declared_mime
 
     # ------------------------------------------------------------------
     # 3. Process through AttachmentProcessor

@@ -345,7 +345,7 @@ class OuraTokenService:
                         "grant_type": "refresh_token",
                         "refresh_token": integration.refresh_token,
                         "client_id": settings.oura_client_id,
-                        "client_secret": settings.oura_client_secret,
+                        "client_secret": settings.oura_client_secret.get_secret_value(),
                     },
                 )
         except httpx.RequestError as exc:

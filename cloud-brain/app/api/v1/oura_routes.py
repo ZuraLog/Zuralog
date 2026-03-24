@@ -106,7 +106,7 @@ async def oura_exchange(
         token_response = await oura_token_service.exchange_code(
             code=code,
             client_id=settings.oura_client_id,
-            client_secret=settings.oura_client_secret,
+            client_secret=settings.oura_client_secret.get_secret_value(),
             redirect_uri=settings.oura_redirect_uri,
         )
     except httpx.HTTPStatusError as exc:
