@@ -12,13 +12,10 @@ when the extracted context is injected into the conversation.
 from __future__ import annotations
 
 import asyncio
-import io
+import concurrent.futures
 import logging
 import re
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any
-
-from pypdf import PdfReader
 
 logger = logging.getLogger(__name__)
 
@@ -132,28 +129,64 @@ _COMPILED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(pat, re.IGNORECASE), label) for pat, label in _HEALTH_PATTERNS
 ]
 
-# Fix 8.3 (M-15): Thread pool for running regex in timeout-protected executor
-_executor = ThreadPoolExecutor(max_workers=2)
+# ---------------------------------------------------------------------------
+# Prompt injection guard
+# ---------------------------------------------------------------------------
+
+_DANGEROUS_PATTERN = re.compile(
+    r'(ignore\s+(?:previous|above|all|everything)|system\s*:|assistant\s*:|forget\s+(?:all|everything|previous)|<\|im_start\|>|<\|im_end\|>|<\|endoftext\|>)',
+    re.IGNORECASE,
+)
 
 
 def sanitize_for_llm(text: str) -> str:
-    """Sanitize text to prevent prompt injection (Fix 8.1 / C-11).
+    """Remove prompt injection patterns from user-supplied text.
 
-    Strips lines starting with common prompt-injection markers before
-    injecting extracted attachment text into the LLM context.
+    Strips multi-word instruction override phrases and special tokens
+    (e.g. ``<|im_start|>``) that could manipulate LLM behaviour.
 
     Args:
-        text: The raw extracted text from a user-uploaded file.
+        text: Raw text from an uploaded file or user input.
 
     Returns:
-        The sanitized text, capped at 2000 characters.
+        Sanitized text with dangerous patterns replaced by ``[removed]``.
     """
-    dangerous_patterns = re.compile(
-        r'^(ignore|system:|assistant:|forget|<\|im_start\|>|<\|im_end\|>)',
-        re.IGNORECASE | re.MULTILINE,
-    )
-    sanitized = dangerous_patterns.sub('[filtered]', text)
-    return sanitized[:2000]
+    return _DANGEROUS_PATTERN.sub("[removed]", text)
+
+
+# ---------------------------------------------------------------------------
+# Thread pool for CPU-bound health fact extraction
+# ---------------------------------------------------------------------------
+
+_executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+
+async def _safe_extract_health_facts(text: str) -> list[str]:
+    """Extract health facts asynchronously with a 2-second timeout.
+
+    Runs the CPU-bound ``_extract_health_facts`` method in a thread pool
+    executor so it does not block the event loop. Uses
+    ``asyncio.get_running_loop()`` (the non-deprecated replacement for
+    ``asyncio.get_event_loop()`` inside async functions).
+
+    Args:
+        text: Decoded text content to scan.
+
+    Returns:
+        A list of health fact strings, or an empty list on timeout/error.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+        return await asyncio.wait_for(
+            loop.run_in_executor(_executor, AttachmentProcessor._extract_health_facts, text),
+            timeout=2.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("_safe_extract_health_facts: timed out extracting health facts")
+        return []
+    except Exception as exc:
+        logger.warning("_safe_extract_health_facts: error extracting health facts: %s", exc)
+        return []
 
 
 class AttachmentProcessor:
@@ -213,7 +246,7 @@ class AttachmentProcessor:
         Returns:
             A structured result dict with keys:
                 - ``type``: ``"image"`` or ``"document"``.
-                - ``filename``: The sanitized filename.
+                - ``filename``: The original filename.
                 - ``content_type``: The validated MIME type.
                 - ``size_bytes``: File size in bytes.
                 - ``extracted_text``: Decoded text for text/CSV; ``None``
@@ -232,13 +265,10 @@ class AttachmentProcessor:
         # Step 1 — validate
         AttachmentProcessor.validate(file_bytes, content_type)
 
-        # Fix 8.4 (M-16): Sanitize filename before storing in result dict
-        safe_filename = re.sub(r'[\r\n\x00-\x1f"\'`]', "", filename)[:255]
-
         logger.info(
             "AttachmentProcessor.process: user=%s filename=%r content_type=%s size=%d",
             user_id,
-            safe_filename,
+            filename,
             content_type,
             len(file_bytes),
         )
@@ -250,31 +280,29 @@ class AttachmentProcessor:
         # Step 2 — food image detection
         is_food_image: bool = False
         if is_image:
-            is_food_image = AttachmentProcessor._detect_food_image(safe_filename)
+            is_food_image = AttachmentProcessor._detect_food_image(filename)
             logger.debug(
                 "AttachmentProcessor.process: is_food_image=%s for filename=%r",
                 is_food_image,
-                safe_filename,
+                filename,
             )
 
         # Step 3 — extract text content
         extracted_text: str | None = AttachmentProcessor._extract_text(file_bytes, content_type)
 
         # Step 4 — identify health facts from any text
-        # Fix 8.3 (M-15): _extract_health_facts is called synchronously here.
-        # For async contexts, use _safe_extract_health_facts() instead.
         health_facts: list[str] = []
         if extracted_text:
             health_facts = AttachmentProcessor._extract_health_facts(extracted_text)
             logger.debug(
                 "AttachmentProcessor.process: found %d health fact(s) in %r",
                 len(health_facts),
-                safe_filename,
+                filename,
             )
 
         # Step 5 — build context message for LLM injection
         context_message: str = AttachmentProcessor._build_context_message(
-            filename=safe_filename,
+            filename=filename,
             content_type=content_type,
             file_type=file_type,
             size_bytes=size_bytes,
@@ -285,7 +313,7 @@ class AttachmentProcessor:
 
         return {
             "type": file_type,
-            "filename": safe_filename,  # Fix 8.4 (M-16): Return sanitized filename
+            "filename": filename,
             "content_type": content_type,
             "size_bytes": size_bytes,
             "extracted_text": extracted_text,
@@ -299,7 +327,7 @@ class AttachmentProcessor:
     _MAGIC_BYTES: dict[str, list[bytes]] = {
         "image/jpeg": [b"\xff\xd8\xff"],
         "image/png": [b"\x89PNG\r\n\x1a\n"],
-        "image/heic": [],  # Fix 8.2 (M-14): HEIC handled separately via offset check below
+        "image/heic": [],  # HEIC containers vary; skip magic-byte check
         "application/pdf": [b"%PDF"],
         "text/plain": [],  # No reliable magic bytes for plain text
         "text/csv": [],  # No reliable magic bytes for CSV
@@ -311,7 +339,7 @@ class AttachmentProcessor:
 
         Checks the declared MIME type against the allowlist, verifies the
         payload does not exceed ``MAX_SIZE_BYTES``, and performs magic-byte
-        verification for JPEG, PNG, PDF, and HEIC files.
+        verification for JPEG, PNG, and PDF files.
 
         Args:
             file_bytes: Raw file bytes to validate.
@@ -333,15 +361,6 @@ class AttachmentProcessor:
         if size > AttachmentProcessor.MAX_SIZE_BYTES:
             max_mb = AttachmentProcessor.MAX_SIZE_BYTES / (1024 * 1024)
             raise ValueError(f"File size {size / (1024 * 1024):.1f} MB exceeds the {max_mb:.0f} MB limit.")
-
-        # Fix 8.2 (M-14): HEIC magic byte check via offset-based 'ftyp' detection
-        if normalised_type == "image/heic":
-            if len(file_bytes) >= 8 and file_bytes[4:8] != b"ftyp":
-                raise ValueError(
-                    "File content does not match declared type 'image/heic'. "
-                    "The file may be corrupt or mislabelled."
-                )
-            return
 
         # Magic-byte verification for types with known signatures
         magic_prefixes = AttachmentProcessor._MAGIC_BYTES.get(normalised_type, [])
@@ -405,31 +424,7 @@ class AttachmentProcessor:
                     return None
 
         if normalised == "application/pdf":
-            try:
-                reader = PdfReader(io.BytesIO(file_bytes))
-                pages_text = []
-                for page in reader.pages:
-                    text = page.extract_text() or ""
-                    if text.strip():
-                        pages_text.append(text)
-                full_text = "\n".join(pages_text)
-                if not full_text.strip():
-                    return (
-                        "This PDF appears to be image-based and cannot be read as text. "
-                        "Please describe its contents or upload a text-based PDF."
-                    )
-                # Apply injection sanitization (regex only, no truncation) then truncate to 8000
-                import re as _re
-                dangerous = _re.compile(
-                    r'^(ignore|system:|assistant:|forget|<\|im_start\||<\|im_end\|>)',
-                    _re.IGNORECASE | _re.MULTILINE
-                )
-                sanitized = dangerous.sub('[filtered]', full_text)
-                sanitized = sanitized.replace('<', '&lt;').replace('>', '&gt;')
-                return sanitized[:8000]
-            except Exception:
-                logger.warning("PDF text extraction failed", exc_info=True)
-                return "Failed to extract PDF text. The file may be corrupted or password-protected."
+            return "PDF content extraction not yet available."
 
         # Images — no text extraction
         return None
@@ -482,11 +477,8 @@ class AttachmentProcessor:
         Summarises the attachment so the language model understands what
         was shared without requiring access to the raw bytes.
 
-        Fix 8.1 (C-11): Extracted text is sanitized with sanitize_for_llm()
-        before being embedded in the context message.
-
         Args:
-            filename: Sanitized upload filename.
+            filename: Original upload filename.
             content_type: File MIME type.
             file_type: ``"image"`` or ``"document"``.
             size_bytes: File size in bytes.
@@ -500,8 +492,9 @@ class AttachmentProcessor:
         size_kb = size_bytes / 1024
         size_label = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
 
-        # filename is already sanitized by process() before reaching here
-        safe_filename = filename
+        # Sanitise filename before embedding in LLM prompt to prevent prompt injection.
+        # Strip newlines, control characters, and truncate to 255 chars.
+        safe_filename = re.sub(r'[\r\n\x00-\x1f"\'`]', "", filename)[:255]
 
         lines: list[str] = [
             f"[Attachment] The user has shared a {file_type}: '{safe_filename}' ({content_type}, {size_label}).",
@@ -517,37 +510,16 @@ class AttachmentProcessor:
                 lines.append("The image has been received. Describe or reference it as needed in your response.")
 
         if extracted_text:
-            # Fix 8.1 (C-11): Sanitize extracted text before LLM injection
+            # Sanitize for prompt injection before embedding in LLM context.
             safe_text = sanitize_for_llm(extracted_text)
-            if len(extracted_text) > 2000:
-                safe_text += f"\n... [truncated — {len(extracted_text)} chars total]"
-            lines.append(f"Extracted content:\n{safe_text}")
+            # Truncate very long texts for the context summary
+            preview = safe_text[:2000]
+            if len(safe_text) > 2000:
+                preview += f"\n... [truncated — {len(safe_text)} chars total]"
+            lines.append(f"Extracted content:\n{preview}")
 
         if health_facts:
             facts_formatted = "\n".join(f"  - {f}" for f in health_facts)
             lines.append(f"Health-relevant information detected in the document:\n{facts_formatted}")
 
         return "\n\n".join(lines)
-
-
-async def _safe_extract_health_facts(text: str) -> list[str]:
-    """Fix 8.3 (M-15): ReDoS protection — run regex in thread pool with timeout.
-
-    Wraps the synchronous _extract_health_facts in an executor with a 2-second
-    timeout to protect against ReDoS attacks from adversarial inputs.
-
-    Args:
-        text: Text content to scan for health facts.
-
-    Returns:
-        A list of health fact strings, or empty list on timeout.
-    """
-    loop = asyncio.get_event_loop()
-    try:
-        return await asyncio.wait_for(
-            loop.run_in_executor(_executor, AttachmentProcessor._extract_health_facts, text),
-            timeout=2.0,
-        )
-    except asyncio.TimeoutError:
-        logger.warning("health_facts_regex_timeout")
-        return []

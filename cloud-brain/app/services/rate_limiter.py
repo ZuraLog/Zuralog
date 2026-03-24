@@ -11,26 +11,18 @@ IP-level rate limiter for different concerns:
 
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 import redis.asyncio as redis
-from redis.exceptions import RedisError
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Fix 3.1 (H-6): Atomic Lua script for INCR+EXPIRE to avoid race conditions
-_INCR_WITH_TTL_SCRIPT = """
-local key = KEYS[1]
-local ttl = tonumber(ARGV[1])
-local current = redis.call('INCR', key)
-if current == 1 then
-    redis.call('EXPIRE', key, ttl)
-end
-return current
-"""
+TIER_LIMITS: dict[str, int] = {
+    "free": 50,
+    "premium": 500,
+}
 
 
 @dataclass
@@ -42,45 +34,26 @@ class RateLimitResult:
         limit: The maximum requests allowed for the tier.
         remaining: How many requests remain in the current window.
         reset_seconds: Seconds until the window resets.
-        reset_at: Optional Unix timestamp when the window resets.
+        reset_at: Unix timestamp when the window resets (0 if unknown).
     """
 
     allowed: bool
     limit: int
     remaining: int
-    reset_seconds: int = 0
-    reset_at: Optional[int] = field(default=None)
+    reset_seconds: int
+    reset_at: int = 0
 
 
 class RateLimiter:
     """Redis-backed fixed-window rate limiter.
 
-    Uses daily keys (keyed by user_id + day) with atomic Lua script
-    (INCR+EXPIRE in one round-trip) to count requests.
-    Each key auto-expires after 24 hours.
+    Uses daily keys (keyed by user_id + day) with atomic INCR
+    to count requests. Each key auto-expires after 24 hours.
     """
 
     def __init__(self) -> None:
         """Initialize the rate limiter with a Redis connection."""
         self._redis: redis.Redis = redis.from_url(settings.redis_url, decode_responses=True)
-        self._script_sha: Optional[str] = None
-
-    async def _get_script_sha(self) -> str:
-        """Load the Lua script into Redis and cache the SHA."""
-        if self._script_sha is None:
-            self._script_sha = await self._redis.script_load(_INCR_WITH_TTL_SCRIPT)
-        # After the None check above, self._script_sha is guaranteed to be a str,
-        # but we use a local binding so Pyright can narrow the type correctly.
-        sha: str = self._script_sha  # type: ignore[assignment]
-        return sha
-
-    @property
-    def _tier_limits(self) -> dict[str, int]:
-        """Fix 3.4 (M-7): Return tier limits from config instead of hardcoded values."""
-        return {
-            "free": settings.rate_limit_free_daily,
-            "premium": settings.rate_limit_premium_daily,
-        }
 
     async def check_limit(self, user_id: str, tier: str = "free") -> RateLimitResult:
         """Check and increment the rate limit counter for a user.
@@ -92,24 +65,15 @@ class RateLimiter:
         Returns:
             A RateLimitResult with the check outcome.
         """
-        # Fix 3.5 (M-8): Log unknown tier
-        if tier not in self._tier_limits:
-            logger.warning(
-                f"Unknown subscription tier '{tier}' for user {user_id}, defaulting to free limits"
-            )
-
-        limit = self._tier_limits.get(tier, self._tier_limits["free"])
+        limit = TIER_LIMITS.get(tier, TIER_LIMITS["free"])
         day_key = int(time.time() // 86400)
         redis_key = f"rate_limit:{user_id}:{day_key}"
         reset_seconds = 86400 - int(time.time() % 86400)
 
         try:
-            sha = await self._get_script_sha()
-            # Fix 3.1 (H-6): Use atomic Lua script instead of INCR + EXPIRE.
-            # decode_responses=True means evalsha returns str; cast to int explicitly.
-            # type: ignore comments suppress stale redis-py stub issues.
-            raw = await self._redis.evalsha(sha, 1, redis_key, "86400")  # type: ignore[misc]
-            current = int(raw)
+            current = await self._redis.incr(redis_key)
+            if current == 1:
+                await self._redis.expire(redis_key, 86400)
 
             allowed = current <= limit
             remaining = max(0, limit - current)
@@ -128,39 +92,15 @@ class RateLimiter:
                 limit=limit,
                 remaining=remaining,
                 reset_seconds=reset_seconds,
-                reset_at=int(time.time()) + reset_seconds,
             )
-        except RedisError as e:
-            # Fix 3.2 (C-5): Fail-open on Redis error instead of denying service
-            logger.warning(f"Rate limiter Redis error (fail-open): {e}")
-            return RateLimitResult(allowed=True, remaining=-1, reset_at=None, limit=0)
-
-    async def check_burst_limit(self, user_id: str) -> RateLimitResult:
-        """Fix 3.3 (H-7 / H-1): Per-minute burst rate limit check.
-
-        Args:
-            user_id: The authenticated user's ID.
-
-        Returns:
-            A RateLimitResult indicating whether the burst limit is exceeded.
-        """
-        minute_key = f"rate_burst:{user_id}:{int(time.time() // 60)}"
-        limit = settings.rate_limit_burst_per_minute  # 10
-        try:
-            sha = await self._get_script_sha()
-            # decode_responses=True means evalsha returns str; cast to int explicitly.
-            raw = await self._redis.evalsha(sha, 1, minute_key, "60")  # type: ignore[misc]
-            current = int(raw)
-            allowed = current <= limit
+        except redis.RedisError as exc:
+            logger.error("Redis error in rate limiter: %s", exc)
             return RateLimitResult(
-                allowed=allowed,
-                remaining=max(0, limit - current),
-                reset_at=None,
+                allowed=False,
                 limit=limit,
+                remaining=0,
+                reset_seconds=reset_seconds,
             )
-        except RedisError as e:
-            logger.warning(f"Burst rate limiter Redis error (fail-open): {e}")
-            return RateLimitResult(allowed=True, remaining=-1, reset_at=None, limit=limit)
 
     @staticmethod
     def headers(result: RateLimitResult) -> dict[str, str]:

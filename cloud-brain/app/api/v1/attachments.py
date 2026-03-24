@@ -23,6 +23,7 @@ Notes
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import filetype  # Fix 7.4 (C-10): Server-side MIME type detection from magic bytes
@@ -36,7 +37,7 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models.conversation import Conversation
 from app.models.user import User
-from app.services.attachment_processor import AttachmentProcessor
+from app.services.attachment_processor import AttachmentProcessor, _safe_extract_health_facts
 from app.services.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
@@ -219,12 +220,17 @@ async def upload_attachment(
     # 3. Process through AttachmentProcessor
     # ------------------------------------------------------------------
     try:
-        processed = AttachmentProcessor.process(
+        processed = await asyncio.to_thread(
+            AttachmentProcessor.process,
             file_bytes=file_bytes,
             filename=filename,
             content_type=content_type,
             user_id=str(user.id),
         )
+        # Override health_facts with the async safe version (timeout-protected,
+        # non-blocking) if there is extracted text to scan.
+        if processed.get("extracted_text"):
+            processed["health_facts"] = await _safe_extract_health_facts(processed["extracted_text"])
     except ValueError as exc:
         logger.info(
             "upload_attachment: validation error for user=%s: %s",

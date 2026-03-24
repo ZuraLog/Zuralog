@@ -26,6 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 from app.api.deps import get_authenticated_user_id
+from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,7 @@ async def list_memories(
     )
 
 
+@limiter.limit("30/minute")
 @router.delete(
     "/{memory_id}",
     response_model=DeleteMemoryResponse,
@@ -222,6 +224,7 @@ async def delete_memory(
     return DeleteMemoryResponse(deleted=deleted, memory_id=memory_id)
 
 
+@limiter.limit("5/hour")
 @router.delete(
     "",
     response_model=ClearMemoriesResponse,
