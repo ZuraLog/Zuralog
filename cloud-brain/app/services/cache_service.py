@@ -166,8 +166,9 @@ def cached(
             if request and hasattr(request, "app"):
                 cache_service = getattr(request.app.state, "cache_service", None)
 
-            # Attempt cache hit
-            if cache_service:
+            # Attempt cache hit — skipped when caller passes force_refresh=True
+            force_refresh = kwargs.get("force_refresh", False)
+            if cache_service and not force_refresh:
                 cached_value = await cache_service.get(cache_key)
                 if cached_value is not None:
                     logger.debug("Cache HIT: %s", cache_key)

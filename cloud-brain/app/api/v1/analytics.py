@@ -422,6 +422,7 @@ async def dashboard_insight(
 async def dashboard_summary(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
+    force_refresh: bool = Query(False, description="Bypass server cache for this request"),
 ) -> DashboardSummaryResponse:
     """Return aggregated dashboard data for the Data tab Health Dashboard.
 
