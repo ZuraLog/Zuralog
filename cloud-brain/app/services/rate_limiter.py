@@ -106,8 +106,10 @@ class RateLimiter:
         try:
             sha = await self._get_script_sha()
             # Fix 3.1 (H-6): Use atomic Lua script instead of INCR + EXPIRE.
-            # All KEYS and ARGV values must be str for redis-py async evalsha.
-            current: int = await self._redis.evalsha(sha, 1, redis_key, str(86400))
+            # decode_responses=True means evalsha returns str; cast to int explicitly.
+            # type: ignore comments suppress stale redis-py stub issues.
+            raw = await self._redis.evalsha(sha, 1, redis_key, "86400")  # type: ignore[misc]
+            current = int(raw)
 
             allowed = current <= limit
             remaining = max(0, limit - current)
@@ -146,8 +148,9 @@ class RateLimiter:
         limit = settings.rate_limit_burst_per_minute  # 10
         try:
             sha = await self._get_script_sha()
-            # All ARGV values must be str for redis-py async evalsha.
-            current: int = await self._redis.evalsha(sha, 1, minute_key, str(60))
+            # decode_responses=True means evalsha returns str; cast to int explicitly.
+            raw = await self._redis.evalsha(sha, 1, minute_key, "60")  # type: ignore[misc]
+            current = int(raw)
             allowed = current <= limit
             return RateLimitResult(
                 allowed=allowed,
