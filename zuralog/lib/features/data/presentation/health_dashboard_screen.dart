@@ -5,13 +5,15 @@
 /// [GlobalTimeRangeSelector], [TileGrid], [SearchOverlay], and [TileEditOverlay] — into a single cohesive screen.
 library;
 
-import 'dart:async';
+import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/constants/app_constants.dart';
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
@@ -84,6 +86,8 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
         }
       });
     });
+    // Schedule auto-sync check after first frame so rendering is not blocked.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _triggerSyncIfDue());
   }
 
   // ── Edit mode ────────────────────────────────────────────────────────────────
@@ -195,6 +199,53 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
     }));
   }
 
+  // ── Health sync constants ──────────────────────────────────────────────────
+
+  /// SharedPreferences key for the last successful sync timestamp (ms since epoch).
+  static const _kLastSyncKey = 'health_last_sync_at';
+
+  /// Minimum gap between automatic app-launch syncs (prevents hammering the server).
+  static const _kSyncThrottleHours = 1;
+
+  // ── App-launch sync ────────────────────────────────────────────────────────
+
+  /// Fires a background health sync if the user has a health integration
+  /// connected AND hasn't synced in the last [_kSyncThrottleHours] hour(s).
+  ///
+  /// Called once per screen lifecycle from [initState] via addPostFrameCallback.
+  /// Fire-and-forget — does not block rendering.
+  Future<void> _triggerSyncIfDue() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final appleConnected =
+        prefs.getBool('integration_connected_apple_health') ?? false;
+    final hcConnected =
+        prefs.getBool('integration_connected_google_health_connect') ?? false;
+    if (!appleConnected && !hcConnected) return;
+
+    final lastSyncMs = prefs.getInt(_kLastSyncKey);
+    if (lastSyncMs != null) {
+      final elapsed = DateTime.now()
+          .difference(DateTime.fromMillisecondsSinceEpoch(lastSyncMs));
+      if (elapsed.inHours < _kSyncThrottleHours) return;
+    }
+
+    // Record attempt time BEFORE firing to prevent parallel syncs on rapid
+    // tab switching.
+    await prefs.setInt(_kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
+
+    final syncService = ref.read(healthSyncServiceProvider);
+    unawaited(
+      syncService.syncToCloud(days: 7).then((success) {
+        debugPrint('[HealthDashboard] Auto-sync ${success ? 'succeeded' : 'failed'}');
+        if (success && mounted) {
+          ref.invalidate(dashboardTilesProvider);
+          ref.invalidate(dashboardProvider);
+        }
+      }),
+    );
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
@@ -279,6 +330,29 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
             color: colors.primary,
             onRefresh: () async {
               if (_isEditMode) return;
+
+              // Sync latest health data to the server before refreshing tiles.
+              final prefs = await SharedPreferences.getInstance();
+              final appleConnected =
+                  prefs.getBool('integration_connected_apple_health') ?? false;
+              final hcConnected =
+                  prefs.getBool('integration_connected_google_health_connect') ??
+                      false;
+
+              if (appleConnected || hcConnected) {
+                final syncService = ref.read(healthSyncServiceProvider);
+                final synced = await syncService.syncToCloud(days: 7);
+                if (synced) {
+                  await prefs.setInt(
+                      _kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
+                }
+                // Bypass both Flutter-side and server-side caches so the user
+                // sees data from the sync that just completed.
+                await ref
+                    .read(dataRepositoryProvider)
+                    .getDashboard(forceRefresh: true);
+              }
+
               ref.invalidate(dashboardTilesProvider);
               ref.invalidate(healthScoreProvider);
               ref.invalidate(dashboardProvider);
