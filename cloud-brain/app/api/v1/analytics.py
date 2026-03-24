@@ -436,6 +436,7 @@ async def dashboard_summary(
     Returns:
         DashboardSummaryResponse with category summaries and visible order.
     """
+    _ = force_refresh  # read by @cached decorator via kwargs; not used in body
     async with async_session() as temp_db:
         today = await get_user_local_date(temp_db, user_id)
     day14_ago = today - timedelta(days=14)
