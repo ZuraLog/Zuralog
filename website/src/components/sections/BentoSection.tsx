@@ -833,7 +833,7 @@ export function BentoSection() {
                         />
 
                         {/* Compact phone — top-right corner with mini chat analytics */}
-                        <div className="absolute top-3 right-3 phone-float" aria-hidden="true">
+                        <div className="absolute top-3 right-3 phone-float z-0" aria-hidden="true">
                             <div
                                 className="relative w-[68px] h-[128px] rounded-[16px] border-[1.5px] border-black/10 overflow-hidden"
                                 style={{
