@@ -55,7 +55,8 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
       final updated = await repo.updateSupplementsList(optimistic);
       setState(() => _localList = updated);
       ref.invalidate(supplementsListProvider);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SupplementsLogScreen save failed: $e');
       setState(() => _localList = currentList);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +76,8 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
       );
       ref.invalidate(todayLogSummaryProvider);
       if (mounted) { Navigator.of(context).pop(); }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SupplementsLogScreen save failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to save. Please try again.')),

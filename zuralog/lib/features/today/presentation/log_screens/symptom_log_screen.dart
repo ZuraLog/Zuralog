@@ -47,7 +47,8 @@ class _SymptomLogScreenState extends ConsumerState<SymptomLogScreen> {
       );
       ref.invalidate(todayLogSummaryProvider);
       if (mounted) { Navigator.of(context).pop(); }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SymptomLogScreen save failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to save. Please try again.')),
