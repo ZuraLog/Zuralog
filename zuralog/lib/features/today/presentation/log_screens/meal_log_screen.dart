@@ -73,6 +73,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
   bool get _canSave {
     if (_isSaving || _mealType == null) return false;
     final quickMode = ref.read(mealLogModeProvider).valueOrNull ?? false;
+    if (quickMode && _calories == null) return false;
     if (!quickMode && _descriptionCtrl.text.trim().isEmpty) return false;
     return true;
   }
@@ -93,7 +94,8 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
       );
       ref.invalidate(todayLogSummaryProvider);
       if (mounted) { Navigator.of(context).pop(); }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('MealLogScreen save failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to save. Please try again.')),

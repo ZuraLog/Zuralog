@@ -149,7 +149,7 @@ void main() {
 
     testWidgets('shows checkmark on tiles in todayLogSummaryProvider',
         (tester) async {
-      final container = _container(loggedTypes: {'water', 'mood'});
+      final container = _container(loggedTypes: {'water_ml', 'mood'});
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,

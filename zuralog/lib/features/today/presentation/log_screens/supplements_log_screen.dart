@@ -22,6 +22,8 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
   final _notesCtrl = TextEditingController();
   bool _isSaving = false;
   bool _showAddForm = false;
+
+  bool get _canSave => !_isSaving && _takenIds.isNotEmpty;
   final _addNameCtrl = TextEditingController();
   final _addDoseCtrl = TextEditingController();
   String _addTiming = 'anytime';
@@ -55,7 +57,8 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
       final updated = await repo.updateSupplementsList(optimistic);
       setState(() => _localList = updated);
       ref.invalidate(supplementsListProvider);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SupplementsLogScreen save failed: $e');
       setState(() => _localList = currentList);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +78,8 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
       );
       ref.invalidate(todayLogSummaryProvider);
       if (mounted) { Navigator.of(context).pop(); }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SupplementsLogScreen save failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to save. Please try again.')),
@@ -145,7 +149,7 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
           Container(
             padding: EdgeInsets.fromLTRB(AppDimens.spaceMd, AppDimens.spaceSm, AppDimens.spaceMd, AppDimens.spaceSm + bottomPad),
             child: FilledButton(
-              onPressed: _isSaving ? null : () => _save(list),
+              onPressed: _canSave ? () => _save(list) : null,
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               child: _isSaving ? const CircularProgressIndicator.adaptive() : const Text('Save'),
             ),

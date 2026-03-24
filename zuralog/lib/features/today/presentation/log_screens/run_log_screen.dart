@@ -130,7 +130,8 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
       );
       ref.invalidate(todayLogSummaryProvider);
       if (mounted) { Navigator.of(context).pop(); }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('RunLogScreen save failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to save. Please try again.')),
