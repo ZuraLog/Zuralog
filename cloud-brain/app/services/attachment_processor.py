@@ -14,7 +14,6 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
-import mimetypes
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any

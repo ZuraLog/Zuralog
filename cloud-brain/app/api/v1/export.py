@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_authenticated_user_id, get_db
 from app.limiter import limiter
-from app.models.conversation import Conversation, Message
+from app.models.conversation import Conversation
 from app.models.user_preferences import UserPreferences
 
 router = APIRouter(prefix="/user", tags=["user"])
