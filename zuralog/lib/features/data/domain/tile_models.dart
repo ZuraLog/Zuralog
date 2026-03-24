@@ -180,6 +180,8 @@ extension TileConfig on TileId {
   /// Blood pressure is a special case handled in the provider (two metrics → one tile).
   String get backendMetricId => switch (this) {
     TileId.workouts => 'exercise_minutes',
+    // NOTE: TileId.floorsClimbed also resolves to 'floors_climbed' via metricSlug.
+    // If both tiles are visible simultaneously they will share the same series data.
     TileId.mobility => 'floors_climbed',
     _ => metricSlug,
   };

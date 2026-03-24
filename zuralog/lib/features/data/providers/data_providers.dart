@@ -712,6 +712,7 @@ MetricSeries? _combineBloodPressure(Map<String, MetricSeries> map) {
     metricId: 'blood_pressure',
     displayName: 'Blood Pressure',
     unit: 'mmHg',
+    sourceIntegration: sys?.sourceIntegration ?? dia?.sourceIntegration,
     dataPoints: sys?.dataPoints ?? dia?.dataPoints ?? [],
     currentValue: '${sys?.currentValue ?? '—'}/${dia?.currentValue ?? '—'}',
     deltaPercent: sys?.deltaPercent,

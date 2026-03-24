@@ -102,6 +102,20 @@ void main() {
       final result = combineBloodPressureForTest(map);
       expect(result!.currentValue, '118/—');
     });
+
+    test('uses — for missing systolic', () {
+      final map = {
+        'blood_pressure_diastolic': MetricSeries(
+          metricId: 'blood_pressure_diastolic',
+          displayName: 'Diastolic',
+          unit: 'mmHg',
+          dataPoints: [],
+          currentValue: '80',
+        ),
+      };
+      final result = combineBloodPressureForTest(map);
+      expect(result!.currentValue, '—/80');
+    });
   });
 
   // ── TimeRange ───────────────────────────────────────────────────────────────
