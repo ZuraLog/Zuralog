@@ -75,6 +75,8 @@ const Map<String, String> _tileKeyToSlug = {
   'run':        'exercise_minutes',
   'meal':       'calories',
   'supplement': 'supplement_taken',
+  'symptom':    'symptom',
+  'workout':    'workout',
 };
 
 // ── ZLogGridSheet ─────────────────────────────────────────────────────────────
