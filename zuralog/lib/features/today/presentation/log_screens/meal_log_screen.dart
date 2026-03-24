@@ -73,6 +73,7 @@ class _MealLogScreenState extends ConsumerState<MealLogScreen> {
   bool get _canSave {
     if (_isSaving || _mealType == null) return false;
     final quickMode = ref.read(mealLogModeProvider).valueOrNull ?? false;
+    if (quickMode && _calories == null) return false;
     if (!quickMode && _descriptionCtrl.text.trim().isEmpty) return false;
     return true;
   }
