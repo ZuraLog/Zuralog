@@ -12,12 +12,19 @@
 /// derived providers.
 library;
 
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
@@ -46,6 +53,49 @@ final _memoryItemsProvider = StateProvider<List<String>>(
 class PrivacyDataScreen extends ConsumerWidget {
   /// Creates the [PrivacyDataScreen].
   const PrivacyDataScreen({super.key});
+
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    ref.read(analyticsServiceProvider).capture(
+      event: AnalyticsEvents.dataExportRequested,
+    );
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.get(
+        '/api/v1/user/export',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final bytes = Uint8List.fromList(response.data as List<int>);
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/zuralog_export.zip');
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Zuralog Data Export',
+      );
+      await file.delete();
+    } on DioException catch (e) {
+      if (context.mounted) {
+        final message = e.response?.statusCode == 429
+            ? 'Export limit reached. You can export once per hour.'
+            : 'Export failed. Check your connection and try again.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Export failed. Please try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -133,14 +183,66 @@ class PrivacyDataScreen extends ConsumerWidget {
                             children: [
                                _MemoryItemRow(
                                 text: item,
-                                onDelete: () {
-                                  final updated = List<String>.from(
-                                    memoryItems,
-                                  )..removeAt(index);
-                                  memoryNotifier.state = updated;
-                                  ref.read(analyticsServiceProvider).capture(
-                                    event: AnalyticsEvents.memoryDeleted,
+                                onDelete: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      backgroundColor: colors.surface,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          AppDimens.radiusCard,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        'Delete Memory?',
+                                        style: AppTextStyles.titleMedium
+                                            .copyWith(
+                                              color: colors.textPrimary,
+                                            ),
+                                      ),
+                                      content: Text(
+                                        'This memory will be permanently removed.',
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: colors.textSecondary,
+                                            ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: Text(
+                                            'Cancel',
+                                            style: AppTextStyles.bodyLarge
+                                                .copyWith(
+                                                  color: colors.textSecondary,
+                                                ),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: Text(
+                                            'Delete',
+                                            style: AppTextStyles.bodyLarge
+                                                .copyWith(
+                                                  color: colors.accent,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   );
+                                  if (confirmed == true) {
+                                    final updated = List<String>.from(
+                                      memoryItems,
+                                    )..removeAt(index);
+                                    memoryNotifier.state = updated;
+                                    ref.read(analyticsServiceProvider).capture(
+                                      event: AnalyticsEvents.memoryDeleted,
+                                    );
+                                  }
                                 },
                               ),
                               if (!isLast) const _Divider(),
@@ -228,33 +330,8 @@ class PrivacyDataScreen extends ConsumerWidget {
                     icon: Icons.download_rounded,
                     iconColor: colors.primary,
                     title: 'Export Data',
-                    subtitle: 'Coming soon',
                     showChevron: false,
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colors.secondary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-                      ),
-                      child: Text(
-                        'Soon',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: colors.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    onTap: () {
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.dataExportRequested,
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Data export coming soon'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+                    onTap: () => _exportData(context, ref),
                   ),
                   const _Divider(),
                   ZSettingsTile(
@@ -265,22 +342,29 @@ class PrivacyDataScreen extends ConsumerWidget {
                     titleColor: AppColors.statusError,
                     onTap: () => _showDeleteDataDialog(
                       context,
-                      onConfirmed: () {
+                      onConfirmed: () async {
+                        // Fire analytics
                         ref.read(analyticsServiceProvider).capture(
                           event: AnalyticsEvents.accountDeleteRequested,
                         );
-                        // TODO(phase9): Wire to Supabase delete-all-data API endpoint.
-                        // Do not show a success message until the API call succeeds.
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Data deletion is not yet available. '
-                              'Contact support@zuralog.com to request erasure.',
+                        // Clear AI memories (what we can delete from client side)
+                        try {
+                          memoryNotifier.state = [];
+                        } catch (_) {
+                          // Best-effort; the message below still directs to support
+                        }
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'AI memories cleared. To fully delete all health data '
+                                'and your account, contact support@zuralog.com.',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 6),
                             ),
-                            behavior: SnackBarBehavior.floating,
-                            duration: Duration(seconds: 6),
-                          ),
-                        );
+                          );
+                        }
                       },
                     ),
                   ),
@@ -359,7 +443,7 @@ class _MemoryItemRow extends StatelessWidget {
   const _MemoryItemRow({required this.text, required this.onDelete});
 
   final String text;
-  final VoidCallback onDelete;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {

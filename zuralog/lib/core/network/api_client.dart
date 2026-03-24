@@ -162,11 +162,14 @@ class ApiClient {
   /// Sends a GET request to the given [path] with optional [queryParameters].
   ///
   /// [queryParameters] are appended to the URL as query string key-value pairs.
+  /// [options] can be used to override request-level Dio settings such as
+  /// [ResponseType] (e.g. for binary downloads).
   /// Returns the Dio [Response] containing the server's response.
   Future<Response<dynamic>> get(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) => _dio.get(path, queryParameters: queryParameters);
+    Options? options,
+  }) => _dio.get(path, queryParameters: queryParameters, options: options);
 
   /// Sends a POST request to the given [path] with optional [data] and
   /// [queryParameters].

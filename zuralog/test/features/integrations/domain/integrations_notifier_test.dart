@@ -55,7 +55,7 @@ class _FakeApiClient implements ApiClient {
   void Function()? get onUnauthenticated => null;
 
   @override
-  Future<Response<dynamic>> get(String path, {Map<String, dynamic>? queryParameters}) async =>
+  Future<Response<dynamic>> get(String path, {Map<String, dynamic>? queryParameters, Options? options}) async =>
       throw UnimplementedError();
   @override
   Future<Response<dynamic>> post(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async =>
