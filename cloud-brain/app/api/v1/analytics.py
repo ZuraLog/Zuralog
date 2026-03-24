@@ -432,11 +432,13 @@ async def dashboard_summary(
     Args:
         request: Incoming FastAPI request.
         user_id: Authenticated user ID from JWT.
+        force_refresh: When True, the @cached decorator skips the cached result
+            and re-fetches fresh data, then re-populates the cache.
 
     Returns:
         DashboardSummaryResponse with category summaries and visible order.
     """
-    _ = force_refresh  # read by @cached decorator via kwargs; not used in body
+    _ = force_refresh  # consumed by @cached
     async with async_session() as temp_db:
         today = await get_user_local_date(temp_db, user_id)
     day14_ago = today - timedelta(days=14)

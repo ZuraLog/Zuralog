@@ -137,6 +137,13 @@ def cached(
         key_params: List of parameter names to include in the cache key.
                     These must match argument names of the decorated function.
 
+    Convention:
+        If a kwarg named `force_refresh=True` is present when the wrapped
+        function is called, the cache hit is skipped and the handler re-runs,
+        but the fresh result is still written back to cache. Endpoints that
+        want to expose this capability should declare `force_refresh` as a
+        Query parameter — do not reuse this kwarg name for other purposes.
+
     Usage:
         @router.get("/daily-summary")
         @cached(prefix="analytics.daily_summary", ttl=300, key_params=["user_id", "date_str"])
