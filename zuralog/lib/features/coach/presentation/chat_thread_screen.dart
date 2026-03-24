@@ -444,20 +444,84 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       body: Column(
         children: [
           // ── Error banner ─────────────────────────────────────────────────
-          if (chatState.errorMessage != null)
-            _ErrorBanner(
-              message: chatState.errorMessage!,
-              onRetry: () {
-                final notifier = ref.read(
-                  coachChatNotifierProvider(widget.conversationId).notifier,
-                );
-                if (widget.conversationId.startsWith('new_')) {
-                  // For new conversations there is no history to load —
-                  // just clear the error so the user can re-type and send.
-                  notifier.clearError();
-                } else {
-                  notifier.loadHistory();
+          if (chatState.isNotFound)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.chat_bubble_outline_rounded, size: 48, color: AppColors.textTertiary),
+                    const SizedBox(height: 16),
+                    Text('Conversation not found', style: AppTextStyles.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This conversation no longer exists.',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => context.goNamed(RouteNames.coach),
+                      child: const Text('Go Back'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (chatState.errorMessage != null)
+            Builder(
+              builder: (context) {
+                final isUpgradeNeeded =
+                    chatState.errorMessage?.toLowerCase().contains('upgrade') == true ||
+                    chatState.errorMessage?.toLowerCase().contains('daily messages') == true ||
+                    chatState.errorMessage?.toLowerCase().contains('free daily') == true;
+
+                if (isUpgradeNeeded) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                      vertical: AppDimens.spaceSm,
+                    ),
+                    color: AppColors.statusError.withValues(alpha: 0.15),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outline_rounded,
+                            color: AppColors.statusError, size: 18),
+                        const SizedBox(width: AppDimens.spaceSm),
+                        Expanded(
+                          child: Text(
+                            chatState.errorMessage!,
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: AppColors.statusError),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => context.pushNamed(RouteNames.settingsSubscription),
+                          child: const Text('Upgrade',
+                              style: TextStyle(color: AppColors.statusError)),
+                        ),
+                      ],
+                    ),
+                  );
                 }
+
+                return _ErrorBanner(
+                  message: chatState.errorMessage!,
+                  onRetry: () {
+                    final notifier = ref.read(
+                      coachChatNotifierProvider(widget.conversationId).notifier,
+                    );
+                    if (widget.conversationId.startsWith('new_')) {
+                      // For new conversations there is no history to load —
+                      // just clear the error so the user can re-type and send.
+                      notifier.clearError();
+                    } else {
+                      notifier.loadHistory();
+                    }
+                  },
+                );
               },
             ),
           // ── Message list + streaming bubble ──────────────────────────────
@@ -1372,6 +1436,29 @@ class _MessageBubble extends StatelessWidget {
                     fontSize: 10,
                   ),
                 ),
+                // SF2: Visible copy button
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: _isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.copy_rounded, size: 14),
+                      color: AppColors.textTertiary,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: message.content));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Copied'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1720,6 +1807,28 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                 ),
               ],
             ),
+          ),
+          // SF1: Character counter — visible when text length >= 3500
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: widget.controller,
+            builder: (context, value, _) {
+              final remaining = 4000 - value.text.length;
+              if (remaining > 500) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(right: 12, bottom: 4),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '$remaining',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: remaining <= 0
+                          ? AppColors.statusError
+                          : AppColors.textTertiary,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

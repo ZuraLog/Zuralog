@@ -489,7 +489,7 @@ class Orchestrator:
 
                 # Fix 5.2 (H-13): Unified streaming loop — single LLM call per turn.
                 # Tool calls are detected from delta.tool_calls during streaming.
-                for turn in range(MAX_TOOL_TURNS + 1):
+                for turn in range(MAX_TOOL_TURNS):
                     accumulated_content = ""
                     # Dict mapping tool_call index → accumulated call data
                     accumulated_tool_calls: dict[int, dict[str, Any]] = {}

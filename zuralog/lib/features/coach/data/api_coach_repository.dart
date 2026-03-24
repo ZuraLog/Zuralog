@@ -13,8 +13,9 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show Platform, SocketException;
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -439,8 +440,19 @@ final class ApiCoachRepository implements CoachRepository {
             controller.add(StreamError('Message parse error: $e'));
           }
         },
-        onError: (Object error) {
-          if (!controller.isClosed) controller.add(StreamError('WebSocket error: $error'));
+        onError: (Object error, StackTrace stackTrace) async {
+          String errorMessage;
+          if (error is SocketException || error is WebSocketChannelException) {
+            final connectivity = await Connectivity().checkConnectivity();
+            final hasInterface = !connectivity.contains(ConnectivityResult.none);
+            errorMessage = hasInterface
+                ? "Connected to network but can't reach the server. "
+                  "If using public WiFi, a login screen may be required."
+                : 'No internet connection. Please check your network.';
+          } else {
+            errorMessage = 'WebSocket error: $error';
+          }
+          if (!controller.isClosed) controller.add(StreamError(errorMessage));
           // Fix C4: complete the single doneCompleter.
           if (!doneCompleter.isCompleted) doneCompleter.complete();
         },
@@ -470,7 +482,18 @@ final class ApiCoachRepository implements CoachRepository {
       // Fix C4: wait for the single doneCompleter.
       await doneCompleter.future;
     } catch (e) {
-      if (!controller.isClosed) controller.add(StreamError('Connection error: $e'));
+      String errorMessage;
+      if (e is SocketException || e is WebSocketChannelException) {
+        final connectivity = await Connectivity().checkConnectivity();
+        final hasInterface = !connectivity.contains(ConnectivityResult.none);
+        errorMessage = hasInterface
+            ? "Connected to network but can't reach the server. "
+              "If using public WiFi, a login screen may be required."
+            : 'No internet connection. Please check your network.';
+      } else {
+        errorMessage = 'Connection error: $e';
+      }
+      if (!controller.isClosed) controller.add(StreamError(errorMessage));
     } finally {
       await subscription?.cancel();
       // Fix C5: guarded close in finally.

@@ -12,43 +12,67 @@
 /// derived providers.
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
+import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/data/memory_repository.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-// ── Local providers ────────────────────────────────────────────────────────────
-
-/// Mock AI memory items — persisted locally for the session.
-final _memoryItemsProvider = StateProvider<List<String>>(
-  (_) => const [
-    'User prefers morning workouts',
-    'Responds well to streak motivation',
-    'Sleep is a priority goal',
-    'Often skips breakfast',
-    'Dislikes long cardio sessions',
-    'Recovers best with 8+ hours of sleep',
-  ],
-);
-
 // ── PrivacyDataScreen ──────────────────────────────────────────────────────────
 
 /// Privacy & Data screen — AI memory, privacy toggles, data management, legal.
-class PrivacyDataScreen extends ConsumerWidget {
+class PrivacyDataScreen extends ConsumerStatefulWidget {
   /// Creates the [PrivacyDataScreen].
   const PrivacyDataScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PrivacyDataScreen> createState() => _PrivacyDataScreenState();
+}
+
+class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
+  bool _isExporting = false;
+
+  Future<void> _exportData() async {
+    setState(() => _isExporting = true);
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.get(
+        '/api/v1/user/export',
+        queryParameters: {'responseType': 'bytes'},
+      );
+      final bytes = (response.data as String).codeUnits;
+      final dir = await getTemporaryDirectory();
+      final date = DateTime.now().toIso8601String().substring(0, 10);
+      final file = File('${dir.path}/zuralog-export-$date.json');
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles([XFile(file.path)], text: 'Zuralog Data Export');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     // Global persisted privacy preferences.
     final dataMaturityBanner =
@@ -56,8 +80,7 @@ class PrivacyDataScreen extends ConsumerWidget {
     final analyticsEnabled = !ref.watch(analyticsOptOutProvider);
 
     final prefsNotifier = ref.read(userPreferencesProvider.notifier);
-    final memoryItems = ref.watch(_memoryItemsProvider);
-    final memoryNotifier = ref.read(_memoryItemsProvider.notifier);
+    final memoriesAsync = ref.watch(memoryItemsProvider);
 
     return ZuralogScaffold(
       body: CustomScrollView(
@@ -101,53 +124,71 @@ class PrivacyDataScreen extends ConsumerWidget {
               const SizedBox(height: AppDimens.spaceSm),
 
               // Memory items list
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
+              memoriesAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(AppDimens.spaceMd),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colors.cardBackground,
-                    borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                  ),
-                  child: Column(
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                  child: Row(
                     children: [
-                      if (memoryItems.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceMd,
-                            vertical: AppDimens.spaceLg,
-                          ),
-                          child: Text(
-                            'No memory stored',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        )
-                      else
-                        ...List.generate(memoryItems.length, (index) {
-                          final item = memoryItems[index];
-                          final isLast = index == memoryItems.length - 1;
-                          return Column(
-                            children: [
-                               _MemoryItemRow(
-                                text: item,
-                                onDelete: () {
-                                  final updated = List<String>.from(
-                                    memoryItems,
-                                  )..removeAt(index);
-                                  memoryNotifier.state = updated;
-                                  ref.read(analyticsServiceProvider).capture(
-                                    event: AnalyticsEvents.memoryDeleted,
-                                  );
-                                },
-                              ),
-                              if (!isLast) const _Divider(),
-                            ],
-                          );
-                        }),
+                      Expanded(
+                        child: Text(
+                          'Failed to load memories',
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.statusError),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => ref.invalidate(memoryItemsProvider),
+                        child: const Text('Retry'),
+                      ),
                     ],
+                  ),
+                ),
+                data: (memoryItems) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colors.cardBackground,
+                      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                    ),
+                    child: Column(
+                      children: [
+                        if (memoryItems.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppDimens.spaceMd,
+                              vertical: AppDimens.spaceLg,
+                            ),
+                            child: Text(
+                              'No memory stored',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          )
+                        else
+                          ...List.generate(memoryItems.length, (index) {
+                            final item = memoryItems[index];
+                            final isLast = index == memoryItems.length - 1;
+                            return Column(
+                              children: [
+                                _MemoryItemRow(
+                                  item: item,
+                                  onDelete: () {
+                                    ref.read(memoryItemsProvider.notifier).delete(item.id);
+                                    ref.read(analyticsServiceProvider).capture(
+                                      event: AnalyticsEvents.memoryDeleted,
+                                    );
+                                  },
+                                ),
+                                if (!isLast) const _Divider(),
+                              ],
+                            );
+                          }),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -155,36 +196,40 @@ class PrivacyDataScreen extends ConsumerWidget {
               const SizedBox(height: AppDimens.spaceSm),
 
               // Clear All Memory row
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colors.cardBackground,
-                    borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              memoriesAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (e, st) => const SizedBox.shrink(),
+                data: (memoryItems) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
                   ),
-                  child: ZSettingsTile(
-                    icon: Icons.delete_sweep_rounded,
-                    iconColor: memoryItems.isNotEmpty
-                        ? colors.accent
-                        : AppColors.textTertiary,
-                    title: 'Clear All Memory',
-                    showChevron: false,
-                    titleColor: memoryItems.isNotEmpty
-                        ? colors.accent
-                        : AppColors.textTertiary,
-                    onTap: memoryItems.isNotEmpty
-                        ? () => _showClearMemoryDialog(
-                            context,
-                            onConfirmed: () {
-                              memoryNotifier.state = [];
-                              ref.read(analyticsServiceProvider).capture(
-                                event: AnalyticsEvents.allMemoriesCleared,
-                              );
-                            },
-                          )
-                        : null,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colors.cardBackground,
+                      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                    ),
+                    child: ZSettingsTile(
+                      icon: Icons.delete_sweep_rounded,
+                      iconColor: memoryItems.isNotEmpty
+                          ? colors.accent
+                          : AppColors.textTertiary,
+                      title: 'Clear All Memory',
+                      showChevron: false,
+                      titleColor: memoryItems.isNotEmpty
+                          ? colors.accent
+                          : AppColors.textTertiary,
+                      onTap: memoryItems.isNotEmpty
+                          ? () => _showClearMemoryDialog(
+                              context,
+                              onConfirmed: () {
+                                ref.read(memoryItemsProvider.notifier).clearAll();
+                                ref.read(analyticsServiceProvider).capture(
+                                  event: AnalyticsEvents.allMemoriesCleared,
+                                );
+                              },
+                            )
+                          : null,
+                    ),
                   ),
                 ),
               ),
@@ -228,33 +273,23 @@ class PrivacyDataScreen extends ConsumerWidget {
                     icon: Icons.download_rounded,
                     iconColor: colors.primary,
                     title: 'Export Data',
-                    subtitle: 'Coming soon',
+                    subtitle: _isExporting ? 'Exporting…' : 'Download your data as JSON',
                     showChevron: false,
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colors.secondary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-                      ),
-                      child: Text(
-                        'Soon',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: colors.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    onTap: () {
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.dataExportRequested,
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Data export coming soon'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+                    trailing: _isExporting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
+                    onTap: _isExporting
+                        ? null
+                        : () {
+                            ref.read(analyticsServiceProvider).capture(
+                              event: AnalyticsEvents.dataExportRequested,
+                            );
+                            _exportData();
+                          },
                   ),
                   const _Divider(),
                   ZSettingsTile(
@@ -356,9 +391,9 @@ class _Divider extends StatelessWidget {
 }
 
 class _MemoryItemRow extends StatelessWidget {
-  const _MemoryItemRow({required this.text, required this.onDelete});
+  const _MemoryItemRow({required this.item, required this.onDelete});
 
-  final String text;
+  final MemoryItem item;
   final VoidCallback onDelete;
 
   @override
@@ -378,7 +413,7 @@ class _MemoryItemRow extends StatelessWidget {
           const SizedBox(width: AppDimens.spaceMd),
           Expanded(
             child: Text(
-              text,
+              item.text,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: colors.textPrimary,
               ),

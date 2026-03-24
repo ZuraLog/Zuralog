@@ -926,6 +926,28 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
               ],
             ),
           ),
+          // SF1: Character counter — visible when text length >= 3500
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: widget.controller,
+            builder: (context, value, _) {
+              final remaining = 4000 - value.text.length;
+              if (remaining > 500) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(right: 12, bottom: 4),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '$remaining',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: remaining <= 0
+                          ? AppColors.statusError
+                          : AppColors.textTertiary,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );

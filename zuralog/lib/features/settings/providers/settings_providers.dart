@@ -27,6 +27,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/di/providers.dart';
+import 'package:zuralog/features/settings/data/memory_repository.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 
 // ── SharedPreferences key ──────────────────────────────────────────────────────
@@ -240,3 +241,31 @@ final unitsSystemProvider = Provider<UnitsSystem>((ref) {
       .valueOrNull
       ?.unitsSystem ?? UnitsSystem.metric;
 });
+
+// ── AI Memory ──────────────────────────────────────────────────────────────────
+
+/// Provides the [MemoryRepository] backed by the Cloud Brain API.
+final memoryRepositoryProvider = Provider<MemoryRepository>((ref) {
+  return MemoryRepository(ref.read(apiClientProvider));
+});
+
+/// Async notifier for the list of AI memory items.
+final memoryItemsProvider =
+    AsyncNotifierProvider<MemoryNotifier, List<MemoryItem>>(MemoryNotifier.new);
+
+class MemoryNotifier extends AsyncNotifier<List<MemoryItem>> {
+  @override
+  Future<List<MemoryItem>> build() async {
+    return ref.read(memoryRepositoryProvider).listMemories();
+  }
+
+  Future<void> delete(String id) async {
+    await ref.read(memoryRepositoryProvider).deleteMemory(id);
+    ref.invalidateSelf();
+  }
+
+  Future<void> clearAll() async {
+    await ref.read(memoryRepositoryProvider).clearAllMemories();
+    state = const AsyncData([]);
+  }
+}

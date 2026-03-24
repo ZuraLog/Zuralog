@@ -127,6 +127,9 @@ class Settings(BaseSettings):
     rate_limit_free_daily: int = 50
     rate_limit_premium_daily: int = 500
     rate_limit_burst_per_minute: int = 10
+    # Conversation count limits per user
+    max_conversations_free: int = 200
+    max_conversations_premium: int = 2000
 
     @model_validator(mode="after")
     def _validate_config(self) -> "Settings":

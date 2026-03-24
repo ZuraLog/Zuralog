@@ -12,11 +12,14 @@ when the extracted context is injected into the conversation.
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import mimetypes
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+
+from pypdf import PdfReader
 
 logger = logging.getLogger(__name__)
 
@@ -403,7 +406,31 @@ class AttachmentProcessor:
                     return None
 
         if normalised == "application/pdf":
-            return "PDF content extraction not yet available."
+            try:
+                reader = PdfReader(io.BytesIO(file_bytes))
+                pages_text = []
+                for page in reader.pages:
+                    text = page.extract_text() or ""
+                    if text.strip():
+                        pages_text.append(text)
+                full_text = "\n".join(pages_text)
+                if not full_text.strip():
+                    return (
+                        "This PDF appears to be image-based and cannot be read as text. "
+                        "Please describe its contents or upload a text-based PDF."
+                    )
+                # Apply injection sanitization (regex only, no truncation) then truncate to 8000
+                import re as _re
+                dangerous = _re.compile(
+                    r'^(ignore|system:|assistant:|forget|<\|im_start\||<\|im_end\|>)',
+                    _re.IGNORECASE | _re.MULTILINE
+                )
+                sanitized = dangerous.sub('[filtered]', full_text)
+                sanitized = sanitized.replace('<', '&lt;').replace('>', '&gt;')
+                return sanitized[:8000]
+            except Exception:
+                logger.warning("PDF text extraction failed", exc_info=True)
+                return "Failed to extract PDF text. The file may be corrupted or password-protected."
 
         # Images — no text extraction
         return None

@@ -21,8 +21,10 @@ WebSocket Protocol (client → server):
   - {"message": str, "attachments": [...], "persona": str, "proactivity": str}
 """
 
+import json
 import logging
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -55,6 +57,7 @@ from app.config import settings
 from app.database import async_session, get_db
 from app.limiter import limiter
 from app.models.conversation import Conversation, Message
+from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
 from app.services.rate_limiter import RateLimiter
@@ -316,6 +319,22 @@ async def websocket_chat(
     user_id: str | None = None
 
     # ── Auth ──────────────────────────────────────────────────────────────────
+    # S1: If token was not in query param, read it from the first message.
+    if token is None:
+        try:
+            first_raw = await websocket.receive_text()
+            first_data = json.loads(first_raw)
+            if first_data.get("type") == "auth" and first_data.get("token"):
+                token = first_data["token"]
+            else:
+                await websocket.send_json({"type": "error", "content": "Authentication required"})
+                await websocket.close(code=4001, reason="Authentication required")
+                return
+        except Exception:
+            await websocket.send_json({"type": "error", "content": "Authentication required"})
+            await websocket.close(code=4001, reason="Authentication required")
+            return
+
     user = await _authenticate_ws(websocket, auth_service, token)
     if user is None:
         return
@@ -365,6 +384,29 @@ async def websocket_chat(
                 return
             resolved_conv_id = conv.id
         else:
+            # S4: Enforce per-user conversation count limit based on subscription tier
+            tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
+            user_subscription_tier = tier_result.scalar_one_or_none() or "free"
+            conv_limit = (
+                settings.max_conversations_premium
+                if user_subscription_tier != "free"
+                else settings.max_conversations_free
+            )
+            conv_count_result = await db.execute(
+                select(func.count()).select_from(Conversation).where(
+                    Conversation.user_id == user_id,
+                    Conversation.deleted_at.is_(None),
+                )
+            )
+            conv_count = conv_count_result.scalar() or 0
+            if conv_count >= conv_limit:
+                await websocket.send_json({
+                    "type": "error",
+                    "content": "You've reached the maximum number of conversations. Please delete some old ones to continue.",
+                })
+                await websocket.close(code=1008)
+                return
+
             conv = Conversation(user_id=user_id)
             db.add(conv)
             await db.commit()
@@ -383,10 +425,25 @@ async def websocket_chat(
     await websocket.send_json({"type": "conversation_init", "conversation_id": resolved_conv_id})
 
     # ── Message loop ──────────────────────────────────────────────────────────
+    # S2: Tracking variables for periodic JWT re-validation
+    last_revalidation = time.time()
+    messages_since_revalidation = 0
+
     try:
         while True:
             data = await websocket.receive_json()
             message_text: str = data.get("message", "")
+
+            # S2: Periodic JWT re-validation (every 15 minutes or 50 messages)
+            messages_since_revalidation += 1
+            if time.time() - last_revalidation > 900 or messages_since_revalidation >= 50:
+                revalidated_user = await auth_service.get_user(token)
+                if not revalidated_user:
+                    await websocket.send_json({"type": "error", "content": "Session expired. Please reconnect."})
+                    await websocket.close(code=4003)
+                    return
+                last_revalidation = time.time()
+                messages_since_revalidation = 0
             raw_attachments: list[dict] | None = data.get("attachments")
             is_regenerate: bool = bool(data.get("regenerate", False))
 

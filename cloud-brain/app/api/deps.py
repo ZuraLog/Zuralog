@@ -173,12 +173,14 @@ async def check_rate_limit(
 
     if not limit_result.allowed:
         logger.warning("Rate limit hit: user=%s tier=%s", user_id, tier)
+        if tier == "free":
+            detail = "You've used your free daily messages. Upgrade to Premium for more."
+        else:
+            reset_hours = limit_result.reset_seconds // 3600
+            detail = f"You've reached your daily message limit. It resets in {reset_hours + 1} hour(s)."
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=(
-                f"Daily rate limit exceeded. Your {tier} plan allows "
-                f"{limit_result.limit} requests/day. Upgrade to Premium for more."
-            ),
+            detail=detail,
             headers={
                 "X-RateLimit-Limit": str(limit_result.limit),
                 "X-RateLimit-Remaining": "0",

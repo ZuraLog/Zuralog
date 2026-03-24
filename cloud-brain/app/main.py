@@ -33,6 +33,7 @@ from app.api.v1.attachments import attachments_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.coach_routes import router as coach_router
+from app.api.v1.export import router as export_router
 from app.api.v1.supplements_routes import router as supplements_router
 from app.api.v1.dev import router as dev_router
 from app.api.v1.devices import router as devices_router
@@ -387,6 +388,7 @@ app.include_router(events_router, prefix="/api/v1")  # Soft-delete events
 app.include_router(today_router, prefix="/api/v1")  # Today tab
 app.include_router(coach_router, prefix="/api/v1")  # Coach context endpoints
 app.include_router(supplements_router, prefix="/api/v1")  # Supplements list management
+app.include_router(export_router, prefix="/api/v1")  # User data export
 
 
 @app.get("/health")

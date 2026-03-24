@@ -147,6 +147,7 @@ class CoachChatState {
     this.isEditing = false,
     this.editingContent,
     this.editSnapshot,
+    this.isNotFound = false,
   });
 
   /// Messages loaded from history (does NOT include the in-flight streaming
@@ -177,6 +178,9 @@ class CoachChatState {
   /// Reset to false at the start of the next [sendMessage] call.
   final bool isCancelled;
 
+  /// True when the conversation was not found on the server (HTTP 404).
+  final bool isNotFound;
+
   /// True when the user is editing a previously sent message.
   final bool isEditing;
 
@@ -204,6 +208,7 @@ class CoachChatState {
     bool clearEditingContent = false,
     List<ChatMessage>? editSnapshot,
     bool clearEditSnapshot = false,
+    bool? isNotFound,
   }) {
     return CoachChatState(
       messages: messages ?? this.messages,
@@ -217,6 +222,7 @@ class CoachChatState {
       isEditing: isEditing ?? this.isEditing,
       editingContent: clearEditingContent ? null : (editingContent ?? this.editingContent),
       editSnapshot: clearEditSnapshot ? null : (editSnapshot ?? this.editSnapshot),
+      isNotFound: isNotFound ?? this.isNotFound,
     );
   }
 }
@@ -249,6 +255,10 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
           .listMessages(arg);
       state = state.copyWith(messages: messages, isLoadingHistory: false);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        state = state.copyWith(isLoadingHistory: false, isNotFound: true);
+        return;
+      }
       state = state.copyWith(
         isLoadingHistory: false,
         errorMessage: ApiClient.friendlyError(e),
