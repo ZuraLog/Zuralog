@@ -621,7 +621,9 @@ final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
         'metricSeriesMap keys: ${metricSeriesMap.keys.join(', ')}');
 
     final tiles = TileId.values.map((tileId) {
-      final series = metricSeriesMap[tileId.metricSlug];
+      final series = tileId == TileId.bloodPressure
+          ? _combineBloodPressure(metricSeriesMap)
+          : metricSeriesMap[tileId.backendMetricId];
       final catSummary = categoryMap[tileId.category];
 
       if (series == null && catSummary == null) {
@@ -695,3 +697,29 @@ CategorySummary _summaryFromSeries(MetricSeries series, HealthCategory category)
         : null,
   );
 }
+
+// ── Blood Pressure ────────────────────────────────────────────────────────────
+
+/// Combines `blood_pressure_systolic` and `blood_pressure_diastolic` series
+/// into a single [MetricSeries] with `currentValue` formatted as "120/80".
+///
+/// Returns `null` when both series are absent (tile shows noSource state).
+MetricSeries? _combineBloodPressure(Map<String, MetricSeries> map) {
+  final sys = map['blood_pressure_systolic'];
+  final dia = map['blood_pressure_diastolic'];
+  if (sys == null && dia == null) return null;
+  return MetricSeries(
+    metricId: 'blood_pressure',
+    displayName: 'Blood Pressure',
+    unit: 'mmHg',
+    dataPoints: sys?.dataPoints ?? dia?.dataPoints ?? [],
+    currentValue: '${sys?.currentValue ?? '—'}/${dia?.currentValue ?? '—'}',
+    deltaPercent: sys?.deltaPercent,
+    average: sys?.average,
+  );
+}
+
+/// Visible-for-testing wrapper so unit tests can call [_combineBloodPressure].
+@visibleForTesting
+MetricSeries? combineBloodPressureForTest(Map<String, MetricSeries> map) =>
+    _combineBloodPressure(map);

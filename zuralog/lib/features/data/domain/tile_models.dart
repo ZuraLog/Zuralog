@@ -170,6 +170,20 @@ extension TileConfig on TileId {
         (m) => '_${m.group(0)!.toLowerCase()}',
       );
 
+  /// The metric_id used for Cloud Brain API lookups.
+  ///
+  /// For most tiles this is identical to [metricSlug]. The two overrides
+  /// below exist because the backend stores data under a different name than
+  /// the Dart enum implies:
+  /// - [TileId.workouts]  → workouts arrive as `exercise_minutes` events
+  /// - [TileId.mobility]  → closest single metric is `floors_climbed`
+  /// Blood pressure is a special case handled in the provider (two metrics → one tile).
+  String get backendMetricId => switch (this) {
+    TileId.workouts => 'exercise_minutes',
+    TileId.mobility => 'floors_climbed',
+    _ => metricSlug,
+  };
+
   /// Human-readable display name for the tile.
   String get displayName {
     switch (this) {
