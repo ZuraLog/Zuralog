@@ -13,7 +13,7 @@ async def test_cached_returns_hit_on_second_call(cache):
     """Normal behaviour: second call returns cached value without re-executing handler."""
     call_count = 0
 
-    async def handler(request, user_id: str):  # pyright: ignore [unused-parameter]
+    async def handler(*_args, **_kwargs):
         nonlocal call_count
         call_count += 1
         return {"value": "fresh"}
@@ -34,7 +34,7 @@ async def test_cached_force_refresh_bypasses_cache(cache):
     """When force_refresh=True, the saved copy is ignored and re-populated."""
     call_count = 0
 
-    async def handler(request, user_id: str, force_refresh: bool = False):  # pyright: ignore [unused-parameter]
+    async def handler(*_args, **_kwargs):
         nonlocal call_count
         call_count += 1
         return {"value": f"call_{call_count}"}
