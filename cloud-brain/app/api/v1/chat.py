@@ -38,7 +38,7 @@ from fastapi import (
     status,
 )
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -197,24 +197,26 @@ async def _load_conversation_history(
     return [{"role": m.role, "content": m.content or ""} for m in messages if m.role in ("user", "assistant")]
 
 
-async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str]:
-    """Load the user's coach persona and proactivity preferences.
+async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str, str]:
+    """Load the user's coach persona, proactivity, and response_length preferences.
 
     Args:
         db: Async database session.
         user_id: The authenticated user's ID.
 
     Returns:
-        A (persona, proactivity) tuple; defaults to ("balanced", "medium").
+        A (persona, proactivity, response_length) tuple;
+        defaults to ("balanced", "medium", "concise").
     """
     try:
         result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
         prefs = result.scalar_one_or_none()
         if prefs:
-            return (prefs.coach_persona or "balanced", prefs.proactivity_level or "medium")
+            response_length = getattr(prefs, "response_length", None) or "concise"
+            return (prefs.coach_persona or "balanced", prefs.proactivity_level or "medium", response_length)
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to load user preferences for user %s: %s", user_id, e)
-    return ("balanced", "medium")
+    return ("balanced", "medium", "concise")
 
 
 # ---------------------------------------------------------------------------
@@ -360,16 +362,33 @@ async def websocket_chat(
 
                 # Load conversation history for LLM context.
                 history = await _load_conversation_history(db, resolved_conv_id, limit=50)
+
+                # If regenerate was requested but there is no history, treat it
+                # as a first message to avoid sending an empty conversation to the LLM.
+                if is_regenerate and not history:
+                    is_regenerate = False
+                    user_msg = Message(
+                        conversation_id=resolved_conv_id,
+                        role="user",
+                        content=message_text,
+                        attachments=raw_attachments or None,
+                    )
+                    db.add(user_msg)
+                    await db.commit()
+                    await db.refresh(user_msg)
                 # Remove the last entry if it matches the current user message
                 # (to avoid passing it twice — it will be passed as `message`).
                 if history and history[-1]["role"] == "user" and history[-1]["content"] == message_text:
                     history = history[:-1]
 
-                db_persona, db_proactivity = await _load_user_preferences(db, user_id)
+                db_persona, db_proactivity, db_response_length = await _load_user_preferences(db, user_id)
                 # Client-supplied values (from user settings at send time) take
                 # precedence; fall back to DB preferences when absent.
                 persona = data.get("persona") or db_persona
                 proactivity = data.get("proactivity") or db_proactivity
+                _VALID_RESPONSE_LENGTHS = {"concise", "detailed"}
+                client_response_length = data.get("response_length")
+                response_length = client_response_length if client_response_length in _VALID_RESPONSE_LENGTHS else db_response_length
 
             # ── Orchestrate with streaming ────────────────────────────────────
             await websocket.send_json({"type": "typing_start"})
@@ -393,6 +412,7 @@ async def websocket_chat(
                         message=augmented_text,
                         persona=persona,
                         proactivity=proactivity,
+                        response_length=response_length,
                         db=db,
                         conversation_history=history,
                     ):
@@ -738,7 +758,7 @@ class ConversationUpdateRequest(BaseModel):
         archived: Optional flag to archive the conversation.
     """
 
-    title: str | None = None
+    title: str | None = Field(default=None, max_length=200)
     archived: bool | None = None
 
 

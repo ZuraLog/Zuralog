@@ -13,6 +13,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
+import redis.asyncio as aioredis
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -313,10 +314,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Reuse push_svc / device_write_svc created above for the MCP server.
     app.state.push_service = push_svc
     app.state.device_write_service = device_write_svc
+    # Shared Redis client for rate limiting, export throttling, and connection counting.
+    if settings.redis_url:
+        app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+    else:
+        app.state.redis = None
 
     yield
 
     # --- Shutdown ---
+    if getattr(app.state, "redis", None):
+        await app.state.redis.aclose()
     if getattr(app.state, "rate_limiter", None) is not None:
         await app.state.rate_limiter.close()
     await http_client.aclose()

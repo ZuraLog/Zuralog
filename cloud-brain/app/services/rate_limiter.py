@@ -34,12 +34,14 @@ class RateLimitResult:
         limit: The maximum requests allowed for the tier.
         remaining: How many requests remain in the current window.
         reset_seconds: Seconds until the window resets.
+        reset_at: Unix timestamp when the window resets (0 if unknown).
     """
 
     allowed: bool
     limit: int
     remaining: int
     reset_seconds: int
+    reset_at: int = 0
 
 
 class RateLimiter:

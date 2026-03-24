@@ -390,6 +390,7 @@ class Orchestrator:
         user_context_suffix: str | None = None,
         persona: str = "balanced",
         proactivity: str = "medium",
+        response_length: str | None = None,
         db: AsyncSession | None = None,
         conversation_history: list[dict[str, Any]] | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
@@ -429,6 +430,7 @@ class Orchestrator:
                 system_prompt = build_system_prompt(
                     persona=persona,
                     proactivity=proactivity,
+                    response_length=response_length,
                     memories=memory_texts if memory_texts else None,
                     user_context_suffix=user_context_suffix,
                 )

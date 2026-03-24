@@ -11,6 +11,8 @@ when the extracted context is injected into the conversation.
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import logging
 import mimetypes
 import re
@@ -127,6 +129,65 @@ _HEALTH_PATTERNS: list[tuple[str, str]] = [
 _COMPILED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(pat, re.IGNORECASE), label) for pat, label in _HEALTH_PATTERNS
 ]
+
+# ---------------------------------------------------------------------------
+# Prompt injection guard
+# ---------------------------------------------------------------------------
+
+_DANGEROUS_PATTERN = re.compile(
+    r'(ignore\s+(?:previous|above|all|everything)|system\s*:|assistant\s*:|forget\s+(?:all|everything|previous)|<\|im_start\|>|<\|im_end\|>|<\|endoftext\|>)',
+    re.IGNORECASE,
+)
+
+
+def sanitize_for_llm(text: str) -> str:
+    """Remove prompt injection patterns from user-supplied text.
+
+    Strips multi-word instruction override phrases and special tokens
+    (e.g. ``<|im_start|>``) that could manipulate LLM behaviour.
+
+    Args:
+        text: Raw text from an uploaded file or user input.
+
+    Returns:
+        Sanitized text with dangerous patterns replaced by ``[removed]``.
+    """
+    return _DANGEROUS_PATTERN.sub("[removed]", text)
+
+
+# ---------------------------------------------------------------------------
+# Thread pool for CPU-bound health fact extraction
+# ---------------------------------------------------------------------------
+
+_executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+
+async def _safe_extract_health_facts(text: str) -> list[str]:
+    """Extract health facts asynchronously with a 2-second timeout.
+
+    Runs the CPU-bound ``_extract_health_facts`` method in a thread pool
+    executor so it does not block the event loop. Uses
+    ``asyncio.get_running_loop()`` (the non-deprecated replacement for
+    ``asyncio.get_event_loop()`` inside async functions).
+
+    Args:
+        text: Decoded text content to scan.
+
+    Returns:
+        A list of health fact strings, or an empty list on timeout/error.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+        return await asyncio.wait_for(
+            loop.run_in_executor(_executor, AttachmentProcessor._extract_health_facts, text),
+            timeout=2.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("_safe_extract_health_facts: timed out extracting health facts")
+        return []
+    except Exception as exc:
+        logger.warning("_safe_extract_health_facts: error extracting health facts: %s", exc)
+        return []
 
 
 class AttachmentProcessor:
@@ -450,10 +511,12 @@ class AttachmentProcessor:
                 lines.append("The image has been received. Describe or reference it as needed in your response.")
 
         if extracted_text:
+            # Sanitize for prompt injection before embedding in LLM context.
+            safe_text = sanitize_for_llm(extracted_text)
             # Truncate very long texts for the context summary
-            preview = extracted_text[:2000]
-            if len(extracted_text) > 2000:
-                preview += f"\n... [truncated — {len(extracted_text)} chars total]"
+            preview = safe_text[:2000]
+            if len(safe_text) > 2000:
+                preview += f"\n... [truncated — {len(safe_text)} chars total]"
             lines.append(f"Extracted content:\n{preview}")
 
         if health_facts:

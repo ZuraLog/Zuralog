@@ -174,6 +174,7 @@ _PERSONA_MAP: dict[str, str] = {
 def build_system_prompt(
     persona: str = "balanced",
     proactivity: str = "medium",
+    response_length: str | None = None,
     memories: list[str] | None = None,
     connected_integrations: list[str] | None = None,
     # Legacy kwarg — kept for backward compat with existing orchestrator call
@@ -236,5 +237,17 @@ def build_system_prompt(
     # Legacy suffix support
     if user_context_suffix:
         prompt += user_context_suffix
+
+    # Response length preference
+    if response_length == "concise":
+        prompt += (
+            "\n\n## Response Length\n"
+            "Keep your responses concise and to the point. Use short paragraphs and bullet points where helpful."
+        )
+    elif response_length == "detailed":
+        prompt += (
+            "\n\n## Response Length\n"
+            "Provide detailed, thorough responses with full explanations and relevant context."
+        )
 
     return prompt
