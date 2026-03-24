@@ -770,6 +770,8 @@ class TodayRepository implements TodayRepositoryInterface {
         return 1.0;
       case 'moderate':
         return 2.0;
+      case 'bad':
+        return 2.5;
       case 'severe':
         return 3.0;
       default:
