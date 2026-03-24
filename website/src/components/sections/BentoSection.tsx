@@ -818,11 +818,10 @@ export function BentoSection() {
                     {/* ══ Card 5: GET THE APP (coming soon) ══ */}
                     <div
                         data-card="get-app"
-                        className="bento-card bento-card-premium group relative rounded-3xl overflow-hidden opacity-0 backdrop-blur-xl"
+                        className="bento-card bento-card-premium group relative rounded-3xl opacity-0 backdrop-blur-xl"
                         style={{
                             backgroundColor: "rgba(255, 255, 255, 0.65)",
                             border: "1px solid rgba(207, 225, 185, 0.35)",
-                            transformStyle: "preserve-3d",
                             willChange: "transform",
                         }}
                     >
@@ -833,9 +832,9 @@ export function BentoSection() {
                         />
 
                         {/* Compact phone — top-right corner with mini chat analytics */}
-                        <div className="absolute top-3 right-3 phone-float z-0" aria-hidden="true">
+                        <div className="absolute top-4 right-4 z-0" aria-hidden="true">
                             <div
-                                className="relative w-[68px] h-[128px] rounded-[16px] border-[1.5px] border-black/10 overflow-hidden"
+                                className="relative w-[50px] h-[90px] rounded-[12px] border-[1.5px] border-black/10 overflow-hidden"
                                 style={{
                                     background: "linear-gradient(170deg, #344E41 0%, #1A2E22 100%)",
                                     boxShadow: "0 8px 32px rgba(52,78,65,0.3), 0 0 16px rgba(207,225,185,0.06)",
