@@ -11,6 +11,7 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/today/data/today_repository.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_steps_log_panel.dart';
 import 'package:zuralog/shared/widgets/log_panels/z_water_log_panel.dart';
@@ -239,6 +240,8 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
           const SizedBox(height: AppDimens.spaceMd),
 
           // Content — grid or inline panel
+          // Resolve repo here, in the stable ConsumerStatefulWidget,
+          // so _PanelView's async closures never hold a stale ref.
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: _selectedTile == null
@@ -250,11 +253,13 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                 : _PanelView(
                     key: ValueKey(_selectedTile!.key),
                     tile: _selectedTile!,
+                    repo: ref.read(todayRepositoryProvider),
                     onBack: _backToGrid,
                     parentMessenger: widget.parentMessenger,
                     onSaved: () {
+                      if (!mounted) return;
                       ref.invalidate(todayLogSummaryProvider);
-                      if (mounted) Navigator.of(context).pop();
+                      Navigator.of(context).pop();
                     },
                   ),
           ),
@@ -307,16 +312,18 @@ class _GridView extends StatelessWidget {
 // ── _PanelView ────────────────────────────────────────────────────────────────
 
 /// Renders the correct inline log panel for the selected tile.
-class _PanelView extends ConsumerWidget {
+class _PanelView extends StatelessWidget {
   const _PanelView({
     super.key,
     required this.tile,
+    required this.repo,
     required this.onBack,
     required this.onSaved,
     this.parentMessenger,
   });
 
   final _TileDef tile;
+  final TodayRepositoryInterface repo;
   final VoidCallback onBack;
   final VoidCallback onSaved;
 
@@ -329,12 +336,12 @@ class _PanelView extends ConsumerWidget {
   final ScaffoldMessengerState? parentMessenger;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return switch (tile.key) {
       'water' => ZWaterLogPanel(
           onSave: (ml) async {
             try {
-              await ref.read(todayRepositoryProvider).logWater(amountMl: ml);
+              await repo.logWater(amountMl: ml);
               onSaved();
             } catch (e) {
               debugPrint('logWater failed: $e');
@@ -352,7 +359,7 @@ class _PanelView extends ConsumerWidget {
       'mood' => ZWellnessLogPanel(
           onSave: (data) async {
             try {
-              await ref.read(todayRepositoryProvider).logWellness(
+              await repo.logWellness(
                 mood: data.mood,
                 energy: data.energy,
                 stress: data.stress,
@@ -375,7 +382,7 @@ class _PanelView extends ConsumerWidget {
       'weight' => ZWeightLogPanel(
           onSave: (kg) async {
             try {
-              await ref.read(todayRepositoryProvider).logWeight(valueKg: kg);
+              await repo.logWeight(valueKg: kg);
               onSaved();
             } catch (e) {
               debugPrint('logWeight failed: $e');
@@ -393,9 +400,7 @@ class _PanelView extends ConsumerWidget {
       'steps' => ZStepsLogPanel(
           onSave: (steps, mode) async {
             try {
-              await ref
-                  .read(todayRepositoryProvider)
-                  .logSteps(steps: steps, mode: mode);
+              await repo.logSteps(steps: steps, mode: mode);
               onSaved();
             } catch (e) {
               debugPrint('logSteps failed: $e');
