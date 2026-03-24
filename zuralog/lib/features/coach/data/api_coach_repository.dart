@@ -103,11 +103,13 @@ final class ApiCoachRepository implements CoachRepository {
         : Platform.isIOS
             ? 'http://127.0.0.1:8001'
             : 'http://10.0.2.2:8001';
+    // Fix L2: if the URL is already a ws/wss scheme, use it as-is.
+    final parsed = Uri.parse(httpUrl);
+    if (parsed.scheme == 'ws' || parsed.scheme == 'wss') return httpUrl;
     // dart:io WebSocket.connect does not resolve default ports for wss:// or
     // ws://, producing port 0 and a failed connection. Parse as http(s) first
     // (which Dart resolves correctly to port 443/80), then rebuild with the
     // wss/ws scheme and the resolved port set explicitly.
-    final parsed = Uri.parse(httpUrl);
     final wsScheme = parsed.scheme == 'https' ? 'wss' : 'ws';
     final wsPort = parsed.hasPort ? parsed.port : (wsScheme == 'wss' ? 443 : 80);
     return Uri(scheme: wsScheme, host: parsed.host, port: wsPort).toString();
@@ -118,7 +120,9 @@ final class ApiCoachRepository implements CoachRepository {
   @override
   Future<List<Conversation>> listConversations() async {
     final response = await _apiClient.get('/api/v1/chat/conversations');
-    final List<dynamic> raw = response.data as List<dynamic>;
+    final rawData = response.data;
+    if (rawData is! List) throw Exception('Unexpected server response format');
+    final List<dynamic> raw = List<dynamic>.from(rawData);
     return raw.map(_parseConversation).toList();
   }
 
@@ -142,7 +146,9 @@ final class ApiCoachRepository implements CoachRepository {
     final response = await _apiClient.get(
       '/api/v1/chat/conversations/$conversationId/messages',
     );
-    final List<dynamic> raw = response.data as List<dynamic>;
+    final rawData = response.data;
+    if (rawData is! List) throw Exception('Unexpected server response format');
+    final List<dynamic> raw = List<dynamic>.from(rawData);
     return raw.map((m) => _parseMessage(m as Map<String, dynamic>, conversationId)).toList();
   }
 
@@ -251,17 +257,16 @@ final class ApiCoachRepository implements CoachRepository {
     bool isRegenerate = false,
   }) {
     // Using a StreamController so we can handle async WS setup cleanly.
-    // The cancelCompleter is completed when the consumer cancels, which
-    // unblocks _runWebSocketStream so it can close the WebSocket promptly.
-    final cancelCompleter = Completer<void>();
+    final doneCompleter = Completer<void>();
     final controller = StreamController<ChatStreamEvent>(
       onCancel: () {
-        if (!cancelCompleter.isCompleted) cancelCompleter.complete();
+        // Fix C4: single doneCompleter replaces Future.any pattern.
+        if (!doneCompleter.isCompleted) doneCompleter.complete();
       },
     );
     _runWebSocketStream(
       controller: controller,
-      cancelCompleter: cancelCompleter,
+      doneCompleter: doneCompleter,
       conversationId: conversationId,
       text: text,
       persona: persona,
@@ -275,7 +280,7 @@ final class ApiCoachRepository implements CoachRepository {
 
   Future<void> _runWebSocketStream({
     required StreamController<ChatStreamEvent> controller,
-    required Completer<void> cancelCompleter,
+    required Completer<void> doneCompleter,
     required String? conversationId,
     required String text,
     required String persona,
@@ -286,23 +291,24 @@ final class ApiCoachRepository implements CoachRepository {
   }) async {
     WebSocketChannel? channel;
     StreamSubscription<dynamic>? subscription;
+    // Fix C5: track whether the sink has already been closed.
+    bool sinkClosed = false;
 
     try {
       // Read a fresh JWT — WS connections bypass the Dio interceptor chain.
       final token = await _secureStorage.getAuthToken();
       if (token == null) {
-        controller.addError(StreamError('No auth token available'));
+        if (!controller.isClosed) controller.add(const StreamError('No auth token available'));
+        if (!doneCompleter.isCompleted) doneCompleter.complete();
         await controller.close();
         return;
       }
 
-      // Build the WS URI by replacing only the path and query parameters on
-      // _wsBaseUrl, which is already the correct wss:// or ws:// base URL
-      // (produced by _deriveWsUrl). Uri.replace() preserves the scheme, host,
-      // and any explicit port as-is — no scheme conversion or port arithmetic
-      // needed, and no risk of introducing a spurious :0 port.
+      // Build the WS URI. Conversation ID may be passed as a query param for
+      // server-side routing before the auth message is processed.
+      // Fix C3: JWT is NOT included in the URL query params — it is sent as
+      // the first message after connecting.
       final queryParams = <String, String>{
-        'token': token,
         'conversation_id': ?conversationId,
       };
       final uri = Uri.parse(_wsBaseUrl).replace(
@@ -312,11 +318,16 @@ final class ApiCoachRepository implements CoachRepository {
 
       channel = WebSocketChannel.connect(uri);
 
+      // Fix C3: send token as the first message so it is not exposed in the URL.
+      // NOTE: Backend must accept token from first WS message, not query param.
+      channel.sink.add(jsonEncode({'type': 'auth', 'token': token}));
+
       String? resolvedConversationId = conversationId;
       bool messageSent = false;
       String accumulated = '';
 
-      final wsCompleter = Completer<void>();
+      // Fix H5: track when conversation_init is received.
+      final initCompleter = Completer<void>();
 
       subscription = channel.stream.listen(
         (rawMessage) {
@@ -330,6 +341,9 @@ final class ApiCoachRepository implements CoachRepository {
               case 'conversation_init':
                 // Server assigned a UUID (always sent, even for existing convs).
                 resolvedConversationId = msg['conversation_id'] as String?;
+
+                // Fix H5: signal that init was received.
+                if (!initCompleter.isCompleted) initCompleter.complete();
 
                 // If conversationId was null, this is a new conversation.
                 if (conversationId == null && resolvedConversationId != null) {
@@ -379,9 +393,18 @@ final class ApiCoachRepository implements CoachRepository {
                 final content = msg['content'] as String? ?? accumulated;
                 final msgId = msg['message_id'] as String? ??
                     'msg_${DateTime.now().millisecondsSinceEpoch}';
-                final convId = msg['conversation_id'] as String? ??
-                    resolvedConversationId ??
-                    'unknown';
+                // Fix M6: reject stream_end with no conversation ID.
+                final convId = msg['conversation_id'] as String? ?? resolvedConversationId;
+                if (convId == null) {
+                  if (!controller.isClosed) {
+                    controller.add(const StreamError('Server did not return conversation ID'));
+                  }
+                  if (!sinkClosed) {
+                    sinkClosed = true;
+                    channel?.sink.close();
+                  }
+                  return;
+                }
 
                 final chatMsg = ChatMessage(
                   id: msgId,
@@ -394,13 +417,19 @@ final class ApiCoachRepository implements CoachRepository {
                   message: chatMsg,
                   conversationId: convId,
                 ));
-                // Gracefully close after final message.
-                channel?.sink.close();
+                // Fix C5: guarded close.
+                if (!sinkClosed) {
+                  sinkClosed = true;
+                  channel?.sink.close();
+                }
 
               case 'error':
                 final errContent = msg['content'] as String? ?? 'Unknown error';
                 controller.add(StreamError(errContent));
-                channel?.sink.close();
+                if (!sinkClosed) {
+                  sinkClosed = true;
+                  channel?.sink.close();
+                }
 
               default:
                 // Unknown message type — ignore.
@@ -411,25 +440,45 @@ final class ApiCoachRepository implements CoachRepository {
           }
         },
         onError: (Object error) {
-          controller.add(StreamError('WebSocket error: $error'));
-          if (!wsCompleter.isCompleted) wsCompleter.completeError(error);
+          if (!controller.isClosed) controller.add(StreamError('WebSocket error: $error'));
+          // Fix C4: complete the single doneCompleter.
+          if (!doneCompleter.isCompleted) doneCompleter.complete();
         },
         onDone: () {
-          if (!wsCompleter.isCompleted) wsCompleter.complete();
+          // Fix C4: complete the single doneCompleter.
+          if (!doneCompleter.isCompleted) doneCompleter.complete();
         },
         cancelOnError: false,
       );
 
-      // Wait for either the WebSocket to finish naturally or the consumer to
-      // cancel (via cancelCompleter). Whichever fires first unblocks us, and
-      // the finally block closes the channel and the controller.
-      await Future.any([wsCompleter.future, cancelCompleter.future]);
+      // Fix H5: 30-second timeout waiting for conversation_init.
+      unawaited(
+        initCompleter.future.timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {
+            if (!controller.isClosed) {
+              controller.add(const StreamError('Connection timed out'));
+            }
+            if (!sinkClosed) {
+              sinkClosed = true;
+              channel?.sink.close();
+            }
+          },
+        ),
+      );
+
+      // Fix C4: wait for the single doneCompleter.
+      await doneCompleter.future;
     } catch (e) {
-      controller.add(StreamError('Connection error: $e'));
+      if (!controller.isClosed) controller.add(StreamError('Connection error: $e'));
     } finally {
       await subscription?.cancel();
-      await channel?.sink.close();
-      await controller.close();
+      // Fix C5: guarded close in finally.
+      if (!sinkClosed) {
+        sinkClosed = true;
+        await channel?.sink.close();
+      }
+      if (!controller.isClosed) await controller.close();
     }
   }
 
@@ -439,7 +488,8 @@ final class ApiCoachRepository implements CoachRepository {
     if (raw == null) return DateTime.now();
     try {
       return DateTime.parse(raw as String).toLocal();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ApiCoachRepository] Date parse failed for "$raw": $e');
       return DateTime.now();
     }
   }

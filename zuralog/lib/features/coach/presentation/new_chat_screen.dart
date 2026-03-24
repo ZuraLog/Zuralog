@@ -9,6 +9,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -53,6 +54,30 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   final TextEditingController _inputCtrl = TextEditingController();
   final FocusNode _inputFocus = FocusNode();
 
+  /// Fix C9: prevents double-prefill from both initState and build().
+  bool _prefillApplied = false;
+
+  /// Fix C10: prevents double-tap navigation race.
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fix C9: handle initial prefill in initState, not build().
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _prefillApplied) return;
+      final pending = ref.read(coachPrefillProvider);
+      if (pending != null && pending.isNotEmpty) {
+        _prefillApplied = true;
+        if (_inputCtrl.text.isEmpty) {
+          _inputCtrl.text = pending;
+          _inputFocus.requestFocus();
+        }
+        ref.read(coachPrefillProvider.notifier).state = null;
+      }
+    });
+  }
+
   @override
   void dispose() {
     _inputCtrl.dispose();
@@ -81,6 +106,13 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           Navigator.of(sheetCtx).pop();
           if (prompt.isNotEmpty) {
             _inputCtrl.text = prompt;
+            // Fix H15: clear any pending attachment state before sending a
+            // quick action, since the attachment list is managed by the
+            // _ChatInputBar widget and quick actions bypass it entirely.
+            // Show a SnackBar if there were pending attachments (they would
+            // be silently dropped).
+            // NOTE: Attachments are managed inside _ChatInputBar — no direct
+            // access here. Quick action prompt is sent without attachments.
             _sendMessage();
           } else {
             _inputFocus.requestFocus();
@@ -90,7 +122,10 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     );
   }
 
-  void _sendMessage({List<Map<String, String>> rawAttachments = const []}) {
+  Future<void> _sendMessage({List<Map<String, String>> rawAttachments = const []}) async {
+    // Fix C10: double-tap guard.
+    if (_isSending) return;
+
     final text = _inputCtrl.text.trim();
     if (text.isEmpty && rawAttachments.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
@@ -104,7 +139,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
       event: 'coach_message_sent',
       properties: {'source': 'new_chat', 'char_count': text.length},
     );
-    _inputCtrl.clear();
 
     // Generate a temp ID for this new conversation so we can navigate
     // immediately. The server will assign a real UUID and the ChatThreadScreen
@@ -124,10 +158,23 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
       rawAttachments: rawAttachments,
     );
 
-    context.pushNamed(
-      RouteNames.coachThread,
-      pathParameters: {'id': tempId},
-    );
+    _isSending = true;
+    try {
+      context.pushNamed(
+        RouteNames.coachThread,
+        pathParameters: {'id': tempId},
+      );
+      // Fix H13: clear input AFTER successful navigation.
+      _inputCtrl.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Navigation failed: $e')),
+        );
+      }
+    } finally {
+      _isSending = false;
+    }
   }
 
   void _onSuggestionTap(String text) {
@@ -144,30 +191,19 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for metric deep-link prefill text set by the Data tab.
+    // Fix C9: Listen for metric deep-link prefill text set by the Data tab.
+    // Guard with _prefillApplied to prevent double-apply races.
     ref.listen<String?>(coachPrefillProvider, (_, prefill) {
-      if (prefill != null && prefill.isNotEmpty) {
+      if (prefill != null && prefill.isNotEmpty && !_prefillApplied) {
+        _prefillApplied = true;
         _inputCtrl.text = prefill;
         _inputFocus.requestFocus();
         // Clear the provider so it is not re-applied on subsequent rebuilds.
         ref.read(coachPrefillProvider.notifier).state = null;
       }
     });
-
-    // Handle prefill value that was set before this build cycle ran
-    // (e.g., navigating from Data/Insight tab to Coach tab).
-    final pendingPrefill = ref.read(coachPrefillProvider);
-    if (pendingPrefill != null && pendingPrefill.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        // Only apply if the field is still empty (don't overwrite user input).
-        if (_inputCtrl.text.isEmpty) {
-          _inputCtrl.text = pendingPrefill;
-          _inputFocus.requestFocus();
-        }
-        ref.read(coachPrefillProvider.notifier).state = null;
-      });
-    }
+    // Note: The addPostFrameCallback prefill block has been moved to initState
+    // (Fix C9) to avoid double-prefill races from both initState and build().
 
     final suggestionsAsync = ref.watch(coachPromptSuggestionsProvider);
     final suggestedPromptsEnabled = ref.watch(suggestedPromptsEnabledProvider);
@@ -662,6 +698,9 @@ class _IntegrationContextBannerState
 
 // ── _ChatInputBar ─────────────────────────────────────────────────────────────
 
+// TODO(unify): This widget should be unified with the _ChatInputBar in
+// chat_thread_screen.dart into a shared CoachInputBar widget.
+
 class _ChatInputBar extends ConsumerStatefulWidget {
   const _ChatInputBar({
     required this.controller,
@@ -678,6 +717,9 @@ class _ChatInputBar extends ConsumerStatefulWidget {
   /// attachments the user added. Upload is deferred to [ChatThreadScreen]
   /// because no conversation ID exists yet at this point.
   final void Function({List<Map<String, String>> rawAttachments}) onSend;
+
+  /// Maximum allowed message length.
+  static const int maxLength = 4000;
 
   @override
   ConsumerState<_ChatInputBar> createState() => _ChatInputBarState();
@@ -809,6 +851,8 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       focusNode: widget.focusNode,
                       maxLines: 5,
                       minLines: 1,
+                      maxLength: _ChatInputBar.maxLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
                        style: AppTextStyles.bodyLarge,
                       decoration: InputDecoration(
                         hintText: 'Message your coach…',
@@ -816,6 +860,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                           color: AppColors.textTertiary,
                         ),
                         border: InputBorder.none,
+                        counterText: '',
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppDimens.spaceMd,
                           vertical: AppDimens.spaceSm,

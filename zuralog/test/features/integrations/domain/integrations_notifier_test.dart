@@ -58,7 +58,7 @@ class _FakeApiClient implements ApiClient {
   Future<Response<dynamic>> get(String path, {Map<String, dynamic>? queryParameters}) async =>
       throw UnimplementedError();
   @override
-  Future<Response<dynamic>> post(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async =>
+  Future<Response<dynamic>> post(String path, {dynamic data, Map<String, dynamic>? queryParameters, void Function(int, int)? onSendProgress}) async =>
       throw UnimplementedError();
   @override
   Future<Response<dynamic>> patch(String path, {Map<String, dynamic>? body}) async =>

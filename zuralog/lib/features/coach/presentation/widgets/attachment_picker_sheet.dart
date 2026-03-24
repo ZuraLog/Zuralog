@@ -16,13 +16,44 @@ import 'package:zuralog/features/chat/domain/attachment_types.dart';
 export 'package:zuralog/features/chat/domain/attachment_types.dart'
     show AttachmentType, PendingAttachment;
 
+// Fix L5: camera quality constant to avoid magic number duplication.
+const int _kCameraQuality = 85;
+
+// Fix M15: max file size (10 MB).
+const int _kMaxFileSizeBytes = 10 * 1024 * 1024;
+
 // ── AttachmentPickerSheet ─────────────────────────────────────────────────────
 
 /// Bottom sheet with 3 attachment options: Camera, Gallery, File.
-class AttachmentPickerSheet extends StatelessWidget {
+///
+/// Fix L6: converted to StatefulWidget to prevent double-tap races.
+class AttachmentPickerSheet extends StatefulWidget {
   const AttachmentPickerSheet({super.key, required this.onAttachment});
 
   final ValueChanged<PendingAttachment> onAttachment;
+
+  @override
+  State<AttachmentPickerSheet> createState() => _AttachmentPickerSheetState();
+}
+
+class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
+  // Fix L6: double-tap guard.
+  bool _picking = false;
+
+  /// Helper: check file size; show snackbar and pop if too large.
+  Future<bool> _checkSize(String path) async {
+    final fileSize = await File(path).length();
+    if (fileSize > _kMaxFileSizeBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File too large (max 10 MB)')),
+        );
+        Navigator.of(context).pop();
+      }
+      return false;
+    }
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,18 +88,40 @@ class AttachmentPickerSheet extends StatelessWidget {
                 icon: Icons.camera_alt_rounded,
                 label: 'Camera',
                 onTap: () async {
-                  final picker = ImagePicker();
-                  final xFile = await picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 85,
-                  );
-                  if (xFile != null && context.mounted) {
+                  // Fix L6: double-tap guard.
+                  if (_picking) return;
+                  setState(() => _picking = true);
+                  try {
+                    final picker = ImagePicker();
+                    final xFile = await picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: _kCameraQuality,
+                    );
+                    // Fix H35: pop sheet on null result (cancelled/denied).
+                    if (xFile == null) {
+                      if (context.mounted) Navigator.of(context).pop();
+                      return;
+                    }
+                    // Fix M15: size check.
+                    if (!await _checkSize(xFile.path)) return;
+                    if (!context.mounted) return;
                     Navigator.of(context).pop();
-                    onAttachment(PendingAttachment(
-                      file: File(xFile.path),
-                      type: AttachmentType.image,
-                      name: xFile.name,
-                    ));
+                    // Fix H36: wrap onAttachment in try/catch.
+                    try {
+                      widget.onAttachment(PendingAttachment(
+                        file: File(xFile.path),
+                        type: AttachmentType.image,
+                        name: xFile.name,
+                      ));
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to add attachment: $e')),
+                        );
+                      }
+                    }
+                  } finally {
+                    if (mounted) setState(() => _picking = false);
                   }
                 },
               ),
@@ -76,18 +129,40 @@ class AttachmentPickerSheet extends StatelessWidget {
                 icon: Icons.photo_library_rounded,
                 label: 'Gallery',
                 onTap: () async {
-                  final picker = ImagePicker();
-                  final xFile = await picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 85,
-                  );
-                  if (xFile != null && context.mounted) {
+                  // Fix L6: double-tap guard.
+                  if (_picking) return;
+                  setState(() => _picking = true);
+                  try {
+                    final picker = ImagePicker();
+                    final xFile = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: _kCameraQuality,
+                    );
+                    // Fix H35: pop sheet on null result (cancelled/denied).
+                    if (xFile == null) {
+                      if (context.mounted) Navigator.of(context).pop();
+                      return;
+                    }
+                    // Fix M15: size check.
+                    if (!await _checkSize(xFile.path)) return;
+                    if (!context.mounted) return;
                     Navigator.of(context).pop();
-                    onAttachment(PendingAttachment(
-                      file: File(xFile.path),
-                      type: AttachmentType.image,
-                      name: xFile.name,
-                    ));
+                    // Fix H36: wrap onAttachment in try/catch.
+                    try {
+                      widget.onAttachment(PendingAttachment(
+                        file: File(xFile.path),
+                        type: AttachmentType.image,
+                        name: xFile.name,
+                      ));
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to add attachment: $e')),
+                        );
+                      }
+                    }
+                  } finally {
+                    if (mounted) setState(() => _picking = false);
                   }
                 },
               ),
@@ -95,24 +170,48 @@ class AttachmentPickerSheet extends StatelessWidget {
                 icon: Icons.attach_file_rounded,
                 label: 'File',
                 onTap: () async {
-                  final result = await FilePicker.platform.pickFiles(
-                    type: FileType.custom,
-                    allowedExtensions: ['pdf', 'txt', 'csv'],
-                    withData: false,
-                  );
-                  if (result != null &&
-                      result.files.single.path != null &&
-                      context.mounted) {
-                    final pf = result.files.single;
+                  // Fix L6: double-tap guard.
+                  if (_picking) return;
+                  setState(() => _picking = true);
+                  try {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.custom,
+                      allowedExtensions: ['pdf', 'txt', 'csv'],
+                      withData: false,
+                    );
+                    // Fix H37/H35: guard against null result or empty files.
+                    if (result == null || result.files.isEmpty) {
+                      if (context.mounted) Navigator.of(context).pop();
+                      return;
+                    }
+                    final pf = result.files.first;
+                    if (pf.path == null) {
+                      if (context.mounted) Navigator.of(context).pop();
+                      return;
+                    }
+                    // Fix M15: size check.
+                    if (!await _checkSize(pf.path!)) return;
+                    if (!context.mounted) return;
                     final type = pf.extension == 'pdf'
                         ? AttachmentType.pdf
                         : AttachmentType.document;
                     Navigator.of(context).pop();
-                    onAttachment(PendingAttachment(
-                      file: File(pf.path!),
-                      type: type,
-                      name: pf.name,
-                    ));
+                    // Fix H36: wrap onAttachment in try/catch.
+                    try {
+                      widget.onAttachment(PendingAttachment(
+                        file: File(pf.path!),
+                        type: type,
+                        name: pf.name,
+                      ));
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to add attachment: $e')),
+                        );
+                      }
+                    }
+                  } finally {
+                    if (mounted) setState(() => _picking = false);
                   }
                 },
               ),

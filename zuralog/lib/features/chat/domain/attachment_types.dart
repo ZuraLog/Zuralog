@@ -7,6 +7,16 @@ library;
 
 import 'dart:io';
 
+// ── AttachmentException ───────────────────────────────────────────────────────
+
+/// Thrown by [AttachmentRepository] on validation or upload failures.
+class AttachmentException implements Exception {
+  final String message;
+  const AttachmentException(this.message);
+  @override
+  String toString() => message;
+}
+
 // ── AttachmentType ─────────────────────────────────────────────────────────────
 
 /// The media category of an attachment.

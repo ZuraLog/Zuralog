@@ -66,15 +66,12 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   /// True when the floating scroll-to-bottom arrow button should be visible.
   bool _showScrollToBottom = false;
 
-  /// True when the user is editing a previously sent message.
-  bool _isEditing = false;
+  /// Fix M9: prevents multiple addPostFrameCallback calls from queuing up.
+  bool _scrollScheduled = false;
 
-  /// The original content of the message being edited (shown in the indicator bar).
-  String? _editingContent;
-
-  /// Snapshot of [CoachChatState.messages] taken just before [editMessage]
-  /// truncates state. Restored if the user cancels the edit.
-  List<ChatMessage>? _editSnapshot;
+  // Fix H10: Edit state is now managed in CoachChatNotifier / CoachChatState.
+  // The local _isEditing, _editingContent, _editSnapshot fields are removed;
+  // use chatState.isEditing, chatState.editingContent, chatState.editSnapshot.
 
   @override
   void initState() {
@@ -289,6 +286,15 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       // and replace the current route so the URL reflects the real UUID.
       // Skipped when the caller needs to do more async work before navigation.
       if (!skipRouteReplace && mounted) {
+        // Fix C7: don't proceed with route replace if an error occurred and
+        // the conversation ID was never resolved.
+        final st = ref.read(coachChatNotifierProvider(widget.conversationId));
+        if ((st.resolvedConversationId == null ||
+                st.resolvedConversationId!.startsWith('new_')) &&
+            st.errorMessage != null) {
+          return; // Error banner is visible; don't proceed with route replace.
+        }
+
         final currentState =
             ref.read(coachChatNotifierProvider(widget.conversationId));
         final resolvedId = currentState.resolvedConversationId;
@@ -323,7 +329,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     _scrollToBottom();
   }
 
-  void _sendMessage({List<Map<String, dynamic>> attachments = const []}) {
+  // Fix H8: _sendMessage is now async and awaitable.
+  Future<void> _sendMessage({List<Map<String, dynamic>> attachments = const []}) async {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty && attachments.isEmpty) return;
     ref.read(hapticServiceProvider).medium();
@@ -333,12 +340,10 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     final responseLength = ref.read(responseLengthProvider).value;
 
     _inputCtrl.clear();
-    if (_isEditing) {
-      setState(() {
-        _isEditing = false;
-        _editingContent = null;
-        _editSnapshot = null;
-      });
+    // Fix H10: clear edit state via notifier.
+    final notifierForEdit = ref.read(coachChatNotifierProvider(widget.conversationId).notifier);
+    if (ref.read(coachChatNotifierProvider(widget.conversationId)).isEditing) {
+      notifierForEdit.cancelEditing();
     }
 
     // Determine the effective conversation ID.
@@ -351,21 +356,32 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
         effectiveId.startsWith('new_') ||
         widget.conversationId.startsWith('new_');
 
-    _dispatchSend(
-      conversationId: isNewConversation ? null : effectiveId,
-      text: text,
-      persona: persona,
-      proactivity: proactivity,
-      responseLength: responseLength,
-      attachments: attachments,
-    );
+    try {
+      await _dispatchSend(
+        conversationId: isNewConversation ? null : effectiveId,
+        text: text,
+        persona: persona,
+        proactivity: proactivity,
+        responseLength: responseLength,
+        attachments: attachments,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message: $e')),
+        );
+      }
+    }
   }
 
   void _scrollToBottom() {
     // Respect the user's scroll position — if they scrolled up to read
     // earlier messages, don't yank them back to the bottom mid-stream.
-    if (_userScrolledUp) return;
+    // Fix M9: debounce by tracking whether a scroll is already scheduled.
+    if (_scrollScheduled || _userScrolledUp) return;
+    _scrollScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollScheduled = false;
       if (!mounted || !_scrollCtrl.hasClients) return;
       _scrollCtrl.animateTo(
         _scrollCtrl.position.maxScrollExtent,
@@ -458,11 +474,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                         conversationId: widget.conversationId,
                         isSending: chatState.isSending,
                         onEditMessage: (snapshot, content) {
-                          _editSnapshot = snapshot;
-                          setState(() {
-                            _isEditing = true;
-                            _editingContent = content;
-                          });
+                          // Fix H10: edit state is in notifier.
+                          // snapshot is pre-truncation; content is the message text.
+                          // We read back the content from the notifier's editingContent.
                           _inputCtrl.text = content;
                           _inputCtrl.selection = TextSelection.collapsed(
                             offset: content.length,
@@ -514,8 +528,38 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
               ],
             ),
           ),
+          // ── Generation cancelled indicator ───────────────────────────────
+          // Fix H3: show a transient label when stream was cancelled.
+          if (chatState.isCancelled && !chatState.isSending)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.spaceMd,
+                vertical: AppDimens.spaceSm,
+              ),
+              color: colors.cardBackground,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.stop_circle_outlined,
+                    size: 14,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: AppDimens.spaceXs),
+                  Text(
+                    'Generation stopped',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textTertiary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // ── Editing indicator bar ─────────────────────────────────────────
-          if (_isEditing)
+          // Fix H10: read edit state from notifier.
+          if (chatState.isEditing)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(
@@ -533,8 +577,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                   const SizedBox(width: AppDimens.spaceSm),
                   Expanded(
                     child: Text(
-                      _editingContent != null
-                          ? 'Editing: $_editingContent'
+                      chatState.editingContent != null
+                          ? 'Editing: ${chatState.editingContent}'
                           : 'Editing message',
                       style: const TextStyle(
                         color: AppColors.textTertiary,
@@ -551,21 +595,13 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     constraints: const BoxConstraints(),
                     tooltip: 'Cancel edit',
                     onPressed: () {
-                      final snapshot = _editSnapshot;
-                      setState(() {
-                        _isEditing = false;
-                        _editingContent = null;
-                        _editSnapshot = null;
-                      });
-                      if (snapshot != null) {
-                        ref
-                            .read(
-                              coachChatNotifierProvider(
-                                widget.conversationId,
-                              ).notifier,
-                            )
-                            .restoreMessages(snapshot);
-                      }
+                      ref
+                          .read(
+                            coachChatNotifierProvider(
+                              widget.conversationId,
+                            ).notifier,
+                          )
+                          .cancelEditing();
                       _inputCtrl.clear();
                     },
                   ),
@@ -655,6 +691,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
   void _showRenameDialog(BuildContext context, String conversationId) {
     final ctrl = TextEditingController();
+    // Capture messenger before async gap.
+    final messenger = ScaffoldMessenger.of(context);
     showDialog<void>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -663,20 +701,22 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
         content: TextField(
           controller: ctrl,
           autofocus: true,
+          maxLength: 100,
           style: AppTextStyles.bodyLarge,
           decoration: const InputDecoration(hintText: 'New title…'),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            // Fix C8: use dialogCtx, not outer context.
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
               final newTitle = ctrl.text.trim();
               if (newTitle.isEmpty) return;
-              Navigator.pop(context);
-              final messenger = ScaffoldMessenger.of(context);
+              // Fix C8: use dialogCtx, not outer context.
+              Navigator.pop(dialogCtx);
               try {
                 await ref
                     .read(coachConversationsProvider.notifier)
@@ -698,14 +738,16 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
   Future<void> _archiveAndPop(BuildContext context, String conversationId) async {
     final messenger = ScaffoldMessenger.of(context);
-    final nav = GoRouter.of(context);
+    // Fix L3: capture router before async gap.
+    final router = GoRouter.of(context);
     try {
       await ref.read(coachConversationsProvider.notifier).archive(conversationId);
       if (mounted) {
         messenger.showSnackBar(
           const SnackBar(content: Text('Conversation archived')),
         );
-        nav.pop();
+        // Fix L3: explicit navigation to coach root.
+        router.goNamed(RouteNames.coach);
       }
     } catch (e) {
       if (mounted) {
@@ -715,6 +757,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   }
 
   void _showDeleteDialog(BuildContext context, String conversationId) {
+    // Fix L3: capture router and messenger before async gap.
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     showDialog<void>(
       context: context,
       builder: (dialogCtx) {
@@ -728,20 +773,21 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            // Fix C8: use dialogCtx, not outer context.
+            onPressed: () => Navigator.pop(dialogCtx),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
-              final messenger = ScaffoldMessenger.of(context);
-              final nav = GoRouter.of(context);
+              // Fix C8: use dialogCtx, not outer context.
+              Navigator.pop(dialogCtx);
               try {
                 await ref
                     .read(coachConversationsProvider.notifier)
                     .delete(conversationId);
                 if (mounted) {
-                  nav.pop();
+                  // Fix L3: explicit navigation to coach root.
+                  router.goNamed(RouteNames.coach);
                   messenger.showSnackBar(
                     const SnackBar(content: Text('Conversation deleted')),
                   );
@@ -861,17 +907,17 @@ class _MessageList extends ConsumerWidget {
             message: msg,
             onEdit: (msg.role == MessageRole.user && !isSending)
                 ? () {
+                    // Fix H10: use notifier's startEditing which manages snapshot.
+                    final notifier = ref.read(
+                      coachChatNotifierProvider(conversationId).notifier,
+                    );
                     // Snapshot the full message list before truncation so the
                     // state can be restored if the user cancels the edit.
                     final snapshot = ref
                         .read(coachChatNotifierProvider(conversationId))
                         .messages
                         .toList();
-                    final content = ref
-                        .read(
-                          coachChatNotifierProvider(conversationId).notifier,
-                        )
-                        .editMessage(i);
+                    final content = notifier.editMessage(i);
                     if (content != null) {
                       onEditMessage(snapshot, content);
                     }
@@ -1397,6 +1443,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
 // ── _ChatInputBar ─────────────────────────────────────────────────────────────
 
+// TODO(unify): This widget should be unified with the _ChatInputBar in
+// new_chat_screen.dart into a shared CoachInputBar widget.
+
 class _ChatInputBar extends ConsumerStatefulWidget {
   const _ChatInputBar({
     required this.controller,
@@ -1415,6 +1464,9 @@ class _ChatInputBar extends ConsumerStatefulWidget {
 
   /// When true the send button is replaced by a stop button.
   final bool isSending;
+
+  /// Maximum allowed message length.
+  static const int maxLength = 4000;
 
   @override
   ConsumerState<_ChatInputBar> createState() => _ChatInputBarState();
@@ -1589,12 +1641,15 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       focusNode: widget.focusNode,
                       maxLines: 5,
                       minLines: 1,
+                      maxLength: _ChatInputBar.maxLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
                        style: AppTextStyles.bodyLarge,
                       decoration: InputDecoration(
                         hintText: 'Message your coach…',
                         hintStyle: AppTextStyles.bodyLarge
                             .copyWith(color: AppColors.textTertiary),
                         border: InputBorder.none,
+                        counterText: '',
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppDimens.spaceMd,
                           vertical: AppDimens.spaceSm,
@@ -1767,6 +1822,8 @@ class _MessagesLoadingSkeletonState extends State<_MessagesLoadingSkeleton>
 
   @override
   Widget build(BuildContext context) {
+    // Fix L4: use screen-width-relative skeleton widths.
+    final sw = MediaQuery.of(context).size.width;
     return AnimatedBuilder(
       animation: _shimmerAnim,
       builder: (context, _) {
@@ -1775,13 +1832,13 @@ class _MessagesLoadingSkeletonState extends State<_MessagesLoadingSkeleton>
           padding: const EdgeInsets.all(AppDimens.spaceMd),
           child: Column(
             children: [
-              _Bubble(isUser: false, width: 260, opacity: opacity),
+              _Bubble(isUser: false, width: sw * 0.65, opacity: opacity),
               const SizedBox(height: AppDimens.spaceMd),
-              _Bubble(isUser: true, width: 180, opacity: opacity),
+              _Bubble(isUser: true, width: sw * 0.45, opacity: opacity),
               const SizedBox(height: AppDimens.spaceMd),
-              _Bubble(isUser: false, width: 300, opacity: opacity),
+              _Bubble(isUser: false, width: sw * 0.75, opacity: opacity),
               const SizedBox(height: AppDimens.spaceMd),
-              _Bubble(isUser: true, width: 140, opacity: opacity),
+              _Bubble(isUser: true, width: sw * 0.35, opacity: opacity),
             ],
           ),
         );

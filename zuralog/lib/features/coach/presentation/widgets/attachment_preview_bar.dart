@@ -67,7 +67,13 @@ class _PreviewTile extends StatelessWidget {
           child: attachment.type == AttachmentType.image
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(attachment.file, fit: BoxFit.cover),
+                  // Fix M17: image error builder.
+                  child: Image.file(
+                    attachment.file,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) =>
+                        const Icon(Icons.broken_image_outlined, size: 28),
+                  ),
                 )
               : Icon(
                   attachment.type == AttachmentType.pdf
@@ -77,23 +83,31 @@ class _PreviewTile extends StatelessWidget {
                   size: 28,
                 ),
         ),
+        // Fix M42: larger remove button hit target (44x44 dp).
         Positioned(
           top: 0,
           right: 0,
-          child: GestureDetector(
-            onTap: onRemove,
-            child: Container(
-              width: 18,
-              height: 18,
-              decoration: const BoxDecoration(
-                // 0xFF636366 == AppColors.textSecondaryLight (exact match).
-                color: AppColors.textSecondaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close_rounded,
-                size: 12,
-                color: Colors.white,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onRemove,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: const BoxDecoration(
+                    // 0xFF636366 == AppColors.textSecondaryLight (exact match).
+                    color: AppColors.textSecondaryLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ),

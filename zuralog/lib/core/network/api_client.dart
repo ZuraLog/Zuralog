@@ -177,7 +177,13 @@ class ApiClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
-  }) => _dio.post(path, data: data, queryParameters: queryParameters);
+    void Function(int, int)? onSendProgress,
+  }) => _dio.post(
+    path,
+    data: data,
+    queryParameters: queryParameters,
+    onSendProgress: onSendProgress,
+  );
 
   /// Sends a PATCH request to the given [path] with optional [body].
   ///

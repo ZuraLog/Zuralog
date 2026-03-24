@@ -14,6 +14,7 @@ library;
 
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -142,6 +143,10 @@ class CoachChatState {
     this.isSending = false,
     this.errorMessage,
     this.resolvedConversationId,
+    this.isCancelled = false,
+    this.isEditing = false,
+    this.editingContent,
+    this.editSnapshot,
   });
 
   /// Messages loaded from history (does NOT include the in-flight streaming
@@ -168,6 +173,20 @@ class CoachChatState {
   /// temporary "new_XXXX" ID used before the first send completes.
   final String? resolvedConversationId;
 
+  /// True after the user explicitly cancelled a stream via [cancelStream].
+  /// Reset to false at the start of the next [sendMessage] call.
+  final bool isCancelled;
+
+  /// True when the user is editing a previously sent message.
+  final bool isEditing;
+
+  /// The original content of the message being edited.
+  final String? editingContent;
+
+  /// Snapshot of messages taken just before [editMessage] truncates state.
+  /// Restored if the user cancels the edit.
+  final List<ChatMessage>? editSnapshot;
+
   CoachChatState copyWith({
     List<ChatMessage>? messages,
     String? streamingContent,
@@ -179,6 +198,12 @@ class CoachChatState {
     String? errorMessage,
     bool clearError = false,
     String? resolvedConversationId,
+    bool? isCancelled,
+    bool? isEditing,
+    String? editingContent,
+    bool clearEditingContent = false,
+    List<ChatMessage>? editSnapshot,
+    bool clearEditSnapshot = false,
   }) {
     return CoachChatState(
       messages: messages ?? this.messages,
@@ -188,6 +213,10 @@ class CoachChatState {
       isSending: isSending ?? this.isSending,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       resolvedConversationId: resolvedConversationId ?? this.resolvedConversationId,
+      isCancelled: isCancelled ?? this.isCancelled,
+      isEditing: isEditing ?? this.isEditing,
+      editingContent: clearEditingContent ? null : (editingContent ?? this.editingContent),
+      editSnapshot: clearEditSnapshot ? null : (editSnapshot ?? this.editSnapshot),
     );
   }
 }
@@ -258,6 +287,28 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   }) async {
     if (state.isSending) return;
 
+    // Fix H1: set isSending immediately to prevent double-sends.
+    state = state.copyWith(isSending: true, clearError: true, isCancelled: false);
+
+    // Fix CC2: connectivity check before doing anything.
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      state = state.copyWith(
+        isSending: false,
+        errorMessage: 'No internet connection. Please check your network.',
+      );
+      return;
+    }
+
+    // Fix M2: message length cap.
+    if (text.length > 4000) {
+      state = state.copyWith(
+        isSending: false,
+        errorMessage: 'Message too long (max 4,000 characters)',
+      );
+      return;
+    }
+
     // Optimistically append the user's message (skipped when regenerating
     // because the user bubble is already present in state).
     String? tempMsgId;
@@ -276,11 +327,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       );
       state = state.copyWith(
         messages: [...state.messages, userMsg],
-        isSending: true,
-        clearError: true,
       );
-    } else {
-      state = state.copyWith(isSending: true, clearError: true);
     }
 
     await _streamSub?.cancel();
@@ -356,7 +403,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
         _cancelInactivityTimer();
         if (!completer.isCompleted) completer.complete();
       },
-      cancelOnError: false,
+      cancelOnError: true,
     );
 
     // Start the inactivity timer. It resets on every server event, so it only
@@ -478,6 +525,35 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     state = state.copyWith(messages: messages);
   }
 
+  /// Enters editing mode for the message at [index].
+  ///
+  /// Stores a snapshot of the current messages for cancel-restore,
+  /// truncates state to exclude the message being edited, and sets
+  /// [CoachChatState.isEditing] / [CoachChatState.editingContent].
+  void startEditing(int index) {
+    if (state.isSending) return;
+    if (index < 0 || index >= state.messages.length) return;
+    final content = state.messages[index].content;
+    final snapshot = List<ChatMessage>.from(state.messages);
+    state = state.copyWith(
+      messages: state.messages.sublist(0, index),
+      isEditing: true,
+      editingContent: content,
+      editSnapshot: snapshot,
+    );
+  }
+
+  /// Cancels editing mode and restores the snapshot.
+  void cancelEditing() {
+    final snapshot = state.editSnapshot;
+    state = state.copyWith(
+      isEditing: false,
+      clearEditingContent: true,
+      clearEditSnapshot: true,
+      messages: snapshot ?? state.messages,
+    );
+  }
+
   /// Seeds this notifier with [messages] and [resolvedConversationId] from a
   /// prior (temp-ID) notifier instance.
   ///
@@ -489,6 +565,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     required List<ChatMessage> messages,
     required String resolvedConversationId,
   }) {
+    if (state.isSending) return;
     state = CoachChatState(
       messages: messages,
       resolvedConversationId: resolvedConversationId,
@@ -497,10 +574,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 
   /// Cancels any in-flight stream.
   ///
-  /// If partial tokens have already arrived ([streamingContent] is non-empty),
-  /// they are committed as a final assistant message. Otherwise a placeholder
-  /// message `_Generation stopped._` is appended so the user knows the
-  /// generation was cancelled.
+  /// Sets [CoachChatState.isCancelled] to true so the UI can show a
+  /// "Generation stopped" indicator. No ghost message is appended — partial
+  /// tokens are discarded. The cancelled state resets on the next send.
   void cancelStream() {
     _timeoutTimer?.cancel();
     _timeoutTimer = null;
@@ -510,22 +586,11 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 
     if (!wasSending) return;
 
-    final partial = state.streamingContent ?? '';
-    final content = partial.isNotEmpty ? partial : '_Generation stopped._';
-
-    final stoppedMsg = ChatMessage(
-      id: 'stopped_${DateTime.now().millisecondsSinceEpoch}',
-      conversationId: state.resolvedConversationId ?? arg,
-      role: MessageRole.assistant,
-      content: content,
-      createdAt: DateTime.now(),
-    );
-
     state = state.copyWith(
-      messages: [...state.messages, stoppedMsg],
       isSending: false,
       clearStreaming: true,
       clearTool: true,
+      isCancelled: true,
     );
   }
 }
@@ -615,4 +680,4 @@ class PendingMessage {
 }
 
 final pendingFirstMessageProvider =
-    StateProvider.family<PendingMessage?, String>((ref, tempId) => null);
+    StateProvider.autoDispose.family<PendingMessage?, String>((ref, tempId) => null);
