@@ -69,7 +69,10 @@ class RateLimiter:
         """Load the Lua script into Redis and cache the SHA."""
         if self._script_sha is None:
             self._script_sha = await self._redis.script_load(_INCR_WITH_TTL_SCRIPT)
-        return self._script_sha
+        # After the None check above, self._script_sha is guaranteed to be a str,
+        # but we use a local binding so Pyright can narrow the type correctly.
+        sha: str = self._script_sha  # type: ignore[assignment]
+        return sha
 
     @property
     def _tier_limits(self) -> dict[str, int]:
@@ -102,8 +105,9 @@ class RateLimiter:
 
         try:
             sha = await self._get_script_sha()
-            # Fix 3.1 (H-6): Use atomic Lua script instead of INCR + EXPIRE
-            current = await self._redis.evalsha(sha, 1, redis_key, 86400)
+            # Fix 3.1 (H-6): Use atomic Lua script instead of INCR + EXPIRE.
+            # All KEYS and ARGV values must be str for redis-py async evalsha.
+            current: int = await self._redis.evalsha(sha, 1, redis_key, str(86400))
 
             allowed = current <= limit
             remaining = max(0, limit - current)
@@ -142,7 +146,8 @@ class RateLimiter:
         limit = settings.rate_limit_burst_per_minute  # 10
         try:
             sha = await self._get_script_sha()
-            current = await self._redis.evalsha(sha, 1, minute_key, 60)
+            # All ARGV values must be str for redis-py async evalsha.
+            current: int = await self._redis.evalsha(sha, 1, minute_key, str(60))
             allowed = current <= limit
             return RateLimitResult(
                 allowed=allowed,

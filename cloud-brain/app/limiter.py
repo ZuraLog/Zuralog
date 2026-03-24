@@ -31,8 +31,10 @@ def _get_rate_limit_key(request: Request) -> str:
     user_id = getattr(request.state, "user_id", None)
     if user_id:
         return f"user:{user_id}"
-    # Fall back to IP — never use unverified JWT claims
-    return f"ip:{request.client.host}"
+    # Fall back to IP — never use unverified JWT claims.
+    # request.client can be None in certain ASGI transports (e.g. TestClient, unix sockets).
+    client_host = request.client.host if request.client else "unknown"
+    return f"ip:{client_host}"
 
 
 # Fix 2.2 (H-8): Use settings for Redis URL instead of os.getenv

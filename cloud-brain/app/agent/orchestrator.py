@@ -104,8 +104,10 @@ class Orchestrator:
         if mcp_tools is None:
             mcp_tools = self.mcp_client.get_all_tools()
 
+        # Null-safe: get_all_tools() may return None if no MCP server is registered.
+        resolved_tools: list = mcp_tools or []
         openai_tools = []
-        for tool in mcp_tools:
+        for tool in resolved_tools:
             openai_tools.append(
                 {
                     "type": "function",
