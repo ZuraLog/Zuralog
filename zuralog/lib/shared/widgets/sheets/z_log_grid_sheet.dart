@@ -62,6 +62,21 @@ const List<_TileDef> _tiles = [
   _TileDef(key: 'workout',    icon: '🏋️', label: 'Workout',      behaviour: _TileBehaviour.comingSoon),
 ];
 
+/// Maps each tile key to the canonical backend metric-type slug reported
+/// by [todayLogSummaryProvider]. Used to determine whether a tile already
+/// has an entry logged today.
+///
+/// Keys absent from this map (e.g. 'mood', 'energy', 'stress', 'steps')
+/// match their metric_type slug directly and need no translation.
+const Map<String, String> _tileKeyToSlug = {
+  'water':      'water_ml',
+  'weight':     'weight_kg',
+  'sleep':      'sleep_duration',
+  'run':        'exercise_minutes',
+  'meal':       'calories',
+  'supplement': 'supplement_taken',
+};
+
 // ── ZLogGridSheet ─────────────────────────────────────────────────────────────
 
 /// A modal bottom sheet showing a 4-column grid of loggable metric tiles.
@@ -295,7 +310,8 @@ class _GridView extends StatelessWidget {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: _tiles.map((tile) {
-          final isLogged = loggedTypes.contains(tile.key);
+          final slug = _tileKeyToSlug[tile.key] ?? tile.key;
+          final isLogged = loggedTypes.contains(slug);
           return ZLogGridCell(
             icon: tile.icon,
             label: tile.label,
