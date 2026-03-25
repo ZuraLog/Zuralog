@@ -171,8 +171,10 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
       latestLogValuesProvider(latestLogValuesKey(const {'weight'})),
       (_, next) {
         next.whenData((latest) {
-          final w = latest['weight'] as Map<String, dynamic>?;
-          if (w != null && _lastLoggedKg == null) {
+          final raw = latest['weight'];
+          if (raw is! Map<String, dynamic>) return;
+          final w = raw;
+          if (_lastLoggedKg == null) {
             final kg = (w['value_kg'] as num?)?.toDouble();
             final loggedAt = w['logged_at'] as String?;
             final source = w['source'] as String? ?? 'manual';

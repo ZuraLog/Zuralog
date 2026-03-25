@@ -114,8 +114,10 @@ class _ZStepsLogPanelState extends ConsumerState<ZStepsLogPanel> {
       latestLogValuesProvider(latestLogValuesKey(const {'steps'})),
       (_, next) {
         next.whenData((latest) {
-          final s = latest['steps'] as Map<String, dynamic>?;
-          if (s != null && _syncedSteps == null) {
+          final raw = latest['steps'];
+          if (raw is! Map<String, dynamic>) return;
+          final s = raw;
+          if (_syncedSteps == null) {
             final steps = (s['steps'] as num?)?.toInt();
             final loggedAt = s['logged_at'] as String?;
             final source = s['source'] as String? ?? 'manual';
