@@ -23,6 +23,7 @@ export 'log_panels/z_weight_log_panel.dart';
 export 'layout/section_header.dart';
 export 'layout/z_section_label.dart';
 export 'layout/zuralog_scaffold.dart';
+export 'list/z_settings_group.dart';
 export 'list/z_settings_tile.dart';
 export 'loading/z_loading_skeleton.dart';
 export 'metric_grid/metric_grid.dart';

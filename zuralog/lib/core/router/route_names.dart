@@ -32,6 +32,7 @@
 ///   /trends/sources               → DataSourcesScreen
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
+///   /settings/account/edit-profile → EditProfileScreen
 ///   /settings/notifications       → NotificationSettingsScreen
 ///   /settings/appearance          → AppearanceSettingsScreen
 ///   /settings/coach               → CoachSettingsScreen

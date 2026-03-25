@@ -53,7 +53,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
           // ── Security section ────────────────────────────────────────────
           const SettingsSectionLabel('Security'),
-          _SettingsGroup(
+          ZSettingsGroup(
             tiles: [
               ZSettingsTile(
                 icon: Icons.email_rounded,
@@ -87,7 +87,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
           // ── Emergency Health Card ────────────────────────────────────────
           const SettingsSectionLabel('Medical'),
-          _SettingsGroup(
+          ZSettingsGroup(
             tiles: [
               ZSettingsTile(
                 icon: Icons.emergency_rounded,
@@ -100,7 +100,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
           ),
 
           // ── Sign Out ─────────────────────────────────────────────────────
-          _SettingsGroup(
+          ZSettingsGroup(
             tiles: [
               ZSettingsTile(
                 icon: Icons.logout_rounded,
@@ -205,43 +205,6 @@ class _ProfileSummaryCard extends ConsumerWidget {
               size: AppDimens.iconMd,
               color: AppColors.textTertiary,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── _SettingsGroup ────────────────────────────────────────────────────────────
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.tiles});
-
-  final List<ZSettingsTile> tiles;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          children: [
-            for (int i = 0; i < tiles.length; i++) ...[
-              tiles[i],
-              if (i < tiles.length - 1)
-                Padding(
-                  padding: const EdgeInsets.only(left: 68),
-                  child: Container(
-                    height: 1,
-                    color: colors.border.withValues(alpha: 0.5),
-                  ),
-                ),
-            ],
           ],
         ),
       ),
@@ -851,7 +814,15 @@ class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
           .deleteAccount();
       // Wipe local state and route to welcome screen.
       await ref.read(authStateProvider.notifier).logout();
-    } catch (_) {
+    } catch (e) {
+      // If the server confirms the account is already gone (404/410), clear
+      // local session so the user isn't stuck on a screen for a deleted account.
+      if (e is DioException &&
+          (e.response?.statusCode == 404 ||
+              e.response?.statusCode == 410)) {
+        await ref.read(authStateProvider.notifier).logout();
+        return;
+      }
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(

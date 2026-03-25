@@ -117,14 +117,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             filePath: file.path,
             contentType: mimeType,
           );
-    } on DioException catch (e) {
+    } catch (e) {
       if (mounted) {
-        final detail = e.response?.data?['detail'] as String?;
-        setState(() => _error = detail ?? 'Photo upload failed. Try again.');
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _error = 'Photo upload failed. Try again.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is DioException
+                ? (e.response?.data?['detail'] as String? ??
+                    'Photo upload failed. Try again.')
+                : 'Photo upload failed. Try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _avatarUploading = false);
@@ -396,7 +399,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
           // ── Identity ───────────────────────────────────────────────────
           const SettingsSectionLabel('Identity'),
-          _SettingsGroup(
+          ZSettingsGroup(
             tiles: [
               ZSettingsTile(
                 icon: Icons.person_outline_rounded,
@@ -429,7 +432,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
           // ── Health Profile ─────────────────────────────────────────────
           const SettingsSectionLabel('Health Profile'),
-          _SettingsGroup(
+          ZSettingsGroup(
             tiles: [
               ZSettingsTile(
                 icon: Icons.cake_outlined,
@@ -552,45 +555,6 @@ class _AvatarSection extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── _SettingsGroup ─────────────────────────────────────────────────────────────
-
-/// Settings card group — a rounded container with card background color that
-/// lays out [tiles] vertically with a 1px divider between each pair.
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.tiles});
-
-  final List<ZSettingsTile> tiles;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          children: [
-            for (int i = 0; i < tiles.length; i++) ...[
-              tiles[i],
-              if (i < tiles.length - 1)
-                Padding(
-                  padding: const EdgeInsets.only(left: 68),
-                  child: Container(
-                    height: 1,
-                    color: colors.border.withValues(alpha: 0.5),
-                  ),
-                ),
-            ],
-          ],
-        ),
       ),
     );
   }

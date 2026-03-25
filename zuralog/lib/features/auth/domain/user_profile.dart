@@ -115,7 +115,7 @@ class UserProfile {
     Object? displayName = _copyWithSentinel,
     Object? nickname = _copyWithSentinel,
     Object? birthday = _copyWithSentinel,
-    String? gender,
+    Object? gender = _copyWithSentinel,
     Object? heightCm = _copyWithSentinel,
     Object? avatarUrl = _copyWithSentinel,
     bool? onboardingComplete,
@@ -132,7 +132,7 @@ class UserProfile {
       birthday: birthday == _copyWithSentinel
           ? this.birthday
           : birthday as DateTime?,
-      gender: gender ?? this.gender,
+      gender: gender == _copyWithSentinel ? this.gender : gender as String?,
       heightCm: heightCm == _copyWithSentinel
           ? this.heightCm
           : heightCm as double?,

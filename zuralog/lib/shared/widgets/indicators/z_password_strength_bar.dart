@@ -13,8 +13,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 ///
 /// Strength levels:
 /// - Empty string → no bar shown ([SizedBox.shrink])
-/// - Length 1–5 → Weak (red, 1/3 width)
-/// - Length 6–7 → Fair (orange, 2/3 width)
+/// - Length 1–7 → Weak (red, 1/3 width) — will be rejected by the server
 /// - Length 8+ with mixed letters & digits → Strong (green, full width)
 /// - Length 8+ but only letters OR only digits → Fair (orange, 2/3 width)
 ///
@@ -74,7 +73,7 @@ class ZPasswordStrengthBar extends StatelessWidget {
   }
 
   _Strength _strength(String pw) {
-    if (pw.length < 6) return _Strength(AppColors.statusError, 1 / 3, 'Weak');
+    if (pw.length < 8) return _Strength(AppColors.statusError, 1 / 3, 'Weak');
     final hasLetter = pw.contains(RegExp(r'[A-Za-z]'));
     final hasDigit = pw.contains(RegExp(r'\d'));
     if (pw.length >= 8 && hasLetter && hasDigit) {
