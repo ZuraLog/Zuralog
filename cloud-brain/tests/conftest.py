@@ -45,10 +45,10 @@ def _stub(module_path: str) -> None:
 
 
 for _broken in (
-    "app.api.v1.journal_routes",
     "app.api.v1.achievement_routes",
     "app.api.v1.streak_routes",
     # quick_log_routes no longer needs stubbing — it loads cleanly on Python 3.14.
+    # journal_routes no longer needs stubbing — it loads cleanly after streak integration.
     "app.api.v1.emergency_card_routes",
 ):
     _stub(_broken)
