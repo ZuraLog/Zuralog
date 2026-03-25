@@ -111,6 +111,8 @@ class UserProfileResponse(BaseModel):
         nickname: Name the AI coach uses (optional).
         birthday: Date of birth for age calculation (optional).
         gender: Self-identified gender, free text (optional).
+        height_cm: User's height in centimetres (optional).
+        avatar_url: URL of the user's profile picture (optional).
         onboarding_complete: True once the profile questionnaire is done.
         created_at: Timestamp when the account was created (optional).
     """
@@ -140,6 +142,7 @@ class UpdateProfileRequest(BaseModel):
         nickname: New coach-facing nickname.
         birthday: New date of birth.
         gender: New self-identified gender.
+        height_cm: New height in centimetres (30–300 cm).
         onboarding_complete: Mark onboarding as done or undone.
     """
 

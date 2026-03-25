@@ -12,7 +12,7 @@ import enum
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, String
+from sqlalchemy import Boolean, Date, DateTime, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -90,12 +90,12 @@ class User(Base):
         comment="Self-identified gender (free text, optional)",
     )
     height_cm: Mapped[float | None] = mapped_column(
-        Float,
+        Numeric(5, 1, asdecimal=False),
         nullable=True,
         comment="User's height in centimetres (30–300 cm)",
     )
     avatar_url: Mapped[str | None] = mapped_column(
-        String,
+        String(2048),
         nullable=True,
         comment="Public URL of the user's profile picture",
     )
