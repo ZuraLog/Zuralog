@@ -45,6 +45,7 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
   const ZuralogAppBar({
     super.key,
     required this.title,
+    this.subtitle,
     this.leading,
     this.actions,
     this.tooltipConfig,
@@ -52,6 +53,9 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// The title text displayed in the app bar.
   final String title;
+
+  /// An optional subtitle displayed below the title in a smaller style.
+  final String? subtitle;
 
   /// An optional leading widget (e.g. back button).
   final Widget? leading;
@@ -63,7 +67,9 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
   final ZuralogAppBarTooltipConfig? tooltipConfig;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+        subtitle != null ? kToolbarHeight + 18 : kToolbarHeight,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +84,25 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
           )
         : titleText;
 
+    final Widget titleColumn = subtitle != null
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              titleWidget,
+              Text(
+                subtitle!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          )
+        : titleWidget;
+
     final fullActions = [
       ...?actions,
       const Padding(
@@ -91,7 +116,7 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
       leading: leading,
-      title: titleWidget,
+      title: titleColumn,
       actions: fullActions,
     );
   }

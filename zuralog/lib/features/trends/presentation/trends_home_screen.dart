@@ -50,6 +50,17 @@ String _strengthLabel(double coefficient) {
   return 'Weak';
 }
 
+/// Parses a hex color string (e.g. '#CFE1B9' or 'CFE1B9') to a [Color].
+/// Returns [AppColors.trendsSage] if the string is invalid.
+// ignore: unused_element
+Color _parseHex(String hex) {
+  final clean = hex.replaceFirst('#', '');
+  if (clean.length != 6) return AppColors.trendsSage;
+  final value = int.tryParse('FF$clean', radix: 16);
+  if (value == null) return AppColors.trendsSage;
+  return Color(value);
+}
+
 // ── TrendsHomeScreen ──────────────────────────────────────────────────────────
 
 /// Root widget for the Trends tab.
@@ -70,7 +81,8 @@ class TrendsHomeScreen extends ConsumerWidget {
 
     return ZuralogScaffold(
       appBar: ZuralogAppBar(
-        title: subtitle != null ? 'Trends' : 'Trends',
+        title: 'Trends',
+        subtitle: subtitle,
       ),
       body: trendsAsync.when(
         loading: () => const _TrendsLoadingSkeleton(),
@@ -95,8 +107,8 @@ class _TrendsHomeBody extends ConsumerStatefulWidget {
 
 class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
     with TickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final List<Animation<double>> _animations;
+  late AnimationController _controller;
+  late List<CurvedAnimation> _animations;
 
   List<CorrelationHighlight> _buildFilteredList(String category) {
     final all = widget.data.correlationHighlights;
@@ -133,6 +145,9 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
 
   @override
   void dispose() {
+    for (final anim in _animations) {
+      anim.dispose();
+    }
     _controller.dispose();
     super.dispose();
   }
@@ -166,6 +181,10 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
               child: _FilterChipsRow(
                 onCategoryChanged: (cat) {
                   final newFiltered = _buildFilteredList(cat);
+                  for (final anim in _animations) {
+                    anim.dispose();
+                  }
+                  _animations.clear();
                   if (_controller.isAnimating) _controller.stop();
                   _controller.dispose();
                   _buildAnimations(newFiltered.length);
@@ -751,7 +770,7 @@ class _ExpandedPatternContent extends ConsumerWidget {
             ],
 
             // Ask Coach CTA
-            _AskCoachButton(categoryColor: categoryColor),
+            _AskCoachButton(patternId: patternId, categoryColor: categoryColor),
           ],
         ),
       ),
@@ -762,8 +781,12 @@ class _ExpandedPatternContent extends ConsumerWidget {
 // ── _AskCoachButton ───────────────────────────────────────────────────────────
 
 class _AskCoachButton extends ConsumerWidget {
-  const _AskCoachButton({required this.categoryColor});
+  const _AskCoachButton({
+    required this.patternId,
+    required this.categoryColor,
+  });
 
+  final String patternId;
   final Color categoryColor;
 
   @override
@@ -774,7 +797,7 @@ class _AskCoachButton extends ConsumerWidget {
         ref.read(hapticServiceProvider).medium();
         ref.read(analyticsServiceProvider).capture(
           event: AnalyticsEvents.trendsCoachCtaTapped,
-          properties: {},
+          properties: {'pattern_id': patternId},
         );
       },
     );
@@ -886,7 +909,7 @@ class _FilterChipsRow extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.spaceMd,
-                  vertical: AppDimens.spaceXs + 2,
+                  vertical: AppDimens.spaceXs,
                 ),
                 decoration: BoxDecoration(
                   color: isActive
@@ -974,7 +997,7 @@ class _TrendsEmptyState extends StatelessWidget {
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Text(
-                'N more days of logging unlocks your first pattern',
+                'Keep logging for 7 days to unlock your first pattern.',
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.trendsTextMuted,
                 ),
