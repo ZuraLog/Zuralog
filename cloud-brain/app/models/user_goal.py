@@ -12,10 +12,10 @@ Models:
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Float, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, String, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -100,7 +100,7 @@ class UserGoal(Base):
     title: Mapped[str] = mapped_column(String, default="")
     current_value: Mapped[float] = mapped_column(Float, default=0.0)
     unit: Mapped[str] = mapped_column(String, default="")
-    start_date: Mapped[str] = mapped_column(String, default="")
-    deadline: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
+    deadline: Mapped[date | None] = mapped_column(Date, nullable=True, default=None)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_commentary: Mapped[str | None] = mapped_column(String, nullable=True, default=None)

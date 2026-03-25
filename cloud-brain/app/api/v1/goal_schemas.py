@@ -53,8 +53,8 @@ class GoalResponse(BaseModel):
     target_value: float
     current_value: float
     unit: str
-    start_date: str
-    deadline: str | None
+    start_date: _date | None = None
+    deadline: _date | None = None
     is_completed: bool
     ai_commentary: str | None
     progress_history: list[Any]
@@ -94,7 +94,7 @@ class GoalCreateRequest(BaseModel):
     title: str
     target_value: float
     unit: str = ""
-    deadline: str | None = None
+    deadline: _date | None = None
 
     @field_validator("type")
     @classmethod
@@ -136,16 +136,6 @@ class GoalCreateRequest(BaseModel):
             raise ValueError("unit cannot exceed 50 characters")
         return v
 
-    @field_validator("deadline")
-    @classmethod
-    def validate_deadline(cls, v: str | None) -> str | None:
-        if v is not None:
-            try:
-                _date.fromisoformat(v)
-            except ValueError:
-                raise ValueError("deadline must be a valid date in YYYY-MM-DD format")  # noqa: B904
-        return v
-
 
 class GoalUpdateRequest(BaseModel):
     """Payload for editing an existing goal.
@@ -162,7 +152,7 @@ class GoalUpdateRequest(BaseModel):
     title: str | None = None
     target_value: float | None = None
     unit: str | None = None
-    deadline: str | None = None
+    deadline: _date | None = None
 
     @field_validator("title")
     @classmethod
@@ -187,14 +177,4 @@ class GoalUpdateRequest(BaseModel):
     def validate_unit(cls, v: str | None) -> str | None:
         if v is not None and len(v) > 50:
             raise ValueError("unit cannot exceed 50 characters")
-        return v
-
-    @field_validator("deadline")
-    @classmethod
-    def validate_deadline(cls, v: str | None) -> str | None:
-        if v is not None:
-            try:
-                _date.fromisoformat(v)
-            except ValueError:
-                raise ValueError("deadline must be a valid date in YYYY-MM-DD format")  # noqa: B904
         return v
