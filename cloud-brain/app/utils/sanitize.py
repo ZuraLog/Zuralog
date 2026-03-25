@@ -12,4 +12,6 @@ def sanitize_for_llm(text: str) -> str:
 
     Does NOT truncate — callers are responsible for length limits.
     """
+    # Strip zero-width and soft-hyphen characters
+    text = re.sub(r'[\u00ad\u200b\u200c\u200d\u2060\ufeff]', '', text)
     return _DANGEROUS_PATTERN.sub("[removed]", text)

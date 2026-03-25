@@ -202,6 +202,7 @@ async def _load_conversation_history(
     conversation_id: str,
     limit: int = 50,
     exclude_message_id: str | None = None,
+    user_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Load recent messages for LLM context injection.
 
@@ -214,10 +215,23 @@ async def _load_conversation_history(
         limit: Maximum number of messages to load (caps token usage).
         exclude_message_id: If provided, exclude this specific message ID
             (used to avoid passing the just-persisted user message twice).
+        user_id: If provided, verify the conversation belongs to this user
+            before returning any messages.
 
     Returns:
         A list of ``{"role": str, "content": str}`` dicts.
     """
+    # Ownership verification
+    if user_id:
+        conv_check = await db.execute(
+            select(Conversation.id).where(
+                Conversation.id == conversation_id,
+                Conversation.user_id == user_id,
+            )
+        )
+        if conv_check.scalar_one_or_none() is None:
+            return []
+
     query = (
         select(Message)
         .where(Message.conversation_id == conversation_id)
@@ -253,7 +267,7 @@ async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, s
                 prefs.response_length or "concise",
             )
     except Exception as e:  # noqa: BLE001
-        logger.warning("Failed to load user preferences for user %s: %s", user_id, e)
+        logger.warning("Failed to load user preferences for user %s: %s", user_id[:8], e)
     return ("balanced", "medium", "concise")
 
 
@@ -655,7 +669,7 @@ async def websocket_chat(
                 # Load conversation history for LLM context, excluding the
                 # just-persisted user message (passed separately as `message`).
                 history = await _load_conversation_history(
-                    db, resolved_conv_id, limit=50, exclude_message_id=persisted_user_msg_id
+                    db, resolved_conv_id, limit=50, exclude_message_id=persisted_user_msg_id, user_id=user_id
                 )
 
                 # Fix 6.7 (H-3): Cap history to MAX_HISTORY_CHARS to bound token usage
