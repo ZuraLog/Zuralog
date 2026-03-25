@@ -1,15 +1,20 @@
 /// Progress Home Screen — Tab 3 (Progress) root screen.
 ///
-/// Displays active goals with animated progress rings, current streaks,
-/// week-over-week comparison summary, quick nav shortcuts, and recent
-/// achievements. Pull-to-refresh invalidates [progressHomeProvider].
+/// Redesigned with the Flame Hero layout:
+/// - Streak Flame Hero card with 7-day calendar row
+/// - 4-tile streak row (engagement, steps, workouts, check-in)
+/// - 14-day heatmap card with freeze CTA
+/// - Next Achievement card with pattern progress bar
+/// - Goal Trajectory cards (vertical list)
+/// - Journal Prompt CTA
+///
+/// Pull-to-refresh invalidates [progressHomeProvider] and [achievementsProvider].
 library;
-
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
@@ -18,21 +23,23 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
-import 'package:zuralog/features/data/domain/unit_converter.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goal_trajectory_card.dart';
+import 'package:zuralog/features/progress/presentation/widgets/journal_prompt_cta.dart';
+import 'package:zuralog/features/progress/presentation/widgets/next_achievement_card.dart';
+import 'package:zuralog/features/progress/presentation/widgets/progress_skeleton_loader.dart';
+import 'package:zuralog/features/progress/presentation/widgets/streak_flame_hero.dart';
+import 'package:zuralog/features/progress/presentation/widgets/streak_freeze_dialog.dart';
+import 'package:zuralog/features/progress/presentation/widgets/streak_heatmap_card.dart';
+import 'package:zuralog/features/progress/presentation/widgets/streak_type_tile.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
-import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
 // ── ProgressHomeScreen ────────────────────────────────────────────────────────
 
 /// Progress Home screen — Tab 3 root.
-///
-/// Uses [ConsumerStatefulWidget] to host the [AnimationController] that drives
-/// the goal progress ring fill animations.
 class ProgressHomeScreen extends ConsumerStatefulWidget {
-  /// Creates the [ProgressHomeScreen].
   const ProgressHomeScreen({super.key});
 
   @override
@@ -43,11 +50,9 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
 
   Future<void> _onRefresh() async {
     ref.read(hapticServiceProvider).medium();
-    // Clear the in-memory repository cache so the invalidated provider
-    // fetches fresh data rather than returning the still-warm cached stub.
     ref.read(progressRepositoryProvider).invalidateAll();
     ref.invalidate(progressHomeProvider);
-    // Wait for the new value to settle (swallow errors — UI handles them).
+    ref.invalidate(achievementsProvider);
     try {
       await ref.read(progressHomeProvider.future);
     } catch (_) {
@@ -76,35 +81,56 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
         backgroundColor: colors.cardBackground,
         onRefresh: _onRefresh,
         child: asyncData.when(
-          loading: () => const _LoadingState(),
-          error: (error, _) => ZErrorState(
-            message: 'Something went wrong. Please try again.',
-            onRetry: () => ref.invalidate(progressHomeProvider),
+          loading: () => CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: const [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: ProgressSkeletonLoader(),
+              ),
+            ],
+          ),
+          error: (error, _) => CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: ZErrorState(
+                  message: 'Something went wrong. Please try again.',
+                  onRetry: () => ref.invalidate(progressHomeProvider),
+                ),
+              ),
+            ],
           ),
           data: (data) {
-            final isEmpty =
-                data.goals.isEmpty && data.streaks.isEmpty;
+            final isEmpty = data.goals.isEmpty && data.streaks.isEmpty;
 
             if (isEmpty) {
-              return ZEmptyState(
-                icon: Icons.flag_rounded,
-                title: 'Start your journey',
-                message: "Set a goal and I'll track your streaks and progress.",
-                actionLabel: 'Set First Goal',
-                onAction: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => const GoalCreateEditSheet(),
-                  );
-                },
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: ZEmptyState(
+                      icon: Icons.flag_rounded,
+                      title: 'Start your journey',
+                      message: "Set a goal and I'll track your streaks and progress.",
+                      actionLabel: 'Set First Goal',
+                      onAction: () {
+                        showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const GoalCreateEditSheet(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               );
             }
 
-            return _ContentView(
-              data: data,
-            );
+            return _ContentView(data: data);
           },
         ),
       ),
@@ -112,173 +138,132 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
   }
 }
 
-// ── _LoadingState ─────────────────────────────────────────────────────────────
-
-class _LoadingState extends StatefulWidget {
-  const _LoadingState();
-
-  @override
-  State<_LoadingState> createState() => _LoadingStateState();
-}
-
-class _LoadingStateState extends State<_LoadingState>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _shimmerCtrl;
-  late final Animation<double> _shimmerAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _shimmerCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-    _shimmerAnim = CurvedAnimation(
-      parent: _shimmerCtrl,
-      curve: Curves.easeInOut,
-    );
-  }
-
-  @override
-  void dispose() {
-    _shimmerCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return AnimatedBuilder(
-      animation: _shimmerAnim,
-      builder: (context, _) {
-        final shimmerColor = Color.lerp(
-          colors.surface,
-          colors.cardBackground,
-          _shimmerAnim.value,
-        )!;
-        return ListView(
-          padding: EdgeInsets.fromLTRB(
-            AppDimens.spaceMd,
-            AppDimens.spaceMd,
-            AppDimens.spaceMd,
-            AppDimens.bottomClearance(context),
-          ),
-          children: [
-            // Hero ring skeleton
-            Container(
-              height: 120,
-              decoration: BoxDecoration(
-                color: shimmerColor,
-                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            // Section label
-            Container(
-              height: 16,
-              width: 80,
-              decoration: BoxDecoration(
-                color: shimmerColor,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            // Goal cards x3
-            for (int i = 0; i < 3; i++) ...[
-              Container(
-                height: 80,
-                decoration: BoxDecoration(
-                  color: shimmerColor,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                ),
-              ),
-              const SizedBox(height: AppDimens.spaceSm),
-            ],
-            const SizedBox(height: AppDimens.spaceMd),
-            // Streaks section
-            Container(
-              height: 16,
-              width: 64,
-              decoration: BoxDecoration(
-                color: shimmerColor,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            for (int i = 0; i < 2; i++) ...[
-              Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  color: shimmerColor,
-                  borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                ),
-              ),
-              const SizedBox(height: AppDimens.spaceSm),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
 // ── _ContentView ──────────────────────────────────────────────────────────────
 
-class _ContentView extends StatelessWidget {
-  const _ContentView({
-    required this.data,
-  });
+class _ContentView extends ConsumerWidget {
+  const _ContentView({required this.data});
 
   final ProgressHomeData data;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reducedMotion = MediaQuery.of(context).disableAnimations;
+
+    Widget wrap(Widget child, int index) {
+      if (reducedMotion) return child;
+      return ZFadeSlideIn(
+        delay: Duration(milliseconds: 60 * index),
+        offset: 16.0,
+        child: child,
+      );
+    }
+
+    final engagementStreak = data.streaks.firstWhere(
+      (s) => s.type == StreakType.engagement,
+      orElse: () => const UserStreak(
+        type: StreakType.engagement,
+        currentCount: 0,
+        longestCount: 0,
+        lastActivityDate: '',
+        isFrozen: false,
+        freezeCount: 0,
+      ),
+    );
+
+    final todayIndex = DateTime.now().weekday - 1; // 0=Monday
+    final weekHits = data.weekHits['engagement'] ?? List.filled(7, false);
+    final heatmapHistory =
+        data.streakHistory['engagement'] ?? List.filled(14, false);
+
     return ListView(
-      padding: EdgeInsets.only(
-        bottom: AppDimens.bottomClearance(context),
+      padding: EdgeInsets.fromLTRB(
+        AppDimens.spaceMd,
+        AppDimens.spaceSm,
+        AppDimens.spaceMd,
+        AppDimens.bottomClearance(context),
       ),
       children: [
-        // Milestone celebration card — shown above everything when milestone hit.
-        if (data.milestoneStreakCount != null) ...[
-          const SizedBox(height: AppDimens.spaceMd),
-          _MilestoneCelebrationCard(days: data.milestoneStreakCount!),
-        ],
+        if (data.milestoneStreakCount != null)
+          wrap(_MilestoneCelebrationCard(days: data.milestoneStreakCount!), 0),
 
-        // Goals section
-        if (data.goals.isNotEmpty) ...[
-          _SectionHeader(
-            title: 'Goals',
-            trailingLabel: 'See all',
-            onTrailingTap: () => context.push(RouteNames.goalsPath),
+        wrap(
+          StreakFlameHero(
+            currentCount: engagementStreak.currentCount,
+            longestCount: engagementStreak.longestCount,
+            weekHits: weekHits,
+            todayIndex: todayIndex,
+            isFrozen: engagementStreak.isFrozen,
           ),
-          _GoalsRow(goals: data.goals),
-          const SizedBox(height: AppDimens.spaceLg),
-        ],
-
-        // Streaks section
-        if (data.streaks.isNotEmpty) ...[
-          const _SectionHeader(title: 'Streaks'),
-          _StreaksRow(streaks: data.streaks),
-          const SizedBox(height: AppDimens.spaceLg),
-        ],
-
-        // Week-over-week summary
-        if (data.wow.metrics.isNotEmpty) ...[
-          _SectionHeader(title: data.wow.weekLabel),
-          _WoWSection(summary: data.wow),
-          const SizedBox(height: AppDimens.spaceLg),
-        ],
-
-        // Quick nav row
-        const _QuickNavRow(),
+          1,
+        ),
         const SizedBox(height: AppDimens.spaceLg),
 
-        // Recent achievements
-        if (data.recentAchievements.isNotEmpty) ...[
-          const _SectionHeader(title: 'Recent Achievements'),
-          _AchievementsRow(achievements: data.recentAchievements),
-          const SizedBox(height: AppDimens.spaceLg),
-        ],
+        wrap(_AllStreaksRow(streaks: data.streaks), 2),
+        const SizedBox(height: AppDimens.spaceLg),
+
+        wrap(
+          Consumer(
+            builder: (context, innerRef, _) => StreakHeatmapCard(
+              streakName: '🔥 Engagement — last 14 days',
+              freezeCount: engagementStreak.freezeCount,
+              history: heatmapHistory,
+              onFreezeTap: () => showStreakFreezeDialog(
+                context,
+                innerRef,
+                engagementStreak,
+              ),
+            ),
+          ),
+          3,
+        ),
+        const SizedBox(height: AppDimens.spaceLg),
+
+        if (data.nextAchievement != null)
+          wrap(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionHeader(
+                  title: 'Next Achievement',
+                  trailingLabel: 'Gallery',
+                  onTrailingTap: () {
+                    ref.read(hapticServiceProvider).light();
+                    context.push(RouteNames.achievementsPath);
+                  },
+                ),
+                NextAchievementCard(
+                  achievement: data.nextAchievement!,
+                  onTap: () => context.push(RouteNames.achievementsPath),
+                ),
+              ],
+            ),
+            4,
+          ),
+        if (data.nextAchievement != null) const SizedBox(height: AppDimens.spaceLg),
+
+        if (data.goals.isNotEmpty)
+          wrap(_GoalsSection(goals: data.goals), 5),
+        if (data.goals.isNotEmpty) const SizedBox(height: AppDimens.spaceLg),
+
+        wrap(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeader(
+                title: 'Journal',
+                trailingLabel: 'History',
+                onTrailingTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  context.push(RouteNames.journalPath);
+                },
+              ),
+              JournalPromptCta(
+                onTap: () => context.push(RouteNames.journalPath),
+              ),
+            ],
+          ),
+          6,
+        ),
       ],
     );
   }
@@ -286,7 +271,7 @@ class _ContentView extends StatelessWidget {
 
 // ── _SectionHeader ────────────────────────────────────────────────────────────
 
-class _SectionHeader extends ConsumerWidget {
+class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
     this.trailingLabel,
@@ -298,28 +283,27 @@ class _SectionHeader extends ConsumerWidget {
   final VoidCallback? onTrailingTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceSm,
+      padding: const EdgeInsets.only(
+        bottom: AppDimens.spaceSm,
       ),
       child: Row(
         children: [
-          Text(title, style: AppTextStyles.titleMedium),
+          Text(
+            title,
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.progressTextPrimary,
+            ),
+          ),
           const Spacer(),
           if (trailingLabel != null && onTrailingTap != null)
             GestureDetector(
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onTrailingTap!();
-              },
+              onTap: onTrailingTap,
               child: Text(
                 trailingLabel!,
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.primary,
+                  color: AppColors.progressTextSecondary,
                 ),
               ),
             ),
@@ -329,425 +313,96 @@ class _SectionHeader extends ConsumerWidget {
   }
 }
 
-// ── _GoalsRow ─────────────────────────────────────────────────────────────────
+// ── _GoalsSection ─────────────────────────────────────────────────────────────
 
-class _GoalsRow extends StatelessWidget {
-  const _GoalsRow({required this.goals});
-
+class _GoalsSection extends ConsumerWidget {
+  const _GoalsSection({required this.goals});
   final List<Goal> goals;
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 200,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-        itemCount: goals.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(width: AppDimens.spaceMd),
-        itemBuilder: (context, index) => _GoalCard(goal: goals[index]),
-      ),
-    );
-  }
-}
-
-// ── _GoalCard ─────────────────────────────────────────────────────────────────
-
-class _GoalCard extends ConsumerWidget {
-  const _GoalCard({required this.goal});
-
-  final Goal goal;
-
-  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    final unitsSystem = ref.watch(unitsSystemProvider);
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Progress ring centred at top of card
-          Center(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: goal.progressFraction),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: CustomPaint(
-                    painter: _RingPainter(progress: value),
-                    child: Center(
-                      child: Text(
-                        '${(value * 100).round()}%',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          title: 'Goals',
+          trailingLabel: 'Manage',
+          onTrailingTap: () {
+            ref.read(hapticServiceProvider).light();
+            context.push(RouteNames.goalsPath);
+          },
+        ),
+        ...goals.asMap().entries.map((entry) => Padding(
+          padding: EdgeInsets.only(
+            bottom: entry.key < goals.length - 1 ? AppDimens.spaceSm : 0,
           ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            goal.title,
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          child: GoalTrajectoryCard(
+            goal: entry.value,
+            onTap: () {
+              ref.read(selectedGoalIdProvider.notifier).state = entry.value.id;
+              context.push(RouteNames.goalDetailPath);
+            },
           ),
-          const SizedBox(height: AppDimens.spaceXs),
-          Text(
-            '${_formatValue(goal.currentValue)} / '
-            '${_formatValue(goal.targetValue)} ${displayUnit(goal.unit, unitsSystem)}',
-            style: AppTextStyles.bodySmall.copyWith(
-                  color: colors.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
-          _StatusChip(isCompleted: goal.isCompleted),
-        ],
-      ),
-    );
-  }
-
-  String _formatValue(double v) {
-    if (v == v.truncateToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(1);
-  }
-}
-
-// ── _RingPainter ──────────────────────────────────────────────────────────────
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter({required this.progress});
-
-  final double progress;
-
-  static const double _strokeWidth = 6;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (math.min(size.width, size.height) - _strokeWidth) / 2;
-    const startAngle = -math.pi / 2; // 12-o'clock
-
-    // Track
-    final trackPaint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.15)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // Fill arc
-    if (progress > 0) {
-      final fillPaint = Paint()
-        ..color = AppColors.primary
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _strokeWidth
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        2 * math.pi * progress,
-        false,
-        fillPaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
-
-// ── _StatusChip ───────────────────────────────────────────────────────────────
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.isCompleted});
-
-  final bool isCompleted;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceSm,
-        vertical: AppDimens.spaceXs,
-      ),
-      decoration: BoxDecoration(
-        color: isCompleted
-            ? AppColors.primary.withValues(alpha: 0.15)
-            : colors.surface,
-        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-      ),
-        child: Text(
-            isCompleted ? 'Completed' : 'In progress',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: isCompleted ? AppColors.primary : colors.textSecondary,
-            ),
-          ),
+        )),
+      ],
     );
   }
 }
 
-// ── _StreaksRow ───────────────────────────────────────────────────────────────
+// ── _AllStreaksRow ─────────────────────────────────────────────────────────────
 
-class _StreaksRow extends StatelessWidget {
-  const _StreaksRow({required this.streaks});
-
+class _AllStreaksRow extends StatelessWidget {
+  const _AllStreaksRow({required this.streaks});
   final List<UserStreak> streaks;
 
+  static const _streakConfig = [
+    (StreakType.engagement, '🔥', 'Engage'),
+    (StreakType.steps, '👟', 'Steps'),
+    (StreakType.workouts, '🏋️', 'Workout'),
+    (StreakType.checkin, '📋', 'Check-in'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 152,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-        itemCount: streaks.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(width: AppDimens.spaceMd),
-        itemBuilder: (context, index) =>
-            _StreakCard(streak: streaks[index]),
-      ),
-    );
-  }
-}
-
-// ── _StreakCard ───────────────────────────────────────────────────────────────
-
-class _StreakCard extends ConsumerStatefulWidget {
-  const _StreakCard({required this.streak});
-
-  final UserStreak streak;
-
-  @override
-  ConsumerState<_StreakCard> createState() => _StreakCardState();
-}
-
-class _StreakCardState extends ConsumerState<_StreakCard> {
-  bool _isLoading = false;
-
-  Future<void> _onShieldTap(BuildContext context) async {
-    final streak = widget.streak;
-
-    if (streak.freezeCount >= 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("You've used all your streak freezes."),
+    final items = <Widget>[];
+    for (var i = 0; i < _streakConfig.length; i++) {
+      final (type, emoji, label) = _streakConfig[i];
+      final streak = streaks.firstWhere(
+        (s) => s.type == type,
+        orElse: () => UserStreak(
+          type: type,
+          currentCount: 0,
+          longestCount: 0,
+          lastActivityDate: '',
+          isFrozen: false,
+          freezeCount: 0,
         ),
       );
-      return;
-    }
-
-    if (streak.isFrozen) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Streak is already frozen.'),
+      items.add(
+        Expanded(
+          child: Semantics(
+            label: '$label streak: ${streak.currentCount} days',
+            excludeSemantics: true,
+            child: StreakTypeTile(
+              emoji: emoji,
+              count: streak.currentCount,
+              label: label,
+              isHot: streak.currentCount > 0,
+            ),
+          ),
         ),
       );
-      return;
-    }
-
-    final remaining = 2 - streak.freezeCount - 1;
-    final colors = AppColorsOf(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        title: Text('Use a Streak Freeze?', style: AppTextStyles.titleMedium),
-        content: Text(
-          'This will protect your streak if you miss today. '
-          'You have $remaining freeze(s) remaining after this.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.primaryButtonText,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-              ),
-            ),
-            child: const Text('Use Freeze'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return;
-
-    setState(() => _isLoading = true);
-    try {
-      await ref
-          .read(progressRepositoryProvider)
-          .applyStreakFreeze(streak.type);
-
-      ref.read(hapticServiceProvider).medium();
-
-      ref.read(analyticsServiceProvider).capture(
-        event: AnalyticsEvents.streakFreezeUsed,
-        properties: {
-          'streak_type': streak.type.apiSlug,
-          // Remaining after this freeze: max 2 total, already used
-          // freezeCount, now using 1 more.
-          'freeze_count_remaining':
-              (2 - streak.freezeCount - 1).clamp(0, 2),
-        },
-      );
-
-      ref.invalidate(progressHomeProvider);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Streak freeze applied! Your streak is protected.',
-            ),
-          ),
-        );
+      if (i < _streakConfig.length - 1) {
+        items.add(const SizedBox(width: AppDimens.spaceSm));
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final streak = widget.streak;
-    final canFreeze = streak.freezeCount < 2 && !streak.isFrozen;
-    // Full opacity when ≥1 freeze used and not already frozen (2nd freeze still
-    // available), or when frozen (showing active protection). 40% when no
-    // freezes have been used yet (subtle dormant indicator).
-    final shieldOpacity =
-        (streak.freezeCount > 0 && !streak.isFrozen) || streak.isFrozen
-            ? 1.0
-            : 0.4;
-    final freezesAvailable = (2 - streak.freezeCount).clamp(0, 2);
-
-    return Container(
-      width: 128,
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  streak.type.displayName,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (_isLoading)
-                const SizedBox(
-                  width: AppDimens.iconSm,
-                  height: AppDimens.iconSm,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.primary,
-                  ),
-                )
-              else
-                Tooltip(
-                  message: 'Tap to use a freeze',
-                  child: GestureDetector(
-                    onTap: canFreeze || streak.isFrozen
-                        ? () => _onShieldTap(context)
-                        : null,
-                    child: Opacity(
-                      opacity: shieldOpacity,
-                      child: Icon(
-                        Icons.shield_rounded,
-                        size: AppDimens.iconSm,
-                        color: streak.isFrozen
-                            ? AppColors.primary
-                            : AppColors.textTertiary,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            '${streak.currentCount}',
-            style: AppTextStyles.displayLarge.copyWith(
-              color: AppColors.primary,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceXs),
-          Text(
-            'day streak',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.textTertiary,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceXs),
-          Text(
-            '$freezesAvailable freeze(s) available',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.textTertiary,
-            ),
-          ),
-        ],
-      ),
-    );
+    return Row(children: items);
   }
 }
 
 // ── _MilestoneCelebrationCard ─────────────────────────────────────────────────
 
 /// Full-width inline card shown when the user hits a major streak milestone.
-///
-/// Displays a scale-pulse animation and fires haptic + analytics exactly once
-/// on first display. Stays visible until the next data refresh clears the
-/// milestone flag from [ProgressHomeData.milestoneStreakCount].
 class _MilestoneCelebrationCard extends ConsumerStatefulWidget {
   const _MilestoneCelebrationCard({required this.days});
 
@@ -764,6 +419,7 @@ class _MilestoneCelebrationCardState
   late final AnimationController _pulseCtrl;
   late final Animation<double> _scaleAnim;
   bool _hapticFired = false;
+  bool _dismissed = false;
 
   @override
   void initState() {
@@ -778,16 +434,20 @@ class _MilestoneCelebrationCardState
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
 
+    SharedPreferences.getInstance().then((prefs) {
+      if (prefs.getBool('last_seen_milestone_${widget.days}') == true) {
+        if (mounted) setState(() => _dismissed = true);
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      // Fire haptic exactly once.
       if (!_hapticFired) {
         _hapticFired = true;
         ref.read(hapticServiceProvider).success();
       }
 
-      // Fire analytics event.
       ref.read(analyticsServiceProvider).capture(
         event: AnalyticsEvents.streakMilestoneViewed,
         properties: {'days': widget.days},
@@ -796,29 +456,47 @@ class _MilestoneCelebrationCardState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) {
+      _pulseCtrl.stop();
+    } else if (!_pulseCtrl.isAnimating && !_dismissed) {
+      _pulseCtrl.repeat(reverse: true);
+    }
+  }
+
+  @override
   void dispose() {
     _pulseCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _dismiss() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('last_seen_milestone_${widget.days}', true);
+    if (mounted) setState(() => _dismissed = true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
+    if (_dismissed) return const SizedBox.shrink();
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
       child: ScaleTransition(
         scale: _scaleAnim,
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-            color: colors.cardBackground,
+            color: AppColors.progressSurface,
+            border: Border.all(color: AppColors.progressBorderDefault),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppDimens.radiusCard),
             child: Stack(
               children: [
-                // Gradient overlay — 8% opacity categoryActivity (green).
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
@@ -826,413 +504,59 @@ class _MilestoneCelebrationCardState
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppColors.categoryActivity.withValues(alpha: 0.08),
-                          AppColors.categoryActivity.withValues(alpha: 0.02),
+                          AppColors.progressStreakWarm.withValues(alpha: 0.08),
+                          AppColors.progressStreakWarm.withValues(alpha: 0.02),
                         ],
                       ),
                     ),
                   ),
                 ),
-                // Content
                 Padding(
                   padding: const EdgeInsets.all(AppDimens.spaceMd),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Icon row
                       Row(
-                        children: [
-                          const Icon(
-                            Icons.local_fire_department_rounded,
-                            color: AppColors.categoryActivity,
-                            size: 28,
-                          ),
-                          const SizedBox(width: AppDimens.spaceXs),
-                          const Icon(
-                            Icons.emoji_events_rounded,
-                            color: AppColors.categoryActivity,
-                            size: 28,
-                          ),
+                        children: const [
+                          Text('🔥', style: TextStyle(fontSize: 28)),
+                          SizedBox(width: AppDimens.spaceXs),
+                          Text('🏆', style: TextStyle(fontSize: 28)),
                         ],
                       ),
                       const SizedBox(height: AppDimens.spaceSm),
-                      // Headline
                       Text(
                         '${widget.days}-Day Streak!',
                         style: AppTextStyles.displaySmall.copyWith(
-                          color: AppColors.primary,
+                          color: AppColors.progressStreakWarm,
                         ),
                       ),
                       const SizedBox(height: AppDimens.spaceXs),
-                      // Subtext
                       Text(
                         'Amazing consistency! You\'ve logged every day '
                         'for ${widget.days} days.',
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: colors.textSecondary,
+                          color: AppColors.progressTextMuted,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── _WoWSection ───────────────────────────────────────────────────────────────
-
-class _WoWSection extends StatelessWidget {
-  const _WoWSection({required this.summary});
-
-  final WoWSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        children: [
-          for (int i = 0; i < summary.metrics.length; i++) ...[
-            _WoWMetricRow(metric: summary.metrics[i]),
-            if (i < summary.metrics.length - 1)
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: colors.border,
-                indent: AppDimens.spaceMd,
-                endIndent: AppDimens.spaceMd,
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ── _WoWMetricRow ─────────────────────────────────────────────────────────────
-
-class _WoWMetricRow extends ConsumerWidget {
-  const _WoWMetricRow({required this.metric});
-
-  final WoWMetric metric;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final delta = metric.deltaPercent;
-    final unitsSystem = ref.watch(unitsSystemProvider);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceMd,
-        vertical: AppDimens.spaceMd,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              metric.label,
-              style: AppTextStyles.bodyMedium,
-            ),
-          ),
-          Text(
-            '${_formatValue(metric.currentValue)} ${displayUnit(metric.unit, unitsSystem)}',
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: AppDimens.spaceSm),
-          _DeltaChip(delta: delta),
-        ],
-      ),
-    );
-  }
-
-  String _formatValue(double v) {
-    if (v == v.truncateToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(1);
-  }
-}
-
-// ── _DeltaChip ────────────────────────────────────────────────────────────────
-
-class _DeltaChip extends StatelessWidget {
-  const _DeltaChip({required this.delta});
-
-  final double? delta;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    if (delta == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.spaceSm,
-          vertical: AppDimens.spaceXs,
-        ),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-        ),
-        child: Text(
-          '—',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.textTertiary,
-          ),
-        ),
-      );
-    }
-
-    final isPositive = delta! >= 0;
-    final color = isPositive ? AppColors.categoryActivity : AppColors.statusError;
-    final label = '${isPositive ? '+' : ''}${delta!.toStringAsFixed(1)}%';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceSm,
-        vertical: AppDimens.spaceXs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(color: color),
-      ),
-    );
-  }
-}
-
-// ── _QuickNavRow ──────────────────────────────────────────────────────────────
-
-class _QuickNavRow extends ConsumerWidget {
-  const _QuickNavRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    void trackAndPush(String label, String path) {
-      ref.read(analyticsServiceProvider).capture(
-        event: AnalyticsEvents.progressNavTapped,
-        properties: {'section': label.toLowerCase()},
-      );
-      context.push(path);
-    }
-
-    final items = [
-      _QuickNavItem(
-        icon: Icons.flag_rounded,
-        label: 'Goals',
-        onTap: () => trackAndPush('Goals', RouteNames.goalsPath),
-      ),
-      _QuickNavItem(
-        icon: Icons.emoji_events_rounded,
-        label: 'Achievements',
-        onTap: () => trackAndPush('Achievements', RouteNames.achievementsPath),
-      ),
-      _QuickNavItem(
-        icon: Icons.bar_chart_rounded,
-        label: 'Report',
-        onTap: () => trackAndPush('Report', RouteNames.weeklyReportPath),
-      ),
-      _QuickNavItem(
-        icon: Icons.book_rounded,
-        label: 'Journal',
-        onTap: () => trackAndPush('Journal', RouteNames.journalPath),
-      ),
-    ];
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      padding: const EdgeInsets.symmetric(
-        vertical: AppDimens.spaceMd,
-      ),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: items,
-      ),
-    );
-  }
-}
-
-class _QuickNavItem extends ConsumerWidget {
-  const _QuickNavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return GestureDetector(
-      onTap: () {
-        ref.read(hapticServiceProvider).light();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: AppDimens.touchTargetMin + 8,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: AppDimens.touchTargetMin,
-              height: AppDimens.touchTargetMin,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              ),
-              child: Icon(icon, color: AppColors.primary, size: AppDimens.iconMd),
-            ),
-            const SizedBox(height: AppDimens.spaceXs),
-            Text(
-              label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: colors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── _AchievementsRow ──────────────────────────────────────────────────────────
-
-class _AchievementsRow extends StatelessWidget {
-  const _AchievementsRow({required this.achievements});
-
-  final List<Achievement> achievements;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 120,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-        itemCount: achievements.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(width: AppDimens.spaceMd),
-        itemBuilder: (context, index) =>
-            _AchievementBadge(achievement: achievements[index]),
-      ),
-    );
-  }
-}
-
-// ── _AchievementBadge ─────────────────────────────────────────────────────────
-
-class _AchievementBadge extends StatelessWidget {
-  const _AchievementBadge({required this.achievement});
-
-  final Achievement achievement;
-
-  IconData _iconForName(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('trophy') || lower.contains('award')) {
-      return Icons.emoji_events_rounded;
-    } else if (lower.contains('flame') || lower.contains('fire') || lower.contains('streak')) {
-      return Icons.local_fire_department_rounded;
-    } else if (lower.contains('heart') || lower.contains('health')) {
-      return Icons.favorite_rounded;
-    } else if (lower.contains('run') || lower.contains('activity') || lower.contains('step')) {
-      return Icons.directions_run_rounded;
-    } else if (lower.contains('sleep')) {
-      return Icons.bedtime_rounded;
-    } else if (lower.contains('goal') || lower.contains('flag')) {
-      return Icons.flag_rounded;
-    } else if (lower.contains('data') || lower.contains('sync')) {
-      return Icons.sync_rounded;
-    } else if (lower.contains('coach') || lower.contains('chat')) {
-      return Icons.chat_rounded;
-    } else {
-      return Icons.star_rounded;
-    }
-  }
-
-  /// Returns true when the achievement was unlocked within the last 7 days.
-  bool get _isNew {
-    final unlockedAt = achievement.unlockedAt;
-    if (unlockedAt == null) return false;
-    return DateTime.now().difference(unlockedAt).inDays < 7;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final showNewBadge = _isNew;
-
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _iconForName(achievement.iconName),
-                color: AppColors.primary,
-                size: AppDimens.iconMd,
-              ),
-              if (showNewBadge) ...[
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceXs,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(AppDimens.spaceXs),
-                  ),
-                  child: Text(
-                    'NEW',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: _dismiss,
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: AppColors.progressTextMuted,
                     ),
                   ),
                 ),
               ],
-            ],
-          ),
-          const Spacer(),
-          Text(
-            achievement.title,
-            style: AppTextStyles.bodySmall.copyWith(
-              fontWeight: FontWeight.w600,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
-        ],
+        ),
       ),
     );
   }

@@ -169,6 +169,7 @@ class Goal {
     this.deadline,
     this.isCompleted = false,
     this.aiCommentary,
+    this.trendDirection = 'on_track',
   });
 
   /// Unique goal identifier.
@@ -211,6 +212,10 @@ class Goal {
   /// Used to render sparklines and trend charts.
   final List<double> progressHistory;
 
+  /// Trend direction relative to expected pace.
+  /// One of: 'on_track', 'behind', 'completed'.
+  final String trendDirection;
+
   /// Progress as a fraction in [0, 1]. Capped at 1.0 when overachieved.
   double get progressFraction =>
       targetValue > 0 ? (currentValue / targetValue).clamp(0.0, 1.0) : 0.0;
@@ -232,6 +237,7 @@ class Goal {
       isCompleted: json['is_completed'] as bool? ?? false,
       aiCommentary: json['ai_commentary'] as String?,
       progressHistory: rawHistory.map((e) => (e as num).toDouble()).toList(),
+      trendDirection: json['trend_direction'] as String? ?? 'on_track',
     );
   }
 
@@ -250,6 +256,7 @@ class Goal {
         'is_completed': isCompleted,
         'ai_commentary': aiCommentary,
         'progress_history': progressHistory,
+        'trend_direction': trendDirection,
       };
 }
 
@@ -363,7 +370,7 @@ class UserStreak {
   /// Whether a streak freeze is currently active (breaks streak loss).
   final bool isFrozen;
 
-  /// Number of freezes the user has applied on this streak.
+  /// Freeze tokens available for this streak (0–2). Decremented on each use.
   final int freezeCount;
 
   /// Deserializes from a JSON map.
@@ -697,6 +704,9 @@ class ProgressHomeData {
     required this.wow,
     required this.recentAchievements,
     this.milestoneStreakCount,
+    this.streakHistory = const {},
+    this.weekHits = const {},
+    this.nextAchievement,
   });
 
   /// Active user goals.
@@ -715,11 +725,39 @@ class ProgressHomeData {
   /// 90, 180, or 365 days). The value is the milestone day count.
   final int? milestoneStreakCount;
 
+  /// 14-day activity history per streak type (key = streak type API slug).
+  /// Each list has 14 booleans: index 0 = 14 days ago, index 13 = today.
+  final Map<String, List<bool>> streakHistory;
+
+  /// 7-day activity hits for the current Mon–Sun week per streak type.
+  /// Each list has 7 booleans: index 0 = Monday, index 6 = Sunday.
+  final Map<String, List<bool>> weekHits;
+
+  /// The closest locked achievement to completion, or null if none.
+  final Achievement? nextAchievement;
+
   /// Deserializes from a JSON map.
   factory ProgressHomeData.fromJson(Map<String, dynamic> json) {
     final rawGoals = json['goals'] as List<dynamic>? ?? [];
     final rawStreaks = json['streaks'] as List<dynamic>? ?? [];
     final rawAch = json['recent_achievements'] as List<dynamic>? ?? [];
+
+    Map<String, List<bool>> parseHistoryMap(dynamic raw) {
+      if (raw == null) return {};
+      final map = raw as Map<String, dynamic>;
+      return map.map((k, v) {
+        final list = (v as List<dynamic>).map((e) => e as bool? ?? false).toList();
+        return MapEntry(k, list);
+      });
+    }
+
+    Achievement? nextAchievement;
+    if (json['next_achievement'] != null) {
+      nextAchievement = Achievement.fromJson(
+        json['next_achievement'] as Map<String, dynamic>,
+      );
+    }
+
     return ProgressHomeData(
       goals: rawGoals
           .map((e) => Goal.fromJson(e as Map<String, dynamic>))
@@ -734,6 +772,9 @@ class ProgressHomeData {
           .map((e) => Achievement.fromJson(e as Map<String, dynamic>))
           .toList(),
       milestoneStreakCount: (json['milestone_streak_count'] as num?)?.toInt(),
+      streakHistory: parseHistoryMap(json['streak_history']),
+      weekHits: parseHistoryMap(json['week_hits']),
+      nextAchievement: nextAchievement,
     );
   }
 
@@ -744,6 +785,9 @@ class ProgressHomeData {
         'wow': wow.toJson(),
         'recent_achievements': recentAchievements.map((a) => a.toJson()).toList(),
         'milestone_streak_count': milestoneStreakCount,
+        'streak_history': streakHistory,
+        'week_hits': weekHits,
+        'next_achievement': nextAchievement?.toJson(),
       };
 }
 

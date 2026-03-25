@@ -108,6 +108,15 @@ abstract final class AppDimens {
   /// Small icon size.
   static const double iconSm = 16;
 
+  /// Small icon container size — 36x36 (goal trajectory card icon box).
+  static const double iconContainerSm = 36;
+
+  /// Medium icon container size — 44x44 (next achievement card icon box).
+  static const double iconContainerMd = 44;
+
+  /// Large icon container size — 72x72 (streak flame hero circle).
+  static const double iconContainerLg = 72;
+
   /// Avatar / profile circle diameter.
   static const double avatarMd = 40;
 
