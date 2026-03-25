@@ -171,7 +171,7 @@ async def generate_report(
     # Rate limit: report generation is expensive
     rate_limiter: RateLimiter | None = getattr(request.app.state, "rate_limiter", None)
     if rate_limiter:
-        await check_rate_limit({"id": user_id}, rate_limiter, db)
+        await check_rate_limit(user_id, rate_limiter, db)
 
     try:
         period_start = date.fromisoformat(date_str)

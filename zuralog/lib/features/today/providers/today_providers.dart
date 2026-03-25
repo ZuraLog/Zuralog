@@ -57,7 +57,8 @@ final healthScoreProvider = FutureProvider<HealthScoreData>((ref) async {
   final repo = ref.read(todayRepositoryProvider);
   try {
     return await repo.getHealthScore();
-  } catch (_) {
+  } catch (e, st) {
+    debugPrint('healthScoreProvider failed: $e\n$st');
     return const HealthScoreData(score: 0, trend: [], dataDays: 0);
   }
 });

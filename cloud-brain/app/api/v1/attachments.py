@@ -114,7 +114,7 @@ async def upload_attachment(
     # ------------------------------------------------------------------
     rate_limiter: RateLimiter | None = getattr(request.app.state, "rate_limiter", None)
     if rate_limiter:
-        await check_rate_limit({"id": str(user.id)}, rate_limiter, db)
+        await check_rate_limit(str(user.id), rate_limiter, db)
 
     # ------------------------------------------------------------------
     # 1. Verify conversation ownership (Fix 7.3 H-18: filter deleted)
