@@ -8,7 +8,7 @@ on the authentication endpoints.
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -128,6 +128,13 @@ class UserProfileResponse(BaseModel):
     onboarding_complete: bool
     created_at: Optional[datetime] = None
 
+    @field_validator("avatar_url")
+    @classmethod
+    def avatar_url_must_be_https(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.startswith("https://"):
+            raise ValueError("avatar_url must be a valid HTTPS URL")
+        return v
+
     class Config:
         from_attributes = True
 
@@ -158,7 +165,8 @@ class ChangePasswordRequest(BaseModel):
 class UpdateProfileRequest(BaseModel):
     """Request body for a partial profile update.
 
-    All fields are optional; only non-None fields are applied.
+    All fields are optional. Fields not sent are left unchanged; sending null
+    explicitly will clear the field in the database.
 
     Attributes:
         display_name: New full display name.

@@ -200,7 +200,8 @@ async def update_profile(
 ) -> UserProfileResponse:
     """Update the current user's profile.
 
-    Only fields with non-None values in the request body are applied.
+    Only fields explicitly sent in the request body are applied. Sending null
+    clears the field; omitting it leaves it unchanged.
 
     Args:
         request: The incoming FastAPI request (used to set state for Sentry).
@@ -228,7 +229,7 @@ async def update_profile(
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    update_data = body.model_dump(exclude_none=True)
+    update_data = body.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
     for field, value in update_data.items():
@@ -518,6 +519,12 @@ async def upload_avatar(
     # Content-Type header, which clients can set to anything.
     kind = filetype.guess(data)
     mime_type = kind.mime if kind else None
+    if mime_type is None:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported file type. Upload a JPEG, PNG, or WebP image.",
+        )
+    mime_type = mime_type.lower()
     if mime_type not in _ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -560,8 +567,26 @@ async def upload_avatar(
         )
 
     # Persist the URL on the user's profile row.
-    await db.execute(update(User).where(User.id == user_id).values(avatar_url=avatar_url))
-    await db.commit()
+    try:
+        await db.execute(update(User).where(User.id == user_id).values(avatar_url=avatar_url))
+        await db.commit()
+    except Exception:
+        # DB write failed — clean up the orphaned file we just uploaded
+        try:
+            await storage.delete_file(
+                bucket=settings.avatar_bucket,
+                path=storage_path,
+            )
+        except Exception:
+            logger.warning(
+                "avatar_upload: orphan cleanup failed for user %s path %s",
+                user_id,
+                storage_path,
+            )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to save avatar. Please try again.",
+        )
 
     # Invalidate the cached profile so the new avatar_url is immediately visible.
     cache = getattr(request.app.state, "cache_service", None)
