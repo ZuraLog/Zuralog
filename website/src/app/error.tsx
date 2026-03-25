@@ -70,9 +70,9 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
         <button
           type="button"
           onClick={reset}
-          className="inline-flex items-center justify-center rounded-full bg-[#E8F5A8] px-6 py-2.5 text-sm font-semibold text-[#2D2D2D] transition-opacity hover:opacity-80"
+          className="btn-pattern-light inline-flex items-center justify-center rounded-full bg-[#CFE1B9] px-6 py-2.5 text-sm font-semibold text-[#141E18] shadow-[0_2px_16px_rgba(207,225,185,0.35)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_4px_30px_rgba(207,225,185,0.55)] active:scale-[0.97]"
         >
-          Try again
+          <span className="relative z-2">Try again</span>
         </button>
         <Link
           href="/"

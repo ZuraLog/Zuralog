@@ -174,20 +174,25 @@ export function BentoSection() {
         () => {
             if (!sectionRef.current) return;
 
+            // Video background is always visible via CSS mask gradient —
+            // no GSAP opacity animation needed. The mask handles the fade.
+
             const cards = sectionRef.current.querySelectorAll<HTMLElement>(".bento-card");
             const title = sectionRef.current.querySelector<HTMLElement>(".bento-title");
             const subtitle = sectionRef.current.querySelector<HTMLElement>(".bento-subtitle");
 
-            // Title entrance
+            // Title entrance — dramatic blur-to-sharp with scale
             if (title) {
                 gsap.fromTo(
                     title,
-                    { opacity: 0, y: 40 },
+                    { opacity: 0, y: 50, scale: 0.92, filter: "blur(12px)" },
                     {
                         opacity: 1,
                         y: 0,
-                        duration: 0.8,
-                        ease: "power3.out",
+                        scale: 1,
+                        filter: "blur(0px)",
+                        duration: 1.2,
+                        ease: "cubic-bezier(0.16, 1, 0.3, 1)",
                         scrollTrigger: {
                             trigger: title,
                             start: "top 85%",
@@ -197,16 +202,19 @@ export function BentoSection() {
                 );
             }
 
+            // Subtitle + decorative line entrance
             if (subtitle) {
+                const subtitleEls = sectionRef.current.querySelectorAll('.bento-subtitle');
                 gsap.fromTo(
-                    subtitle,
-                    { opacity: 0, y: 30 },
+                    subtitleEls,
+                    { opacity: 0, y: 30, filter: "blur(6px)" },
                     {
                         opacity: 1,
                         y: 0,
-                        duration: 0.7,
-                        ease: "power3.out",
-                        delay: 0.15,
+                        filter: "blur(0px)",
+                        duration: 0.9,
+                        ease: "cubic-bezier(0.16, 1, 0.3, 1)",
+                        stagger: 0.1,
                         scrollTrigger: {
                             trigger: subtitle,
                             start: "top 85%",
@@ -216,7 +224,7 @@ export function BentoSection() {
                 );
             }
 
-            // Staggered card entrance for generic cards
+            // Staggered card entrance for generic cards — blur-to-sharp + scale
             cards.forEach((card, i) => {
                 const cardType = card.getAttribute('data-card');
                 // Connect, waitlist, and dashboard handled specifically below
@@ -224,12 +232,13 @@ export function BentoSection() {
 
                 gsap.fromTo(
                     card,
-                    { opacity: 0, y: 60, scale: 0.95 },
+                    { opacity: 0, y: 80, scale: 0.88, filter: "blur(8px)" },
                     {
                         opacity: 1,
                         y: 0,
                         scale: 1,
-                        duration: 0.7,
+                        filter: "blur(0px)",
+                        duration: 1.0,
                         ease: "cubic-bezier(0.16, 1, 0.3, 1)",
                         delay: i * 0.12,
                         scrollTrigger: {
@@ -248,9 +257,9 @@ export function BentoSection() {
             if (card1) {
                 gsap.fromTo(
                     card1,
-                    { opacity: 0, y: 80, scale: 0.8, rotateX: 25, rotateY: -15, transformPerspective: 1000 },
+                    { opacity: 0, y: 80, scale: 0.8, rotateX: 25, rotateY: -15, transformPerspective: 1000, filter: "blur(10px)" },
                     {
-                        opacity: 1, y: 0, scale: 1, rotateX: 0, rotateY: 0,
+                        opacity: 1, y: 0, scale: 1, rotateX: 0, rotateY: 0, filter: "blur(0px)",
                         duration: 1.4, ease: "elastic.out(1, 0.7)",
                         scrollTrigger: {
                             trigger: card1,
@@ -341,9 +350,9 @@ export function BentoSection() {
             if (card2) {
                 gsap.fromTo(
                     card2,
-                    { opacity: 0, scale: 0.85, y: 50 },
+                    { opacity: 0, scale: 0.85, y: 50, filter: "blur(10px)" },
                     {
-                        opacity: 1, scale: 1, y: 0,
+                        opacity: 1, scale: 1, y: 0, filter: "blur(0px)",
                         duration: 1.2, ease: "elastic.out(1, 0.6)",
                         delay: 0.2,
                         scrollTrigger: {
@@ -410,9 +419,9 @@ export function BentoSection() {
             if (card5) {
                 gsap.fromTo(
                     card5,
-                    { opacity: 0, y: 50, scale: 0.93 },
+                    { opacity: 0, y: 50, scale: 0.93, filter: "blur(8px)" },
                     {
-                        opacity: 1, y: 0, scale: 1,
+                        opacity: 1, y: 0, scale: 1, filter: "blur(0px)",
                         duration: 1.0,
                         ease: "power3.out",
                         scrollTrigger: {
@@ -499,24 +508,42 @@ export function BentoSection() {
             ref={sectionRef}
             id="bento-section"
             className="relative w-full py-16 md:py-28 lg:py-36 overflow-hidden"
+            style={{ backgroundColor: "transparent" }}
         >
-            {/* Subtle background texture */}
+            {/* Background video — subtle at top, fades out smoothly before cards */}
             <div
-                className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                className="absolute inset-0 pointer-events-none overflow-hidden"
                 style={{
-                    backgroundImage: `radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)`,
-                    backgroundSize: "40px 40px",
+                    maskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 20%, transparent 45%)",
+                    WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 10%, black 20%, transparent 45%)",
                 }}
-            />
+            >
+                <video
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute top-1/2 left-1/2 min-w-full min-h-full object-cover"
+                    style={{
+                        transform: "translate(-50%, -50%)",
+                        mixBlendMode: "overlay",
+                        opacity: 0.2,
+                    }}
+                >
+                    <source src="/bento-bg.mp4" type="video/mp4" />
+                </video>
+            </div>
 
             <div className="relative z-10 max-w-[1280px] mx-auto px-6 lg:px-12">
                 {/* ── Section Header ── */}
                 <div className="text-center mb-10 md:mb-16 lg:mb-20">
-                    <p className="bento-subtitle text-sm font-semibold tracking-[0.25em] uppercase text-[#E8F5A8] mb-4 opacity-0">
-                        How It Works
+                    {/* Decorative gradient line */}
+                    <div className="bento-subtitle mx-auto mb-6 h-px w-16 opacity-0" style={{ background: "linear-gradient(to right, transparent, #344E41, transparent)" }} />
+                    <p className="bento-subtitle text-sm font-semibold tracking-[0.25em] uppercase mb-4 opacity-0" style={{ color: "#344E41" }}>
+                        Your Dashboard
                     </p>
-                    <h2 className="bento-title text-4xl sm:text-5xl lg:text-[56px] font-bold text-white leading-[1.1] tracking-tight opacity-0">
-                        How ZuraLog Works
+                    <h2 className="bento-title text-4xl sm:text-5xl lg:text-[56px] font-bold leading-[1.1] tracking-tight opacity-0" style={{ color: "#1A1A1A" }}>
+                        Master Your Metrics
                     </h2>
                 </div>
 
@@ -525,26 +552,33 @@ export function BentoSection() {
                     {/* ══ Card 1: CONNECT ══ */}
                     <div
                         data-card="connect"
-                        className="bento-card group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
-                                   hover:shadow-2xl transition-shadow duration-300 opacity-0"
-                        style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+                        className="bento-card bento-card-premium group relative rounded-3xl p-7 lg:p-8 overflow-hidden
+                                   transition-all duration-300 opacity-0 backdrop-blur-xl"
+                        style={{
+                            backgroundColor: "rgba(255, 255, 255, 0.65)",
+                            border: "1px solid rgba(207, 225, 185, 0.35)",
+                            transformStyle: "preserve-3d",
+                            willChange: "transform",
+                        }}
                     >
+                        {/* Accent pattern strip — top edge */}
+                        <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: "linear-gradient(to right, transparent, rgba(52,78,65,0.15), rgba(207,225,185,0.4), rgba(52,78,65,0.15), transparent)" }} />
                         {/* Interactive Sheen layer */}
-                        <div className="connect-sheen absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/80 to-transparent skew-x-[-25deg] pointer-events-none z-20" style={{ left: "-100%" }} />
-                        {/* Decorative lime accent dot */}
-                        <div className="connect-dot absolute top-6 right-6 w-3 h-3 rounded-full bg-[#E8F5A8] z-10" />
+                        <div className="connect-sheen absolute top-0 w-full h-full bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-25deg] pointer-events-none z-20" style={{ left: "-100%" }} />
+                        {/* Decorative sage accent dot */}
+                        <div className="connect-dot absolute top-6 right-6 w-3 h-3 rounded-full bg-[#CFE1B9] z-10" />
 
                         <div className="flex items-center gap-3 mb-5 relative z-10">
-                            <div className="connect-zap w-11 h-11 rounded-2xl bg-[#E8F5A8] flex items-center justify-center flex-shrink-0 origin-center">
-                                <Zap size={20} className="text-gray-900" />
+                            <div className="connect-zap w-11 h-11 rounded-2xl bg-[#344E41]/10 flex items-center justify-center flex-shrink-0 origin-center">
+                                <Zap size={20} className="text-[#344E41]" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900">Connect</h3>
-                                <p className="text-xs text-gray-500 font-medium">One-tap integration</p>
+                                <h3 className="text-xl font-bold" style={{ color: "#1A2E22" }}>Connect</h3>
+                                <p className="text-xs font-medium" style={{ color: "rgba(52, 78, 65, 0.55)" }}>One-tap integration</p>
                             </div>
                         </div>
 
-                        <p className="text-sm text-gray-600 leading-relaxed mb-6 relative z-10">
+                        <p className="text-sm leading-relaxed mb-6 relative z-10" style={{ color: "rgba(52, 78, 65, 0.55)" }}>
                             Link your favorite apps in seconds. ZuraLog handles the rest — no manual imports, no friction.
                         </p>
 
@@ -557,7 +591,7 @@ export function BentoSection() {
                                             className={step.done ? "text-[#4CAF50] flex-shrink-0" : "text-gray-300 flex-shrink-0"}
                                         />
                                     </div>
-                                    <span className={`text-sm font-medium ${step.done ? "text-gray-700" : "text-gray-400"}`}>
+                                    <span className={`text-sm font-medium ${step.done ? "text-[#1A2E22]" : "text-[#1A2E22]/30"}`}>
                                         {step.label}
                                     </span>
                                 </div>
@@ -572,8 +606,8 @@ export function BentoSection() {
                             ].map((app) => (
                                 <div
                                     key={app.name}
-                                    className="connect-app-pill opacity-0 flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-full px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm"
-                                    style={{ willChange: "transform" }}
+                                    className="connect-app-pill opacity-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+                                    style={{ backgroundColor: "rgba(52, 78, 65, 0.06)", border: "1px solid rgba(52, 78, 65, 0.12)", color: "#344E41", willChange: "transform" }}
                                 >
                                     {app.icon}
                                     {app.name}
@@ -585,29 +619,35 @@ export function BentoSection() {
                     {/* ══ Card 2: WAITLIST & LEADERBOARD ══ */}
                     <div
                         data-card="waitlist"
-                        className="bento-card group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden
-                                   hover:shadow-2xl transition-shadow duration-300 opacity-0"
-                        style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+                        className="bento-card bento-card-premium group relative rounded-3xl p-7 lg:p-8 overflow-hidden
+                                   transition-all duration-300 opacity-0 backdrop-blur-xl"
+                        style={{
+                            backgroundColor: "rgba(255, 255, 255, 0.65)",
+                            border: "1px solid rgba(207, 225, 185, 0.35)",
+                            transformStyle: "preserve-3d",
+                            willChange: "transform",
+                        }}
                     >
-                        <div className="waitlist-hover-mask absolute inset-0 bg-gradient-to-b from-[#E8F5A8]/10 to-transparent opacity-0 pointer-events-none transition-opacity duration-300" />
+                        <div className="waitlist-hover-mask absolute inset-0 bg-gradient-to-b from-[#CFE1B9]/5 to-transparent opacity-0 pointer-events-none transition-opacity duration-300" />
 
                         <div className="flex justify-between items-start mb-6 relative z-10">
                             <div>
-                                <div className="inline-flex items-center gap-2 bg-[#1A1A1A] rounded-full px-3 py-1 mb-3">
-                                    <div className="w-2 h-2 rounded-full bg-[#E8F5A8] animate-pulse" />
-                                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Live Waitlist</span>
+                                <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-3" style={{ backgroundColor: "rgba(52, 78, 65, 0.08)", border: "1px solid rgba(52, 78, 65, 0.12)" }}>
+                                    <div className="w-2 h-2 rounded-full bg-[#344E41] animate-pulse" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#344E41" }}>Live Waitlist</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-1 leading-tight">Join the Waitlist</h3>
-                                <p className="text-xs text-gray-500 font-medium">Climb the ranks. Earn Pro.</p>
+                                <h3 className="text-xl font-bold mb-1 leading-tight" style={{ color: "#1A2E22" }}>Join the Waitlist</h3>
+                                <p className="text-xs font-medium" style={{ color: "rgba(52, 78, 65, 0.55)" }}>Climb the ranks. Earn Pro.</p>
                             </div>
                             <div className="text-right">
                                 <div
-                                    className="text-2xl font-black text-gray-900 leading-none waitlist-counter-opt"
+                                    className="text-2xl font-black leading-none waitlist-counter-opt"
+                                    style={{ color: "#1A2E22" }}
                                     data-target={totalUsers}
                                 >
                                     0
                                 </div>
-                                <div className="text-[10px] uppercase font-bold text-gray-400 mt-1">Total Users</div>
+                                <div className="text-[10px] uppercase font-bold mt-1" style={{ color: "rgba(52, 78, 65, 0.40)" }}>Total Users</div>
                             </div>
                         </div>
 
@@ -628,22 +668,26 @@ export function BentoSection() {
                                     return (
                                         <div
                                             key={entry.rank}
-                                            className={`leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl border ${
+                                            className={`leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl ${
                                                 isFirst
-                                                    ? 'bg-gradient-to-r from-[#FFD700]/10 to-transparent border-[#FFD700]/20'
-                                                    : 'bg-gray-50 border-gray-100'
+                                                    ? ''
+                                                    : ''
                                             }`}
+                                            style={{
+                                                backgroundColor: isFirst ? "rgba(212, 175, 55, 0.08)" : "rgba(52, 78, 65, 0.04)",
+                                                border: isFirst ? "1px solid rgba(212, 175, 55, 0.20)" : "1px solid rgba(52, 78, 65, 0.08)",
+                                            }}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-6 font-bold text-sm text-center ${isFirst ? 'text-[#D4AF37]' : 'text-gray-400'}`}>
+                                                <div className={`w-6 font-bold text-sm text-center ${isFirst ? 'text-[#D4AF37]' : ''}`} style={!isFirst ? { color: "rgba(207, 225, 185, 0.30)" } : {}}>
                                                     #{entry.rank}
                                                 </div>
-                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm ${
-                                                    isFirst ? 'bg-gray-900 text-white' : 'bg-[#E8F5A8] text-gray-900'
-                                                }`}>
+                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                                    isFirst ? 'bg-[#344E41] text-white' : ''
+                                                }`} style={!isFirst ? { backgroundColor: "rgba(52, 78, 65, 0.08)", color: "#344E41" } : {}}>
                                                     {initials}
                                                 </div>
-                                                <span className={`text-sm font-semibold ${isFirst ? 'text-gray-900' : 'text-gray-700'}`}>
+                                                <span className="text-sm font-semibold" style={{ color: isFirst ? "#1A2E22" : "rgba(52, 78, 65, 0.65)" }}>
                                                     {entry.display_name}
                                                 </span>
                                             </div>
@@ -655,25 +699,25 @@ export function BentoSection() {
                                 return (
                                     <div
                                         key={`slot-${slotRank}`}
-                                        className={`leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl border ${
-                                            isFirst && leaderboard.length === 0
-                                                ? 'bg-gradient-to-r from-[#FFD700]/10 to-transparent border-[#FFD700]/20'
-                                                : 'bg-gray-50 border-gray-100'
-                                        }`}
+                                        className="leaderboard-entry opacity-0 flex items-center justify-between p-2.5 rounded-xl"
+                                        style={{
+                                            backgroundColor: isFirst && leaderboard.length === 0 ? "rgba(212, 175, 55, 0.08)" : "rgba(207, 225, 185, 0.04)",
+                                            border: isFirst && leaderboard.length === 0 ? "1px solid rgba(212, 175, 55, 0.15)" : "1px solid rgba(207, 225, 185, 0.06)",
+                                        }}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-6 font-bold text-sm text-center ${isFirst && leaderboard.length === 0 ? 'text-[#D4AF37]' : 'text-gray-400'}`}>
+                                            <div className={`w-6 font-bold text-sm text-center ${isFirst && leaderboard.length === 0 ? 'text-[#D4AF37]' : ''}`} style={!(isFirst && leaderboard.length === 0) ? { color: "rgba(207, 225, 185, 0.30)" } : {}}>
                                                 #{slotRank}
                                             </div>
-                                            <div className="w-7 h-7 rounded-full border border-gray-200 border-dashed flex items-center justify-center text-gray-400 text-[10px] font-bold">+</div>
-                                            <span className="text-sm font-medium text-gray-400 italic">This could be you</span>
+                                            <div className="w-7 h-7 rounded-full border border-dashed flex items-center justify-center text-[10px] font-bold" style={{ borderColor: "rgba(52, 78, 65, 0.20)", color: "rgba(52, 78, 65, 0.30)" }}>+</div>
+                                            <span className="text-sm font-medium italic" style={{ color: "rgba(52, 78, 65, 0.40)" }}>This could be you</span>
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
 
-                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium relative z-10 text-center">
+                        <p className="text-[10px] leading-relaxed font-medium relative z-10 text-center" style={{ color: "rgba(52, 78, 65, 0.35)" }}>
                             * Top 30 receive 3 months of ZuraLog Pro.
                             <br />First 30 receive 1 month. Refer friends to climb.
                         </p>
@@ -688,8 +732,12 @@ export function BentoSection() {
                         style={{ willChange: "transform", transformStyle: "preserve-3d" }}
                     >
                     <div
-                        className="bento-card group relative bg-white rounded-3xl shadow-xl overflow-hidden opacity-0
-                                   hover:shadow-2xl transition-shadow duration-300 h-full min-h-[300px] sm:min-h-0"
+                        className="bento-card bento-card-premium group relative rounded-3xl overflow-hidden opacity-0
+                                   transition-all duration-300 h-full min-h-[300px] sm:min-h-0 backdrop-blur-xl"
+                        style={{
+                            backgroundColor: "rgba(255, 255, 255, 0.65)",
+                            border: "1px solid rgba(207, 225, 185, 0.35)",
+                        }}
                     >
                         <div
                             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -712,8 +760,8 @@ export function BentoSection() {
                                     const icons = APPS.map((app, i) => (
                                         <div
                                             key={i}
-                                            className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.03)]"
-                                            style={{ transform: "rotate(-45deg) translateZ(0)" }}
+                                            className="w-16 h-16 rounded-2xl flex flex-shrink-0 items-center justify-center"
+                                            style={{ backgroundColor: "rgba(255, 255, 255, 0.7)", border: "1px solid rgba(52, 78, 65, 0.08)", transform: "rotate(-45deg) translateZ(0)" }}
                                         >
                                             <app.Icon size={28} color={app.color} />
                                         </div>
@@ -747,15 +795,15 @@ export function BentoSection() {
 
                         <div className="absolute bottom-0 left-0 w-full p-7 lg:p-8 z-10 flex flex-col justify-end h-full pointer-events-none">
                             <div className="pointer-events-auto mt-auto">
-                                <div className="inline-flex items-center gap-1.5 bg-[#E8F5A8] text-[#4d5e12] rounded-full px-3 py-1 mb-4 shadow-sm">
-                                    <Sparkles size={12} className="text-[#6B7522]" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">Centralized Hub</span>
+                                <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-4" style={{ backgroundColor: "rgba(52, 78, 65, 0.08)", border: "1px solid rgba(52, 78, 65, 0.12)" }}>
+                                    <Sparkles size={12} style={{ color: "#344E41" }} />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#344E41" }}>Centralized Hub</span>
                                 </div>
-                                <h3 className="text-[28px] font-bold text-gray-900 mb-2 leading-tight">50+ Apps Flowing Seamlessly</h3>
-                                <p className="text-sm text-gray-500 leading-relaxed mb-6 font-medium">
+                                <h3 className="text-[28px] font-bold mb-2 leading-tight" style={{ color: "#1A2E22" }}>50+ Apps Flowing Seamlessly</h3>
+                                <p className="text-sm leading-relaxed mb-6 font-medium" style={{ color: "rgba(52, 78, 65, 0.55)" }}>
                                     From Apple Health to Strava — every platform you love, organically synced into one powerful dashboard.
                                 </p>
-                                <button className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-[#5A631B] group/btn transition-colors">
+                                <button className="flex items-center gap-1.5 text-sm font-semibold group/btn transition-colors" style={{ color: "#344E41" }}>
                                     Explore integrations
                                      <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                                 </button>
@@ -770,26 +818,26 @@ export function BentoSection() {
                     {/* ══ Card 5: GET THE APP (coming soon) ══ */}
                     <div
                         data-card="get-app"
-                        className="bento-card group relative rounded-3xl overflow-hidden shadow-xl opacity-0"
+                        className="bento-card bento-card-premium group relative rounded-3xl opacity-0 backdrop-blur-xl"
                         style={{
-                            background: "linear-gradient(160deg, #141414 0%, #1E1E1E 60%, #0f1f0f 100%)",
-                            transformStyle: "preserve-3d",
+                            backgroundColor: "rgba(255, 255, 255, 0.65)",
+                            border: "1px solid rgba(207, 225, 185, 0.35)",
                             willChange: "transform",
                         }}
                     >
-                        {/* Lime corner glow */}
+                        {/* Sage corner glow */}
                         <div
                             className="absolute -top-12 -right-12 w-44 h-44 rounded-full pointer-events-none"
-                            style={{ background: "radial-gradient(circle, rgba(232,245,168,0.10) 0%, transparent 70%)" }}
+                            style={{ background: "radial-gradient(circle, rgba(207,225,185,0.20) 0%, transparent 70%)" }}
                         />
 
                         {/* Compact phone — top-right corner with mini chat analytics */}
-                        <div className="absolute top-3 right-3 phone-float" aria-hidden="true">
+                        <div className="absolute top-4 right-4 z-0" aria-hidden="true">
                             <div
-                                className="relative w-[68px] h-[128px] rounded-[16px] border-[1.5px] border-white/15 overflow-hidden"
+                                className="relative w-[50px] h-[90px] rounded-[12px] border-[1.5px] border-black/10 overflow-hidden"
                                 style={{
-                                    background: "linear-gradient(170deg, #333 0%, #1a1a1a 100%)",
-                                    boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 16px rgba(232,245,168,0.06)",
+                                    background: "linear-gradient(170deg, #344E41 0%, #1A2E22 100%)",
+                                    boxShadow: "0 8px 32px rgba(52,78,65,0.3), 0 0 16px rgba(207,225,185,0.06)",
                                 }}
                             >
                                 {/* Dynamic Island */}
@@ -846,16 +894,16 @@ export function BentoSection() {
                         {/* Content */}
                         <div className="relative z-10 flex flex-col h-full p-6">
                             {/* Coming soon pill */}
-                            <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 text-white/50 rounded-full px-2.5 py-1 mb-4 w-fit">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#E8F5A8]/60 animate-pulse" />
-                                <span className="text-[9px] font-bold uppercase tracking-widest">Coming Soon</span>
+                            <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 mb-4 w-fit" style={{ backgroundColor: "rgba(52, 78, 65, 0.06)", border: "1px solid rgba(52, 78, 65, 0.10)" }}>
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#344E41] animate-pulse" />
+                                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "rgba(52, 78, 65, 0.50)" }}>Coming Soon</span>
                             </div>
 
                             {/* Headline */}
-                            <h3 className="text-lg font-bold text-white leading-tight mb-1">
+                            <h3 className="text-lg font-bold leading-tight mb-1" style={{ color: "#1A2E22" }}>
                                 Get the App
                             </h3>
-                            <p className="text-[11px] text-white/40 leading-relaxed mb-5">
+                            <p className="text-[11px] leading-relaxed mb-5" style={{ color: "rgba(52, 78, 65, 0.50)" }}>
                                 iOS &amp; Android — dropping soon.
                             </p>
 
@@ -863,39 +911,40 @@ export function BentoSection() {
                             <div className="flex flex-col gap-2 mb-5">
                                 {/* App Store — locked */}
                                 <div
-                                    className="store-badge flex items-center gap-2.5 rounded-xl px-3 py-2.5 opacity-40 cursor-not-allowed select-none"
-                                    style={{ background: "#1c1c1e" }}
+                                    className="store-badge flex items-center gap-2.5 rounded-xl px-3 py-2.5 opacity-50 cursor-not-allowed select-none"
+                                    style={{ backgroundColor: "rgba(52, 78, 65, 0.06)", border: "1px solid rgba(52, 78, 65, 0.08)" }}
                                     aria-label="App Store — coming soon"
                                 >
-                                    <FaAppStoreIos size={18} className="text-white/70 flex-shrink-0" />
+                                    <FaAppStoreIos size={18} className="text-[#344E41] flex-shrink-0" />
                                     <div className="leading-none">
-                                        <div className="text-[8px] text-white/50 uppercase tracking-widest mb-0.5">Download on the</div>
-                                        <div className="text-[13px] font-semibold text-white/70">App Store</div>
+                                        <div className="text-[8px] uppercase tracking-widest mb-0.5" style={{ color: "rgba(52, 78, 65, 0.40)" }}>Download on the</div>
+                                        <div className="text-[13px] font-semibold" style={{ color: "#1A2E22" }}>App Store</div>
                                     </div>
-                                    <div className="ml-auto text-white/30 text-base">🔒</div>
+                                    <div className="ml-auto text-base" style={{ color: "rgba(52, 78, 65, 0.25)" }}>🔒</div>
                                 </div>
 
                                 {/* Google Play — locked */}
                                 <div
-                                    className="store-badge flex items-center gap-2.5 rounded-xl px-3 py-2.5 opacity-40 cursor-not-allowed select-none"
-                                    style={{ background: "#1c1c1e" }}
+                                    className="store-badge flex items-center gap-2.5 rounded-xl px-3 py-2.5 opacity-50 cursor-not-allowed select-none"
+                                    style={{ backgroundColor: "rgba(52, 78, 65, 0.06)", border: "1px solid rgba(52, 78, 65, 0.08)" }}
                                     aria-label="Google Play — coming soon"
                                 >
-                                    <FaGooglePlay size={16} className="text-white/70 flex-shrink-0" />
+                                    <FaGooglePlay size={16} className="text-[#344E41] flex-shrink-0" />
                                     <div className="leading-none">
-                                        <div className="text-[8px] text-white/50 uppercase tracking-widest mb-0.5">Get it on</div>
-                                        <div className="text-[13px] font-semibold text-white/70">Google Play</div>
+                                        <div className="text-[8px] uppercase tracking-widest mb-0.5" style={{ color: "rgba(52, 78, 65, 0.40)" }}>Get it on</div>
+                                        <div className="text-[13px] font-semibold" style={{ color: "#1A2E22" }}>Google Play</div>
                                     </div>
-                                    <div className="ml-auto text-white/30 text-base">🔒</div>
+                                    <div className="ml-auto text-base" style={{ color: "rgba(52, 78, 65, 0.25)" }}>🔒</div>
                                 </div>
                             </div>
 
                             {/* Waitlist CTA */}
                             <button
-                                className="mt-auto w-full bg-[#E8F5A8] text-gray-900 text-xs font-bold py-2.5 rounded-xl hover:bg-[#d4f291] active:scale-95 transition-all duration-150 shadow-md shadow-black/30"
+                                className="btn-pattern-light mt-auto w-full text-xs font-bold py-2.5 rounded-xl active:scale-95 transition-all duration-300 hover:scale-[1.02]"
+                                style={{ backgroundColor: "#CFE1B9", color: "#141E18", boxShadow: "0 2px 12px rgba(207, 225, 185, 0.25)" }}
                                 onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                             >
-                                Join the Waitlist →
+                                <span className="relative z-2">Join the Waitlist →</span>
                             </button>
                         </div>
                     </div>
@@ -908,17 +957,21 @@ export function BentoSection() {
                         style={{ willChange: "transform", transformStyle: "preserve-3d" }}
                     >
                     <div
-                        className="bento-card personalized-card group relative bg-white rounded-3xl shadow-xl overflow-hidden
-                                   hover:shadow-2xl transition-shadow duration-200 opacity-0 h-full"
+                        className="bento-card bento-card-premium personalized-card group relative rounded-3xl overflow-hidden
+                                   transition-all duration-200 opacity-0 h-full backdrop-blur-xl"
+                        style={{
+                            backgroundColor: "rgba(255, 255, 255, 0.65)",
+                            border: "1px solid rgba(207, 225, 185, 0.35)",
+                        }}
                     >
                         {/* ── Header ── */}
                         <div className="flex items-center gap-3 px-7 lg:px-8 pt-7 lg:pt-8 pb-5">
-                            <div className="w-11 h-11 rounded-2xl bg-gray-900 flex items-center justify-center flex-shrink-0">
-                                <Sparkles size={20} className="text-[#E8F5A8]" />
+                            <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "rgba(52, 78, 65, 0.08)" }}>
+                                <Sparkles size={20} style={{ color: "#344E41" }} />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900">Personalized for You</h3>
-                                <p className="text-xs text-gray-500 font-medium">AI-powered insights based on YOUR data</p>
+                                <h3 className="text-xl font-bold" style={{ color: "#1A2E22" }}>Personalized for You</h3>
+                                <p className="text-xs font-medium" style={{ color: "rgba(52, 78, 65, 0.55)" }}>AI-powered insights based on YOUR data</p>
                             </div>
                         </div>
 

@@ -39,15 +39,14 @@ export function ScrollProgress() {
     return (
         <div
             aria-hidden="true"
-            className="fixed inset-x-0 top-0 z-[9999] h-[3px] pointer-events-none"
-            style={{ background: "rgba(207, 225, 185, 0.18)" }}
+            className="fixed inset-x-0 top-0 z-[9999] h-[2px] pointer-events-none"
+            style={{ background: "rgba(207, 225, 185, 0.08)" }}
         >
             <div
                 ref={barRef}
                 className="h-full w-0"
                 style={{
-                    background: "linear-gradient(to right, #CFE1B9, #D4F291, #E8F5A8)",
-                    boxShadow: "0 0 10px 2px rgba(212, 242, 145, 0.7), 0 0 24px 4px rgba(207, 225, 185, 0.4)",
+                    background: "linear-gradient(to right, rgba(207,225,185,0.6), rgba(212,242,145,0.5))",
                     transition: "width 80ms linear",
                 }}
             />

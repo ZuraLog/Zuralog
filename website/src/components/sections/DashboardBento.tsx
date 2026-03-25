@@ -428,7 +428,7 @@ function DashboardMetricCard({ snapshot, slotIndex }: DashboardMetricCardProps) 
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
                         <snapshot.Icon size={13} style={{ color: snapshot.iconColor }} />
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{snapshot.label}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(52, 78, 65, 0.50)" }}>{snapshot.label}</p>
                     </div>
                     <div
                         className="w-2 h-2 rounded-full flex-shrink-0"
@@ -442,10 +442,10 @@ function DashboardMetricCard({ snapshot, slotIndex }: DashboardMetricCardProps) 
                     </span>
                 </div>
 
-                <p className="text-[10px] font-medium text-gray-400 mt-1 leading-snug line-clamp-1">{snapshot.sub}</p>
+                <p className="text-[10px] font-medium mt-1 leading-snug line-clamp-1" style={{ color: "rgba(52, 78, 65, 0.40)" }}>{snapshot.sub}</p>
 
                 <div className="mt-auto pt-2.5">
-                    <div className="h-1 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(52, 78, 65, 0.08)" }}>
                         <div
                             ref={barFillRef}
                             className="h-full rounded-full transition-colors duration-700"
@@ -630,28 +630,35 @@ export default function DashboardBento() {
         <div
             ref={cardRef}
             data-card="dashboard"
-            className="bento-card dashboard-bento group relative bg-white rounded-3xl p-7 lg:p-8 shadow-xl overflow-hidden opacity-0 sm:col-span-2 lg:col-span-2 lg:col-start-1 lg:row-start-2"
-            style={{ transformStyle: "preserve-3d", willChange: "transform" }}
+            className="bento-card bento-card-premium dashboard-bento group relative rounded-3xl p-7 lg:p-8 overflow-hidden opacity-0 sm:col-span-2 lg:col-span-2 lg:col-start-1 lg:row-start-2 backdrop-blur-xl"
+            style={{
+                backgroundColor: "rgba(255, 255, 255, 0.65)",
+                border: "1px solid rgba(207, 225, 185, 0.35)",
+                transformStyle: "preserve-3d",
+                willChange: "transform",
+            }}
         >
+            {/* Accent pattern strip — top edge */}
+            <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: "linear-gradient(to right, transparent, rgba(52,78,65,0.15), rgba(207,225,185,0.4), rgba(52,78,65,0.15), transparent)" }} />
             {/* Subtle inner glow on hover */}
             <div
                 className="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100"
-                style={{ boxShadow: "inset 0 0 40px rgba(232,245,168,0.12)" }}
+                style={{ boxShadow: "inset 0 0 40px rgba(207,225,185,0.08)" }}
             />
 
             <div className="flex flex-col lg:flex-row gap-6 h-full">
                 {/* Left: Title block */}
                 <div className="flex-shrink-0 lg:w-[200px]">
-                    <div className="w-11 h-11 rounded-2xl bg-gray-900 flex items-center justify-center mb-4">
-                        <LayoutDashboard size={20} className="text-[#E8F5A8]" />
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: "rgba(52, 78, 65, 0.08)" }}>
+                        <LayoutDashboard size={20} style={{ color: "#344E41" }} />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Your Unified Dashboard</h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">
+                    <h3 className="text-xl font-bold mb-2" style={{ color: "#1A2E22" }}>Your Unified Dashboard</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: "rgba(52, 78, 65, 0.55)" }}>
                         Real-time health metrics — tailored for you, live.
                     </p>
                     <div className="flex items-center gap-1.5 mt-4">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Live data</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(52, 78, 65, 0.40)" }}>Live data</span>
                     </div>
                 </div>
 

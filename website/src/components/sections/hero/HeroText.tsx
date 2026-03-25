@@ -62,10 +62,10 @@ export function HeroText() {
                 </p>
 
                 <button
-                    className="hero-cta pointer-events-auto mt-8 md:mt-12 bg-dark-charcoal text-white px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg font-semibold hover:bg-black transition-colors shadow-xl"
+                    className="hero-cta pointer-events-auto mt-8 md:mt-12 btn-pattern-light bg-[#CFE1B9] text-[#141E18] px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg font-semibold transition-all duration-300 shadow-[0_4px_20px_rgba(207,225,185,0.45)] hover:scale-[1.04] hover:shadow-[0_6px_35px_rgba(207,225,185,0.6)] active:scale-[0.97]"
                     onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                 >
-                    Waitlist Now
+                    <span className="relative z-2">Waitlist Now</span>
                 </button>
             </div>
         </div>
