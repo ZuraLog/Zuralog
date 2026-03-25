@@ -377,6 +377,12 @@ async def websocket_chat(
         return
 
     # Fix 6.8 (H-4): Track per-user WebSocket connection count
+    # _counter_incremented tracks whether we successfully incremented the Redis
+    # counter WITHOUT immediately decrementing it (i.e. the >3 branch was NOT
+    # taken).  The finally block below uses this flag to avoid a double-decr on
+    # the >3 early-return path and to guarantee a decr on all other exit paths
+    # that occur after the incr (fix for WS connection counter leak).
+    _counter_incremented = False
     if redis_client and user_id:
         conn_key = f"ws_connections:{user_id}"
         try:
@@ -387,88 +393,89 @@ async def websocket_chat(
                 await websocket.send_json({"type": "error", "content": "Too many active connections"})
                 await websocket.close(code=1008)
                 return
+            _counter_incremented = True
         except Exception as redis_exc:
             logger.warning("WebSocket connection tracking failed (fail-open): %s", redis_exc)
 
-    # ── Resolve / create conversation ─────────────────────────────────────────
-    resolved_conv_id: str
-    is_new_conversation = False
+    try:
+        # ── Resolve / create conversation ──────────────────────────────────────
+        resolved_conv_id: str
+        is_new_conversation = False
 
-    user_subscription_tier: str = "free"
+        user_subscription_tier: str = "free"
 
-    async with async_session() as db:
-        if conversation_id:
-            # Fix 6.11 (M-2): Wrap conversation lookup to handle invalid UUIDs
-            try:
-                result = await db.execute(
-                    select(Conversation).where(
-                        Conversation.id == conversation_id,
+        async with async_session() as db:
+            if conversation_id:
+                # Fix 6.11 (M-2): Wrap conversation lookup to handle invalid UUIDs
+                try:
+                    result = await db.execute(
+                        select(Conversation).where(
+                            Conversation.id == conversation_id,
+                            Conversation.user_id == user_id,
+                            Conversation.deleted_at.is_(None),
+                        )
+                    )
+                    conv = result.scalar_one_or_none()
+                except Exception as db_exc:
+                    logger.warning("Conversation lookup failed for id=%s: %s", conversation_id, db_exc)
+                    await websocket.send_json({"type": "error", "content": "Invalid conversation ID"})
+                    await websocket.close(code=4004, reason="Invalid conversation ID")
+                    return
+                if conv is None:
+                    await websocket.send_json({"type": "error", "content": "Conversation not found"})
+                    await websocket.close(code=4004, reason="Conversation not found")
+                    return
+                resolved_conv_id = conv.id
+                # Fetch tier so burst_limit can use it for existing-conversation connections.
+                tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
+                user_subscription_tier = tier_result.scalar_one_or_none() or "free"
+            else:
+                # S4: Enforce per-user conversation count limit based on subscription tier
+                tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
+                user_subscription_tier = tier_result.scalar_one_or_none() or "free"
+                conv_limit = (
+                    settings.max_conversations_premium
+                    if user_subscription_tier != "free"
+                    else settings.max_conversations_free
+                )
+                conv_count_result = await db.execute(
+                    select(func.count()).select_from(Conversation).where(
                         Conversation.user_id == user_id,
                         Conversation.deleted_at.is_(None),
                     )
                 )
-                conv = result.scalar_one_or_none()
-            except Exception as db_exc:
-                logger.warning("Conversation lookup failed for id=%s: %s", conversation_id, db_exc)
-                await websocket.send_json({"type": "error", "content": "Invalid conversation ID"})
-                await websocket.close(code=4004, reason="Invalid conversation ID")
-                return
-            if conv is None:
-                await websocket.send_json({"type": "error", "content": "Conversation not found"})
-                await websocket.close(code=4004, reason="Conversation not found")
-                return
-            resolved_conv_id = conv.id
-            # Fetch tier so burst_limit can use it for existing-conversation connections.
-            tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
-            user_subscription_tier = tier_result.scalar_one_or_none() or "free"
-        else:
-            # S4: Enforce per-user conversation count limit based on subscription tier
-            tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
-            user_subscription_tier = tier_result.scalar_one_or_none() or "free"
-            conv_limit = (
-                settings.max_conversations_premium
-                if user_subscription_tier != "free"
-                else settings.max_conversations_free
-            )
-            conv_count_result = await db.execute(
-                select(func.count()).select_from(Conversation).where(
-                    Conversation.user_id == user_id,
-                    Conversation.deleted_at.is_(None),
-                )
-            )
-            conv_count = conv_count_result.scalar() or 0
-            if conv_count >= conv_limit:
-                await websocket.send_json({
-                    "type": "error",
-                    "content": "You've reached the maximum number of conversations. Please delete some old ones to continue.",
-                })
-                await websocket.close(code=1008)
-                return
+                conv_count = conv_count_result.scalar() or 0
+                if conv_count >= conv_limit:
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": "You've reached the maximum number of conversations. Please delete some old ones to continue.",
+                    })
+                    await websocket.close(code=1008)
+                    return
 
-            conv = Conversation(user_id=user_id)
-            conv.updated_at = datetime.now(timezone.utc)
-            db.add(conv)
-            await db.commit()
-            await db.refresh(conv)
-            resolved_conv_id = conv.id
-            is_new_conversation = True
+                conv = Conversation(user_id=user_id)
+                conv.updated_at = datetime.now(timezone.utc)
+                db.add(conv)
+                await db.commit()
+                await db.refresh(conv)
+                resolved_conv_id = conv.id
+                is_new_conversation = True
 
-    logger.info(
-        "WebSocket connected for user '%s', conversation '%s' (new=%s)",
-        user_id,
-        resolved_conv_id,
-        is_new_conversation,
-    )
+        logger.info(
+            "WebSocket connected for user '%s', conversation '%s' (new=%s)",
+            user_id,
+            resolved_conv_id,
+            is_new_conversation,
+        )
 
-    # Send conversation ID immediately so the client can update its route.
-    await websocket.send_json({"type": "conversation_init", "conversation_id": resolved_conv_id})
+        # Send conversation ID immediately so the client can update its route.
+        await websocket.send_json({"type": "conversation_init", "conversation_id": resolved_conv_id})
 
-    # ── Message loop ──────────────────────────────────────────────────────────
-    # S2: Tracking variables for periodic JWT re-validation
-    last_revalidation = time.time()
-    messages_since_revalidation = 0
+        # ── Message loop ────────────────────────────────────────────────────────
+        # S2: Tracking variables for periodic JWT re-validation
+        last_revalidation = time.time()
+        messages_since_revalidation = 0
 
-    try:
         while True:
             try:
                 raw = await asyncio.wait_for(websocket.receive_text(), timeout=300.0)
@@ -687,7 +694,7 @@ async def websocket_chat(
                         elif etype == "error":
                             had_error = True
                             await websocket.send_json(event)
-                            await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id)})
+                            await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id), "client_action": None})
                             break
 
                 except Exception as orch_exc:
@@ -695,7 +702,7 @@ async def websocket_chat(
                     logger.exception("Orchestrator stream error for user '%s'", user_id)
                     sentry_sdk.capture_exception(orch_exc)
                     await websocket.send_json({"type": "error", "content": "Something went wrong. Please try again."})
-                    await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id)})
+                    await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id), "client_action": None})
                     continue
 
                 if had_error:
@@ -704,7 +711,7 @@ async def websocket_chat(
             # ── Persist assistant message ─────────────────────────────────────
             # Fix 6.4 (C-4): Skip persisting blank assistant messages
             if not full_content.strip():
-                await websocket.send_json({"type": "stream_end", "content": "", "conversation_id": str(resolved_conv_id)})
+                await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id), "client_action": None})
                 continue
 
             async with async_session() as db:
@@ -762,10 +769,9 @@ async def websocket_chat(
                 "type": "stream_end",
                 "content": full_content,
                 "message_id": str(assistant_msg_id),
-                "conversation_id": resolved_conv_id,
+                "conversation_id": str(resolved_conv_id),
+                "client_action": client_action,
             }
-            if client_action is not None:
-                final_payload["client_action"] = client_action
             await websocket.send_json(final_payload)
 
     except WebSocketDisconnect:
@@ -778,8 +784,10 @@ async def websocket_chat(
         except Exception:
             pass
     finally:
-        # Fix 6.8 (H-4): Decrement per-user connection count on disconnect
-        if redis_client and user_id:
+        # Fix 6.8 (H-4): Decrement per-user connection count on disconnect.
+        # Only decrement if we successfully incremented the counter and did NOT
+        # take the >3 early-return path (which does its own decr before returning).
+        if redis_client and user_id and _counter_incremented:
             conn_key = f"ws_connections:{user_id}"
             try:
                 await redis_client.decr(conn_key)
