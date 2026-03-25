@@ -8,7 +8,6 @@ the ``@cached`` decorator's ``key_params``.
 """
 
 import logging
-from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
