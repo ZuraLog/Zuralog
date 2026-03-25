@@ -370,7 +370,7 @@ class UserStreak {
   /// Whether a streak freeze is currently active (breaks streak loss).
   final bool isFrozen;
 
-  /// Number of freezes the user has applied on this streak.
+  /// Freeze tokens available for this streak (0–2). Decremented on each use.
   final int freezeCount;
 
   /// Deserializes from a JSON map.

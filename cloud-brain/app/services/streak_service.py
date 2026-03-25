@@ -37,26 +37,19 @@ async def apply_streak_freeze(
     if streak.freeze_used_this_week:
         raise ValueError("weekly_limit_reached")
 
+    # Capture token count before the freeze (use_freeze decrements it and commits)
+    tokens_before = streak.freeze_count
+
     tracker = StreakTracker()
     await tracker.use_freeze(user_id=user_id, streak_type=streak_type, db=db)
-
-    # Ensure is_frozen is set (tracker may not set it — belt-and-suspenders)
-    streak_result = await db.execute(
-        select(UserStreak).where(
-            UserStreak.user_id == user_id,
-            UserStreak.streak_type == streak_type,
-        )
-    )
-    updated_streak = streak_result.scalar_one_or_none()
-    if updated_streak and not updated_streak.is_frozen:
-        updated_streak.is_frozen = True
-        await db.commit()
+    # use_freeze sets is_frozen=True, decrements freeze_count, and commits.
+    # Do not re-query or re-commit — the session has already been committed.
 
     return {
         "success": True,
         "streak_type": streak_type,
         "message": "Streak frozen successfully.",
-        "freeze_tokens_remaining": max(0, (updated_streak.freeze_count if updated_streak else 0)),
+        "freeze_tokens_remaining": max(0, tokens_before - 1),
     }
 
 

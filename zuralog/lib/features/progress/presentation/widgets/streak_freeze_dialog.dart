@@ -28,7 +28,8 @@ Future<void> showStreakFreezeDialog(
   WidgetRef ref,
   UserStreak streak,
 ) async {
-  final freezesLeft = 2 - streak.freezeCount;
+  // freeze_count is tokens *available* (0–2), not tokens used.
+  final freezesLeft = streak.freezeCount;
 
   if (freezesLeft <= 0) {
     ScaffoldMessenger.of(context).showSnackBar(

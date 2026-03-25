@@ -26,7 +26,8 @@ class StreakHeatmapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final freezesLeft = (2 - freezeCount).clamp(0, 2);
+    // freeze_count is tokens *available* (0–2), not tokens used.
+    final freezesLeft = freezeCount.clamp(0, 2);
     final canFreeze = freezesLeft > 0;
 
     DateTime? startDate;

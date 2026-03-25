@@ -37,8 +37,7 @@ class GoalTrajectoryCard extends StatelessWidget {
     final pctInt = (pct * 100).round();
 
     final badgeColor = (goal.trendDirection == 'completed' ||
-            goal.trendDirection == 'on_track' ||
-            goal.trendDirection == 'in_progress')
+            goal.trendDirection == 'on_track')
         ? AppColors.statusConnected
         : AppColors.progressStreakWarm;
     final pctColor = badgeColor;

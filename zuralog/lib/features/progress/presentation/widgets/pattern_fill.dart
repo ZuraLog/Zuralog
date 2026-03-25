@@ -42,13 +42,16 @@ class _PatternFillState extends State<PatternFill> {
   @override
   Widget build(BuildContext context) {
     if (_patternImage != null) {
+      final dpr = MediaQuery.devicePixelRatioOf(context);
       return ShaderMask(
         shaderCallback: (bounds) {
+          // Scale the shader matrix by 1/dpr so the pattern renders at the
+          // same physical size regardless of screen density.
           return ImageShader(
             _patternImage!,
             TileMode.repeated,
             TileMode.repeated,
-            Matrix4.identity().storage,
+            (Matrix4.identity()..scaleByDouble(1.0 / dpr, 1.0 / dpr, 1.0, 1.0)).storage,
           );
         },
         blendMode: BlendMode.srcIn,
