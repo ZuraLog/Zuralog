@@ -57,7 +57,7 @@ class CorrelationHighlight {
     if (discoveredAt.isEmpty) return false;
     final discovered = DateTime.tryParse(discoveredAt);
     if (discovered == null) return false;
-    return DateTime.now().difference(discovered).inDays <= 7;
+    return DateTime.now().toUtc().difference(discovered.toUtc()).inDays < 8;
   }
 
   factory CorrelationHighlight.fromJson(Map<String, dynamic> json) {
@@ -333,7 +333,7 @@ class PatternExpandData {
       seriesBLabel: json['series_b_label'] as String? ?? '',
       aiExplanation: json['ai_explanation'] as String? ?? '',
       dataSources: (json['data_sources'] as List<dynamic>? ?? [])
-          .map((e) => e as String)
+          .whereType<String>()
           .toList(),
       dataDays: json['data_days'] as int? ?? 0,
       timeRange: json['time_range'] as String? ?? '30d',
