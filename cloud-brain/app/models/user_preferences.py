@@ -286,12 +286,12 @@ class UserPreferences(Base):
     )
 
     # Timestamps
-    created_at: Mapped[str | None] = mapped_column(
+    created_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=True,
     )
-    updated_at: Mapped[str | None] = mapped_column(
+    updated_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True),
         onupdate=func.now(),
         nullable=True,

@@ -95,10 +95,11 @@ class RateLimiter:
             )
         except redis.RedisError as exc:
             logger.error("Redis error in rate limiter: %s", exc)
+            # Fail-open: a Redis outage should not block all users
             return RateLimitResult(
-                allowed=False,
+                allowed=True,
                 limit=limit,
-                remaining=0,
+                remaining=-1,
                 reset_seconds=reset_seconds,
             )
 
