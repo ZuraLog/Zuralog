@@ -18,6 +18,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
@@ -153,7 +154,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } on DioException catch (e) {
       setState(() {
         _error =
-            e.response?.data['detail'] as String? ?? 'Something went wrong. Try again.';
+            e.response?.data?['detail'] as String? ?? 'Something went wrong. Try again.';
       });
     } catch (_) {
       setState(() => _error = 'Something went wrong. Try again.');
@@ -218,8 +219,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        setState(() => _birthday = picked);
                         Navigator.pop(sheetCtx);
+                        setState(() => _birthday = picked);
                       },
                       child: Text(
                         'Done',
@@ -284,8 +285,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   child: ZSelectableTile(
                     isSelected: isSelected,
                     onTap: () {
-                      setState(() => _gender = option);
                       Navigator.pop(sheetCtx);
+                      setState(() => _gender = option);
                     },
                     showCheckIndicator: true,
                     child: Text(
@@ -330,7 +331,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   String _formatHeight() {
     if (_heightCm == null) return 'Not set';
-    final units = ref.read(unitsSystemProvider);
+    final units = ref.watch(unitsSystemProvider);
     if (units == UnitsSystem.metric) {
       return '${_heightCm!.toStringAsFixed(0)} cm';
     }
@@ -488,7 +489,7 @@ class _AvatarSection extends StatelessWidget {
     required this.onTap,
   });
 
-  final dynamic profile;
+  final UserProfile? profile;
   final String initial;
   final bool uploading;
   final VoidCallback onTap;
@@ -506,7 +507,7 @@ class _AvatarSection extends StatelessWidget {
               alignment: Alignment.bottomRight,
               children: [
                 ZAvatar(
-                  imageUrl: profile?.avatarUrl as String?,
+                  imageUrl: profile?.avatarUrl,
                   initials: initial,
                   size: 88,
                 ),
