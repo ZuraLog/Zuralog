@@ -8,7 +8,6 @@
 ///   - Time-machine horizontal scroll strip (periods, newest first)
 ///   - Section: "Patterns We Found" — correlation cards
 ///   - Onboarding empty state when [hasEnoughData] is false
-///   - Quick-nav row → Correlations, Reports, Data Sources
 library;
 
 import 'dart:async';
@@ -499,11 +498,6 @@ class _CorrelationCard extends ConsumerWidget {
                   style: AppTextStyles.labelSmall.copyWith(color: accentColor),
                 ),
                 const Spacer(),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: AppDimens.iconMd,
-                  color: AppColors.textTertiary,
-                ),
               ],
             ),
           ],
