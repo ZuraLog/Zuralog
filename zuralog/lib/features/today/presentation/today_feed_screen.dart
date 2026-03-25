@@ -714,6 +714,8 @@ MetricTileData _buildTile(
   // /latest endpoint, return (null, null) for any non-map value rather
   // than crashing with a type cast error.
   final raw = latest[type];
+  debugPrint('[extractLastLogged] type=$type '
+      'raw.runtimeType=${raw.runtimeType} raw=$raw');
   if (raw is! Map<String, dynamic>) return (null, null);
   final entry = raw;
 

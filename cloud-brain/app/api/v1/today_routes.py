@@ -72,6 +72,11 @@ async def today_summary(
         TodayMetric(metric_type=r.metric_type, value=r.value, unit=r.unit)
         for r in rows.fetchall()
     ]
+    logger.info(
+        "[today_summary] user=%s date=%s metrics=%s",
+        user_id[:8], local_date,
+        [(m.metric_type, type(m.value).__name__, m.value) for m in metrics],
+    )
     return TodaySummaryResponse(date=str(local_date), metrics=metrics)
 
 
