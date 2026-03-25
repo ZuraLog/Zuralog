@@ -54,7 +54,7 @@ async def export_user_data(
                 for m in (raw or [])
             ]
         except Exception:
-            logger.exception("Failed to export memories for user '%s'", user_id)
+            logger.exception("Failed to export memories for user '%s'", user_id[:8])
             memories_export_partial = True
 
     conv_ids = [c.id for c in conversations]

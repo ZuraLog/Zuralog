@@ -637,7 +637,7 @@ async def websocket_chat(
                     user_msg = Message(
                         conversation_id=resolved_conv_id,
                         role="user",
-                        content=message_text,
+                        content=message_text or "[attachment]",
                         attachments=sanitized_attachments or None,
                     )
                     db.add(user_msg)
@@ -725,7 +725,7 @@ async def websocket_chat(
 
                 except Exception as orch_exc:
                     # Fix 6.13 (M-4): Hide exception detail from client; log server-side
-                    logger.exception("Orchestrator stream error for user '%s'", user_id)
+                    logger.exception("Orchestrator stream error for user '%s'", user_id[:8])
                     sentry_sdk.capture_exception(orch_exc)
                     await websocket.send_json({"type": "error", "content": "Something went wrong. Please try again."})
                     await websocket.send_json({"type": "stream_end", "content": "", "message_id": "", "conversation_id": str(resolved_conv_id), "client_action": None})
