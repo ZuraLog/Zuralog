@@ -387,6 +387,30 @@ class AuthService:
 
         return response.json()
 
+    async def admin_delete_user(self, user_id: str) -> None:
+        """Delete a user from Supabase Auth via admin API.
+
+        Uses the Supabase management API with the service role key to
+        permanently delete the user's auth record. Called as best-effort
+        during account deletion — failures are logged but do not abort
+        the deletion flow.
+
+        Args:
+            user_id: The Supabase Auth UID to delete.
+
+        Raises:
+            httpx.HTTPStatusError: If the Supabase admin API returns an error.
+        """
+        url = f"{self._base_url}/auth/v1/admin/users/{user_id}"
+        service_key = settings.supabase_service_key.get_secret_value()
+        headers = {
+            "Authorization": f"Bearer {service_key}",
+            "apikey": service_key,
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await client.delete(url, headers=headers)
+            resp.raise_for_status()
+
     @staticmethod
     def _extract_error(response: httpx.Response) -> str:
         """Extracts a human-readable error message from a Supabase response.

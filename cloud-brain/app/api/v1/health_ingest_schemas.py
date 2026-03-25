@@ -10,7 +10,9 @@ data types it has available. Each entry type has its own required fields.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class WorkoutEntry(BaseModel):
@@ -165,12 +167,28 @@ class HealthIngestRequest(BaseModel):
         Daily scalar metric snapshots to upsert.
     """
 
-    source: str = Field("apple_health", description="Data source identifier")
+    source: Literal["apple_health", "health_connect"] = Field("apple_health", description="Data source identifier")
     workouts: list[WorkoutEntry] = Field(default_factory=list)
     sleep: list[SleepEntry] = Field(default_factory=list)
     nutrition: list[NutritionEntry] = Field(default_factory=list)
     weight: list[WeightEntry] = Field(default_factory=list)
     daily_metrics: list[DailyMetricsEntry] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _check_max_items(self) -> "HealthIngestRequest":
+        total = (
+            len(self.workouts or [])
+            + len(self.sleep or [])
+            + len(self.nutrition or [])
+            + len(self.weight or [])
+            + len(self.daily_metrics or [])
+        )
+        if total > 500:
+            raise ValueError(
+                f"Payload contains {total} records; maximum is 500 per request. "
+                "Split into multiple requests."
+            )
+        return self
 
 
 class HealthIngestResponse(BaseModel):

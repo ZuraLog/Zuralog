@@ -223,6 +223,20 @@ final tileFilterProvider = StateProvider<HealthCategory?>((ref) => null);
 final dashboardTimeRangeProvider =
     StateProvider<TimeRange>((ref) => TimeRange.sevenDays);
 
+// ── Debounced Time Range ──────────────────────────────────────────────────────
+
+/// Debounced version of [dashboardTimeRangeProvider].
+///
+/// Waits 300 ms after the last change before the tile cascade fires,
+/// preventing rapid time range taps from launching 10 concurrent requests
+/// per tap. [dashboardTilesProvider] watches this provider's `.future`
+/// instead of [dashboardTimeRangeProvider] directly.
+final debouncedTimeRangeProvider = FutureProvider<TimeRange>((ref) async {
+  final range = ref.watch(dashboardTimeRangeProvider);
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  return range;
+});
+
 // ── Custom Date Range ─────────────────────────────────────────────────────────
 
 /// Session-only custom date range. Null when time range is not [TimeRange.custom].
@@ -584,7 +598,10 @@ final tileOrderingProvider = Provider<List<TileId>>((ref) {
 ///
 /// Never throws — errors resolve to empty/noSource tiles.
 final dashboardTilesProvider = FutureProvider<List<TileData>>((ref) async {
-  final timeRange = ref.watch(dashboardTimeRangeProvider);
+  // Use the debounced provider so rapid chip taps don't cascade 10 parallel
+  // HTTP requests per tap. The 300 ms delay is introduced in
+  // [debouncedTimeRangeProvider].
+  final timeRange = await ref.watch(debouncedTimeRangeProvider.future);
   try {
     final dashAsync = await ref.watch(dashboardProvider.future);
     // Watch daily goals for goal-progress visualization (steps ring, water gauge).

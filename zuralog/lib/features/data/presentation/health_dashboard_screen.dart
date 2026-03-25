@@ -353,6 +353,14 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   await prefs.setInt(
                       _kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
                 }
+                if (!synced && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Sync failed. Pull down to try again.'),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
                 // Prime the server cache with fresh data before invalidating providers.
                 // Without this, ref.invalidate(dashboardProvider) would trigger a
                 // getDashboard() call that hits the server's stale in-memory cache.
@@ -472,6 +480,51 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                           // Write to dashboardTimeRangeProvider so tiles re-fetch with the new range.
                           ref.read(dashboardTimeRangeProvider.notifier).state = range;
                         },
+                      ),
+                    ),
+                  ),
+
+                // ── Network error banner ──────────────────────────────────
+                // Shown when the API call failed AND the user has at least one
+                // connected source (i.e. not all tiles show "noSource").
+                // When ALL tiles are noSource, the full empty-state below
+                // already handles the error message.
+                if (hasNetworkError && !allNoSource)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceXs,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppDimens.spaceSm),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusCard),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.cloud_off_rounded,
+                              size: 18,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
+                            ),
+                            const SizedBox(width: AppDimens.spaceSm),
+                            Expanded(
+                              child: Text(
+                                'Could not refresh data. Showing cached results.',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onErrorContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

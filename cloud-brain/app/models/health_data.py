@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, Float, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -67,7 +67,7 @@ class UnifiedActivity(Base):
     """
 
     __tablename__ = "unified_activities"
-    __table_args__ = (UniqueConstraint("source", "original_id", name="uq_activity_source_original"),)
+    __table_args__ = (UniqueConstraint("user_id", "source", "original_id", name="uq_activity_user_source_original"),)
 
     id: Mapped[str] = mapped_column(
         String,
@@ -76,6 +76,7 @@ class UnifiedActivity(Base):
     )
     user_id: Mapped[str] = mapped_column(
         String,
+        ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
     source: Mapped[str] = mapped_column(String)
@@ -117,6 +118,7 @@ class SleepRecord(Base):
     )
     user_id: Mapped[str] = mapped_column(
         String,
+        ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
     source: Mapped[str] = mapped_column(String)
@@ -157,6 +159,7 @@ class NutritionEntry(Base):
     )
     user_id: Mapped[str] = mapped_column(
         String,
+        ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
     source: Mapped[str] = mapped_column(String)
@@ -195,6 +198,7 @@ class WeightMeasurement(Base):
     )
     user_id: Mapped[str] = mapped_column(
         String,
+        ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
     source: Mapped[str] = mapped_column(String)

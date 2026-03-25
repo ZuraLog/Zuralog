@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from pydantic import SecretStr
 
 from app.api.v1.webhooks import router
 from app.database import get_db
@@ -38,7 +39,7 @@ class TestWebhookAuth:
     @patch("app.api.v1.webhooks.settings")
     async def test_rejects_missing_auth(self, mock_settings, client):
         """Request without Authorization header should be rejected with 403."""
-        mock_settings.revenuecat_webhook_secret = "secret-123"
+        mock_settings.revenuecat_webhook_secret = SecretStr("secret-123")
         response = await client.post("/api/v1/webhooks/revenuecat", json={})
         assert response.status_code == 403
 
@@ -46,7 +47,7 @@ class TestWebhookAuth:
     @patch("app.api.v1.webhooks.settings")
     async def test_rejects_wrong_secret(self, mock_settings, client):
         """Request with incorrect secret should be rejected with 403."""
-        mock_settings.revenuecat_webhook_secret = "secret-123"
+        mock_settings.revenuecat_webhook_secret = SecretStr("secret-123")
         response = await client.post(
             "/api/v1/webhooks/revenuecat",
             json={},
@@ -59,7 +60,7 @@ class TestWebhookAuth:
     @patch("app.api.v1.webhooks.settings")
     async def test_accepts_correct_secret(self, mock_settings, mock_service_cls, app, client):
         """Request with correct secret should return 200 with received=True."""
-        mock_settings.revenuecat_webhook_secret = "secret-123"
+        mock_settings.revenuecat_webhook_secret = SecretStr("secret-123")
 
         # Override the DB dependency with a mock
         mock_db = AsyncMock()
@@ -95,7 +96,7 @@ class TestWebhookAuth:
     @patch("app.api.v1.webhooks.settings")
     async def test_rejects_malformed_json(self, mock_settings, app, client):
         """Request with malformed JSON body should return 400."""
-        mock_settings.revenuecat_webhook_secret = "secret-123"
+        mock_settings.revenuecat_webhook_secret = SecretStr("secret-123")
 
         response = await client.post(
             "/api/v1/webhooks/revenuecat",

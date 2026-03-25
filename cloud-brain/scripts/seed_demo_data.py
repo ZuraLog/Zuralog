@@ -489,7 +489,7 @@ def seed_activities(cur):
           (id, user_id, source, original_id, activity_type, duration_seconds,
            distance_meters, calories, start_time)
         VALUES %s
-        ON CONFLICT (source, original_id) DO NOTHING
+        ON CONFLICT (user_id, source, original_id) DO NOTHING
     """,
         rows,
     )

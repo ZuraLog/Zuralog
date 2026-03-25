@@ -8,7 +8,7 @@ call the ingest endpoint multiple times without creating duplicate rows.
 
 import uuid
 
-from sqlalchemy import Column, Float, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Float, ForeignKey, Integer, String, UniqueConstraint
 
 from app.database import Base
 
@@ -51,7 +51,7 @@ class DailyHealthMetrics(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, index=True, nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     source = Column(String, nullable=False)
     date = Column(String, nullable=False)
 
