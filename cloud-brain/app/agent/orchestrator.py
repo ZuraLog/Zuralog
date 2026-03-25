@@ -348,6 +348,8 @@ class Orchestrator:
 
                         if result.success:
                             result_content = json.dumps(result.data)
+                            if len(result_content.encode("utf-8")) > 32768:  # 32KB cap on tool results
+                                result_content = json.dumps({"error": "Tool result too large", "truncated": True})
                         else:
                             result_content = json.dumps({"error": result.error or "Tool execution failed"})
 
@@ -522,11 +524,12 @@ class Orchestrator:
                             if result.success and isinstance(result.data, dict) and "client_action" in result.data:
                                 last_client_action = result.data
 
-                            result_content = (
-                                json.dumps(result.data)
-                                if result.success
-                                else json.dumps({"error": result.error or "Tool execution failed"})
-                            )
+                            if result.success:
+                                result_content = json.dumps(result.data)
+                                if len(result_content.encode("utf-8")) > 32768:  # 32KB cap on tool results
+                                    result_content = json.dumps({"error": "Tool result too large", "truncated": True})
+                            else:
+                                result_content = json.dumps({"error": result.error or "Tool execution failed"})
 
                             messages.append(
                                 {

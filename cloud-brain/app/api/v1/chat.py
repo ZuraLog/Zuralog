@@ -394,6 +394,8 @@ async def websocket_chat(
     resolved_conv_id: str
     is_new_conversation = False
 
+    user_subscription_tier: str = "free"
+
     async with async_session() as db:
         if conversation_id:
             # Fix 6.11 (M-2): Wrap conversation lookup to handle invalid UUIDs
@@ -416,6 +418,9 @@ async def websocket_chat(
                 await websocket.close(code=4004, reason="Conversation not found")
                 return
             resolved_conv_id = conv.id
+            # Fetch tier so burst_limit can use it for existing-conversation connections.
+            tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
+            user_subscription_tier = tier_result.scalar_one_or_none() or "free"
         else:
             # S4: Enforce per-user conversation count limit based on subscription tier
             tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
@@ -465,7 +470,11 @@ async def websocket_chat(
 
     try:
         while True:
-            raw = await websocket.receive_text()
+            try:
+                raw = await asyncio.wait_for(websocket.receive_text(), timeout=300.0)
+            except asyncio.TimeoutError:
+                await websocket.close(code=1001)
+                break
             if len(raw.encode("utf-8")) > 65536:
                 await websocket.send_json({"type": "error", "content": "Message payload too large"})
                 continue
@@ -534,7 +543,7 @@ async def websocket_chat(
             # Fix 6.5 (H-1): Per-minute burst limit check before daily rate limit
             if rate_limiter:
                 try:
-                    burst_result = await rate_limiter.check_burst_limit(user_id)
+                    burst_result = await rate_limiter.check_burst_limit(user_id, tier=user_subscription_tier)
                     if not burst_result.allowed:
                         await websocket.send_json({
                             "type": "error",
@@ -678,7 +687,7 @@ async def websocket_chat(
                         elif etype == "error":
                             had_error = True
                             await websocket.send_json(event)
-                            await websocket.send_json({"type": "stream_end", "content": "", "conversation_id": str(resolved_conv_id)})
+                            await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id)})
                             break
 
                 except Exception as orch_exc:
@@ -686,7 +695,7 @@ async def websocket_chat(
                     logger.exception("Orchestrator stream error for user '%s'", user_id)
                     sentry_sdk.capture_exception(orch_exc)
                     await websocket.send_json({"type": "error", "content": "Something went wrong. Please try again."})
-                    await websocket.send_json({"type": "stream_end", "content": "", "conversation_id": str(resolved_conv_id)})
+                    await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id)})
                     continue
 
                 if had_error:
