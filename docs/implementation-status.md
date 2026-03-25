@@ -7,6 +7,47 @@
 
 ---
 
+## Trends Tab — Full Redesign: Single-Screen Pattern Discovery (main, 2026-03-25)
+
+**Scope:** Complete redesign of the Trends Tab (Tab 5). Replaced the old multi-screen correlation explorer (Correlations, Reports, Data Sources) with a unified single-screen pattern discovery experience. Hero pattern card with topographic overlay, ranked pattern feed with in-place expansion (AnimatedSize), horizontal category filter chips, and AppBar subtitle showing pattern count.
+**Status:** `flutter analyze lib/features/trends/` — 0 issues.
+
+### What was implemented
+
+**Backend (`cloud-brain/`):**
+- `GET /api/v1/trends/pattern/{id}/expand` — new endpoint for retrieving expanded chart data, AI explanation, and Coach CTA payload for a single pattern.
+
+**Flutter (`zuralog/`):**
+
+*Models extended (`trends_models.dart`):*
+- `TrendPattern`: added `category` (Sleep/Activity/Heart/Nutrition/Body/Wellness), `discoveredAt` (ISO timestamp), `isNew` (boolean), `patternCount` (patterns discovered this session).
+- `PatternExpandData` (new) — contains `chartData: List<ChartSeriesPoint>`, `explanation: String`, `coachCta: String`.
+- `ChartSeriesPoint` (new) — `{x: DateTime, y: double, label: String}` for pattern charts.
+- Removed 13 dead model classes (old correlation explorers, report types, data source models).
+
+*New widgets (all in `lib/features/trends/presentation/widgets/`):*
+- `z_topographic_card.dart` (new shared widget) — pattern card with brand topographic overlay using `ImageShader` and DPI-correct matrix; fallback gradient.
+- `trends_hero_pattern_card.dart` — hero card displaying strongest correlation with topographic pattern, correlation strength percentage, and metric labels.
+- `trends_filter_chips.dart` — horizontal chip row for 7 categories (All, Sleep, Activity, Heart, Nutrition, Body, Wellness); tappable filter state.
+- `trends_pattern_feed.dart` — scrollable list of ranked patterns sorted by strength; each item is a `PressableCard`.
+- `trends_pattern_card_collapsed.dart` — compact view: metric labels, correlation %, category badge.
+- `trends_pattern_card_expanded.dart` — expanded view with `AnimatedSize`: inline chart, AI explanation text, "Discuss with Coach" CTA button.
+- `trends_skeleton_loader.dart` — skeleton matching actual content order.
+- `trends_empty_state.dart` — onboarding empty state with pattern count and CTA.
+
+*Routes & Screens:*
+- Deleted `correlations_screen.dart`, `reports_screen.dart`, `data_sources_screen.dart`.
+- Deleted 6 route constants and 3 `GoRoute` entries from `app_router.dart`.
+- Rewrote `trends_home_screen.dart` — single screen with hero card, filter chips, ranked feed, and in-place expansion logic.
+
+*Styling:*
+- Added `trends*` color tokens to `brand_colors.dart`: `trendsHeroGradient1`, `trendsHeroGradient2`, `trendsBadgeBackground`, etc.
+
+*Analytics:*
+- Added 4 event constants: `pattern_card_expanded`, `pattern_card_collapsed`, `filter_chip_tapped`, `coach_cta_tapped`.
+
+---
+
 ## Coach Tab — Production Hardening (main, 2026-03-25)
 
 **Scope:** Full security, rate-limiting, resilience, and UX-correctness audit of the Coach Tab across ~26 iterative rounds. All MEDIUM+ severity issues resolved. Deployed to Railway; all rounds passed healthcheck with zero deploy errors.

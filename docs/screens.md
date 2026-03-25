@@ -106,14 +106,11 @@ The emotional/motivational tab. Answers "am I on track?" without requiring chart
 
 ### 3.5 Trends Tab
 
-The analytical tab. Where Progress is emotional, Trends is intellectual. This is where Zuralog's cross-app reasoning becomes visual.
+The analytical tab. Where Progress is emotional, Trends is intellectual. A single, unified screen where Zuralog's cross-app reasoning becomes visual.
 
 | Screen | Type | Purpose |
 |--------|------|---------|
-| **Trends Home** | Tab root | AI-surfaced correlation cards ("Your sleep quality improves by 22% on days you run before 6pm"). A scrollable time-machine strip at the top allows browsing week-by-week or month-by-month historical summaries. Each correlation card is tappable for full analysis. **Common Correlation Suggestion cards** shown when the AI detects that additional tracked data would unlock a new correlation — e.g., "Start tracking stress to see how it affects your sleep" — tappable to open the Quick Log or relevant integration. |
-| **Correlations** | Pushed | Interactive correlation explorer. User picks two metrics (e.g., sleep duration vs. running distance) and sees a scatter plot or overlay chart. AI annotation explains the correlation in plain English. If insufficient data: "Correlations need at least 7 days of data. You have 3 days — check back soon." Backend `analytics/` engine already computes these — this is the visualization layer. |
-| **Reports** | Pushed | Auto-generated monthly health report. A polished, scrollable page: key stats, biggest improvements, areas of concern, integration activity summary, goal adherence rate. Exportable as PDF or shareable image. |
-| **Data Sources** | Pushed | Read-only transparency screen. Shows every integration feeding data into the app with a **staleness indicator** (green/yellow/red dot per integration), **last sync timestamp** under each integration name, and a **Reconnect button** for error-state integrations. A **data type breakdown** per integration lists exactly which data types it provides (e.g., "Strava: workouts, GPS routes, heart rate during exercise"). Answers "where is this number coming from?" — this is about data provenance, not connection management. |
+| **Trends Home** | Tab root | Single screen showing AI-discovered correlations ("Your sleep quality improves by 22% on days you run before 6pm"). **Hero Pattern Card** at the top displays the strongest correlation with a topographic brand pattern overlay. **Horizontal filter chips** (7 categories: All, Sleep, Activity, Heart, Nutrition, Body, Wellness) allow users to browse patterns by health domain. **Ranked Pattern Feed** below — scrollable list of correlations sorted by strength, each card tappable to expand. **In-place card expansion** (AnimatedSize) reveals a full chart, AI explanation, and Coach CTA without navigation. **AppBar subtitle** shows pattern count ("3 patterns discovered"). **Loading skeleton** while data loads. **Empty state** for onboarding ("No patterns yet — connect more apps to unlock insights"). No sub-screens or navigation to separate explorers; all discovery happens on this single screen. |
 
 ### 3.6 Auth & Onboarding
 
