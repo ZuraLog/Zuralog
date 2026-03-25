@@ -560,7 +560,12 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
       filePath: filePath,
       contentType: contentType,
     );
-    state = state?.copyWith(avatarUrl: avatarUrl);
+    if (state != null) {
+      state = state!.copyWith(avatarUrl: avatarUrl);
+    } else {
+      // Profile not loaded yet — re-fetch so state reflects the upload
+      await load();
+    }
   }
 
   /// Permanently deletes the authenticated user's account.
