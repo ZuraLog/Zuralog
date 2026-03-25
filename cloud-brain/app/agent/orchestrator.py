@@ -252,7 +252,7 @@ class Orchestrator:
             injection_mode = "dynamic" if db is not None else "static"
             logger.info(
                 "Processing message for user '%s': %d memory items, %d tools (%s)",
-                user_id,
+                user_id[:8],
                 len(memory_texts),
                 len(tools),
                 injection_mode,
@@ -282,7 +282,7 @@ class Orchestrator:
                     except Exception:
                         logger.warning(
                             "Failed to track usage for user '%s' on turn %d",
-                            user_id,
+                            user_id[:8],
                             turn + 1,
                             exc_info=True,
                         )
@@ -290,7 +290,7 @@ class Orchestrator:
                 if not response.choices:
                     logger.warning(
                         "Orchestrator: empty choices in LLM response for user '%s' on turn %d — stopping",
-                        user_id,
+                        user_id[:8],
                         turn + 1,
                     )
                     break
@@ -367,7 +367,7 @@ class Orchestrator:
                 final_content = assistant_message.content or ""
                 logger.info(
                     "Final response for user '%s' after %d turn(s)",
-                    user_id,
+                    user_id[:8],
                     turn + 1,
                 )
                 return AgentResponse(
@@ -379,7 +379,7 @@ class Orchestrator:
             logger.warning(
                 "Max tool turns (%d) exceeded for user '%s'",
                 MAX_TOOL_TURNS,
-                user_id,
+                user_id[:8],
             )
             return AgentResponse(
                 message="I'm having trouble retrieving all the information right now. "
@@ -513,7 +513,7 @@ class Orchestrator:
                                     result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
                                 except Exception as tool_exc:
                                     sentry_sdk.capture_exception(tool_exc)
-                                    logger.exception("Tool error in '%s' for user '%s'", func_name, user_id)
+                                    logger.exception("Tool error in '%s' for user '%s'", func_name, user_id[:8])
                                     yield {"type": "tool_end", "tool_name": func_name}
                                     yield {"type": "error", "content": "Something went wrong. Please try again."}
                                     return
@@ -559,5 +559,5 @@ class Orchestrator:
                 raise
             except Exception as exc:
                 sentry_sdk.capture_exception(exc)
-                logger.exception("process_message_stream error for user '%s'", user_id)
+                logger.exception("process_message_stream error for user '%s'", user_id[:8])
                 yield {"type": "error", "content": "Something went wrong. Please try again."}

@@ -105,7 +105,6 @@ async def export_user_data(
 
     export_data = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
-        "user_id": user_id,
         "conversations": conversations_data,
         "preferences": {
             "coach_persona": preferences.coach_persona if preferences else None,

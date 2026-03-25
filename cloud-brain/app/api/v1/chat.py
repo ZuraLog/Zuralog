@@ -501,8 +501,9 @@ async def websocket_chat(
                         await websocket.send_json({"type": "error", "content": "Session expired."})
                         await websocket.close(code=4003)
                         return
-                except HTTPException:
-                    await websocket.send_json({"type": "error", "content": "Session expired."})
+                except Exception:
+                    # On any auth error (expired, revoked, Supabase unreachable), close gracefully
+                    await websocket.send_json({"type": "error", "content": "Session expired. Please reconnect."})
                     await websocket.close(code=4003)
                     return
                 last_revalidation = time.time()
