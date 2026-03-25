@@ -97,6 +97,11 @@ final class ApiCoachRepository implements CoachRepository {
   final SecureStorage _secureStorage;
   final String _wsBaseUrl;
 
+  /// Tracks how many times we have re-attempted the WebSocket connection
+  /// after receiving close code 4003 (token expired). Reset at the start
+  /// of each new [sendMessageStream] call.
+  int _wsReconnectAttempts = 0;
+
   static String _deriveWsUrl() {
     const String envUrl = String.fromEnvironment('BASE_URL', defaultValue: '');
     final String httpUrl = envUrl.isNotEmpty
@@ -257,6 +262,8 @@ final class ApiCoachRepository implements CoachRepository {
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
   }) {
+    // Reset reconnect counter for each new message stream.
+    _wsReconnectAttempts = 0;
     // Using a StreamController so we can handle async WS setup cleanly.
     final doneCompleter = Completer<void>();
     final controller = StreamController<ChatStreamEvent>(
@@ -294,6 +301,8 @@ final class ApiCoachRepository implements CoachRepository {
     StreamSubscription<dynamic>? subscription;
     // Fix C5: track whether the sink has already been closed.
     bool sinkClosed = false;
+    // Tracks whether a 4003-triggered reconnect should happen after cleanup.
+    bool reconnectAfter4003 = false;
 
     try {
       // Read a fresh JWT — WS connections bypass the Dio interceptor chain.
@@ -481,6 +490,26 @@ final class ApiCoachRepository implements CoachRepository {
 
       // Fix C4: wait for the single doneCompleter.
       await doneCompleter.future;
+
+      // Check for close code 4003 (token expired on the WebSocket side).
+      // Attempt up to 2 token refreshes before giving up.
+      if (channel.closeCode == 4003) {
+        if (_wsReconnectAttempts < 2) {
+          _wsReconnectAttempts++;
+          try {
+            await _apiClient.refreshToken();
+            reconnectAfter4003 = true;
+          } catch (refreshError) {
+            if (!controller.isClosed) {
+              controller.add(StreamError('Session expired. Please log in again.'));
+            }
+          }
+        } else {
+          if (!controller.isClosed) {
+            controller.add(const StreamError('Session expired. Please log in again.'));
+          }
+        }
+      }
     } catch (e) {
       String errorMessage;
       if (e is SocketException || e is WebSocketChannelException) {
@@ -501,19 +530,39 @@ final class ApiCoachRepository implements CoachRepository {
         sinkClosed = true;
         await channel?.sink.close();
       }
-      if (!controller.isClosed) await controller.close();
+      // Only close the controller if we are not about to reconnect.
+      if (!reconnectAfter4003 && !controller.isClosed) await controller.close();
+    }
+
+    // Reconnect outside the try/finally so the old subscription and channel
+    // are fully torn down before we open a new WebSocket connection.
+    if (reconnectAfter4003) {
+      await _runWebSocketStream(
+        controller: controller,
+        doneCompleter: Completer<void>(),
+        conversationId: conversationId,
+        text: text,
+        persona: persona,
+        proactivity: proactivity,
+        responseLength: responseLength,
+        attachments: attachments,
+        isRegenerate: isRegenerate,
+      );
     }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   DateTime _parseDate(dynamic raw) {
-    if (raw == null) return DateTime.fromMillisecondsSinceEpoch(0);
+    if (raw == null) {
+      debugPrint('[ApiCoachRepository] _parseDate: received null, falling back to DateTime.now()');
+      return DateTime.now();
+    }
     try {
       return DateTime.parse(raw as String).toLocal();
     } catch (e) {
-      debugPrint('[ApiCoachRepository] Date parse failed for "$raw": $e');
-      return DateTime.fromMillisecondsSinceEpoch(0);
+      debugPrint('[ApiCoachRepository] Date parse failed for "$raw": $e — falling back to DateTime.now()');
+      return DateTime.now();
     }
   }
 }
