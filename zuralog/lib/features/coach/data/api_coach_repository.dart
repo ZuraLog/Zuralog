@@ -265,13 +265,8 @@ final class ApiCoachRepository implements CoachRepository {
     // Reset reconnect counter for each new message stream.
     _wsReconnectAttempts = 0;
     // Using a StreamController so we can handle async WS setup cleanly.
-    final doneCompleter = Completer<void>();
-    final controller = StreamController<ChatStreamEvent>(
-      onCancel: () {
-        // Fix C4: single doneCompleter replaces Future.any pattern.
-        if (!doneCompleter.isCompleted) doneCompleter.complete();
-      },
-    );
+    final doneCompleter = Completer<int?>();
+    final controller = StreamController<ChatStreamEvent>();
     _runWebSocketStream(
       controller: controller,
       doneCompleter: doneCompleter,
@@ -288,7 +283,7 @@ final class ApiCoachRepository implements CoachRepository {
 
   Future<void> _runWebSocketStream({
     required StreamController<ChatStreamEvent> controller,
-    required Completer<void> doneCompleter,
+    required Completer<int?> doneCompleter,
     required String? conversationId,
     required String text,
     required String persona,
@@ -297,6 +292,12 @@ final class ApiCoachRepository implements CoachRepository {
     required List<Map<String, dynamic>> attachments,
     bool isRegenerate = false,
   }) async {
+    // Fix 3: re-wire onCancel to this invocation's completer so cancellation
+    // during a reconnect completes the active (not the original) completer.
+    controller.onCancel = () {
+      if (!doneCompleter.isCompleted) doneCompleter.complete(null);
+    };
+
     WebSocketChannel? channel;
     StreamSubscription<dynamic>? subscription;
     // Fix C5: track whether the sink has already been closed.
@@ -309,7 +310,7 @@ final class ApiCoachRepository implements CoachRepository {
       final token = await _secureStorage.getAuthToken();
       if (token == null) {
         if (!controller.isClosed) controller.add(const StreamError('No auth token available'));
-        if (!doneCompleter.isCompleted) doneCompleter.complete();
+        if (!doneCompleter.isCompleted) doneCompleter.complete(null);
         await controller.close();
         return;
       }
@@ -441,6 +442,14 @@ final class ApiCoachRepository implements CoachRepository {
                   channel?.sink.close();
                 }
 
+              case 'rate_limit':
+                final msg2 = msg['content'] as String? ?? 'Rate limit reached. Please try again later.';
+                controller.add(StreamError(msg2));
+                if (!sinkClosed) {
+                  sinkClosed = true;
+                  channel?.sink.close();
+                }
+
               default:
                 // Unknown message type — ignore.
                 break;
@@ -463,11 +472,13 @@ final class ApiCoachRepository implements CoachRepository {
           }
           if (!controller.isClosed) controller.add(StreamError(errorMessage));
           // Fix C4: complete the single doneCompleter.
-          if (!doneCompleter.isCompleted) doneCompleter.complete();
+          if (!doneCompleter.isCompleted) doneCompleter.complete(null);
         },
         onDone: () {
-          // Fix C4: complete the single doneCompleter.
-          if (!doneCompleter.isCompleted) doneCompleter.complete();
+          // Fix 1: capture closeCode before completing so it is available after
+          // the channel may be torn down.
+          final capturedCode = channel?.closeCode;
+          if (!doneCompleter.isCompleted) doneCompleter.complete(capturedCode);
         },
         cancelOnError: false,
       );
@@ -489,11 +500,11 @@ final class ApiCoachRepository implements CoachRepository {
       );
 
       // Fix C4: wait for the single doneCompleter.
-      await doneCompleter.future;
+      final closeCode = await doneCompleter.future;
 
       // Check for close code 4003 (token expired on the WebSocket side).
       // Attempt up to 2 token refreshes before giving up.
-      if (channel.closeCode == 4003) {
+      if (closeCode == 4003) {
         if (_wsReconnectAttempts < 2) {
           _wsReconnectAttempts++;
           try {
@@ -539,7 +550,7 @@ final class ApiCoachRepository implements CoachRepository {
     if (reconnectAfter4003) {
       await _runWebSocketStream(
         controller: controller,
-        doneCompleter: Completer<void>(),
+        doneCompleter: Completer<int?>(),
         conversationId: conversationId,
         text: text,
         persona: persona,

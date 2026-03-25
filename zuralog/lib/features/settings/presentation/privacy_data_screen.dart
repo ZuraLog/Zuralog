@@ -64,8 +64,26 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
       await Share.shareXFiles([XFile(file.path)], text: 'Zuralog Data Export');
     } catch (e) {
       if (mounted) {
+        String errorMessage;
+        if (e is DioException) {
+          switch (e.response?.statusCode) {
+            case 429:
+              errorMessage = 'You\'ve already exported recently. Try again later.';
+              break;
+            case 401:
+              errorMessage = 'Session expired. Please log in again.';
+              break;
+            default:
+              errorMessage = 'Export failed. Please try again.';
+          }
+        } else {
+          errorMessage = 'Export failed. Please try again.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(
+            content: Text(errorMessage),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
