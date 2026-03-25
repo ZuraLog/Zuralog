@@ -225,7 +225,6 @@ class Orchestrator:
             an optional ``client_action`` dict for the Edge Agent.
         """
         with sentry_sdk.start_transaction(op="ai.process_message", name="orchestrator.process_message") as txn:
-            txn.set_tag("user_id", user_id)
             txn.set_tag("tool_injection_mode", "dynamic" if db is not None else "static")
 
             # 1. Retrieve relevant memories first (needed for prompt injection)
@@ -424,7 +423,6 @@ class Orchestrator:
         with sentry_sdk.start_transaction(
             op="ai.process_message_stream", name="orchestrator.process_message_stream"
         ) as txn:
-            txn.set_tag("user_id", user_id)
 
             try:
                 # Build context (same as process_message)

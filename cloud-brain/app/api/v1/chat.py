@@ -1101,7 +1101,11 @@ async def update_conversation(
         )
 
     if body.title is not None:
-        conv.title = sanitize_for_llm(body.title)[:200]
+        stripped_title = body.title.strip()
+        if not stripped_title:
+            raise HTTPException(status_code=422, detail="Title cannot be empty")
+        safe_title = sanitize_for_llm(stripped_title)[:200]
+        conv.title = safe_title
 
     if body.archived is not None:
         try:
