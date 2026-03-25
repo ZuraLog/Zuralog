@@ -1,9 +1,59 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-19 (Today tab daily goals wiring complete: real API integration, cross-tab reactivity, mock data)  
+**Last Updated:** 2026-03-25 (Progress Tab full redesign: Flame Hero layout, streak hardening, brand pattern, accessibility)  
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Progress Tab — Full Redesign: Flame Hero Layout (feat/progress-tab-redesign, 2026-03-25)
+
+**Scope:** Complete redesign of the Progress Tab (Tab 4). Replaced the old goal rings / WoW rows layout with "The Flame" — a Duolingo-inspired streak hero, heatmap, achievement hook, vertical goal trajectory cards, and journal CTA. Includes backend hardening of the streak freeze system.
+**Branch:** `feat/progress-tab-redesign` → merged to main (2026-03-25)
+**Status:** `flutter analyze lib/features/progress/` — 0 issues. All audit cycles passed (3 rounds).
+
+### What was implemented
+
+**Backend (`cloud-brain/`):**
+- `streak_service.py` (new) — single source of truth for freeze operations: `apply_streak_freeze` with full eligibility checks (`freeze_count > 0`, `not is_frozen`, `not freeze_used_this_week`), `get_freeze_status` helper.
+- `streak_tracker.py` — `use_freeze` now sets `is_frozen = True`; `record_activity` clears `is_frozen = False`.
+- `streak_routes.py` — freeze endpoint uses `streak_service`; rate limited to `5/minute`; `StreakResponse` and `_streak_to_response` now include `is_frozen`.
+- `progress_routes.py` — `/progress/home` enriched: timezone-aware `_resolve_local_date(request)` via `zoneinfo`; `_compute_14day_history`, `_compute_week_hits`, `_compute_trend_direction` all accept `local_date`; open-ended goals always return `on_track`; `freeze_tokens_available` and `history_start_date` added to response.
+- `user_streak.py` + migration — `is_frozen: Mapped[bool]` column added.
+
+**Flutter (`zuralog/`):**
+
+*New widgets (all in `lib/features/progress/presentation/widgets/`):*
+- `pattern_fill.dart` — `StatefulWidget` loading `assets/images/brand_pattern.png` via `ImageShader` with DPI-correct matrix; gradient fallback.
+- `pattern_progress_bar.dart` — animated `TweenAnimationBuilder` bar, animates from previous fraction on rebuild.
+- `streak_flame_hero.dart` — hero card: count with `PatternFill`, personal best badge, `StreakWeekCalendarRow`, "Today: done/pending" label. `Semantics` label on count.
+- `streak_week_calendar_row.dart` — 7-dot Mon–Sun row, labels `['M','Tu','W','Th','F','Sa','Su']`.
+- `streak_heatmap_card.dart` — 14-dot history, pre-history dots, freeze button disabled at 0.35 opacity when `freezeCount == 0`.
+- `streak_type_tile.dart` — compact emoji + count tile; 4 streak types.
+- `streak_freeze_dialog.dart` — extracted from old screen; uses `streak_service` eligibility; styled `SnackBar`.
+- `next_achievement_card.dart` — `PatternFill` 3px top accent strip; Material icon map; `PatternProgressBar`.
+- `goal_trajectory_card.dart` — trend-direction-based badge color; `PressableCard`.
+- `journal_prompt_cta.dart` — dashed border, rotating weekly prompt, full-card tap via `PressableCard`.
+- `pressable_card.dart` (new shared) — 0.97 scale on tap-down, 120ms ease-out.
+- `progress_skeleton_loader.dart` — skeleton matching actual content order.
+
+*Modified:*
+- `progress_home_screen.dart` — full `_ContentView` rewrite; staggered `ZFadeSlideIn`; `RefreshIndicator` on all states; milestone card dismissal with `SharedPreferences`; animation paused when route inactive.
+- `app_colors.dart` — 4 dark mode tokens corrected (`backgroundDark = #141E18`, `surfaceDark = #1E2E24`, etc.); 10 `progressXxx` getters added to `AppColorsOf`.
+- `app_dimens.dart` — `iconContainerSm/Md/Lg` constants added.
+- `progress_models.dart` — `UserStreak.freezeCount` documented as tokens-available (not used).
+
+### Key decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Streak freeze eligibility enforced in `streak_service.py` | Client-side guards are UX only; production freeze logic must live server-side |
+| `freeze_count` = tokens available (0–2) | Existing DB semantic; `freeze_tokens_available` alias returned for client clarity |
+| `PatternFill` with `ImageShader` + DPI scaling | Design system requires brand pattern on hero/progress bars; DPI-correct shader avoids tiny pattern on retina displays |
+| `_compute_14day_history` approximation documented as tech debt | No per-day activity log table exists; freeze gap days show as "missed" — `TODO(activity-log)` comment added |
+| Dark mode token correction affects all screens | Progress tab already used correct colors; other tabs used charcoal grey; fixing globally avoids visual split |
+| `PressableCard` extracted as shared widget | 4+ cards needed identical 0.97 press feedback; shared to prevent future drift |
 
 ---
 
