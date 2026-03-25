@@ -381,7 +381,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: $e')),
+          SnackBar(content: Text('Failed to send. Please try again.')),
         );
       }
     }
@@ -1655,7 +1655,7 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
       Sentry.captureException(e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: $e')),
+          SnackBar(content: Text('Failed to send. Please try again.')),
         );
       }
     }
