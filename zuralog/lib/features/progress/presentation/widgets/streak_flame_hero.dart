@@ -139,33 +139,37 @@ class StreakFlameHero extends StatelessWidget {
           ],
           if (freezeCount > 0) ...[
             const SizedBox(height: AppDimens.spaceMd),
-            GestureDetector(
-              onTap: onFreezeTap,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                  vertical: AppDimens.spaceXs,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.categoryBody.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-                  border: Border.all(
-                    color: AppColors.categoryBody.withValues(alpha: 0.25),
+            Semantics(
+              label: 'Use streak freeze — $freezeCount remaining',
+              button: true,
+              child: GestureDetector(
+                onTap: onFreezeTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                    vertical: AppDimens.spaceXs,
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🧊', style: TextStyle(fontSize: 13)),
-                    const SizedBox(width: AppDimens.spaceXs),
-                    Text(
-                      '$freezeCount freeze token${freezeCount == 1 ? '' : 's'} available',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.categoryBody,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  decoration: BoxDecoration(
+                    color: AppColors.categoryBody.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusButton),
+                    border: Border.all(
+                      color: AppColors.categoryBody.withValues(alpha: 0.25),
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🧊', style: TextStyle(fontSize: 13)),
+                      const SizedBox(width: AppDimens.spaceXs),
+                      Text(
+                        '$freezeCount freeze token${freezeCount == 1 ? '' : 's'} available',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.categoryBody,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

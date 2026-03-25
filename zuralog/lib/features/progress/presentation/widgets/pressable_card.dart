@@ -8,10 +8,13 @@ class PressableCard extends StatefulWidget {
     required this.child,
     this.onTap,
     this.borderRadius = 16.0,
+    this.semanticsLabel,
   });
   final Widget child;
   final VoidCallback? onTap;
   final double borderRadius;
+  /// Optional label announced by screen readers when this card is focused.
+  final String? semanticsLabel;
 
   @override
   State<PressableCard> createState() => _PressableCardState();
@@ -22,7 +25,7 @@ class _PressableCardState extends State<PressableCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final detector = GestureDetector(
       onTapDown: widget.onTap != null ? (_) => setState(() => _scale = 0.97) : null,
       onTapUp: widget.onTap != null
           ? (_) {
@@ -38,5 +41,14 @@ class _PressableCardState extends State<PressableCard> {
         child: widget.child,
       ),
     );
+
+    if (widget.semanticsLabel != null) {
+      return Semantics(
+        label: widget.semanticsLabel,
+        button: widget.onTap != null,
+        child: detector,
+      );
+    }
+    return detector;
   }
 }

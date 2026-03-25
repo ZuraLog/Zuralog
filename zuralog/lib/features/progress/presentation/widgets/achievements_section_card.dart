@@ -56,12 +56,16 @@ class AchievementsSectionCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: onGalleryTap,
-                child: Text(
-                  'Gallery',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.progressTextSecondary,
+              Semantics(
+                label: 'View all achievements',
+                button: true,
+                child: GestureDetector(
+                  onTap: onGalleryTap,
+                  child: Text(
+                    'Gallery',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.progressTextSecondary,
+                    ),
                   ),
                 ),
               ),
