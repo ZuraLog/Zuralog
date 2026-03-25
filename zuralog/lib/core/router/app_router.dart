@@ -22,9 +22,6 @@
 ///   /progress/report                → WeeklyReportScreen
 ///   /progress/journal               → JournalScreen
 /// /trends                           → TrendsHomeScreen (tab 4)
-///   /trends/correlations            → CorrelationsScreen
-///   /trends/reports                 → ReportsScreen
-///   /trends/sources                 → DataSourcesScreen
 /// /settings                         → SettingsHubScreen (pushed over shell)
 ///   /settings/account … /settings/about  → sub-screens
 /// /profile                          → ProfileScreen (pushed over shell)
@@ -86,9 +83,6 @@ import 'package:zuralog/features/progress/presentation/journal_screen.dart';
 
 // ── Tab 4: Trends ─────────────────────────────────────────────────────────────
 import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
-import 'package:zuralog/features/trends/presentation/correlations_screen.dart';
-import 'package:zuralog/features/trends/presentation/reports_screen.dart';
-import 'package:zuralog/features/trends/presentation/data_sources_screen.dart';
 
 // ── Settings (pushed over shell) ──────────────────────────────────────────────
 import 'package:zuralog/features/settings/presentation/settings_hub_screen.dart';
@@ -604,32 +598,6 @@ List<RouteBase> _buildRoutes() {
                 module: 'trends',
                 child: TrendsHomeScreen(),
               ),
-              routes: [
-                GoRoute(
-                  path: 'correlations',
-                  name: RouteNames.correlations,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'trends.correlations',
-                    child: CorrelationsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'reports',
-                  name: RouteNames.reports,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'trends.reports',
-                    child: ReportsScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: 'sources',
-                  name: RouteNames.dataSources,
-                  builder: (context, state) => const SentryErrorBoundary(
-                    module: 'trends.data_sources',
-                    child: DataSourcesScreen(),
-                  ),
-                ),
-              ],
             ),
           ],
         ),

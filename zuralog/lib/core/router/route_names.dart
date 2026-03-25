@@ -27,9 +27,6 @@
 ///   /progress/report              → WeeklyReportScreen
 ///   /progress/journal             → JournalScreen
 /// /trends                         → TrendsHomeScreen (tab 4)
-///   /trends/correlations          → CorrelationsScreen
-///   /trends/reports               → ReportsScreen
-///   /trends/sources               → DataSourcesScreen
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
 ///   /settings/notifications       → NotificationSettingsScreen
@@ -223,24 +220,6 @@ abstract final class RouteNames {
 
   /// Path for the Trends Home screen.
   static const String trendsPath = '/trends';
-
-  /// Name for the Correlations Explorer screen.
-  static const String correlations = 'correlations';
-
-  /// Path for the Correlations screen.
-  static const String correlationsPath = '/trends/correlations';
-
-  /// Name for the Reports screen.
-  static const String reports = 'reports';
-
-  /// Path for the Reports screen.
-  static const String reportsPath = '/trends/reports';
-
-  /// Name for the Data Sources screen.
-  static const String dataSources = 'dataSources';
-
-  /// Path for the Data Sources screen.
-  static const String dataSourcesPath = '/trends/sources';
 
   // ── Settings (pushed over shell) ─────────────────────────────────────────
 

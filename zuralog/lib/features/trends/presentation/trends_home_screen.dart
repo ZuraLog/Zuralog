@@ -200,7 +200,7 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
                   ),
                   child: _CorrelationCard(
                     highlight: data.correlationHighlights[index],
-                    onTap: () => context.push(RouteNames.correlationsPath),
+                    onTap: () {},
                   ),
                 ),
                 childCount: data.correlationHighlights.length,
@@ -253,12 +253,6 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
               ),
             ),
           ],
-
-          // ── Quick-nav row ──────────────────────────────────────────────
-          const SliverToBoxAdapter(child: _SectionHeader(title: 'Explore')),
-          SliverToBoxAdapter(
-            child: _QuickNavRow(),
-          ),
 
           SliverToBoxAdapter(
             child: SizedBox(height: AppDimens.bottomClearance(context)),
@@ -557,106 +551,6 @@ class _CorrelationStrengthBadge extends StatelessWidget {
             style: AppTextStyles.labelSmall.copyWith(color: accentColor),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Quick-nav Row ─────────────────────────────────────────────────────────────
-
-class _QuickNavRow extends StatelessWidget {
-  const _QuickNavRow();
-
-  static const _items = [
-    _QuickNavItem(
-      icon: Icons.scatter_plot_rounded,
-      label: 'Explorer',
-      routePath: RouteNames.correlationsPath,
-    ),
-    _QuickNavItem(
-      icon: Icons.summarize_rounded,
-      label: 'Reports',
-      routePath: RouteNames.reportsPath,
-    ),
-    _QuickNavItem(
-      icon: Icons.device_hub_rounded,
-      label: 'Sources',
-      routePath: RouteNames.dataSourcesPath,
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Row(
-        children: _items
-            .map(
-              (item) => Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimens.spaceXs),
-                  child: _QuickNavButton(item: item),
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-@immutable
-class _QuickNavItem {
-  const _QuickNavItem({
-    required this.icon,
-    required this.label,
-    required this.routePath,
-  });
-
-  final IconData icon;
-  final String label;
-  final String routePath;
-}
-
-class _QuickNavButton extends ConsumerWidget {
-  const _QuickNavButton({required this.item});
-  final _QuickNavItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return GestureDetector(
-      onTap: () {
-        ref.read(hapticServiceProvider).light();
-        ref.read(analyticsServiceProvider).capture(
-          event: AnalyticsEvents.trendsNavTapped,
-          properties: {'section': item.label.toLowerCase()},
-        );
-        context.push(item.routePath);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: AppDimens.spaceMd,
-          horizontal: AppDimens.spaceSm,
-        ),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(item.icon, size: 22, color: AppColors.primary),
-            const SizedBox(height: AppDimens.spaceXs),
-            Text(
-              item.label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
