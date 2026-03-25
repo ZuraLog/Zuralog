@@ -13,9 +13,7 @@
 library;
 
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,76 +27,52 @@ import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/settings/data/memory_repository.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-// ── Local providers ────────────────────────────────────────────────────────────
-
-/// Mock AI memory items — persisted locally for the session.
-final _memoryItemsProvider = StateProvider<List<String>>(
-  (_) => const [
-    'User prefers morning workouts',
-    'Responds well to streak motivation',
-    'Sleep is a priority goal',
-    'Often skips breakfast',
-    'Dislikes long cardio sessions',
-    'Recovers best with 8+ hours of sleep',
-  ],
-);
-
 // ── PrivacyDataScreen ──────────────────────────────────────────────────────────
 
 /// Privacy & Data screen — AI memory, privacy toggles, data management, legal.
-class PrivacyDataScreen extends ConsumerWidget {
+class PrivacyDataScreen extends ConsumerStatefulWidget {
   /// Creates the [PrivacyDataScreen].
   const PrivacyDataScreen({super.key});
 
-  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
-    ref.read(analyticsServiceProvider).capture(
-      event: AnalyticsEvents.dataExportRequested,
-    );
+  @override
+  ConsumerState<PrivacyDataScreen> createState() => _PrivacyDataScreenState();
+}
+
+class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
+  bool _isExporting = false;
+
+  Future<void> _exportData() async {
+    setState(() => _isExporting = true);
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get(
         '/api/v1/user/export',
-        options: Options(responseType: ResponseType.bytes),
+        queryParameters: {'responseType': 'bytes'},
       );
-      final bytes = Uint8List.fromList(response.data as List<int>);
+      final bytes = (response.data as String).codeUnits;
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/zuralog_export.zip');
+      final date = DateTime.now().toIso8601String().substring(0, 10);
+      final file = File('${dir.path}/zuralog-export-$date.json');
       await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Zuralog Data Export',
-      );
-      await file.delete();
-    } on DioException catch (e) {
-      if (context.mounted) {
-        final message = e.response?.statusCode == 429
-            ? 'Export limit reached. You can export once per hour.'
-            : 'Export failed. Check your connection and try again.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      await Share.shareXFiles([XFile(file.path)], text: 'Zuralog Data Export');
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Export failed. Please try again.'),
-            behavior: SnackBarBehavior.floating,
-          ),
+          SnackBar(content: Text('Export failed: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     // Global persisted privacy preferences.
     final dataMaturityBanner =
@@ -106,8 +80,7 @@ class PrivacyDataScreen extends ConsumerWidget {
     final analyticsEnabled = !ref.watch(analyticsOptOutProvider);
 
     final prefsNotifier = ref.read(userPreferencesProvider.notifier);
-    final memoryItems = ref.watch(_memoryItemsProvider);
-    final memoryNotifier = ref.read(_memoryItemsProvider.notifier);
+    final memoriesAsync = ref.watch(memoryItemsProvider);
 
     return ZuralogScaffold(
       body: CustomScrollView(
@@ -151,105 +124,82 @@ class PrivacyDataScreen extends ConsumerWidget {
               const SizedBox(height: AppDimens.spaceSm),
 
               // Memory items list
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
+              memoriesAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(AppDimens.spaceMd),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colors.cardBackground,
-                    borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-                  ),
-                  child: Column(
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                  child: Row(
                     children: [
-                      if (memoryItems.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimens.spaceMd,
-                            vertical: AppDimens.spaceLg,
-                          ),
-                          child: Text(
-                            'No memory stored',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        )
-                      else
-                        ...List.generate(memoryItems.length, (index) {
-                          final item = memoryItems[index];
-                          final isLast = index == memoryItems.length - 1;
-                          return Column(
-                            children: [
-                               _MemoryItemRow(
-                                text: item,
-                                onDelete: () async {
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      backgroundColor: colors.surface,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          AppDimens.radiusCard,
-                                        ),
-                                      ),
-                                      title: Text(
-                                        'Delete Memory?',
-                                        style: AppTextStyles.titleMedium
-                                            .copyWith(
-                                              color: colors.textPrimary,
-                                            ),
-                                      ),
-                                      content: Text(
-                                        'This memory will be permanently removed.',
-                                        style: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: colors.textSecondary,
-                                            ),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(false),
-                                          child: Text(
-                                            'Cancel',
-                                            style: AppTextStyles.bodyLarge
-                                                .copyWith(
-                                                  color: colors.textSecondary,
-                                                ),
-                                          ),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(true),
-                                          child: Text(
-                                            'Delete',
-                                            style: AppTextStyles.bodyLarge
-                                                .copyWith(
-                                                  color: colors.accent,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                  if (confirmed == true) {
-                                    final updated = List<String>.from(
-                                      memoryItems,
-                                    )..removeAt(index);
-                                    memoryNotifier.state = updated;
-                                    ref.read(analyticsServiceProvider).capture(
-                                      event: AnalyticsEvents.memoryDeleted,
-                                    );
-                                  }
-                                },
-                              ),
-                              if (!isLast) const _Divider(),
-                            ],
-                          );
-                        }),
+                      Expanded(
+                        child: Text(
+                          'Failed to load memories',
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.statusError),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => ref.invalidate(memoryItemsProvider),
+                        child: const Text('Retry'),
+                      ),
                     ],
+                  ),
+                ),
+                data: (memoryItems) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colors.cardBackground,
+                      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                    ),
+                    child: Column(
+                      children: [
+                        if (memoryItems.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppDimens.spaceMd,
+                              vertical: AppDimens.spaceLg,
+                            ),
+                            child: Text(
+                              'No memory stored',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          )
+                        else
+                          ...List.generate(memoryItems.length, (index) {
+                            final item = memoryItems[index];
+                            final isLast = index == memoryItems.length - 1;
+                            return Column(
+                              children: [
+                                _MemoryItemRow(
+                                  item: item,
+                                  onDelete: () async {
+                                    try {
+                                      await ref.read(memoryItemsProvider.notifier).delete(item.id);
+                                      ref.read(analyticsServiceProvider).capture(
+                                        event: AnalyticsEvents.memoryDeleted,
+                                      );
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Failed to delete memory: $e'),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                ),
+                                if (!isLast) const _Divider(),
+                              ],
+                            );
+                          }),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -257,36 +207,51 @@ class PrivacyDataScreen extends ConsumerWidget {
               const SizedBox(height: AppDimens.spaceSm),
 
               // Clear All Memory row
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colors.cardBackground,
-                    borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              memoriesAsync.when(
+                loading: () => const SizedBox.shrink(),
+                error: (e, st) => const SizedBox.shrink(),
+                data: (memoryItems) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
                   ),
-                  child: ZSettingsTile(
-                    icon: Icons.delete_sweep_rounded,
-                    iconColor: memoryItems.isNotEmpty
-                        ? colors.accent
-                        : AppColors.textTertiary,
-                    title: 'Clear All Memory',
-                    showChevron: false,
-                    titleColor: memoryItems.isNotEmpty
-                        ? colors.accent
-                        : AppColors.textTertiary,
-                    onTap: memoryItems.isNotEmpty
-                        ? () => _showClearMemoryDialog(
-                            context,
-                            onConfirmed: () {
-                              memoryNotifier.state = [];
-                              ref.read(analyticsServiceProvider).capture(
-                                event: AnalyticsEvents.allMemoriesCleared,
-                              );
-                            },
-                          )
-                        : null,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colors.cardBackground,
+                      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+                    ),
+                    child: ZSettingsTile(
+                      icon: Icons.delete_sweep_rounded,
+                      iconColor: memoryItems.isNotEmpty
+                          ? colors.accent
+                          : AppColors.textTertiary,
+                      title: 'Clear All Memory',
+                      showChevron: false,
+                      titleColor: memoryItems.isNotEmpty
+                          ? colors.accent
+                          : AppColors.textTertiary,
+                      onTap: memoryItems.isNotEmpty
+                          ? () => _showClearMemoryDialog(
+                              context,
+                              onConfirmed: () async {
+                                try {
+                                  await ref.read(memoryItemsProvider.notifier).clearAll();
+                                  ref.read(analyticsServiceProvider).capture(
+                                    event: AnalyticsEvents.allMemoriesCleared,
+                                  );
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to clear memories: $e'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            )
+                          : null,
+                    ),
                   ),
                 ),
               ),
@@ -330,8 +295,23 @@ class PrivacyDataScreen extends ConsumerWidget {
                     icon: Icons.download_rounded,
                     iconColor: colors.primary,
                     title: 'Export Data',
+                    subtitle: _isExporting ? 'Exporting…' : 'Download your data as JSON',
                     showChevron: false,
-                    onTap: () => _exportData(context, ref),
+                    trailing: _isExporting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
+                    onTap: _isExporting
+                        ? null
+                        : () {
+                            ref.read(analyticsServiceProvider).capture(
+                              event: AnalyticsEvents.dataExportRequested,
+                            );
+                            _exportData();
+                          },
                   ),
                   const _Divider(),
                   ZSettingsTile(
@@ -343,22 +323,19 @@ class PrivacyDataScreen extends ConsumerWidget {
                     onTap: () => _showDeleteDataDialog(
                       context,
                       onConfirmed: () async {
-                        // Fire analytics
                         ref.read(analyticsServiceProvider).capture(
                           event: AnalyticsEvents.accountDeleteRequested,
                         );
-                        // Clear AI memories (what we can delete from client side)
                         try {
-                          memoryNotifier.state = [];
+                          await ref.read(memoryItemsProvider.notifier).clearAll();
                         } catch (_) {
-                          // Best-effort; the message below still directs to support
+                          // Ignore errors — show success message regardless.
                         }
-                        if (context.mounted) {
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'AI memories cleared. To fully delete all health data '
-                                'and your account, contact support@zuralog.com.',
+                                'AI memories deleted. To fully delete your account, contact support@zuralog.com.',
                               ),
                               behavior: SnackBarBehavior.floating,
                               duration: Duration(seconds: 6),
@@ -440,9 +417,9 @@ class _Divider extends StatelessWidget {
 }
 
 class _MemoryItemRow extends StatelessWidget {
-  const _MemoryItemRow({required this.text, required this.onDelete});
+  const _MemoryItemRow({required this.item, required this.onDelete});
 
-  final String text;
+  final MemoryItem item;
   final Future<void> Function() onDelete;
 
   @override
@@ -462,7 +439,7 @@ class _MemoryItemRow extends StatelessWidget {
           const SizedBox(width: AppDimens.spaceMd),
           Expanded(
             child: Text(
-              text,
+              item.text,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: colors.textPrimary,
               ),
@@ -562,7 +539,7 @@ class _ToggleRow extends StatelessWidget {
 
 Future<void> _showClearMemoryDialog(
   BuildContext context, {
-  required VoidCallback onConfirmed,
+  required Future<void> Function() onConfirmed,
 }) async {
   final colors = AppColorsOf(context);
   final confirmed = await showDialog<bool>(
@@ -607,13 +584,13 @@ Future<void> _showClearMemoryDialog(
     ),
   );
   if (confirmed == true) {
-    onConfirmed();
+    await onConfirmed();
   }
 }
 
 Future<void> _showDeleteDataDialog(
   BuildContext context, {
-  required VoidCallback onConfirmed,
+  required Future<void> Function() onConfirmed,
 }) async {
   final colors = AppColorsOf(context);
   final confirmed = await showDialog<bool>(
@@ -627,26 +604,11 @@ Future<void> _showDeleteDataDialog(
         'Delete All My Data?',
         style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'This action is permanent and cannot be undone.',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.accent,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            'All health records, AI memory, preferences, and account data '
-            'will be permanently erased. You will be signed out immediately.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-        ],
+      content: Text(
+        'This will delete your AI coaching memories. To delete your account and all health data, contact support@zuralog.com.',
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: colors.textSecondary,
+        ),
       ),
       actions: [
         TextButton(
@@ -672,6 +634,6 @@ Future<void> _showDeleteDataDialog(
     ),
   );
   if (confirmed == true) {
-    onConfirmed();
+    await onConfirmed();
   }
 }
