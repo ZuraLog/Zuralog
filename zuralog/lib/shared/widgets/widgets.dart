@@ -12,6 +12,7 @@ export 'cards/z_insight_card.dart';
 export 'cards/z_selectable_tile.dart';
 export 'cards/z_snapshot_card.dart';
 export 'cards/zuralog_card.dart';
+export 'cards/z_topographic_card.dart';
 export 'indicators/status_indicator.dart';
 export 'indicators/z_icon_badge.dart';
 export 'inputs/app_text_field.dart';
