@@ -5,6 +5,7 @@
 /// type-safe REST methods for communicating with the Cloud Brain backend.
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -34,6 +35,12 @@ class ApiClient {
   /// expired or invalid). Wire this to [AuthStateNotifier.forceLogout]
   /// via the DI provider so the app redirects to the login screen.
   final void Function()? onUnauthenticated;
+
+  /// Guards concurrent token-refresh attempts.
+  ///
+  /// When a 401 is received while a refresh is already in flight, subsequent
+  /// requests wait on this completer rather than issuing a second refresh.
+  Completer<void>? _refreshCompleter;
 
   /// Creates a new [ApiClient].
   ///
@@ -94,63 +101,100 @@ class ApiClient {
   ///    (to avoid triggering this interceptor recursively).
   /// 3. On success: saves new tokens and retries the original request.
   /// 4. On failure: clears stored tokens (forces re-login).
+  ///
+  /// Uses [_refreshCompleter] to serialise concurrent 401s — only one
+  /// refresh is ever in flight at a time; other waiters queue behind it.
   Future<void> _onError(
-    DioException error,
+    DioException e,
     ErrorInterceptorHandler handler,
   ) async {
-    if (error.response?.statusCode != 401) {
-      return handler.next(error);
+    if (e.response?.statusCode != 401) {
+      return handler.next(e);
     }
 
     // Don't attempt refresh on auth endpoints themselves to avoid loops
-    final path = error.requestOptions.path;
+    final path = e.requestOptions.path;
     if (path.contains('/auth/login') ||
         path.contains('/auth/register') ||
         path.contains('/auth/refresh')) {
-      return handler.next(error);
+      return handler.next(e);
     }
 
-    final refreshToken = await _storage.read(key: 'refresh_token');
-    if (refreshToken == null) {
-      return handler.next(error);
+    if (_refreshCompleter != null) {
+      // Another refresh is in flight — wait for it, then retry.
+      try {
+        await _refreshCompleter!.future;
+        final newToken = await _storage.read(key: 'auth_token');
+        e.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+        final retryResponse = await _dio.request(
+          e.requestOptions.path,
+          data: e.requestOptions.data,
+          queryParameters: e.requestOptions.queryParameters,
+          options: Options(
+            method: e.requestOptions.method,
+            headers: e.requestOptions.headers,
+          ),
+        );
+        return handler.resolve(retryResponse);
+      } catch (_) {
+        return handler.next(e);
+      }
     }
 
+    _refreshCompleter = Completer<void>();
     try {
-      // Use a separate Dio instance to avoid recursive interceptor calls
-      final refreshDio = Dio(BaseOptions(baseUrl: _dio.options.baseUrl));
-      final response = await refreshDio.post(
-        '/api/v1/auth/refresh',
-        data: {'refresh_token': refreshToken},
-      );
-
-      final data = response.data as Map<String, dynamic>;
-      final newAccessToken = data['access_token'] as String;
-      final newRefreshToken = data['refresh_token'] as String;
-
-      // Persist new tokens
-      await _storage.write(key: 'auth_token', value: newAccessToken);
-      await _storage.write(key: 'refresh_token', value: newRefreshToken);
-
-      // Retry the original request with the new token
-      final opts = error.requestOptions;
-      opts.headers['Authorization'] = 'Bearer $newAccessToken';
-
+      await refreshToken();
+      _refreshCompleter!.complete();
+      final newToken = await _storage.read(key: 'auth_token');
+      e.requestOptions.headers['Authorization'] = 'Bearer $newToken';
       final retryResponse = await _dio.request(
-        opts.path,
-        options: Options(method: opts.method, headers: opts.headers),
-        data: opts.data,
-        queryParameters: opts.queryParameters,
+        e.requestOptions.path,
+        data: e.requestOptions.data,
+        queryParameters: e.requestOptions.queryParameters,
+        options: Options(
+          method: e.requestOptions.method,
+          headers: e.requestOptions.headers,
+        ),
       );
       return handler.resolve(retryResponse);
-    } catch (_) {
+    } catch (refreshError) {
+      _refreshCompleter!.completeError(refreshError);
       // Refresh failed — clear tokens and notify the app to force-logout.
       // This happens when both the access token and refresh token are
       // expired (e.g., user hasn't opened the app in >7 days).
-      await _storage.delete(key: 'auth_token');
-      await _storage.delete(key: 'refresh_token');
+      await _storage.deleteAll();
       onUnauthenticated?.call();
-      return handler.next(error);
+      return handler.next(e);
+    } finally {
+      _refreshCompleter = null;
     }
+  }
+
+  /// Refreshes the stored access token using the stored refresh token.
+  ///
+  /// Uses a separate [Dio] instance so this call does not pass through
+  /// [_onError] and cause infinite recursion.
+  ///
+  /// Throws if no refresh token is stored, or if the refresh endpoint
+  /// returns an error. On success, the new tokens are persisted to
+  /// [FlutterSecureStorage] immediately.
+  Future<void> refreshToken() async {
+    final storedRefreshToken = await _storage.read(key: 'refresh_token');
+    if (storedRefreshToken == null) throw Exception('No refresh token available');
+
+    // Use a separate Dio instance to avoid recursive interceptor calls.
+    final refreshDio = Dio(BaseOptions(baseUrl: _dio.options.baseUrl));
+    final response = await refreshDio.post(
+      '/api/v1/auth/refresh',
+      data: {'refresh_token': storedRefreshToken},
+    );
+
+    final data = response.data as Map<String, dynamic>;
+    final newAccessToken = data['access_token'] as String;
+    final newRefreshToken = data['refresh_token'] as String;
+
+    await _storage.write(key: 'auth_token', value: newAccessToken);
+    await _storage.write(key: 'refresh_token', value: newRefreshToken);
   }
 
   /// The base URL this client is configured to communicate with.
