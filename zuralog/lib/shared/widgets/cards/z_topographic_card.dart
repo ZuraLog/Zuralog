@@ -67,6 +67,12 @@ class _ZTopographicCardState extends State<ZTopographicCard> {
     _loadPattern();
   }
 
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadPattern() async {
     try {
       final data = await rootBundle.load('assets/images/brand_pattern.png');
@@ -105,8 +111,8 @@ class _ZTopographicCardState extends State<ZTopographicCard> {
               child: Stack(
                 children: [
                   // Layer 1 — brand pattern overlay (non-interactive)
-                  IgnorePointer(
-                    child: Positioned.fill(
+                  Positioned.fill(
+                    child: IgnorePointer(
                       child: ShaderMask(
                         blendMode: BlendMode.overlay,
                         shaderCallback: (bounds) {
