@@ -7,6 +7,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
+import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -80,6 +81,8 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
         Navigator.of(context).pop();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.invalidate(todayLogSummaryProvider);
+          ref.invalidate(progressHomeProvider);
+          ref.invalidate(goalsProvider);
         });
       }
     } catch (e) {

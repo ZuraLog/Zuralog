@@ -29,6 +29,7 @@ from app.models.metric_definition import MetricDefinition
 from app.models.daily_summary import DailySummary
 from app.services.ingest_service import compute_local_date, validate_metric_value
 from app.services.aggregation_service import aggregate_events
+from app.services.ingest_post_processing import trigger_streaks_for_metric
 
 logger = logging.getLogger(__name__)
 
@@ -327,6 +328,8 @@ async def ingest_single(
         event.id, daily_total,
     )
 
+    await trigger_streaks_for_metric(db, user_id, body.metric_type, local_date)
+
     return SingleIngestResponse(
         event_id=str(event.id),
         daily_total=daily_total,
@@ -411,6 +414,15 @@ async def ingest_session(
         await _recompute_daily_summary(db, user_id, local_date, m.metric_type, unit, agg_fn)
 
     await db.commit()
+
+    # Trigger streaks for each unique (metric_type, local_date) pair in the session.
+    seen_pairs: set[tuple[str, date]] = set()
+    for m in body.metrics:
+        pair = (m.metric_type, compute_local_date(body.started_at))
+        if pair not in seen_pairs:
+            seen_pairs.add(pair)
+            await trigger_streaks_for_metric(db, user_id, m.metric_type, pair[1])
+
     return SessionIngestResponse(session_id=str(session.id), event_ids=event_ids, date=str(local_date))
 
 
@@ -477,6 +489,10 @@ async def ingest_bulk(
         logger.error("Failed to enqueue aggregation task for user %s: %s", user_id, exc)
         # If Celery isn't available, generate a placeholder task_id
         task_id = str(uuid.uuid4())
+
+    # Trigger streaks for each unique (metric_type, local_date) pair in the batch.
+    for uid, ld, mt in affected_combos:
+        await trigger_streaks_for_metric(db, uid, mt, ld)
 
     return BulkIngestResponse(task_id=task_id, event_count=len(body.events), status="processing")
 

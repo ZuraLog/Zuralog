@@ -24,12 +24,12 @@ def _stub_router_module(module_path: str) -> None:
     if module_path in sys.modules:
         return
     stub = types.ModuleType(module_path)
-    stub.router = MagicMock()
+    setattr(stub, "router", MagicMock())
     sys.modules[module_path] = stub
 
 
 # Stub the broken Phase-2 routes that fail on Python 3.14 before app.main loads.
-_stub_router_module("app.api.v1.journal_routes")
+# journal_routes no longer needs stubbing — it loads cleanly after streak integration.
 _stub_router_module("app.api.v1.achievement_routes")
 _stub_router_module("app.api.v1.streak_routes")
 # quick_log_routes no longer needs stubbing — it loads cleanly on Python 3.14.
@@ -37,7 +37,7 @@ _stub_router_module("app.api.v1.emergency_card_routes")
 
 # Also stub dependent models so the stubs don't cascade.
 for _m in (
-    "app.models.journal_entry",
+    # app.models.journal_entry no longer needs stubbing.
     "app.models.achievement",
     "app.models.streak",
     # app.models.quick_log no longer needs stubbing.

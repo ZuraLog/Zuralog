@@ -14,6 +14,7 @@ relying on database exceptions.
 
 import logging
 import uuid
+from datetime import date as _date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.models.journal_entry import JournalEntry
+from app.services.streak_tracker import StreakTracker
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +216,17 @@ async def create_journal_entry(
 
     await db.commit()
     await db.refresh(entry)
+
+    try:
+        await StreakTracker().record_activity(
+            user_id=user_id,
+            streak_type="checkin",
+            activity_date=_date.fromisoformat(entry.date),
+            db=db,
+        )
+    except Exception:
+        pass  # never block journal write on streak failure
+
     return _entry_to_response(entry)
 
 
@@ -305,6 +318,17 @@ async def update_journal_entry(
     await db.commit()
     await db.refresh(entry)
     logger.info("Replaced journal entry %s for user %s", entry_id, user_id)
+
+    try:
+        await StreakTracker().record_activity(
+            user_id=user_id,
+            streak_type="checkin",
+            activity_date=_date.fromisoformat(entry.date),
+            db=db,
+        )
+    except Exception:
+        pass  # never block journal write on streak failure
+
     return _entry_to_response(entry)
 
 
