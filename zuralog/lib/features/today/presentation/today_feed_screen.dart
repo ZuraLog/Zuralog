@@ -709,8 +709,9 @@ MetricTileData _buildTile(
   String type,
   Map<String, dynamic> latest,
 ) {
-  final entry = latest[type] as Map<String, dynamic>?;
-  if (entry == null) return (null, null);
+  final entryRaw = latest[type];
+  if (entryRaw is! Map<String, dynamic>) return (null, null);
+  final entry = entryRaw;
 
   // Parse logged_at
   DateTime? loggedAt;

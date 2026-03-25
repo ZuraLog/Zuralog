@@ -126,7 +126,10 @@ class HealthScoreCalculator:
         # Minimum requirement: at least one sleep OR activity source
         has_sleep = today_sleep is not None
         has_activity = len(activity_history) > 0 or (
-            today_daily is not None and today_daily.get("active_calories") is not None
+            today_daily is not None and (
+                today_daily.get("active_calories") is not None
+                or today_daily.get("steps") is not None
+            )
         )
 
         if not has_sleep and not has_activity:
