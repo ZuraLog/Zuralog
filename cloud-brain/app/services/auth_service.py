@@ -460,9 +460,8 @@ class AuthService:
             "Authorization": f"Bearer {service_key}",
             "apikey": service_key,
         }
-        async with httpx.AsyncClient() as client:
-            resp = await client.delete(url, headers=headers)
-            resp.raise_for_status()
+        resp = await self._client.delete(url, headers=headers)
+        resp.raise_for_status()
 
     @staticmethod
     def _extract_error(response: httpx.Response) -> str:

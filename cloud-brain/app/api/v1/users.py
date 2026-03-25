@@ -361,6 +361,7 @@ async def change_password(
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/day")
 async def delete_account(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
