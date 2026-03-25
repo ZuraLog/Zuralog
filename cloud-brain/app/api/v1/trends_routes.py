@@ -13,7 +13,6 @@ import re
 import zoneinfo
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone as tz
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
