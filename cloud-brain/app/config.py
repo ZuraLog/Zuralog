@@ -136,6 +136,12 @@ class Settings(BaseSettings):
         """Fail fast on invalid configuration combinations."""
         # H-11: Validate required secrets are set in production
         if self.app_env == "production":
+            if not self.database_url:
+                raise ValueError("DATABASE_URL must be set in production")
+            if not self.supabase_url:
+                raise ValueError("SUPABASE_URL must be set in production")
+            if not self.supabase_anon_key.get_secret_value():
+                raise ValueError("SUPABASE_ANON_KEY must be set in production")
             if self.openrouter_api_key.get_secret_value() == "":
                 logger.error("OPENROUTER_API_KEY must be set in production")
                 raise ValueError("OPENROUTER_API_KEY must be set in production")
