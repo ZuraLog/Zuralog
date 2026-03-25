@@ -111,8 +111,12 @@ class _SleepLogScreenState extends ConsumerState<SleepLogScreen> {
         factors: _factors.toList(),
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
-      ref.invalidate(todayLogSummaryProvider);
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(todayLogSummaryProvider);
+        });
+      }
     } catch (e) {
       debugPrint('SleepLogScreen save failed: $e');
       if (mounted) {

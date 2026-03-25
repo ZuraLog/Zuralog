@@ -76,8 +76,12 @@ class _SupplementsLogScreenState extends ConsumerState<SupplementsLogScreen> {
         takenIds: _takenIds.toList(),
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
-      ref.invalidate(todayLogSummaryProvider);
-      if (mounted) { Navigator.of(context).pop(); }
+      if (mounted) {
+        Navigator.of(context).pop();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(todayLogSummaryProvider);
+        });
+      }
     } catch (e) {
       debugPrint('SupplementsLogScreen save failed: $e');
       if (mounted) {
