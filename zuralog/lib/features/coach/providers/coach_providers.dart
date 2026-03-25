@@ -627,11 +627,15 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     if (!wasSending) return;
 
     state = state.copyWith(
+      messages: _pendingTempMsgId != null
+          ? state.messages.where((m) => m.id != _pendingTempMsgId).toList()
+          : null,
       isSending: false,
       clearStreaming: true,
       clearTool: true,
       isCancelled: true,
     );
+    _pendingTempMsgId = null;
   }
 }
 
