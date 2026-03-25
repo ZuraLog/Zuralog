@@ -13,6 +13,8 @@ Backward compatible: calling ``build_system_prompt()`` with no arguments returns
 the balanced persona with medium proactivity.
 """
 
+from app.utils.sanitize import sanitize_for_llm
+
 # ---------------------------------------------------------------------------
 # Shared capabilities block (injected into all persona prompts)
 # ---------------------------------------------------------------------------
@@ -239,7 +241,7 @@ def build_system_prompt(
 
     # Legacy suffix support
     if user_context_suffix:
-        prompt += user_context_suffix
+        prompt += sanitize_for_llm(user_context_suffix)
 
     # Response length preference
     if response_length == "concise":

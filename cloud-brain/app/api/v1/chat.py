@@ -24,10 +24,9 @@ WebSocket Protocol (client → server):
 import asyncio
 import json
 import logging
-import re
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Annotated, Any
 
 import sentry_sdk
 from fastapi import (
@@ -41,19 +40,15 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import redis.asyncio as aioredis
 
 from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.orchestrator import Orchestrator
-from app.api.deps import _get_auth_service, check_rate_limit
+from app.api.deps import _get_auth_service, check_rate_limit, get_authenticated_user_id
 from app.config import settings
 from app.database import async_session, get_db
 from app.limiter import limiter
@@ -64,6 +59,7 @@ from app.services.auth_service import AuthService
 from app.services.rate_limiter import RateLimiter
 from app.services.storage_service import StorageService
 from app.services.usage_tracker import UsageTracker
+from app.utils.sanitize import sanitize_for_llm
 
 logger = logging.getLogger(__name__)
 
@@ -76,26 +72,6 @@ _VALID_RESPONSE_LENGTHS = {"concise", "detailed"}
 MAX_HISTORY_CHARS = 40_000
 
 
-def sanitize_for_llm(text: str) -> str:
-    """Fix 6.17 / 8.1 (C-11): Sanitize text to prevent prompt injection.
-
-    Strips lines starting with common prompt-injection markers before
-    injecting extracted attachment text into the LLM context.
-
-    Args:
-        text: The raw extracted text from a user-uploaded file.
-
-    Returns:
-        The sanitized text, capped at 2000 characters.
-    """
-    dangerous_patterns = re.compile(
-        r'^(ignore|system:|assistant:|forget|<\|im_start\|>|<\|im_end\|>)',
-        re.IGNORECASE | re.MULTILINE,
-    )
-    sanitized = dangerous_patterns.sub('[filtered]', text)
-    return sanitized[:2000]
-
-
 async def _set_sentry_module() -> None:
     sentry_sdk.set_tag("api.module", "chat")
 
@@ -105,7 +81,6 @@ router = APIRouter(
     tags=["chat"],
     dependencies=[Depends(_set_sentry_module)],
 )
-security = HTTPBearer()
 
 
 def _get_storage_service(request: Request) -> StorageService:
@@ -173,7 +148,7 @@ def _process_attachments(attachments: list[dict]) -> str:
             parts.append(f"[User attached image: {att.get('filename', 'image')}]")
         elif att.get("context_message"):
             # Fix 6.17 (C-11): Sanitize extracted attachment text before LLM injection
-            safe_context = sanitize_for_llm(att["context_message"])
+            safe_context = sanitize_for_llm(att["context_message"])[:2000]
             parts.append(safe_context)
     return "\n".join(parts)
 
@@ -254,27 +229,31 @@ async def _load_conversation_history(
     result = await db.execute(query)
     messages = result.scalars().all()
     # Only pass user/assistant roles to the LLM; skip tool/system rows.
-    return [{"role": m.role, "content": m.content or ""} for m in messages if m.role in ("user", "assistant")]
+    return [{"role": m.role, "content": (m.content or "")[:8000]} for m in messages if m.role in ("user", "assistant")]
 
 
-async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str]:
-    """Load the user's coach persona and proactivity preferences.
+async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str, str]:
+    """Load the user's coach persona, proactivity, and response_length preferences.
 
     Args:
         db: Async database session.
         user_id: The authenticated user's ID.
 
     Returns:
-        A (persona, proactivity) tuple; defaults to ("balanced", "medium").
+        A (persona, proactivity, response_length) tuple; defaults to ("balanced", "medium", "concise").
     """
     try:
         result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
         prefs = result.scalar_one_or_none()
         if prefs:
-            return (prefs.coach_persona or "balanced", prefs.proactivity_level or "medium")
+            return (
+                prefs.coach_persona or "balanced",
+                prefs.proactivity_level or "medium",
+                prefs.response_length or "concise",
+            )
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to load user preferences for user %s: %s", user_id, e)
-    return ("balanced", "medium")
+    return ("balanced", "medium", "concise")
 
 
 async def _generate_and_save_title(
@@ -353,9 +332,7 @@ async def websocket_chat(
     storage_service: StorageService = app.state.storage_service
 
     # Fix 6.8 (H-4): Per-user WebSocket connection count limit via Redis
-    redis_client: aioredis.Redis | None = None
-    if settings.redis_url:
-        redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
+    redis_client: object | None = getattr(websocket.app.state, "redis", None)
 
     # Accept immediately so all failure paths can send JSON error messages
     # instead of closing an unaccepted socket (which causes HTTP 500).
@@ -405,8 +382,6 @@ async def websocket_chat(
                 await redis_client.decr(conn_key)
                 await websocket.send_json({"type": "error", "message": "Too many active connections"})
                 await websocket.close(code=1008)
-                if redis_client:
-                    await redis_client.aclose()
                 return
         except Exception as redis_exc:
             logger.warning("WebSocket connection tracking failed (fail-open): %s", redis_exc)
@@ -607,12 +582,14 @@ async def websocket_chat(
                     removed = history.pop(0)  # Remove oldest message
                     total_chars -= len(removed.get("content") or "")
 
-                db_persona, db_proactivity = await _load_user_preferences(db, user_id)
+                db_persona, db_proactivity, db_response_length = await _load_user_preferences(db, user_id)
                 # Fix 6.6 (H-2): Validate client-supplied persona/proactivity against allowlist
                 client_persona = data.get("persona")
                 persona = client_persona if client_persona in _VALID_PERSONAS else db_persona
                 client_proactivity = data.get("proactivity")
                 proactivity = client_proactivity if client_proactivity in _VALID_PROACTIVITY else db_proactivity
+                client_response_length = data.get("response_length")
+                response_length = client_response_length if client_response_length in _VALID_RESPONSE_LENGTHS else db_response_length
 
             # ── Orchestrate with streaming ────────────────────────────────────
             await websocket.send_json({"type": "typing_start"})
@@ -636,6 +613,7 @@ async def websocket_chat(
                         message=augmented_text,
                         persona=persona,
                         proactivity=proactivity,
+                        response_length=response_length,
                         db=db,
                         conversation_history=history,
                     ):
@@ -752,11 +730,6 @@ async def websocket_chat(
                 await redis_client.decr(conn_key)
             except Exception as redis_exc:
                 logger.warning("Failed to decrement WebSocket connection count: %s", redis_exc)
-        if redis_client:
-            try:
-                await redis_client.aclose()
-            except Exception:
-                pass
 
 
 # ---------------------------------------------------------------------------
@@ -770,42 +743,34 @@ async def get_chat_history(
     request: Request,
     limit: int = Query(default=20, ge=1, le=100, description="Maximum number of conversations to return"),
     offset: int = Query(default=0, ge=0, description="Number of conversations to skip"),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: Annotated[str, Depends(get_authenticated_user_id)] = ...,
     storage_service: StorageService = Depends(_get_storage_service),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """Retrieve chat history for the authenticated user.
 
-    Returns non-deleted conversations and their messages, ordered by most recent
-    conversation first, messages chronologically. Supports pagination via
-    ``limit`` (max 100, default 20) and ``offset``. Attachment signed URLs are
-    refreshed on each request.
+    Returns non-deleted conversations ordered by most recent first.
+    Supports pagination via ``limit`` (max 100, default 20) and ``offset``.
 
     Args:
         limit: Maximum number of conversations to return (1–100).
         offset: Number of conversations to skip (for pagination).
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
+        user_id: Authenticated user ID from the Bearer token.
         storage_service: Injected storage service for signed URLs.
         db: Injected async database session.
 
     Returns:
-        A list of conversation dicts, each containing a list of messages.
+        A list of conversation metadata dicts.
 
     Raises:
         HTTPException: 401 if the token is invalid.
     """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
-
     result = await db.execute(
         select(Conversation)
         .where(
             Conversation.user_id == user_id,
             Conversation.deleted_at.is_(None),
         )
-        .options(selectinload(Conversation.messages))
         .order_by(Conversation.updated_at.desc(), Conversation.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -814,19 +779,6 @@ async def get_chat_history(
 
     history = []
     for conv in conversations:
-        # messages are already loaded via selectinload — no extra DB query
-        messages = sorted(conv.messages, key=lambda m: m.created_at)
-
-        msg_dicts = []
-        for msg in messages:
-            msg_dict = _message_to_dict(msg)
-            if msg.attachments:
-                msg_dict["attachments"] = await _refresh_attachment_urls(
-                    msg.attachments,
-                    storage_service,
-                )
-            msg_dicts.append(msg_dict)
-
         created = conv.created_at
         updated = conv.updated_at or conv.created_at
         history.append(
@@ -836,7 +788,7 @@ async def get_chat_history(
                 "created_at": created.isoformat() if hasattr(created, "isoformat") else str(created),
                 "updated_at": updated.isoformat() if hasattr(updated, "isoformat") else str(updated),
                 "archived": conv.archived,
-                "messages": msg_dicts,
+                "messages": [],
             }
         )
 
@@ -850,8 +802,7 @@ async def list_conversations(
     include_archived: bool = Query(default=False),
     limit: int = Query(default=20, ge=1, le=100, description="Maximum number of conversations to return"),
     offset: int = Query(default=0, ge=0, description="Number of conversations to skip"),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: Annotated[str, Depends(get_authenticated_user_id)] = ...,
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """List all conversations for the authenticated user.
@@ -865,8 +816,7 @@ async def list_conversations(
         include_archived: When True, include archived conversations.
         limit: Maximum number of conversations to return (1–100).
         offset: Number of conversations to skip (for pagination).
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
+        user_id: Authenticated user ID from the Bearer token.
         db: Injected async database session.
 
     Returns:
@@ -875,8 +825,6 @@ async def list_conversations(
     Raises:
         HTTPException: 401 if the token is invalid.
     """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
 
     # Correlated subquery: count of messages per conversation
     msg_count_subq = (
@@ -943,8 +891,7 @@ async def get_conversation_messages(
     conversation_id: str,
     limit: int = Query(100, le=200),
     offset: int = Query(0, ge=0),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: Annotated[str, Depends(get_authenticated_user_id)] = ...,
     storage_service: StorageService = Depends(_get_storage_service),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
@@ -955,8 +902,7 @@ async def get_conversation_messages(
 
     Args:
         conversation_id: The UUID of the conversation.
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
+        user_id: Authenticated user ID from the Bearer token.
         storage_service: Injected storage service for signed URLs.
         db: Injected async database session.
 
@@ -968,8 +914,6 @@ async def get_conversation_messages(
         HTTPException: 404 if the conversation does not exist or belongs
             to a different user.
     """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
 
     conv_result = await db.execute(
         select(Conversation).where(
@@ -1031,8 +975,7 @@ async def update_conversation(
     request: Request,
     conversation_id: str,
     body: ConversationUpdateRequest,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: Annotated[str, Depends(get_authenticated_user_id)] = ...,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Rename or archive a conversation.
@@ -1042,8 +985,7 @@ async def update_conversation(
     Args:
         conversation_id: The UUID of the conversation to update.
         body: Fields to update — ``title`` and/or ``archived``.
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
+        user_id: Authenticated user ID from the Bearer token.
         db: Injected async database session.
 
     Returns:
@@ -1054,8 +996,6 @@ async def update_conversation(
         HTTPException: 404 if the conversation does not exist or belongs
             to a different user.
     """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
 
     result = await db.execute(
         select(Conversation).where(
@@ -1110,8 +1050,7 @@ async def update_conversation(
 async def delete_conversation(
     request: Request,
     conversation_id: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    auth_service: AuthService = Depends(_get_auth_service),
+    user_id: Annotated[str, Depends(get_authenticated_user_id)] = ...,
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Soft-delete a conversation.
@@ -1120,8 +1059,7 @@ async def delete_conversation(
 
     Args:
         conversation_id: The UUID of the conversation to delete.
-        credentials: Bearer token from the Authorization header.
-        auth_service: Injected auth service for token validation.
+        user_id: Authenticated user ID from the Bearer token.
         db: Injected async database session.
 
     Returns:
@@ -1132,8 +1070,6 @@ async def delete_conversation(
         HTTPException: 404 if the conversation does not exist or belongs
             to a different user.
     """
-    user = await auth_service.get_user(credentials.credentials)
-    user_id = user.get("id", "unknown")
 
     result = await db.execute(
         select(Conversation).where(

@@ -30,6 +30,7 @@ from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.prompts.system import build_system_prompt
 from app.agent.response import AgentResponse
+from app.config import settings
 from app.services.usage_tracker import UsageTracker
 
 if TYPE_CHECKING:
@@ -46,7 +47,7 @@ without generating a final text response.
 
 # Lightweight model used only for auto-generating conversation titles.
 # A small, cheap model is preferred since this is a one-shot, low-stakes call.
-_TITLE_MODEL = "openai/gpt-4.1-nano"
+_TITLE_MODEL = settings.openrouter_title_model
 
 
 class Orchestrator:
@@ -101,7 +102,7 @@ class Orchestrator:
             A list of tool dicts in OpenAI function-calling schema.
         """
         if mcp_tools is None:
-            mcp_tools = self.mcp_client.get_all_tools()
+            mcp_tools = self.mcp_client.get_all_tools() or []
 
         openai_tools = []
         for tool in mcp_tools:
@@ -446,51 +447,61 @@ class Orchestrator:
                 last_client_action: dict[str, Any] | None = None
 
                 for turn in range(MAX_TOOL_TURNS):
-                    # Check if we should stream this turn.
-                    # We use non-streaming for all tool-call turns and only
-                    # stream the final text response.
+                    # Single streaming call per turn — tool-call detection from stream deltas.
                     with sentry_sdk.start_span(op="ai.llm_call", description=f"Stream turn {turn + 1}") as llm_span:
                         llm_span.set_tag("turn", turn + 1)
-                        response = await self.llm_client.chat(
+                        stream = await self.llm_client.stream_chat(
                             messages,
                             tools=tools if tools else None,
                         )
 
-                    if self.usage_tracker:
-                        try:
-                            await self.usage_tracker.track_from_response(user_id, response)
-                        except Exception:
-                            pass
+                    # Accumulate stream deltas to detect tool calls vs. final text.
+                    full_content = ""
+                    tool_call_chunks: dict[int, dict[str, Any]] = {}
+                    finish_reason: str | None = None
 
-                    if not response.choices:
-                        break
+                    async for chunk in stream:
+                        if not chunk.choices:
+                            continue
+                        delta = chunk.choices[0].delta
+                        finish_reason = chunk.choices[0].finish_reason or finish_reason
 
-                    assistant_message = response.choices[0].message
+                        if delta.content:
+                            full_content += delta.content
+                            yield {"type": "stream_token", "content": delta.content}
 
-                    if assistant_message.tool_calls:
-                        # Tool-call turn: emit progress events, execute tools.
+                        if delta.tool_calls:
+                            for tc_delta in delta.tool_calls:
+                                idx = tc_delta.index
+                                if idx not in tool_call_chunks:
+                                    tool_call_chunks[idx] = {
+                                        "id": "",
+                                        "type": "function",
+                                        "function": {"name": "", "arguments": ""},
+                                    }
+                                if tc_delta.id:
+                                    tool_call_chunks[idx]["id"] += tc_delta.id
+                                if tc_delta.function:
+                                    if tc_delta.function.name:
+                                        tool_call_chunks[idx]["function"]["name"] += tc_delta.function.name
+                                    if tc_delta.function.arguments:
+                                        tool_call_chunks[idx]["function"]["arguments"] += tc_delta.function.arguments
+
+                    if tool_call_chunks:
+                        # Tool-call turn: assemble collected tool calls, execute them.
+                        assembled_tool_calls = [tool_call_chunks[i] for i in sorted(tool_call_chunks)]
                         messages.append(
                             {
                                 "role": "assistant",
-                                "content": assistant_message.content,
-                                "tool_calls": [
-                                    {
-                                        "id": tc.id,
-                                        "type": "function",
-                                        "function": {
-                                            "name": tc.function.name,
-                                            "arguments": tc.function.arguments,
-                                        },
-                                    }
-                                    for tc in assistant_message.tool_calls
-                                ],
+                                "content": full_content or None,
+                                "tool_calls": assembled_tool_calls,
                             }
                         )
 
-                        for tool_call in assistant_message.tool_calls:
-                            func_name = tool_call.function.name
+                        for tc in assembled_tool_calls:
+                            func_name = tc["function"]["name"]
                             try:
-                                arguments = json.loads(tool_call.function.arguments)
+                                arguments = json.loads(tc["function"]["arguments"])
                             except json.JSONDecodeError:
                                 arguments = {}
 
@@ -519,31 +530,17 @@ class Orchestrator:
                             messages.append(
                                 {
                                     "role": "tool",
-                                    "tool_call_id": tool_call.id,
+                                    "tool_call_id": tc["id"],
                                     "content": result_content,
                                 }
                             )
 
                         continue  # Next ReAct turn
 
-                    # No tool calls — this is the final response; stream it.
-                    # Re-invoke the LLM in streaming mode with the accumulated messages.
-                    with sentry_sdk.start_span(op="ai.stream_final", description="streaming final response"):
-                        stream = await self.llm_client.stream_chat(
-                            messages,
-                            tools=None,  # No tools on final streaming turn
-                        )
-
-                        full_content = ""
-                        async for chunk in stream:
-                            delta = chunk.choices[0].delta if chunk.choices else None
-                            if delta and delta.content:
-                                full_content += delta.content
-                                yield {"type": "stream_token", "content": delta.content}
-
+                    # No tool calls — full_content already streamed token-by-token above.
                     yield {
                         "type": "stream_end",
-                        "content": full_content or (assistant_message.content or ""),
+                        "content": full_content,
                         "client_action": last_client_action,
                     }
                     return

@@ -17,6 +17,8 @@ import logging
 import re
 from typing import Any
 
+from app.utils.sanitize import sanitize_for_llm
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -128,31 +130,6 @@ _HEALTH_PATTERNS: list[tuple[str, str]] = [
 _COMPILED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(pat, re.IGNORECASE), label) for pat, label in _HEALTH_PATTERNS
 ]
-
-# ---------------------------------------------------------------------------
-# Prompt injection guard
-# ---------------------------------------------------------------------------
-
-_DANGEROUS_PATTERN = re.compile(
-    r'(ignore\s+(?:previous|above|all|everything)|system\s*:|assistant\s*:|forget\s+(?:all|everything|previous)|<\|im_start\|>|<\|im_end\|>|<\|endoftext\|>)',
-    re.IGNORECASE,
-)
-
-
-def sanitize_for_llm(text: str) -> str:
-    """Remove prompt injection patterns from user-supplied text.
-
-    Strips multi-word instruction override phrases and special tokens
-    (e.g. ``<|im_start|>``) that could manipulate LLM behaviour.
-
-    Args:
-        text: Raw text from an uploaded file or user input.
-
-    Returns:
-        Sanitized text with dangerous patterns replaced by ``[removed]``.
-    """
-    return _DANGEROUS_PATTERN.sub("[removed]", text)
-
 
 # ---------------------------------------------------------------------------
 # Thread pool for CPU-bound health fact extraction
