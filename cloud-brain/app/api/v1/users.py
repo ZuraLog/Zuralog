@@ -37,6 +37,14 @@ security = HTTPBearer()
 
 VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
 
+_PROFILE_WRITABLE_FIELDS: frozenset[str] = frozenset({
+    "display_name",
+    "nickname",
+    "birthday",
+    "gender",
+    "onboarding_complete",
+})
+
 
 class UpdatePreferencesRequest(BaseModel):
     """Request body for updating user preferences.
@@ -209,6 +217,11 @@ async def update_profile(
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
     for field, value in update_data.items():
+        if field not in _PROFILE_WRITABLE_FIELDS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Field '{field}' cannot be updated",
+            )
         setattr(db_user, field, value)
 
     await db.commit()
