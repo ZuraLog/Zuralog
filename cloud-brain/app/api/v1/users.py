@@ -326,11 +326,13 @@ async def change_password(
     # Verify the current password by attempting a fresh sign-in.
     try:
         await auth_service.sign_in(email, body.current_password)
-    except HTTPException:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect.",
-        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect.",
+            )
+        raise  # propagate 503/504/502 as-is
 
     # Apply the new password using the user's own token (not the service key).
     await auth_service.update_user_password(

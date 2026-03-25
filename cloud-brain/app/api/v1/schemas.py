@@ -28,11 +28,11 @@ class RegisterRequest(BaseModel):
 
     Attributes:
         email: User's email address.
-        password: User's password (min 6 chars enforced by Supabase).
+        password: User's password (min 8 chars).
     """
 
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
 
 
 class RefreshRequest(BaseModel):
@@ -151,7 +151,7 @@ class ChangePasswordRequest(BaseModel):
         new_password: The new password (minimum 8 characters).
     """
 
-    current_password: str
+    current_password: str = Field(min_length=1)
     new_password: str = Field(min_length=8)
 
 
