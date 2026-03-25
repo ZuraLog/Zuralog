@@ -198,6 +198,7 @@ class AuthRepository {
   ///   [birthday]: New date of birth (optional). Sent as `YYYY-MM-DD`.
   ///   [gender]: New gender identifier (optional).
   ///   [onboardingComplete]: Marks onboarding as done (optional).
+  ///   [heightCm]: Height in centimetres (optional).
   ///
   /// Returns:
   ///   The updated [UserProfile] as returned by the server.
@@ -210,6 +211,7 @@ class AuthRepository {
     DateTime? birthday,
     String? gender,
     bool? onboardingComplete,
+    double? heightCm,
   }) async {
     final body = <String, dynamic>{};
     if (displayName != null) body['display_name'] = displayName;
@@ -221,11 +223,99 @@ class AuthRepository {
     if (onboardingComplete != null) {
       body['onboarding_complete'] = onboardingComplete;
     }
+    if (heightCm != null) body['height_cm'] = heightCm;
     final response = await _apiClient.patch(
       '/api/v1/users/me/profile',
       body: body,
     );
     return UserProfile.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Requests an email address change for the current user.
+  ///
+  /// Calls `POST /api/v1/users/me/email`. The backend sends a confirmation
+  /// email to [newEmail] — the change does not take effect until confirmed.
+  ///
+  /// Args:
+  ///   [newEmail]: The new email address the user wants to switch to.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<void> changeEmail(String newEmail) async {
+    await _apiClient.post(
+      '/api/v1/users/me/email',
+      data: {'new_email': newEmail},
+    );
+  }
+
+  /// Changes the current user's password.
+  ///
+  /// Calls `POST /api/v1/users/me/password` with both the current and new
+  /// passwords. The backend verifies [currentPassword] before applying the
+  /// change.
+  ///
+  /// Args:
+  ///   [currentPassword]: The user's existing password for verification.
+  ///   [newPassword]: The new password to set.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails, the current password is
+  ///   wrong, or the new password does not meet requirements.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _apiClient.post(
+      '/api/v1/users/me/password',
+      data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      },
+    );
+  }
+
+  /// Uploads a new avatar image for the current user.
+  ///
+  /// Calls `POST /api/v1/users/me/avatar` as a multipart form upload.
+  /// The file is sent under the field name `file`.
+  ///
+  /// Args:
+  ///   [filePath]: Absolute path to the image file on the device.
+  ///   [contentType]: MIME type of the image (e.g. `image/jpeg`).
+  ///
+  /// Returns:
+  ///   The public URL of the newly uploaded avatar.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<String> uploadAvatar({
+    required String filePath,
+    required String contentType,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        filePath,
+        contentType: DioMediaType.parse(contentType),
+      ),
+    });
+    final response = await _apiClient.post(
+      '/api/v1/users/me/avatar',
+      data: formData,
+    );
+    final data = response.data as Map<String, dynamic>;
+    return data['avatar_url'] as String;
+  }
+
+  /// Permanently deletes the current user's account.
+  ///
+  /// Calls `DELETE /api/v1/users/me`. This action is irreversible — all user
+  /// data is removed from the server. Local tokens are not cleared here;
+  /// the caller is responsible for logging out after this succeeds.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<void> deleteAccount() async {
+    await _apiClient.delete('/api/v1/users/me');
   }
 
   /// Checks if the user has a stored auth token.
