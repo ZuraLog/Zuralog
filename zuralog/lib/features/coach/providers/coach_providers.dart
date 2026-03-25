@@ -516,6 +516,9 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// local state, then returns the content of the removed message so the
   /// caller can pre-fill the input field.
   ///
+  /// Delegates to [startEditing] so a snapshot is always saved before
+  /// truncation (enabling cancel-restore via [cancelEditing]).
+  ///
   /// This is a local-only operation — nothing is persisted to the DB.
   ///
   /// Returns null if [messageIndex] is out of bounds (e.g. state changed
@@ -524,7 +527,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     if (state.isSending) return null;
     if (messageIndex < 0 || messageIndex >= state.messages.length) return null;
     final content = state.messages[messageIndex].content;
-    state = state.copyWith(messages: state.messages.sublist(0, messageIndex));
+    startEditing(messageIndex);
     return content;
   }
 
@@ -587,12 +590,16 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// Sets [CoachChatState.isCancelled] to true so the UI can show a
   /// "Generation stopped" indicator. No ghost message is appended — partial
   /// tokens are discarded. The cancelled state resets on the next send.
-  void cancelStream() {
+  Future<void> cancelStream() async {
     _timeoutTimer?.cancel();
     _timeoutTimer = null;
     final wasSending = state.isSending; // capture before cancel
     _streamSub?.cancel();
     _streamSub = null;
+
+    // Also cancel the active WebSocket stream on the repository so the
+    // underlying connection is torn down immediately.
+    await ref.read(coachRepositoryProvider).cancelActiveStream();
 
     if (!wasSending) return;
 

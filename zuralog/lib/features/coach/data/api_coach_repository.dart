@@ -102,6 +102,25 @@ final class ApiCoachRepository implements CoachRepository {
   /// of each new [sendMessageStream] call.
   int _wsReconnectAttempts = 0;
 
+  /// Completer for the currently active WebSocket stream, used by
+  /// [cancelActiveStream] to signal done without waiting for the WS to close.
+  Completer<int?>? _activeDoneCompleter;
+
+  /// The currently active WebSocket channel, used by [cancelActiveStream].
+  WebSocketChannel? _activeChannel;
+
+  /// Cancels any in-flight WebSocket stream immediately.
+  ///
+  /// Completes [_activeDoneCompleter] (so the awaiting [_runWebSocketStream]
+  /// unblocks) and closes the channel sink. Safe to call when idle.
+  @override
+  Future<void> cancelActiveStream() async {
+    _activeDoneCompleter?.complete(null);
+    await _activeChannel?.sink.close();
+    _activeDoneCompleter = null;
+    _activeChannel = null;
+  }
+
   static String _deriveWsUrl() {
     const String envUrl = String.fromEnvironment('BASE_URL', defaultValue: '');
     final String httpUrl = envUrl.isNotEmpty
@@ -329,6 +348,10 @@ final class ApiCoachRepository implements CoachRepository {
 
       channel = WebSocketChannel.connect(uri);
 
+      // Track active channel and completer so cancelActiveStream() can abort.
+      _activeChannel = channel;
+      _activeDoneCompleter = doneCompleter;
+
       // Fix C3: send token as the first message so it is not exposed in the URL.
       // NOTE: Backend must accept token from first WS message, not query param.
       channel.sink.add(jsonEncode({'type': 'auth', 'token': token}));
@@ -454,8 +477,8 @@ final class ApiCoachRepository implements CoachRepository {
                 // Unknown message type — ignore.
                 break;
             }
-          } catch (e) {
-            controller.add(StreamError('Message parse error: $e'));
+          } catch (_) {
+            controller.add(const StreamError('Something went wrong. Please try again.'));
           }
         },
         onError: (Object error, StackTrace stackTrace) async {
@@ -468,9 +491,14 @@ final class ApiCoachRepository implements CoachRepository {
                   "If using public WiFi, a login screen may be required."
                 : 'No internet connection. Please check your network.';
           } else {
-            errorMessage = 'WebSocket error: $error';
+            errorMessage = 'Something went wrong. Please try again.';
           }
           if (!controller.isClosed) controller.add(StreamError(errorMessage));
+          await subscription?.cancel();
+          if (!sinkClosed) {
+            sinkClosed = true;
+            channel?.sink.close();
+          }
           // Fix C4: complete the single doneCompleter.
           if (!doneCompleter.isCompleted) doneCompleter.complete(null);
         },
@@ -487,10 +515,12 @@ final class ApiCoachRepository implements CoachRepository {
       unawaited(
         initCompleter.future.timeout(
           const Duration(seconds: 30),
-          onTimeout: () {
+          onTimeout: () async {
             if (!controller.isClosed) {
               controller.add(const StreamError('Connection timed out'));
             }
+            await subscription?.cancel();
+            if (!doneCompleter.isCompleted) doneCompleter.complete(null);
             if (!sinkClosed) {
               sinkClosed = true;
               channel?.sink.close();
@@ -531,7 +561,7 @@ final class ApiCoachRepository implements CoachRepository {
               "If using public WiFi, a login screen may be required."
             : 'No internet connection. Please check your network.';
       } else {
-        errorMessage = 'Connection error: $e';
+        errorMessage = 'Something went wrong. Please try again.';
       }
       if (!controller.isClosed) controller.add(StreamError(errorMessage));
     } finally {
@@ -540,6 +570,11 @@ final class ApiCoachRepository implements CoachRepository {
       if (!sinkClosed) {
         sinkClosed = true;
         await channel?.sink.close();
+      }
+      // Clear instance references so cancelActiveStream() is a no-op after done.
+      if (_activeDoneCompleter == doneCompleter) {
+        _activeDoneCompleter = null;
+        _activeChannel = null;
       }
       // Only close the controller if we are not about to reconnect.
       if (!reconnectAfter4003 && !controller.isClosed) await controller.close();

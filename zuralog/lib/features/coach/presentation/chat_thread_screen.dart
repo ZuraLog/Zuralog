@@ -550,10 +550,9 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                         scrollController: _scrollCtrl,
                         conversationId: widget.conversationId,
                         isSending: chatState.isSending,
-                        onEditMessage: (snapshot, content) {
-                          // Fix H10: edit state is in notifier.
-                          // snapshot is pre-truncation; content is the message text.
-                          // We read back the content from the notifier's editingContent.
+                        onEditMessage: (content) {
+                          // Fix H10: snapshot is managed by startEditing() in the
+                          // notifier; we only need the content to prefill the input.
                           _inputCtrl.text = content;
                           _inputCtrl.selection = TextSelection.collapsed(
                             offset: content.length,
@@ -947,9 +946,9 @@ class _MessageList extends ConsumerWidget {
   final bool isSending;
 
   /// Called when the user taps "Edit" on a user message bubble.
-  /// Receives the pre-truncation message [snapshot] (for cancel-restore) and
-  /// the [content] of the message being edited.
-  final void Function(List<ChatMessage> snapshot, String content) onEditMessage;
+  /// Receives the [content] of the message being edited.
+  /// The snapshot is saved internally by [CoachChatNotifier.startEditing].
+  final void Function(String content) onEditMessage;
 
   final String? streamingContent;
   final String? activeToolName;
@@ -984,19 +983,16 @@ class _MessageList extends ConsumerWidget {
             message: msg,
             onEdit: (msg.role == MessageRole.user && !isSending)
                 ? () {
-                    // Fix H10: use notifier's startEditing which manages snapshot.
+                    // Fix H10: startEditing saves snapshot and truncates state.
                     final notifier = ref.read(
                       coachChatNotifierProvider(conversationId).notifier,
                     );
-                    // Snapshot the full message list before truncation so the
-                    // state can be restored if the user cancels the edit.
-                    final snapshot = ref
+                    notifier.startEditing(i);
+                    final content = ref
                         .read(coachChatNotifierProvider(conversationId))
-                        .messages
-                        .toList();
-                    final content = notifier.editMessage(i);
+                        .editingContent;
                     if (content != null) {
-                      onEditMessage(snapshot, content);
+                      onEditMessage(content);
                     }
                   }
                 : null,

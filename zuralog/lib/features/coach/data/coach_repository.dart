@@ -117,6 +117,11 @@ abstract interface class CoachRepository {
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
   });
+
+  /// Cancels any in-flight WebSocket stream immediately.
+  ///
+  /// Safe to call when no stream is active.
+  Future<void> cancelActiveStream();
 }
 
 // ── Mock Implementation ────────────────────────────────────────────────────────
@@ -252,6 +257,9 @@ final class MockCoachRepository implements CoachRepository {
       conversationId: effectiveId,
     );
   }
+
+  @override
+  Future<void> cancelActiveStream() async {}
 
   @override
   Future<List<QuickAction>> fetchQuickActions() async {
