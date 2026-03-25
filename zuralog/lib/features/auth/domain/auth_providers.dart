@@ -490,6 +490,7 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
   ///   [nickname]: New nickname for AI greetings (optional).
   ///   [birthday]: New date of birth (optional).
   ///   [gender]: New gender identifier (optional).
+  ///   [heightCm]: New height in centimetres (optional).
   ///   [onboardingComplete]: Marks onboarding as complete (optional).
   ///
   /// Throws:
@@ -499,6 +500,7 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
     String? nickname,
     DateTime? birthday,
     String? gender,
+    double? heightCm,
     bool? onboardingComplete,
   }) async {
     final repo = ref.read(authRepositoryProvider);
@@ -507,8 +509,69 @@ class UserProfileNotifier extends Notifier<UserProfile?> {
       nickname: nickname,
       birthday: birthday,
       gender: gender,
+      heightCm: heightCm,
       onboardingComplete: onboardingComplete,
     );
+  }
+
+  /// Sends a request to change the authenticated user's email address.
+  ///
+  /// The backend sends a confirmation email to [newEmail] — the change only
+  /// takes effect after the user clicks the confirmation link.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails — callers should handle this.
+  Future<void> changeEmail(String newEmail) async {
+    await ref.read(authRepositoryProvider).changeEmail(newEmail);
+  }
+
+  /// Sends a request to change the authenticated user's password.
+  ///
+  /// Args:
+  ///   [currentPassword]: The user's existing password, verified server-side.
+  ///   [newPassword]: The replacement password.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails — callers should handle this.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await ref.read(authRepositoryProvider).changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+  }
+
+  /// Uploads an avatar image and updates the local profile state with the
+  /// returned URL.
+  ///
+  /// Args:
+  ///   [filePath]: Absolute path to the image file on the device.
+  ///   [contentType]: MIME type of the image (e.g. `image/jpeg`).
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails — callers should handle this.
+  Future<void> uploadAvatar({
+    required String filePath,
+    required String contentType,
+  }) async {
+    final avatarUrl = await ref.read(authRepositoryProvider).uploadAvatar(
+      filePath: filePath,
+      contentType: contentType,
+    );
+    state = state?.copyWith(avatarUrl: avatarUrl);
+  }
+
+  /// Permanently deletes the authenticated user's account.
+  ///
+  /// This action is irreversible. The backend removes all user data and
+  /// revokes all sessions.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails — callers should handle this.
+  Future<void> deleteAccount() async {
+    await ref.read(authRepositoryProvider).deleteAccount();
   }
 
   /// Clears the cached profile state (called on logout).
