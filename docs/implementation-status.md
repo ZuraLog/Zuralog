@@ -1,6 +1,6 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-25 (Coach Tab production hardening: security, rate limiting, resilience, Flutter UX correctness)
+**Last Updated:** 2026-03-26 (Account Management redesign merged into main)
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
@@ -46,6 +46,47 @@
 *Analytics:*
 - Added 4 event constants: `pattern_card_expanded`, `pattern_card_collapsed`, `filter_chip_tapped`, `coach_cta_tapped`.
 
+
+## Account Management Redesign (feat/account-management, 2026-03-25)
+
+**Scope:** Full Account Settings rework and new Edit Profile screen. Users can now update their profile photo, display name, nickname, birthday, gender, and height — and change their email address, change their password, or permanently delete their account, all without leaving the app.
+**Branch:** `feat/account-management` → merged to main (2026-03-25)
+**Status:** `flutter analyze lib/features/settings/` — 0 issues. All audit cycles passed.
+
+### What was built
+
+**Backend (`cloud-brain/`):**
+
+- **DB migration:** `height_cm NUMERIC(5,1)` and `avatar_url VARCHAR(2048)` added to the `users` table via Alembic migration.
+- **POST /users/me/email** — changes the authenticated user's email address via Supabase Auth. Rate-limited to 3 requests per hour per user.
+- **POST /users/me/password** — changes the authenticated user's password via Supabase Auth. Rate-limited to 3 requests per hour per user.
+- **POST /users/me/avatar** — accepts a multipart image upload. Validates the file's magic bytes (JPEG, PNG, WebP only), enforces a 5 MB size cap, stores the file in Supabase Storage, and writes the public URL back to the user record. Rate-limited to 10 requests per hour per user.
+- **StorageService:** extended with upsert support so re-uploading a profile photo replaces the previous file at the same path.
+- **AuthService:** two new methods — `update_user_email` and `update_user_password` — wrapping the Supabase Admin API.
+
+**Flutter (`zuralog/`):**
+
+- **UserProfile model:** `heightCm` (`double?`) and `avatarUrl` (`String?`) fields added. `copyWith` uses a sentinel pattern so callers can explicitly set either field to `null`.
+- **UserProfileNotifier:** four new async actions — `changeEmail`, `changePassword`, `uploadAvatar`, and `deleteAccount` — each updating optimistic UI state and calling through to the backend.
+- **AuthRepository:** five new API methods wired to the backend endpoints above plus delete account.
+- **AccountSettingsScreen (rework):** profile card at the top (tappable → Edit Profile), email change sheet, password change sheet (with `ZPasswordStrengthBar`), 2-step delete account dialog, sign out button. Linked accounts and health goals sections removed.
+- **EditProfileScreen (new):** `/settings/account/edit-profile` route (`editProfile`). Editable fields: profile photo (uploads immediately on selection), display name, nickname, birthday, gender, height (unit-aware). Save button in app bar, disabled until a field changes.
+- **ZPasswordStrengthBar (new shared widget):** `zuralog/lib/shared/widgets/inputs/z_password_strength_bar.dart`. Animated four-segment bar showing weak / fair / strong / very strong. Added to `widgets.dart` barrel export.
+
+### Infrastructure note
+
+The `avatars` Supabase Storage bucket must be created manually in the Supabase dashboard and set to **public**. It is not created automatically by any migration. See `docs/infrastructure.md` — Supabase Storage section.
+
+### Key decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Magic-byte validation on avatar upload | File extension alone is trivially spoofed; checking the actual file header blocks content injection |
+| 5 MB avatar size cap | Keeps storage costs predictable; more than enough for a profile photo at any practical resolution |
+| Sentinel `copyWith` pattern on UserProfile | Allows callers to explicitly clear `avatarUrl` (e.g. on delete) without ambiguity between "not set" and "intentionally null" |
+| Save button disabled until a field changes | Prevents unnecessary API calls and gives users a clear signal that their edit has been registered |
+| Rate limits on email/password change (3/hr) | These endpoints call Supabase Auth, which has its own limits; tight app-level limits reduce abuse surface and protect downstream quota |
+
 ---
 
 ## Coach Tab — Production Hardening (main, 2026-03-25)
@@ -85,10 +126,6 @@
 - `exclude_message_id` filter now applied before `.limit()` in history query (was silently wasting a history slot)
 - `conversation_id` and `str()` casts applied consistently across all `send_json` calls
 
-**Flutter state management:**
-- Optimistic user message bubble removed on ALL stream exit paths: `StreamError`, `onError`, inactivity timeout, and user cancel (`_pendingTempMsgId` pattern)
-- `cancelActiveStream()` called on all termination paths including inactivity timeout
-- `initCompleter` timeout replaced with cancellable `Timer` — no 30-second reference retention on early WS close
 - Reconnect race window closed — `_activeDoneCompleter` assigned before recursive `_runWebSocketStream` call
 - `receivedError` flag suppresses spurious `StreamComplete` after an `error` event
 - Empty string `message_id` from server treated as absent (falls through to local fallback)

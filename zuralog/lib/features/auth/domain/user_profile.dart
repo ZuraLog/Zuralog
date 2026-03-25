@@ -35,6 +35,12 @@ class UserProfile {
   /// Optional gender identifier.
   final String? gender;
 
+  /// Optional height in centimetres.
+  final double? heightCm;
+
+  /// Optional URL of the user's avatar image.
+  final String? avatarUrl;
+
   /// Whether the user has completed the onboarding flow.
   final bool onboardingComplete;
 
@@ -54,6 +60,8 @@ class UserProfile {
     this.nickname,
     this.birthday,
     this.gender,
+    this.heightCm,
+    this.avatarUrl,
     required this.onboardingComplete,
     this.createdAt,
   });
@@ -83,6 +91,8 @@ class UserProfile {
           ? DateTime.parse(json['birthday'] as String)
           : null,
       gender: json['gender'] as String?,
+      heightCm: (json['height_cm'] as num?)?.toDouble(),
+      avatarUrl: json['avatar_url'] as String?,
       onboardingComplete: json['onboarding_complete'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
@@ -105,7 +115,9 @@ class UserProfile {
     Object? displayName = _copyWithSentinel,
     Object? nickname = _copyWithSentinel,
     Object? birthday = _copyWithSentinel,
-    String? gender,
+    Object? gender = _copyWithSentinel,
+    Object? heightCm = _copyWithSentinel,
+    Object? avatarUrl = _copyWithSentinel,
     bool? onboardingComplete,
   }) {
     return UserProfile(
@@ -120,7 +132,13 @@ class UserProfile {
       birthday: birthday == _copyWithSentinel
           ? this.birthday
           : birthday as DateTime?,
-      gender: gender ?? this.gender,
+      gender: gender == _copyWithSentinel ? this.gender : gender as String?,
+      heightCm: heightCm == _copyWithSentinel
+          ? this.heightCm
+          : heightCm as double?,
+      avatarUrl: avatarUrl == _copyWithSentinel
+          ? this.avatarUrl
+          : avatarUrl as String?,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
       createdAt: createdAt,
     );
@@ -137,6 +155,8 @@ class UserProfile {
           nickname == other.nickname &&
           birthday == other.birthday &&
           gender == other.gender &&
+          heightCm == other.heightCm &&
+          avatarUrl == other.avatarUrl &&
           onboardingComplete == other.onboardingComplete &&
           createdAt == other.createdAt;
 
@@ -148,6 +168,8 @@ class UserProfile {
         nickname,
         birthday,
         gender,
+        heightCm,
+        avatarUrl,
         onboardingComplete,
         createdAt,
       );

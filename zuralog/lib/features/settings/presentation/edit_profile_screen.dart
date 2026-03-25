@@ -1,0 +1,821 @@
+/// Edit Profile Screen — lets the user update their display name, nickname,
+/// birthday, gender, height, and avatar photo.
+///
+/// Avatar changes are applied immediately on photo selection (separate action,
+/// not gated behind the Save button). All other field changes accumulate
+/// locally and are flushed to the server when the user taps Save.
+library;
+
+import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mime/mime.dart';
+
+import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/auth/domain/auth_providers.dart';
+import 'package:zuralog/features/auth/domain/user_profile.dart';
+import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
+import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
+import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/widgets.dart';
+
+// ── EditProfileScreen ─────────────────────────────────────────────────────────
+
+/// Screen for editing the user's profile: name, nickname, birthday, gender,
+/// height, and avatar photo.
+class EditProfileScreen extends ConsumerStatefulWidget {
+  /// Creates [EditProfileScreen].
+  const EditProfileScreen({super.key});
+
+  @override
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
+  // ── Controllers ────────────────────────────────────────────────────────────
+  late TextEditingController _nameController;
+  late TextEditingController _nicknameController;
+
+  // ── Editable local state ────────────────────────────────────────────────────
+  DateTime? _birthday;
+  String? _gender;
+  double? _heightCm;
+
+  // ── Upload / save state ────────────────────────────────────────────────────
+  bool _avatarUploading = false;
+  bool _saving = false;
+  String? _error;
+
+  // ── Original values (used to detect unsaved changes) ──────────────────────
+  late String _originalName;
+  late String _originalNickname;
+  late DateTime? _originalBirthday;
+  late String? _originalGender;
+  late double? _originalHeightCm;
+
+  // ── Has the user changed anything? ────────────────────────────────────────
+  bool get _hasChanges =>
+      _nameController.text != _originalName ||
+      _nicknameController.text != _originalNickname ||
+      _birthday != _originalBirthday ||
+      _gender != _originalGender ||
+      _heightCm != _originalHeightCm;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = ref.read(userProfileProvider);
+    _originalName = profile?.displayName ?? '';
+    _originalNickname = profile?.nickname ?? '';
+    _originalBirthday = profile?.birthday;
+    _originalGender = profile?.gender;
+    _originalHeightCm = profile?.heightCm;
+
+    _nameController = TextEditingController(text: _originalName);
+    _nicknameController = TextEditingController(text: _originalNickname);
+    _birthday = _originalBirthday;
+    _gender = _originalGender;
+    _heightCm = _originalHeightCm;
+
+    // Rebuild the Save button whenever text changes.
+    _nameController.addListener(_onTextChanged);
+    _nicknameController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _nameController.removeListener(_onTextChanged);
+    _nicknameController.removeListener(_onTextChanged);
+    _nameController.dispose();
+    _nicknameController.dispose();
+    super.dispose();
+  }
+
+  // ── Avatar upload ──────────────────────────────────────────────────────────
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 800,
+    );
+    if (file == null) return;
+
+    final mimeType = lookupMimeType(file.path) ?? 'image/jpeg';
+
+    setState(() => _avatarUploading = true);
+    try {
+      await ref.read(userProfileProvider.notifier).uploadAvatar(
+            filePath: file.path,
+            contentType: mimeType,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is DioException
+                ? (e.response?.data?['detail'] as String? ??
+                    'Photo upload failed. Try again.')
+                : 'Photo upload failed. Try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _avatarUploading = false);
+    }
+  }
+
+  // ── Save profile ────────────────────────────────────────────────────────────
+
+  Future<void> _save() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(userProfileProvider.notifier).update(
+            displayName: _nameController.text.trim().isEmpty
+                ? null
+                : _nameController.text.trim(),
+            nickname: _nicknameController.text.trim().isEmpty
+                ? null
+                : _nicknameController.text.trim(),
+            birthday: _birthday,
+            gender: _gender,
+            heightCm: _heightCm,
+          );
+      if (mounted) context.pop();
+    } on DioException catch (e) {
+      setState(() {
+        _error =
+            e.response?.data?['detail'] as String? ?? 'Something went wrong. Try again.';
+      });
+    } catch (_) {
+      setState(() => _error = 'Something went wrong. Try again.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  // ── Bottom sheet helpers ────────────────────────────────────────────────────
+
+  void _showFieldSheet(
+    String title,
+    String hint,
+    TextEditingController controller,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _FieldEditSheet(
+        title: title,
+        hint: hint,
+        initialValue: controller.text,
+        onSave: (value) {
+          controller.text = value;
+          setState(() {});
+        },
+      ),
+    );
+  }
+
+  void _showBirthdayPicker() {
+    DateTime picked = _birthday ?? DateTime(1990, 1, 1);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        final colors = AppColorsOf(context);
+        return Container(
+          margin: const EdgeInsets.all(AppDimens.spaceMd),
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceMd,
+                  0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Birthday',
+                      style: AppTextStyles.titleMedium
+                          .copyWith(color: colors.textPrimary),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(sheetCtx);
+                        setState(() => _birthday = picked);
+                      },
+                      child: Text(
+                        'Done',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 200,
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: picked,
+                  minimumDate: DateTime(1900),
+                  maximumDate: DateTime.now(),
+                  onDateTimeChanged: (date) => picked = date,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showGenderPicker() {
+    final options = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        final colors = AppColorsOf(context);
+        return Container(
+          margin: const EdgeInsets.all(AppDimens.spaceMd),
+          decoration: BoxDecoration(
+            color: colors.cardBackground,
+            borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+          ),
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
+                child: Text(
+                  'Gender',
+                  style: AppTextStyles.titleMedium
+                      .copyWith(color: colors.textPrimary),
+                ),
+              ),
+              ...options.map((option) {
+                final isSelected = _gender == option;
+                return Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: AppDimens.spaceSm),
+                  child: ZSelectableTile(
+                    isSelected: isSelected,
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      setState(() => _gender = option);
+                    },
+                    showCheckIndicator: true,
+                    child: Text(
+                      option,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: AppDimens.spaceSm),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showHeightPicker() {
+    final units = ref.read(unitsSystemProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _HeightPickerSheet(
+        initialHeightCm: _heightCm,
+        units: units,
+        onSave: (cm) => setState(() => _heightCm = cm),
+      ),
+    );
+  }
+
+  // ── Formatters ──────────────────────────────────────────────────────────────
+
+  String _formatDate(DateTime d) {
+    final mm = d.month.toString().padLeft(2, '0');
+    final dd = d.day.toString().padLeft(2, '0');
+    final yyyy = d.year.toString();
+    return '$mm/$dd/$yyyy';
+  }
+
+  String _formatHeight() {
+    if (_heightCm == null) return 'Not set';
+    final units = ref.watch(unitsSystemProvider);
+    if (units == UnitsSystem.metric) {
+      return '${_heightCm!.toStringAsFixed(0)} cm';
+    }
+    // Convert to ft + in
+    final totalInches = _heightCm! / 2.54;
+    final ft = (totalInches / 12).floor();
+    final inches = (totalInches % 12).round();
+    return "${ft}' ${inches}\"";
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final profile = ref.watch(userProfileProvider);
+
+    // Avatar initials fallback — first letter of display name or email.
+    final email = ref.watch(userEmailProvider);
+    final nameText = _nameController.text;
+    final initial = nameText.isNotEmpty
+        ? nameText[0].toUpperCase()
+        : email.isNotEmpty
+            ? email[0].toUpperCase()
+            : 'U';
+
+    return ZuralogScaffold(
+      appBar: ZuralogAppBar(
+        title: 'Edit Profile',
+        actions: [
+          TextButton(
+            onPressed: _hasChanges && !_saving ? _save : null,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  )
+                : Text(
+                    'Save',
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: _hasChanges && !_saving
+                          ? colors.primary
+                          : colors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding:
+            const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
+        children: [
+          // ── Avatar ─────────────────────────────────────────────────────
+          _AvatarSection(
+            profile: profile,
+            initial: initial,
+            uploading: _avatarUploading,
+            onTap: _pickAndUploadAvatar,
+          ),
+
+          // ── Identity ───────────────────────────────────────────────────
+          const SettingsSectionLabel('Identity'),
+          ZSettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.person_outline_rounded,
+                iconColor: AppColors.primary,
+                title: 'Name',
+                subtitle: _nameController.text.isEmpty
+                    ? 'Not set'
+                    : _nameController.text,
+                onTap: () => _showFieldSheet(
+                  'Name',
+                  'Your full name',
+                  _nameController,
+                ),
+              ),
+              ZSettingsTile(
+                icon: Icons.face_rounded,
+                iconColor: AppColors.categorySleep,
+                title: 'Nickname',
+                subtitle: _nicknameController.text.isEmpty
+                    ? 'Not set'
+                    : _nicknameController.text,
+                onTap: () => _showFieldSheet(
+                  'Nickname',
+                  'What your AI coach calls you',
+                  _nicknameController,
+                ),
+              ),
+            ],
+          ),
+
+          // ── Health Profile ─────────────────────────────────────────────
+          const SettingsSectionLabel('Health Profile'),
+          ZSettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.cake_outlined,
+                iconColor: AppColors.categoryNutrition,
+                title: 'Birthday',
+                subtitle: _birthday != null
+                    ? _formatDate(_birthday!)
+                    : 'Not set',
+                onTap: _showBirthdayPicker,
+              ),
+              ZSettingsTile(
+                icon: Icons.people_outline_rounded,
+                iconColor: AppColors.categoryWellness,
+                title: 'Gender',
+                subtitle: _gender ?? 'Not set',
+                onTap: _showGenderPicker,
+              ),
+              ZSettingsTile(
+                icon: Icons.straighten_rounded,
+                iconColor: AppColors.categoryActivity,
+                title: 'Height',
+                subtitle: _formatHeight(),
+                onTap: _showHeightPicker,
+              ),
+            ],
+          ),
+
+          // ── Inline error ───────────────────────────────────────────────
+          if (_error != null) ...[
+            const SizedBox(height: AppDimens.spaceMd),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd),
+              child: Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.statusError,
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: AppDimens.spaceXxl),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _AvatarSection ────────────────────────────────────────────────────────────
+
+class _AvatarSection extends StatelessWidget {
+  const _AvatarSection({
+    required this.profile,
+    required this.initial,
+    required this.uploading,
+    required this.onTap,
+  });
+
+  final UserProfile? profile;
+  final String initial;
+  final bool uploading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: uploading ? null : onTap,
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                ZAvatar(
+                  imageUrl: profile?.avatarUrl,
+                  initials: initial,
+                  size: 88,
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: colors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colors.cardBackground,
+                        width: 2,
+                      ),
+                    ),
+                    child: uploading
+                        ? const Padding(
+                            padding: EdgeInsets.all(5),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'Change Photo',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: colors.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _FieldEditSheet ────────────────────────────────────────────────────────────
+
+/// Bottom sheet with a single text field for editing a profile string value.
+class _FieldEditSheet extends StatefulWidget {
+  const _FieldEditSheet({
+    required this.title,
+    required this.hint,
+    required this.initialValue,
+    required this.onSave,
+  });
+
+  final String title;
+  final String hint;
+  final String initialValue;
+  final ValueChanged<String> onSave;
+
+  @override
+  State<_FieldEditSheet> createState() => _FieldEditSheetState();
+}
+
+class _FieldEditSheetState extends State<_FieldEditSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+        ),
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.title,
+              style: AppTextStyles.displaySmall
+                  .copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            AppTextField(
+              hintText: widget.hint,
+              controller: _controller,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: () {
+                widget.onSave(_controller.text);
+                Navigator.pop(context);
+              },
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: 'Save',
+                onPressed: () {
+                  widget.onSave(_controller.text);
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _HeightPickerSheet ─────────────────────────────────────────────────────────
+
+/// Bottom sheet for entering height — adapts to metric (cm) or imperial (ft/in).
+class _HeightPickerSheet extends StatefulWidget {
+  const _HeightPickerSheet({
+    required this.initialHeightCm,
+    required this.units,
+    required this.onSave,
+  });
+
+  final double? initialHeightCm;
+  final UnitsSystem units;
+  final ValueChanged<double?> onSave;
+
+  @override
+  State<_HeightPickerSheet> createState() => _HeightPickerSheetState();
+}
+
+class _HeightPickerSheetState extends State<_HeightPickerSheet> {
+  late TextEditingController _cmController;
+  late TextEditingController _ftController;
+  late TextEditingController _inController;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final h = widget.initialHeightCm;
+
+    if (widget.units == UnitsSystem.metric) {
+      _cmController = TextEditingController(
+        text: h != null ? h.toStringAsFixed(0) : '',
+      );
+      _ftController = TextEditingController();
+      _inController = TextEditingController();
+    } else {
+      _cmController = TextEditingController();
+      if (h != null) {
+        final totalInches = h / 2.54;
+        final ft = (totalInches / 12).floor();
+        final inches = (totalInches % 12).round();
+        _ftController = TextEditingController(text: ft.toString());
+        _inController = TextEditingController(text: inches.toString());
+      } else {
+        _ftController = TextEditingController();
+        _inController = TextEditingController();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _cmController.dispose();
+    _ftController.dispose();
+    _inController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    double? cm;
+
+    if (widget.units == UnitsSystem.metric) {
+      final raw = double.tryParse(_cmController.text.trim());
+      if (raw == null || raw < 30 || raw > 300) {
+        setState(
+          () => _error = 'Please enter a height between 30 and 300 cm.',
+        );
+        return;
+      }
+      cm = raw;
+    } else {
+      final ft = double.tryParse(_ftController.text.trim());
+      final inches = double.tryParse(_inController.text.trim()) ?? 0;
+      if (ft == null) {
+        setState(() => _error = 'Please enter your height in feet and inches.');
+        return;
+      }
+      cm = ft * 30.48 + inches * 2.54;
+      if (cm < 30 || cm > 300) {
+        setState(
+          () => _error = 'Please enter a valid height.',
+        );
+        return;
+      }
+    }
+
+    widget.onSave(cm);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final isMetric = widget.units == UnitsSystem.metric;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+        ),
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Height',
+              style: AppTextStyles.displaySmall
+                  .copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            if (isMetric)
+              AppTextField(
+                hintText: 'Height (cm)',
+                controller: _cmController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: _save,
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: AppTextField(
+                      hintText: 'ft',
+                      controller: _ftController,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimens.spaceMd),
+                  Expanded(
+                    child: AppTextField(
+                      hintText: 'in',
+                      controller: _inController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: _save,
+                    ),
+                  ),
+                ],
+              ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.statusError,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppDimens.spaceMd),
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: 'Save',
+                onPressed: _save,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -86,6 +86,7 @@ class StorageService:
         path: str,
         content: bytes,
         content_type: str,
+        upsert: bool = False,
     ) -> str:
         """Uploads a file to Supabase Storage.
 
@@ -94,6 +95,9 @@ class StorageService:
             path: Object path within the bucket (e.g., 'user-id/uuid/photo.jpg').
             content: Raw file bytes.
             content_type: MIME type of the file (e.g., 'image/jpeg').
+            upsert: When True, overwrite an existing object at the same path
+                instead of failing with a conflict error. Sends the
+                ``x-upsert: true`` header to the Supabase Storage API.
 
         Returns:
             The storage path ('{bucket}/{path}') for later retrieval.
@@ -109,6 +113,8 @@ class StorageService:
 
         url = self._storage_url(f"/object/{bucket}/{path}")
         headers = self._headers(content_type=content_type)
+        if upsert:
+            headers["x-upsert"] = "true"
 
         try:
             response = await self._client.post(url, headers=headers, content=content)
@@ -247,7 +253,8 @@ class StorageService:
         headers = self._headers(content_type="application/json")
 
         try:
-            response = await self._client.delete(
+            response = await self._client.request(
+                "DELETE",
                 url,
                 headers=headers,
                 json={"prefixes": paths},

@@ -7,7 +7,7 @@ All values are loaded from environment variables or a .env file.
 
 import logging
 
-from pydantic import SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -123,6 +123,8 @@ class Settings(BaseSettings):
     # PostHog
     posthog_api_key: str = ""
     posthog_host: str = "https://us.i.posthog.com"
+    # Supabase Storage — bucket names
+    avatar_bucket: str = Field(default="avatars", description="Supabase Storage bucket for avatar images. Must be set to public in Supabase dashboard.")  # AVATAR_BUCKET
     # Rate limits (Fix 1.5 / M-7)
     rate_limit_free_daily: int = 50
     rate_limit_premium_daily: int = 500

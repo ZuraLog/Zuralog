@@ -1,7 +1,7 @@
 # Zuralog — Mobile Screen Inventory
 
-**Version:** 1.2  
-**Last Updated:** 2026-03-16  
+**Version:** 1.3
+**Last Updated:** 2026-03-25
 **Status:** Living Document
 
 ---
@@ -128,7 +128,8 @@ The analytical tab. Where Progress is emotional, Trends is intellectual. A singl
 |--------|-------------|---------|
 | **Profile** | Avatar tap (side panel or header) | Display name, email, avatar, member-since date, subscription tier badge. Edit profile fields. **Emergency Health Card link/button** — prominently displayed as a tappable card within the Profile screen (not buried in a sub-menu) with a red cross icon and label "Emergency Health Card". This ensures quick access for first responders or users sharing their device. |
 | **Settings Hub** | Gear icon from Profile or header | Top-level settings menu: Account, Notifications, Appearance, Coach, Integrations, Privacy & Data, Subscription, About. |
-| **Account Settings** | Settings > Account | Email, password change, linked social accounts, delete account. |
+| **Account Settings** | Settings > Account | Fully reworked (2026-03-25). Profile card at the top — tapping it navigates to Edit Profile. Email change and password change are fully implemented with Supabase Auth. Delete account is fully wired with a 2-step confirmation dialog. Sign out button added. Linked social accounts and health goals sections removed. |
+| **Edit Profile** | Account Settings > profile card tap | Path: `/settings/account/edit-profile`, route name: `editProfile`. Lets the user edit their profile photo (uploaded immediately on selection), display name, nickname, birthday, gender, and height (unit-aware — metric or imperial). A Save button in the app bar is disabled until at least one field has changed. |
 | **Notification Preferences** | Settings > Notifications | **Expanded notification settings:** Morning Briefing toggle + time picker (7:00 AM default). Smart Reminders master toggle with per-category sub-toggles (Pattern-based, Gap-based, Goal-based, Celebration). Reminder Frequency selector (Low 1/day / Medium 2/day / High 3/day). Streak Reminders toggle. Achievement Notifications toggle. Anomaly Alerts toggle. Integration Alerts toggle. Quiet Hours start/end time picker (10:00 PM – 7:00 AM default). |
 | **Appearance Settings** | Settings > Appearance | Dashboard card color customization (per-category accent picker). Card layout density (compact / comfortable). **Theme selector** (Dark / Light / System — follows OS). **Haptic Feedback toggle** (on/off). **Reset Onboarding Tooltips button** (re-enables all first-visit tooltip overlays). **Disable Tooltips toggle** (globally suppress all onboarding tooltips). |
 | **Coach Settings** | Settings > Coach | AI persona tuning (tone: Tough Love / Balanced / Gentle). Response length preference (Concise / Detailed). Suggested prompts on/off. Voice input settings. **Proactivity Level selector** (Low / Medium / High) positioned below the persona selector — controls how frequently the AI proactively surfaces insights, check-ins, and suggestions. |
@@ -172,6 +173,7 @@ The following reusable components are available across all screens:
 | `ZWeightLogPanel` | `log_panels/z_weight_log_panel.dart` | Inline weight log with kg/lbs toggle; pre-fills from latest backend value; delta indicator vs previous; last-used unit persisted via SharedPreferences; real `logWeight` API call | Part 5 |
 | `ZStepsLogPanel` | `log_panels/z_steps_log_panel.dart` | Inline step count entry; sync banner shows Apple Health / Health Connect source name; goal progress from `dailyGoalsProvider`; "Confirm Steps" label when value matches synced total; manual source omits banner; real `logSteps` API call | Part 5 |
 | `ZSectionLabel` | `layout/z_section_label.dart` | Section title label for log screens | Part 3 |
+| `ZPasswordStrengthBar` | `inputs/z_password_strength_bar.dart` | Animated segmented bar that rates password strength (weak / fair / strong / very strong) — used on password change sheet | Account Management (2026-03-25) |
 
 ---
 
@@ -185,8 +187,8 @@ The following reusable components are available across all screens:
 | Progress tab | 6 | 6 new |
 | Trends tab | 4 | 4 new (backend exists, no UI) |
 | Auth & Onboarding | 5 | 4 existing + 1 rebuilt (Onboarding Flow replaces Profile Questionnaire) |
-| Settings & Profile | 14 | 12 existing + 2 new (Emergency Health Card + Edit) |
-| **Total** | **~40** | **~27 new/rebuilt, ~13 carried forward** |
+| Settings & Profile | 15 | 12 existing + 3 new (Emergency Health Card + Edit, Edit Profile) |
+| **Total** | **~41** | **~28 new/rebuilt, ~13 carried forward** |
 
 ---
 

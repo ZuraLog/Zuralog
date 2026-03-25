@@ -29,6 +29,7 @@
 /// /trends                         → TrendsHomeScreen (tab 4)
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
+///   /settings/account/edit-profile → EditProfileScreen
 ///   /settings/notifications       → NotificationSettingsScreen
 ///   /settings/appearance          → AppearanceSettingsScreen
 ///   /settings/coach               → CoachSettingsScreen
@@ -308,6 +309,14 @@ abstract final class RouteNames {
 
   /// Path for the Emergency Health Card edit screen.
   static const String emergencyCardEditPath = '/profile/emergency-card/edit';
+
+  // ── Account (under Settings) ─────────────────────────────────────────────
+
+  /// Name for the Edit Profile screen.
+  static const String editProfile = 'editProfile';
+
+  /// Path for the Edit Profile screen.
+  static const String editProfilePath = '/settings/account/edit-profile';
 
   // ── Developer Tools ───────────────────────────────────────────────────────
 

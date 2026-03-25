@@ -96,7 +96,7 @@ class AuthService:
         meaningful HTTPExceptions instead of unhandled 500s.
 
         Args:
-            method: HTTP method ("GET" or "POST").
+            method: HTTP method ("GET", "POST", or "PUT").
             path: Auth API path (e.g., "/token?grant_type=password").
             json: Optional JSON body.
             headers: Request headers.
@@ -118,6 +118,8 @@ class AuthService:
         try:
             if method.upper() == "GET":
                 return await self._client.get(url, headers=headers or {})
+            if method.upper() == "PUT":
+                return await self._client.put(url, headers=headers or {}, json=json)
             return await self._client.post(url, headers=headers or {}, json=json)
         except httpx.TimeoutException:
             logger.error("Supabase auth request timed out: %s %s", method, url)
@@ -387,6 +389,57 @@ class AuthService:
 
         return response.json()
 
+    async def update_user_email(self, access_token: str, new_email: str) -> None:
+        """Request an email address change via Supabase Auth.
+
+        Supabase sends a confirmation link to `new_email`. The change is
+        not applied until the user clicks the link.
+
+        Args:
+            access_token: The user's current JWT (not the service key).
+            new_email: The new email address to request.
+
+        Raises:
+            HTTPException: If Supabase rejects the request.
+        """
+        response = await self._request(
+            "PUT",
+            "/user",
+            headers=self._headers(access_token=access_token),
+            json={"email": new_email},
+        )
+
+        if response.status_code not in (200, 204):
+            detail = self._extract_error(response)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Email update failed: {detail}",
+            )
+
+    async def update_user_password(self, access_token: str, new_password: str) -> None:
+        """Update the user's password via Supabase Auth.
+
+        Args:
+            access_token: The user's current JWT (not the service key).
+            new_password: The new password to set.
+
+        Raises:
+            HTTPException: If Supabase rejects the request.
+        """
+        response = await self._request(
+            "PUT",
+            "/user",
+            headers=self._headers(access_token=access_token),
+            json={"password": new_password},
+        )
+
+        if response.status_code not in (200, 204):
+            detail = self._extract_error(response)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Password update failed: {detail}",
+            )
+
     async def admin_delete_user(self, user_id: str) -> None:
         """Delete a user from Supabase Auth via admin API.
 
@@ -407,9 +460,8 @@ class AuthService:
             "Authorization": f"Bearer {service_key}",
             "apikey": service_key,
         }
-        async with httpx.AsyncClient() as client:
-            resp = await client.delete(url, headers=headers)
-            resp.raise_for_status()
+        resp = await self._client.delete(url, headers=headers)
+        resp.raise_for_status()
 
     @staticmethod
     def _extract_error(response: httpx.Response) -> str:

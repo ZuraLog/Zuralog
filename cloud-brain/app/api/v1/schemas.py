@@ -8,7 +8,7 @@ on the authentication endpoints.
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -28,11 +28,11 @@ class RegisterRequest(BaseModel):
 
     Attributes:
         email: User's email address.
-        password: User's password (min 6 chars enforced by Supabase).
+        password: User's password (min 8 chars).
     """
 
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
 
 
 class RefreshRequest(BaseModel):
@@ -111,6 +111,8 @@ class UserProfileResponse(BaseModel):
         nickname: Name the AI coach uses (optional).
         birthday: Date of birth for age calculation (optional).
         gender: Self-identified gender, free text (optional).
+        height_cm: User's height in centimetres (optional).
+        avatar_url: URL of the user's profile picture (optional).
         onboarding_complete: True once the profile questionnaire is done.
         created_at: Timestamp when the account was created (optional).
     """
@@ -121,23 +123,57 @@ class UserProfileResponse(BaseModel):
     nickname: Optional[str]
     birthday: Optional[date]
     gender: Optional[str]
+    height_cm: Optional[float] = None
+    avatar_url: Optional[str] = None
     onboarding_complete: bool
     created_at: Optional[datetime] = None
+
+    @field_validator("avatar_url")
+    @classmethod
+    def avatar_url_must_be_https(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.startswith("https://"):
+            raise ValueError("avatar_url must be a valid HTTPS URL")
+        return v
 
     class Config:
         from_attributes = True
 
 
+class ChangeEmailRequest(BaseModel):
+    """Request body for changing the user's email address.
+
+    Attributes:
+        new_email: The new email address. Supabase will send a
+            confirmation link here — the change is not applied until clicked.
+    """
+
+    new_email: EmailStr
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request body for changing the user's password.
+
+    Attributes:
+        current_password: The user's current password for verification.
+        new_password: The new password (minimum 8 characters).
+    """
+
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8)
+
+
 class UpdateProfileRequest(BaseModel):
     """Request body for a partial profile update.
 
-    All fields are optional; only non-None fields are applied.
+    All fields are optional. Fields not sent are left unchanged; sending null
+    explicitly will clear the field in the database.
 
     Attributes:
         display_name: New full display name.
         nickname: New coach-facing nickname.
         birthday: New date of birth.
         gender: New self-identified gender.
+        height_cm: New height in centimetres (30–300 cm).
         onboarding_complete: Mark onboarding as done or undone.
     """
 
@@ -145,4 +181,15 @@ class UpdateProfileRequest(BaseModel):
     nickname: Optional[str] = None
     birthday: Optional[date] = None
     gender: Optional[str] = None
+    height_cm: Optional[float] = Field(default=None, ge=30, le=300)
     onboarding_complete: Optional[bool] = None
+
+
+class AvatarUploadResponse(BaseModel):
+    """Response after a successful avatar upload.
+
+    Attributes:
+        avatar_url: Public URL of the newly uploaded profile picture.
+    """
+
+    avatar_url: str
