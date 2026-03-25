@@ -1,504 +1,564 @@
 /// Trends Home Screen — Tab 4 root screen.
 ///
-/// Surfaces AI-discovered correlations and a horizontal time-machine strip
-/// that lets the user swipe through week-by-week historical summaries.
-///
-/// Layout:
-///   - AppBar: ZuralogAppBar — "Trends" title + onboarding tooltip (avatar auto-appended)
-///   - Time-machine horizontal scroll strip (periods, newest first)
-///   - Section: "Patterns We Found" — correlation cards
-///   - Onboarding empty state when [hasEnoughData] is false
+/// Single-screen Trends experience: filter chips, hero pattern card,
+/// ranked pattern feed, and in-place card expansion with sparkline charts.
 library;
 
-import 'dart:async';
-import 'dart:convert';
-
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/analytics/analytics_events.dart';
-import 'package:zuralog/core/storage/prefs_service.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
-import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/trends/domain/trends_models.dart';
 import 'package:zuralog/features/trends/providers/trends_providers.dart';
+import 'package:zuralog/shared/widgets/buttons/z_button.dart';
+import 'package:zuralog/shared/widgets/cards/z_topographic_card.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/loading/z_loading_skeleton.dart';
+import 'package:zuralog/shared/widgets/z_badge.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
+
+// ── Helper Functions ──────────────────────────────────────────────────────────
+
+Color _categoryColor(String category) {
+  switch (category) {
+    case 'sleep':
+      return AppColors.categorySleep;
+    case 'activity':
+      return AppColors.categoryActivity;
+    case 'heart':
+      return AppColors.categoryHeart;
+    case 'nutrition':
+      return AppColors.categoryNutrition;
+    case 'body':
+      return AppColors.categoryBody;
+    case 'wellness':
+      return AppColors.categoryWellness;
+    default:
+      return AppColors.trendsSage;
+  }
+}
+
+String _strengthLabel(double coefficient) {
+  final abs = coefficient.abs();
+  if (abs >= 0.7) return 'Strong';
+  if (abs >= 0.4) return 'Moderate';
+  return 'Weak';
+}
 
 // ── TrendsHomeScreen ──────────────────────────────────────────────────────────
 
-/// Trends Home screen — AI correlations + time-machine history strip.
+/// Root widget for the Trends tab.
 class TrendsHomeScreen extends ConsumerWidget {
-  /// Creates the [TrendsHomeScreen].
   const TrendsHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trendsAsync = ref.watch(trendsHomeProvider);
 
+    String? subtitle;
+    if (trendsAsync.hasValue) {
+      final data = trendsAsync.value!;
+      if (data.patternCount > 0) {
+        subtitle = '${data.patternCount} patterns discovered';
+      }
+    }
+
     return ZuralogScaffold(
-      addBottomNavPadding: true,
       appBar: ZuralogAppBar(
-        title: 'Trends',
-        tooltipConfig: const ZuralogAppBarTooltipConfig(
-          screenKey: 'trends_home',
-          tooltipKey: 'welcome',
-          message: 'This is where patterns hide. '
-              "I'll surface correlations you'd never find on your own.",
-        ),
+        title: subtitle != null ? 'Trends' : 'Trends',
       ),
-      // Provider never errors — safety-net error branch shows the empty state
-      // rather than any connection error message.
       body: trendsAsync.when(
-        error: (err, stack) => _TrendsHomeBody(
-          data: const TrendsHomeData(
-            correlationHighlights: [],
-            timePeriods: [],
-            hasEnoughData: false,
-          ),
-        ),
         loading: () => const _TrendsLoadingSkeleton(),
-        data: (data) => _TrendsHomeBody(data: data),
+        error: (err, stack) => const _TrendsEmptyState(),
+        data: (data) => _TrendsHomeBody(data: data, subtitle: subtitle),
       ),
     );
   }
 }
 
-// ── Body ──────────────────────────────────────────────────────────────────────
+// ── _TrendsHomeBody ───────────────────────────────────────────────────────────
 
 class _TrendsHomeBody extends ConsumerStatefulWidget {
-  const _TrendsHomeBody({required this.data});
+  const _TrendsHomeBody({required this.data, this.subtitle});
+
   final TrendsHomeData data;
+  final String? subtitle;
 
   @override
   ConsumerState<_TrendsHomeBody> createState() => _TrendsHomeBodyState();
 }
 
-class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody> {
-  static const _kDismissedKey = 'dismissed_correlation_suggestions';
+class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
+    with TickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final List<Animation<double>> _animations;
 
-  final Set<String> _dismissedSuggestions = {};
+  List<CorrelationHighlight> _buildFilteredList(String category) {
+    final all = widget.data.correlationHighlights;
+    final filtered =
+        category == 'all' ? all : all.where((h) => h.category == category).toList();
+    final sorted = [...filtered]
+      ..sort((a, b) => b.coefficient.abs().compareTo(a.coefficient.abs()));
+    return sorted;
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadDismissals();
+    final category = ref.read(selectedCategoryFilterProvider);
+    final filtered = _buildFilteredList(category);
+    _buildAnimations(filtered.length);
   }
 
-  /// Loads persisted dismissed suggestion IDs from SharedPreferences.
-  ///
-  /// Called from [initState] (cannot be async directly). The widget renders
-  /// immediately with an empty set; a [setState] call triggers a rebuild once
-  /// the saved IDs are available.
-  ///
-  /// Intersects the stored IDs against [widget.data.suggestionCards] so that
-  /// stale IDs (from previous sessions where suggestions have rotated) are
-  /// pruned automatically. This prevents unbounded set growth and ensures a
-  /// reused suggestion ID is always shown fresh.
-  ///
-  /// **Multi-account safety:** Suggestion IDs are derived server-side as
-  /// `uuid5(userId, goal, category)` — they are unique per user. If a
-  /// different user logs in, their suggestion IDs will never match the
-  /// previous user's dismissed IDs, so the intersection will produce an
-  /// empty set and `prefs.remove` will clean up the stale key. No SharedPreferences
-  /// namespacing by user ID is required.
-  Future<void> _loadDismissals() async {
-    try {
-      final prefs = ref.read(prefsProvider);
-      final raw = prefs.getString(_kDismissedKey);
-      if (raw != null) {
-        final stored = (jsonDecode(raw) as List<dynamic>)
-            .whereType<String>()
-            .toSet();
-        // Only keep IDs that are still present in the current suggestion list.
-        // This prunes stale IDs and prevents ID-reuse from hiding new cards.
-        final currentIds =
-            widget.data.suggestionCards.map((s) => s.id).toSet();
-        final validIds = stored.intersection(currentIds);
-        if (validIds.isNotEmpty) {
-          if (mounted) setState(() => _dismissedSuggestions.addAll(validIds));
-          // Re-persist the pruned set to keep storage clean.
-          await prefs.setString(
-            _kDismissedKey,
-            jsonEncode(validIds.toList()),
-          );
-        } else if (stored.isNotEmpty) {
-          // All stored IDs are stale — clear storage.
-          await prefs.remove(_kDismissedKey);
-        }
-      }
-    } catch (_) {
-      // Corrupt or missing data — start with empty set.
-    }
+  void _buildAnimations(int count) {
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 600 + count * 60),
+    )..forward();
+
+    _animations = List.generate(count + 1, (i) {
+      final start = (i * 0.06).clamp(0.0, 1.0);
+      final end = (i * 0.06 + 0.4).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _controller,
+        curve: Interval(start, end, curve: Curves.easeOut),
+      );
+    });
   }
 
-  /// Persists the current [_dismissedSuggestions] set to SharedPreferences.
-  ///
-  /// Synchronous via [prefsProvider] — no Future, no disposed-widget risk.
-  void _persistDismissals() {
-    try {
-      unawaited(ref.read(prefsProvider).setString(
-        _kDismissedKey,
-        jsonEncode(_dismissedSuggestions.toList()),
-      ));
-    } catch (_) {
-      // Write failures are non-fatal — the in-memory set remains correct.
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Animation<double> _animFor(int index) {
+    if (index < _animations.length) return _animations[index];
+    return _animations.last;
   }
 
   @override
   Widget build(BuildContext context) {
-    final data = widget.data;
-    final visibleSuggestions = data.suggestionCards
-        .where((s) => !_dismissedSuggestions.contains(s.id))
-        .toList();
+    final category = ref.watch(selectedCategoryFilterProvider);
+    final filtered = _buildFilteredList(category);
+
+    final hero = filtered.isNotEmpty ? filtered.first : null;
+    final feed = filtered.length > 1 ? filtered.sublist(1) : <CorrelationHighlight>[];
 
     return RefreshIndicator(
+      color: AppColors.trendsSage,
       onRefresh: () async {
         ref.read(hapticServiceProvider).light();
         ref.invalidate(trendsHomeProvider);
       },
-      color: AppColors.primary,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // ── Time-machine strip ─────────────────────────────────────────
-          if (data.timePeriods.isNotEmpty) ...[
-            const SliverToBoxAdapter(
-              child: _SectionHeader(title: 'History'),
-            ),
-            SliverToBoxAdapter(
-              child: _TimeMachineStrip(periods: data.timePeriods),
-            ),
-          ],
-
-          // ── Correlation highlights ─────────────────────────────────────
+          // Filter chips row
           SliverToBoxAdapter(
-            child: _SectionHeader(
-              title: 'Patterns We Found',
-              subtitle: data.hasEnoughData
-                  ? null
-                  : 'Keep logging — patterns appear after 7+ days of data',
+            child: Padding(
+              padding: const EdgeInsets.only(top: AppDimens.spaceSm),
+              child: _FilterChipsRow(
+                onCategoryChanged: (cat) {
+                  final newFiltered = _buildFilteredList(cat);
+                  if (_controller.isAnimating) _controller.stop();
+                  _controller.dispose();
+                  _buildAnimations(newFiltered.length);
+                },
+              ),
             ),
           ),
 
-          if (!data.hasEnoughData || data.correlationHighlights.isEmpty)
-            const SliverToBoxAdapter(child: _EmptyCorrelationsState())
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceSm / 2,
+          // Empty state when not enough data
+          if (!widget.data.hasEnoughData)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: _TrendsEmptyState(),
+            )
+          else ...[
+            // Hero card
+            if (hero != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceMd,
+                    0,
                   ),
-                  child: _CorrelationCard(
-                    highlight: data.correlationHighlights[index],
-                    onTap: () {},
+                  child: FadeTransition(
+                    opacity: _animFor(0),
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.08),
+                        end: Offset.zero,
+                      ).animate(_animFor(0)),
+                      child: _HeroPatternCard(highlight: hero),
+                    ),
                   ),
                 ),
-                childCount: data.correlationHighlights.length,
               ),
-            ),
 
-          // ── Correlation suggestion cards ───────────────────────────────
-          if (visibleSuggestions.isNotEmpty) ...[
-            const SliverToBoxAdapter(
-              child: _SectionHeader(title: 'Track More, Learn More'),
-            ),
+            // Section header
+            if (feed.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.spaceMd,
+                    AppDimens.spaceLg,
+                    AppDimens.spaceMd,
+                    AppDimens.spaceSm,
+                  ),
+                  child: _SectionHeader(title: 'Patterns'),
+                ),
+              ),
+
+            // Ranked feed
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final s = visibleSuggestions[index];
+                  final h = feed[index];
+                  // +1 because hero is index 0 in animation list
+                  final anim = _animFor(index + 1);
                   return Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDimens.spaceMd,
                       vertical: AppDimens.spaceSm / 2,
                     ),
-                    child: _CorrelationSuggestionCard(
-                      suggestion: s,
-                      onDismiss: () {
-                        setState(() => _dismissedSuggestions.add(s.id));
-                        _persistDismissals(); // fire-and-forget
-                      },
-                      onCtaTap: () {
-                        ref.read(hapticServiceProvider).light();
-                        ref.read(analyticsServiceProvider).capture(
-                          event:
-                              AnalyticsEvents.correlationSuggestionTapped,
-                          properties: {
-                            'metric_needed': s.metricNeeded,
-                            'cta_label': s.ctaLabel,
-                          },
-                        );
-                        // Security: validate route against allowlist before
-                        // navigating — ctaRoute is backend-supplied.
-                        const allowedRoutes = {
-                          RouteNames.settingsIntegrationsPath,
-                        };
-                        if (allowedRoutes.contains(s.ctaRoute)) {
-                          context.push(s.ctaRoute);
-                        }
-                      },
+                    child: FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.08),
+                          end: Offset.zero,
+                        ).animate(anim),
+                        child: _PatternCard(highlight: h),
+                      ),
                     ),
                   );
                 },
-                childCount: visibleSuggestions.length,
+                childCount: feed.length,
               ),
             ),
-          ],
 
-          SliverToBoxAdapter(
-            child: SizedBox(height: AppDimens.bottomClearance(context)),
-          ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppDimens.spaceXl)),
+          ],
         ],
       ),
     );
   }
 }
 
-// ── Time-Machine Strip ────────────────────────────────────────────────────────
+// ── _HeroPatternCard ──────────────────────────────────────────────────────────
 
-class _TimeMachineStrip extends StatelessWidget {
-  const _TimeMachineStrip({required this.periods});
-  final List<TimePeriodSummary> periods;
+class _HeroPatternCard extends ConsumerStatefulWidget {
+  const _HeroPatternCard({required this.highlight});
+
+  final CorrelationHighlight highlight;
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 140,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-        scrollDirection: Axis.horizontal,
-        itemCount: periods.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppDimens.spaceSm),
-        itemBuilder: (context, index) =>
-            _TimePeriodCard(period: periods[index]),
-      ),
-    );
-  }
+  ConsumerState<_HeroPatternCard> createState() => _HeroPatternCardState();
 }
 
-class _TimePeriodCard extends StatelessWidget {
-  const _TimePeriodCard({required this.period});
-  final TimePeriodSummary period;
+class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
+  bool _isExpanded = false;
 
-  Color _scoreColor(int score) {
-    if (score >= 70) return AppColors.healthScoreGreen;
-    if (score >= 40) return AppColors.healthScoreAmber;
-    return AppColors.healthScoreRed;
+  void _handleTap() {
+    final h = widget.highlight;
+    final strength = _strengthLabel(h.coefficient);
+
+    ref.read(hapticServiceProvider).light();
+    ref.read(analyticsServiceProvider).capture(
+      event: AnalyticsEvents.trendsPatternTapped,
+      properties: {
+        'pattern_id': h.id,
+        'category': h.category,
+        'strength': strength,
+        'is_new': h.isNew,
+      },
+    );
+
+    if (!_isExpanded) {
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.trendsPatternExpanded,
+        properties: {'pattern_id': h.id, 'category': h.category},
+      );
+    }
+
+    setState(() => _isExpanded = !_isExpanded);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    final scoreColor = _scoreColor(period.overallScore);
-    return Container(
-      width: 160,
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  period.label,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textSecondary,
+    final h = widget.highlight;
+    final catColor = _categoryColor(h.category);
+    final strength = _strengthLabel(h.coefficient);
+    final directionText = h.direction == CorrelationDirection.positive
+        ? 'Positive relationship'
+        : h.direction == CorrelationDirection.negative
+            ? 'Negative relationship'
+            : 'Neutral relationship';
+
+    return GestureDetector(
+      onTap: _handleTap,
+      child: ZTopographicCard(
+        accentColor: catColor,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Eyebrow row
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: catColor,
+                    shape: BoxShape.circle,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Text(
+                  'Strongest Pattern',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: catColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                if (h.isNew)
+                  ZBadge(
+                    label: 'New',
+                    color: catColor.withValues(alpha: 0.18),
+                    textColor: catColor,
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // Headline
+            Text(
+              h.headline,
+              style: AppTextStyles.titleLarge.copyWith(
+                color: AppColors.trendsTextPrimary,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceSm,
-                  vertical: 2,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+
+            // Metric pills
+            Row(
+              children: [
+                ZBadge(
+                  label: h.metricA,
+                  color: catColor.withValues(alpha: 0.15),
+                  textColor: catColor,
                 ),
-                decoration: BoxDecoration(
-                  color: scoreColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                const SizedBox(width: AppDimens.spaceSm),
+                ZBadge(
+                  label: h.metricB,
+                  color: catColor.withValues(alpha: 0.10),
+                  textColor: catColor.withValues(alpha: 0.8),
                 ),
-                child: Text(
-                  '${period.overallScore}',
-                  style: AppTextStyles.bodySmall.copyWith(color: scoreColor),
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+
+            // Strength row
+            Row(
+              children: [
+                ZBadge(
+                  label: strength,
+                  color: catColor.withValues(alpha: 0.15),
+                  textColor: catColor,
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Text(
+                  h.coefficient.toStringAsFixed(2),
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.trendsTextSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceXs),
+                Text(
+                  '·  $directionText',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.trendsTextMuted,
+                  ),
+                ),
+              ],
+            ),
+
+            // Tap hint
+            if (!_isExpanded) ...[
+              const SizedBox(height: AppDimens.spaceMd),
+              Text(
+                'Tap to explore',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.trendsTextMuted,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          ...period.highlights.take(2).map(
-                (h) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          h.label,
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.textTertiary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        '${h.value} ${h.unit}'.trim(),
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-        ],
+
+            // Expansion
+            AnimatedSize(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOut,
+              child: _isExpanded
+                  ? _ExpandedPatternContent(
+                      patternId: h.id,
+                      categoryColor: catColor,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Correlation Card ──────────────────────────────────────────────────────────
+// ── _PatternCard ──────────────────────────────────────────────────────────────
 
-class _CorrelationCard extends ConsumerWidget {
-  const _CorrelationCard({
-    required this.highlight,
-    required this.onTap,
-  });
+class _PatternCard extends ConsumerStatefulWidget {
+  const _PatternCard({required this.highlight});
 
   final CorrelationHighlight highlight;
-  final VoidCallback onTap;
 
-  Color _parseHex(String hex) {
-    final cleaned = hex.replaceAll('#', '');
-    // Validate: must be exactly 6 hex characters — never trust backend-supplied color strings
-    if (cleaned.length == 6 && RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(cleaned)) {
-      return Color(int.parse('FF$cleaned', radix: 16));
-    }
-    return AppColors.primary;
-  }
+  @override
+  ConsumerState<_PatternCard> createState() => _PatternCardState();
+}
 
-  IconData _directionIcon(CorrelationDirection dir) {
-    switch (dir) {
-      case CorrelationDirection.positive:
-        return Icons.trending_up_rounded;
-      case CorrelationDirection.negative:
-        return Icons.trending_down_rounded;
-      case CorrelationDirection.neutral:
-        return Icons.trending_flat_rounded;
+class _PatternCardState extends ConsumerState<_PatternCard> {
+  bool _isExpanded = false;
+
+  void _handleTap() {
+    final h = widget.highlight;
+    final strength = _strengthLabel(h.coefficient);
+
+    ref.read(hapticServiceProvider).light();
+    ref.read(analyticsServiceProvider).capture(
+      event: AnalyticsEvents.trendsPatternTapped,
+      properties: {
+        'pattern_id': h.id,
+        'category': h.category,
+        'strength': strength,
+        'is_new': h.isNew,
+      },
+    );
+
+    if (!_isExpanded) {
+      ref.read(analyticsServiceProvider).capture(
+        event: AnalyticsEvents.trendsPatternExpanded,
+        properties: {'pattern_id': h.id, 'category': h.category},
+      );
     }
+
+    setState(() => _isExpanded = !_isExpanded);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    final accentColor = _parseHex(highlight.categoryColorHex);
-    final coeffAbs = highlight.coefficient.abs();
+  Widget build(BuildContext context) {
+    final h = widget.highlight;
+    final catColor = _categoryColor(h.category);
+    final strength = _strengthLabel(h.coefficient);
 
     return GestureDetector(
-      onTap: () {
-        ref.read(hapticServiceProvider).light();
-        ref.read(analyticsServiceProvider).capture(
-          event: AnalyticsEvents.correlationTapped,
-          properties: {
-            'metric_a': highlight.metricA,
-            'metric_b': highlight.metricB,
-            'direction': highlight.direction.name,
-          },
-        );
-        onTap();
-      },
+      onTap: _handleTap,
       child: Container(
         decoration: BoxDecoration(
-          color: colors.cardBackground,
+          color: AppColors.trendsSurface,
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          border: h.isNew
+              ? Border(
+                  left: BorderSide(width: 3, color: catColor),
+                  top: BorderSide(color: AppColors.trendsBorderDefault),
+                  right: BorderSide(color: AppColors.trendsBorderDefault),
+                  bottom: BorderSide(color: AppColors.trendsBorderDefault),
+                )
+              : Border.all(color: AppColors.trendsBorderDefault),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header row: metrics + coefficient ─────────────────────
+            // Top row: New badge + strength badge
             Row(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${highlight.metricA}  ×  ${highlight.metricB}',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        highlight.headline,
-                        style: AppTextStyles.titleMedium,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                if (h.isNew) ...[
+                  ZBadge(
+                    label: 'New',
+                    color: catColor.withValues(alpha: 0.18),
+                    textColor: catColor,
                   ),
-                ),
-                const SizedBox(width: AppDimens.spaceMd),
-                // Correlation strength indicator
-                _CorrelationStrengthBadge(
-                  coefficient: highlight.coefficient,
-                  accentColor: accentColor,
+                  const SizedBox(width: AppDimens.spaceSm),
+                ],
+                const Spacer(),
+                ZBadge(
+                  label: strength,
+                  color: catColor.withValues(alpha: 0.15),
+                  textColor: catColor,
                 ),
               ],
             ),
             const SizedBox(height: AppDimens.spaceSm),
 
-            // ── Progress bar showing correlation strength ──────────────
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: coeffAbs,
-                minHeight: 3,
-                backgroundColor: colors.border,
-                color: accentColor,
-              ),
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-
-            // ── Body text ─────────────────────────────────────────────
+            // Headline
             Text(
-              highlight.body,
+              h.headline,
+              style: AppTextStyles.titleMedium.copyWith(
+                color: AppColors.trendsTextPrimary,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: AppDimens.spaceXs),
+
+            // Body text
+            Text(
+              h.body,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textSecondary,
+                color: AppColors.trendsTextSecondary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppDimens.spaceSm),
 
-            // ── Direction chip ─────────────────────────────────────────
+            // Metric pills
             Row(
               children: [
-                Icon(
-                  _directionIcon(highlight.direction),
-                  size: AppDimens.iconSm,
-                  color: accentColor,
+                ZBadge(
+                  label: h.metricA,
+                  color: catColor.withValues(alpha: 0.12),
+                  textColor: catColor,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  highlight.direction.label,
-                  style: AppTextStyles.labelSmall.copyWith(color: accentColor),
+                const SizedBox(width: AppDimens.spaceSm),
+                ZBadge(
+                  label: h.metricB,
+                  color: catColor.withValues(alpha: 0.08),
+                  textColor: catColor.withValues(alpha: 0.75),
                 ),
-                const Spacer(),
               ],
+            ),
+
+            // Expansion
+            AnimatedSize(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOut,
+              child: _isExpanded
+                  ? _ExpandedPatternContent(
+                      patternId: h.id,
+                      categoryColor: catColor,
+                    )
+                  : const SizedBox.shrink(),
             ),
           ],
         ),
@@ -507,42 +567,419 @@ class _CorrelationCard extends ConsumerWidget {
   }
 }
 
-class _CorrelationStrengthBadge extends StatelessWidget {
-  const _CorrelationStrengthBadge({
-    required this.coefficient,
-    required this.accentColor,
+// ── _ExpandedPatternContent ───────────────────────────────────────────────────
+
+class _ExpandedPatternContent extends ConsumerWidget {
+  const _ExpandedPatternContent({
+    required this.patternId,
+    required this.categoryColor,
   });
 
-  final double coefficient;
-  final Color accentColor;
+  final String patternId;
+  final Color categoryColor;
 
-  String _strengthLabel(double coeff) {
-    final abs = coeff.abs();
-    if (abs >= 0.7) return 'Strong';
-    if (abs >= 0.4) return 'Moderate';
-    return 'Weak';
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final expandAsync = ref.watch(patternExpandProvider(patternId));
+
+    return expandAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.only(top: AppDimens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Divider(color: AppColors.trendsBorderDefault),
+            SizedBox(height: AppDimens.spaceSm),
+            ZLoadingSkeleton(width: double.infinity, height: 120),
+            SizedBox(height: AppDimens.spaceSm),
+            ZLoadingSkeleton(width: double.infinity, height: 16),
+            SizedBox(height: AppDimens.spaceXs),
+            ZLoadingSkeleton(width: 200, height: 16),
+            SizedBox(height: AppDimens.spaceSm),
+            ZLoadingSkeleton(width: double.infinity, height: 14),
+          ],
+        ),
+      ),
+      error: (err, stack) => Padding(
+        padding: const EdgeInsets.only(top: AppDimens.spaceMd),
+        child: Center(
+          child: Text(
+            "Couldn't load details",
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.trendsTextMuted,
+            ),
+          ),
+        ),
+      ),
+      data: (data) => Padding(
+        padding: const EdgeInsets.only(top: AppDimens.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Divider(color: AppColors.trendsBorderDefault),
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // Time range chips (static — 30D active)
+            Row(
+              children: ['7D', '30D', '90D'].map((label) {
+                final isActive = label == '30D';
+                return Padding(
+                  padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceSm,
+                      vertical: AppDimens.spaceXs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? categoryColor.withValues(alpha: 0.15)
+                          : AppColors.trendsBorderDefault,
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusChip),
+                      border: Border.all(
+                        color: isActive
+                            ? categoryColor.withValues(alpha: 0.4)
+                            : AppColors.trendsBorderDefault,
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: isActive
+                            ? categoryColor
+                            : AppColors.trendsTextMuted,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+
+            // Sparkline chart
+            if (data.seriesA.isNotEmpty || data.seriesB.isNotEmpty)
+              _SparklineChart(
+                seriesA: data.seriesA,
+                seriesB: data.seriesB,
+                color: categoryColor,
+              ),
+
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // Series labels
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: categoryColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceXs),
+                Expanded(
+                  child: Text(
+                    data.seriesALabel,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.trendsTextSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceSm),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.trendsTextMuted,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: AppDimens.spaceXs),
+                Expanded(
+                  child: Text(
+                    data.seriesBLabel,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.trendsTextMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+
+            // AI explanation
+            if (data.aiExplanation.isNotEmpty) ...[
+              Text(
+                data.aiExplanation,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.trendsTextSecondary,
+                ),
+              ),
+              const SizedBox(height: AppDimens.spaceSm),
+            ],
+
+            // Data days caption
+            Text(
+              'Based on ${data.dataDays} days of data',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.trendsTextMuted,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+
+            // Data sources
+            if (data.dataSources.isNotEmpty) ...[
+              Wrap(
+                spacing: AppDimens.spaceXs,
+                runSpacing: AppDimens.spaceXs,
+                children: data.dataSources
+                    .map(
+                      (src) => ZBadge(
+                        label: src,
+                        color: AppColors.trendsBorderDefault,
+                        textColor: AppColors.trendsTextMuted,
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: AppDimens.spaceMd),
+            ],
+
+            // Ask Coach CTA
+            _AskCoachButton(categoryColor: categoryColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _AskCoachButton ───────────────────────────────────────────────────────────
+
+class _AskCoachButton extends ConsumerWidget {
+  const _AskCoachButton({required this.categoryColor});
+
+  final Color categoryColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ZButton(
+      label: 'Ask Coach',
+      onPressed: () {
+        ref.read(hapticServiceProvider).medium();
+        ref.read(analyticsServiceProvider).capture(
+          event: AnalyticsEvents.trendsCoachCtaTapped,
+          properties: {},
+        );
+      },
+    );
+  }
+}
+
+// ── _SparklineChart ───────────────────────────────────────────────────────────
+
+class _SparklineChart extends StatelessWidget {
+  const _SparklineChart({
+    required this.seriesA,
+    required this.seriesB,
+    required this.color,
+  });
+
+  final List<ChartSeriesPoint> seriesA;
+  final List<ChartSeriesPoint> seriesB;
+  final Color color;
+
+  List<FlSpot> _toSpots(List<ChartSeriesPoint> points) {
+    return points.asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), e.value.value);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimens.spaceSm,
-        vertical: AppDimens.spaceXs,
+    final spotsA = _toSpots(seriesA);
+    final spotsB = _toSpots(seriesB);
+
+    return SizedBox(
+      height: 120,
+      child: LineChart(
+        LineChartData(
+          lineBarsData: [
+            if (spotsA.isNotEmpty)
+              LineChartBarData(
+                spots: spotsA,
+                isCurved: true,
+                color: color,
+                barWidth: 2,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(show: false),
+              ),
+            if (spotsB.isNotEmpty)
+              LineChartBarData(
+                spots: spotsB,
+                isCurved: true,
+                color: AppColors.trendsTextMuted,
+                barWidth: 2,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(show: false),
+              ),
+          ],
+          gridData: const FlGridData(show: false),
+          titlesData: const FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          lineTouchData: const LineTouchData(enabled: false),
+        ),
       ),
-      decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+    );
+  }
+}
+
+// ── _FilterChipsRow ───────────────────────────────────────────────────────────
+
+class _FilterChipsRow extends ConsumerWidget {
+  const _FilterChipsRow({this.onCategoryChanged});
+
+  final void Function(String category)? onCategoryChanged;
+
+  static const _categories = [
+    'all',
+    'sleep',
+    'activity',
+    'heart',
+    'nutrition',
+    'body',
+    'wellness',
+  ];
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(selectedCategoryFilterProvider);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: Row(
+        children: _categories.map((cat) {
+          final isActive = cat == selected;
+          final catColor = _categoryColor(cat);
+
+          return Padding(
+            padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+            child: GestureDetector(
+              onTap: () {
+                ref.read(hapticServiceProvider).selectionTick();
+                ref.read(selectedCategoryFilterProvider.notifier).state = cat;
+                ref.read(analyticsServiceProvider).capture(
+                  event: AnalyticsEvents.trendsFilterChanged,
+                  properties: {'category': cat},
+                );
+                onCategoryChanged?.call(cat);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                  vertical: AppDimens.spaceXs + 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? catColor.withValues(alpha: 0.15)
+                      : AppColors.trendsSurface,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusChip),
+                  border: Border.all(
+                    color: isActive
+                        ? catColor.withValues(alpha: 0.4)
+                        : AppColors.trendsBorderDefault,
+                  ),
+                ),
+                child: Text(
+                  _capitalize(cat),
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: isActive ? catColor : AppColors.trendsTextMuted,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
+    );
+  }
+}
+
+// ── _TrendsEmptyState ─────────────────────────────────────────────────────────
+
+class _TrendsEmptyState extends StatelessWidget {
+  const _TrendsEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            coefficient.toStringAsFixed(2),
-            style: AppTextStyles.titleMedium.copyWith(color: accentColor),
+          // Three icon dots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _CategoryDot(
+                icon: Icons.bedtime_rounded,
+                color: AppColors.categorySleep,
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              _CategoryDot(
+                icon: Icons.auto_awesome_rounded,
+                color: AppColors.trendsSage,
+                size: 52,
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              _CategoryDot(
+                icon: Icons.directions_run_rounded,
+                color: AppColors.categoryActivity,
+              ),
+            ],
           ),
+          const SizedBox(height: AppDimens.spaceMd),
           Text(
-            _strengthLabel(coefficient),
-            style: AppTextStyles.labelSmall.copyWith(color: accentColor),
+            'This is where patterns hide',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.trendsTextPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'Keep logging for 7+ days and Zuralog will surface hidden connections — like how your sleep affects your workouts.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.trendsTextSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 14,
+                color: AppColors.trendsSage.withValues(alpha: 0.7),
+              ),
+              const SizedBox(width: AppDimens.spaceSm),
+              Text(
+                'N more days of logging unlocks your first pattern',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.trendsTextMuted,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -550,80 +987,8 @@ class _CorrelationStrengthBadge extends StatelessWidget {
   }
 }
 
-// ── Empty / Onboarding State ──────────────────────────────────────────────────
-
-class _EmptyCorrelationsState extends StatelessWidget {
-  const _EmptyCorrelationsState();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceSm,
-        AppDimens.spaceMd,
-        AppDimens.spaceSm,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppDimens.spaceLg),
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Icon cluster hinting at multiple data connections
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _CorrelationDot(
-                  icon: Icons.bedtime_rounded,
-                  color: AppColors.categorySleep,
-                ),
-                const SizedBox(width: AppDimens.spaceSm),
-                _CorrelationDot(
-                  icon: Icons.auto_awesome_rounded,
-                  color: AppColors.primary,
-                  size: 52,
-                ),
-                const SizedBox(width: AppDimens.spaceSm),
-                _CorrelationDot(
-                  icon: Icons.directions_run_rounded,
-                  color: AppColors.categoryActivity,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              'This is where patterns hide',
-              style: AppTextStyles.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceSm),
-            Text(
-              'Keep logging for 7+ days and Zuralog will surface hidden connections — like how your sleep affects your workouts.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: colors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            // Progress hint row showing what's needed
-            _ProgressHintRow(
-              icon: Icons.calendar_today_rounded,
-              label: '7 days of data unlocks your first pattern',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CorrelationDot extends StatelessWidget {
-  const _CorrelationDot({
+class _CategoryDot extends StatelessWidget {
+  const _CategoryDot({
     required this.icon,
     required this.color,
     this.size = 40,
@@ -651,176 +1016,7 @@ class _CorrelationDot extends StatelessWidget {
   }
 }
 
-class _ProgressHintRow extends StatelessWidget {
-  const _ProgressHintRow({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 14,
-          color: AppColors.primary.withValues(alpha: 0.7),
-        ),
-        const SizedBox(width: AppDimens.spaceSm),
-        Expanded(
-          child: Text(
-            label,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Section Header ────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.subtitle});
-  final String title;
-  final String? subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceLg,
-        AppDimens.spaceMd,
-        AppDimens.spaceSm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTextStyles.displaySmall),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle!,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ── Correlation Suggestion Card ───────────────────────────────────────────────
-
-class _CorrelationSuggestionCard extends ConsumerWidget {
-  const _CorrelationSuggestionCard({
-    required this.suggestion,
-    required this.onDismiss,
-    required this.onCtaTap,
-  });
-
-  final CorrelationSuggestion suggestion;
-  final VoidCallback onDismiss;
-  final VoidCallback onCtaTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        AppDimens.spaceMd,
-        AppDimens.spaceMd,
-        AppDimens.spaceXs,
-        AppDimens.spaceSm,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Icon ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(top: 2, right: AppDimens.spaceSm),
-            child: Icon(
-              Icons.add_circle_outline_rounded,
-              size: AppDimens.iconMd,
-              color: AppColors.primary,
-            ),
-          ),
-
-          // ── Text content + CTA ───────────────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  suggestion.metricNeeded,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  suggestion.description,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppDimens.spaceXs),
-                TextButton(
-                  onPressed: onCtaTap,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    suggestion.ctaLabel,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Dismiss button ───────────────────────────────────────────
-          IconButton(
-            onPressed: onDismiss,
-            icon: Icon(
-              Icons.close_rounded,
-              size: AppDimens.iconSm,
-              color: AppColors.textTertiary,
-            ),
-            padding: const EdgeInsets.all(AppDimens.spaceXs),
-            constraints: const BoxConstraints(),
-            style: IconButton.styleFrom(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Loading Skeleton ──────────────────────────────────────────────────────────
+// ── _TrendsLoadingSkeleton ────────────────────────────────────────────────────
 
 class _TrendsLoadingSkeleton extends StatelessWidget {
   const _TrendsLoadingSkeleton();
@@ -834,20 +1030,40 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: AppDimens.spaceLg),
-          // Time strip skeleton
-          SizedBox(
-            height: 140,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              scrollDirection: Axis.horizontal,
-              itemCount: 4,
-              separatorBuilder: (_, _) => const SizedBox(width: AppDimens.spaceSm),
-              itemBuilder: (_, _) => const ZLoadingSkeleton(width: 160, height: 120),
+          // Filter chip skeletons
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.spaceMd,
+              vertical: AppDimens.spaceSm,
+            ),
+            child: Row(
+              children: List.generate(
+                5,
+                (i) => Padding(
+                  padding: const EdgeInsets.only(right: AppDimens.spaceSm),
+                  child: ZLoadingSkeleton(
+                    width: i == 0 ? 48 : 72,
+                    height: 32,
+                    borderRadius: AppDimens.radiusChip,
+                  ),
+                ),
+              ),
             ),
           ),
+
+          // Hero skeleton
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+            child: const ZLoadingSkeleton(
+              width: double.infinity,
+              height: 180,
+              borderRadius: AppDimens.radiusCard,
+            ),
+          ),
+
           const SizedBox(height: AppDimens.spaceLg),
-          // Correlation card skeletons
+
+          // Feed card skeletons
           ...List.generate(
             3,
             (_) => Padding(
@@ -855,7 +1071,11 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
                 horizontal: AppDimens.spaceMd,
                 vertical: AppDimens.spaceSm / 2,
               ),
-              child: const ZLoadingSkeleton(width: double.infinity, height: 110),
+              child: const ZLoadingSkeleton(
+                width: double.infinity,
+                height: 110,
+                borderRadius: AppDimens.radiusCard,
+              ),
             ),
           ),
         ],
@@ -864,4 +1084,20 @@ class _TrendsLoadingSkeleton extends StatelessWidget {
   }
 }
 
+// ── _SectionHeader ────────────────────────────────────────────────────────────
 
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: AppTextStyles.displaySmall.copyWith(
+        color: AppColors.trendsTextPrimary,
+      ),
+    );
+  }
+}
