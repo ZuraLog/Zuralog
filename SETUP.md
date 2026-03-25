@@ -348,6 +348,13 @@ uv run alembic upgrade head
 
 This creates all tables (`users`, `integrations`, `health_events`, `daily_summaries`, `metric_definitions`, `activity_sessions`, and related tables) in your local PostgreSQL.
 
+> **After pulling recent changes**, always re-run this command. Recent migrations added:
+> - Cascading deletes so health data is automatically removed when a user account is deleted
+> - A unique constraint on activities that includes `user_id` (prevents cross-user data collisions)
+> - A unique constraint on user goals (one goal per metric per user)
+> - A performance index on `daily_summaries(user_id, metric_type, date)`
+> - Correct `Date` column types on `UserGoal.start_date` and `UserGoal.deadline`
+
 ### 2e. Start the Dev Server
 
 ```bash
@@ -375,6 +382,14 @@ Open [http://localhost:8001/health](http://localhost:8001/health) in your browse
 Full interactive API docs (Swagger UI) are available at [http://localhost:8001/docs](http://localhost:8001/docs).
 
 All API routes are under the `/api/v1` prefix (e.g., `/api/v1/auth/login`, `/api/v1/chat/message`).
+
+#### Notable API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `DELETE` | `/api/v1/users/me` | Delete account and all health data (GDPR Art. 17 — right to erasure) |
+| `GET` | `/api/v1/users/me/export` | Download all your data as JSON (GDPR Art. 20 — data portability) |
+| `POST` | `/api/v1/health/ingest` | Ingest health data from `apple_health` or `health_connect` only; max 500 records per request |
 
 ### 2g. Run Backend Tests
 
