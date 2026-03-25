@@ -32,134 +32,79 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
   @override
   Future<TrendsHomeData> getTrendsHome() async {
     await _delay();
-    return const TrendsHomeData(
+    final now = DateTime.now();
+    return TrendsHomeData(
+      patternCount: 5,
       hasEnoughData: true,
+      timePeriods: const [],
+      suggestionCards: const [],
       correlationHighlights: [
         CorrelationHighlight(
-          id: 'mock-corr-1',
-          metricA: 'Sleep Duration',
-          metricB: 'HRV',
+          id: 'pattern-sleep-hrv',
+          metricA: 'Deep Sleep',
+          metricB: 'Morning HRV',
           coefficient: 0.72,
           direction: CorrelationDirection.positive,
-          headline: 'More sleep → higher HRV',
+          headline: 'More deep sleep → higher morning HRV',
           body:
-              'On nights you slept 8+ hours, your morning HRV was 18% higher on average over the past 30 days.',
-          categoryColorHex: '#30D158',
-        ),
-        CorrelationHighlight(
-          id: 'mock-corr-2',
-          metricA: 'Daily Steps',
-          metricB: 'Energy Level',
-          coefficient: 0.61,
-          direction: CorrelationDirection.positive,
-          headline: 'Active days boost energy',
-          body:
-              'Days with 10,000+ steps consistently correlate with higher self-reported energy scores the following morning.',
+              'On nights with 90+ min of deep sleep, your morning HRV is consistently 15–20% higher.',
+          category: 'sleep',
+          discoveredAt:
+              now.subtract(const Duration(days: 14)).toIso8601String(),
           categoryColorHex: '#CFE1B9',
         ),
         CorrelationHighlight(
-          id: 'mock-corr-3',
+          id: 'pattern-steps-energy',
+          metricA: 'Daily Steps',
+          metricB: 'Perceived Energy',
+          coefficient: 0.61,
+          direction: CorrelationDirection.positive,
+          headline: '10k steps correlates with higher energy next day',
+          body:
+              'Days you hit 10,000+ steps, you report 30% higher energy the following morning.',
+          category: 'activity',
+          discoveredAt: now.subtract(const Duration(days: 3)).toIso8601String(),
+          categoryColorHex: '#30D158',
+        ),
+        CorrelationHighlight(
+          id: 'pattern-screen-sleep',
           metricA: 'Screen Time',
           metricB: 'Sleep Quality',
           coefficient: -0.58,
           direction: CorrelationDirection.negative,
-          headline: 'Screen time hurts sleep quality',
+          headline: 'Late screen time hurts sleep quality',
           body:
-              'Every extra 30 minutes of screen time after 9 PM is associated with a 0.4-point drop in next-day sleep quality score.',
-          categoryColorHex: '#FF9F0A',
+              'Each extra hour of screen time after 9pm is associated with 12% worse sleep quality scores.',
+          category: 'wellness',
+          discoveredAt: now.subtract(const Duration(days: 5)).toIso8601String(),
+          categoryColorHex: '#FFD60A',
         ),
         CorrelationHighlight(
-          id: 'mock-corr-4',
-          metricA: 'Running Distance',
+          id: 'pattern-running-hr',
+          metricA: 'Running',
           metricB: 'Resting Heart Rate',
           coefficient: -0.49,
           direction: CorrelationDirection.negative,
-          headline: 'Running lowers resting HR',
+          headline: 'Regular running lowers resting heart rate',
           body:
-              'Weeks with 20+ km of running show a 3–5 bpm reduction in resting heart rate by the following Monday.',
-          categoryColorHex: '#FF6B6B',
+              'Weeks with 3+ runs correlate with a 4 bpm lower resting heart rate.',
+          category: 'heart',
+          discoveredAt:
+              now.subtract(const Duration(days: 21)).toIso8601String(),
+          categoryColorHex: '#FF375F',
         ),
-      ],
-      suggestionCards: [
-        CorrelationSuggestion(
-          id: 'mock-sug-1',
-          metricNeeded: 'Stress Level',
-          description:
-              'Track stress to unlock how it affects your sleep quality and HRV.',
-          ctaLabel: 'Start Logging',
-          ctaRoute: '/settings/integrations',
-        ),
-        CorrelationSuggestion(
-          id: 'mock-sug-2',
-          metricNeeded: 'Heart Rate Variability',
-          description:
-              'Connect a wearable to see how recovery correlates with training load.',
-          ctaLabel: 'Connect App',
-          ctaRoute: '/settings/integrations',
-        ),
-        CorrelationSuggestion(
-          id: 'mock-sug-3',
-          metricNeeded: 'Nutrition Calories',
-          description:
-              'Log meals to discover how caloric intake affects your energy and weight.',
-          ctaLabel: 'Start Logging',
-          ctaRoute: '/settings/integrations',
-        ),
-      ],
-      timePeriods: [
-        TimePeriodSummary(
-          label: 'Feb 24 – Mar 1',
-          periodStart: '2026-02-24',
-          periodEnd: '2026-03-01',
-          overallScore: 82,
-          highlights: [
-            MetricHighlight(
-                label: 'Steps', value: '9,840', unit: 'steps', deltaPercent: 6.2),
-            MetricHighlight(
-                label: 'Sleep', value: '7.4', unit: 'hrs', deltaPercent: 2.1),
-            MetricHighlight(
-                label: 'HRV', value: '54', unit: 'ms', deltaPercent: 8.5),
-          ],
-        ),
-        TimePeriodSummary(
-          label: 'Feb 17 – Feb 23',
-          periodStart: '2026-02-17',
-          periodEnd: '2026-02-23',
-          overallScore: 74,
-          highlights: [
-            MetricHighlight(
-                label: 'Steps', value: '8,120', unit: 'steps', deltaPercent: -4.3),
-            MetricHighlight(
-                label: 'Sleep', value: '6.9', unit: 'hrs', deltaPercent: -5.8),
-            MetricHighlight(
-                label: 'HRV', value: '48', unit: 'ms', deltaPercent: -2.0),
-          ],
-        ),
-        TimePeriodSummary(
-          label: 'Feb 10 – Feb 16',
-          periodStart: '2026-02-10',
-          periodEnd: '2026-02-16',
-          overallScore: 78,
-          highlights: [
-            MetricHighlight(
-                label: 'Steps', value: '10,450', unit: 'steps', deltaPercent: 12.1),
-            MetricHighlight(
-                label: 'Sleep', value: '7.8', unit: 'hrs', deltaPercent: 4.0),
-            MetricHighlight(
-                label: 'HRV', value: '52', unit: 'ms', deltaPercent: 3.2),
-          ],
-        ),
-        TimePeriodSummary(
-          label: 'Feb 3 – Feb 9',
-          periodStart: '2026-02-03',
-          periodEnd: '2026-02-09',
-          overallScore: 69,
-          highlights: [
-            MetricHighlight(
-                label: 'Steps', value: '6,900', unit: 'steps', deltaPercent: -14.2),
-            MetricHighlight(
-                label: 'Sleep', value: '6.5', unit: 'hrs', deltaPercent: -8.1),
-          ],
+        CorrelationHighlight(
+          id: 'pattern-protein-recovery',
+          metricA: 'Protein Intake',
+          metricB: 'Recovery Score',
+          coefficient: 0.44,
+          direction: CorrelationDirection.positive,
+          headline: 'Higher protein → better workout recovery',
+          body:
+              'On days with 120g+ protein, your next-day recovery score averages 18% higher.',
+          category: 'nutrition',
+          discoveredAt: now.subtract(const Duration(days: 1)).toIso8601String(),
+          categoryColorHex: '#FF9F0A',
         ),
       ],
     );
