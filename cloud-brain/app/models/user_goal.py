@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Float, String
+from sqlalchemy import Boolean, DateTime, Float, String, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -73,6 +73,9 @@ class UserGoal(Base):
     """
 
     __tablename__ = "user_goals"
+    __table_args__ = (
+        UniqueConstraint("user_id", "metric", name="uq_user_goals_user_metric"),
+    )
 
     id: Mapped[str] = mapped_column(
         String,
