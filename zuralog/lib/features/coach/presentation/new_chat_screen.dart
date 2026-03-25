@@ -58,6 +58,10 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   /// Used to warn the user when a quick action would drop them.
   final ValueNotifier<int> _attachmentCount = ValueNotifier(0);
 
+  /// Key used to call [_ChatInputBarState.clearAttachments] after a quick
+  /// action so staged files are not silently dropped.
+  final _inputBarKey = GlobalKey<_ChatInputBarState>();
+
   /// Fix C9: prevents double-prefill from both initState and build().
   bool _prefillApplied = false;
 
@@ -122,6 +126,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                   behavior: SnackBarBehavior.floating,
                 ),
               );
+              _inputBarKey.currentState?.clearAttachments();
             }
             _sendMessage();
           } else {
@@ -260,6 +265,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           const _IntegrationContextBanner(),
           // ── Input Bar ──────────────────────────────────────────────────────
           _ChatInputBar(
+            key: _inputBarKey,
             controller: _inputCtrl,
             focusNode: _inputFocus,
             onSend: ({rawAttachments = const []}) =>
@@ -746,6 +752,17 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
 
   void _updateAttachmentCount() {
     widget.attachmentCountNotifier?.value = _attachments.length;
+  }
+
+  /// Clears all staged attachments and resets the count notifier.
+  ///
+  /// Called by [_NewChatScreenState] after a quick action is triggered so
+  /// attachments are not silently dropped.
+  void clearAttachments() {
+    setState(() {
+      _attachments.clear();
+      _updateAttachmentCount();
+    });
   }
 
   void _handleSend() {

@@ -75,7 +75,11 @@ class AttachmentRepository {
     FormData formData;
     try {
       formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: filename),
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: filename,
+          contentType: DioMediaType.parse(mimeType ?? 'application/octet-stream'),
+        ),
       });
     } on FileSystemException catch (e) {
       throw AttachmentException('File not found or inaccessible: ${e.message}');
