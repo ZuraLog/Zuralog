@@ -584,9 +584,14 @@ final class ApiCoachRepository implements CoachRepository {
     // Reconnect outside the try/finally so the old subscription and channel
     // are fully torn down before we open a new WebSocket connection.
     if (reconnectAfter4003) {
+      // Close the reconnect race window: assign _activeDoneCompleter BEFORE
+      // entering _runWebSocketStream so any cancelActiveStream() call during
+      // the async gap finds a valid completer and can abort the new connection.
+      final reconnectCompleter = Completer<int?>();
+      _activeDoneCompleter = reconnectCompleter;
       await _runWebSocketStream(
         controller: controller,
-        doneCompleter: Completer<int?>(),
+        doneCompleter: reconnectCompleter,
         conversationId: conversationId,
         text: text,
         persona: persona,
