@@ -10,6 +10,8 @@ data types it has available. Each entry type has its own required fields.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -165,7 +167,7 @@ class HealthIngestRequest(BaseModel):
         Daily scalar metric snapshots to upsert.
     """
 
-    source: str = Field("apple_health", description="Data source identifier")
+    source: Literal["apple_health", "health_connect"] = Field("apple_health", description="Data source identifier")
     workouts: list[WorkoutEntry] = Field(default_factory=list)
     sleep: list[SleepEntry] = Field(default_factory=list)
     nutrition: list[NutritionEntry] = Field(default_factory=list)
