@@ -260,6 +260,27 @@ class AuthStateNotifier extends Notifier<AuthState> {
     return result;
   }
 
+  /// Permanently deletes the current user's account and all associated data.
+  ///
+  /// Calls `DELETE /api/v1/users/me` on the backend, which wipes every row
+  /// belonging to this user and removes them from Supabase Auth.
+  /// On success, performs the same full state cleanup as [logout] so the
+  /// router redirects to the welcome/auth screen.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails — callers must handle this
+  ///   and show an appropriate error message to the user.
+  Future<void> deleteAccount() async {
+    ref.read(analyticsServiceProvider).reset();
+    SentryBreadcrumbs.authEvent(event: 'delete_account');
+    state = AuthState.loading;
+    await _authRepository.deleteAccount();
+    ref.read(userEmailProvider.notifier).state = '';
+    ref.read(userProfileProvider.notifier).clear();
+    await _clearUserState();
+    state = AuthState.unauthenticated;
+  }
+
   /// Logs out the current user.
   ///
   /// Always transitions to [AuthState.unauthenticated] and clears ALL

@@ -170,7 +170,7 @@ class AccountSettingsScreen extends ConsumerWidget {
                 showChevron: false,
                 onTap: () {
                   ref.read(hapticServiceProvider).warning();
-                  _showDeleteAccountDialog(context);
+                  _showDeleteAccountDialog(context, ref);
                 },
               ),
             ),
@@ -654,11 +654,59 @@ void _showSimpleFormSheet(
 
 // ── Delete account dialog ─────────────────────────────────────────────────────
 
-void _showDeleteAccountDialog(BuildContext context) {
-  final colors = AppColorsOf(context);
+void _showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
   showDialog<void>(
     context: context,
-    builder: (_) => AlertDialog(
+    barrierDismissible: false,
+    builder: (_) => _DeleteAccountDialog(ref: ref),
+  );
+}
+
+/// Confirmation dialog for permanent account deletion.
+///
+/// Manages its own loading state so the Delete button can show a spinner
+/// while the network call is in-flight and re-enable on error.
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog({required this.ref});
+
+  final WidgetRef ref;
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  bool _isLoading = false;
+
+  Future<void> _handleDelete() async {
+    setState(() => _isLoading = true);
+    try {
+      await widget.ref.read(authStateProvider.notifier).deleteAccount();
+      // deleteAccount() transitions auth state to unauthenticated.
+      // The router guard will redirect, but we also navigate explicitly so
+      // the dialog is dismissed and the stack is cleared immediately.
+      if (mounted) {
+        Navigator.of(context).pop();
+        context.go(RouteNames.welcomePath);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong. Please try again.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return AlertDialog(
       backgroundColor: colors.cardBackground,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -674,37 +722,34 @@ void _showDeleteAccountDialog(BuildContext context) {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
           child: Text(
             'Cancel',
             style: AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
           ),
         ),
         TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            // TODO(phase9): Call Supabase delete-account API endpoint here.
-            // For now, show an honest message — do not silently no-op.
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Account deletion is not yet available. '
-                  'Please contact support@zuralog.com to request deletion.',
+          onPressed: _isLoading ? null : _handleDelete,
+          child: _isLoading
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.statusError,
+                    ),
+                  ),
+                )
+              : Text(
+                  'Delete',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.statusError,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 6),
-              ),
-            );
-          },
-          child: Text(
-            'Delete',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.statusError,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ),
       ],
-    ),
-  );
+    );
+  }
 }

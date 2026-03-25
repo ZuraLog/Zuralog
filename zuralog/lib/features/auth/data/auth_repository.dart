@@ -182,6 +182,20 @@ class AuthRepository {
     }
   }
 
+  /// Permanently deletes the current user's account.
+  ///
+  /// Calls `DELETE /api/v1/users/me` which removes all user data from every
+  /// table and removes the user from Supabase Auth on the server.
+  /// On success (HTTP 204), clears local tokens so the app treats the
+  /// session as ended.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<void> deleteAccount() async {
+    await _apiClient.delete('/api/v1/users/me');
+    await _clearTokens();
+  }
+
   /// Logs out the current user.
   ///
   /// Calls `POST /api/v1/auth/logout` to invalidate the server session,
