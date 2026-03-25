@@ -178,43 +178,6 @@ def _goal_to_dict_with_date(goal: UserGoal, local_date: _date) -> dict:
     }
 
 
-def _goal_to_dict(goal: UserGoal) -> dict:
-    """Serialise a UserGoal ORM instance to the Flutter Goal.fromJson shape.
-
-    Returns a plain dict rather than a Pydantic model because this is used
-    inside a nested list in the progress home response.
-
-    Both ``type`` and ``period`` use an ``.value`` guard so the correct
-    string slug is returned regardless of whether SQLAlchemy materialises
-    the column as a raw string or as the Python enum object (behaviour can
-    differ between driver versions).
-
-    Args:
-        goal: The ORM instance to serialise.
-
-    Returns:
-        Dict matching the Flutter ``Goal.fromJson`` contract.
-    """
-    type_str = goal.type.value if hasattr(goal.type, "value") else str(goal.type)  # type: ignore[union-attr]
-    period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)  # type: ignore[union-attr]
-    return {
-        "id": str(goal.id),
-        "user_id": str(goal.user_id),
-        "type": type_str,
-        "period": period_str,
-        "title": goal.title,
-        "target_value": float(goal.target_value or 0.0),
-        "current_value": float(goal.current_value or 0.0),
-        "unit": goal.unit or "",
-        "start_date": str(goal.start_date) if goal.start_date else "",
-        "deadline": str(goal.deadline) if goal.deadline else None,
-        "is_completed": goal.is_completed,
-        "ai_commentary": goal.ai_commentary,
-        "progress_history": [],  # placeholder — analytics engine wired in a future phase
-        "trend_direction": _compute_trend_direction(goal, _date.today()),
-    }
-
-
 def _streak_to_dict(streak: UserStreak) -> dict:
     """Serialise a UserStreak ORM instance to the Flutter UserStreak.fromJson shape.
 
