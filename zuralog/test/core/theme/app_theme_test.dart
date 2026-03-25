@@ -97,10 +97,10 @@ void main() {
       expect(dark.brightness, Brightness.dark);
     });
 
-    test('scaffold background is backgroundDark (Dark Charcoal #2D2D2D)', () {
+    test('scaffold background is backgroundDark (Deep Forest #141E18)', () {
       expect(dark.scaffoldBackgroundColor, AppColors.backgroundDark);
-      // Confirm it matches the brand Dark Charcoal palette.
-      expect(dark.scaffoldBackgroundColor, const Color(0xFF2D2D2D));
+      // Confirm it matches the brand Deep Forest dark background palette.
+      expect(dark.scaffoldBackgroundColor, const Color(0xFF141E18));
     });
 
     test('primary color is still Sage Green (#CFE1B9)', () {

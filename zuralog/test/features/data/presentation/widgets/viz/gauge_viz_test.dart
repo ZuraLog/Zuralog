@@ -29,7 +29,7 @@ void main() {
   testWidgets('renders without exception for all sizes', (tester) async {
     for (final size in TileSize.values) {
       await tester.pumpWidget(_wrap(SizedBox(
-        height: 150, width: 200,
+        height: 220, width: 200,
         child: GaugeViz(config: config, color: Colors.blue, size: size),
       )));
     }

@@ -759,7 +759,7 @@ void main() {
 
   group('Reorder to end', () {
     testWidgets(
-        'SliverReorderableList is present in edit mode with loaded tiles',
+        'DragTarget tiles are present in edit mode with loaded tiles',
         (tester) async {
       final container = _container(allLoaded: true);
       addTearDown(container.dispose);
@@ -771,8 +771,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // SliverReorderableList must be present in edit mode.
-      expect(find.byType(SliverReorderableList), findsOneWidget);
+      // DragTarget tiles must be present in edit mode (custom drag-and-drop replaces SliverReorderableList).
+      expect(find.byType(DragTarget<TileId>), findsWidgets);
     });
 
     testWidgets(
