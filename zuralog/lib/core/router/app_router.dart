@@ -100,6 +100,7 @@ import 'package:zuralog/features/settings/presentation/integrations_screen.dart'
 import 'package:zuralog/features/settings/presentation/privacy_data_screen.dart';
 import 'package:zuralog/features/settings/presentation/subscription_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/about_screen.dart';
+import 'package:zuralog/features/settings/presentation/edit_profile_screen.dart';
 import 'package:zuralog/features/settings/presentation/privacy_policy_screen.dart';
 import 'package:zuralog/features/settings/presentation/terms_of_service_screen.dart';
 
@@ -255,6 +256,16 @@ List<RouteBase> _buildRoutes() {
             module: 'settings.account',
             child: AccountSettingsScreen(),
           ),
+          routes: [
+            GoRoute(
+              path: 'edit-profile',
+              name: RouteNames.editProfile,
+              builder: (context, state) => const SentryErrorBoundary(
+                module: 'settings.account.editProfile',
+                child: EditProfileScreen(),
+              ),
+            ),
+          ],
         ),
         GoRoute(
           path: 'notifications',
