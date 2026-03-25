@@ -13,11 +13,50 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_foreign_key("fk_unified_activities_user_id", "unified_activities", "users", ["user_id"], ["id"], ondelete="CASCADE")
-    op.create_foreign_key("fk_sleep_records_user_id", "sleep_records", "users", ["user_id"], ["id"], ondelete="CASCADE")
-    op.create_foreign_key("fk_nutrition_entries_user_id", "nutrition_entries", "users", ["user_id"], ["id"], ondelete="CASCADE")
-    op.create_foreign_key("fk_weight_measurements_user_id", "weight_measurements", "users", ["user_id"], ["id"], ondelete="CASCADE")
-    op.create_foreign_key("fk_daily_health_metrics_user_id", "daily_health_metrics", "users", ["user_id"], ["id"], ondelete="CASCADE")
+    # Use raw SQL with existence checks — tables may not exist in all environments
+    op.execute("""
+        DO $$
+        DECLARE
+            t TEXT;
+            c TEXT;
+        BEGIN
+            -- unified_activities
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'unified_activities') THEN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_unified_activities_user_id') THEN
+                    ALTER TABLE unified_activities ADD CONSTRAINT fk_unified_activities_user_id
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+            END IF;
+            -- sleep_records
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sleep_records') THEN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_sleep_records_user_id') THEN
+                    ALTER TABLE sleep_records ADD CONSTRAINT fk_sleep_records_user_id
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+            END IF;
+            -- nutrition_entries
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'nutrition_entries') THEN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_nutrition_entries_user_id') THEN
+                    ALTER TABLE nutrition_entries ADD CONSTRAINT fk_nutrition_entries_user_id
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+            END IF;
+            -- weight_measurements
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'weight_measurements') THEN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_weight_measurements_user_id') THEN
+                    ALTER TABLE weight_measurements ADD CONSTRAINT fk_weight_measurements_user_id
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+            END IF;
+            -- daily_health_metrics
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'daily_health_metrics') THEN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_daily_health_metrics_user_id') THEN
+                    ALTER TABLE daily_health_metrics ADD CONSTRAINT fk_daily_health_metrics_user_id
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                END IF;
+            END IF;
+        END $$;
+    """)
 
 
 def downgrade() -> None:
