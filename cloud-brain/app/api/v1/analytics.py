@@ -244,7 +244,7 @@ async def sleep_activity_correlation(
 
 @limiter.limit("60/minute")
 @router.get("/trend/{metric}", response_model=TrendResponse)
-@cached(prefix="analytics.trend", ttl=300, key_params=["user_id", "metric"])
+@cached(prefix="analytics.trend", ttl=300, key_params=["user_id", "metric", "window_size"])
 async def metric_trend(
     request: Request,
     metric: str,
