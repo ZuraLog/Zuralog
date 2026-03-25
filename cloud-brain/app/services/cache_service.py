@@ -3,19 +3,19 @@ In-memory TTL cache layer.
 
 Replaces the previous Upstash Redis REST implementation.
 Uses a simple dict-based store with expiry timestamps.
-Thread-safe via threading.Lock for use with async FastAPI.
+Concurrency-safe via asyncio.Lock for use with async FastAPI.
 
 The public interface is identical to the previous implementation —
 all consumers (analytics, integrations, users, health_ingest) work unchanged.
 """
 
+import asyncio
 import fnmatch
 import json
 import logging
 import time
 from collections.abc import Callable
 from functools import wraps
-from threading import Lock
 from typing import Any
 
 from app.config import settings
@@ -34,7 +34,7 @@ class CacheService:
     def __init__(self) -> None:
         """Initialize the in-memory cache service."""
         self._store: dict[str, tuple[Any, float]] = {}  # key -> (value, expires_at)
-        self._lock = Lock()
+        self._lock = asyncio.Lock()
         self.enabled = True
         logger.info("CacheService initialized (in-memory TTL)")
 
@@ -47,7 +47,7 @@ class CacheService:
         Returns:
             The cached value (already deserialised), or None if missing/expired.
         """
-        with self._lock:
+        async with self._lock:
             entry = self._store.get(key)
             if entry is None:
                 return None
@@ -74,7 +74,7 @@ class CacheService:
             parsed = value
 
         expires_at = time.monotonic() + ttl if ttl else float("inf")
-        with self._lock:
+        async with self._lock:
             self._store[key] = (parsed, expires_at)
 
     async def delete(self, key: str) -> None:
@@ -83,7 +83,7 @@ class CacheService:
         Args:
             key: The cache key to delete.
         """
-        with self._lock:
+        async with self._lock:
             self._store.pop(key, None)
 
     async def invalidate_pattern(self, pattern: str) -> int:
@@ -95,7 +95,7 @@ class CacheService:
         Returns:
             Number of keys deleted.
         """
-        with self._lock:
+        async with self._lock:
             keys_to_delete = [k for k in self._store if fnmatch.fnmatch(k, pattern)]
             for k in keys_to_delete:
                 del self._store[k]
