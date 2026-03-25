@@ -21,7 +21,11 @@ WebSocket Protocol (client → server):
   - {"message": str, "attachments": [...], "persona": str, "proactivity": str}
 """
 
+import asyncio
+import json
 import logging
+import re
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -38,19 +42,23 @@ from fastapi import (
     status,
 )
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+
+import redis.asyncio as aioredis
 
 from app.agent.context_manager.memory_store import MemoryStore
 from app.agent.llm_client import LLMClient
 from app.agent.mcp_client import MCPClient
 from app.agent.orchestrator import Orchestrator
 from app.api.deps import _get_auth_service, check_rate_limit
+from app.config import settings
 from app.database import async_session, get_db
 from app.limiter import limiter
 from app.models.conversation import Conversation, Message
+from app.models.user import User
 from app.models.user_preferences import UserPreferences
 from app.services.auth_service import AuthService
 from app.services.rate_limiter import RateLimiter
@@ -58,6 +66,34 @@ from app.services.storage_service import StorageService
 from app.services.usage_tracker import UsageTracker
 
 logger = logging.getLogger(__name__)
+
+# Fix 6.6 (H-2): Allowlist for client-supplied preference values
+_VALID_PERSONAS = {"tough_love", "balanced", "gentle"}
+_VALID_PROACTIVITY = {"low", "medium", "high"}
+_VALID_RESPONSE_LENGTHS = {"concise", "detailed"}
+
+# Fix 6.7 (H-3): History character budget
+MAX_HISTORY_CHARS = 40_000
+
+
+def sanitize_for_llm(text: str) -> str:
+    """Fix 6.17 / 8.1 (C-11): Sanitize text to prevent prompt injection.
+
+    Strips lines starting with common prompt-injection markers before
+    injecting extracted attachment text into the LLM context.
+
+    Args:
+        text: The raw extracted text from a user-uploaded file.
+
+    Returns:
+        The sanitized text, capped at 2000 characters.
+    """
+    dangerous_patterns = re.compile(
+        r'^(ignore|system:|assistant:|forget|<\|im_start\|>|<\|im_end\|>)',
+        re.IGNORECASE | re.MULTILINE,
+    )
+    sanitized = dangerous_patterns.sub('[filtered]', text)
+    return sanitized[:2000]
 
 
 async def _set_sentry_module() -> None:
@@ -110,6 +146,7 @@ def _process_attachments(attachments: list[dict]) -> str:
     """Process attachments and return text to augment the user message.
 
     Image attachments are noted as metadata for the LLM.
+    Attachment text is sanitized against prompt injection (Fix 6.17 / C-11).
 
     Args:
         attachments: List of attachment dicts from the client.
@@ -117,10 +154,27 @@ def _process_attachments(attachments: list[dict]) -> str:
     Returns:
         Combined text fragments to append to the user message.
     """
+    # Fix 6.15 (M-6): Validate attachment refs and cap count
+    if len(attachments) > 3:
+        logger.warning("_process_attachments: more than 3 attachments received, truncating to 3")
+        attachments = attachments[:3]
+
     parts: list[str] = []
     for att in attachments:
+        # Fix 6.15 (M-6): Validate required fields
+        if not isinstance(att, dict):
+            logger.warning("_process_attachments: skipping invalid attachment (not a dict)")
+            continue
+        if not att.get("filename") and not att.get("url") and not att.get("path"):
+            logger.warning("_process_attachments: skipping attachment missing filename/url/path")
+            continue
+
         if att.get("type") == "image":
             parts.append(f"[User attached image: {att.get('filename', 'image')}]")
+        elif att.get("context_message"):
+            # Fix 6.17 (C-11): Sanitize extracted attachment text before LLM injection
+            safe_context = sanitize_for_llm(att["context_message"])
+            parts.append(safe_context)
     return "\n".join(parts)
 
 
@@ -172,6 +226,7 @@ async def _load_conversation_history(
     db: AsyncSession,
     conversation_id: str,
     limit: int = 50,
+    exclude_message_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Load recent messages for LLM context injection.
 
@@ -182,41 +237,84 @@ async def _load_conversation_history(
         db: Async database session.
         conversation_id: The conversation to fetch history for.
         limit: Maximum number of messages to load (caps token usage).
+        exclude_message_id: If provided, exclude this specific message ID
+            (used to avoid passing the just-persisted user message twice).
 
     Returns:
         A list of ``{"role": str, "content": str}`` dicts.
     """
-    result = await db.execute(
+    query = (
         select(Message)
         .where(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.asc())
         .limit(limit)
     )
+    if exclude_message_id is not None:
+        query = query.where(Message.id != exclude_message_id)
+    result = await db.execute(query)
     messages = result.scalars().all()
     # Only pass user/assistant roles to the LLM; skip tool/system rows.
     return [{"role": m.role, "content": m.content or ""} for m in messages if m.role in ("user", "assistant")]
 
 
-async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str, str]:
-    """Load the user's coach persona, proactivity, and response_length preferences.
+async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, str]:
+    """Load the user's coach persona and proactivity preferences.
 
     Args:
         db: Async database session.
         user_id: The authenticated user's ID.
 
     Returns:
-        A (persona, proactivity, response_length) tuple;
-        defaults to ("balanced", "medium", "concise").
+        A (persona, proactivity) tuple; defaults to ("balanced", "medium").
     """
     try:
         result = await db.execute(select(UserPreferences).where(UserPreferences.user_id == user_id))
         prefs = result.scalar_one_or_none()
         if prefs:
-            response_length = getattr(prefs, "response_length", None) or "concise"
-            return (prefs.coach_persona or "balanced", prefs.proactivity_level or "medium", response_length)
+            return (prefs.coach_persona or "balanced", prefs.proactivity_level or "medium")
     except Exception as e:  # noqa: BLE001
         logger.warning("Failed to load user preferences for user %s: %s", user_id, e)
-    return ("balanced", "medium", "concise")
+    return ("balanced", "medium")
+
+
+async def _generate_and_save_title(
+    db_url: str,
+    conversation_id: str,
+    message_text: str,
+    mcp_client: MCPClient,
+    memory_store: MemoryStore,
+    llm_client: LLMClient | None,
+) -> None:
+    """Generate a conversation title and persist it asynchronously (fire-and-forget).
+
+    Creates its own DB session, generates a title via the Orchestrator's
+    lightweight title model, and saves it. Wrapped entirely in try/except
+    since failure is non-critical (a fallback truncated title is set before
+    this task is created).
+
+    Args:
+        db_url: Not used (uses async_session factory directly).
+        conversation_id: The conversation to update.
+        message_text: The first user message to generate a title from.
+        mcp_client: MCP client for Orchestrator construction.
+        memory_store: Memory store for Orchestrator construction.
+        llm_client: LLM client for Orchestrator construction.
+    """
+    try:
+        title_orchestrator = Orchestrator(
+            mcp_client=mcp_client,
+            memory_store=memory_store,
+            llm_client=llm_client,
+        )
+        generated_title = await title_orchestrator.generate_title(message_text)
+        async with async_session() as db:
+            result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
+            conv = result.scalar_one_or_none()
+            if conv is not None:
+                conv.title = generated_title
+                await db.commit()
+    except Exception:
+        logger.warning("Background title generation failed for conv %s", conversation_id)
 
 
 # ---------------------------------------------------------------------------
@@ -227,21 +325,20 @@ async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, s
 @router.websocket("/ws")
 async def websocket_chat(
     websocket: WebSocket,
-    token: str | None = Query(default=None),
     conversation_id: str | None = Query(default=None, alias="conversation_id"),
 ) -> None:
     """WebSocket endpoint for real-time AI chat with token streaming.
 
     On connect:
-      1. Validates the JWT token.
-      2. Resolves or creates the conversation (returns its UUID to the client).
-      3. Enters a message loop: receives user messages, runs them through
+      1. Reads the first message as an auth frame: {"type":"auth","token":"..."}.
+      2. Validates the JWT token from the auth frame.
+      3. Resolves or creates the conversation (returns its UUID to the client).
+      4. Enters a message loop: receives user messages, runs them through
          the Orchestrator with streaming, persists both messages, and updates
          the conversation title on first exchange.
 
     Args:
         websocket: The WebSocket connection.
-        token: JWT access token (query param).
         conversation_id: Optional existing conversation UUID (query param).
             If omitted, a new conversation is created and its ID is returned
             in the ``conversation_init`` message.
@@ -255,18 +352,64 @@ async def websocket_chat(
     analytics = getattr(app.state, "analytics_service", None)
     storage_service: StorageService = app.state.storage_service
 
+    # Fix 6.8 (H-4): Per-user WebSocket connection count limit via Redis
+    redis_client: aioredis.Redis | None = None
+    if settings.redis_url:
+        redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
+
     # Accept immediately so all failure paths can send JSON error messages
     # instead of closing an unaccepted socket (which causes HTTP 500).
     await websocket.accept()
 
-    user_id: str = "unknown"
+    # Fix 6.10 (M-1): Initialize user_id and token before auth block
+    user_id: str | None = None
+    token: str | None = None
 
     # ── Auth ──────────────────────────────────────────────────────────────────
+    # Read token from the first WebSocket message (auth frame).
+    # The Flutter client sends {"type":"auth","token":"..."} as its first message.
+    try:
+        raw_auth = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+        if len(raw_auth) > 4096:
+            await websocket.send_json({"type": "error", "content": "Auth payload too large"})
+            await websocket.close(code=4001)
+            return
+        first_data = json.loads(raw_auth)
+        if first_data.get("type") != "auth":
+            await websocket.send_json({"type": "error", "content": "Auth failed"})
+            await websocket.close(code=4001)
+            return
+        token = first_data.get("token")
+        if not token:
+            await websocket.send_json({"type": "error", "content": "Auth failed"})
+            await websocket.close(code=4001)
+            return
+    except (asyncio.TimeoutError, json.JSONDecodeError, Exception):
+        await websocket.send_json({"type": "error", "content": "Auth failed"})
+        await websocket.close(code=4001)
+        return
+
     user = await _authenticate_ws(websocket, auth_service, token)
     if user is None:
         return
 
     user_id = user.get("id", "unknown")
+
+    # Fix 6.8 (H-4): Track per-user WebSocket connection count
+    if redis_client and user_id:
+        conn_key = f"ws_connections:{user_id}"
+        try:
+            conn_count = await redis_client.incr(conn_key)
+            await redis_client.expire(conn_key, 3600)
+            if conn_count > 3:
+                await redis_client.decr(conn_key)
+                await websocket.send_json({"type": "error", "message": "Too many active connections"})
+                await websocket.close(code=1008)
+                if redis_client:
+                    await redis_client.aclose()
+                return
+        except Exception as redis_exc:
+            logger.warning("WebSocket connection tracking failed (fail-open): %s", redis_exc)
 
     # ── Resolve / create conversation ─────────────────────────────────────────
     resolved_conv_id: str
@@ -274,20 +417,50 @@ async def websocket_chat(
 
     async with async_session() as db:
         if conversation_id:
-            result = await db.execute(
-                select(Conversation).where(
-                    Conversation.id == conversation_id,
-                    Conversation.user_id == user_id,
-                    Conversation.deleted_at.is_(None),
+            # Fix 6.11 (M-2): Wrap conversation lookup to handle invalid UUIDs
+            try:
+                result = await db.execute(
+                    select(Conversation).where(
+                        Conversation.id == conversation_id,
+                        Conversation.user_id == user_id,
+                        Conversation.deleted_at.is_(None),
+                    )
                 )
-            )
-            conv = result.scalar_one_or_none()
+                conv = result.scalar_one_or_none()
+            except Exception as db_exc:
+                logger.warning("Conversation lookup failed for id=%s: %s", conversation_id, db_exc)
+                await websocket.send_json({"type": "error", "content": "Invalid conversation ID"})
+                await websocket.close(code=4004, reason="Invalid conversation ID")
+                return
             if conv is None:
                 await websocket.send_json({"type": "error", "content": "Conversation not found"})
                 await websocket.close(code=4004, reason="Conversation not found")
                 return
             resolved_conv_id = conv.id
         else:
+            # S4: Enforce per-user conversation count limit based on subscription tier
+            tier_result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
+            user_subscription_tier = tier_result.scalar_one_or_none() or "free"
+            conv_limit = (
+                settings.max_conversations_premium
+                if user_subscription_tier != "free"
+                else settings.max_conversations_free
+            )
+            conv_count_result = await db.execute(
+                select(func.count()).select_from(Conversation).where(
+                    Conversation.user_id == user_id,
+                    Conversation.deleted_at.is_(None),
+                )
+            )
+            conv_count = conv_count_result.scalar() or 0
+            if conv_count >= conv_limit:
+                await websocket.send_json({
+                    "type": "error",
+                    "content": "You've reached the maximum number of conversations. Please delete some old ones to continue.",
+                })
+                await websocket.close(code=1008)
+                return
+
             conv = Conversation(user_id=user_id)
             db.add(conv)
             await db.commit()
@@ -306,16 +479,68 @@ async def websocket_chat(
     await websocket.send_json({"type": "conversation_init", "conversation_id": resolved_conv_id})
 
     # ── Message loop ──────────────────────────────────────────────────────────
+    # S2: Tracking variables for periodic JWT re-validation
+    last_revalidation = time.time()
+    messages_since_revalidation = 0
+
     try:
         while True:
-            data = await websocket.receive_json()
+            raw = await websocket.receive_text()
+            if len(raw) > 65536:
+                await websocket.send_json({"type": "error", "content": "Message payload too large"})
+                continue
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "content": "Invalid message format"})
+                continue
             message_text: str = data.get("message", "")
+
+            # S2: Periodic JWT re-validation (every 15 minutes or 50 messages)
+            messages_since_revalidation += 1
+            if time.time() - last_revalidation > 900 or messages_since_revalidation >= 50:
+                revalidated_user = await auth_service.get_user(token)
+                if not revalidated_user:
+                    await websocket.send_json({"type": "error", "content": "Session expired. Please reconnect."})
+                    await websocket.close(code=4003)
+                    return
+                last_revalidation = time.time()
+                messages_since_revalidation = 0
             raw_attachments: list[dict] | None = data.get("attachments")
             is_regenerate: bool = bool(data.get("regenerate", False))
 
             if not message_text and not raw_attachments:
                 await websocket.send_json({"type": "error", "content": "Empty message"})
                 continue
+
+            # Fix 6.1 (C-1): Message size cap
+            if message_text and len(message_text) > 4000:
+                await websocket.send_json({"type": "error", "content": "Message too long (max 4,000 characters)"})
+                continue
+
+            # Fix 6.2 (C-2): Attachment count cap
+            if raw_attachments and len(raw_attachments) > 3:
+                await websocket.send_json({"type": "error", "message": "Too many attachments (max 3)"})
+                continue
+
+            # Fix 6.12 (M-3): Audit log for regenerate
+            if is_regenerate:
+                logger.info("regenerate_request", extra={"user_id": user_id, "conv_id": resolved_conv_id})
+
+            # Fix 6.5 (H-1): Per-minute burst limit check before daily rate limit
+            if rate_limiter:
+                try:
+                    burst_result = await rate_limiter.check_burst_limit(user_id)
+                    if not burst_result.allowed:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Too many messages. Please wait a moment.",
+                            "limit": burst_result.limit,
+                            "remaining": burst_result.remaining,
+                        })
+                        continue
+                except Exception as burst_exc:
+                    logger.warning("Burst limit check failed (fail-open): %s", burst_exc)
 
             # ── Rate limiting ─────────────────────────────────────────────────
             if rate_limiter:
@@ -324,7 +549,14 @@ async def websocket_chat(
                         await check_rate_limit(user, rate_limiter, db)
                 except HTTPException as exc:
                     if exc.status_code == 429:
-                        await websocket.send_json({"type": "error", "content": exc.detail or "Rate limit exceeded"})
+                        rate_headers = exc.headers or {}
+                        await websocket.send_json({
+                            "type": "rate_limit",
+                            "content": exc.detail or "Rate limit exceeded",
+                            "reset_seconds": int(rate_headers.get("X-RateLimit-Reset", 0)),
+                            "limit": int(rate_headers.get("X-RateLimit-Limit", 0)),
+                            "remaining": 0,
+                        })
                         continue
                     raise
 
@@ -350,6 +582,7 @@ async def websocket_chat(
             # When regenerating, the user message is already in the DB from the
             # original send — skip inserting a duplicate.
             async with async_session() as db:
+                persisted_user_msg_id: str | None = None
                 if not is_regenerate:
                     user_msg = Message(
                         conversation_id=resolved_conv_id,
@@ -359,36 +592,27 @@ async def websocket_chat(
                     )
                     db.add(user_msg)
                     await db.commit()
-
-                # Load conversation history for LLM context.
-                history = await _load_conversation_history(db, resolved_conv_id, limit=50)
-
-                # If regenerate was requested but there is no history, treat it
-                # as a first message to avoid sending an empty conversation to the LLM.
-                if is_regenerate and not history:
-                    is_regenerate = False
-                    user_msg = Message(
-                        conversation_id=resolved_conv_id,
-                        role="user",
-                        content=message_text,
-                        attachments=raw_attachments or None,
-                    )
-                    db.add(user_msg)
-                    await db.commit()
                     await db.refresh(user_msg)
-                # Remove the last entry if it matches the current user message
-                # (to avoid passing it twice — it will be passed as `message`).
-                if history and history[-1]["role"] == "user" and history[-1]["content"] == message_text:
-                    history = history[:-1]
+                    persisted_user_msg_id = str(user_msg.id)
 
-                db_persona, db_proactivity, db_response_length = await _load_user_preferences(db, user_id)
-                # Client-supplied values (from user settings at send time) take
-                # precedence; fall back to DB preferences when absent.
-                persona = data.get("persona") or db_persona
-                proactivity = data.get("proactivity") or db_proactivity
-                _VALID_RESPONSE_LENGTHS = {"concise", "detailed"}
-                client_response_length = data.get("response_length")
-                response_length = client_response_length if client_response_length in _VALID_RESPONSE_LENGTHS else db_response_length
+                # Load conversation history for LLM context, excluding the
+                # just-persisted user message (passed separately as `message`).
+                history = await _load_conversation_history(
+                    db, resolved_conv_id, limit=50, exclude_message_id=persisted_user_msg_id
+                )
+
+                # Fix 6.7 (H-3): Cap history to MAX_HISTORY_CHARS to bound token usage
+                total_chars = sum(len(m.get("content") or "") for m in history)
+                while total_chars > MAX_HISTORY_CHARS and len(history) > 1:
+                    removed = history.pop(0)  # Remove oldest message
+                    total_chars -= len(removed.get("content") or "")
+
+                db_persona, db_proactivity = await _load_user_preferences(db, user_id)
+                # Fix 6.6 (H-2): Validate client-supplied persona/proactivity against allowlist
+                client_persona = data.get("persona")
+                persona = client_persona if client_persona in _VALID_PERSONAS else db_persona
+                client_proactivity = data.get("proactivity")
+                proactivity = client_proactivity if client_proactivity in _VALID_PROACTIVITY else db_proactivity
 
             # ── Orchestrate with streaming ────────────────────────────────────
             await websocket.send_json({"type": "typing_start"})
@@ -412,7 +636,6 @@ async def websocket_chat(
                         message=augmented_text,
                         persona=persona,
                         proactivity=proactivity,
-                        response_length=response_length,
                         db=db,
                         conversation_history=history,
                     ):
@@ -432,18 +655,25 @@ async def websocket_chat(
                         elif etype == "error":
                             had_error = True
                             await websocket.send_json(event)
+                            await websocket.send_json({"type": "stream_end", "content": full_content or "", "conversation_id": str(resolved_conv_id)})
                             break
 
                 except Exception as orch_exc:
+                    # Fix 6.13 (M-4): Hide exception detail from client; log server-side
                     logger.exception("Orchestrator stream error for user '%s'", user_id)
                     sentry_sdk.capture_exception(orch_exc)
-                    await websocket.send_json({"type": "error", "content": f"Processing error: {orch_exc!s}"})
+                    await websocket.send_json({"type": "error", "content": "Something went wrong. Please try again."})
+                    await websocket.send_json({"type": "stream_end", "content": full_content or "", "conversation_id": str(resolved_conv_id)})
                     continue
 
                 if had_error:
                     continue
 
             # ── Persist assistant message ─────────────────────────────────────
+            # Fix 6.4 (C-4): Skip persisting blank assistant messages
+            if not full_content.strip():
+                continue
+
             async with async_session() as db:
                 assistant_msg = Message(
                     conversation_id=resolved_conv_id,
@@ -456,19 +686,27 @@ async def websocket_chat(
                 conv_result = await db.execute(select(Conversation).where(Conversation.id == resolved_conv_id))
                 conv_row = conv_result.scalar_one_or_none()
                 if conv_row:
-                    conv_row.updated_at = datetime.now(timezone.utc)
+                    # Fix 6.16 (L-2): updated_at has onupdate=func.now() in the model;
+                    # no manual assignment needed — SQLAlchemy handles it automatically.
 
-                    # Generate title on the first exchange.
+                    # Issue B: Non-blocking title generation.
+                    # Set a fallback title immediately, then kick off an async
+                    # background task to generate a better one with the LLM.
                     if conv_row.title is None and message_text:
+                        conv_row.title = message_text[:60] + ("…" if len(message_text) > 60 else "")
                         try:
-                            title_orchestrator = Orchestrator(
-                                mcp_client=mcp_client,
-                                memory_store=memory_store,
-                                llm_client=llm_client,
+                            asyncio.create_task(
+                                _generate_and_save_title(
+                                    db_url=settings.database_url,
+                                    conversation_id=str(resolved_conv_id),
+                                    message_text=message_text,
+                                    mcp_client=mcp_client,
+                                    memory_store=memory_store,
+                                    llm_client=llm_client,
+                                )
                             )
-                            conv_row.title = await title_orchestrator.generate_title(message_text)
                         except Exception:
-                            conv_row.title = message_text[:60] + ("…" if len(message_text) > 60 else "")
+                            pass  # Fallback title already set above
 
                 await db.commit()
                 await db.refresh(assistant_msg)
@@ -501,6 +739,24 @@ async def websocket_chat(
         logger.info("WebSocket disconnected for user '%s'", user_id)
     except Exception:
         logger.exception("Unexpected WebSocket error for user '%s'", user_id)
+        # Fix 6.3 (C-3): Close WebSocket on unexpected exception
+        try:
+            await websocket.close(code=1011)
+        except Exception:
+            pass
+    finally:
+        # Fix 6.8 (H-4): Decrement per-user connection count on disconnect
+        if redis_client and user_id:
+            conn_key = f"ws_connections:{user_id}"
+            try:
+                await redis_client.decr(conn_key)
+            except Exception as redis_exc:
+                logger.warning("Failed to decrement WebSocket connection count: %s", redis_exc)
+        if redis_client:
+            try:
+                await redis_client.aclose()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -685,6 +941,8 @@ async def list_conversations(
 async def get_conversation_messages(
     request: Request,
     conversation_id: str,
+    limit: int = Query(100, le=200),
+    offset: int = Query(0, ge=0),
     credentials: HTTPAuthorizationCredentials = Depends(security),
     auth_service: AuthService = Depends(_get_auth_service),
     storage_service: StorageService = Depends(_get_storage_service),
@@ -727,8 +985,13 @@ async def get_conversation_messages(
             detail="Conversation not found",
         )
 
+    # Fix 6.14 (M-5): Apply pagination to message query
     msg_result = await db.execute(
-        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at.asc())
+        select(Message)
+        .where(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.asc())
+        .limit(limit)
+        .offset(offset)
     )
     messages = msg_result.scalars().all()
 
@@ -758,7 +1021,7 @@ class ConversationUpdateRequest(BaseModel):
         archived: Optional flag to archive the conversation.
     """
 
-    title: str | None = Field(default=None, max_length=200)
+    title: str | None = None
     archived: bool | None = None
 
 

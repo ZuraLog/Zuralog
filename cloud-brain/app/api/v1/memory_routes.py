@@ -132,6 +132,7 @@ def _is_pinecone_store(memory_store: Any) -> bool:
 # ---------------------------------------------------------------------------
 
 
+@limiter.limit("60/minute")
 @router.get(
     "",
     response_model=MemoryListResponse,
