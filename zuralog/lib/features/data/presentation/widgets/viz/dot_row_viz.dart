@@ -33,9 +33,9 @@ class DotRowViz extends StatelessWidget {
       width: dotSize,
       height: dotSize,
       decoration: BoxDecoration(
-        color: color.withOpacity(opacity),
+        color: color.withValues(alpha: opacity),
         shape: BoxShape.circle,
-        boxShadow: isToday ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 4, spreadRadius: 1)] : null,
+        boxShadow: isToday ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 4, spreadRadius: 1)] : null,
       ),
     );
   }

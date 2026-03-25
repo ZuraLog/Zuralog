@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -47,7 +48,7 @@ class FillGaugeViz extends StatelessWidget {
             height: (height - 3) * _fillRatio,
             child: Container(
               decoration: BoxDecoration(
-                color: color.withOpacity(0.7),
+                color: color.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.only(
                   bottomLeft: const Radius.circular(3),
                   bottomRight: const Radius.circular(3),
@@ -74,7 +75,7 @@ class FillGaugeViz extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(_valueLabel, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-            Text('/ ${config.maxValue} ${config.unit}', style: TextStyle(fontSize: 9, color: Colors.grey[600])),
+            Text('/ ${config.maxValue} ${config.unit}', style: const TextStyle(fontSize: 9, color: AppColors.textSecondaryDark)),
           ],
         ),
       ],
@@ -100,7 +101,7 @@ class FillGaugeViz extends StatelessWidget {
                   children: List.generate(totalIcons, (i) =>
                     Text(config.unitIcon!, style: TextStyle(
                       fontSize: 14,
-                      color: i < iconCount ? Colors.blue : Colors.grey[300],
+                      color: i < iconCount ? AppColors.categorySleep : AppColors.borderLight,
                     )),
                   ),
                 ),
