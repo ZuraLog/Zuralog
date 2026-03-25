@@ -22,7 +22,7 @@ from app.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
 from app.services.storage_service import StorageService
-from app.api.deps import _get_auth_service, get_authenticated_user_id, get_current_user
+from app.api.deps import _get_auth_service, get_authenticated_user_id
 from app.limiter import limiter
 from app.services.cache_service import CacheService, cached
 
@@ -575,7 +575,7 @@ async def upload_avatar(
         try:
             await storage.delete_file(
                 bucket=settings.avatar_bucket,
-                path=storage_path,
+                paths=[storage_path],
             )
         except Exception:
             logger.warning(
