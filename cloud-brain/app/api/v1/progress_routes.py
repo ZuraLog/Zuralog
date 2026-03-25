@@ -18,15 +18,20 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.analytics_service import AnalyticsService
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
 from app.limiter import limiter
 from app.models.achievement import Achievement as AchievementModel
+from app.models.daily_summary import DailySummary
 from app.models.user_goal import UserGoal
 from app.models.user_streak import UserStreak
+from app.services.goal_history_service import get_goal_history
+
+_analytics = AnalyticsService()
 
 logger = logging.getLogger(__name__)
 
@@ -152,14 +157,86 @@ router = APIRouter(
 
 
 # ---------------------------------------------------------------------------
+# Analytics helpers
+# ---------------------------------------------------------------------------
+
+
+async def _compute_wow(db: AsyncSession, user_id: str, local_date: _date) -> dict:
+    """Compare this week's vs last week's key metrics from daily_summaries."""
+    monday = local_date - _timedelta(days=local_date.weekday())
+    last_monday = monday - _timedelta(days=7)
+    last_sunday = monday - _timedelta(days=1)
+
+    key_metrics = ["steps", "sleep_hours", "calories_consumed", "weight_kg"]
+    metrics_out = []
+
+    for metric in key_metrics:
+        # this week: monday..today
+        this_result = await db.execute(
+            select(func.avg(DailySummary.value))
+            .where(
+                DailySummary.user_id == user_id,
+                DailySummary.metric_type == metric,
+                DailySummary.date >= monday,
+                DailySummary.date <= local_date,
+            )
+        )
+        this_avg = this_result.scalar_one_or_none()
+
+        # last week: last_monday..last_sunday
+        last_result = await db.execute(
+            select(func.avg(DailySummary.value))
+            .where(
+                DailySummary.user_id == user_id,
+                DailySummary.metric_type == metric,
+                DailySummary.date >= last_monday,
+                DailySummary.date <= last_sunday,
+            )
+        )
+        last_avg = last_result.scalar_one_or_none()
+
+        if this_avg is None and last_avg is None:
+            continue
+
+        delta_pct = 0.0
+        if last_avg and last_avg > 0:
+            delta_pct = round(((this_avg or 0) - last_avg) / last_avg * 100, 1)
+
+        metrics_out.append({
+            "metric": metric,
+            "this_week_avg": round(this_avg or 0, 2),
+            "last_week_avg": round(last_avg or 0, 2),
+            "delta_pct": delta_pct,
+        })
+
+    return {
+        "week_label": f"Week of {monday.isoformat()}",
+        "metrics": metrics_out,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Serialization helpers
 # ---------------------------------------------------------------------------
 
 
-def _goal_to_dict_with_date(goal: UserGoal, local_date: _date) -> dict:
-    """Serialise a UserGoal ORM instance using the provided local date for trend computation."""
+def _goal_to_dict_with_date(
+    goal: UserGoal,
+    local_date: _date,
+    live_current_value: float | None = None,
+    progress_history: list[dict] | None = None,
+) -> dict:
+    """Serialise a UserGoal ORM instance using the provided local date for trend computation.
+
+    Args:
+        goal: The ORM instance to serialise.
+        local_date: The user's local date for trend direction computation.
+        live_current_value: If provided, overrides goal.current_value in the output.
+        progress_history: If provided, populates the progress_history field.
+    """
     type_str = goal.type.value if hasattr(goal.type, "value") else str(goal.type)  # type: ignore[union-attr]
     period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)  # type: ignore[union-attr]
+    current_val = live_current_value if live_current_value is not None else float(goal.current_value or 0.0)
     return {
         "id": str(goal.id),
         "user_id": str(goal.user_id),
@@ -167,13 +244,13 @@ def _goal_to_dict_with_date(goal: UserGoal, local_date: _date) -> dict:
         "period": period_str,
         "title": goal.title,
         "target_value": float(goal.target_value or 0.0),
-        "current_value": float(goal.current_value or 0.0),
+        "current_value": current_val,
         "unit": goal.unit or "",
         "start_date": str(goal.start_date) if goal.start_date else "",
         "deadline": str(goal.deadline) if goal.deadline else None,
         "is_completed": goal.is_completed,
         "ai_commentary": goal.ai_commentary,
-        "progress_history": [],  # placeholder — analytics engine wired in a future phase
+        "progress_history": progress_history if progress_history is not None else [],
         "trend_direction": _compute_trend_direction(goal, local_date),
     }
 
@@ -279,6 +356,40 @@ async def progress_home(
                 "progress_label": f"{current} of {total}",
             }
 
+    # Enrich each goal with live current_value and progress_history.
+    enriched_goals = []
+    for goal in goals:
+        period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)
+        live_value = await _analytics._get_current_metric_value(db, user_id, goal.metric, period_str)
+        goal.current_value = live_value
+        history = await get_goal_history(db, user_id, goal.metric, days=30)
+        enriched_goals.append((goal, live_value, history))
+
+    await db.commit()
+
+    # Recent achievements — last 5 unlocked.
+    recent_ach_result = await db.execute(
+        select(AchievementModel)
+        .where(
+            AchievementModel.user_id == user_id,
+            AchievementModel.unlocked_at.is_not(None),
+        )
+        .order_by(AchievementModel.unlocked_at.desc())
+        .limit(5)
+    )
+    recent_achievements = [
+        {
+            "key": a.achievement_key,
+            "title": a.achievement_key.replace("_", " ").title(),
+            "unlocked_at": str(a.unlocked_at),
+            "icon_name": _achievement_icon(a.achievement_key),
+        }
+        for a in recent_ach_result.scalars().all()
+    ]
+
+    # Week-over-week metrics.
+    wow = await _compute_wow(db, user_id, local_date)
+
     logger.info(
         "progress_home: user='%s' goals=%d streaks=%d",
         user_id,
@@ -287,7 +398,10 @@ async def progress_home(
     )
 
     return {
-        "goals": [_goal_to_dict_with_date(g, local_date) for g in goals],
+        "goals": [
+            _goal_to_dict_with_date(g, local_date, live_val, history)
+            for g, live_val, history in enriched_goals
+        ],
         "streaks": [_streak_to_dict(s) for s in streaks],
         "streak_history": {s.streak_type: _compute_14day_history(s, local_date) for s in streaks},
         "week_hits": {s.streak_type: _compute_week_hits(s, local_date) for s in streaks},
@@ -296,11 +410,8 @@ async def progress_home(
             (s.created_at.isoformat()[:10] for s in streaks),
             default=None,
         ) if streaks else None,
-        "wow": {
-            "week_label": "",
-            "metrics": [],
-        },
-        "recent_achievements": [],
+        "wow": wow,
+        "recent_achievements": recent_achievements,
     }
 
 
@@ -309,22 +420,81 @@ async def progress_home(
 async def progress_weekly_report(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Return the latest weekly progress report.
 
-    Currently returns an empty scaffold. Full report generation
-    (driven by Celery weekly tasks) will be wired in a future phase.
+    Aggregates this week's daily_summaries into category cards for
+    the Flutter Progress tab weekly report screen.
 
     Args:
         request: FastAPI request object (required by the rate limiter).
         user_id: Authenticated user ID from JWT.
+        db: Async database session.
 
     Returns:
         dict matching the WeeklyReport model shape.
     """
+    local_date = _resolve_local_date(request)
+    monday = local_date - _timedelta(days=local_date.weekday())
+    sunday = monday + _timedelta(days=6)
+
+    # Fetch this week's daily_summaries
+    result = await db.execute(
+        select(DailySummary)
+        .where(
+            DailySummary.user_id == user_id,
+            DailySummary.date >= monday,
+            DailySummary.date <= local_date,
+        )
+    )
+    summaries = result.scalars().all()
+
+    if not summaries:
+        return {
+            "id": "",
+            "period_start": str(monday),
+            "period_end": str(sunday),
+            "cards": [],
+        }
+
+    # Group by metric_type
+    by_metric: dict[str, list[float]] = {}
+    for s in summaries:
+        by_metric.setdefault(s.metric_type, []).append(s.value)
+
+    def _card(category: str, metric_keys: list[str], label_map: dict[str, str]) -> dict | None:
+        card_metrics = []
+        for key in metric_keys:
+            vals = by_metric.get(key, [])
+            if not vals:
+                continue
+            avg_val = sum(vals) / len(vals)
+            total_val = sum(vals)
+            card_metrics.append({
+                "label": label_map.get(key, key.replace("_", " ").title()),
+                "value": round(avg_val, 1),
+                "total": round(total_val, 1),
+                "days_with_data": len(vals),
+            })
+        if not card_metrics:
+            return None
+        return {"category": category, "metrics": card_metrics}
+
+    cards = []
+    for card in [
+        _card("Activity",   ["steps", "workouts", "active_calories"], {"steps": "Steps/day", "workouts": "Workouts", "active_calories": "Active cal/day"}),
+        _card("Sleep",      ["sleep_hours", "sleep_duration"],        {"sleep_hours": "Hours/night", "sleep_duration": "Duration"}),
+        _card("Nutrition",  ["calories_consumed", "water_intake"],    {"calories_consumed": "Calories/day", "water_intake": "Water (L)/day"}),
+        _card("Body",       ["weight_kg", "body_fat_pct"],            {"weight_kg": "Weight (kg)", "body_fat_pct": "Body fat %"}),
+        _card("Vitals",     ["heart_rate", "hrv", "spo2"],            {"heart_rate": "Resting HR", "hrv": "HRV", "spo2": "SpO\u2082"}),
+    ]:
+        if card:
+            cards.append(card)
+
     return {
-        "id": "",
-        "period_start": "",
-        "period_end": "",
-        "cards": [],
+        "id": f"{user_id}-{monday.isoformat()}",
+        "period_start": str(monday),
+        "period_end": str(sunday),
+        "cards": cards,
     }

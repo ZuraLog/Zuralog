@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.analytics_service import AnalyticsService
 from app.api.deps import get_authenticated_user_id
 from app.api.v1.goal_schemas import (
     GoalCreateRequest,
@@ -28,6 +29,9 @@ from app.api.v1.goal_schemas import (
 from app.database import get_db
 from app.limiter import limiter
 from app.models.user_goal import GoalPeriod, UserGoal
+from app.services.goal_history_service import get_goal_history
+
+_analytics = AnalyticsService()
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +64,17 @@ _SLUG_TO_PERIOD: dict[str, GoalPeriod] = {
 # ---------------------------------------------------------------------------
 
 
-def _goal_to_response(goal: UserGoal) -> GoalResponse:
+def _goal_to_response(
+    goal: UserGoal,
+    live_current_value: float | None = None,
+    progress_history: list[dict] | None = None,
+) -> GoalResponse:
     """Convert a UserGoal ORM instance to a GoalResponse.
 
     Args:
         goal: The ORM instance to serialize.
+        live_current_value: If provided, overrides goal.current_value.
+        progress_history: If provided, populates the progress_history field.
 
     Returns:
         GoalResponse matching the Flutter Goal.fromJson contract.
@@ -72,6 +82,7 @@ def _goal_to_response(goal: UserGoal) -> GoalResponse:
     # GoalPeriod enum value is e.g. "daily" — the .value attribute
     # gives us the lowercase slug the Flutter client expects.
     period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)
+    current_val = live_current_value if live_current_value is not None else float(goal.current_value or 0.0)
 
     return GoalResponse(
         id=str(goal.id),
@@ -80,13 +91,13 @@ def _goal_to_response(goal: UserGoal) -> GoalResponse:
         period=period_str,
         title=goal.title,
         target_value=float(goal.target_value or 0.0),
-        current_value=float(goal.current_value or 0.0),
+        current_value=current_val,
         unit=goal.unit,
         start_date=goal.start_date,
         deadline=goal.deadline,
         is_completed=goal.is_completed,
         ai_commentary=goal.ai_commentary,
-        progress_history=[],  # placeholder — computed by analytics engine
+        progress_history=progress_history if progress_history is not None else [],
     )
 
 
@@ -120,7 +131,18 @@ async def list_goals(
         .limit(100)
     )
     goals = result.scalars().all()
-    return GoalListResponse(goals=[_goal_to_response(g) for g in goals])
+
+    # Enrich with live current_value and progress_history from daily_summaries.
+    enriched: list[GoalResponse] = []
+    for goal in goals:
+        period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)
+        live_value = await _analytics._get_current_metric_value(db, user_id, goal.metric, period_str)
+        goal.current_value = live_value
+        history = await get_goal_history(db, user_id, goal.metric, days=30)
+        enriched.append(_goal_to_response(goal, live_current_value=live_value, progress_history=history))
+
+    await db.commit()
+    return GoalListResponse(goals=enriched)
 
 
 @router.post(
