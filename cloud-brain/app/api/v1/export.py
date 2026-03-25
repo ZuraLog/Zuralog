@@ -1,6 +1,7 @@
 """User data export endpoint."""
 import json
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -56,15 +57,28 @@ async def export_user_data(
             logger.exception("Failed to export memories for user '%s'", user_id)
             memories_export_partial = True
 
-    conversations_data = []
-    for c in conversations:
+    conv_ids = [c.id for c in conversations]
+
+    if not conv_ids:
+        messages_by_conv: dict = {}
+    else:
         msg_result = await db.execute(
             select(Message)
-            .where(Message.conversation_id == c.id)
-            .order_by(Message.created_at.desc())
-            .limit(200)
+            .where(Message.conversation_id.in_(conv_ids))
+            .order_by(Message.created_at.asc())
         )
-        msgs = list(msg_result.scalars().all())
+        all_messages = msg_result.scalars().all()
+
+        messages_by_conv = defaultdict(list)
+        for m in all_messages:
+            messages_by_conv[str(m.conversation_id)].append(m)
+        # Trim each conversation to max 200 messages
+        for cid in messages_by_conv:
+            messages_by_conv[cid] = messages_by_conv[cid][-200:]
+
+    conversations_data = []
+    for c in conversations:
+        msgs = messages_by_conv.get(str(c.id), [])
         conversations_data.append({
             "id": str(c.id),
             "title": c.title,
@@ -76,7 +90,7 @@ async def export_user_data(
                     "content": m.content,
                     "created_at": m.created_at.isoformat() if m.created_at else None,
                 }
-                for m in sorted(msgs, key=lambda x: x.created_at or datetime.min)
+                for m in msgs
             ],
         })
 

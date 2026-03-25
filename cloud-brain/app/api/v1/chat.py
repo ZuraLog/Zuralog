@@ -221,13 +221,14 @@ async def _load_conversation_history(
     query = (
         select(Message)
         .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc())
+        .order_by(Message.created_at.desc())
         .limit(limit)
     )
     if exclude_message_id is not None:
         query = query.where(Message.id != exclude_message_id)
     result = await db.execute(query)
     messages = result.scalars().all()
+    messages = list(reversed(messages))
     # Only pass user/assistant roles to the LLM; skip tool/system rows.
     return [{"role": m.role, "content": (m.content or "")[:8000]} for m in messages if m.role in ("user", "assistant")]
 
@@ -380,7 +381,7 @@ async def websocket_chat(
             await redis_client.expire(conn_key, 3600)
             if conn_count > 3:
                 await redis_client.decr(conn_key)
-                await websocket.send_json({"type": "error", "message": "Too many active connections"})
+                await websocket.send_json({"type": "error", "content": "Too many active connections"})
                 await websocket.close(code=1008)
                 return
         except Exception as redis_exc:
@@ -437,6 +438,7 @@ async def websocket_chat(
                 return
 
             conv = Conversation(user_id=user_id)
+            conv.updated_at = datetime.now(timezone.utc)
             db.add(conv)
             await db.commit()
             await db.refresh(conv)
@@ -495,8 +497,18 @@ async def websocket_chat(
 
             # Fix 6.2 (C-2): Attachment count cap
             if raw_attachments and len(raw_attachments) > 3:
-                await websocket.send_json({"type": "error", "message": "Too many attachments (max 3)"})
+                await websocket.send_json({"type": "error", "content": "Too many attachments (max 3)"})
                 continue
+
+            # Soft-deleted conversation guard (catch race conditions per message)
+            async with async_session() as db:
+                conv_check = await db.execute(
+                    select(Conversation.deleted_at).where(Conversation.id == resolved_conv_id)
+                )
+                if conv_check.scalar_one_or_none() is not None:
+                    await websocket.send_json({"type": "error", "content": "This conversation has been deleted."})
+                    await websocket.close(code=4004)
+                    return
 
             # Fix 6.12 (M-3): Audit log for regenerate
             if is_regenerate:
@@ -509,9 +521,10 @@ async def websocket_chat(
                     if not burst_result.allowed:
                         await websocket.send_json({
                             "type": "error",
-                            "message": "Too many messages. Please wait a moment.",
+                            "content": "Too many messages. Please wait a moment.",
                             "limit": burst_result.limit,
                             "remaining": burst_result.remaining,
+                            "reset_seconds": burst_result.reset_seconds,
                         })
                         continue
                 except Exception as burst_exc:
@@ -569,6 +582,13 @@ async def websocket_chat(
                     await db.commit()
                     await db.refresh(user_msg)
                     persisted_user_msg_id = str(user_msg.id)
+
+                    # Update conversation.updated_at when a new user message is added
+                    conv_upd = await db.execute(select(Conversation).where(Conversation.id == resolved_conv_id))
+                    conversation = conv_upd.scalar_one_or_none()
+                    if conversation:
+                        conversation.updated_at = datetime.now(timezone.utc)
+                        await db.commit()
 
                 # Load conversation history for LLM context, excluding the
                 # just-persisted user message (passed separately as `message`).
@@ -664,14 +684,14 @@ async def websocket_chat(
                 conv_result = await db.execute(select(Conversation).where(Conversation.id == resolved_conv_id))
                 conv_row = conv_result.scalar_one_or_none()
                 if conv_row:
-                    # Fix 6.16 (L-2): updated_at has onupdate=func.now() in the model;
-                    # no manual assignment needed — SQLAlchemy handles it automatically.
+                    conv_row.updated_at = datetime.now(timezone.utc)
 
                     # Issue B: Non-blocking title generation.
                     # Set a fallback title immediately, then kick off an async
                     # background task to generate a better one with the LLM.
                     if conv_row.title is None and message_text:
-                        conv_row.title = message_text[:60] + ("…" if len(message_text) > 60 else "")
+                        safe_title = sanitize_for_llm(message_text)
+                        conv_row.title = safe_title[:60] + ("..." if len(safe_title) > 60 else "")
                         try:
                             asyncio.create_task(
                                 _generate_and_save_title(
