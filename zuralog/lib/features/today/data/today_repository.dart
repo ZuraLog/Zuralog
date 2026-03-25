@@ -729,14 +729,29 @@ class TodayRepository implements TodayRepositoryInterface {
     debugPrint('[TodayRepo] logWeight ✅ done');
   }
 
+  // Maps UI tile type names to the backend metric_type keys used in
+  // daily_summaries / today summary latestValues.
+  static const _uiTypeToMetricType = {
+    'weight': 'weight_kg',
+    'sleep': 'sleep_duration',
+    'run': 'distance',
+    'meal': 'calories',
+    'supplement': 'supplement_taken',
+    'water': 'water_ml',
+    // mood, energy, stress, steps — same name on both sides, no entry needed
+  };
+
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
     debugPrint('[TodayRepo] getLatestLogValues requested types=$types');
     if (types.isEmpty) return const {};
     final summary = await getTodayLogSummary();
-    final result = Map.fromEntries(
-      summary.latestValues.entries.where((e) => types.contains(e.key)),
-    );
+    final result = <String, dynamic>{};
+    for (final type in types) {
+      final metricType = _uiTypeToMetricType[type] ?? type;
+      final value = summary.latestValues[metricType];
+      if (value != null) result[type] = value;
+    }
     debugPrint('[TodayRepo] getLatestLogValues result='
         '${result.map((k, v) => MapEntry(k, '${v.runtimeType}($v)'))}');
     return result;
