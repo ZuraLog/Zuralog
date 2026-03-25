@@ -236,7 +236,10 @@ class Goal {
       deadline: json['deadline'] as String?,
       isCompleted: json['is_completed'] as bool? ?? false,
       aiCommentary: json['ai_commentary'] as String?,
-      progressHistory: rawHistory.map((e) => (e as num).toDouble()).toList(),
+      progressHistory: rawHistory.map((e) {
+        if (e is num) return e.toDouble();
+        return ((e as Map<String, dynamic>)['value'] as num).toDouble();
+      }).toList(),
       trendDirection: json['trend_direction'] as String? ?? 'on_track',
     );
   }

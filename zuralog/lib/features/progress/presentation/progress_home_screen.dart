@@ -24,7 +24,6 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
-import 'package:zuralog/features/progress/presentation/goal_create_edit_sheet.dart';
 import 'package:zuralog/features/progress/presentation/widgets/goal_trajectory_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/journal_prompt_cta.dart';
 import 'package:zuralog/features/progress/presentation/widgets/next_achievement_card.dart';
@@ -103,33 +102,6 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
             ],
           ),
           data: (data) {
-            final isEmpty = data.goals.isEmpty && data.streaks.isEmpty;
-
-            if (isEmpty) {
-              return CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: ZEmptyState(
-                      icon: Icons.flag_rounded,
-                      title: 'Start your journey',
-                      message: "Set a goal and I'll track your streaks and progress.",
-                      actionLabel: 'Set First Goal',
-                      onAction: () {
-                        showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => const GoalCreateEditSheet(),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              );
-            }
-
             return _ContentView(data: data);
           },
         ),
