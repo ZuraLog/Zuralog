@@ -429,8 +429,10 @@ final class ApiCoachRepository implements CoachRepository {
 
               case 'stream_end':
                 final content = msg['content'] as String? ?? accumulated;
-                final msgId = msg['message_id'] as String? ??
-                    'msg_${DateTime.now().millisecondsSinceEpoch}';
+                final rawMsgId = msg['message_id'] as String?;
+                final msgId = (rawMsgId == null || rawMsgId.isEmpty)
+                    ? 'msg_${DateTime.now().millisecondsSinceEpoch}'
+                    : rawMsgId;
                 // Fix M6: reject stream_end with no conversation ID.
                 final convId = msg['conversation_id'] as String? ?? resolvedConversationId;
                 if (convId == null) {
