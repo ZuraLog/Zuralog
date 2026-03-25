@@ -3,11 +3,13 @@ import '../../../core/network/api_client.dart';
 class MemoryItem {
   final String id;
   final String text;
-  const MemoryItem({required this.id, required this.text});
+  final Map<String, dynamic> metadata;
+  const MemoryItem({required this.id, required this.text, this.metadata = const {}});
 
   factory MemoryItem.fromJson(Map<String, dynamic> json) => MemoryItem(
     id: json['id']?.toString() ?? '',
     text: json['text']?.toString() ?? json['memory']?.toString() ?? '',
+    metadata: json['metadata'] as Map<String, dynamic>? ?? const {},
   );
 }
 
@@ -27,6 +29,6 @@ class MemoryRepository {
   }
 
   Future<void> clearAllMemories() async {
-    await _apiClient.delete('/api/v1/memories', queryParameters: {'confirm': 'true'});
+    await _apiClient.delete('/api/v1/memories', queryParameters: {'confirm': true});
   }
 }

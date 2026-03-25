@@ -508,12 +508,12 @@ final class ApiCoachRepository implements CoachRepository {
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   DateTime _parseDate(dynamic raw) {
-    if (raw == null) return DateTime.now();
+    if (raw == null) return DateTime.fromMillisecondsSinceEpoch(0);
     try {
       return DateTime.parse(raw as String).toLocal();
     } catch (e) {
       debugPrint('[ApiCoachRepository] Date parse failed for "$raw": $e');
-      return DateTime.now();
+      return DateTime.fromMillisecondsSinceEpoch(0);
     }
   }
 }

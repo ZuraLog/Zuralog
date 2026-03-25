@@ -13,7 +13,9 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -52,9 +54,9 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get(
         '/api/v1/user/export',
-        queryParameters: {'responseType': 'bytes'},
+        options: Options(responseType: ResponseType.bytes),
       );
-      final bytes = (response.data as String).codeUnits;
+      final bytes = Uint8List.fromList(response.data as List<int>);
       final dir = await getTemporaryDirectory();
       final date = DateTime.now().toIso8601String().substring(0, 10);
       final file = File('${dir.path}/zuralog-export-$date.json');
@@ -317,8 +319,8 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                   ZSettingsTile(
                     icon: Icons.delete_forever_rounded,
                     iconColor: AppColors.statusError,
-                    title: 'Delete All My Data',
-                    subtitle: 'Permanently removes all health data',
+                    title: 'Delete Account Data',
+                    subtitle: 'Clear AI memories & request account deletion',
                     titleColor: AppColors.statusError,
                     onTap: () => _showDeleteDataDialog(
                       context,
@@ -601,7 +603,7 @@ Future<void> _showDeleteDataDialog(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
       ),
       title: Text(
-        'Delete All My Data?',
+        'Delete Account Data?',
         style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
       ),
       content: Text(
