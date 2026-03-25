@@ -526,12 +526,26 @@ async def upload_avatar(
     ext = _MIME_TO_EXT[mime_type]
     storage_path = f"{user_id}/avatar.{ext}"
 
+    # Remove any avatar files stored under the other two possible extensions so
+    # the bucket never accumulates stale files when a user switches format
+    # (e.g. uploads a PNG after previously uploading a JPEG).
+    stale_exts = {"jpg", "png", "webp"} - {ext}
+    for stale_ext in stale_exts:
+        try:
+            await storage.delete_file(
+                bucket=settings.avatar_bucket,
+                paths=[f"{user_id}/avatar.{stale_ext}"],
+            )
+        except Exception:
+            pass  # file didn't exist or already deleted — not an error
+
     # Upload to the configured avatars bucket, overwriting any existing file.
     await storage.upload_file(
         bucket=settings.avatar_bucket,
         path=storage_path,
         content=data,
         content_type=mime_type,
+        upsert=True,
     )
 
     # Build the public URL from the Supabase project URL — never hardcode a domain.
