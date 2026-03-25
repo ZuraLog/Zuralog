@@ -128,8 +128,12 @@ class _RunLogScreenState extends ConsumerState<RunLogScreen> {
         effortLevel: _effortIndex != null ? _kEffortLabels[_effortIndex!].toLowerCase() : null,
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
-      ref.invalidate(todayLogSummaryProvider);
-      if (mounted) { Navigator.of(context).pop(); }
+      if (mounted) {
+        Navigator.of(context).pop();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.invalidate(todayLogSummaryProvider);
+        });
+      }
     } catch (e) {
       debugPrint('RunLogScreen save failed: $e');
       if (mounted) {

@@ -275,8 +275,16 @@ class _ZLogGridSheetState extends ConsumerState<ZLogGridSheet> {
                     parentMessenger: widget.parentMessenger,
                     onSaved: () {
                       if (!mounted) return;
-                      ref.invalidate(todayLogSummaryProvider);
                       Navigator.of(context).pop();
+                      // Defer provider invalidation until after the sheet is
+                      // fully popped. Calling ref.invalidate() synchronously
+                      // while the Scaffold is mid-layout causes
+                      // markNeedsBuild() to fire inside a LayoutBuilder
+                      // layout callback, producing an ErrorWidget (gray panel)
+                      // on the Today tab.
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        ref.invalidate(todayLogSummaryProvider);
+                      });
                     },
                   ),
           ),
