@@ -1,9 +1,70 @@
 # Zuralog — Implementation Status
 
-**Last Updated:** 2026-03-25 (Progress Tab full redesign: Flame Hero layout, streak hardening, brand pattern, accessibility)  
+**Last Updated:** 2026-03-25 (Coach Tab production hardening: security, rate limiting, resilience, Flutter UX correctness)
 **Purpose:** Historical record of what has been built, per major area. Synthesized from agent execution logs.
 
 > This document covers *what was built*, including notable decisions made during implementation and deviations from the original plan. For *what's next*, see [roadmap.md](./roadmap.md).
+
+---
+
+## Coach Tab — Production Hardening (main, 2026-03-25)
+
+**Scope:** Full security, rate-limiting, resilience, and UX-correctness audit of the Coach Tab across ~26 iterative rounds. All MEDIUM+ severity issues resolved. Deployed to Railway; all rounds passed healthcheck with zero deploy errors.
+
+**Status:** All audit cycles passed. `flutter analyze lib/features/coach/` — 0 new issues. Railway deploy clean.
+
+### What was fixed
+
+**Security & auth:**
+- User ID guard: unknown/empty `user_id` closes WebSocket with code 4001 before any processing
+- Ownership guard added inside `_load_conversation_history` — always filters by `user_id` regardless of call site (latent IDOR closed)
+- `is_regenerate` validated server-side: last DB message must be assistant role before allowing LLM token burn
+- All user-facing error messages are generic — no raw exception strings, internal URLs, or stack traces exposed to clients
+- `user_id` truncated to 8 chars in all server log calls; removed from Sentry span tags; removed from export JSON
+- Zero-width Unicode characters stripped in `sanitize_for_llm` alongside 15+ injection token patterns
+- Attachment `context_message`, conversation preview snippets, and PATCH titles all sanitized before DB persist or LLM use
+- PATCH title endpoint rejects empty/whitespace titles with 422
+- Attachment-only messages store `"[attachment]"` instead of empty string content
+
+**Rate limiting:**
+- Redis INCR+EXPIRE made truly atomic via Lua script (no orphaned TTL-less keys on process crash)
+- Daily window fixed: EXPIRE only set on first increment (was rolling window)
+- Burst limit now passes normalized tier ("free"/"premium") — premium users no longer silently capped at free tier
+
+**WebSocket resilience:**
+- `receive_text()` wrapped with `asyncio.wait_for(300s)` — idle connections can't hold resources indefinitely
+- WS connection counter TTL extended to 3600s (was 120s) — idle connections can't expire the counter and bypass the 3-connection cap
+- `_counter_incremented` flag ensures decrement fires on ALL pre-loop early returns (invalid conv UUID, conv not found, conv limit exceeded)
+- JWT periodic re-validation catches all exceptions (not just `HTTPException`) and closes with 4003 so Flutter triggers token refresh
+- `CancelledError` re-raised in orchestrator — client disconnects don't keep burning LLM tokens
+- MCP tool results capped at 32 KB before LLM injection
+
+**Protocol correctness:**
+- `stream_end` frame has consistent 5-field payload (`type`, `content`, `message_id`, `conversation_id`, `client_action`) on all code paths
+- `exclude_message_id` filter now applied before `.limit()` in history query (was silently wasting a history slot)
+- `conversation_id` and `str()` casts applied consistently across all `send_json` calls
+
+**Flutter state management:**
+- Optimistic user message bubble removed on ALL stream exit paths: `StreamError`, `onError`, inactivity timeout, and user cancel (`_pendingTempMsgId` pattern)
+- `cancelActiveStream()` called on all termination paths including inactivity timeout
+- `initCompleter` timeout replaced with cancellable `Timer` — no 30-second reference retention on early WS close
+- Reconnect race window closed — `_activeDoneCompleter` assigned before recursive `_runWebSocketStream` call
+- `receivedError` flag suppresses spurious `StreamComplete` after an `error` event
+- Empty string `message_id` from server treated as absent (falls through to local fallback)
+
+**Export:**
+- Bulk message fetch replaced with SQL `ROW_NUMBER()` window function — only 200 most recent messages per conversation fetched at DB level (was loading up to 40k rows into Python)
+- `user_id` removed from downloadable export JSON
+
+### Key decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Lua script for INCR+EXPIRE | Pipeline approach is not truly atomic; Lua executes atomically on Redis server |
+| Fail-open on Redis error | Redis outage should not block all users; rate limiting is best-effort cost control |
+| `_counter_incremented` flag pattern | Simplest way to guarantee decrement without restructuring the entire WS handler |
+| Generic error messages everywhere | Internal error detail in UI is a security/UX liability; server logs capture the real error |
+| `receivedError` flag in Flutter | Server sends `error` then `stream_end` for protocol consistency; client must not emit `StreamComplete` after an error |
 
 ---
 
