@@ -10,9 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.api.deps import get_authenticated_user_id
-from app.database import get_db
-
 TEST_USER_ID = "progress-home-test-user-001"
 AUTH_HEADER = {"Authorization": "Bearer test-token"}
 
@@ -85,7 +82,7 @@ async def test_progress_home_returns_live_current_value_for_steps_goal():
 
     call_count = 0
 
-    async def _execute_side_effect(stmt, *args, **kwargs):
+    async def _execute_side_effect(_stmt, *_args, **_kwargs):
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -148,7 +145,7 @@ async def test_progress_home_returns_progress_history_list():
 
     call_count = 0
 
-    async def _execute_side_effect(stmt, *args, **kwargs):
+    async def _execute_side_effect(_stmt, *_args, **_kwargs):
         nonlocal call_count
         call_count += 1
         if call_count == 1:

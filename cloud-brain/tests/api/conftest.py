@@ -24,7 +24,7 @@ def _stub_router_module(module_path: str) -> None:
     if module_path in sys.modules:
         return
     stub = types.ModuleType(module_path)
-    stub.router = MagicMock()
+    setattr(stub, "router", MagicMock())
     sys.modules[module_path] = stub
 
 

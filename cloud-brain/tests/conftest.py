@@ -17,7 +17,7 @@ Fixtures:
 
 import sys
 import types
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,7 +40,7 @@ def _stub(module_path: str) -> None:
         from fastapi import APIRouter  # noqa: PLC0415 — local import to keep stub minimal
 
         stub = types.ModuleType(module_path)
-        stub.router = APIRouter()
+        setattr(stub, "router", APIRouter())
         sys.modules[module_path] = stub
 
 

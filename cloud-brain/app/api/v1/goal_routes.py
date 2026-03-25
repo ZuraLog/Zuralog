@@ -109,7 +109,7 @@ def _goal_to_response(
 @router.get("", response_model=GoalListResponse, summary="List all active goals")
 @limiter.limit("30/minute")
 async def list_goals(
-    request: Request,
+    request: Request,  # noqa: ARG001 — required by slowapi
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> GoalListResponse:
@@ -153,7 +153,7 @@ async def list_goals(
 )
 @limiter.limit("10/minute")
 async def create_goal(
-    request: Request,
+    request: Request,  # noqa: ARG001 — required by slowapi
     body: GoalCreateRequest,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
@@ -194,7 +194,7 @@ async def create_goal(
 @router.patch("/{goal_id}", response_model=GoalResponse, summary="Update a goal")
 @limiter.limit("20/minute")
 async def update_goal(
-    request: Request,
+    request: Request,  # noqa: ARG001 — required by slowapi
     goal_id: str,
     body: GoalUpdateRequest,
     user_id: str = Depends(get_authenticated_user_id),
@@ -255,7 +255,7 @@ async def update_goal(
 )
 @limiter.limit("20/minute")
 async def delete_goal(
-    request: Request,
+    request: Request,  # noqa: ARG001 — required by slowapi
     goal_id: str,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),

@@ -12,7 +12,7 @@ import app.models.quick_log  # noqa: F401
 
 
 @pytest.fixture(autouse=True)
-def disable_slowapi_for_direct_calls(monkeypatch):
+def disable_slowapi_for_direct_calls():
     """Disable the slowapi rate-limiter for tests that call route handlers directly.
 
     Tests that invoke route coroutines directly (bypassing the HTTP stack) pass
