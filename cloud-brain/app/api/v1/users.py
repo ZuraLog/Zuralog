@@ -43,6 +43,7 @@ _PROFILE_WRITABLE_FIELDS: frozenset[str] = frozenset({
     "nickname",
     "birthday",
     "gender",
+    "height_cm",
     "onboarding_complete",
 })
 

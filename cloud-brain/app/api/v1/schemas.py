@@ -8,7 +8,7 @@ on the authentication endpoints.
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
@@ -121,6 +121,8 @@ class UserProfileResponse(BaseModel):
     nickname: Optional[str]
     birthday: Optional[date]
     gender: Optional[str]
+    height_cm: Optional[float] = None
+    avatar_url: Optional[str] = None
     onboarding_complete: bool
     created_at: Optional[datetime] = None
 
@@ -145,4 +147,5 @@ class UpdateProfileRequest(BaseModel):
     nickname: Optional[str] = None
     birthday: Optional[date] = None
     gender: Optional[str] = None
+    height_cm: Optional[float] = Field(default=None, ge=30, le=300)
     onboarding_complete: Optional[bool] = None
