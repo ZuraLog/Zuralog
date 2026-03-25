@@ -1,14 +1,14 @@
 /// Progress Home Screen — Tab 3 (Progress) root screen.
 ///
-/// Redesigned with the Flame Hero layout:
-/// - Streak Flame Hero card with 7-day calendar row
-/// - 4-tile streak row (engagement, steps, workouts, check-in)
-/// - 14-day heatmap card with freeze CTA
-/// - Next Achievement card with pattern progress bar
-/// - Goal Trajectory cards (vertical list)
-/// - Journal Prompt CTA
+/// Redesigned with the Flame Hero layout (v2):
+/// - Streak Flame Hero card with 7-day calendar row + freeze pill
+/// - "This Week" snapshot card (goals on track, day streak, top WoW metric)
+/// - Achievements section (next achievement + recently unlocked badges)
+/// - Goals section (trajectory cards, or empty-state CTA when no goals)
+/// - Journal CTA (hidden when already logged today, contextual otherwise)
 ///
-/// Pull-to-refresh invalidates [progressHomeProvider] and [achievementsProvider].
+/// Pull-to-refresh invalidates [progressHomeProvider], [achievementsProvider],
+/// and [journalProvider].
 library;
 
 import 'package:flutter/material.dart';
@@ -24,14 +24,14 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/progress/presentation/widgets/achievements_section_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/goal_trajectory_card.dart';
+import 'package:zuralog/features/progress/presentation/widgets/goals_empty_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/journal_prompt_cta.dart';
-import 'package:zuralog/features/progress/presentation/widgets/next_achievement_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/progress_skeleton_loader.dart';
 import 'package:zuralog/features/progress/presentation/widgets/streak_flame_hero.dart';
 import 'package:zuralog/features/progress/presentation/widgets/streak_freeze_dialog.dart';
-import 'package:zuralog/features/progress/presentation/widgets/streak_heatmap_card.dart';
-import 'package:zuralog/features/progress/presentation/widgets/streak_type_tile.dart';
+import 'package:zuralog/features/progress/presentation/widgets/this_week_snapshot_card.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -46,12 +46,12 @@ class ProgressHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
-
   Future<void> _onRefresh() async {
     ref.read(hapticServiceProvider).medium();
     ref.read(progressRepositoryProvider).invalidateAll();
     ref.invalidate(progressHomeProvider);
     ref.invalidate(achievementsProvider);
+    ref.invalidate(journalProvider);
     try {
       await ref.read(progressHomeProvider.future);
     } catch (_) {
@@ -101,9 +101,7 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
               ),
             ],
           ),
-          data: (data) {
-            return _ContentView(data: data);
-          },
+          data: (data) => _ContentView(data: data),
         ),
       ),
     );
@@ -120,6 +118,7 @@ class _ContentView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reducedMotion = MediaQuery.of(context).disableAnimations;
+    final journalAsync = ref.watch(journalProvider);
 
     Widget wrap(Widget child, int index) {
       if (reducedMotion) return child;
@@ -144,8 +143,29 @@ class _ContentView extends ConsumerWidget {
 
     final todayIndex = DateTime.now().weekday - 1; // 0=Monday
     final weekHits = data.weekHits['engagement'] ?? List.filled(7, false);
-    final heatmapHistory =
-        data.streakHistory['engagement'] ?? List.filled(14, false);
+
+    final goalsOnTrack = data.goals
+        .where((g) =>
+            g.trendDirection == 'on_track' || g.trendDirection == 'completed')
+        .length;
+
+    final nudgeMessage = engagementStreak.currentCount == 0
+        ? 'Open the app daily to start building your streak.'
+        : null;
+
+    // Derive journal state from journalProvider
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    String? lastEntryDateStr;
+    bool journalledToday = false;
+    journalAsync.whenData((page) {
+      if (page.entries.isNotEmpty) {
+        lastEntryDateStr = page.entries.first.date;
+        journalledToday = page.entries.first.date == todayStr;
+      }
+    });
+
+    final hasAchievements =
+        data.nextAchievement != null || data.recentAchievements.isNotEmpty;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -155,30 +175,21 @@ class _ContentView extends ConsumerWidget {
         AppDimens.bottomClearance(context),
       ),
       children: [
+        // Milestone celebration banner
         if (data.milestoneStreakCount != null)
           wrap(_MilestoneCelebrationCard(days: data.milestoneStreakCount!), 0),
 
-        wrap(
-          StreakFlameHero(
-            currentCount: engagementStreak.currentCount,
-            longestCount: engagementStreak.longestCount,
-            weekHits: weekHits,
-            todayIndex: todayIndex,
-            isFrozen: engagementStreak.isFrozen,
-          ),
-          1,
-        ),
-        const SizedBox(height: AppDimens.spaceLg),
-
-        wrap(_AllStreaksRow(streaks: data.streaks), 2),
-        const SizedBox(height: AppDimens.spaceLg),
-
+        // Streak Flame Hero with freeze pill
         wrap(
           Consumer(
-            builder: (context, innerRef, _) => StreakHeatmapCard(
-              streakName: '🔥 Engagement — last 14 days',
+            builder: (context, innerRef, _) => StreakFlameHero(
+              currentCount: engagementStreak.currentCount,
+              longestCount: engagementStreak.longestCount,
+              weekHits: weekHits,
+              todayIndex: todayIndex,
+              isFrozen: engagementStreak.isFrozen,
               freezeCount: engagementStreak.freezeCount,
-              history: heatmapHistory,
+              nudgeMessage: nudgeMessage,
               onFreezeTap: () => showStreakFreezeDialog(
                 context,
                 innerRef,
@@ -186,55 +197,68 @@ class _ContentView extends ConsumerWidget {
               ),
             ),
           ),
-          3,
+          1,
         ),
         const SizedBox(height: AppDimens.spaceLg),
 
-        if (data.nextAchievement != null)
+        // This Week snapshot (shown when there is any meaningful data)
+        if (data.streaks.isNotEmpty || data.goals.isNotEmpty) ...[
           wrap(
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(
-                  title: 'Next Achievement',
-                  trailingLabel: 'Gallery',
-                  onTrailingTap: () {
-                    ref.read(hapticServiceProvider).light();
-                    context.push(RouteNames.achievementsPath);
-                  },
-                ),
-                NextAchievementCard(
-                  achievement: data.nextAchievement!,
-                  onTap: () => context.push(RouteNames.achievementsPath),
-                ),
-              ],
+            ThisWeekSnapshotCard(
+              wow: data.wow,
+              streakCount: engagementStreak.currentCount,
+              goalsOnTrack: goalsOnTrack,
+              totalGoals: data.goals.length,
             ),
-            4,
+            2,
           ),
-        if (data.nextAchievement != null) const SizedBox(height: AppDimens.spaceLg),
+          const SizedBox(height: AppDimens.spaceLg),
+        ],
 
-        if (data.goals.isNotEmpty)
-          wrap(_GoalsSection(goals: data.goals), 5),
-        if (data.goals.isNotEmpty) const SizedBox(height: AppDimens.spaceLg),
+        // Achievements section
+        if (hasAchievements) ...[
+          wrap(
+            AchievementsSectionCard(
+              nextAchievement: data.nextAchievement,
+              recentAchievements: data.recentAchievements,
+              onGalleryTap: () {
+                ref.read(hapticServiceProvider).light();
+                context.push(RouteNames.achievementsPath);
+              },
+              onAchievementTap: () =>
+                  context.push(RouteNames.achievementsPath),
+            ),
+            3,
+          ),
+          const SizedBox(height: AppDimens.spaceLg),
+        ],
 
+        // Goals section (with empty state CTA when no goals)
+        wrap(_GoalsSection(goals: data.goals), 4),
+        const SizedBox(height: AppDimens.spaceLg),
+
+        // Journal CTA (hidden automatically when user already journalled today)
         wrap(
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionHeader(
-                title: 'Journal',
-                trailingLabel: 'History',
-                onTrailingTap: () {
-                  ref.read(hapticServiceProvider).light();
-                  context.push(RouteNames.journalPath);
-                },
-              ),
+              if (!journalledToday)
+                _SectionHeader(
+                  title: 'Journal',
+                  trailingLabel: 'History',
+                  onTrailingTap: () {
+                    ref.read(hapticServiceProvider).light();
+                    context.push(RouteNames.journalPath);
+                  },
+                ),
               JournalPromptCta(
                 onTap: () => context.push(RouteNames.journalPath),
+                lastEntryDate: lastEntryDateStr,
+                journalledToday: journalledToday,
               ),
             ],
           ),
-          6,
+          5,
         ),
       ],
     );
@@ -304,71 +328,30 @@ class _GoalsSection extends ConsumerWidget {
             context.push(RouteNames.goalsPath);
           },
         ),
-        ...goals.asMap().entries.map((entry) => Padding(
-          padding: EdgeInsets.only(
-            bottom: entry.key < goals.length - 1 ? AppDimens.spaceSm : 0,
-          ),
-          child: GoalTrajectoryCard(
-            goal: entry.value,
+        if (goals.isEmpty)
+          GoalsEmptyCard(
             onTap: () {
-              ref.read(selectedGoalIdProvider.notifier).state = entry.value.id;
-              context.push(RouteNames.goalDetailPath);
+              ref.read(hapticServiceProvider).light();
+              context.push(RouteNames.goalsPath);
             },
-          ),
-        )),
+          )
+        else
+          ...goals.asMap().entries.map((entry) => Padding(
+                padding: EdgeInsets.only(
+                  bottom:
+                      entry.key < goals.length - 1 ? AppDimens.spaceSm : 0,
+                ),
+                child: GoalTrajectoryCard(
+                  goal: entry.value,
+                  onTap: () {
+                    ref.read(selectedGoalIdProvider.notifier).state =
+                        entry.value.id;
+                    context.push(RouteNames.goalDetailPath);
+                  },
+                ),
+              )),
       ],
     );
-  }
-}
-
-// ── _AllStreaksRow ─────────────────────────────────────────────────────────────
-
-class _AllStreaksRow extends StatelessWidget {
-  const _AllStreaksRow({required this.streaks});
-  final List<UserStreak> streaks;
-
-  static const _streakConfig = [
-    (StreakType.engagement, '🔥', 'Engage'),
-    (StreakType.steps, '👟', 'Steps'),
-    (StreakType.workouts, '🏋️', 'Workout'),
-    (StreakType.checkin, '📋', 'Check-in'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <Widget>[];
-    for (var i = 0; i < _streakConfig.length; i++) {
-      final (type, emoji, label) = _streakConfig[i];
-      final streak = streaks.firstWhere(
-        (s) => s.type == type,
-        orElse: () => UserStreak(
-          type: type,
-          currentCount: 0,
-          longestCount: 0,
-          lastActivityDate: '',
-          isFrozen: false,
-          freezeCount: 0,
-        ),
-      );
-      items.add(
-        Expanded(
-          child: Semantics(
-            label: '$label streak: ${streak.currentCount} days',
-            excludeSemantics: true,
-            child: StreakTypeTile(
-              emoji: emoji,
-              count: streak.currentCount,
-              label: label,
-              isHot: streak.currentCount > 0,
-            ),
-          ),
-        ),
-      );
-      if (i < _streakConfig.length - 1) {
-        items.add(const SizedBox(width: AppDimens.spaceSm));
-      }
-    }
-    return Row(children: items);
   }
 }
 
