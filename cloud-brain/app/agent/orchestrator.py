@@ -102,7 +102,7 @@ class Orchestrator:
             A list of tool dicts in OpenAI function-calling schema.
         """
         if mcp_tools is None:
-            mcp_tools = self.mcp_client.get_all_tools()
+            mcp_tools = self.mcp_client.get_all_tools() or []
 
         openai_tools = []
         for tool in mcp_tools:
