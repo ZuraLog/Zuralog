@@ -323,6 +323,7 @@ final class ApiCoachRepository implements CoachRepository {
     bool sinkClosed = false;
     // Tracks whether a 4003-triggered reconnect should happen after cleanup.
     bool reconnectAfter4003 = false;
+    Timer? initTimer;
 
     try {
       // Read a fresh JWT — WS connections bypass the Dio interceptor chain.
@@ -377,7 +378,10 @@ final class ApiCoachRepository implements CoachRepository {
                 resolvedConversationId = msg['conversation_id'] as String?;
 
                 // Fix H5: signal that init was received.
-                if (!initCompleter.isCompleted) initCompleter.complete();
+                if (!initCompleter.isCompleted) {
+                  initCompleter.complete();
+                  initTimer?.cancel();
+                }
 
                 // If conversationId was null, this is a new conversation.
                 if (conversationId == null && resolvedConversationId != null) {
@@ -512,22 +516,18 @@ final class ApiCoachRepository implements CoachRepository {
       );
 
       // Fix H5: 30-second timeout waiting for conversation_init.
-      unawaited(
-        initCompleter.future.timeout(
-          const Duration(seconds: 30),
-          onTimeout: () async {
-            if (!controller.isClosed) {
-              controller.add(const StreamError('Connection timed out'));
-            }
-            await subscription?.cancel();
-            if (!doneCompleter.isCompleted) doneCompleter.complete(null);
-            if (!sinkClosed) {
-              sinkClosed = true;
-              channel?.sink.close();
-            }
-          },
-        ),
-      );
+      initTimer = Timer(const Duration(seconds: 30), () {
+        if (initCompleter.isCompleted) return;
+        if (!controller.isClosed) {
+          controller.add(const StreamError('Connection timed out'));
+        }
+        subscription?.cancel();
+        if (!doneCompleter.isCompleted) doneCompleter.complete(null);
+        if (!sinkClosed) {
+          sinkClosed = true;
+          channel?.sink.close();
+        }
+      });
 
       // Fix C4: wait for the single doneCompleter.
       final closeCode = await doneCompleter.future;
@@ -565,6 +565,7 @@ final class ApiCoachRepository implements CoachRepository {
       }
       if (!controller.isClosed) controller.add(StreamError(errorMessage));
     } finally {
+      initTimer?.cancel();
       await subscription?.cancel();
       // Fix C5: guarded close in finally.
       if (!sinkClosed) {

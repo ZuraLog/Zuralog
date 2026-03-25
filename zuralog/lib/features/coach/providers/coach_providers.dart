@@ -234,6 +234,7 @@ class CoachChatState {
 class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   StreamSubscription<ChatStreamEvent>? _streamSub;
   Timer? _timeoutTimer;
+  String? _pendingTempMsgId;
 
   @override
   CoachChatState build(String conversationId) {
@@ -324,6 +325,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     String? tempMsgId;
     if (!isRegenerate) {
       tempMsgId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+      _pendingTempMsgId = tempMsgId;
       final userMsg = ChatMessage(
         id: tempMsgId,
         conversationId: conversationId ?? arg,
@@ -338,6 +340,8 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       state = state.copyWith(
         messages: [...state.messages, userMsg],
       );
+    } else {
+      _pendingTempMsgId = null;
     }
 
     await _streamSub?.cancel();
@@ -383,6 +387,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
               clearTool: true,
               resolvedConversationId: conversationId,
             );
+            _pendingTempMsgId = null;
 
             // Refresh the conversation list so the drawer shows the new entry.
             ref.read(coachConversationsProvider.notifier).refresh();
@@ -392,21 +397,29 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
           case StreamError(:final error):
             _cancelInactivityTimer();
             state = state.copyWith(
+              messages: tempMsgId != null
+                  ? state.messages.where((m) => m.id != tempMsgId).toList()
+                  : null,
               isSending: false,
               clearStreaming: true,
               clearTool: true,
               errorMessage: error,
             );
+            _pendingTempMsgId = null;
             if (!completer.isCompleted) completer.complete();
         }
       },
       onError: (Object error) {
         _cancelInactivityTimer();
         state = state.copyWith(
+          messages: tempMsgId != null
+              ? state.messages.where((m) => m.id != tempMsgId).toList()
+              : null,
           isSending: false,
           clearStreaming: true,
           errorMessage: 'Connection error: $error',
         );
+        _pendingTempMsgId = null;
         if (!completer.isCompleted) completer.complete();
       },
       onDone: () {
@@ -458,11 +471,15 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     _timeoutTimer = null;
 
     state = state.copyWith(
+      messages: _pendingTempMsgId != null
+          ? state.messages.where((m) => m.id != _pendingTempMsgId).toList()
+          : null,
       isSending: false,
       clearStreaming: true,
       clearTool: true,
       errorMessage: 'The connection went silent. Please try again.',
     );
+    _pendingTempMsgId = null;
   }
 
   /// Removes the last assistant message from local state and re-sends the
