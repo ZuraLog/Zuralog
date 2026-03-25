@@ -24,6 +24,11 @@ TIER_LIMITS: dict[str, int] = {
     "premium": 500,
 }
 
+BURST_LIMITS: dict[str, int] = {
+    "free": 10,
+    "premium": 30,
+}
+
 
 @dataclass
 class RateLimitResult:
@@ -95,6 +100,42 @@ class RateLimiter:
             )
         except redis.RedisError as exc:
             logger.error("Redis error in rate limiter: %s", exc)
+            # Fail-open: a Redis outage should not block all users
+            return RateLimitResult(
+                allowed=True,
+                limit=limit,
+                remaining=-1,
+                reset_seconds=reset_seconds,
+            )
+
+    async def check_burst_limit(self, user_id: str, tier: str = "free") -> RateLimitResult:
+        """Check and increment the per-minute burst limit counter for a user.
+
+        Args:
+            user_id: The authenticated user's ID.
+            tier: Subscription tier ('free' or 'premium').
+
+        Returns:
+            A RateLimitResult with the burst check outcome.
+        """
+        limit = BURST_LIMITS.get(tier, BURST_LIMITS["free"])
+        minute_key = int(time.time() // 60)
+        redis_key = f"burst:{user_id}:{minute_key}"
+        reset_seconds = 60 - int(time.time() % 60)
+
+        try:
+            current = await self._redis.incr(redis_key)
+            if current == 1:
+                await self._redis.expire(redis_key, 60)
+
+            return RateLimitResult(
+                allowed=current <= limit,
+                limit=limit,
+                remaining=max(0, limit - current),
+                reset_seconds=reset_seconds,
+            )
+        except redis.RedisError as exc:
+            logger.error("Redis error in burst limiter: %s", exc)
             # Fail-open: a Redis outage should not block all users
             return RateLimitResult(
                 allowed=True,
