@@ -61,6 +61,32 @@ final selectedCategoryFilterProvider = StateProvider<String>((ref) => 'all');
 ///
 /// Not autoDisposed — the data stays alive after the card collapses so a
 /// second tap re-expands instantly without a loading spinner.
+///
+/// **Design: [ref.read] vs [ref.watch]**
+///
+/// This provider uses [ref.read] (not [ref.watch]) to read the repository
+/// instance once at provider build time. This prevents the future from
+/// re-firing if [trendsRepositoryProvider] rebuilds. We use [ref.read]
+/// because:
+///   - Pattern expand is a one-shot fetch (user taps to expand), not a
+///     continuous subscription.
+///   - If [trendsRepositoryProvider] ever becomes reactive (e.g., toggles
+///     between mock and real), the expanded card will simply show stale data
+///     until manually invalidated — acceptable for this use case.
+///   - If we used [ref.watch], every repository swap would re-fetch the
+///     pattern, creating unnecessary network churn.
+///
+/// Call [ref.invalidate(patternExpandProvider)] explicitly to force a
+/// re-fetch if the data source changes.
+///
+/// **Error handling — why errors propagate:**
+///
+/// Unlike [trendsHomeProvider], which catches all errors and returns
+/// safe empty data, this provider lets errors propagate to the caller
+/// (FutureProvider error branch). The expanded card renders a user-visible
+/// error state rather than silently hiding the failure. This is intentional:
+/// the user explicitly asked to see the data (by tapping), so they deserve
+/// to know if it failed.
 final patternExpandProvider =
     FutureProvider.family<PatternExpandData, String>((ref, patternId) {
   final repo = ref.read(trendsRepositoryProvider);

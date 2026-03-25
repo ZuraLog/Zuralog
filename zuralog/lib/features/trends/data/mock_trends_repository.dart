@@ -172,7 +172,7 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
     String patternId, {
     String timeRange = '30d',
   }) async {
-    await Future.delayed(const Duration(milliseconds: 600));
+    await _delay();
     return PatternExpandData(
       id: patternId,
       seriesALabel: 'Deep Sleep',
