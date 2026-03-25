@@ -121,7 +121,7 @@ async def _fetch_category_data(
             unit=unit,
             delta_percent=_delta([v for _, v in recent_rows], [v for _, v in prior_rows]),
             trend=_trend(recent_rows),
-            last_updated=recent_rows[-1][0],
+            last_updated=recent_rows[-1][0].isoformat(),
             has_data=True,
         )
     return CategorySummaryItem(category=category, has_data=False)
@@ -649,7 +649,7 @@ async def category_detail(
             ),
             {"uid": user_id, "mt": metric_type, "since": since},
         )
-        return [(row[0], float(row[1])) for row in r.fetchall()]
+        return [(row[0].isoformat(), float(row[1])) for row in r.fetchall()]
 
     if category == "activity":
         for mt, mid, dn, unit in [
@@ -866,7 +866,7 @@ async def metric_detail(
         ),
         {"uid": user_id, "mt": metric_type, "since": since},
     )
-    rows = [(r[0], float(r[1])) for r in result.fetchall()]
+    rows = [(r[0].isoformat(), float(r[1])) for r in result.fetchall()]
 
     if not rows:
         # Return empty series — not a 404, just no data
