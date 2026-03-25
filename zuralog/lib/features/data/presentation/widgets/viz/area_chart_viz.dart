@@ -2,6 +2,7 @@ library;
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -77,7 +78,7 @@ class _AreaPainter extends CustomPainter {
     areaPath.lineTo(toX(points.length - 1), size.height);
     areaPath.close();
 
-    canvas.drawPath(areaPath, Paint()..color = color.withOpacity(fillOpacity));
+    canvas.drawPath(areaPath, Paint()..color = color.withValues(alpha: fillOpacity));
 
     // Line on top
     final linePath = Path();
@@ -95,7 +96,7 @@ class _AreaPainter extends CustomPainter {
     if (targetLine != null) {
       final ty = toY(targetLine!);
       final dashPaint = Paint()
-        ..color = color.withOpacity(0.5)
+        ..color = color.withValues(alpha: 0.5)
         ..strokeWidth = 0.75;
       const dashWidth = 4.0, dashGap = 3.0;
       double x = 0;
@@ -126,14 +127,14 @@ class _DeltaBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPositive = delta >= 0;
     final isGood = positiveIsUp ? isPositive : !isPositive;
-    final badgeColor = isGood ? Colors.green : Colors.red;
+    final badgeColor = isGood ? AppColors.categoryActivity : AppColors.accentDark;
     final arrow = isPositive ? '▲' : '▼';
     final pct = '${arrow} ${(delta.abs() * 100).toStringAsFixed(1)}%';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
-        color: badgeColor.withOpacity(0.15),
+        color: badgeColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(pct, style: TextStyle(fontSize: 8, color: badgeColor, fontWeight: FontWeight.bold)),

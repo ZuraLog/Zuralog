@@ -223,7 +223,7 @@ abstract final class AppColors {
   /// MyFitnessPal brand blue.
   static const Color brandMfp = Color(0xFF0070D1);
 
-  // ── Progress Tab tokens ──────────────────────────────────────────────────
+  // ── Progress Tab tokens — dark mode ──────────────────────────────────────
   static const Color progressCanvas = Color(0xFF141E18);
   static const Color progressSurface = Color(0xFF1E2E24);
   static const Color progressSurfaceRaised = Color(0xFF253A2C);
@@ -234,6 +234,18 @@ abstract final class AppColors {
   static const Color progressBorderStrong = Color(0x1FCFE1B9);
   static const Color progressSage = Color(0xFFCFE1B9);
   static const Color progressStreakWarm = Color(0xFFFF9500);
+
+  // ── Progress Tab tokens — light mode ─────────────────────────────────────
+  static const Color progressCanvasLight = Color(0xFFF4F7F0);
+  static const Color progressSurfaceLight = Color(0xFFEBF1E5);
+  static const Color progressSurfaceRaisedLight = Color(0xFFDFEBD6);
+  static const Color progressTextPrimaryLight = Color(0xFF1A2E1E);
+  static const Color progressTextSecondaryLight = Color(0xFF3D5E2E);
+  static const Color progressTextMutedLight = Color(0x993D5E2E);
+  static const Color progressBorderDefaultLight = Color(0x1F3D5E2E);
+  static const Color progressBorderStrongLight = Color(0x333D5E2E);
+  static const Color progressSageLight = Color(0xFF4A7C3F);
+  static const Color progressStreakWarmLight = Color(0xFFFF9500);
 
   // -- Trends Tab tokens ---------------------------------------------------
   static const Color trendsCanvas = Color(0xFF141E18);
@@ -320,17 +332,16 @@ class AppColorsOf {
   bool get isDark => _isDark;
 
   // ── Progress ──────────────────────────────────────────────────────────
-  // TODO(light-mode): add light variant values for progress tokens.
-  Color get progressCanvas => AppColors.progressCanvas;
-  Color get progressSurface => AppColors.progressSurface;
-  Color get progressSurfaceRaised => AppColors.progressSurfaceRaised;
-  Color get progressTextPrimary => AppColors.progressTextPrimary;
-  Color get progressTextSecondary => AppColors.progressTextSecondary;
-  Color get progressTextMuted => AppColors.progressTextMuted;
-  Color get progressBorderDefault => AppColors.progressBorderDefault;
-  Color get progressBorderStrong => AppColors.progressBorderStrong;
-  Color get progressSage => AppColors.progressSage;
-  Color get progressStreakWarm => AppColors.progressStreakWarm;
+  Color get progressCanvas => _isDark ? AppColors.progressCanvas : AppColors.progressCanvasLight;
+  Color get progressSurface => _isDark ? AppColors.progressSurface : AppColors.progressSurfaceLight;
+  Color get progressSurfaceRaised => _isDark ? AppColors.progressSurfaceRaised : AppColors.progressSurfaceRaisedLight;
+  Color get progressTextPrimary => _isDark ? AppColors.progressTextPrimary : AppColors.progressTextPrimaryLight;
+  Color get progressTextSecondary => _isDark ? AppColors.progressTextSecondary : AppColors.progressTextSecondaryLight;
+  Color get progressTextMuted => _isDark ? AppColors.progressTextMuted : AppColors.progressTextMutedLight;
+  Color get progressBorderDefault => _isDark ? AppColors.progressBorderDefault : AppColors.progressBorderDefaultLight;
+  Color get progressBorderStrong => _isDark ? AppColors.progressBorderStrong : AppColors.progressBorderStrongLight;
+  Color get progressSage => _isDark ? AppColors.progressSage : AppColors.progressSageLight;
+  Color get progressStreakWarm => _isDark ? AppColors.progressStreakWarm : AppColors.progressStreakWarmLight;
 
   // -- Trends ---------------------------------------------------------------
   Color get trendsCanvas => AppColors.trendsCanvas;

@@ -9,7 +9,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -17,20 +16,17 @@ import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
 import 'package:zuralog/core/router/route_names.dart';
-import 'package:zuralog/core/speech/speech_providers.dart';
-import 'package:zuralog/core/speech/speech_state.dart';
 import 'package:zuralog/core/theme/app_assets.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/theme/category_colors.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
-import 'package:zuralog/features/coach/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:zuralog/features/integrations/domain/integration_model.dart';
 import 'package:zuralog/features/integrations/domain/integrations_provider.dart';
-import 'package:zuralog/features/coach/presentation/widgets/attachment_preview_bar.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/shared/widgets/coach_input_bar.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
@@ -58,9 +54,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   /// Used to warn the user when a quick action would drop them.
   final ValueNotifier<int> _attachmentCount = ValueNotifier(0);
 
-  /// Key used to call [_ChatInputBarState.clearAttachments] after a quick
+  /// Key used to call [CoachInputBarState.clearAttachments] after a quick
   /// action so staged files are not silently dropped.
-  final _inputBarKey = GlobalKey<_ChatInputBarState>();
+  final _inputBarKey = GlobalKey<CoachInputBarState>();
 
   /// Fix C9: prevents double-prefill from both initState and build().
   bool _prefillApplied = false;
@@ -264,11 +260,11 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           ),
           const _IntegrationContextBanner(),
           // ── Input Bar ──────────────────────────────────────────────────────
-          _ChatInputBar(
+          CoachInputBar(
             key: _inputBarKey,
             controller: _inputCtrl,
             focusNode: _inputFocus,
-            onSend: ({rawAttachments = const []}) =>
+            onSend: ({rawAttachments = const [], attachments = const []}) =>
                 _sendMessage(rawAttachments: rawAttachments),
             attachmentCountNotifier: _attachmentCount,
           ),
@@ -708,339 +704,6 @@ class _IntegrationContextBannerState
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── _ChatInputBar ─────────────────────────────────────────────────────────────
-
-// TODO(unify): This widget should be unified with the _ChatInputBar in
-// chat_thread_screen.dart into a shared CoachInputBar widget.
-
-class _ChatInputBar extends ConsumerStatefulWidget {
-  const _ChatInputBar({
-    super.key,
-    required this.controller,
-    required this.focusNode,
-    required this.onSend,
-    this.attachmentCountNotifier,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-
-  /// Called when the user taps Send.
-  ///
-  /// [rawAttachments] contains raw local file info (path + name) for any
-  /// attachments the user added. Upload is deferred to [ChatThreadScreen]
-  /// because no conversation ID exists yet at this point.
-  final void Function({List<Map<String, String>> rawAttachments}) onSend;
-
-  /// When provided, updated with the current number of staged attachments
-  /// after every add/remove so the parent can warn before quick actions.
-  final ValueNotifier<int>? attachmentCountNotifier;
-
-  /// Maximum allowed message length.
-  static const int maxLength = 4000;
-
-  @override
-  ConsumerState<_ChatInputBar> createState() => _ChatInputBarState();
-}
-
-class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
-  final List<PendingAttachment> _attachments = [];
-
-  void _updateAttachmentCount() {
-    widget.attachmentCountNotifier?.value = _attachments.length;
-  }
-
-  /// Clears all staged attachments and resets the count notifier.
-  ///
-  /// Called by [_NewChatScreenState] after a quick action is triggered so
-  /// attachments are not silently dropped.
-  void clearAttachments() {
-    setState(() {
-      _attachments.clear();
-      _updateAttachmentCount();
-    });
-  }
-
-  void _handleSend() {
-    final text = widget.controller.text.trim();
-    if (text.isEmpty && _attachments.isEmpty) return;
-
-    // Attachments cannot be uploaded here because there is no conversation ID
-    // yet. Pass the raw file paths to [ChatThreadScreen], which will upload
-    // them after the server assigns a real UUID via the ConversationCreated
-    // event.
-    final rawAttachments = _attachments
-        .map((a) => {'path': a.file.path, 'name': a.name})
-        .toList();
-
-    setState(() {
-      _attachments.clear();
-      _updateAttachmentCount();
-    });
-    widget.onSend(rawAttachments: rawAttachments);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final speechState = ref.watch(speechNotifierProvider);
-    final isListening = speechState.status == SpeechStatus.listening;
-    final voiceInputEnabled = ref.watch(voiceInputEnabledProvider);
-
-    // Sync recognized text to input field.
-    ref.listen<SpeechState>(speechNotifierProvider, (prev, next) {
-      // Stream partial results while listening.
-      if (next.recognizedText.isNotEmpty && !next.isFinal) {
-        widget.controller.text = next.recognizedText;
-        widget.controller.selection = TextSelection.fromPosition(
-          TextPosition(offset: widget.controller.text.length),
-        );
-      }
-      // Commit final transcript when listening ends.
-      if (prev?.isFinal == false &&
-          next.isFinal &&
-          next.recognizedText.isNotEmpty) {
-        widget.controller.text = next.recognizedText;
-        widget.controller.selection = TextSelection.fromPosition(
-          TextPosition(offset: widget.controller.text.length),
-        );
-      }
-      // Show error snackbar.
-      if (next.status == SpeechStatus.error) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.errorMessage ?? 'Microphone unavailable'),
-          ),
-        );
-      }
-    });
-
-    final colors = AppColorsOf(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.background,
-        border: Border(
-          top: BorderSide(color: colors.border, width: 0.5),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Attachment previews ──────────────────────────────────────────
-          AttachmentPreviewBar(
-            attachments: _attachments,
-            onRemove: (i) => setState(() {
-              _attachments.removeAt(i);
-              _updateAttachmentCount();
-            }),
-          ),
-          // ── Input row ────────────────────────────────────────────────────
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppDimens.spaceMd,
-              AppDimens.spaceSm,
-              AppDimens.spaceMd,
-              // Small visual breathing room between the input row and the
-              // bottom of the container. Nav bar clearance is handled by the
-              // SizedBox added after _ChatInputBar in the parent Column.
-              AppDimens.spaceSm,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Attachment
-                _InputIconButton(
-                  icon: Icons.add_circle_outline_rounded,
-                  onTap: () async {
-                    if (_attachments.length >= 3) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Maximum 3 attachments per message'),
-                        ),
-                      );
-                      return;
-                    }
-                    ref.read(hapticServiceProvider).light();
-                    await showModalBottomSheet<void>(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: true,
-                      useSafeArea: true,
-                      builder: (_) => AttachmentPickerSheet(
-                        onAttachment: (attachment) {
-                          setState(() {
-                            _attachments.add(attachment);
-                            _updateAttachmentCount();
-                          });
-                        },
-                      ),
-                    );
-                  },
-                  tooltip: 'Attach',
-                ),
-                const SizedBox(width: AppDimens.spaceSm),
-                // Text field
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: colors.inputBackground,
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.radiusInput),
-                    ),
-                    child: TextField(
-                      controller: widget.controller,
-                      focusNode: widget.focusNode,
-                      maxLines: 5,
-                      minLines: 1,
-                      maxLength: _ChatInputBar.maxLength,
-                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                       style: AppTextStyles.bodyLarge,
-                      decoration: InputDecoration(
-                        hintText: 'Message your coach…',
-                        hintStyle: AppTextStyles.bodyLarge.copyWith(
-                          color: AppColors.textTertiary,
-                        ),
-                        border: InputBorder.none,
-                        counterText: '',
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.spaceMd,
-                          vertical: AppDimens.spaceSm,
-                        ),
-                      ),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _handleSend(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppDimens.spaceSm),
-                // Send / Voice
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: widget.controller,
-                  builder: (context, value, _) {
-                    final hasText = value.text.trim().isNotEmpty;
-                    final hasContent = hasText || _attachments.isNotEmpty;
-                    if (hasContent) {
-                      return _InputIconButton(
-                        icon: Icons.arrow_upward_rounded,
-                        filled: true,
-                        onTap: _handleSend,
-                        tooltip: 'Send',
-                      );
-                    }
-                    if (!voiceInputEnabled) {
-                      return const SizedBox.shrink();
-                    }
-                    return _InputIconButton(
-                      icon: isListening
-                          ? Icons.stop_circle_rounded
-                          : Icons.mic_none_rounded,
-                      filled: false,
-                      activeColor: isListening ? AppColors.statusError : null,
-                      onTap: () async {
-                        if (isListening) {
-                          ref
-                              .read(speechNotifierProvider.notifier)
-                              .stopListening();
-                          ref.read(hapticServiceProvider).light();
-                        } else {
-                          ref.read(hapticServiceProvider).medium();
-                          // Initialize the speech engine on first use (requests
-                          // microphone permission and sets up the recognizer).
-                          // Subsequent calls are idempotent — the service tracks
-                          // its own state and skips re-initialization when ready.
-                          final notifier =
-                              ref.read(speechNotifierProvider.notifier);
-                          final currentStatus = ref
-                              .read(speechNotifierProvider)
-                              .status;
-                          if (currentStatus == SpeechStatus.uninitialized) {
-                            final available = await notifier.initialize();
-                            if (!available) return;
-                          }
-                          notifier.startListening();
-                        }
-                      },
-                      tooltip: isListening ? 'Stop listening' : 'Voice input',
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          // SF1: Character counter — visible when text length >= 3500
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: widget.controller,
-            builder: (context, value, _) {
-              final remaining = 4000 - value.text.length;
-              if (remaining > 500) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(right: 12, bottom: 4),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '$remaining',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: remaining <= 0
-                          ? AppColors.statusError
-                          : AppColors.textTertiary,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InputIconButton extends StatelessWidget {
-  const _InputIconButton({
-    required this.icon,
-    required this.onTap,
-    required this.tooltip,
-    this.filled = false,
-    this.activeColor,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final String tooltip;
-  final bool filled;
-
-  /// Override icon color (e.g. red when mic is recording).
-  final Color? activeColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: filled ? AppColors.primary : colors.inputBackground,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: activeColor ??
-                (filled
-                    ? AppColors.primaryButtonText
-                    : colors.textSecondary),
-          ),
-        ),
       ),
     );
   }

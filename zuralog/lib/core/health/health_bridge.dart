@@ -12,6 +12,7 @@
 /// use `HealthRepository` instead.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Dart-side platform channel wrapper for native health data access.
@@ -38,8 +39,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.isAvailable PlatformException: ${e.message}');
+        debugPrint('HealthBridge.isAvailable PlatformException: ${e.message}');
         return true;
       }());
       return false;
@@ -59,8 +59,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print(
+        debugPrint(
           'HealthBridge.requestAuthorization PlatformException: ${e.message}',
         );
         return true;
@@ -84,8 +83,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.checkPermissions PlatformException: ${e.message}');
+        debugPrint('HealthBridge.checkPermissions PlatformException: ${e.message}');
         return true;
       }());
       return false;
@@ -103,8 +101,7 @@ class HealthBridge {
       return result?.toDouble() ?? 0.0;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getSteps PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getSteps PlatformException: ${e.message}');
         return true;
       }());
       return 0.0;
@@ -132,8 +129,7 @@ class HealthBridge {
           .toList();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getWorkouts PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getWorkouts PlatformException: ${e.message}');
         return true;
       }());
       return [];
@@ -166,8 +162,7 @@ class HealthBridge {
       }).toList();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getSleep PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getSleep PlatformException: ${e.message}');
         return true;
       }());
       return [];
@@ -214,8 +209,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getWeight PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getWeight PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -234,8 +228,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getCaloriesBurned PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getCaloriesBurned PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -254,8 +247,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print(
+        debugPrint(
           'HealthBridge.getNutritionCalories PlatformException: ${e.message}',
         );
         return true;
@@ -273,8 +265,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print(
+        debugPrint(
           'HealthBridge.getRestingHeartRate PlatformException: ${e.message}',
         );
         return true;
@@ -293,8 +284,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getHRV PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getHRV PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -310,8 +300,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getCardioFitness PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getCardioFitness PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -342,8 +331,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.writeWorkout PlatformException: ${e.message}');
+        debugPrint('HealthBridge.writeWorkout PlatformException: ${e.message}');
         return true;
       }());
       return false;
@@ -368,8 +356,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.writeNutrition PlatformException: ${e.message}');
+        debugPrint('HealthBridge.writeNutrition PlatformException: ${e.message}');
         return true;
       }());
       return false;
@@ -394,8 +381,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.writeWeight PlatformException: ${e.message}');
+        debugPrint('HealthBridge.writeWeight PlatformException: ${e.message}');
         return true;
       }());
       return false;
@@ -411,8 +397,7 @@ class HealthBridge {
       return result?.toDouble() ?? 0.0;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getDistance PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getDistance PlatformException: ${e.message}');
         return true;
       }());
       return 0.0;
@@ -428,8 +413,7 @@ class HealthBridge {
       return result?.toDouble() ?? 0.0;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getFlights PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getFlights PlatformException: ${e.message}');
         return true;
       }());
       return 0.0;
@@ -443,8 +427,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getBodyFat PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getBodyFat PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -458,8 +441,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getRespiratoryRate PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getRespiratoryRate PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -473,8 +455,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getOxygenSaturation PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getOxygenSaturation PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -488,8 +469,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getHeartRate PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getHeartRate PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -507,8 +487,7 @@ class HealthBridge {
       return result;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getBloodPressure PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getBloodPressure PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -526,8 +505,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getWater PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getWater PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -545,8 +523,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getBodyTemperature PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getBodyTemperature PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -562,8 +539,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getWristTemperature PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getWristTemperature PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -581,8 +557,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getWalkingSpeed PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getWalkingSpeed PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -600,8 +575,7 @@ class HealthBridge {
       return result?.toDouble();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getMindfulMinutes PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getMindfulMinutes PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -626,8 +600,7 @@ class HealthBridge {
           .toList();
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getCycleData PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getCycleData PlatformException: ${e.message}');
         return true;
       }());
       return [];
@@ -648,8 +621,7 @@ class HealthBridge {
       return result?.map((k, v) => MapEntry(k.toString(), v));
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getNutritionMacros PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getNutritionMacros PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -671,8 +643,7 @@ class HealthBridge {
       );
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.getWalkingMetrics PlatformException: ${e.message}');
+        debugPrint('HealthBridge.getWalkingMetrics PlatformException: ${e.message}');
         return true;
       }());
       return null;
@@ -690,8 +661,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print('HealthBridge.triggerSync PlatformException: ${e.message}');
+        debugPrint('HealthBridge.triggerSync PlatformException: ${e.message}');
         return true;
       }());
       return false;
@@ -723,8 +693,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print(
+        debugPrint(
           'HealthBridge.configureBackgroundSync PlatformException: ${e.message}',
         );
         return true;
@@ -748,8 +717,7 @@ class HealthBridge {
       return result ?? false;
     } on PlatformException catch (e) {
       assert(() {
-        // ignore: avoid_print
-        print(
+        debugPrint(
           'HealthBridge.startBackgroundObservers PlatformException: ${e.message}',
         );
         return true;

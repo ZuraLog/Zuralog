@@ -355,7 +355,7 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'AI memories deleted. To fully delete your account, contact support@zuralog.com.',
+                                'AI memories deleted. To delete your account and all health data, go to Account Settings → Delete Account.',
                               ),
                               behavior: SnackBarBehavior.floating,
                               duration: Duration(seconds: 6),
@@ -625,7 +625,7 @@ Future<void> _showDeleteDataDialog(
         style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
       ),
       content: Text(
-        'This will delete your AI coaching memories. To delete your account and all health data, contact support@zuralog.com.',
+        'This will delete your AI coaching memories. To delete your account and all health data, go to Account Settings → Delete Account.',
         style: AppTextStyles.bodyMedium.copyWith(
           color: colors.textSecondary,
         ),

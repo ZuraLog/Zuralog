@@ -82,7 +82,7 @@ class _BarChart extends StatelessWidget {
                   key: const Key('bar_chart_bar'),
                   height: h.clamp(2.0, barHeight),
                   decoration: BoxDecoration(
-                    color: bar.isToday ? color : color.withOpacity(0.3),
+                    color: bar.isToday ? color : color.withValues(alpha: 0.3),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
                   ),
                 ),

@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -108,7 +109,7 @@ class _LinePainter extends CustomPainter {
 
     // Range band
     if (rangeMin != null && rangeMax != null) {
-      final bandPaint = Paint()..color = color.withOpacity(0.08);
+      final bandPaint = Paint()..color = color.withValues(alpha: 0.08);
       canvas.drawRect(Rect.fromLTRB(0, toY(maxV), size.width, toY(minV)), bandPaint);
     }
 
@@ -116,7 +117,7 @@ class _LinePainter extends CustomPainter {
     if (referenceLine != null) {
       final refY = toY(referenceLine!);
       final refPaint = Paint()
-        ..color = color.withOpacity(0.4)
+        ..color = color.withValues(alpha: 0.4)
         ..strokeWidth = 0.75
         ..style = PaintingStyle.stroke;
       const dashWidth = 4.0, dashGap = 3.0;
@@ -192,7 +193,7 @@ class _Stat extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: TextStyle(fontSize: 8, color: Colors.grey[600])),
+        Text(label, style: const TextStyle(fontSize: 8, color: AppColors.textSecondaryDark)),
       ],
     );
   }

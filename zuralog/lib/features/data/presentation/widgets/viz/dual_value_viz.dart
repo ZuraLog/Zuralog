@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -39,7 +40,7 @@ class _ValueColumn extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: TextStyle(fontSize: 9, color: Colors.grey[600])),
+        Text(label, style: const TextStyle(fontSize: 9, color: AppColors.textSecondaryDark)),
       ],
     );
   }
@@ -59,7 +60,7 @@ class _Square extends StatelessWidget {
         _ValueColumn(value: config.value1, label: config.label1, color: color),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text('/', style: TextStyle(fontSize: 20, color: Colors.grey[400])),
+          child: const Text('/', style: TextStyle(fontSize: 20, color: AppColors.textTertiary)),
         ),
         _ValueColumn(value: config.value2, label: config.label2, color: color),
       ],
@@ -126,7 +127,7 @@ class _MiniLinePainter extends CustomPainter {
     if (points1.isEmpty && points2.isEmpty) return;
     final paint = Paint()..color = color..strokeWidth = 1.5..style = PaintingStyle.stroke;
     _drawLine(canvas, size, points1, paint);
-    _drawLine(canvas, size, points2, paint..color = color.withOpacity(0.5));
+    _drawLine(canvas, size, points2, paint..color = color.withValues(alpha: 0.5));
   }
 
   void _drawLine(Canvas canvas, Size size, List<ChartPoint> pts, Paint paint) {

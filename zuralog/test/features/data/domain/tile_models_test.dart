@@ -127,8 +127,8 @@ void main() {
       expect(TileId.weight.defaultSize, TileSize.wide);
     });
 
-    test('steps.allowedSizes does NOT contain wide', () {
-      expect(TileId.steps.allowedSizes.contains(TileSize.wide), isFalse);
+    test('steps.allowedSizes contains wide', () {
+      expect(TileId.steps.allowedSizes.contains(TileSize.wide), isTrue);
     });
 
     test('mood.allowedSizes contains both square and wide', () {
@@ -138,19 +138,19 @@ void main() {
   });
 
   group('TileConfig.nextSize', () {
-    test('steps cycles square→tall→square', () {
-      expect(TileId.steps.nextSize(TileSize.square), TileSize.tall);
+    test('steps cycles square→wide→tall→square', () {
+      expect(TileId.steps.nextSize(TileSize.square), TileSize.wide);
       expect(TileId.steps.nextSize(TileSize.tall), TileSize.square);
     });
 
-    test('nextSize cycles through all sizes for sleepStages (wide→tall→wide)', () {
+    test('nextSize cycles through all sizes for sleepStages (wide→tall→square→wide)', () {
       expect(TileId.sleepStages.nextSize(TileSize.wide), TileSize.tall);
-      expect(TileId.sleepStages.nextSize(TileSize.tall), TileSize.wide);
+      expect(TileId.sleepStages.nextSize(TileSize.tall), TileSize.square);
     });
 
-    test('nextSize returns first allowed size when current is not in allowedSizes', () {
-      // steps.allowedSizes = [square, tall]. Passing wide (not allowed) should return square.
-      expect(TileId.steps.nextSize(TileSize.wide), TileSize.square);
+    test('nextSize advances to next size when current is in allowedSizes', () {
+      // steps.allowedSizes = [square, wide, tall]. wide is at index 1, so next is tall.
+      expect(TileId.steps.nextSize(TileSize.wide), TileSize.tall);
     });
   });
 

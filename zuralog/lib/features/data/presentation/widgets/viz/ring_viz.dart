@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -37,7 +38,7 @@ class RingViz extends StatelessWidget {
           CircularProgressIndicator(
             value: (config.value / config.maxValue).clamp(0.0, 1.0),
             color: color,
-            backgroundColor: color.withOpacity(0.15),
+            backgroundColor: color.withValues(alpha: 0.15),
             strokeWidth: diameter * 0.12,
             strokeCap: StrokeCap.round,
           ),
@@ -60,8 +61,8 @@ class RingViz extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('${config.value.round()}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('/ ${config.maxValue.round()} ${config.unit}', style: TextStyle(fontSize: 9, color: Colors.grey[600])),
-              Text('${(config.maxValue - config.value).round()} remaining', style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+              Text('/ ${config.maxValue.round()} ${config.unit}', style: const TextStyle(fontSize: 9, color: AppColors.textSecondaryDark)),
+              Text('${(config.maxValue - config.value).round()} remaining', style: const TextStyle(fontSize: 9, color: AppColors.textTertiary)),
             ],
           ),
         ),
@@ -104,7 +105,7 @@ class _BarRow extends StatelessWidget {
                 Container(
                   height: h.clamp(2.0, 24.0),
                   decoration: BoxDecoration(
-                    color: bar.isToday ? color : color.withOpacity(0.35),
+                    color: bar.isToday ? color : color.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

@@ -159,6 +159,43 @@ class AuthRepository {
     }
   }
 
+  /// Sends a password reset email to the given address.
+  ///
+  /// Calls `POST /api/v1/auth/reset-password` with the user's email.
+  /// The backend triggers Supabase GoTrue to send a reset link.
+  ///
+  /// Args:
+  ///   [email]: The email address to send the reset link to.
+  ///
+  /// Returns:
+  ///   [AuthSuccess] (with empty token fields) on success.
+  ///   [AuthFailure] with error message on failure.
+  Future<AuthResult> resetPassword(String email) async {
+    try {
+      await _apiClient.post(
+        '/api/v1/auth/reset-password',
+        data: {'email': email},
+      );
+      return const AuthSuccess(userId: '', accessToken: '', refreshToken: '');
+    } on DioException catch (e) {
+      return AuthFailure(message: _extractErrorMessage(e));
+    }
+  }
+
+  /// Permanently deletes the current user's account.
+  ///
+  /// Calls `DELETE /api/v1/users/me` which removes all user data from every
+  /// table and removes the user from Supabase Auth on the server.
+  /// On success (HTTP 204), clears local tokens so the app treats the
+  /// session as ended.
+  ///
+  /// Throws:
+  ///   [DioException] if the network call fails or returns a non-2xx status.
+  Future<void> deleteAccount() async {
+    await _apiClient.delete('/api/v1/users/me');
+    await _clearTokens();
+  }
+
   /// Logs out the current user.
   ///
   /// Calls `POST /api/v1/auth/logout` to invalidate the server session,

@@ -92,6 +92,39 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     return null;
   }
 
+  // ── Forgot Password ────────────────────────────────────────────────────────
+
+  Future<void> _handleForgotPassword() async {
+    final email = _loginEmailCtrl.text.trim();
+    if (email.isEmpty) {
+      _showError('Enter your email address first');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await ref
+        .read(authRepositoryProvider)
+        .resetPassword(email);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    switch (result) {
+      case AuthSuccess():
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Password reset email sent — check your inbox',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      case AuthFailure(:final message):
+        _showError(message);
+    }
+  }
+
   // ── Login ──────────────────────────────────────────────────────────────────
 
   Future<void> _handleLogin() async {
@@ -205,6 +238,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     onToggleObscure: () =>
                         setState(() => _loginObscure = !_loginObscure),
                     onSubmit: _handleLogin,
+                    onForgotPassword: _handleForgotPassword,
                     onSwitchToRegister: () => _tabController.animateTo(1),
                     validateEmail: _validateEmail,
                     validatePassword: _validatePassword,
@@ -283,6 +317,7 @@ class _LoginForm extends StatelessWidget {
     required this.isLoading,
     required this.onToggleObscure,
     required this.onSubmit,
+    required this.onForgotPassword,
     required this.onSwitchToRegister,
     required this.validateEmail,
     required this.validatePassword,
@@ -295,6 +330,7 @@ class _LoginForm extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onToggleObscure;
   final VoidCallback onSubmit;
+  final VoidCallback onForgotPassword;
   final VoidCallback onSwitchToRegister;
   final FormFieldValidator<String> validateEmail;
   final FormFieldValidator<String> validatePassword;
@@ -355,9 +391,7 @@ class _LoginForm extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {
-                  // TODO(dev): Implement forgot password flow.
-                },
+                onPressed: isLoading ? null : onForgotPassword,
                 style: TextButton.styleFrom(
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,

@@ -56,9 +56,9 @@ class CalendarGridViz extends StatelessWidget {
           width: isToday ? 12 : 9,
           height: isToday ? 12 : 9,
           decoration: BoxDecoration(
-            color: (day.phaseColor ?? color).withOpacity(day.value),
+            color: (day.phaseColor ?? color).withValues(alpha: day.value),
             shape: BoxShape.circle,
-            boxShadow: isToday ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 3)] : null,
+            boxShadow: isToday ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 3)] : null,
           ),
         );
       }).toList(),
@@ -76,16 +76,16 @@ class CalendarGridViz extends StatelessWidget {
         final isToday = day == config.days.last;
         return Container(
           decoration: BoxDecoration(
-            color: (day.phaseColor ?? color).withOpacity(day.value),
+            color: (day.phaseColor ?? color).withValues(alpha: day.value),
             shape: BoxShape.circle,
-            boxShadow: isToday ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 3)] : null,
+            boxShadow: isToday ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 3)] : null,
           ),
           child: Center(
             child: Text(
               '${day.dayNumber}',
               style: TextStyle(
                 fontSize: 7,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
               ),
             ),

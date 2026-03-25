@@ -2,6 +2,7 @@ library;
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -48,7 +49,7 @@ class GaugeViz extends StatelessWidget {
           ),
           Text(
             _currentZoneLabel,
-            style: TextStyle(fontSize: 9, color: Colors.grey[600]),
+            style: const TextStyle(fontSize: 9, color: AppColors.textSecondaryDark),
           ),
           if (size == TileSize.tall) ...[
             const SizedBox(height: 8),
@@ -90,7 +91,7 @@ class _GaugePainter extends CustomPainter {
         sweepAngle,
         false,
         Paint()
-          ..color = zone.color.withOpacity(0.7)
+          ..color = zone.color.withValues(alpha: 0.7)
           ..strokeWidth = 10
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.butt,
