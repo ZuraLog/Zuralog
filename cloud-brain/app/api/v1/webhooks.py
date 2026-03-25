@@ -60,7 +60,7 @@ async def revenuecat_webhook(
         HTTPException: 403 if the authorization secret is invalid.
         HTTPException: 400 if the request body is not valid JSON.
     """
-    expected = f"Bearer {settings.revenuecat_webhook_secret}"
+    expected = f"Bearer {settings.revenuecat_webhook_secret.get_secret_value()}"
     if not authorization or not hmac.compare_digest(authorization, expected):
         logger.warning("RevenueCat webhook: invalid authorization")
         raise HTTPException(

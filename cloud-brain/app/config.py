@@ -72,8 +72,8 @@ class Settings(BaseSettings):
     # Firebase credentials as a JSON string (for Railway/production).
     # Takes priority over fcm_credentials_path when set.
     firebase_credentials_json: str = ""
-    revenuecat_webhook_secret: str = ""
-    revenuecat_api_key: str = ""
+    revenuecat_webhook_secret: SecretStr = SecretStr("")
+    revenuecat_api_key: SecretStr = SecretStr("")
     # Comma-separated list of allowed CORS origins.
     # Use "*" for development; lock down for production.
     allowed_origins: str = ""
