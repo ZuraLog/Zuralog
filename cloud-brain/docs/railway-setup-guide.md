@@ -176,6 +176,32 @@ After full setup:
 - [ ] Celery worker logs show `ready` and `beat: Starting...`
 - [ ] SSL certificate is valid (green lock in browser)
 - [ ] Strava webhook registered (if using Strava)
+- [ ] `DELETE https://api.zuralog.com/api/v1/users/me` returns 204 for a valid token (GDPR account deletion)
+- [ ] `GET https://api.zuralog.com/api/v1/users/me/export` returns a JSON blob of user data (GDPR data export)
+
+---
+
+## Recent API Changes
+
+### GDPR Endpoints (Art. 17 & 20)
+
+Two user-facing GDPR endpoints were added:
+
+| Method | Path | What it does |
+|---|---|---|
+| `DELETE` | `/api/v1/users/me` | Deletes **all** user health data and the account itself. Returns `204 No Content`. Also removes the user from Supabase Auth. |
+| `GET` | `/api/v1/users/me/export` | Returns all user health data (metrics, activities, sleep, nutrition, weight, goals) as a single JSON download. |
+
+### Health Ingest Validation
+
+`POST /api/v1/health/ingest` now enforces two additional rules:
+
+- **`source` field** must be exactly `"apple_health"` or `"health_connect"`. Any other string returns `422 Unprocessable Entity`.
+- **Payload size cap**: a single request may not contain more than 500 total records across all data types. Larger batches should be split client-side. Exceeding the cap returns `422 Unprocessable Entity`.
+
+### Secret Field Handling
+
+`REVENUECAT_API_KEY` and `REVENUECAT_WEBHOOK_SECRET` are now treated as secrets internally (they will no longer appear in logs or error traces). No change is needed to the Railway environment variable values themselves.
 
 ---
 
