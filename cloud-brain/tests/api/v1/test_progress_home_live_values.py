@@ -82,7 +82,7 @@ async def test_progress_home_returns_live_current_value_for_steps_goal():
 
     call_count = 0
 
-    async def _execute_side_effect(*_, **__):
+    async def _execute_side_effect(*args, **kwargs):  # type: ignore[misc]
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -145,7 +145,7 @@ async def test_progress_home_returns_progress_history_list():
 
     call_count = 0
 
-    async def _execute_side_effect(*_, **__):
+    async def _execute_side_effect(*args, **kwargs):  # type: ignore[misc]
         nonlocal call_count
         call_count += 1
         if call_count == 1:
