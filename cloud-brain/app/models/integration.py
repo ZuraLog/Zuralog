@@ -6,6 +6,7 @@ Stores OAuth tokens and sync metadata for each user-integration pair.
 """
 
 import uuid
+from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
@@ -66,7 +67,7 @@ class Integration(Base):
     provider: Mapped[str] = mapped_column(String)
     access_token: Mapped[str | None] = mapped_column(String, nullable=True)
     refresh_token: Mapped[str | None] = mapped_column(String, nullable=True)
-    token_expires_at: Mapped[str | None] = mapped_column(
+    token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
@@ -75,7 +76,7 @@ class Integration(Base):
         nullable=True,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    last_synced_at: Mapped[str | None] = mapped_column(
+    last_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
@@ -88,7 +89,7 @@ class Integration(Base):
         nullable=True,
         insert_default=None,
     )
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )

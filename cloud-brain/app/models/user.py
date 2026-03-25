@@ -10,7 +10,7 @@ and onboarding state for the AI coach personalisation flow.
 
 import enum
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import Boolean, Date, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -96,11 +96,11 @@ class User(Base):
         nullable=False,
         comment="True once the user has completed the profile questionnaire",
     )
-    created_at: Mapped[str] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
     )
-    updated_at: Mapped[str | None] = mapped_column(
+    updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         onupdate=func.now(),
         nullable=True,
@@ -113,7 +113,7 @@ class User(Base):
         String,
         default="free",
     )
-    subscription_expires_at: Mapped[str | None] = mapped_column(
+    subscription_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
