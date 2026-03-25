@@ -232,14 +232,10 @@ async def _load_conversation_history(
         if conv_check.scalar_one_or_none() is None:
             return []
 
-    query = (
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.desc())
-        .limit(limit)
-    )
+    query = select(Message).where(Message.conversation_id == conversation_id)
     if exclude_message_id is not None:
         query = query.where(Message.id != exclude_message_id)
+    query = query.order_by(Message.created_at.desc()).limit(limit)
     result = await db.execute(query)
     messages = result.scalars().all()
     messages = list(reversed(messages))
@@ -477,7 +473,7 @@ async def websocket_chat(
 
         logger.info(
             "WebSocket connected for user '%s', conversation '%s' (new=%s)",
-            user_id,
+            user_id[:8] if user_id else "?",
             resolved_conv_id,
             is_new_conversation,
         )
@@ -815,9 +811,9 @@ async def websocket_chat(
             await websocket.send_json(final_payload)
 
     except WebSocketDisconnect:
-        logger.info("WebSocket disconnected for user '%s'", user_id)
+        logger.info("WebSocket disconnected for user '%s'", user_id[:8] if user_id else "?")
     except Exception:
-        logger.exception("Unexpected WebSocket error for user '%s'", user_id)
+        logger.exception("Unexpected WebSocket error for user '%s'", user_id[:8] if user_id else "?")
         # Fix 6.3 (C-3): Close WebSocket on unexpected exception
         try:
             await websocket.close(code=1011)
