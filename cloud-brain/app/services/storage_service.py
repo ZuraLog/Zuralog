@@ -253,7 +253,8 @@ class StorageService:
         headers = self._headers(content_type="application/json")
 
         try:
-            response = await self._client.delete(
+            response = await self._client.request(
+                "DELETE",
                 url,
                 headers=headers,
                 json={"prefixes": paths},
