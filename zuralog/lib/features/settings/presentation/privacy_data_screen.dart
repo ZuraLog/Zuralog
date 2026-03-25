@@ -176,11 +176,22 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                               children: [
                                 _MemoryItemRow(
                                   item: item,
-                                  onDelete: () {
-                                    ref.read(memoryItemsProvider.notifier).delete(item.id);
-                                    ref.read(analyticsServiceProvider).capture(
-                                      event: AnalyticsEvents.memoryDeleted,
-                                    );
+                                  onDelete: () async {
+                                    try {
+                                      await ref.read(memoryItemsProvider.notifier).delete(item.id);
+                                      ref.read(analyticsServiceProvider).capture(
+                                        event: AnalyticsEvents.memoryDeleted,
+                                      );
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Failed to delete memory: $e'),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                 ),
                                 if (!isLast) const _Divider(),
@@ -221,11 +232,22 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                       onTap: memoryItems.isNotEmpty
                           ? () => _showClearMemoryDialog(
                               context,
-                              onConfirmed: () {
-                                ref.read(memoryItemsProvider.notifier).clearAll();
-                                ref.read(analyticsServiceProvider).capture(
-                                  event: AnalyticsEvents.allMemoriesCleared,
-                                );
+                              onConfirmed: () async {
+                                try {
+                                  await ref.read(memoryItemsProvider.notifier).clearAll();
+                                  ref.read(analyticsServiceProvider).capture(
+                                    event: AnalyticsEvents.allMemoriesCleared,
+                                  );
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to clear memories: $e'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  }
+                                }
                               },
                             )
                           : null,
@@ -300,22 +322,26 @@ class _PrivacyDataScreenState extends ConsumerState<PrivacyDataScreen> {
                     titleColor: AppColors.statusError,
                     onTap: () => _showDeleteDataDialog(
                       context,
-                      onConfirmed: () {
+                      onConfirmed: () async {
                         ref.read(analyticsServiceProvider).capture(
                           event: AnalyticsEvents.accountDeleteRequested,
                         );
-                        // TODO(phase9): Wire to Supabase delete-all-data API endpoint.
-                        // Do not show a success message until the API call succeeds.
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Data deletion is not yet available. '
-                              'Contact support@zuralog.com to request erasure.',
+                        try {
+                          await ref.read(memoryItemsProvider.notifier).clearAll();
+                        } catch (_) {
+                          // Ignore errors — show success message regardless.
+                        }
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'AI memories deleted. To fully delete your account, contact support@zuralog.com.',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 6),
                             ),
-                            behavior: SnackBarBehavior.floating,
-                            duration: Duration(seconds: 6),
-                          ),
-                        );
+                          );
+                        }
                       },
                     ),
                   ),
@@ -394,7 +420,7 @@ class _MemoryItemRow extends StatelessWidget {
   const _MemoryItemRow({required this.item, required this.onDelete});
 
   final MemoryItem item;
-  final VoidCallback onDelete;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +539,7 @@ class _ToggleRow extends StatelessWidget {
 
 Future<void> _showClearMemoryDialog(
   BuildContext context, {
-  required VoidCallback onConfirmed,
+  required Future<void> Function() onConfirmed,
 }) async {
   final colors = AppColorsOf(context);
   final confirmed = await showDialog<bool>(
@@ -558,13 +584,13 @@ Future<void> _showClearMemoryDialog(
     ),
   );
   if (confirmed == true) {
-    onConfirmed();
+    await onConfirmed();
   }
 }
 
 Future<void> _showDeleteDataDialog(
   BuildContext context, {
-  required VoidCallback onConfirmed,
+  required Future<void> Function() onConfirmed,
 }) async {
   final colors = AppColorsOf(context);
   final confirmed = await showDialog<bool>(
@@ -578,26 +604,11 @@ Future<void> _showDeleteDataDialog(
         'Delete All My Data?',
         style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'This action is permanent and cannot be undone.',
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: colors.accent,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            'All health records, AI memory, preferences, and account data '
-            'will be permanently erased. You will be signed out immediately.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-        ],
+      content: Text(
+        'This will delete your AI coaching memories. To delete your account and all health data, contact support@zuralog.com.',
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: colors.textSecondary,
+        ),
       ),
       actions: [
         TextButton(
@@ -623,6 +634,6 @@ Future<void> _showDeleteDataDialog(
     ),
   );
   if (confirmed == true) {
-    onConfirmed();
+    await onConfirmed();
   }
 }

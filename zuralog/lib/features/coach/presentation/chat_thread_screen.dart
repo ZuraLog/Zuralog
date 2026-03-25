@@ -12,6 +12,7 @@
 ///  • Existing conversations — loads history via [CoachChatNotifier.loadHistory].
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -178,10 +179,22 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                   'size_bytes': uploaded.sizeBytes ?? 0,
                   'mime_type': uploaded.mimeType ?? '',
                 });
-              } catch (e) {
+              } on DioException catch (e) {
+                if (mounted) {
+                  final msg = e.response?.statusCode == 413
+                      ? '$name is too large to upload.'
+                      : 'Failed to upload $name. Check your connection.';
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+                  );
+                }
+              } catch (_) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to upload $name: $e')),
+                    SnackBar(
+                      content: Text('Failed to upload $name. Please try again.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
                   );
                 }
               }
@@ -1113,6 +1126,10 @@ class _ToolProgressIndicator extends StatelessWidget {
       'get_activities' => 'Checking your Strava activities…',
       'get_fitbit_data' => 'Checking your Fitbit data…',
       'get_oura_data' => 'Checking your Oura data…',
+      'withings_get_measurements' => 'Checking Withings data…',
+      'oura_get_daily_activity' => 'Reading Oura Ring activity…',
+      'oura_get_sleep' => 'Reading Oura Ring sleep…',
+      'oura_get_heart_rate' => 'Reading Oura Ring heart rate…',
       'query_memory' => 'Checking your history…',
       'save_memory' => 'Saving to memory…',
       _ => 'Checking your data…',
@@ -1614,10 +1631,22 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
               'size_bytes': uploaded.sizeBytes ?? 0,
               'mime_type': uploaded.mimeType ?? '',
             });
-          } catch (e) {
+          } on DioException catch (e) {
+            if (mounted) {
+              final msg = e.response?.statusCode == 413
+                  ? '${a.name} is too large to upload.'
+                  : 'Failed to upload ${a.name}. Check your connection.';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+              );
+            }
+          } catch (_) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to upload ${a.name}: $e')),
+                SnackBar(
+                  content: Text('Failed to upload ${a.name}. Please try again.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
               );
             }
           }

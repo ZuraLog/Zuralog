@@ -54,6 +54,10 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   final TextEditingController _inputCtrl = TextEditingController();
   final FocusNode _inputFocus = FocusNode();
 
+  /// Tracks the number of staged attachments in [_ChatInputBar].
+  /// Used to warn the user when a quick action would drop them.
+  final ValueNotifier<int> _attachmentCount = ValueNotifier(0);
+
   /// Fix C9: prevents double-prefill from both initState and build().
   bool _prefillApplied = false;
 
@@ -82,6 +86,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
   void dispose() {
     _inputCtrl.dispose();
     _inputFocus.dispose();
+    _attachmentCount.dispose();
     super.dispose();
   }
 
@@ -106,13 +111,18 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
           Navigator.of(sheetCtx).pop();
           if (prompt.isNotEmpty) {
             _inputCtrl.text = prompt;
-            // Fix H15: clear any pending attachment state before sending a
-            // quick action, since the attachment list is managed by the
-            // _ChatInputBar widget and quick actions bypass it entirely.
-            // Show a SnackBar if there were pending attachments (they would
-            // be silently dropped).
-            // NOTE: Attachments are managed inside _ChatInputBar — no direct
-            // access here. Quick action prompt is sent without attachments.
+            // Warn if there are staged attachments — quick actions bypass the
+            // input bar's attachment list, so they would be silently dropped.
+            if (_attachmentCount.value > 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Staged attachments were not included in the quick action.',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
             _sendMessage();
           } else {
             _inputFocus.requestFocus();
@@ -254,6 +264,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
             focusNode: _inputFocus,
             onSend: ({rawAttachments = const []}) =>
                 _sendMessage(rawAttachments: rawAttachments),
+            attachmentCountNotifier: _attachmentCount,
           ),
           // Push the input bar above the frosted nav bar.
           // AppShell(extendBody: true) injects the nav bar height into
@@ -706,6 +717,7 @@ class _ChatInputBar extends ConsumerStatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.onSend,
+    this.attachmentCountNotifier,
   });
 
   final TextEditingController controller;
@@ -718,6 +730,10 @@ class _ChatInputBar extends ConsumerStatefulWidget {
   /// because no conversation ID exists yet at this point.
   final void Function({List<Map<String, String>> rawAttachments}) onSend;
 
+  /// When provided, updated with the current number of staged attachments
+  /// after every add/remove so the parent can warn before quick actions.
+  final ValueNotifier<int>? attachmentCountNotifier;
+
   /// Maximum allowed message length.
   static const int maxLength = 4000;
 
@@ -727,6 +743,10 @@ class _ChatInputBar extends ConsumerStatefulWidget {
 
 class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
   final List<PendingAttachment> _attachments = [];
+
+  void _updateAttachmentCount() {
+    widget.attachmentCountNotifier?.value = _attachments.length;
+  }
 
   void _handleSend() {
     final text = widget.controller.text.trim();
@@ -740,7 +760,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
         .map((a) => {'path': a.file.path, 'name': a.name})
         .toList();
 
-    setState(() => _attachments.clear());
+    setState(() {
+      _attachments.clear();
+      _updateAttachmentCount();
+    });
     widget.onSend(rawAttachments: rawAttachments);
   }
 
@@ -794,7 +817,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
           // ── Attachment previews ──────────────────────────────────────────
           AttachmentPreviewBar(
             attachments: _attachments,
-            onRemove: (i) => setState(() => _attachments.removeAt(i)),
+            onRemove: (i) => setState(() {
+              _attachments.removeAt(i);
+              _updateAttachmentCount();
+            }),
           ),
           // ── Input row ────────────────────────────────────────────────────
           Padding(
@@ -830,7 +856,10 @@ class _ChatInputBarState extends ConsumerState<_ChatInputBar> {
                       useSafeArea: true,
                       builder: (_) => AttachmentPickerSheet(
                         onAttachment: (attachment) {
-                          setState(() => _attachments.add(attachment));
+                          setState(() {
+                            _attachments.add(attachment);
+                            _updateAttachmentCount();
+                          });
                         },
                       ),
                     );
