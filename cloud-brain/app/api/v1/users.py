@@ -7,23 +7,35 @@ such as coaching persona, subscription tier, and onboarding profile fields.
 
 import logging
 
+import filetype
 import sentry_sdk
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from collections.abc import Sequence
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.schemas import ChangeEmailRequest, ChangePasswordRequest, MessageResponse, UpdateProfileRequest, UserProfileResponse
+from app.api.v1.schemas import AvatarUploadResponse, ChangeEmailRequest, ChangePasswordRequest, MessageResponse, UpdateProfileRequest, UserProfileResponse
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
+from app.services.storage_service import StorageService
 from app.api.deps import _get_auth_service, get_authenticated_user_id, get_current_user
 from app.limiter import limiter
 from app.services.cache_service import CacheService, cached
 
 logger = logging.getLogger(__name__)
+
+_AVATAR_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+_ALLOWED_MIME_TYPES: frozenset[str] = frozenset({"image/jpeg", "image/png", "image/webp"})
+_MIME_TO_EXT: dict[str, str] = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+
+
+def _get_storage_service(request: Request) -> StorageService:
+    """FastAPI dependency that retrieves the shared StorageService from app state."""
+    return request.app.state.storage_service
 
 
 async def _set_sentry_module() -> None:
@@ -457,3 +469,88 @@ async def export_user_data(
             UserGoal, ["metric", "target_value", "period", "is_active", "start_date", "deadline"]
         ),
     }
+
+
+@router.post("/me/avatar", response_model=AvatarUploadResponse)
+@limiter.limit("10/hour")
+async def upload_avatar(
+    request: Request,
+    file: UploadFile,
+    user_id: str = Depends(get_authenticated_user_id),
+    db: AsyncSession = Depends(get_db),
+    storage: StorageService = Depends(_get_storage_service),
+) -> AvatarUploadResponse:
+    """Upload or replace the current user's profile picture.
+
+    Validates the file size (max 5 MB) and actual MIME type via magic bytes
+    before uploading to Supabase Storage. The uploaded image always overwrites
+    the previous one at a deterministic path so the bucket never grows unbounded.
+
+    Args:
+        request: The incoming FastAPI request (required by the rate limiter).
+        file: The image file uploaded by the client (multipart/form-data).
+        user_id: Authenticated user ID from JWT (injected by dependency).
+        db: Injected async database session.
+        storage: Injected storage service for Supabase bucket uploads.
+
+    Returns:
+        AvatarUploadResponse containing the public URL of the uploaded image.
+
+    Raises:
+        HTTPException: 413 if the file exceeds 5 MB.
+        HTTPException: 415 if the file is not a JPEG, PNG, or WebP image.
+        HTTPException: 500 if a valid public URL could not be constructed.
+        HTTPException: 429 if the rate limit is exceeded.
+    """
+    sentry_sdk.set_user({"id": user_id})
+
+    # Read up to 5 MB + 1 byte so we can detect oversized files without
+    # buffering the entire upload into memory first.
+    data = await file.read(_AVATAR_MAX_BYTES + 1)
+    if len(data) > _AVATAR_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File too large. Maximum size is 5 MB.",
+        )
+
+    # Validate the actual file type from magic bytes — never trust the
+    # Content-Type header, which clients can set to anything.
+    kind = filetype.guess(data)
+    mime_type = kind.mime if kind else None
+    if mime_type not in _ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported file type. Upload a JPEG, PNG, or WebP image.",
+        )
+
+    ext = _MIME_TO_EXT[mime_type]
+    storage_path = f"{user_id}/avatar.{ext}"
+
+    # Upload to the configured avatars bucket, overwriting any existing file.
+    await storage.upload_file(
+        bucket=settings.avatar_bucket,
+        path=storage_path,
+        content=data,
+        content_type=mime_type,
+    )
+
+    # Build the public URL from the Supabase project URL — never hardcode a domain.
+    base_url = settings.supabase_url.strip().rstrip("/")
+    avatar_url = f"{base_url}/storage/v1/object/public/{settings.avatar_bucket}/{storage_path}"
+
+    if not avatar_url.startswith("https://"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to build a valid avatar URL.",
+        )
+
+    # Persist the URL on the user's profile row.
+    await db.execute(update(User).where(User.id == user_id).values(avatar_url=avatar_url))
+    await db.commit()
+
+    # Invalidate the cached profile so the new avatar_url is immediately visible.
+    cache = getattr(request.app.state, "cache_service", None)
+    if cache:
+        await cache.delete(CacheService.make_key("users.profile", user_id))
+
+    return AvatarUploadResponse(avatar_url=avatar_url)

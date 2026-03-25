@@ -175,3 +175,13 @@ class UpdateProfileRequest(BaseModel):
     gender: Optional[str] = None
     height_cm: Optional[float] = Field(default=None, ge=30, le=300)
     onboarding_complete: Optional[bool] = None
+
+
+class AvatarUploadResponse(BaseModel):
+    """Response after a successful avatar upload.
+
+    Attributes:
+        avatar_url: Public URL of the newly uploaded profile picture.
+    """
+
+    avatar_url: str

@@ -123,6 +123,8 @@ class Settings(BaseSettings):
     # PostHog
     posthog_api_key: str = ""
     posthog_host: str = "https://us.i.posthog.com"
+    # Supabase Storage — bucket names
+    avatar_bucket: str = "avatars"  # AVATAR_BUCKET — storage bucket for user profile pictures
     # Rate limits (Fix 1.5 / M-7)
     rate_limit_free_daily: int = 50
     rate_limit_premium_daily: int = 500
