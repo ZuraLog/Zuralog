@@ -1,7 +1,7 @@
 # Zuralog — Product Roadmap
 
 **Format:** Living checklist. Agents and developers update `Status` as work completes.  
-**Last Updated:** 2026-03-22 (Phase 12: Unified Health Data Architecture — event sourcing + CQRS, replaces quick_log_routes.py)
+**Last Updated:** 2026-03-25 (Account Management redesign: Edit Profile screen, avatar upload, email/password change, delete account)
 
 **Status Key:** ✅ Done | 🔄 In Progress | 🔜 Planned | 📋 Future | ❌ Blocked
 
@@ -170,7 +170,7 @@
 | P0 | Integrations Hub screen | ✅ Done | Connected / Available / Coming Soon sections |
 | P0 | Settings screen | ✅ Done | |
 | P0 | Data export | 📋 Future | |
-| P0 | Profile photo upload | 📋 Future | |
+| P0 | Profile photo upload | ✅ Done | feat/account-management — avatar upload with magic-byte validation, 5 MB cap, Supabase Storage; 2026-03-25 |
 | P1 | RevenueCat paywall (Pro upgrade) | ✅ Done | |
 | P1 | Analytics / correlation views | ✅ Done | |
 | P1 | Deep link catalog (third-party app launch) | ✅ Done | |
@@ -214,7 +214,8 @@
  | P1 | Trends — Data Sources | ✅ Complete | Phase 7 |
 | P1 | Trends — Persist dismissed correlation suggestion IDs (Step 3.8) | ✅ Done | feat/trends-persist-dismissals — SharedPreferences persistence with stale-ID pruning and multi-account safety |
 | P1 | Settings Hub | ✅ Complete | Phase 8 |
-| P1 | Settings — Account | ✅ Complete | Phase 8 |
+| P1 | Settings — Account | ✅ Complete | Phase 8; fully reworked in feat/account-management (2026-03-25) — email/password change, 2-step delete account, profile card tappable, sign out added |
+| P1 | Settings — Edit Profile | ✅ Done | feat/account-management (2026-03-25) — new screen; photo, display name, nickname, birthday, gender, height (unit-aware) |
 | P1 | Settings — Notifications | ✅ Complete | Phase 8; re-wired to API + SharedPrefs persistence in feat/settings-providers |
 | P1 | Settings — Appearance | ✅ Complete | Phase 8; fixed tooltips/haptics/theme wiring in feat/settings-providers |
 | P1 | Settings — Coach Settings | ✅ Complete | feat/coach-tab-gaps + feat/settings-providers + feat/coach-settings-wiring — private StateProviders replaced with global UserPreferencesNotifier; all 5 coach preferences wired to chat screens |
@@ -815,7 +816,7 @@ Completed magic number extraction, ORM migration, smoke test rewrite, and docume
 | Voice input (on-device STT) | P1 | ✅ Done | `speech_to_text` Flutter package — on-device, free, no API key; hold-to-talk fills input field for user review before sending; wired to Coach mic button |
 | File attachments in chat | P2 | ✅ Done | `attachment_picker_sheet.dart` + `attachment_preview_bar.dart`; backend pipeline: upload, validate, extract health facts, inject into LLM context; food photo detection |
 | Apple Sign In | P1 | 🔜 Planned | Pending Apple Developer subscription |
-| Profile photo upload | P2 | 📋 Future | |
+| Profile photo upload | P2 | ✅ Done | feat/account-management (2026-03-25) — avatar upload endpoint, magic-byte validation, Supabase Storage avatars bucket |
 | Data export | P2 | 📋 Future | |
 | Pinecone vector store (AI memory) | P2 | ✅ Done | PineconeMemoryStore implemented; per-user namespace; graceful fallback to InMemoryStore |
 | Dynamic tool injection | P1 | ✅ Done | Only inject MCP tools for integrations the user has connected; prevents context bloat as integration catalog grows; prerequisite for semantic retrieval |

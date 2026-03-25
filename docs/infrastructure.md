@@ -1,7 +1,7 @@
 # Zuralog — Infrastructure & Deployment
 
-**Version:** 2.0  
-**Last Updated:** 2026-03-01  
+**Version:** 2.1
+**Last Updated:** 2026-03-25
 **Status:** Living Document
 
 ---
@@ -194,6 +194,28 @@ All services used in production, current tier, and purpose:
 
 ---
 
+## 5.6 Supabase Storage — Avatars Bucket (2026-03-25)
+
+Profile photos are stored in a Supabase Storage bucket. This bucket is **not created automatically** by any database migration — it must be set up once, manually, in the Supabase dashboard.
+
+| Setting | Value |
+|---------|-------|
+| Bucket name | `avatars` (configurable via `AVATAR_BUCKET` env var) |
+| Visibility | **Public** — URLs are served without a signed token so the mobile app can display photos via a plain HTTPS URL |
+| File path format | `{user_id}/avatar.{ext}` — one file per user; re-uploading replaces the previous file at the same path |
+| Allowed file types | JPEG, PNG, WebP — validated by magic-byte check on the server, not just file extension |
+| Maximum file size | 5 MB |
+
+**Setup steps (one-time):**
+1. Open the Supabase dashboard → Storage → New bucket.
+2. Name it `avatars` (or whatever `AVATAR_BUCKET` is set to).
+3. Toggle "Public bucket" on.
+4. Save.
+
+No RLS policy is needed on the bucket itself because files are written server-side using the Supabase service key, and read publicly via URL.
+
+---
+
 ## 6. Environment Variables Reference
 
 See `cloud-brain/RAILWAY_ENV_VARS.md` for the complete list of all env vars required for production deployment. Key categories:
@@ -211,6 +233,7 @@ See `cloud-brain/RAILWAY_ENV_VARS.md` for the complete list of all env vars requ
 | Notifications | `FCM_CREDENTIALS_PATH` or `FIREBASE_CREDENTIALS_JSON` |
 | Subscriptions | `REVENUECAT_WEBHOOK_SECRET`, `REVENUECAT_API_KEY` |
 | Monitoring | `SENTRY_DSN` |
+| Storage | `AVATAR_BUCKET` — Supabase Storage bucket name for profile photos. Must be created manually in the Supabase dashboard and set to public. Default: `"avatars"`. |
 | AI (planned) | `PINECONE_API_KEY`, `OPENAI_API_KEY` |
 
 ---
