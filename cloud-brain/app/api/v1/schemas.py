@@ -143,6 +143,18 @@ class ChangeEmailRequest(BaseModel):
     new_email: EmailStr
 
 
+class ChangePasswordRequest(BaseModel):
+    """Request body for changing the user's password.
+
+    Attributes:
+        current_password: The user's current password for verification.
+        new_password: The new password (minimum 8 characters).
+    """
+
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
 class UpdateProfileRequest(BaseModel):
     """Request body for a partial profile update.
 

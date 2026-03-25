@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.schemas import ChangeEmailRequest, MessageResponse, UpdateProfileRequest, UserProfileResponse
+from app.api.v1.schemas import ChangeEmailRequest, ChangePasswordRequest, MessageResponse, UpdateProfileRequest, UserProfileResponse
 from app.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
@@ -279,6 +279,71 @@ async def change_email(
         await cache.delete(CacheService.make_key("users.profile", user_id))
 
     return MessageResponse(message="Check your new inbox to confirm.")
+
+
+@router.post("/me/password", response_model=MessageResponse)
+@limiter.limit("3/hour")
+async def change_password(
+    request: Request,
+    body: ChangePasswordRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    user_id: str = Depends(get_authenticated_user_id),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Change the current user's password.
+
+    Verifies the current password by re-authenticating before applying the
+    change. Social login users (Google/Apple) have no Supabase password and
+    will always receive a 401 — the Flutter client handles the UX for that.
+
+    Args:
+        request: The incoming FastAPI request (required by the rate limiter).
+        body: Request body containing current_password and new_password.
+        credentials: Bearer token from the Authorization header.
+        user_id: Authenticated user ID from JWT (injected by dependency).
+        auth_service: Injected auth service for Supabase calls.
+        db: Injected async database session.
+
+    Returns:
+        MessageResponse confirming the password was changed.
+
+    Raises:
+        HTTPException: 401 if the current password is wrong (or the user is
+            a social login user with no password set).
+        HTTPException: 400 if Supabase rejects the new password.
+        HTTPException: 404 if the user row is not found in the local database.
+        HTTPException: 429 if the rate limit is exceeded.
+    """
+    sentry_sdk.set_user({"id": user_id})
+
+    # Look up the user's email — needed to re-authenticate for verification.
+    result = await db.execute(select(User.email).where(User.id == user_id))
+    email = result.scalar_one_or_none()
+    if email is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    # Verify the current password by attempting a fresh sign-in.
+    try:
+        await auth_service.sign_in(email, body.current_password)
+    except HTTPException:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect.",
+        )
+
+    # Apply the new password using the user's own token (not the service key).
+    await auth_service.update_user_password(
+        access_token=credentials.credentials,
+        new_password=body.new_password,
+    )
+
+    # Invalidate cached profile in case any derived data changes.
+    cache = getattr(request.app.state, "cache_service", None)
+    if cache:
+        await cache.delete(CacheService.make_key("users.profile", user_id))
+
+    return MessageResponse(message="Password updated successfully.")
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
