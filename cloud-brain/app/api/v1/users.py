@@ -11,6 +11,7 @@ import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from collections.abc import Sequence
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -311,13 +312,13 @@ async def export_user_data(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    def _rows_to_dicts(rows: list, columns: list[str]) -> list[dict]:
+    def _rows_to_dicts(rows: Sequence, columns: list[str]) -> list[dict]:
         return [{col: str(getattr(row, col, "")) for col in columns} for row in rows]
 
     # Collect data from each health table
     async def _fetch(model, cols):
         r = await db.execute(select(model).where(model.user_id == user_id))
-        return _rows_to_dicts(r.scalars().all(), cols)
+        return _rows_to_dicts(list(r.scalars().all()), cols)
 
     return {
         "user": {
