@@ -498,10 +498,14 @@ class TodayRepository implements TodayRepositoryInterface {
     final data = response.data as Map<String, dynamic>;
     final metrics = (data['metrics'] as List<dynamic>? ?? [])
         .cast<Map<String, dynamic>>();
-    final loggedTypes =
-        metrics.map((m) => m['metric_type'] as String).toSet();
+    final loggedTypes = metrics.map((m) {
+      final serverKey = m['metric_type'] as String;
+      return _metricTypeToUiType[serverKey] ?? serverKey;
+    }).toSet();
     final latestValues = <String, dynamic>{
-      for (final m in metrics) m['metric_type'] as String: m['value'],
+      for (final m in metrics)
+        (_metricTypeToUiType[m['metric_type'] as String] ??
+            m['metric_type'] as String): m['value'],
     };
     debugPrint('[TodayRepo] getTodayLogSummary ← '
         'loggedTypes=$loggedTypes');
@@ -729,16 +733,17 @@ class TodayRepository implements TodayRepositoryInterface {
     debugPrint('[TodayRepo] logWeight ✅ done');
   }
 
-  // Maps UI tile type names to the backend metric_type keys used in
-  // daily_summaries / today summary latestValues.
-  static const _uiTypeToMetricType = {
-    'weight': 'weight_kg',
-    'sleep': 'sleep_duration',
-    'run': 'distance',
-    'meal': 'calories',
-    'supplement': 'supplement_taken',
-    'water': 'water_ml',
-    // mood, energy, stress, steps — same name on both sides, no entry needed
+  // Normalises server metric_type keys to UI tile type keys.
+  // The API uses descriptive names (weight_kg, sleep_duration, distance, …)
+  // while the UI uses short names (weight, sleep, run, …).
+  // Keys absent here pass through unchanged (mood, energy, stress, steps, symptom, …).
+  static const _metricTypeToUiType = {
+    'weight_kg': 'weight',
+    'sleep_duration': 'sleep',
+    'distance': 'run',
+    'calories': 'meal',
+    'supplement_taken': 'supplement',
+    'water_ml': 'water',
   };
 
   @override
@@ -748,8 +753,7 @@ class TodayRepository implements TodayRepositoryInterface {
     final summary = await getTodayLogSummary();
     final result = <String, dynamic>{};
     for (final type in types) {
-      final metricType = _uiTypeToMetricType[type] ?? type;
-      final value = summary.latestValues[metricType];
+      final value = summary.latestValues[type];
       if (value != null) result[type] = value;
     }
     debugPrint('[TodayRepo] getLatestLogValues result='
