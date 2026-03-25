@@ -321,6 +321,8 @@ final class ApiCoachRepository implements CoachRepository {
     StreamSubscription<dynamic>? subscription;
     // Fix C5: track whether the sink has already been closed.
     bool sinkClosed = false;
+    // Suppress StreamComplete if an error event was already received.
+    bool receivedError = false;
     // Tracks whether a 4003-triggered reconnect should happen after cleanup.
     bool reconnectAfter4003 = false;
     Timer? initTimer;
@@ -428,42 +430,45 @@ final class ApiCoachRepository implements CoachRepository {
                 ));
 
               case 'stream_end':
-                final content = msg['content'] as String? ?? accumulated;
-                final rawMsgId = msg['message_id'] as String?;
-                final msgId = (rawMsgId == null || rawMsgId.isEmpty)
-                    ? 'msg_${DateTime.now().millisecondsSinceEpoch}'
-                    : rawMsgId;
-                // Fix M6: reject stream_end with no conversation ID.
-                final convId = msg['conversation_id'] as String? ?? resolvedConversationId;
-                if (convId == null) {
-                  if (!controller.isClosed) {
-                    controller.add(const StreamError('Server did not return conversation ID'));
+                if (!receivedError) {
+                  final content = msg['content'] as String? ?? accumulated;
+                  final rawMsgId = msg['message_id'] as String?;
+                  final msgId = (rawMsgId == null || rawMsgId.isEmpty)
+                      ? 'msg_${DateTime.now().millisecondsSinceEpoch}'
+                      : rawMsgId;
+                  // Fix M6: reject stream_end with no conversation ID.
+                  final convId = msg['conversation_id'] as String? ?? resolvedConversationId;
+                  if (convId == null) {
+                    if (!controller.isClosed) {
+                      controller.add(const StreamError('Server did not return conversation ID'));
+                    }
+                    if (!sinkClosed) {
+                      sinkClosed = true;
+                      channel?.sink.close();
+                    }
+                    return;
                   }
-                  if (!sinkClosed) {
-                    sinkClosed = true;
-                    channel?.sink.close();
-                  }
-                  return;
-                }
 
-                final chatMsg = ChatMessage(
-                  id: msgId,
-                  conversationId: convId,
-                  role: MessageRole.assistant,
-                  content: content,
-                  createdAt: DateTime.now(),
-                );
-                controller.add(StreamComplete(
-                  message: chatMsg,
-                  conversationId: convId,
-                ));
-                // Fix C5: guarded close.
+                  final chatMsg = ChatMessage(
+                    id: msgId,
+                    conversationId: convId,
+                    role: MessageRole.assistant,
+                    content: content,
+                    createdAt: DateTime.now(),
+                  );
+                  controller.add(StreamComplete(
+                    message: chatMsg,
+                    conversationId: convId,
+                  ));
+                }
+                // Fix C5: guarded close (always runs, even after an error).
                 if (!sinkClosed) {
                   sinkClosed = true;
                   channel?.sink.close();
                 }
 
               case 'error':
+                receivedError = true;
                 final errContent = msg['content'] as String? ?? 'Unknown error';
                 controller.add(StreamError(errContent));
                 if (!sinkClosed) {
