@@ -26,6 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 from app.api.deps import get_authenticated_user_id
+from app.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,7 @@ def _is_pinecone_store(memory_store: Any) -> bool:
 # ---------------------------------------------------------------------------
 
 
+@limiter.limit("60/minute")
 @router.get(
     "",
     response_model=MemoryListResponse,

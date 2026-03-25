@@ -1,5 +1,6 @@
 """User data export endpoint."""
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -13,6 +14,8 @@ from app.api.deps import get_authenticated_user_id, get_db
 from app.limiter import limiter
 from app.models.conversation import Conversation
 from app.models.user_preferences import UserPreferences
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -42,6 +45,7 @@ async def export_user_data(
 
     # Memories (if available)
     memories = []
+    memories_export_partial = False
     memory_store = getattr(request.app.state, "memory_store", None)
     if memory_store is not None:
         try:
@@ -51,7 +55,8 @@ async def export_user_data(
                 for m in (raw or [])
             ]
         except Exception:
-            pass
+            logger.exception("Failed to export memories for user '%s'", user_id)
+            memories_export_partial = True
 
     export_data = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
@@ -79,6 +84,7 @@ async def export_user_data(
             "response_length": preferences.response_length if preferences else None,
         },
         "memories": memories,
+        "memories_export_partial": memories_export_partial,
     }
 
     filename = f"zuralog-export-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.json"

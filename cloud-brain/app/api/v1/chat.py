@@ -21,6 +21,7 @@ WebSocket Protocol (client → server):
   - {"message": str, "attachments": [...], "persona": str, "proactivity": str}
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -225,6 +226,7 @@ async def _load_conversation_history(
     db: AsyncSession,
     conversation_id: str,
     limit: int = 50,
+    exclude_message_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Load recent messages for LLM context injection.
 
@@ -235,16 +237,21 @@ async def _load_conversation_history(
         db: Async database session.
         conversation_id: The conversation to fetch history for.
         limit: Maximum number of messages to load (caps token usage).
+        exclude_message_id: If provided, exclude this specific message ID
+            (used to avoid passing the just-persisted user message twice).
 
     Returns:
         A list of ``{"role": str, "content": str}`` dicts.
     """
-    result = await db.execute(
+    query = (
         select(Message)
         .where(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.asc())
         .limit(limit)
     )
+    if exclude_message_id is not None:
+        query = query.where(Message.id != exclude_message_id)
+    result = await db.execute(query)
     messages = result.scalars().all()
     # Only pass user/assistant roles to the LLM; skip tool/system rows.
     return [{"role": m.role, "content": m.content or ""} for m in messages if m.role in ("user", "assistant")]
@@ -270,6 +277,46 @@ async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, s
     return ("balanced", "medium")
 
 
+async def _generate_and_save_title(
+    db_url: str,
+    conversation_id: str,
+    message_text: str,
+    mcp_client: MCPClient,
+    memory_store: MemoryStore,
+    llm_client: LLMClient | None,
+) -> None:
+    """Generate a conversation title and persist it asynchronously (fire-and-forget).
+
+    Creates its own DB session, generates a title via the Orchestrator's
+    lightweight title model, and saves it. Wrapped entirely in try/except
+    since failure is non-critical (a fallback truncated title is set before
+    this task is created).
+
+    Args:
+        db_url: Not used (uses async_session factory directly).
+        conversation_id: The conversation to update.
+        message_text: The first user message to generate a title from.
+        mcp_client: MCP client for Orchestrator construction.
+        memory_store: Memory store for Orchestrator construction.
+        llm_client: LLM client for Orchestrator construction.
+    """
+    try:
+        title_orchestrator = Orchestrator(
+            mcp_client=mcp_client,
+            memory_store=memory_store,
+            llm_client=llm_client,
+        )
+        generated_title = await title_orchestrator.generate_title(message_text)
+        async with async_session() as db:
+            result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
+            conv = result.scalar_one_or_none()
+            if conv is not None:
+                conv.title = generated_title
+                await db.commit()
+    except Exception:
+        logger.warning("Background title generation failed for conv %s", conversation_id)
+
+
 # ---------------------------------------------------------------------------
 # WebSocket — real-time AI chat with streaming
 # ---------------------------------------------------------------------------
@@ -278,21 +325,20 @@ async def _load_user_preferences(db: AsyncSession, user_id: str) -> tuple[str, s
 @router.websocket("/ws")
 async def websocket_chat(
     websocket: WebSocket,
-    token: str | None = Query(default=None),
     conversation_id: str | None = Query(default=None, alias="conversation_id"),
 ) -> None:
     """WebSocket endpoint for real-time AI chat with token streaming.
 
     On connect:
-      1. Validates the JWT token.
-      2. Resolves or creates the conversation (returns its UUID to the client).
-      3. Enters a message loop: receives user messages, runs them through
+      1. Reads the first message as an auth frame: {"type":"auth","token":"..."}.
+      2. Validates the JWT token from the auth frame.
+      3. Resolves or creates the conversation (returns its UUID to the client).
+      4. Enters a message loop: receives user messages, runs them through
          the Orchestrator with streaming, persists both messages, and updates
          the conversation title on first exchange.
 
     Args:
         websocket: The WebSocket connection.
-        token: JWT access token (query param).
         conversation_id: Optional existing conversation UUID (query param).
             If omitted, a new conversation is created and its ID is returned
             in the ``conversation_init`` message.
@@ -315,25 +361,33 @@ async def websocket_chat(
     # instead of closing an unaccepted socket (which causes HTTP 500).
     await websocket.accept()
 
-    # Fix 6.10 (M-1): Initialize user_id before auth block
+    # Fix 6.10 (M-1): Initialize user_id and token before auth block
     user_id: str | None = None
+    token: str | None = None
 
     # ── Auth ──────────────────────────────────────────────────────────────────
-    # S1: If token was not in query param, read it from the first message.
-    if token is None:
-        try:
-            first_raw = await websocket.receive_text()
-            first_data = json.loads(first_raw)
-            if first_data.get("type") == "auth" and first_data.get("token"):
-                token = first_data["token"]
-            else:
-                await websocket.send_json({"type": "error", "content": "Authentication required"})
-                await websocket.close(code=4001, reason="Authentication required")
-                return
-        except Exception:
-            await websocket.send_json({"type": "error", "content": "Authentication required"})
-            await websocket.close(code=4001, reason="Authentication required")
+    # Read token from the first WebSocket message (auth frame).
+    # The Flutter client sends {"type":"auth","token":"..."} as its first message.
+    try:
+        raw_auth = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+        if len(raw_auth) > 4096:
+            await websocket.send_json({"type": "error", "content": "Auth payload too large"})
+            await websocket.close(code=4001)
             return
+        first_data = json.loads(raw_auth)
+        if first_data.get("type") != "auth":
+            await websocket.send_json({"type": "error", "content": "Auth failed"})
+            await websocket.close(code=4001)
+            return
+        token = first_data.get("token")
+        if not token:
+            await websocket.send_json({"type": "error", "content": "Auth failed"})
+            await websocket.close(code=4001)
+            return
+    except (asyncio.TimeoutError, json.JSONDecodeError, Exception):
+        await websocket.send_json({"type": "error", "content": "Auth failed"})
+        await websocket.close(code=4001)
+        return
 
     user = await _authenticate_ws(websocket, auth_service, token)
     if user is None:
@@ -431,7 +485,15 @@ async def websocket_chat(
 
     try:
         while True:
-            data = await websocket.receive_json()
+            raw = await websocket.receive_text()
+            if len(raw) > 65536:
+                await websocket.send_json({"type": "error", "content": "Message payload too large"})
+                continue
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "content": "Invalid message format"})
+                continue
             message_text: str = data.get("message", "")
 
             # S2: Periodic JWT re-validation (every 15 minutes or 50 messages)
@@ -453,7 +515,7 @@ async def websocket_chat(
 
             # Fix 6.1 (C-1): Message size cap
             if message_text and len(message_text) > 4000:
-                await websocket.send_json({"type": "error", "message": "Message too long (max 4,000 characters)"})
+                await websocket.send_json({"type": "error", "content": "Message too long (max 4,000 characters)"})
                 continue
 
             # Fix 6.2 (C-2): Attachment count cap
@@ -487,7 +549,14 @@ async def websocket_chat(
                         await check_rate_limit(user, rate_limiter, db)
                 except HTTPException as exc:
                     if exc.status_code == 429:
-                        await websocket.send_json({"type": "error", "content": exc.detail or "Rate limit exceeded"})
+                        rate_headers = exc.headers or {}
+                        await websocket.send_json({
+                            "type": "rate_limit",
+                            "content": exc.detail or "Rate limit exceeded",
+                            "reset_seconds": int(rate_headers.get("X-RateLimit-Reset", 0)),
+                            "limit": int(rate_headers.get("X-RateLimit-Limit", 0)),
+                            "remaining": 0,
+                        })
                         continue
                     raise
 
@@ -513,6 +582,7 @@ async def websocket_chat(
             # When regenerating, the user message is already in the DB from the
             # original send — skip inserting a duplicate.
             async with async_session() as db:
+                persisted_user_msg_id: str | None = None
                 if not is_regenerate:
                     user_msg = Message(
                         conversation_id=resolved_conv_id,
@@ -522,13 +592,14 @@ async def websocket_chat(
                     )
                     db.add(user_msg)
                     await db.commit()
+                    await db.refresh(user_msg)
+                    persisted_user_msg_id = str(user_msg.id)
 
-                # Load conversation history for LLM context.
-                history = await _load_conversation_history(db, resolved_conv_id, limit=50)
-                # Remove the last entry if it matches the current user message
-                # (to avoid passing it twice — it will be passed as `message`).
-                if history and history[-1]["role"] == "user" and history[-1]["content"] == message_text:
-                    history = history[:-1]
+                # Load conversation history for LLM context, excluding the
+                # just-persisted user message (passed separately as `message`).
+                history = await _load_conversation_history(
+                    db, resolved_conv_id, limit=50, exclude_message_id=persisted_user_msg_id
+                )
 
                 # Fix 6.7 (H-3): Cap history to MAX_HISTORY_CHARS to bound token usage
                 total_chars = sum(len(m.get("content") or "") for m in history)
@@ -584,13 +655,15 @@ async def websocket_chat(
                         elif etype == "error":
                             had_error = True
                             await websocket.send_json(event)
+                            await websocket.send_json({"type": "stream_end", "content": full_content or "", "conversation_id": str(resolved_conv_id)})
                             break
 
                 except Exception as orch_exc:
                     # Fix 6.13 (M-4): Hide exception detail from client; log server-side
                     logger.exception("Orchestrator stream error for user '%s'", user_id)
                     sentry_sdk.capture_exception(orch_exc)
-                    await websocket.send_json({"type": "error", "content": "An error occurred processing your message."})
+                    await websocket.send_json({"type": "error", "content": "Something went wrong. Please try again."})
+                    await websocket.send_json({"type": "stream_end", "content": full_content or "", "conversation_id": str(resolved_conv_id)})
                     continue
 
                 if had_error:
@@ -616,19 +689,24 @@ async def websocket_chat(
                     # Fix 6.16 (L-2): updated_at has onupdate=func.now() in the model;
                     # no manual assignment needed — SQLAlchemy handles it automatically.
 
-                    # Fix 6.9 (H-5): Title generation with error isolation; max_tokens=50 is
-                    # enforced inside generate_title() and cannot affect the main flow.
+                    # Issue B: Non-blocking title generation.
+                    # Set a fallback title immediately, then kick off an async
+                    # background task to generate a better one with the LLM.
                     if conv_row.title is None and message_text:
+                        conv_row.title = message_text[:60] + ("…" if len(message_text) > 60 else "")
                         try:
-                            title_orchestrator = Orchestrator(
-                                mcp_client=mcp_client,
-                                memory_store=memory_store,
-                                llm_client=llm_client,
+                            asyncio.create_task(
+                                _generate_and_save_title(
+                                    db_url=settings.database_url,
+                                    conversation_id=str(resolved_conv_id),
+                                    message_text=message_text,
+                                    mcp_client=mcp_client,
+                                    memory_store=memory_store,
+                                    llm_client=llm_client,
+                                )
                             )
-                            conv_row.title = await title_orchestrator.generate_title(message_text)
                         except Exception:
-                            logger.warning("Title generation failed for conv %s; using truncated message", resolved_conv_id)
-                            conv_row.title = message_text[:60] + ("…" if len(message_text) > 60 else "")
+                            pass  # Fallback title already set above
 
                 await db.commit()
                 await db.refresh(assistant_msg)
