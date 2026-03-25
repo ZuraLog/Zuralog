@@ -283,3 +283,43 @@ class MetricDetailResponse(BaseModel):
     series: MetricSeriesItem
     category: str
     ai_insight: str | None = None
+
+
+# -- Trends Tab schemas -------------------------------------------------------
+
+class ChartSeriesPointSchema(BaseModel):
+    date: str
+    value: float
+
+class CorrelationHighlightSchema(BaseModel):
+    id: str
+    metric_a: str
+    metric_b: str
+    coefficient: float
+    direction: str = Field(..., pattern="^(positive|negative|neutral)$")
+    headline: str
+    body: str
+    category_color_hex: str = "#CFE1B9"
+    category: str = Field(
+        default="activity",
+        pattern="^(activity|sleep|heart|nutrition|body|wellness)$",
+    )
+    discovered_at: str = ""
+
+class TrendsHomeResponse(BaseModel):
+    correlation_highlights: list[CorrelationHighlightSchema] = []
+    time_periods: list = []
+    has_enough_data: bool = False
+    pattern_count: int = 0
+    suggestion_cards: list = []
+
+class PatternExpandResponse(BaseModel):
+    id: str
+    series_a: list[ChartSeriesPointSchema] = []
+    series_b: list[ChartSeriesPointSchema] = []
+    series_a_label: str = ""
+    series_b_label: str = ""
+    ai_explanation: str = ""
+    data_sources: list[str] = []
+    data_days: int = 0
+    time_range: str = "30d"
