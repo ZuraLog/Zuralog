@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
@@ -80,28 +81,52 @@ class _ProgressHomeScreenState extends ConsumerState<ProgressHomeScreen> {
         backgroundColor: colors.cardBackground,
         onRefresh: _onRefresh,
         child: asyncData.when(
-          loading: () => const ProgressSkeletonLoader(),
-          error: (error, _) => ZErrorState(
-            message: 'Something went wrong. Please try again.',
-            onRetry: () => ref.invalidate(progressHomeProvider),
+          loading: () => CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: const [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: ProgressSkeletonLoader(),
+              ),
+            ],
+          ),
+          error: (error, _) => CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: ZErrorState(
+                  message: 'Something went wrong. Please try again.',
+                  onRetry: () => ref.invalidate(progressHomeProvider),
+                ),
+              ),
+            ],
           ),
           data: (data) {
             final isEmpty = data.goals.isEmpty && data.streaks.isEmpty;
 
             if (isEmpty) {
-              return ZEmptyState(
-                icon: Icons.flag_rounded,
-                title: 'Start your journey',
-                message: "Set a goal and I'll track your streaks and progress.",
-                actionLabel: 'Set First Goal',
-                onAction: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => const GoalCreateEditSheet(),
-                  );
-                },
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: ZEmptyState(
+                      icon: Icons.flag_rounded,
+                      title: 'Start your journey',
+                      message: "Set a goal and I'll track your streaks and progress.",
+                      actionLabel: 'Set First Goal',
+                      onAction: () {
+                        showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const GoalCreateEditSheet(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               );
             }
 
@@ -201,8 +226,10 @@ class _ContentView extends ConsumerWidget {
                 _SectionHeader(
                   title: 'Next Achievement',
                   trailingLabel: 'Gallery',
-                  onTrailingTap: () =>
-                      context.push(RouteNames.achievementsPath),
+                  onTrailingTap: () {
+                    ref.read(hapticServiceProvider).light();
+                    context.push(RouteNames.achievementsPath);
+                  },
                 ),
                 NextAchievementCard(
                   achievement: data.nextAchievement!,
@@ -225,7 +252,10 @@ class _ContentView extends ConsumerWidget {
               _SectionHeader(
                 title: 'Journal',
                 trailingLabel: 'History',
-                onTrailingTap: () => context.push(RouteNames.journalPath),
+                onTrailingTap: () {
+                  ref.read(hapticServiceProvider).light();
+                  context.push(RouteNames.journalPath);
+                },
               ),
               JournalPromptCta(
                 onTap: () => context.push(RouteNames.journalPath),
@@ -241,7 +271,7 @@ class _ContentView extends ConsumerWidget {
 
 // ── _SectionHeader ────────────────────────────────────────────────────────────
 
-class _SectionHeader extends ConsumerWidget {
+class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
     this.trailingLabel,
@@ -253,7 +283,7 @@ class _SectionHeader extends ConsumerWidget {
   final VoidCallback? onTrailingTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(
         bottom: AppDimens.spaceSm,
@@ -269,10 +299,7 @@ class _SectionHeader extends ConsumerWidget {
           const Spacer(),
           if (trailingLabel != null && onTrailingTap != null)
             GestureDetector(
-              onTap: () {
-                ref.read(hapticServiceProvider).light();
-                onTrailingTap!();
-              },
+              onTap: onTrailingTap,
               child: Text(
                 trailingLabel!,
                 style: AppTextStyles.bodyMedium.copyWith(
@@ -298,9 +325,12 @@ class _GoalsSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: 'Long-Term Goals',
+          title: 'Goals',
           trailingLabel: 'Manage',
-          onTrailingTap: () => context.push(RouteNames.goalsPath),
+          onTrailingTap: () {
+            ref.read(hapticServiceProvider).light();
+            context.push(RouteNames.goalsPath);
+          },
         ),
         ...goals.asMap().entries.map((entry) => Padding(
           padding: EdgeInsets.only(
@@ -350,11 +380,15 @@ class _AllStreaksRow extends StatelessWidget {
       );
       items.add(
         Expanded(
-          child: StreakTypeTile(
-            emoji: emoji,
-            count: streak.currentCount,
-            label: label,
-            isHot: streak.currentCount > 0,
+          child: Semantics(
+            label: '$label streak: ${streak.currentCount} days',
+            excludeSemantics: true,
+            child: StreakTypeTile(
+              emoji: emoji,
+              count: streak.currentCount,
+              label: label,
+              isHot: streak.currentCount > 0,
+            ),
           ),
         ),
       );
@@ -385,6 +419,7 @@ class _MilestoneCelebrationCardState
   late final AnimationController _pulseCtrl;
   late final Animation<double> _scaleAnim;
   bool _hapticFired = false;
+  bool _dismissed = false;
 
   @override
   void initState() {
@@ -398,6 +433,12 @@ class _MilestoneCelebrationCardState
     _scaleAnim = Tween<double>(begin: 1.0, end: 1.015).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
+
+    SharedPreferences.getInstance().then((prefs) {
+      if (prefs.getBool('last_seen_milestone_${widget.days}') == true) {
+        if (mounted) setState(() => _dismissed = true);
+      }
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -415,13 +456,32 @@ class _MilestoneCelebrationCardState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) {
+      _pulseCtrl.stop();
+    } else if (!_pulseCtrl.isAnimating && !_dismissed) {
+      _pulseCtrl.repeat(reverse: true);
+    }
+  }
+
+  @override
   void dispose() {
     _pulseCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _dismiss() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('last_seen_milestone_${widget.days}', true);
+    if (mounted) setState(() => _dismissed = true);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimens.spaceMd),
       child: ScaleTransition(
@@ -479,6 +539,18 @@ class _MilestoneCelebrationCardState
                         ),
                       ),
                     ],
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: _dismiss,
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: AppColors.progressTextMuted,
+                    ),
                   ),
                 ),
               ],

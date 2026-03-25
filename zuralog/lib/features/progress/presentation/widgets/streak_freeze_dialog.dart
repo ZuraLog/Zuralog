@@ -11,6 +11,18 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 
+SnackBar _styledSnackBar(String message) {
+  return SnackBar(
+    content: Text(message),
+    backgroundColor: AppColors.progressSurfaceRaised,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(16)),
+    ),
+    behavior: SnackBarBehavior.floating,
+    margin: const EdgeInsets.all(20),
+  );
+}
+
 Future<void> showStreakFreezeDialog(
   BuildContext context,
   WidgetRef ref,
@@ -20,13 +32,13 @@ Future<void> showStreakFreezeDialog(
 
   if (freezesLeft <= 0) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("You've used all your streak freezes.")),
+      _styledSnackBar("You've used all your streak freezes."),
     );
     return;
   }
   if (streak.isFrozen) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Streak is already frozen.')),
+      _styledSnackBar('Streak is already frozen.'),
     );
     return;
   }
@@ -86,17 +98,13 @@ Future<void> showStreakFreezeDialog(
     ref.invalidate(progressHomeProvider);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Streak freeze applied! Your streak is protected.'),
-        ),
+        _styledSnackBar('Streak freeze applied! Your streak is protected.'),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to apply freeze. Please try again.'),
-        ),
+        _styledSnackBar('Failed to apply freeze. Please try again.'),
       );
     }
   }

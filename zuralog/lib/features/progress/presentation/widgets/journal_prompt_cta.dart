@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/progress/presentation/widgets/pressable_card.dart';
 
 class JournalPromptCta extends StatelessWidget {
   const JournalPromptCta({super.key, required this.onTap});
@@ -21,30 +22,31 @@ class JournalPromptCta extends StatelessWidget {
     final week = DateTime.now().weekOfYear;
     final prompt = _prompts[week % _prompts.length];
 
-    return CustomPaint(
-      painter: _DashedBorderPainter(
-        color: AppColors.progressBorderStrong,
-        radius: AppDimens.radiusCard.toDouble(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceMd),
-        child: Row(
-          children: [
-            const Text('✍️', style: TextStyle(fontSize: 22)),
-            const SizedBox(width: AppDimens.spaceSm),
-            Expanded(
-              child: Text(
-                '"$prompt"',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.progressTextSecondary,
-                  fontStyle: FontStyle.italic,
+    return PressableCard(
+      onTap: onTap,
+      borderRadius: AppDimens.radiusCard,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(
+          color: AppColors.progressBorderStrong,
+          radius: AppDimens.radiusCard.toDouble(),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          child: Row(
+            children: [
+              const Text('✍️', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: AppDimens.spaceSm),
+              Expanded(
+                child: Text(
+                  '"$prompt"',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.progressTextSecondary,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppDimens.spaceSm),
-            GestureDetector(
-              onTap: onTap,
-              child: Container(
+              const SizedBox(width: AppDimens.spaceSm),
+              Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.progressSurfaceRaised,
@@ -59,8 +61,8 @@ class JournalPromptCta extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

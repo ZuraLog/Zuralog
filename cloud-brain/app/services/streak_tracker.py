@@ -151,6 +151,7 @@ class StreakTracker:
             streak.current_count = 1
 
         streak.last_activity_date = date_str
+        streak.is_frozen = False
 
         if streak.current_count > streak.longest_count:
             streak.longest_count = streak.current_count
@@ -228,6 +229,7 @@ class StreakTracker:
 
         streak.freeze_count -= 1
         streak.freeze_used_this_week = True
+        streak.is_frozen = True
 
         # Extend last_activity_date by 1 day to bridge the gap so that the
         # next record_activity call sees only a 1-day delta.

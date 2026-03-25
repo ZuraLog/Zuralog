@@ -14,7 +14,7 @@ class StreakWeekCalendarRow extends StatelessWidget {
   final List<bool> hits;
   final int todayIndex;
 
-  static const _labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  static const _labels = ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'];
 
   @override
   Widget build(BuildContext context) {

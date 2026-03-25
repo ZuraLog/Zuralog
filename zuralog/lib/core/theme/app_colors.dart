@@ -1,7 +1,7 @@
 /// Zuralog Design System — Color Tokens.
 ///
 /// All hex values are sourced from the View Design Document v1.1
-/// (docs/plans/frontend/view-design.md, Feb 18, 2026).
+/// (docs/design.md v4.0).
 ///
 /// Usage: Never reference raw hex values in widgets.
 /// Always use a semantic token from [AppColors].
@@ -69,7 +69,7 @@ abstract final class AppColors {
   static const Color backgroundLight = Color(0xFFFAFAF5);
 
   /// Main scaffold background — dark mode (Brand Dark Charcoal — matches website dark palette).
-  static const Color backgroundDark = Color(0xFF2D2D2D);
+  static const Color backgroundDark = Color(0xFF141E18);
 
   // ── Surfaces ─────────────────────────────────────────────────────────────
 
@@ -77,19 +77,19 @@ abstract final class AppColors {
   static const Color surfaceLight = Color(0xFFF2F2F7);
 
   /// Elevated surfaces (colorScheme.surface) — dark mode.
-  static const Color surfaceDark = Color(0xFF3A3A3C);
+  static const Color surfaceDark = Color(0xFF1E2E24);
 
   /// Standard card background — light mode (white on white-scaffold).
   static const Color cardBackgroundLight = Color(0xFFFFFFFF);
 
   /// Standard card background — dark mode.
-  static const Color cardBackgroundDark = Color(0xFF383838);
+  static const Color cardBackgroundDark = Color(0xFF1E2E24);
 
   /// Elevated card / modal surface — light mode.
   static const Color elevatedSurfaceLight = Color(0xFFFFFFFF);
 
   /// Elevated card / modal surface — dark mode.
-  static const Color elevatedSurfaceDark = Color(0xFF444444);
+  static const Color elevatedSurfaceDark = Color(0xFF253A2C);
 
   /// Input field background — light mode.
   static const Color inputBackgroundLight = Color(0xFFF2F2F7);
@@ -306,4 +306,17 @@ class AppColorsOf {
 
   // ── Convenience ────────────────────────────────────────────────────────
   bool get isDark => _isDark;
+
+  // ── Progress ──────────────────────────────────────────────────────────
+  // TODO(light-mode): add light variant values for progress tokens.
+  Color get progressCanvas => AppColors.progressCanvas;
+  Color get progressSurface => AppColors.progressSurface;
+  Color get progressSurfaceRaised => AppColors.progressSurfaceRaised;
+  Color get progressTextPrimary => AppColors.progressTextPrimary;
+  Color get progressTextSecondary => AppColors.progressTextSecondary;
+  Color get progressTextMuted => AppColors.progressTextMuted;
+  Color get progressBorderDefault => AppColors.progressBorderDefault;
+  Color get progressBorderStrong => AppColors.progressBorderStrong;
+  Color get progressSage => AppColors.progressSage;
+  Color get progressStreakWarm => AppColors.progressStreakWarm;
 }

@@ -26,6 +26,9 @@ class StreakFlameHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRecord = currentCount > 0 && currentCount >= longestCount;
+    final clampedTodayIndex = todayIndex.clamp(0, 6);
+    final todayDone = clampedTodayIndex < weekHits.length && weekHits[clampedTodayIndex];
+
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceLg),
       decoration: BoxDecoration(
@@ -40,8 +43,8 @@ class StreakFlameHero extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 72,
-                height: 72,
+                width: AppDimens.iconContainerLg,
+                height: AppDimens.iconContainerLg,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
@@ -63,12 +66,15 @@ class StreakFlameHero extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    PatternFill(
-                      child: Text(
-                        '$currentCount',
-                        style: AppTextStyles.displayLarge.copyWith(
-                          color: Colors.white,
-                          height: 1.0,
+                    Semantics(
+                      label: '$currentCount day streak',
+                      child: PatternFill(
+                        child: Text(
+                          '$currentCount',
+                          style: AppTextStyles.displayLarge.copyWith(
+                            color: Colors.white,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
@@ -104,6 +110,14 @@ class StreakFlameHero extends StatelessWidget {
           ),
           const SizedBox(height: AppDimens.spaceMd),
           StreakWeekCalendarRow(hits: weekHits, todayIndex: todayIndex),
+          const SizedBox(height: 4),
+          Text(
+            todayDone ? 'Today: done' : 'Today: pending',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: todayDone ? AppColors.progressSage : AppColors.progressTextMuted,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );

@@ -8,6 +8,7 @@
 /// that exercises every Progress-tab widget path.
 library;
 
+import 'package:intl/intl.dart';
 import 'package:zuralog/features/progress/data/progress_repository.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
 
@@ -54,7 +55,7 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         title: 'Streak 14',
         description: 'Keep going to unlock this achievement',
         category: AchievementCategory.consistency,
-        iconName: '🔥',
+        iconName: 'flame',
         unlockedAt: null,
         progressCurrent: 7,
         progressTotal: 14,
@@ -333,8 +334,11 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
   WoWSummary _mockWow() {
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final prevWeekStart = weekStart.subtract(const Duration(days: 7));
+    final prevWeekEnd = weekStart.subtract(const Duration(days: 1));
+    final fmt = DateFormat('MMM');
     final label =
-        'Feb ${weekStart.subtract(const Duration(days: 7)).day} – Feb ${weekStart.subtract(const Duration(days: 1)).day}';
+        '${fmt.format(prevWeekStart)} ${prevWeekStart.day} – ${fmt.format(prevWeekEnd)} ${prevWeekEnd.day}';
     return WoWSummary(
       weekLabel: label,
       metrics: const [

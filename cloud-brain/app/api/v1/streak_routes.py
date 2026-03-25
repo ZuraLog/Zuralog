@@ -11,13 +11,15 @@ Streaks are tracked per type: ``engagement``, ``steps``, ``workouts``, ``checkin
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
 from app.database import get_db
+from app.limiter import limiter
 from app.models.user_streak import UserStreak
+from app.services.streak_service import apply_streak_freeze
 from app.services.streak_tracker import StreakTracker, _VALID_STREAK_TYPES
 
 logger = logging.getLogger(__name__)
@@ -62,11 +64,13 @@ class FreezeResponse(BaseModel):
         success: Always ``True`` when the freeze was applied.
         streak_type: The streak type the freeze was applied to.
         message: Human-readable confirmation message.
+        freeze_tokens_remaining: Tokens remaining after this freeze.
     """
 
     success: bool
     streak_type: str
     message: str
+    freeze_tokens_remaining: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -135,7 +139,9 @@ async def list_streaks(
     summary="Consume a freeze token to preserve a streak",
     response_model=FreezeResponse,
 )
+@limiter.limit("5/minute")
 async def use_streak_freeze(
+    request: Request,
     streak_type: str,
     user_id: str = Depends(get_authenticated_user_id),
     db: AsyncSession = Depends(get_db),
@@ -145,9 +151,11 @@ async def use_streak_freeze(
     A freeze can only be applied if:
     - ``streak_type`` is one of ``engagement``, ``steps``, ``workouts``, ``checkin``.
     - The user has at least 1 accumulated freeze token (``freeze_count > 0``).
+    - The streak is not already frozen (``is_frozen`` is False).
     - The free weekly freeze has not already been used this week.
 
     Args:
+        request: FastAPI request object (required by the rate limiter).
         streak_type: The streak type path parameter (must be a valid type).
         user_id: Authenticated user ID (injected by dependency).
         db: Async database session.
@@ -157,7 +165,8 @@ async def use_streak_freeze(
 
     Raises:
         HTTPException: 400 if ``streak_type`` is invalid.
-        HTTPException: 409 if no freeze tokens are available or weekly limit is reached.
+        HTTPException: 404 if no streak exists for this user + type.
+        HTTPException: 409 if ineligible (no tokens, already frozen, weekly limit).
     """
     if streak_type not in _VALID_STREAK_TYPES:
         raise HTTPException(
@@ -168,17 +177,20 @@ async def use_streak_freeze(
             ),
         )
 
-    tracker = StreakTracker()
-    applied = await tracker.use_freeze(user_id=user_id, streak_type=streak_type, db=db)
+    _conflict_messages = {
+        "no_tokens": "No freeze tokens remaining",
+        "already_frozen": "Streak is already frozen",
+        "weekly_limit_reached": "Weekly freeze limit reached",
+    }
 
-    if not applied:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "No freeze tokens available or the weekly freeze limit has already been used. "
-                "Earn freeze tokens by maintaining your streak."
-            ),
-        )
+    try:
+        result = await apply_streak_freeze(db=db, user_id=user_id, streak_type=streak_type)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "streak_not_found":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Streak not found")
+        detail = _conflict_messages.get(code, "Cannot apply freeze at this time.")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
     logger.info(
         "use_streak_freeze: freeze applied for user='%s' streak_type='%s'",
@@ -186,8 +198,4 @@ async def use_streak_freeze(
         streak_type,
     )
 
-    return {
-        "success": True,
-        "streak_type": streak_type,
-        "message": f"Freeze token applied to your '{streak_type}' streak. Keep it going!",
-    }
+    return result

@@ -13,7 +13,8 @@ they will be wired in a future phase when the analytics engine is live.
 """
 
 import logging
-from datetime import date as _date, timedelta as _timedelta
+from datetime import date as _date, datetime as _datetime, timedelta as _timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, Request
@@ -30,9 +31,26 @@ from app.models.user_streak import UserStreak
 logger = logging.getLogger(__name__)
 
 
-def _compute_14day_history(streak) -> list[bool]:
-    """Return list of 14 booleans: index 0 = 14 days ago, index 13 = today."""
-    today = _date.today()
+def _resolve_local_date(request: Request) -> _date:
+    """Resolve today's date in the user's local timezone."""
+    tz_header = request.headers.get("X-User-Timezone", "UTC")
+    try:
+        tz = ZoneInfo(tz_header)
+    except (ZoneInfoNotFoundError, KeyError):
+        tz = ZoneInfo("UTC")
+    return _datetime.now(ZoneInfo("UTC")).astimezone(tz).date()
+
+
+def _compute_14day_history(streak, local_date: _date) -> list[bool]:
+    """Return list of 14 booleans: index 0 = 14 days ago, index 13 = today.
+
+    # TODO(activity-log): This approximation infers daily active/inactive
+    # status from (last_activity_date, current_count). It is inaccurate
+    # for days where a freeze was active (they appear as "missed" even
+    # though the streak was preserved). The correct fix requires an
+    # activity_log table with one row per active day.
+    """
+    today = local_date
     if not streak.last_activity_date:
         return [False] * 14
     try:
@@ -48,9 +66,9 @@ def _compute_14day_history(streak) -> list[bool]:
     return result
 
 
-def _compute_week_hits(streak) -> list[bool]:
+def _compute_week_hits(streak, local_date: _date) -> list[bool]:
     """Return list of 7 booleans for current week Mon-Sun."""
-    today = _date.today()
+    today = local_date
     monday = today - _timedelta(days=today.weekday())
     if not streak.last_activity_date:
         return [False] * 7
@@ -70,7 +88,7 @@ def _compute_week_hits(streak) -> list[bool]:
     return result
 
 
-def _compute_trend_direction(goal) -> str:
+def _compute_trend_direction(goal, local_date: _date) -> str:
     if goal.is_completed:
         return "completed"
     target = float(goal.target_value or 0)
@@ -81,7 +99,7 @@ def _compute_trend_direction(goal) -> str:
         try:
             start_d = _date.fromisoformat(str(goal.start_date))
             end_d = _date.fromisoformat(str(goal.deadline))
-            today = _date.today()
+            today = local_date
             total_days = max((end_d - start_d).days, 1)
             elapsed_days = (today - start_d).days
             expected_fraction = elapsed_days / total_days
@@ -89,19 +107,20 @@ def _compute_trend_direction(goal) -> str:
             return "on_track" if actual_fraction >= expected_fraction else "behind"
         except (ValueError, TypeError):
             pass
-    return "on_track" if (current / target) >= 0.5 else "behind"
+    # No deadline — open-ended goal, never show as "behind"
+    return "on_track"
 
 
 _ACHIEVEMENT_ICONS = {
-    "streak_7": "🔥", "streak_14": "🔥", "streak_30": "⚡",
-    "streak_60": "💎", "streak_90": "💎", "streak_180": "👑",
-    "streak_365": "🏆", "first_sync": "🔗", "first_goal": "🎯",
-    "goals_5_complete": "🌟", "data_rich_30": "📊",
+    "streak_7": "flame", "streak_14": "flame", "streak_30": "zap",
+    "streak_60": "gem", "streak_90": "gem", "streak_180": "crown",
+    "streak_365": "trophy", "first_sync": "link", "first_goal": "flag",
+    "goals_5_complete": "star", "data_rich_30": "bar_chart",
 }
 
 
 def _achievement_icon(key: str) -> str:
-    return _ACHIEVEMENT_ICONS.get(key, "🏅")
+    return _ACHIEVEMENT_ICONS.get(key, "trophy")
 
 
 def _estimate_achievement_progress(key: str, streaks, goals) -> tuple[int, int]:
@@ -120,7 +139,7 @@ def _estimate_achievement_progress(key: str, streaks, goals) -> tuple[int, int]:
     return (0, 1)
 
 
-async def _set_sentry_module() -> None:
+def _set_sentry_module() -> None:
     """Tag the current Sentry scope with the progress module name."""
     sentry_sdk.set_tag("api.module", "progress")
 
@@ -135,6 +154,28 @@ router = APIRouter(
 # ---------------------------------------------------------------------------
 # Serialization helpers
 # ---------------------------------------------------------------------------
+
+
+def _goal_to_dict_with_date(goal: UserGoal, local_date: _date) -> dict:
+    """Serialise a UserGoal ORM instance using the provided local date for trend computation."""
+    type_str = goal.type.value if hasattr(goal.type, "value") else str(goal.type)  # type: ignore[union-attr]
+    period_str = goal.period.value if hasattr(goal.period, "value") else str(goal.period)  # type: ignore[union-attr]
+    return {
+        "id": str(goal.id),
+        "user_id": str(goal.user_id),
+        "type": type_str,
+        "period": period_str,
+        "title": goal.title,
+        "target_value": float(goal.target_value or 0.0),
+        "current_value": float(goal.current_value or 0.0),
+        "unit": goal.unit or "",
+        "start_date": str(goal.start_date) if goal.start_date else "",
+        "deadline": str(goal.deadline) if goal.deadline else None,
+        "is_completed": goal.is_completed,
+        "ai_commentary": goal.ai_commentary,
+        "progress_history": [],  # placeholder — analytics engine wired in a future phase
+        "trend_direction": _compute_trend_direction(goal, local_date),
+    }
 
 
 def _goal_to_dict(goal: UserGoal) -> dict:
@@ -170,7 +211,7 @@ def _goal_to_dict(goal: UserGoal) -> dict:
         "is_completed": goal.is_completed,
         "ai_commentary": goal.ai_commentary,
         "progress_history": [],  # placeholder — analytics engine wired in a future phase
-        "trend_direction": _compute_trend_direction(goal),
+        "trend_direction": _compute_trend_direction(goal, _date.today()),
     }
 
 
@@ -178,18 +219,13 @@ def _streak_to_dict(streak: UserStreak) -> dict:
     """Serialise a UserStreak ORM instance to the Flutter UserStreak.fromJson shape.
 
     Key field mappings:
-      - DB ``streak_type``           → Flutter ``type``
-      - DB ``last_activity_date``    → Flutter ``last_activity_date`` (None → "")
-      - DB ``freeze_used_this_week`` → Flutter ``is_frozen``
+      - DB ``streak_type``        → Flutter ``type``
+      - DB ``last_activity_date`` → Flutter ``last_activity_date`` (None → "")
+      - DB ``is_frozen``          → Flutter ``is_frozen``
 
-    NOTE: ``is_frozen`` is mapped from ``freeze_used_this_week`` as a
-    best-current-approximation. These are semantically different: the DB
-    field tracks whether the weekly free-freeze quota has been spent,
-    while Flutter's ``is_frozen`` should track whether a freeze is
-    *currently active* (i.e. protecting a streak right now). A dedicated
-    ``is_frozen`` column should be added to ``user_streaks`` when the
-    streak-freeze flow is fully implemented, at which point this mapping
-    should be updated to use that column instead.
+    Read directly from the ``is_frozen`` column. The freeze endpoint sets
+    this to True; it clears on the next successful activity or at the weekly
+    Monday reset.
 
     Args:
         streak: The ORM instance to serialise.
@@ -204,6 +240,7 @@ def _streak_to_dict(streak: UserStreak) -> dict:
         "last_activity_date": streak.last_activity_date or "",
         "is_frozen": streak.is_frozen,
         "freeze_count": streak.freeze_count,
+        "freeze_tokens_available": streak.freeze_count,
     }
 
 
@@ -237,6 +274,8 @@ async def progress_home(
     Returns:
         dict matching the ProgressHomeData model shape.
     """
+    local_date = _resolve_local_date(request)
+
     # Active goals, newest first, capped at 20 for the home summary.
     goals_result = await db.execute(
         select(UserGoal)
@@ -285,11 +324,15 @@ async def progress_home(
     )
 
     return {
-        "goals": [_goal_to_dict(g) for g in goals],
+        "goals": [_goal_to_dict_with_date(g, local_date) for g in goals],
         "streaks": [_streak_to_dict(s) for s in streaks],
-        "streak_history": {s.streak_type: _compute_14day_history(s) for s in streaks},
-        "week_hits": {s.streak_type: _compute_week_hits(s) for s in streaks},
+        "streak_history": {s.streak_type: _compute_14day_history(s, local_date) for s in streaks},
+        "week_hits": {s.streak_type: _compute_week_hits(s, local_date) for s in streaks},
         "next_achievement": next_ach,
+        "history_start_date": min(
+            (s.created_at.isoformat()[:10] for s in streaks),
+            default=None,
+        ) if streaks else None,
         "wow": {
             "week_label": "",
             "metrics": [],
