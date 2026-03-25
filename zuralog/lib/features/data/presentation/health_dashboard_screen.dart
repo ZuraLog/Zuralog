@@ -353,6 +353,14 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                   await prefs.setInt(
                       _kLastSyncKey, DateTime.now().millisecondsSinceEpoch);
                 }
+                if (!synced && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Sync failed. Pull down to try again.'),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
                 // Prime the server cache with fresh data before invalidating providers.
                 // Without this, ref.invalidate(dashboardProvider) would trigger a
                 // getDashboard() call that hits the server's stale in-memory cache.
