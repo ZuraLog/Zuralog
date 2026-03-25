@@ -512,8 +512,9 @@ class Orchestrator:
                                     result = await self.mcp_client.execute_tool(func_name, arguments, user_id)
                                 except Exception as tool_exc:
                                     sentry_sdk.capture_exception(tool_exc)
+                                    logger.exception("Tool error in '%s' for user '%s'", func_name, user_id)
                                     yield {"type": "tool_end", "tool_name": func_name}
-                                    yield {"type": "error", "content": f"Tool error: {tool_exc!s}"}
+                                    yield {"type": "error", "content": "Something went wrong. Please try again."}
                                     return
 
                             yield {"type": "tool_end", "tool_name": func_name}
@@ -555,4 +556,4 @@ class Orchestrator:
             except Exception as exc:
                 sentry_sdk.capture_exception(exc)
                 logger.exception("process_message_stream error for user '%s'", user_id)
-                yield {"type": "error", "content": f"Processing error: {exc!s}"}
+                yield {"type": "error", "content": "Something went wrong. Please try again."}

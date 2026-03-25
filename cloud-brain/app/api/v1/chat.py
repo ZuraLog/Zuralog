@@ -378,7 +378,7 @@ async def websocket_chat(
         conn_key = f"ws_connections:{user_id}"
         try:
             conn_count = await redis_client.incr(conn_key)
-            await redis_client.expire(conn_key, 3600)
+            await redis_client.expire(conn_key, 120)
             if conn_count > 3:
                 await redis_client.decr(conn_key)
                 await websocket.send_json({"type": "error", "content": "Too many active connections"})
@@ -476,9 +476,14 @@ async def websocket_chat(
             # S2: Periodic JWT re-validation (every 15 minutes or 50 messages)
             messages_since_revalidation += 1
             if time.time() - last_revalidation > 900 or messages_since_revalidation >= 50:
-                revalidated_user = await auth_service.get_user(token)
-                if not revalidated_user:
-                    await websocket.send_json({"type": "error", "content": "Session expired. Please reconnect."})
+                try:
+                    user_check = await auth_service.get_user(token)
+                    if not user_check:
+                        await websocket.send_json({"type": "error", "content": "Session expired."})
+                        await websocket.close(code=4003)
+                        return
+                except HTTPException:
+                    await websocket.send_json({"type": "error", "content": "Session expired."})
                     await websocket.close(code=4003)
                     return
                 last_revalidation = time.time()
@@ -499,6 +504,15 @@ async def websocket_chat(
             if raw_attachments and len(raw_attachments) > 3:
                 await websocket.send_json({"type": "error", "content": "Too many attachments (max 3)"})
                 continue
+
+            # Refresh the connection-counter TTL on each valid message so it
+            # stays alive for the duration of an active session.
+            if redis_client and user_id:
+                conn_key = f"ws_connections:{user_id}"
+                try:
+                    await redis_client.expire(conn_key, 120)
+                except Exception as redis_ttl_exc:
+                    logger.warning("Failed to refresh WebSocket connection TTL: %s", redis_ttl_exc)
 
             # Soft-deleted conversation guard (catch race conditions per message)
             async with async_session() as db:
@@ -559,6 +573,9 @@ async def websocket_chat(
                     },
                 )
 
+            # Sanitize user input before passing to the LLM or persisting to DB.
+            message_text = sanitize_for_llm(message_text)
+
             # ── Attachment processing ─────────────────────────────────────────
             augmented_text = message_text
             if raw_attachments:
@@ -598,9 +615,14 @@ async def websocket_chat(
 
                 # Fix 6.7 (H-3): Cap history to MAX_HISTORY_CHARS to bound token usage
                 total_chars = sum(len(m.get("content") or "") for m in history)
-                while total_chars > MAX_HISTORY_CHARS and len(history) > 1:
-                    removed = history.pop(0)  # Remove oldest message
-                    total_chars -= len(removed.get("content") or "")
+                if total_chars > MAX_HISTORY_CHARS:
+                    excess = total_chars - MAX_HISTORY_CHARS
+                    removed = 0
+                    trim_count = 0
+                    while trim_count < len(history) - 1 and removed < excess:
+                        removed += len(str(history[trim_count].get("content") or ""))
+                        trim_count += 1
+                    history = history[trim_count:]
 
                 db_persona, db_proactivity, db_response_length = await _load_user_preferences(db, user_id)
                 # Fix 6.6 (H-2): Validate client-supplied persona/proactivity against allowlist
@@ -1033,7 +1055,7 @@ async def update_conversation(
         )
 
     if body.title is not None:
-        conv.title = body.title
+        conv.title = sanitize_for_llm(body.title)[:200]
 
     if body.archived is not None:
         try:

@@ -309,17 +309,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.llm_client = LLMClient()
     else:
         app.state.llm_client = None
-    app.state.rate_limiter = RateLimiter()
+    # Shared Redis client for rate limiting, export throttling, and connection counting.
+    # Must be initialized before RateLimiter so the client can be shared.
+    if settings.redis_url:
+        app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+    else:
+        app.state.redis = None
+    app.state.rate_limiter = RateLimiter(redis_client=app.state.redis)
     app.state.cache_service = CacheService()
     app.state.analytics_service = AnalyticsService()
     # Reuse push_svc / device_write_svc created above for the MCP server.
     app.state.push_service = push_svc
     app.state.device_write_service = device_write_svc
-    # Shared Redis client for rate limiting, export throttling, and connection counting.
-    if settings.redis_url:
-        app.state.redis = aioredis.from_url(settings.redis_url, decode_responses=True)
-    else:
-        app.state.redis = None
 
     yield
 

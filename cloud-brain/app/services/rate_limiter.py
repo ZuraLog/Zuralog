@@ -56,9 +56,20 @@ class RateLimiter:
     to count requests. Each key auto-expires after 24 hours.
     """
 
-    def __init__(self) -> None:
-        """Initialize the rate limiter with a Redis connection."""
-        self._redis: redis.Redis = redis.from_url(settings.redis_url, decode_responses=True)
+    def __init__(self, redis_client: "redis.Redis | None" = None) -> None:
+        """Initialize the rate limiter with a Redis connection.
+
+        Args:
+            redis_client: An existing Redis client to reuse. If None, a new
+                connection is created from ``settings.redis_url`` and owned
+                by this instance (closed on :meth:`close`).
+        """
+        if redis_client is not None:
+            self._redis: redis.Redis = redis_client
+            self._owns_connection = False
+        else:
+            self._redis = redis.from_url(settings.redis_url, decode_responses=True)
+            self._owns_connection = True
 
     async def check_limit(self, user_id: str, tier: str = "free") -> RateLimitResult:
         """Check and increment the rate limit counter for a user.
@@ -161,5 +172,6 @@ class RateLimiter:
         }
 
     async def close(self) -> None:
-        """Close the Redis connection."""
-        await self._redis.aclose()
+        """Close the Redis connection (only if owned by this instance)."""
+        if self._owns_connection:
+            await self._redis.aclose()
