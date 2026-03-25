@@ -345,17 +345,29 @@ async def ingest_health_data(
     if cache_service:
         from app.services.cache_service import CacheService
 
-        date_str_val = body.daily_metrics[0].date if body.daily_metrics else None
-        keys_to_delete = [
-            CacheService.make_key("analytics.daily_summary", user_id, str(date_str_val) if date_str_val else ""),
-            CacheService.make_key("analytics.weekly_trends", user_id),
-            CacheService.make_key("analytics.correlation", user_id, "30"),
-            CacheService.make_key("analytics.goals", user_id),
-            CacheService.make_key("analytics.dashboard_insight", user_id),
-        ]
-        for key in keys_to_delete:
-            await cache_service.delete(key)
-        logger.info("Invalidated analytics cache for user %s after ingest", user_id)
+        # Collect all unique dates from the batch
+        all_dates: set[str] = set()
+        for dm in body.daily_metrics:
+            all_dates.add(dm.date)
+        for s in body.sleep:
+            all_dates.add(s.date)
+        for n in body.nutrition:
+            all_dates.add(n.date)
+        for w in body.weight:
+            all_dates.add(w.date)
+
+        # Invalidate per-date summary keys
+        for date_val in all_dates:
+            await cache_service.delete(
+                CacheService.make_key("analytics.daily_summary", user_id, date_val)
+            )
+        # Invalidate all other analytics keys for this user
+        await cache_service.invalidate_pattern(f"cache:analytics.*{user_id}*")
+        logger.info(
+            "Invalidated analytics cache for user %s (%d unique dates)",
+            user_id,
+            len(all_dates),
+        )
 
     # ---------------------------------------------------------------------- #
     # Post-ingest Celery task triggers                                        #
