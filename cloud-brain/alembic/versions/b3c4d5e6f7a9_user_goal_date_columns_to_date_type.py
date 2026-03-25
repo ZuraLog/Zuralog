@@ -25,6 +25,7 @@ def upgrade() -> None:
                 AND data_type NOT IN ('date')
             ) THEN
                 UPDATE user_goals SET start_date = NULL WHERE start_date = '' OR start_date IS NULL;
+                ALTER TABLE user_goals ALTER COLUMN start_date DROP DEFAULT;
                 ALTER TABLE user_goals
                     ALTER COLUMN start_date TYPE DATE USING start_date::date;
             END IF;
@@ -35,6 +36,7 @@ def upgrade() -> None:
                 AND data_type NOT IN ('date')
             ) THEN
                 UPDATE user_goals SET deadline = NULL WHERE deadline = '' OR deadline IS NULL;
+                ALTER TABLE user_goals ALTER COLUMN deadline DROP DEFAULT;
                 ALTER TABLE user_goals
                     ALTER COLUMN deadline TYPE DATE USING deadline::date;
             END IF;
