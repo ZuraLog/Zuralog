@@ -446,6 +446,11 @@ class _ChangeEmailSheetState extends ConsumerState<_ChangeEmailSheet> {
       setState(() => _error = 'Please enter a valid email address.');
       return;
     }
+    final currentEmail = ref.read(userEmailProvider);
+    if (email == currentEmail) {
+      setState(() => _error = 'This is already your current email address.');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -608,8 +613,13 @@ class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
         );
       }
     } on DioException catch (e) {
-      final detail = e.response?.data?['detail'] as String?;
-      setState(() => _error = detail ?? 'Something went wrong. Please try again.');
+      String message;
+      if (e.response?.statusCode == 401) {
+        message = 'Password change is not available for accounts signed in with Google or Apple.';
+      } else {
+        message = e.response?.data?['detail'] as String? ?? 'Something went wrong. Try again.';
+      }
+      setState(() => _error = message);
     } catch (_) {
       setState(() => _error = 'Something went wrong. Please try again.');
     } finally {
@@ -811,27 +821,19 @@ void _showDeleteAccountStep1Dialog(BuildContext context, WidgetRef ref) {
 void _showDeleteAccountStep2Dialog(BuildContext context, WidgetRef ref) {
   showDialog<void>(
     context: context,
-    builder: (dialogCtx) => _DeleteConfirmDialog(
-      outerContext: context,
-      ref: ref,
-    ),
+    builder: (dialogCtx) => const _DeleteConfirmDialog(),
   );
 }
 
-class _DeleteConfirmDialog extends StatefulWidget {
-  const _DeleteConfirmDialog({
-    required this.outerContext,
-    required this.ref,
-  });
-
-  final BuildContext outerContext;
-  final WidgetRef ref;
+class _DeleteConfirmDialog extends ConsumerStatefulWidget {
+  const _DeleteConfirmDialog();
 
   @override
-  State<_DeleteConfirmDialog> createState() => _DeleteConfirmDialogState();
+  ConsumerState<_DeleteConfirmDialog> createState() =>
+      _DeleteConfirmDialogState();
 }
 
-class _DeleteConfirmDialogState extends State<_DeleteConfirmDialog> {
+class _DeleteConfirmDialogState extends ConsumerState<_DeleteConfirmDialog> {
   final _controller = TextEditingController();
   bool _loading = false;
 
@@ -844,15 +846,15 @@ class _DeleteConfirmDialogState extends State<_DeleteConfirmDialog> {
   Future<void> _confirm() async {
     setState(() => _loading = true);
     try {
-      await widget.ref
+      await ref
           .read(userProfileProvider.notifier)
           .deleteAccount();
       // Wipe local state and route to welcome screen.
-      await widget.ref.read(authStateProvider.notifier).logout();
+      await ref.read(authStateProvider.notifier).logout();
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(widget.outerContext).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
               'Could not delete account. Please try again or contact support@zuralog.com.',
