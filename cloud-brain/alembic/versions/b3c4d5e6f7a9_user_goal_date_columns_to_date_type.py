@@ -14,11 +14,32 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Clean empty strings before type change
-    op.execute("UPDATE user_goals SET start_date = NULL WHERE start_date = '' OR start_date IS NULL")
-    op.execute("UPDATE user_goals SET deadline = NULL WHERE deadline = '' OR deadline IS NULL")
-    op.alter_column("user_goals", "start_date", type_=sa.Date(), postgresql_using="start_date::date")
-    op.alter_column("user_goals", "deadline", type_=sa.Date(), nullable=True, postgresql_using="deadline::date")
+    # Use raw SQL to check current column type before altering (idempotent)
+    op.execute("""
+        DO $$
+        BEGIN
+            -- Only alter start_date if it is not already a date type
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'user_goals' AND column_name = 'start_date'
+                AND data_type NOT IN ('date')
+            ) THEN
+                UPDATE user_goals SET start_date = NULL WHERE start_date = '' OR start_date IS NULL;
+                ALTER TABLE user_goals
+                    ALTER COLUMN start_date TYPE DATE USING start_date::date;
+            END IF;
+            -- Only alter deadline if it is not already a date type
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'user_goals' AND column_name = 'deadline'
+                AND data_type NOT IN ('date')
+            ) THEN
+                UPDATE user_goals SET deadline = NULL WHERE deadline = '' OR deadline IS NULL;
+                ALTER TABLE user_goals
+                    ALTER COLUMN deadline TYPE DATE USING deadline::date;
+            END IF;
+        END $$;
+    """)
 
 
 def downgrade() -> None:

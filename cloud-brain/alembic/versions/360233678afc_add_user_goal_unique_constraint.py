@@ -20,11 +20,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.create_unique_constraint(
-        "uq_user_goals_user_metric",
-        "user_goals",
-        ["user_id", "metric"],
-    )
+    op.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'uq_user_goals_user_metric'
+            ) THEN
+                ALTER TABLE user_goals
+                    ADD CONSTRAINT uq_user_goals_user_metric UNIQUE (user_id, metric);
+            END IF;
+        END $$;
+    """)
 
 
 def downgrade() -> None:
