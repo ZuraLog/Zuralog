@@ -87,7 +87,7 @@ async def ingest_health_data(
 ) -> HealthIngestResponse:
     """Receive batched health data from the Edge Agent and upsert into the DB.
 
-    Upserts all data types using source + date/original_id dedup constraints.
+    Upserts all data types using user_id + source + date/original_id dedup constraints.
     The device can call this endpoint multiple times safely — duplicate records
     are updated in place rather than inserted again.
 
@@ -144,6 +144,7 @@ async def ingest_health_data(
         )
         existing = await db.execute(
             select(UnifiedActivity).where(
+                UnifiedActivity.user_id == user_id,
                 UnifiedActivity.source == source,
                 UnifiedActivity.original_id == w.original_id,
             )

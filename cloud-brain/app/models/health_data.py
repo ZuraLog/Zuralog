@@ -67,7 +67,7 @@ class UnifiedActivity(Base):
     """
 
     __tablename__ = "unified_activities"
-    __table_args__ = (UniqueConstraint("source", "original_id", name="uq_activity_source_original"),)
+    __table_args__ = (UniqueConstraint("user_id", "source", "original_id", name="uq_activity_user_source_original"),)
 
     id: Mapped[str] = mapped_column(
         String,
