@@ -720,6 +720,7 @@ class _IntegrationContextBannerState
 
 class _ChatInputBar extends ConsumerStatefulWidget {
   const _ChatInputBar({
+    super.key,
     required this.controller,
     required this.focusNode,
     required this.onSend,

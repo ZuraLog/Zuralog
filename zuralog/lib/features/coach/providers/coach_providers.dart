@@ -724,4 +724,4 @@ class PendingMessage {
 }
 
 final pendingFirstMessageProvider =
-    StateProvider.autoDispose.family<PendingMessage?, String>((ref, tempId) => null);
+    StateProvider.family<PendingMessage?, String>((ref, tempId) => null);
