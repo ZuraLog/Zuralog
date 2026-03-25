@@ -132,6 +132,17 @@ class UserProfileResponse(BaseModel):
         from_attributes = True
 
 
+class ChangeEmailRequest(BaseModel):
+    """Request body for changing the user's email address.
+
+    Attributes:
+        new_email: The new email address. Supabase will send a
+            confirmation link here — the change is not applied until clicked.
+    """
+
+    new_email: EmailStr
+
+
 class UpdateProfileRequest(BaseModel):
     """Request body for a partial profile update.
 

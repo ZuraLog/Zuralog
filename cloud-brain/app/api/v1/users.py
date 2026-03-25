@@ -15,11 +15,12 @@ from collections.abc import Sequence
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.schemas import UpdateProfileRequest, UserProfileResponse
+from app.api.v1.schemas import ChangeEmailRequest, MessageResponse, UpdateProfileRequest, UserProfileResponse
 from app.database import get_db
 from app.models.user import User
 from app.services.auth_service import AuthService
-from app.api.deps import _get_auth_service, get_authenticated_user_id
+from app.api.deps import _get_auth_service, get_authenticated_user_id, get_current_user
+from app.limiter import limiter
 from app.services.cache_service import CacheService, cached
 
 logger = logging.getLogger(__name__)
@@ -235,6 +236,49 @@ async def update_profile(
         await cache.delete(CacheService.make_key("users.profile", user_id))
 
     return UserProfileResponse.model_validate(db_user)
+
+
+@router.post("/me/email", response_model=MessageResponse)
+@limiter.limit("3/hour")
+async def change_email(
+    request: Request,
+    body: ChangeEmailRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_service: AuthService = Depends(_get_auth_service),
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Request an email address change.
+
+    Sends a confirmation link to the new address. The change is not
+    applied until the user clicks the link.
+
+    Args:
+        request: The incoming FastAPI request (required by the rate limiter).
+        body: Request body containing the new email address.
+        credentials: Bearer token from the Authorization header.
+        auth_service: Injected auth service for the Supabase call.
+        db: Injected async database session.
+
+    Returns:
+        MessageResponse instructing the user to check their new inbox.
+
+    Raises:
+        HTTPException: 401 if the token is invalid.
+        HTTPException: 400 if Supabase rejects the email change request.
+        HTTPException: 429 if the rate limit is exceeded.
+    """
+    user = await get_current_user(credentials=credentials, auth_service=auth_service, db=db)
+    await auth_service.update_user_email(
+        access_token=credentials.credentials,
+        new_email=str(body.new_email),
+    )
+
+    # Invalidate cached profile so any email read from cache is refreshed
+    cache = getattr(request.app.state, "cache_service", None)
+    if cache:
+        await cache.delete(CacheService.make_key("users.profile", user.id))
+
+    return MessageResponse(message="Check your new inbox to confirm.")
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)

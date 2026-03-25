@@ -96,7 +96,7 @@ class AuthService:
         meaningful HTTPExceptions instead of unhandled 500s.
 
         Args:
-            method: HTTP method ("GET" or "POST").
+            method: HTTP method ("GET", "POST", or "PUT").
             path: Auth API path (e.g., "/token?grant_type=password").
             json: Optional JSON body.
             headers: Request headers.
@@ -118,6 +118,8 @@ class AuthService:
         try:
             if method.upper() == "GET":
                 return await self._client.get(url, headers=headers or {})
+            if method.upper() == "PUT":
+                return await self._client.put(url, headers=headers or {}, json=json)
             return await self._client.post(url, headers=headers or {}, json=json)
         except httpx.TimeoutException:
             logger.error("Supabase auth request timed out: %s %s", method, url)
@@ -386,6 +388,33 @@ class AuthService:
             )
 
         return response.json()
+
+    async def update_user_email(self, access_token: str, new_email: str) -> None:
+        """Request an email address change via Supabase Auth.
+
+        Supabase sends a confirmation link to `new_email`. The change is
+        not applied until the user clicks the link.
+
+        Args:
+            access_token: The user's current JWT (not the service key).
+            new_email: The new email address to request.
+
+        Raises:
+            HTTPException: If Supabase rejects the request.
+        """
+        response = await self._request(
+            "PUT",
+            "/user",
+            headers=self._headers(access_token=access_token),
+            json={"email": new_email},
+        )
+
+        if response.status_code not in (200, 204):
+            detail = self._extract_error(response)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Email update failed: {detail}",
+            )
 
     async def admin_delete_user(self, user_id: str) -> None:
         """Delete a user from Supabase Auth via admin API.
