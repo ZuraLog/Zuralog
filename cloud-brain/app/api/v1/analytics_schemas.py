@@ -287,9 +287,11 @@ class MetricDetailResponse(BaseModel):
 
 # -- Trends Tab schemas -------------------------------------------------------
 
+
 class ChartSeriesPointSchema(BaseModel):
     date: str
     value: float
+
 
 class CorrelationHighlightSchema(BaseModel):
     id: str
@@ -306,12 +308,14 @@ class CorrelationHighlightSchema(BaseModel):
     )
     discovered_at: str = ""
 
+
 class TrendsHomeResponse(BaseModel):
     correlation_highlights: list[CorrelationHighlightSchema] = []
-    time_periods: list = []
+    time_periods: list[dict] = []
     has_enough_data: bool = False
     pattern_count: int = 0
-    suggestion_cards: list = []
+    suggestion_cards: list[dict] = []
+
 
 class PatternExpandResponse(BaseModel):
     id: str

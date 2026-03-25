@@ -9,6 +9,8 @@ Currently returns empty scaffolds so the client renders its designed
 empty/onboarding state. Full computation will be wired in a future phase.
 """
 
+import re
+
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import text
@@ -194,7 +196,7 @@ async def pattern_expand(
     """Return chart series and AI explanation for a single pattern card."""
     if time_range not in {"7d", "30d", "90d"}:
         time_range = "30d"
-    if len(pattern_id) > 64:
+    if not re.match(r"^[a-zA-Z0-9_-]{1,64}$", pattern_id):
         raise HTTPException(status_code=400, detail="Invalid pattern_id")
 
     # TODO: Wire to real correlation data query
