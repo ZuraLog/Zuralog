@@ -800,7 +800,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
               } catch (e) {
                 if (mounted) {
                   messenger.showSnackBar(
-                    SnackBar(content: Text('Rename failed: $e')),
+                    SnackBar(content: Text('Rename failed. Please try again.')),
                   );
                 }
               }
@@ -827,7 +827,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('Archive failed: $e')));
+        messenger.showSnackBar(SnackBar(content: Text('Archive failed. Please try again.')));
       }
     }
   }
@@ -871,7 +871,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
               } catch (e) {
                 if (mounted) {
                   messenger
-                      .showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+                      .showSnackBar(SnackBar(content: Text('Delete failed. Please try again.')));
                 }
               }
             },
