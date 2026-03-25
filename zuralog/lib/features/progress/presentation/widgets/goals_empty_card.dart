@@ -1,3 +1,7 @@
+/// Inline empty-state card shown when the user has no active goals.
+///
+/// Uses a dashed border to visually distinguish it from data-filled cards
+/// and provides a clear call-to-action to create the first goal.
 library;
 
 import 'package:flutter/material.dart';
@@ -6,54 +10,13 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/presentation/widgets/pressable_card.dart';
 
-class JournalPromptCta extends StatelessWidget {
-  const JournalPromptCta({
-    super.key,
-    required this.onTap,
-    this.lastEntryDate,
-    this.journalledToday = false,
-  });
+class GoalsEmptyCard extends StatelessWidget {
+  const GoalsEmptyCard({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
-  /// ISO-8601 date string of the most recent journal entry (e.g. "2026-03-24").
-  /// Null when the user has never journalled.
-  final String? lastEntryDate;
-
-  /// True when the user has already logged a journal entry today.
-  /// When true this widget renders nothing (returns [SizedBox.shrink]).
-  final bool journalledToday;
-
-  static const _prompts = [
-    'How did this week feel to you?',
-    'What are you proud of this week?',
-    'What would you do differently?',
-    'What energized you most?',
-  ];
-
-  String _buildPrompt() {
-    if (lastEntryDate == null) return 'Start your journal — how are you feeling?';
-    final week = DateTime.now().weekOfYear;
-    return _prompts[week % _prompts.length];
-  }
-
-  String _buildSubLabel() {
-    if (lastEntryDate == null) return 'First entry';
-    final last = DateTime.tryParse(lastEntryDate!);
-    if (last == null) return 'Log today';
-    final diff = DateTime.now().difference(last).inDays;
-    if (diff == 0) return 'Log today';
-    if (diff == 1) return 'Yesterday';
-    return '$diff days ago';
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (journalledToday) return const SizedBox.shrink();
-
-    final prompt = _buildPrompt();
-    final subLabel = _buildSubLabel();
-
     return PressableCard(
       onTap: onTap,
       borderRadius: AppDimens.radiusCard,
@@ -63,26 +26,45 @@ class JournalPromptCta extends StatelessWidget {
           radius: AppDimens.radiusCard.toDouble(),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(AppDimens.spaceMd),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.spaceMd,
+            vertical: AppDimens.spaceLg,
+          ),
           child: Row(
             children: [
-              const Text('✍️', style: TextStyle(fontSize: 22)),
-              const SizedBox(width: AppDimens.spaceSm),
+              Container(
+                width: AppDimens.iconContainerSm,
+                height: AppDimens.iconContainerSm,
+                decoration: BoxDecoration(
+                  color: AppColors.progressSage.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                  border: Border.all(
+                    color: AppColors.progressSage.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.flag_rounded,
+                    size: AppDimens.iconSm,
+                    color: AppColors.progressSage,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppDimens.spaceMd),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '"$prompt"',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.progressTextSecondary,
-                        fontStyle: FontStyle.italic,
+                      'Set your first goal',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: AppColors.progressTextPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      subLabel,
-                      style: AppTextStyles.labelSmall.copyWith(
+                      'Track your progress toward what matters most.',
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.progressTextMuted,
                       ),
                     ),
@@ -91,16 +73,21 @@ class JournalPromptCta extends StatelessWidget {
               ),
               const SizedBox(width: AppDimens.spaceSm),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                  vertical: AppDimens.spaceXs + 2,
+                ),
                 decoration: BoxDecoration(
-                  color: AppColors.progressSurfaceRaised,
+                  color: AppColors.progressSage.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppDimens.radiusButton),
-                  border: Border.all(color: AppColors.progressBorderStrong),
+                  border: Border.all(
+                    color: AppColors.progressSage.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Text(
-                  'Write',
+                  'Add Goal',
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.progressTextSecondary,
+                    color: AppColors.progressSage,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -112,6 +99,8 @@ class JournalPromptCta extends StatelessWidget {
     );
   }
 }
+
+// ── _DashedBorderPainter ──────────────────────────────────────────────────────
 
 class _DashedBorderPainter extends CustomPainter {
   const _DashedBorderPainter({required this.color, required this.radius});
@@ -158,12 +147,4 @@ class _DashedBorderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
-}
-
-extension on DateTime {
-  int get weekOfYear {
-    final firstDayOfYear = DateTime(year, 1, 1);
-    final diff = difference(firstDayOfYear).inDays;
-    return ((diff + firstDayOfYear.weekday - 1) / 7).floor() + 1;
-  }
 }

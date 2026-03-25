@@ -15,6 +15,9 @@ class StreakFlameHero extends StatelessWidget {
     required this.weekHits,
     required this.todayIndex,
     this.isFrozen = false,
+    this.freezeCount = 0,
+    this.onFreezeTap,
+    this.nudgeMessage,
   });
 
   final int currentCount;
@@ -22,6 +25,12 @@ class StreakFlameHero extends StatelessWidget {
   final List<bool> weekHits;
   final int todayIndex;
   final bool isFrozen;
+  /// Number of streak-freeze tokens available. When > 0 a pill is shown.
+  final int freezeCount;
+  /// Called when the user taps the freeze pill. Typically opens the freeze dialog.
+  final VoidCallback? onFreezeTap;
+  /// Optional contextual message shown below the calendar row (e.g. for zero-data state).
+  final String? nudgeMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +127,49 @@ class StreakFlameHero extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          if (nudgeMessage != null) ...[
+            const SizedBox(height: AppDimens.spaceSm),
+            Text(
+              nudgeMessage!,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.progressTextMuted,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+          if (freezeCount > 0) ...[
+            const SizedBox(height: AppDimens.spaceMd),
+            GestureDetector(
+              onTap: onFreezeTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                  vertical: AppDimens.spaceXs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.categoryBody.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusButton),
+                  border: Border.all(
+                    color: AppColors.categoryBody.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🧊', style: TextStyle(fontSize: 13)),
+                    const SizedBox(width: AppDimens.spaceXs),
+                    Text(
+                      '$freezeCount freeze token${freezeCount == 1 ? '' : 's'} available',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.categoryBody,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
