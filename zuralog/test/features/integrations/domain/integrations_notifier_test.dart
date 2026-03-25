@@ -66,6 +66,8 @@ class _FakeApiClient implements ApiClient {
   @override
   Future<Response<dynamic>> delete(String path, {Map<String, dynamic>? queryParameters}) async =>
       throw UnimplementedError();
+  @override
+  Future<void> refreshToken() async => throw UnimplementedError();
 
   // ignore: unused_element
   static String friendlyError(DioException e) => '';

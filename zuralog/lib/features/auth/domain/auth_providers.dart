@@ -358,9 +358,6 @@ class AuthStateNotifier extends Notifier<AuthState> {
 
     // Trends tab.
     ref.invalidate(trendsHomeProvider);
-    ref.invalidate(availableMetricsProvider);
-    ref.invalidate(reportsProvider);
-    ref.invalidate(dataSourcesProvider);
 
     // Progress tab.
     ref.invalidate(progressHomeProvider);

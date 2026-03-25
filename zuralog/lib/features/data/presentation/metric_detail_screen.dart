@@ -228,7 +228,6 @@ class _MetricDetailBodyState extends ConsumerState<_MetricDetailBody>
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
     final series = widget.detail.series;
     final cat = widget.detail.category;
     final overrideInt = ref.watch(

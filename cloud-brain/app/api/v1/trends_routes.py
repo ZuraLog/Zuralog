@@ -10,11 +10,12 @@ empty/onboarding state. Full computation will be wired in a future phase.
 """
 
 import sentry_sdk
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
+from app.api.v1.analytics_schemas import PatternExpandResponse
 from app.database import get_db
 from app.limiter import limiter
 
@@ -53,6 +54,8 @@ async def trends_home(
         "correlation_highlights": [],
         "time_periods": [],
         "has_enough_data": False,
+        "pattern_count": 0,
+        "suggestion_cards": [],
     }
 
 
@@ -177,3 +180,26 @@ async def trends_correlation(
             correlation = None
 
     return {"data_points": data_points, "correlation": correlation, "metric_a": metric_a, "metric_b": metric_b}
+
+
+@limiter.limit("60/minute")
+@router.get("/pattern/{pattern_id}/expand", response_model=PatternExpandResponse)
+async def pattern_expand(
+    request: Request,
+    pattern_id: str,
+    time_range: str = "30d",
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_authenticated_user_id),
+) -> PatternExpandResponse:
+    """Return chart series and AI explanation for a single pattern card."""
+    if time_range not in {"7d", "30d", "90d"}:
+        time_range = "30d"
+    if len(pattern_id) > 64:
+        raise HTTPException(status_code=400, detail="Invalid pattern_id")
+
+    # TODO: Wire to real correlation data query
+    return PatternExpandResponse(
+        id=pattern_id,
+        ai_explanation="Not enough data yet to generate a detailed explanation. Keep logging and check back soon.",
+        time_range=time_range,
+    )

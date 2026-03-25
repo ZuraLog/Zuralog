@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zuralog/features/data/data/data_repository.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
@@ -10,6 +11,47 @@ import 'package:zuralog/features/data/domain/time_range.dart';
 import 'package:zuralog/features/data/providers/data_providers.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
+
+// ── Fakes ─────────────────────────────────────────────────────────────────────
+
+/// A [DataRepositoryInterface] fake that returns empty data for all calls.
+///
+/// Used to prevent [dashboardTilesProvider] from making real HTTP requests
+/// to [getCategoryDetail] in tests. Without this override the provider hangs
+/// waiting for network responses that never arrive in the test environment.
+class _FakeDataRepository implements DataRepositoryInterface {
+  @override
+  Future<DashboardData> getDashboard({bool forceRefresh = false}) async =>
+      const DashboardData(categories: [], visibleOrder: []);
+
+  @override
+  Future<CategoryDetailData> getCategoryDetail({
+    required String categoryId,
+    required String timeRange,
+  }) async =>
+      CategoryDetailData(
+        category:
+            HealthCategory.fromString(categoryId) ?? HealthCategory.activity,
+        metrics: [],
+        timeRange: timeRange,
+      );
+
+  @override
+  Future<MetricDetailData> getMetricDetail({
+    required String metricId,
+    required String timeRange,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> saveDashboardLayout(DashboardLayout layout) async {}
+
+  @override
+  Future<DashboardLayout?> getPersistedLayout() async => null;
+
+  @override
+  void invalidateAll() {}
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -44,8 +86,14 @@ DashboardData _fullDashboard() {
 }
 
 /// Creates a [ProviderContainer] with [dashboardProvider] overridden to return
-/// [data] without hitting the network, and [dailyGoalsProvider] overridden to
-/// return [goals] (default empty) so tests never hit the real API.
+/// [data] without hitting the network.
+///
+/// Also overrides:
+/// - [dailyGoalsProvider] — returns [goals] (default empty) so tests never hit the real API
+/// - [dataRepositoryProvider] — returns [_FakeDataRepository] so [dashboardTilesProvider]
+///   does not make real HTTP calls to [getCategoryDetail] for all 10 health categories
+/// - [debouncedTimeRangeProvider] — resolves immediately to [TimeRange.sevenDays]
+///   instead of waiting the real 300 ms debounce delay
 ProviderContainer _containerWithDashboard(
   DashboardData data, {
   List<DailyGoal> goals = const [],
@@ -54,6 +102,8 @@ ProviderContainer _containerWithDashboard(
     overrides: [
       dashboardProvider.overrideWith((ref) async => data),
       dailyGoalsProvider.overrideWith((ref) async => goals),
+      dataRepositoryProvider.overrideWith((ref) => _FakeDataRepository()),
+      debouncedTimeRangeProvider.overrideWith((ref) async => TimeRange.sevenDays),
     ],
   );
 }
