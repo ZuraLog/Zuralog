@@ -53,6 +53,7 @@ class StreakResponse(BaseModel):
     last_activity_date: str | None
     freeze_count: int
     freeze_used_this_week: bool
+    is_frozen: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -96,6 +97,7 @@ def _streak_to_response(streak: UserStreak) -> dict:
         "last_activity_date": streak.last_activity_date,
         "freeze_count": streak.freeze_count,
         "freeze_used_this_week": streak.freeze_used_this_week,
+        "is_frozen": streak.is_frozen,
     }
 
 
