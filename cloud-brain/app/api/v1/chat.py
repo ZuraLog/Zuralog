@@ -348,7 +348,7 @@ async def websocket_chat(
     # The Flutter client sends {"type":"auth","token":"..."} as its first message.
     try:
         raw_auth = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
-        if len(raw_auth) > 4096:
+        if len(raw_auth.encode("utf-8")) > 4096:
             await websocket.send_json({"type": "error", "content": "Auth payload too large"})
             await websocket.close(code=4001)
             return
@@ -371,7 +371,10 @@ async def websocket_chat(
     if user is None:
         return
 
-    user_id = user.get("id", "unknown")
+    user_id = user.get("id", "")
+    if not user_id or user_id == "unknown":
+        await websocket.close(code=4001)
+        return
 
     # Fix 6.8 (H-4): Track per-user WebSocket connection count
     if redis_client and user_id:
@@ -463,7 +466,7 @@ async def websocket_chat(
     try:
         while True:
             raw = await websocket.receive_text()
-            if len(raw) > 65536:
+            if len(raw.encode("utf-8")) > 65536:
                 await websocket.send_json({"type": "error", "content": "Message payload too large"})
                 continue
             try:
@@ -548,7 +551,7 @@ async def websocket_chat(
             if rate_limiter:
                 try:
                     async with async_session() as db:
-                        await check_rate_limit(user, rate_limiter, db)
+                        await check_rate_limit(user_id, rate_limiter, db)
                 except HTTPException as exc:
                     if exc.status_code == 429:
                         rate_headers = exc.headers or {}
@@ -675,7 +678,7 @@ async def websocket_chat(
                         elif etype == "error":
                             had_error = True
                             await websocket.send_json(event)
-                            await websocket.send_json({"type": "stream_end", "content": full_content or "", "conversation_id": str(resolved_conv_id)})
+                            await websocket.send_json({"type": "stream_end", "content": "", "conversation_id": str(resolved_conv_id)})
                             break
 
                 except Exception as orch_exc:
@@ -683,7 +686,7 @@ async def websocket_chat(
                     logger.exception("Orchestrator stream error for user '%s'", user_id)
                     sentry_sdk.capture_exception(orch_exc)
                     await websocket.send_json({"type": "error", "content": "Something went wrong. Please try again."})
-                    await websocket.send_json({"type": "stream_end", "content": full_content or "", "conversation_id": str(resolved_conv_id)})
+                    await websocket.send_json({"type": "stream_end", "content": "", "conversation_id": str(resolved_conv_id)})
                     continue
 
                 if had_error:
@@ -692,6 +695,7 @@ async def websocket_chat(
             # ── Persist assistant message ─────────────────────────────────────
             # Fix 6.4 (C-4): Skip persisting blank assistant messages
             if not full_content.strip():
+                await websocket.send_json({"type": "stream_end", "content": ""})
                 continue
 
             async with async_session() as db:

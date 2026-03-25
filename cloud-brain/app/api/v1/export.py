@@ -66,6 +66,7 @@ async def export_user_data(
             select(Message)
             .where(Message.conversation_id.in_(conv_ids))
             .order_by(Message.created_at.asc())
+            .limit(40000)
         )
         all_messages = msg_result.scalars().all()
 

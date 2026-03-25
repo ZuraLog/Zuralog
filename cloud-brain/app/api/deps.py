@@ -146,7 +146,7 @@ def require_tier(min_tier: str):
 
 
 async def check_rate_limit(
-    user: dict[str, Any],
+    user_id: str,
     limiter: RateLimiter,
     db: AsyncSession,
 ) -> None:
@@ -156,14 +156,19 @@ async def check_rate_limit(
     checks the Redis rate limiter with the appropriate tier.
 
     Args:
-        user: The authenticated user dict (must contain 'id').
+        user_id: The authenticated user's ID.
         limiter: The rate limiter service.
         db: The async database session.
 
     Raises:
+        HTTPException: 401 if user_id is missing or invalid.
         HTTPException: 429 if the daily limit is exceeded.
     """
-    user_id = user.get("id", "unknown")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
 
     result = await db.execute(select(User.subscription_tier).where(User.id == user_id))
     subscription_tier = result.scalar_one_or_none() or "free"

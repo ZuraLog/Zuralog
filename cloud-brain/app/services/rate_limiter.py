@@ -135,9 +135,11 @@ class RateLimiter:
         reset_seconds = 60 - int(time.time() % 60)
 
         try:
-            current = await self._redis.incr(redis_key)
-            if current == 1:
-                await self._redis.expire(redis_key, 60)
+            pipe = self._redis.pipeline(transaction=False)
+            pipe.incr(redis_key)
+            pipe.expire(redis_key, 60)
+            results = await pipe.execute()
+            current = results[0]
 
             return RateLimitResult(
                 allowed=current <= limit,
