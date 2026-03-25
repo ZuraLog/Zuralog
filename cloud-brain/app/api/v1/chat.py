@@ -547,6 +547,25 @@ async def websocket_chat(
             if is_regenerate:
                 logger.info("regenerate_request", extra={"user_id": user_id, "conv_id": resolved_conv_id})
 
+            # Fix 17 (MEDIUM): Validate regenerate flag server-side before burning LLM tokens.
+            # A regenerate is only valid when the last message in the conversation is an
+            # assistant message (i.e. there is something to regenerate from).
+            if is_regenerate:
+                async with async_session() as db:
+                    last_msg_result = await db.execute(
+                        select(Message)
+                        .where(Message.conversation_id == resolved_conv_id)
+                        .order_by(Message.created_at.desc())
+                        .limit(1)
+                    )
+                    last_msg = last_msg_result.scalar_one_or_none()
+                if last_msg is None or last_msg.role == "user":
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": "Nothing to regenerate: conversation must end with an assistant message.",
+                    })
+                    continue
+
             # Fix 6.5 (H-1): Per-minute burst limit check before daily rate limit
             if rate_limiter:
                 try:
@@ -694,7 +713,7 @@ async def websocket_chat(
                         elif etype == "error":
                             had_error = True
                             await websocket.send_json(event)
-                            await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id), "client_action": None})
+                            await websocket.send_json({"type": "stream_end", "content": "", "message_id": "", "conversation_id": str(resolved_conv_id), "client_action": None})
                             break
 
                 except Exception as orch_exc:
@@ -702,7 +721,7 @@ async def websocket_chat(
                     logger.exception("Orchestrator stream error for user '%s'", user_id)
                     sentry_sdk.capture_exception(orch_exc)
                     await websocket.send_json({"type": "error", "content": "Something went wrong. Please try again."})
-                    await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id), "client_action": None})
+                    await websocket.send_json({"type": "stream_end", "content": "", "message_id": "", "conversation_id": str(resolved_conv_id), "client_action": None})
                     continue
 
                 if had_error:
@@ -711,7 +730,7 @@ async def websocket_chat(
             # ── Persist assistant message ─────────────────────────────────────
             # Fix 6.4 (C-4): Skip persisting blank assistant messages
             if not full_content.strip():
-                await websocket.send_json({"type": "stream_end", "content": "", "message_id": None, "conversation_id": str(resolved_conv_id), "client_action": None})
+                await websocket.send_json({"type": "stream_end", "content": "", "message_id": "", "conversation_id": str(resolved_conv_id), "client_action": None})
                 continue
 
             async with async_session() as db:
@@ -929,7 +948,7 @@ async def list_conversations(
 
     output = []
     for conv, message_count, preview_raw in rows:
-        preview_snippet: str | None = preview_raw[:100] if preview_raw else None
+        preview_snippet: str | None = sanitize_for_llm(preview_raw[:100]) if preview_raw else None
         created = conv.created_at
         updated = conv.updated_at or conv.created_at
         output.append(
