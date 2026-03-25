@@ -134,7 +134,9 @@ class _ZWeightLogPanelState extends ConsumerState<ZWeightLogPanel> {
   }
 
   Future<void> _handleSave() async {
+    debugPrint('[WeightLog] 📤 Save tapped — value=$_value kg');
     await widget.onSave(_value);
+    debugPrint('[WeightLog] ✅ onSave callback returned');
   }
 
   String _formatDate(String? iso) {

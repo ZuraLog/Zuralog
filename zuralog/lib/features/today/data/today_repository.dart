@@ -15,6 +15,7 @@
 /// redundant requests on rapid tab switches.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
 import 'package:zuralog/core/network/api_client.dart';
@@ -337,6 +338,9 @@ class TodayRepository implements TodayRepositoryInterface {
     final recordedAtStr =
         '${recordedAt.toLocal().toIso8601String().split('.').first}$sign$hh:$mm';
 
+    debugPrint('[TodayRepo] submitIngest → POST /api/v1/ingest '
+        'metric_type=$metricType value=$value unit=$unit '
+        'recorded_at=$recordedAtStr');
     final resp = await _api.post('/api/v1/ingest', data: {
       'metric_type': metricType,
       'value': value,
@@ -346,6 +350,8 @@ class TodayRepository implements TodayRepositoryInterface {
       if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       if (metadata != null) 'metadata': metadata,
     });
+    debugPrint('[TodayRepo] submitIngest ← HTTP ${resp.statusCode} '
+        'body=${resp.data}');
     invalidateFeedCache();
     return IngestResult.fromJson(resp.data as Map<String, dynamic>);
   }
@@ -487,6 +493,7 @@ class TodayRepository implements TodayRepositoryInterface {
 
   @override
   Future<TodayLogSummary> getTodayLogSummary() async {
+    debugPrint('[TodayRepo] getTodayLogSummary → GET /api/v1/today/summary');
     final response = await _api.get('/api/v1/today/summary');
     final data = response.data as Map<String, dynamic>;
     final metrics = (data['metrics'] as List<dynamic>? ?? [])
@@ -496,6 +503,10 @@ class TodayRepository implements TodayRepositoryInterface {
     final latestValues = <String, dynamic>{
       for (final m in metrics) m['metric_type'] as String: m['value'],
     };
+    debugPrint('[TodayRepo] getTodayLogSummary ← '
+        'loggedTypes=$loggedTypes');
+    debugPrint('[TodayRepo] getTodayLogSummary latestValues='
+        '${latestValues.map((k, v) => MapEntry(k, '${v.runtimeType}($v)'))}');
     return TodayLogSummary(
       loggedTypes: loggedTypes,
       latestValues: latestValues,
@@ -707,6 +718,7 @@ class TodayRepository implements TodayRepositoryInterface {
 
   @override
   Future<void> logWeight({required double valueKg}) async {
+    debugPrint('[TodayRepo] logWeight → valueKg=$valueKg');
     await submitIngest(
       metricType: 'weight_kg',
       value: valueKg,
@@ -714,15 +726,20 @@ class TodayRepository implements TodayRepositoryInterface {
       source: 'manual',
       recordedAt: DateTime.now(),
     );
+    debugPrint('[TodayRepo] logWeight ✅ done');
   }
 
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
+    debugPrint('[TodayRepo] getLatestLogValues requested types=$types');
     if (types.isEmpty) return const {};
     final summary = await getTodayLogSummary();
-    return Map.fromEntries(
+    final result = Map.fromEntries(
       summary.latestValues.entries.where((e) => types.contains(e.key)),
     );
+    debugPrint('[TodayRepo] getLatestLogValues result='
+        '${result.map((k, v) => MapEntry(k, '${v.runtimeType}($v)'))}');
+    return result;
   }
 
   // ── Supplements List ───────────────────────────────────────────────────────

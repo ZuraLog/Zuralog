@@ -242,6 +242,12 @@ async def ingest_single(
     user_id: str = Depends(get_authenticated_user_id),
 ) -> SingleIngestResponse:
     """Log a single manual health event synchronously."""
+    logger.info(
+        "[ingest_single] user=%s metric_type=%s value=%s unit=%s "
+        "source=%s recorded_at=%s idempotency_key=%s",
+        user_id[:8], body.metric_type, body.value, body.unit,
+        body.source, body.recorded_at, body.idempotency_key,
+    )
     local_date = compute_local_date(body.recorded_at)
 
     # Idempotency check
@@ -254,6 +260,9 @@ async def ingest_single(
         )
         existing_event = existing.scalar_one_or_none()
         if existing_event:
+            logger.info(
+                "[ingest_single] idempotency hit — event_id=%s", existing_event.id
+            )
             # Return original event data — idempotent success
             summary = await db.execute(
                 select(DailySummary.value).where(
@@ -273,14 +282,22 @@ async def ingest_single(
     # Validate value range
     metric_def = await _get_metric_def(db, body.metric_type)
     if metric_def:
+        logger.info(
+            "[ingest_single] metric_def found — aggregation_fn=%s "
+            "min=%s max=%s unit=%s",
+            metric_def.aggregation_fn, metric_def.min_value,
+            metric_def.max_value, metric_def.unit,
+        )
         try:
             validate_metric_value(
                 body.metric_type, body.value,
                 metric_def.min_value, metric_def.max_value,
             )
         except ValueError as exc:
+            logger.warning("[ingest_single] validation failed: %s", exc)
             raise HTTPException(status_code=422, detail=str(exc))
     else:
+        logger.warning("[ingest_single] unknown metric_type=%s", body.metric_type)
         raise HTTPException(status_code=422, detail=f"Unknown metric type: '{body.metric_type}'")
 
     event = HealthEvent(
@@ -297,6 +314,7 @@ async def ingest_single(
     )
     db.add(event)
     await db.flush()   # get the id
+    logger.info("[ingest_single] event flushed — event_id=%s", event.id)
 
     # Synchronous aggregation
     daily_total = await _recompute_daily_summary(
@@ -304,6 +322,10 @@ async def ingest_single(
         body.metric_type, metric_def.unit, metric_def.aggregation_fn,
     )
     await db.commit()
+    logger.info(
+        "[ingest_single] ✅ committed — event_id=%s daily_total=%s",
+        event.id, daily_total,
+    )
 
     return SingleIngestResponse(
         event_id=str(event.id),
