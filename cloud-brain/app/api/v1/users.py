@@ -244,8 +244,8 @@ async def change_email(
     request: Request,
     body: ChangeEmailRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    user_id: str = Depends(get_authenticated_user_id),
     auth_service: AuthService = Depends(_get_auth_service),
-    db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
     """Request an email address change.
 
@@ -256,8 +256,8 @@ async def change_email(
         request: The incoming FastAPI request (required by the rate limiter).
         body: Request body containing the new email address.
         credentials: Bearer token from the Authorization header.
+        user_id: Authenticated user ID from JWT (injected by dependency).
         auth_service: Injected auth service for the Supabase call.
-        db: Injected async database session.
 
     Returns:
         MessageResponse instructing the user to check their new inbox.
@@ -267,7 +267,7 @@ async def change_email(
         HTTPException: 400 if Supabase rejects the email change request.
         HTTPException: 429 if the rate limit is exceeded.
     """
-    user = await get_current_user(credentials=credentials, auth_service=auth_service, db=db)
+    sentry_sdk.set_user({"id": user_id})
     await auth_service.update_user_email(
         access_token=credentials.credentials,
         new_email=str(body.new_email),
@@ -276,7 +276,7 @@ async def change_email(
     # Invalidate cached profile so any email read from cache is refreshed
     cache = getattr(request.app.state, "cache_service", None)
     if cache:
-        await cache.delete(CacheService.make_key("users.profile", user.id))
+        await cache.delete(CacheService.make_key("users.profile", user_id))
 
     return MessageResponse(message="Check your new inbox to confirm.")
 
