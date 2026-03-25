@@ -165,6 +165,16 @@ abstract final class AnalyticsEvents {
   static const String dataSourcesTapped = 'data_sources_tapped';
   /// Include `integration` (string).
   static const String dataSourceReconnectTapped = 'data_source_reconnect_tapped';
+  // -- Trends Tab -----------------------------------------------------------
+  /// Fired when any pattern card is tapped. Include: pattern_id, category,
+  /// strength ('strong'|'moderate'|'weak'), is_new (bool).
+  static const String trendsPatternTapped = 'trends_pattern_tapped';
+  /// Fired when a pattern card finishes expanding. Include: pattern_id, time_range.
+  static const String trendsPatternExpanded = 'trends_pattern_expanded';
+  /// Fired when the category filter chip changes. Include: category.
+  static const String trendsFilterChanged = 'trends_filter_changed';
+  /// Fired when the "Ask Coach" CTA inside an expanded card is tapped. Include: pattern_id.
+  static const String trendsCoachCtaTapped = 'trends_coach_cta_tapped';
 
   // ── Settings ─────────────────────────────────────────────────────────────────
   /// Include `section` (string).
