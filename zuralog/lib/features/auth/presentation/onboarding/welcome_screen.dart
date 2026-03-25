@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zuralog/core/di/providers.dart';
 import 'package:zuralog/core/router/route_names.dart';
@@ -433,12 +434,26 @@ class _LegalFooterState extends State<_LegalFooter> {
   void initState() {
     super.initState();
     _tosRecognizer = TapGestureRecognizer()
-      ..onTap = () {
-        // TODO(dev): Open Terms of Service URL via url_launcher.
+      ..onTap = () async {
+        try {
+          await launchUrl(
+            Uri.parse('https://zuralog.com/terms'),
+            mode: LaunchMode.externalApplication,
+          );
+        } catch (_) {
+          // Silently ignore — do not crash if the URL cannot be opened.
+        }
       };
     _privacyRecognizer = TapGestureRecognizer()
-      ..onTap = () {
-        // TODO(dev): Open Privacy Policy URL via url_launcher.
+      ..onTap = () async {
+        try {
+          await launchUrl(
+            Uri.parse('https://zuralog.com/privacy'),
+            mode: LaunchMode.externalApplication,
+          );
+        } catch (_) {
+          // Silently ignore — do not crash if the URL cannot be opened.
+        }
       };
   }
 

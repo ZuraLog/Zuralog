@@ -159,6 +159,29 @@ class AuthRepository {
     }
   }
 
+  /// Sends a password reset email to the given address.
+  ///
+  /// Calls `POST /api/v1/auth/reset-password` with the user's email.
+  /// The backend triggers Supabase GoTrue to send a reset link.
+  ///
+  /// Args:
+  ///   [email]: The email address to send the reset link to.
+  ///
+  /// Returns:
+  ///   [AuthSuccess] (with empty token fields) on success.
+  ///   [AuthFailure] with error message on failure.
+  Future<AuthResult> resetPassword(String email) async {
+    try {
+      await _apiClient.post(
+        '/api/v1/auth/reset-password',
+        data: {'email': email},
+      );
+      return const AuthSuccess(userId: '', accessToken: '', refreshToken: '');
+    } on DioException catch (e) {
+      return AuthFailure(message: _extractErrorMessage(e));
+    }
+  }
+
   /// Logs out the current user.
   ///
   /// Calls `POST /api/v1/auth/logout` to invalidate the server session,
