@@ -19,6 +19,7 @@ the client in real time.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import TYPE_CHECKING, Any, AsyncGenerator
@@ -556,6 +557,8 @@ class Orchestrator:
                     "client_action": None,
                 }
 
+            except asyncio.CancelledError:
+                raise
             except Exception as exc:
                 sentry_sdk.capture_exception(exc)
                 logger.exception("process_message_stream error for user '%s'", user_id)

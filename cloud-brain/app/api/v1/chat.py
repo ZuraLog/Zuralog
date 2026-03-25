@@ -569,7 +569,8 @@ async def websocket_chat(
             # Fix 6.5 (H-1): Per-minute burst limit check before daily rate limit
             if rate_limiter:
                 try:
-                    burst_result = await rate_limiter.check_burst_limit(user_id, tier=user_subscription_tier)
+                    normalized_tier = "premium" if user_subscription_tier and user_subscription_tier not in ("", "free") else "free"
+                    burst_result = await rate_limiter.check_burst_limit(user_id, tier=normalized_tier)
                     if not burst_result.allowed:
                         await websocket.send_json({
                             "type": "error",
@@ -627,11 +628,16 @@ async def websocket_chat(
             async with async_session() as db:
                 persisted_user_msg_id: str | None = None
                 if not is_regenerate:
+                    sanitized_attachments = []
+                    for att in (raw_attachments or []):
+                        if isinstance(att, dict) and "context_message" in att:
+                            att = {**att, "context_message": sanitize_for_llm(att["context_message"])}
+                        sanitized_attachments.append(att)
                     user_msg = Message(
                         conversation_id=resolved_conv_id,
                         role="user",
                         content=message_text,
-                        attachments=raw_attachments or None,
+                        attachments=sanitized_attachments or None,
                     )
                     db.add(user_msg)
                     await db.commit()

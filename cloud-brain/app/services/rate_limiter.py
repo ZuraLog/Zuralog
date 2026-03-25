@@ -19,6 +19,12 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+_INCR_EXPIRE_SCRIPT = """
+local current = redis.call('INCR', KEYS[1])
+redis.call('EXPIRE', KEYS[1], ARGV[1])
+return current
+"""
+
 TIER_LIMITS: dict[str, int] = {
     "free": 50,
     "premium": 500,
@@ -87,11 +93,7 @@ class RateLimiter:
         reset_seconds = 86400 - int(time.time() % 86400)
 
         try:
-            pipe = self._redis.pipeline(transaction=False)
-            pipe.incr(redis_key)
-            pipe.expire(redis_key, 86400)
-            results = await pipe.execute()
-            current = results[0]
+            current = await self._redis.eval(_INCR_EXPIRE_SCRIPT, 1, redis_key, 86400)
 
             allowed = current <= limit
             remaining = max(0, limit - current)
@@ -137,11 +139,7 @@ class RateLimiter:
         reset_seconds = 60 - int(time.time() % 60)
 
         try:
-            pipe = self._redis.pipeline(transaction=False)
-            pipe.incr(redis_key)
-            pipe.expire(redis_key, 60)
-            results = await pipe.execute()
-            current = results[0]
+            current = await self._redis.eval(_INCR_EXPIRE_SCRIPT, 1, redis_key, 60)
 
             return RateLimitResult(
                 allowed=current <= limit,
