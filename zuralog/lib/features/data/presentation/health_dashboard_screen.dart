@@ -476,6 +476,51 @@ class _HealthDashboardScreenState extends ConsumerState<HealthDashboardScreen>
                     ),
                   ),
 
+                // ── Network error banner ──────────────────────────────────
+                // Shown when the API call failed AND the user has at least one
+                // connected source (i.e. not all tiles show "noSource").
+                // When ALL tiles are noSource, the full empty-state below
+                // already handles the error message.
+                if (hasNetworkError && !allNoSource)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceMd,
+                        vertical: AppDimens.spaceXs,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(AppDimens.spaceSm),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusCard),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.cloud_off_rounded,
+                              size: 18,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
+                            ),
+                            const SizedBox(width: AppDimens.spaceSm),
+                            Expanded(
+                              child: Text(
+                                'Could not refresh data. Showing cached results.',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onErrorContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
                 // ── Onboarding empty state or Tile Grid ───────────────────
                 if (allNoSource && hasNetworkError)
                   SliverToBoxAdapter(
