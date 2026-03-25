@@ -19,6 +19,8 @@ import 'package:zuralog/features/trends/domain/trends_models.dart';
 /// [MockTrendsRepository] (debug).
 abstract interface class TrendsRepositoryInterface {
   Future<TrendsHomeData> getTrendsHome();
+  Future<PatternExpandData> fetchPatternExpand(String patternId,
+      {String timeRange = '30d'});
   void invalidateAll();
 }
 
@@ -65,6 +67,21 @@ class TrendsRepository implements TrendsRepositoryInterface {
         hasEnoughData: false,
       );
     }
+  }
+
+  // ── Pattern Expand ────────────────────────────────────────────────────────
+
+  /// Fetches chart data and AI explanation for a single pattern card.
+  @override
+  Future<PatternExpandData> fetchPatternExpand(
+    String patternId, {
+    String timeRange = '30d',
+  }) async {
+    final response = await _api.get(
+      '/api/v1/trends/pattern/$patternId/expand',
+      queryParameters: {'time_range': timeRange},
+    );
+    return PatternExpandData.fromJson(response.data as Map<String, dynamic>);
   }
 
   // ── Cache Invalidation ────────────────────────────────────────────────────

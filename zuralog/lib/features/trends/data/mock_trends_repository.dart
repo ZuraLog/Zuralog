@@ -165,6 +165,48 @@ class MockTrendsRepository implements TrendsRepositoryInterface {
     );
   }
 
+  // ── Pattern Expand ───────────────────────────────────────────────────────────
+
+  @override
+  Future<PatternExpandData> fetchPatternExpand(
+    String patternId, {
+    String timeRange = '30d',
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    return PatternExpandData(
+      id: patternId,
+      seriesALabel: 'Deep Sleep',
+      seriesBLabel: 'Morning HRV',
+      aiExplanation:
+          'On nights when you get more than 90 minutes of deep sleep, your '
+          'morning heart rate variability is consistently 15–20% higher. '
+          'This pattern has held across the last 30 days of data.',
+      dataSources: ['Apple Health', 'Fitbit'],
+      dataDays: 30,
+      timeRange: timeRange,
+      seriesA: List.generate(
+        7,
+        (i) => ChartSeriesPoint(
+          date: DateTime.now()
+              .subtract(Duration(days: 6 - i))
+              .toIso8601String()
+              .substring(0, 10),
+          value: 85.0 + (i * 2.5),
+        ),
+      ),
+      seriesB: List.generate(
+        7,
+        (i) => ChartSeriesPoint(
+          date: DateTime.now()
+              .subtract(Duration(days: 6 - i))
+              .toIso8601String()
+              .substring(0, 10),
+          value: 42.0 + (i * 1.8),
+        ),
+      ),
+    );
+  }
+
   // ── Cache Invalidation ────────────────────────────────────────────────────────
 
   @override

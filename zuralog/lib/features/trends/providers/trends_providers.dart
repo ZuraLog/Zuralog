@@ -5,6 +5,8 @@
 /// Provider inventory:
 /// - [trendsRepositoryProvider]         — singleton repository
 /// - [trendsHomeProvider]               — async aggregated Trends Home data
+/// - [selectedCategoryFilterProvider]   — active category filter slug
+/// - [patternExpandProvider]            — chart + AI data for a pattern card
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,4 +46,23 @@ final trendsHomeProvider = FutureProvider<TrendsHomeData>((ref) async {
       hasEnoughData: false,
     );
   }
+});
+
+// ── Category Filter ───────────────────────────────────────────────────────────
+
+/// Active category filter slug. The value `'all'` means no filter is applied
+/// and every pattern card is visible.
+final selectedCategoryFilterProvider = StateProvider<String>((ref) => 'all');
+
+// ── Pattern Expand ────────────────────────────────────────────────────────────
+
+/// Chart data and AI explanation for a single pattern card identified by its
+/// [patternId].
+///
+/// Not autoDisposed — the data stays alive after the card collapses so a
+/// second tap re-expands instantly without a loading spinner.
+final patternExpandProvider =
+    FutureProvider.family<PatternExpandData, String>((ref, patternId) {
+  final repo = ref.read(trendsRepositoryProvider);
+  return repo.fetchPatternExpand(patternId);
 });
