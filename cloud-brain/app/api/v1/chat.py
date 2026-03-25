@@ -381,7 +381,7 @@ async def websocket_chat(
         conn_key = f"ws_connections:{user_id}"
         try:
             conn_count = await redis_client.incr(conn_key)
-            await redis_client.expire(conn_key, 120)
+            await redis_client.expire(conn_key, 3600)
             if conn_count > 3:
                 await redis_client.decr(conn_key)
                 await websocket.send_json({"type": "error", "content": "Too many active connections"})
@@ -513,7 +513,7 @@ async def websocket_chat(
             if redis_client and user_id:
                 conn_key = f"ws_connections:{user_id}"
                 try:
-                    await redis_client.expire(conn_key, 120)
+                    await redis_client.expire(conn_key, 3600)
                 except Exception as redis_ttl_exc:
                     logger.warning("Failed to refresh WebSocket connection TTL: %s", redis_ttl_exc)
 
@@ -695,7 +695,7 @@ async def websocket_chat(
             # ── Persist assistant message ─────────────────────────────────────
             # Fix 6.4 (C-4): Skip persisting blank assistant messages
             if not full_content.strip():
-                await websocket.send_json({"type": "stream_end", "content": ""})
+                await websocket.send_json({"type": "stream_end", "content": "", "conversation_id": str(resolved_conv_id)})
                 continue
 
             async with async_session() as db:
@@ -752,7 +752,7 @@ async def websocket_chat(
             final_payload: dict[str, Any] = {
                 "type": "stream_end",
                 "content": full_content,
-                "message_id": assistant_msg_id,
+                "message_id": str(assistant_msg_id),
                 "conversation_id": resolved_conv_id,
             }
             if client_action is not None:

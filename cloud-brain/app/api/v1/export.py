@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_authenticated_user_id, get_db
 from app.limiter import limiter
@@ -62,20 +62,28 @@ async def export_user_data(
     if not conv_ids:
         messages_by_conv: dict = {}
     else:
+        row_num_col = func.row_number().over(
+            partition_by=Message.conversation_id,
+            order_by=Message.created_at.desc()
+        ).label("rn")
+
+        subq = (
+            select(Message.id, row_num_col)
+            .where(Message.conversation_id.in_(conv_ids))
+            .subquery()
+        )
+
         msg_result = await db.execute(
             select(Message)
-            .where(Message.conversation_id.in_(conv_ids))
+            .join(subq, Message.id == subq.c.id)
+            .where(subq.c.rn <= 200)
             .order_by(Message.created_at.asc())
-            .limit(40000)
         )
-        all_messages = msg_result.scalars().all()
+        messages = msg_result.scalars().all()
 
         messages_by_conv = defaultdict(list)
-        for m in all_messages:
+        for m in messages:
             messages_by_conv[str(m.conversation_id)].append(m)
-        # Trim each conversation to max 200 messages
-        for cid in messages_by_conv:
-            messages_by_conv[cid] = messages_by_conv[cid][-200:]
 
     conversations_data = []
     for c in conversations:
