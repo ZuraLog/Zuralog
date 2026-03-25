@@ -28,12 +28,38 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
   @override
   Future<ProgressHomeData> getProgressHome() async {
     await Future<void>.delayed(_delay);
+    final today = DateTime.now();
+    final weekday = today.weekday; // 1=Mon .. 7=Sun
     return ProgressHomeData(
       goals: _mockGoals(),
       streaks: _mockStreaks(),
       wow: _mockWow(),
       recentAchievements: _mockRecentAchievements(),
       milestoneStreakCount: 7,
+      streakHistory: {
+        'engagement': List.generate(14, (i) => i >= 7),
+        'steps': List.generate(14, (i) => i >= 9),
+        'workouts': List.generate(14, (i) => i == 9 || i == 11 || i == 13),
+        'checkin': List.generate(14, (i) => i >= 10),
+      },
+      weekHits: {
+        'engagement': List.generate(7, (i) => i < weekday),
+        'steps': List.generate(7, (i) => i < weekday && i != 1),
+        'workouts': List.generate(7, (i) => i == 0 || i == 2),
+        'checkin': List.generate(7, (i) => i < weekday),
+      },
+      nextAchievement: const Achievement(
+        id: 'ach_next_14',
+        key: 'streak_14',
+        title: 'Streak 14',
+        description: 'Keep going to unlock this achievement',
+        category: AchievementCategory.consistency,
+        iconName: '🔥',
+        unlockedAt: null,
+        progressCurrent: 7,
+        progressTotal: 14,
+        progressLabel: '7 of 14 days',
+      ),
     );
   }
 
@@ -229,6 +255,7 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         progressHistory: const [
           7200.0, 7800.0, 8100.0, 6900.0, 8500.0, 7600.0, 8432.0
         ],
+        trendDirection: 'on_track',
       ),
       Goal(
         id: 'goal_sleep',
@@ -244,6 +271,7 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         aiCommentary:
             "You're averaging 7h 22m. Try going to bed 40 minutes earlier.",
         progressHistory: const [6.5, 7.0, 7.2, 6.8, 7.5, 7.1, 7.4],
+        trendDirection: 'behind',
       ),
       Goal(
         id: 'goal_workouts',
@@ -259,6 +287,7 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         aiCommentary:
             "2 of 3 workouts done this week. One more session to hit your goal!",
         progressHistory: const [3.0, 2.0, 3.0, 3.0, 2.0, 3.0, 2.0],
+        trendDirection: 'on_track',
       ),
     ];
   }
@@ -281,6 +310,22 @@ final class MockProgressRepository implements ProgressRepositoryInterface {
         lastActivityDate: today,
         isFrozen: false,
         freezeCount: 1,
+      ),
+      UserStreak(
+        type: StreakType.workouts,
+        currentCount: 3,
+        longestCount: 8,
+        lastActivityDate: today,
+        isFrozen: false,
+        freezeCount: 0,
+      ),
+      UserStreak(
+        type: StreakType.checkin,
+        currentCount: 4,
+        longestCount: 10,
+        lastActivityDate: today,
+        isFrozen: false,
+        freezeCount: 0,
       ),
     ];
   }

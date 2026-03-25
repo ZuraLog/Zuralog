@@ -223,6 +223,18 @@ abstract final class AppColors {
   /// MyFitnessPal brand blue.
   static const Color brandMfp = Color(0xFF0070D1);
 
+  // ── Progress Tab tokens ──────────────────────────────────────────────────
+  static const Color progressCanvas = Color(0xFF141E18);
+  static const Color progressSurface = Color(0xFF1E2E24);
+  static const Color progressSurfaceRaised = Color(0xFF253A2C);
+  static const Color progressTextPrimary = Color(0xFFE8EDE0);
+  static const Color progressTextSecondary = Color(0xFFCFE1B9);
+  static const Color progressTextMuted = Color(0x66CFE1B9);
+  static const Color progressBorderDefault = Color(0x0FCFE1B9);
+  static const Color progressBorderStrong = Color(0x1FCFE1B9);
+  static const Color progressSage = Color(0xFFCFE1B9);
+  static const Color progressStreakWarm = Color(0xFFFF9500);
+
   // ── Legacy compatibility alias ────────────────────────────────────────────
   // Kept to avoid breaking existing widgets that reference the old `nutrition`
   // constant. New code should use [categoryNutrition] for consistency.
