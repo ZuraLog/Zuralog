@@ -413,20 +413,18 @@ void _showChangeEmailSheet(BuildContext context, WidgetRef ref) {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _ChangeEmailSheet(ref: ref),
+    builder: (_) => const _ChangeEmailSheet(),
   );
 }
 
-class _ChangeEmailSheet extends StatefulWidget {
-  const _ChangeEmailSheet({required this.ref});
-
-  final WidgetRef ref;
+class _ChangeEmailSheet extends ConsumerStatefulWidget {
+  const _ChangeEmailSheet();
 
   @override
-  State<_ChangeEmailSheet> createState() => _ChangeEmailSheetState();
+  ConsumerState<_ChangeEmailSheet> createState() => _ChangeEmailSheetState();
 }
 
-class _ChangeEmailSheetState extends State<_ChangeEmailSheet> {
+class _ChangeEmailSheetState extends ConsumerState<_ChangeEmailSheet> {
   final _controller = TextEditingController();
   bool _loading = false;
   String? _error;
@@ -443,12 +441,17 @@ class _ChangeEmailSheetState extends State<_ChangeEmailSheet> {
       setState(() => _error = 'Please enter your new email address.');
       return;
     }
+    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(email)) {
+      setState(() => _error = 'Please enter a valid email address.');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      await widget.ref
+      await ref
           .read(userProfileProvider.notifier)
           .changeEmail(email);
       if (mounted) {
@@ -537,20 +540,19 @@ void _showChangePasswordSheet(BuildContext context, WidgetRef ref) {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _ChangePasswordSheet(ref: ref),
+    builder: (_) => const _ChangePasswordSheet(),
   );
 }
 
-class _ChangePasswordSheet extends StatefulWidget {
-  const _ChangePasswordSheet({required this.ref});
-
-  final WidgetRef ref;
+class _ChangePasswordSheet extends ConsumerStatefulWidget {
+  const _ChangePasswordSheet();
 
   @override
-  State<_ChangePasswordSheet> createState() => _ChangePasswordSheetState();
+  ConsumerState<_ChangePasswordSheet> createState() =>
+      _ChangePasswordSheetState();
 }
 
-class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
+class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
   final _currentController = TextEditingController();
   final _newController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -579,6 +581,10 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
       setState(() => _error = 'Please fill in all three fields.');
       return;
     }
+    if (_newController.text.length < 8) {
+      setState(() => _error = 'New password must be at least 8 characters.');
+      return;
+    }
     if (newPw != confirm) {
       setState(() => _error = 'The new passwords do not match.');
       return;
@@ -589,7 +595,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
       _error = null;
     });
     try {
-      await widget.ref
+      await ref
           .read(userProfileProvider.notifier)
           .changePassword(currentPassword: current, newPassword: newPw);
       if (mounted) {
