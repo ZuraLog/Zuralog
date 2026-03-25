@@ -68,6 +68,14 @@ class _ZTopographicCardState extends State<ZTopographicCard> {
   }
 
   @override
+  void reassemble() {
+    super.reassemble();
+    _image?.dispose();
+    _image = null;
+    _loadPattern();
+  }
+
+  @override
   void dispose() {
     _image?.dispose();
     super.dispose();

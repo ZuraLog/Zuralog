@@ -10,6 +10,10 @@ empty/onboarding state. Full computation will be wired in a future phase.
 """
 
 import re
+import zoneinfo
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone as tz
 
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -17,7 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_authenticated_user_id
-from app.api.v1.analytics_schemas import PatternExpandResponse
+from app.api.v1.analytics_schemas import PatternExpandResponse, TrendsHomeResponse
 from app.database import get_db
 from app.limiter import limiter
 
@@ -35,11 +39,11 @@ router = APIRouter(
 
 
 @limiter.limit("60/minute")
-@router.get("/home")
+@router.get("/home", response_model=TrendsHomeResponse)
 async def trends_home(
     request: Request,
     user_id: str = Depends(get_authenticated_user_id),
-) -> dict:
+) -> TrendsHomeResponse:
     """Return aggregated Trends Home data.
 
     Returns correlation highlights and time-machine period summaries.
@@ -50,15 +54,9 @@ async def trends_home(
         user_id: Authenticated user ID from JWT.
 
     Returns:
-        dict matching the TrendsHomeData model shape.
+        TrendsHomeResponse with empty scaffold data.
     """
-    return {
-        "correlation_highlights": [],
-        "time_periods": [],
-        "has_enough_data": False,
-        "pattern_count": 0,
-        "suggestion_cards": [],
-    }
+    return TrendsHomeResponse()
 
 
 @limiter.limit("60/minute")
@@ -136,10 +134,6 @@ async def trends_correlation(
     user_id: str = Depends(get_authenticated_user_id),
 ) -> dict:
     """Correlation between two metrics over a time range."""
-    from datetime import timedelta
-    import zoneinfo
-    from datetime import datetime, timezone as tz
-
     row = await db.execute(
         text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
         {"uid": str(user_id)},

@@ -6,6 +6,7 @@
 /// - [trendsRepositoryProvider]         — singleton repository
 /// - [trendsHomeProvider]               — async aggregated Trends Home data
 /// - [selectedCategoryFilterProvider]   — active category filter slug
+/// - [expandedPatternIdsProvider]       — set of pattern IDs currently expanded
 /// - [patternExpandProvider]            — chart + AI data for a pattern card
 library;
 
@@ -53,6 +54,12 @@ final trendsHomeProvider = FutureProvider<TrendsHomeData>((ref) async {
 /// Active category filter slug. The value `'all'` means no filter is applied
 /// and every pattern card is visible.
 final selectedCategoryFilterProvider = StateProvider<String>((ref) => 'all');
+
+// ── Expanded Pattern IDs ──────────────────────────────────────────────────────
+
+/// Set of pattern IDs currently expanded. Lives outside the widget tree so
+/// expansion state survives scroll recycling.
+final expandedPatternIdsProvider = StateProvider<Set<String>>((ref) => const {});
 
 // ── Pattern Expand ────────────────────────────────────────────────────────────
 

@@ -7,9 +7,11 @@ library;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zuralog/core/analytics/analytics_events.dart';
 import 'package:zuralog/core/analytics/analytics_service.dart';
 import 'package:zuralog/core/haptics/haptic.dart';
+import 'package:zuralog/core/router/route_names.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
@@ -48,17 +50,6 @@ String _strengthLabel(double coefficient) {
   if (abs >= 0.7) return 'Strong';
   if (abs >= 0.4) return 'Moderate';
   return 'Weak';
-}
-
-/// Parses a hex color string (e.g. '#CFE1B9' or 'CFE1B9') to a [Color].
-/// Returns [AppColors.trendsSage] if the string is invalid.
-// ignore: unused_element
-Color _parseHex(String hex) {
-  final clean = hex.replaceFirst('#', '');
-  if (clean.length != 6) return AppColors.trendsSage;
-  final value = int.tryParse('FF$clean', radix: 16);
-  if (value == null) return AppColors.trendsSage;
-  return Color(value);
 }
 
 // ── TrendsHomeScreen ──────────────────────────────────────────────────────────
@@ -108,7 +99,7 @@ class _TrendsHomeBody extends ConsumerStatefulWidget {
 class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
     with TickerProviderStateMixin {
   late AnimationController _controller;
-  late List<CurvedAnimation> _animations;
+  List<CurvedAnimation> _animations = [];
 
   List<CorrelationHighlight> _buildFilteredList(String category) {
     final all = widget.data.correlationHighlights;
@@ -157,6 +148,9 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
     return _animations.last;
   }
 
+  String _capitalize(String category) =>
+      category.isEmpty ? category : category[0].toUpperCase() + category.substring(1);
+
   @override
   Widget build(BuildContext context) {
     final category = ref.watch(selectedCategoryFilterProvider);
@@ -198,6 +192,27 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
             const SliverFillRemaining(
               hasScrollBody: false,
               child: _TrendsEmptyState(),
+            )
+          // Empty state when a category filter yields no results
+          else if (filtered.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceLg,
+                  ),
+                  child: Text(
+                    category == 'all'
+                        ? 'No patterns found yet — keep logging and we\'ll discover your first connection soon.'
+                        : 'No ${_capitalize(category)} patterns found.\nTry a different category or log more $category data.',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.trendsTextMuted,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
             )
           else ...[
             // Hero card
@@ -285,11 +300,10 @@ class _HeroPatternCard extends ConsumerStatefulWidget {
 }
 
 class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
-  bool _isExpanded = false;
-
   void _handleTap() {
     final h = widget.highlight;
     final strength = _strengthLabel(h.coefficient);
+    final isExpanded = ref.read(expandedPatternIdsProvider).contains(h.id);
 
     ref.read(hapticServiceProvider).light();
     ref.read(analyticsServiceProvider).capture(
@@ -302,14 +316,22 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
       },
     );
 
-    if (!_isExpanded) {
+    if (!isExpanded) {
       ref.read(analyticsServiceProvider).capture(
         event: AnalyticsEvents.trendsPatternExpanded,
         properties: {'pattern_id': h.id, 'category': h.category},
       );
     }
 
-    setState(() => _isExpanded = !_isExpanded);
+    ref.read(expandedPatternIdsProvider.notifier).update((set) {
+      final next = Set<String>.from(set);
+      if (next.contains(h.id)) {
+        next.remove(h.id);
+      } else {
+        next.add(h.id);
+      }
+      return next;
+    });
   }
 
   @override
@@ -322,6 +344,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
         : h.direction == CorrelationDirection.negative
             ? 'Negative relationship'
             : 'Neutral relationship';
+    final isExpanded = ref.watch(expandedPatternIdsProvider).contains(h.id);
 
     return GestureDetector(
       onTap: _handleTap,
@@ -416,7 +439,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
             ),
 
             // Tap hint
-            if (!_isExpanded) ...[
+            if (!isExpanded) ...[
               const SizedBox(height: AppDimens.spaceMd),
               Text(
                 'Tap to explore',
@@ -430,7 +453,7 @@ class _HeroPatternCardState extends ConsumerState<_HeroPatternCard> {
             AnimatedSize(
               duration: const Duration(milliseconds: 400),
               curve: Curves.easeOut,
-              child: _isExpanded
+              child: isExpanded
                   ? _ExpandedPatternContent(
                       patternId: h.id,
                       categoryColor: catColor,
@@ -456,11 +479,10 @@ class _PatternCard extends ConsumerStatefulWidget {
 }
 
 class _PatternCardState extends ConsumerState<_PatternCard> {
-  bool _isExpanded = false;
-
   void _handleTap() {
     final h = widget.highlight;
     final strength = _strengthLabel(h.coefficient);
+    final isExpanded = ref.read(expandedPatternIdsProvider).contains(h.id);
 
     ref.read(hapticServiceProvider).light();
     ref.read(analyticsServiceProvider).capture(
@@ -473,14 +495,22 @@ class _PatternCardState extends ConsumerState<_PatternCard> {
       },
     );
 
-    if (!_isExpanded) {
+    if (!isExpanded) {
       ref.read(analyticsServiceProvider).capture(
         event: AnalyticsEvents.trendsPatternExpanded,
         properties: {'pattern_id': h.id, 'category': h.category},
       );
     }
 
-    setState(() => _isExpanded = !_isExpanded);
+    ref.read(expandedPatternIdsProvider.notifier).update((set) {
+      final next = Set<String>.from(set);
+      if (next.contains(h.id)) {
+        next.remove(h.id);
+      } else {
+        next.add(h.id);
+      }
+      return next;
+    });
   }
 
   @override
@@ -488,6 +518,7 @@ class _PatternCardState extends ConsumerState<_PatternCard> {
     final h = widget.highlight;
     final catColor = _categoryColor(h.category);
     final strength = _strengthLabel(h.coefficient);
+    final isExpanded = ref.watch(expandedPatternIdsProvider).contains(h.id);
 
     return GestureDetector(
       onTap: _handleTap,
@@ -572,7 +603,7 @@ class _PatternCardState extends ConsumerState<_PatternCard> {
             AnimatedSize(
               duration: const Duration(milliseconds: 400),
               curve: Curves.easeOut,
-              child: _isExpanded
+              child: isExpanded
                   ? _ExpandedPatternContent(
                       patternId: h.id,
                       categoryColor: catColor,
@@ -799,6 +830,7 @@ class _AskCoachButton extends ConsumerWidget {
           event: AnalyticsEvents.trendsCoachCtaTapped,
           properties: {'pattern_id': patternId},
         );
+        context.go(RouteNames.coachPath);
       },
     );
   }
