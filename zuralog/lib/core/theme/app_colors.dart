@@ -235,6 +235,18 @@ abstract final class AppColors {
   static const Color progressSage = Color(0xFFCFE1B9);
   static const Color progressStreakWarm = Color(0xFFFF9500);
 
+  // -- Trends Tab tokens ---------------------------------------------------
+  static const Color trendsCanvas = Color(0xFF141E18);
+  static const Color trendsSurface = Color(0xFF1E2E24);
+  static const Color trendsSurfaceRaised = Color(0xFF253A2C);
+  static const Color trendsTextPrimary = Color(0xFFE8EDE0);
+  static const Color trendsTextSecondary = Color(0xFFCFE1B9);
+  static const Color trendsTextMuted = Color(0x66CFE1B9);
+  static const Color trendsBorderDefault = Color(0x0FCFE1B9);
+  static const Color trendsBorderStrong = Color(0x1FCFE1B9);
+  static const Color trendsSage = Color(0xFFCFE1B9);
+  static const Color trendsDeepForest = Color(0xFF344E41);
+
   // ── Legacy compatibility alias ────────────────────────────────────────────
   // Kept to avoid breaking existing widgets that reference the old `nutrition`
   // constant. New code should use [categoryNutrition] for consistency.
@@ -319,4 +331,16 @@ class AppColorsOf {
   Color get progressBorderStrong => AppColors.progressBorderStrong;
   Color get progressSage => AppColors.progressSage;
   Color get progressStreakWarm => AppColors.progressStreakWarm;
+
+  // -- Trends ---------------------------------------------------------------
+  Color get trendsCanvas => AppColors.trendsCanvas;
+  Color get trendsSurface => AppColors.trendsSurface;
+  Color get trendsSurfaceRaised => AppColors.trendsSurfaceRaised;
+  Color get trendsTextPrimary => AppColors.trendsTextPrimary;
+  Color get trendsTextSecondary => AppColors.trendsTextSecondary;
+  Color get trendsTextMuted => AppColors.trendsTextMuted;
+  Color get trendsBorderDefault => AppColors.trendsBorderDefault;
+  Color get trendsBorderStrong => AppColors.trendsBorderStrong;
+  Color get trendsSage => AppColors.trendsSage;
+  Color get trendsDeepForest => AppColors.trendsDeepForest;
 }
