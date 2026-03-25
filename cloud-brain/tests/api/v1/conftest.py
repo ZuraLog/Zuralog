@@ -8,9 +8,6 @@ from unittest.mock import patch
 
 import pytest
 
-import app.models.quick_log  # noqa: F401
-
-
 @pytest.fixture(autouse=True)
 def disable_slowapi_for_direct_calls():
     """Disable the slowapi rate-limiter for tests that call route handlers directly.
