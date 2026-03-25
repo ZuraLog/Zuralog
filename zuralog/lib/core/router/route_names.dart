@@ -330,6 +330,14 @@ abstract final class RouteNames {
   /// Path for the Emergency Health Card edit screen.
   static const String emergencyCardEditPath = '/profile/emergency-card/edit';
 
+  // ── Account (under Settings) ─────────────────────────────────────────────
+
+  /// Name for the Edit Profile screen.
+  static const String editProfile = 'editProfile';
+
+  /// Path for the Edit Profile screen.
+  static const String editProfilePath = '/settings/account/edit-profile';
+
   // ── Developer Tools ───────────────────────────────────────────────────────
 
   /// Name for the design system visual catalog (dev only).

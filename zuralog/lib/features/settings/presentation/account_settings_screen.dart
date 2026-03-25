@@ -1,9 +1,10 @@
-/// Account Settings Screen — manage email, password, linked accounts, goals,
-/// and emergency health card link.
+/// Account Settings Screen — manage email, password, emergency health card,
+/// units preferences, sign out, and danger zone (delete account).
 ///
 /// Full implementation: Phase 8, Task 8.2.
 library;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,29 +16,33 @@ import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 import 'package:zuralog/features/auth/domain/auth_providers.dart';
-import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/features/settings/domain/user_preferences_model.dart';
 import 'package:zuralog/features/settings/presentation/widgets/settings_section_label.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
 
 // ── AccountSettingsScreen ─────────────────────────────────────────────────────
 
-/// Account settings: email, password, linked social accounts, goals editor,
-/// emergency health card, and danger zone (delete account).
-class AccountSettingsScreen extends ConsumerWidget {
+/// Account settings: profile, email, password, preferences, medical,
+/// sign out, and danger zone (delete account).
+class AccountSettingsScreen extends ConsumerStatefulWidget {
   /// Creates the [AccountSettingsScreen].
   const AccountSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountSettingsScreen> createState() =>
+      _AccountSettingsScreenState();
+}
+
+class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
+  @override
+  Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
     return ZuralogScaffold(
       appBar: ZuralogAppBar(title: 'Account'),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.spaceMd),
         children: [
-          // ── Profile summary ─────────────────────────────────────────────
+          // ── Profile summary (tappable → Edit Profile) ──────────────────
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppDimens.spaceMd,
@@ -46,8 +51,8 @@ class AccountSettingsScreen extends ConsumerWidget {
             child: _ProfileSummaryCard(),
           ),
 
-          // ── Credentials section ─────────────────────────────────────────
-          const SettingsSectionLabel('Credentials'),
+          // ── Security section ────────────────────────────────────────────
+          const SettingsSectionLabel('Security'),
           _SettingsGroup(
             tiles: [
               ZSettingsTile(
@@ -55,72 +60,17 @@ class AccountSettingsScreen extends ConsumerWidget {
                 iconColor: AppColors.categorySleep,
                 title: 'Email',
                 subtitle: ref.watch(userEmailProvider),
-                onTap: () => _showChangeEmailSheet(context),
+                onTap: () => _showChangeEmailSheet(context, ref),
               ),
               ZSettingsTile(
                 icon: Icons.lock_outline_rounded,
                 iconColor: AppColors.categoryVitals,
                 title: 'Change Password',
                 subtitle: 'Update your account password',
-                onTap: () => _showChangePasswordSheet(context),
+                onTap: () => _showChangePasswordSheet(context, ref),
               ),
             ],
           ),
-
-          // ── Linked accounts ─────────────────────────────────────────────
-          const SettingsSectionLabel('Linked Accounts'),
-          _SettingsGroup(
-            tiles: [
-              ZSettingsTile(
-                icon: Icons.g_mobiledata_rounded,
-                iconColor: AppColors.googleBlue,
-                title: 'Google',
-                subtitle: 'Linked',
-                onTap: () {},
-                showChevron: false,
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.statusConnected.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-                  ),
-                  child: Text(
-                    'Linked',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.statusConnected,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              ZSettingsTile(
-                icon: Icons.apple_rounded,
-                iconColor: colors.textPrimary,
-                title: 'Apple',
-                subtitle: 'Not linked',
-                onTap: () => _showLinkAppleSheet(context),
-                showChevron: false,
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppDimens.radiusChip),
-                  ),
-                  child: Text(
-                    'Link',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          // ── Goals ───────────────────────────────────────────────────────
-          const SettingsSectionLabel('Health Goals'),
-          _GoalsTile(),
 
           // ── Preferences ─────────────────────────────────────────────────
           const SettingsSectionLabel('Preferences'),
@@ -149,6 +99,20 @@ class AccountSettingsScreen extends ConsumerWidget {
             ],
           ),
 
+          // ── Sign Out ─────────────────────────────────────────────────────
+          _SettingsGroup(
+            tiles: [
+              ZSettingsTile(
+                icon: Icons.logout_rounded,
+                iconColor: AppColors.primary,
+                title: 'Sign Out',
+                subtitle: 'Sign out of your account',
+                showChevron: false,
+                onTap: () => _showSignOutDialog(context, ref),
+              ),
+            ],
+          ),
+
           // ── Danger Zone ─────────────────────────────────────────────────
           const SettingsSectionLabel('Danger Zone'),
           Padding(
@@ -170,7 +134,7 @@ class AccountSettingsScreen extends ConsumerWidget {
                 showChevron: false,
                 onTap: () {
                   ref.read(hapticServiceProvider).warning();
-                  _showDeleteAccountDialog(context);
+                  _showDeleteAccountStep1Dialog(context, ref);
                 },
               ),
             ),
@@ -199,54 +163,50 @@ class _ProfileSummaryCard extends ConsumerWidget {
         : email.isNotEmpty
             ? email[0].toUpperCase()
             : 'U';
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      ),
-      child: Row(
-        children: [
-          // Avatar circle with initial.
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: colors.primary.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
+
+    return GestureDetector(
+      onTap: () => context.push(RouteNames.editProfilePath),
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        ),
+        child: Row(
+          children: [
+            ZAvatar(
+              imageUrl: profile?.avatarUrl,
+              initials: avatarInitial,
+              size: 56,
             ),
-            child: Center(
-              child: Text(
-                avatarInitial,
-                style: AppTextStyles.displaySmall.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
+            const SizedBox(width: AppDimens.spaceMd),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName.isNotEmpty ? displayName : 'Your Profile',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Edit profile',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: AppDimens.spaceMd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  email,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
+            Icon(
+              Icons.chevron_right_rounded,
+              size: AppDimens.iconMd,
+              color: AppColors.textTertiary,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -446,145 +406,76 @@ class _Segment extends StatelessWidget {
   }
 }
 
-// ── _GoalsTile ────────────────────────────────────────────────────────────────
+// ── Change Email Sheet ────────────────────────────────────────────────────────
 
-/// Settings tile for "My Goals" — shows the live goal count from [goalsProvider]
-/// and navigates to the full Goals screen (backed by the real API) on tap.
-///
-/// Replaces the old local-only [_selectedGoalsProvider] / [_GoalsEditorSheet]
-/// that stored goal selections in memory and never persisted them (DEBT-019).
-class _GoalsTile extends ConsumerWidget {
-  const _GoalsTile();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    final asyncGoals = ref.watch(goalsProvider);
-
-    final subtitle = asyncGoals.when(
-      data: (list) {
-        final count = list.goals.length;
-        if (count == 0) return 'No goals yet — tap to add one';
-        return count == 1 ? '1 active goal' : '$count active goals';
-      },
-      loading: () => 'Loading…',
-      error: (err, stack) {
-        Sentry.captureException(err, stackTrace: stack);
-        return 'Could not load goals';
-      },
-    );
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        ),
-        child: ZSettingsTile(
-          icon: Icons.track_changes_rounded,
-          iconColor: AppColors.categoryActivity,
-          title: 'My Goals',
-          subtitle: subtitle,
-          onTap: () => context.push(RouteNames.goalsPath),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Change email / password sheet stubs ──────────────────────────────────────
-
-void _showChangeEmailSheet(BuildContext context) {
-  _showSimpleFormSheet(
-    context,
-    title: 'Change Email',
-    fieldLabel: 'New email address',
-    keyboardType: TextInputType.emailAddress,
-    actionLabel: 'Update Email',
-  );
-}
-
-void _showChangePasswordSheet(BuildContext context) {
-  _showSimpleFormSheet(
-    context,
-    title: 'Change Password',
-    fieldLabel: 'New password',
-    obscureText: true,
-    actionLabel: 'Update Password',
-  );
-}
-
-void _showLinkAppleSheet(BuildContext context) {
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (sheetCtx) {
-      final colors = AppColorsOf(sheetCtx);
-      return Container(
-      margin: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      padding: const EdgeInsets.all(AppDimens.spaceLg),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.apple_rounded, size: 48, color: colors.textPrimary),
-          const SizedBox(height: AppDimens.spaceMd),
-          Text(
-            'Link Apple ID',
-            style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-          Text(
-            'Connect your Apple ID for one-tap sign in across devices.',
-            style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppDimens.spaceLg),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.primaryButtonText,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.radiusButtonMd),
-                ),
-              ),
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Continue with Apple',
-                style: AppTextStyles.titleMedium.copyWith(color: AppColors.primaryButtonText),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimens.spaceSm),
-        ],
-      ),
-    );
-    },
-  );
-}
-
-void _showSimpleFormSheet(
-  BuildContext context, {
-  required String title,
-  required String fieldLabel,
-  required String actionLabel,
-  TextInputType keyboardType = TextInputType.text,
-  bool obscureText = false,
-}) {
+void _showChangeEmailSheet(BuildContext context, WidgetRef ref) {
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetCtx) {
-      final colors = AppColorsOf(sheetCtx);
-      return Padding(
+    builder: (_) => _ChangeEmailSheet(ref: ref),
+  );
+}
+
+class _ChangeEmailSheet extends StatefulWidget {
+  const _ChangeEmailSheet({required this.ref});
+
+  final WidgetRef ref;
+
+  @override
+  State<_ChangeEmailSheet> createState() => _ChangeEmailSheetState();
+}
+
+class _ChangeEmailSheetState extends State<_ChangeEmailSheet> {
+  final _controller = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final email = _controller.text.trim();
+    if (email.isEmpty) {
+      setState(() => _error = 'Please enter your new email address.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await widget.ref
+          .read(userProfileProvider.notifier)
+          .changeEmail(email);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Check your new email inbox — we sent a confirmation link.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on DioException catch (e) {
+      final detail = e.response?.data?['detail'] as String?;
+      setState(() => _error = detail ?? 'Something went wrong. Please try again.');
+    } catch (_) {
+      setState(() => _error = 'Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
@@ -592,7 +483,7 @@ void _showSimpleFormSheet(
         margin: const EdgeInsets.all(AppDimens.spaceMd),
         decoration: BoxDecoration(
           color: colors.cardBackground,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         ),
         padding: const EdgeInsets.all(AppDimens.spaceLg),
         child: Column(
@@ -600,65 +491,275 @@ void _showSimpleFormSheet(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
-              style:
-                  AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
-            ),
-            const SizedBox(height: AppDimens.spaceMd),
-            TextField(
-              autofocus: true,
-              keyboardType: keyboardType,
-              obscureText: obscureText,
-              style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
-              decoration: InputDecoration(
-                labelText: fieldLabel,
-                labelStyle: AppTextStyles.bodySmall
-                    .copyWith(color: colors.textSecondary),
-                filled: true,
-                fillColor: colors.surface,
-                border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimens.radiusInput),
-                  borderSide: BorderSide.none,
-                ),
+              'Change Email',
+              style: AppTextStyles.displaySmall.copyWith(
+                color: colors.textPrimary,
               ),
             ),
             const SizedBox(height: AppDimens.spaceMd),
+            AppTextField(
+              hintText: 'New email address',
+              controller: _controller,
+              keyboardType: TextInputType.emailAddress,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: _submit,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.statusError,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppDimens.spaceMd),
             SizedBox(
               width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.primaryButtonText,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimens.radiusButtonMd),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  actionLabel,
-                  style: AppTextStyles.titleMedium
-                      .copyWith(color: AppColors.primaryButtonText),
-                ),
+              child: PrimaryButton(
+                label: 'Update Email',
+                isLoading: _loading,
+                onPressed: _submit,
               ),
             ),
           ],
         ),
       ),
     );
-    },
+  }
+}
+
+// ── Change Password Sheet ─────────────────────────────────────────────────────
+
+void _showChangePasswordSheet(BuildContext context, WidgetRef ref) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _ChangePasswordSheet(ref: ref),
   );
 }
 
-// ── Delete account dialog ─────────────────────────────────────────────────────
+class _ChangePasswordSheet extends StatefulWidget {
+  const _ChangePasswordSheet({required this.ref});
 
-void _showDeleteAccountDialog(BuildContext context) {
+  final WidgetRef ref;
+
+  @override
+  State<_ChangePasswordSheet> createState() => _ChangePasswordSheetState();
+}
+
+class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
+
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _currentController.dispose();
+    _newController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final current = _currentController.text;
+    final newPw = _newController.text;
+    final confirm = _confirmController.text;
+
+    if (current.isEmpty || newPw.isEmpty || confirm.isEmpty) {
+      setState(() => _error = 'Please fill in all three fields.');
+      return;
+    }
+    if (newPw != confirm) {
+      setState(() => _error = 'The new passwords do not match.');
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await widget.ref
+          .read(userProfileProvider.notifier)
+          .changePassword(currentPassword: current, newPassword: newPw);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password updated successfully.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on DioException catch (e) {
+      final detail = e.response?.data?['detail'] as String?;
+      setState(() => _error = detail ?? 'Something went wrong. Please try again.');
+    } catch (_) {
+      setState(() => _error = 'Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final canSubmit = _currentController.text.isNotEmpty &&
+        _newController.text.isNotEmpty &&
+        _confirmController.text.isNotEmpty;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(AppDimens.spaceMd),
+        decoration: BoxDecoration(
+          color: colors.cardBackground,
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+        ),
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Change Password',
+              style: AppTextStyles.displaySmall.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            // Current password.
+            AppTextField(
+              hintText: 'Current password',
+              controller: _currentController,
+              obscureText: _obscureCurrent,
+              autofocus: true,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => setState(() {}),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureCurrent
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: AppDimens.iconMd,
+                  color: colors.textSecondary,
+                ),
+                onPressed: () =>
+                    setState(() => _obscureCurrent = !_obscureCurrent),
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceMd),
+            // New password + strength bar.
+            AppTextField(
+              hintText: 'New password',
+              controller: _newController,
+              obscureText: _obscureNew,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => setState(() {}),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureNew
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: AppDimens.iconMd,
+                  color: colors.textSecondary,
+                ),
+                onPressed: () => setState(() => _obscureNew = !_obscureNew),
+              ),
+            ),
+            ZPasswordStrengthBar(password: _newController.text),
+            const SizedBox(height: AppDimens.spaceMd),
+            // Confirm password.
+            AppTextField(
+              hintText: 'Confirm new password',
+              controller: _confirmController,
+              obscureText: _obscureConfirm,
+              textInputAction: TextInputAction.done,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: canSubmit ? _submit : null,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirm
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: AppDimens.iconMd,
+                  color: colors.textSecondary,
+                ),
+                onPressed: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.statusError,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppDimens.spaceMd),
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: 'Update Password',
+                isLoading: _loading,
+                onPressed: canSubmit ? _submit : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sign Out Dialog ───────────────────────────────────────────────────────────
+
+void _showSignOutDialog(BuildContext context, WidgetRef ref) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      title: const Text('Sign Out?'),
+      content: const Text('You can sign back in any time.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogCtx),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(dialogCtx);
+            ref.read(hapticServiceProvider).warning();
+            ref.read(authStateProvider.notifier).logout();
+          },
+          child: const Text('Sign Out'),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Delete Account Dialogs (2-step) ───────────────────────────────────────────
+
+/// Step 1: intent warning.
+void _showDeleteAccountStep1Dialog(BuildContext context, WidgetRef ref) {
   final colors = AppColorsOf(context);
   showDialog<void>(
     context: context,
-    builder: (_) => AlertDialog(
+    builder: (dialogCtx) => AlertDialog(
       backgroundColor: colors.cardBackground,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimens.radiusCard),
@@ -674,30 +775,21 @@ void _showDeleteAccountDialog(BuildContext context) {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(dialogCtx),
           child: Text(
             'Cancel',
-            style: AppTextStyles.bodyLarge.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: colors.textSecondary,
+            ),
           ),
         ),
         TextButton(
           onPressed: () {
-            Navigator.pop(context);
-            // TODO(phase9): Call Supabase delete-account API endpoint here.
-            // For now, show an honest message — do not silently no-op.
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Account deletion is not yet available. '
-                  'Please contact support@zuralog.com to request deletion.',
-                ),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 6),
-              ),
-            );
+            Navigator.pop(dialogCtx);
+            _showDeleteAccountStep2Dialog(context, ref);
           },
           child: Text(
-            'Delete',
+            'Continue',
             style: AppTextStyles.bodyLarge.copyWith(
               color: AppColors.statusError,
               fontWeight: FontWeight.w600,
@@ -707,4 +799,132 @@ void _showDeleteAccountDialog(BuildContext context) {
       ],
     ),
   );
+}
+
+/// Step 2: type-to-confirm dialog.
+void _showDeleteAccountStep2Dialog(BuildContext context, WidgetRef ref) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogCtx) => _DeleteConfirmDialog(
+      outerContext: context,
+      ref: ref,
+    ),
+  );
+}
+
+class _DeleteConfirmDialog extends StatefulWidget {
+  const _DeleteConfirmDialog({
+    required this.outerContext,
+    required this.ref,
+  });
+
+  final BuildContext outerContext;
+  final WidgetRef ref;
+
+  @override
+  State<_DeleteConfirmDialog> createState() => _DeleteConfirmDialogState();
+}
+
+class _DeleteConfirmDialogState extends State<_DeleteConfirmDialog> {
+  final _controller = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    setState(() => _loading = true);
+    try {
+      await widget.ref
+          .read(userProfileProvider.notifier)
+          .deleteAccount();
+      // Wipe local state and route to welcome screen.
+      await widget.ref.read(authStateProvider.notifier).logout();
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(widget.outerContext).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not delete account. Please try again or contact support@zuralog.com.',
+            ),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 6),
+          ),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    final confirmed = _controller.text == 'DELETE';
+
+    return AlertDialog(
+      backgroundColor: colors.cardBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      title: Text(
+        'Are you sure?',
+        style: AppTextStyles.displaySmall.copyWith(color: colors.textPrimary),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Type DELETE to confirm. This cannot be undone.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          AppTextField(
+            hintText: 'Type DELETE',
+            controller: _controller,
+            autofocus: true,
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+        ),
+        _loading
+            ? const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+              )
+            : TextButton(
+                onPressed: confirmed ? _confirm : null,
+                child: Text(
+                  'Delete Account',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: confirmed
+                        ? AppColors.statusError
+                        : AppColors.textTertiary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+      ],
+    );
+  }
 }

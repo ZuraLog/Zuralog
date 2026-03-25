@@ -14,6 +14,7 @@ export 'cards/z_snapshot_card.dart';
 export 'cards/zuralog_card.dart';
 export 'indicators/status_indicator.dart';
 export 'indicators/z_icon_badge.dart';
+export 'indicators/z_password_strength_bar.dart';
 export 'inputs/app_text_field.dart';
 export 'log_panels/z_steps_log_panel.dart';
 export 'log_panels/z_water_log_panel.dart';
