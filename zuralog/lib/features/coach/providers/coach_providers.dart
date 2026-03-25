@@ -450,7 +450,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
   /// connection has been completely silent for [_kInactivityTimeout].
   void _resetInactivityTimer() {
     _timeoutTimer?.cancel();
-    _timeoutTimer = Timer(_kInactivityTimeout, _onInactivityTimeout);
+    _timeoutTimer = Timer(_kInactivityTimeout, () => _onInactivityTimeout());
   }
 
   /// Cancels the inactivity timer without restarting it.
@@ -463,12 +463,18 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
 
   /// Called when the server has been silent for [_kInactivityTimeout].
   ///
-  /// The connection is considered dead — cancel the stream and surface a
-  /// clear error so the user knows they can try again.
-  void _onInactivityTimeout() {
+  /// The connection is considered dead — cancel the stream (both locally and
+  /// on the repository so the server-side WebSocket is torn down immediately,
+  /// avoiding unnecessary LLM token burn) and surface a clear error so the
+  /// user knows they can try again.
+  Future<void> _onInactivityTimeout() async {
     _streamSub?.cancel();
     _streamSub = null;
     _timeoutTimer = null;
+
+    // Tell the server to close the active WebSocket stream so it stops
+    // generating tokens — mirrors what cancelStream() does explicitly.
+    await ref.read(coachRepositoryProvider).cancelActiveStream();
 
     state = state.copyWith(
       messages: _pendingTempMsgId != null
