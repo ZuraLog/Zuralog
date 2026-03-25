@@ -709,8 +709,13 @@ MetricTileData _buildTile(
   String type,
   Map<String, dynamic> latest,
 ) {
-  final entry = latest[type] as Map<String, dynamic>?;
-  if (entry == null) return (null, null);
+  // Guard: getLatestLogValues may return flat scalars (e.g. double) instead
+  // of the expected nested map shape. Until the backend exposes a proper
+  // /latest endpoint, return (null, null) for any non-map value rather
+  // than crashing with a type cast error.
+  final raw = latest[type];
+  if (raw is! Map<String, dynamic>) return (null, null);
+  final entry = raw;
 
   // Parse logged_at
   DateTime? loggedAt;
