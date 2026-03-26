@@ -1,1764 +1,939 @@
-/**
- * Zuralog Brand Bible — Visual Design System Reference
- *
- * A living visual representation of every design token, component, and pattern
- * defined in docs/design.md. This page IS the proof that the design system works.
- */
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Brand Bible",
-  description: "Zuralog Design System — Visual Reference",
-  robots: { index: false, follow: false },
-};
+import {
+  PatternOverlay,
+  Text,
+  DSButton,
+  Card,
+  TextField,
+  Toggle,
+  DSCheckbox,
+  DSSlider,
+  DSRadioGroup,
+  RadioItem,
+  Chip,
+  Divider,
+  Avatar,
+  Badge,
+  DSAccordion,
+  DSAccordionItem,
+  DSAccordionTrigger,
+  DSAccordionContent,
+  DSTabs,
+  DSTabsList,
+  DSTabsTrigger,
+  DSTabsContent,
+  DSTooltip,
+  DSTooltipTrigger,
+  DSTooltipContent,
+  DSDialog,
+  DSDialogTrigger,
+  DSDialogContent,
+  DSDialogTitle,
+  DSDialogDescription,
+  DSDialogClose,
+} from "@/components/design-system";
+import {
+  Bell,
+  Palette,
+  Lock,
+  Leaf,
+  Droplet,
+  Smile,
+  Zap,
+  Search,
+  Plus,
+  Moon,
+  Heart,
+  Activity,
+  Home,
+  BarChart3,
+  Settings,
+  User,
+} from "lucide-react";
 
-/* ── Design Tokens ──────────────────────────────────────────────────────────── */
+/* ── Section helpers ─────────────────────────────────────────────────── */
 
-const t = {
-  canvas: "#161618",
-  surface: "#1E1E20",
-  surfaceRaised: "#272729",
-  surfaceOverlay: "#313133",
-  sage: "#CFE1B9",
-  warmWhite: "#F0EEE9",
-  textPrimary: "#F0EEE9",
-  textSecondary: "#9B9894",
-  textOnSage: "#1A2E22",
-  textOnWarmWhite: "#161618",
-  success: "#34C759",
-  warning: "#FF9500",
-  error: "#FF3B30",
-  syncing: "#007AFF",
-  categoryActivity: "#30D158",
-  categorySleep: "#5E5CE6",
-  categoryHeart: "#FF375F",
-  categoryNutrition: "#FF9F0A",
-  categoryBody: "#64D2FF",
-  categoryVitals: "#6AC4DC",
-  categoryWellness: "#BF5AF2",
-  categoryCycle: "#FF6482",
-  categoryMobility: "#FFD60A",
-  categoryEnvironment: "#63E6BE",
-};
-
-/* ── Pattern helpers ────────────────────────────────────────────────────────── */
-
-/** Sage-colored surface pattern — visible contour lines with color-burn */
-function sagePattern(opacity = 0.28): React.CSSProperties {
-  return {
-    position: "absolute" as const,
-    inset: 0,
-    backgroundImage: "url('/patterns/sage.png')",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    opacity,
-    mixBlendMode: "color-burn" as const,
-  };
-}
-
-/** Crimson pattern for destructive/error surfaces */
-function crimsonPattern(opacity = 0.25): React.CSSProperties {
-  return {
-    position: "absolute" as const,
-    inset: 0,
-    backgroundImage: "url('/patterns/crimson.png')",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    opacity,
-    mixBlendMode: "color-burn" as const,
-  };
-}
-
-/** Dark surface pattern — screen blend for cards, avatars, etc. */
-function darkPattern(opacity = 0.18, file = "sage.png"): React.CSSProperties {
-  return {
-    position: "absolute" as const,
-    inset: 0,
-    backgroundImage: `url('/patterns/${file}')`,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    opacity,
-    mixBlendMode: "screen" as const,
-  };
-}
-
-/* ── Inline SVG Icons ───────────────────────────────────────────────────────── */
-
-const iconProps = {
-  width: 20,
-  height: 20,
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 2,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-};
-
-function IconBell() {
+function SectionTitle({ children }: { children: string }) {
   return (
-    <svg {...iconProps}>
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
-function IconPalette() {
-  return (
-    <svg {...iconProps}>
-      <circle cx="13.5" cy="6.5" r="1.5" />
-      <circle cx="17.5" cy="10.5" r="1.5" />
-      <circle cx="8.5" cy="7.5" r="1.5" />
-      <circle cx="6.5" cy="12" r="1.5" />
-      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
-    </svg>
-  );
-}
-
-function IconLock() {
-  return (
-    <svg {...iconProps}>
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function IconLeaf() {
-  return (
-    <svg {...iconProps} width={36} height={36}>
-      <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 20 4 20 4s-1 4.5-3 10.1A7 7 0 0 1 11 20z" />
-      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 12 13" />
-    </svg>
-  );
-}
-
-function IconDroplet() {
-  return (
-    <svg {...iconProps}>
-      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-    </svg>
-  );
-}
-
-function IconSmile() {
-  return (
-    <svg {...iconProps}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-      <line x1="9" y1="9" x2="9.01" y2="9" />
-      <line x1="15" y1="9" x2="15.01" y2="9" />
-    </svg>
-  );
-}
-
-function IconZap() {
-  return (
-    <svg {...iconProps}>
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-
-function IconSearch() {
-  return (
-    <svg {...iconProps}>
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
-
-/* ── Helpers ─────────────────────────────────────────────────────────────────── */
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2
-      style={{
-        color: t.sage,
-        fontSize: 28,
-        fontWeight: 600,
-        marginTop: 64,
-        marginBottom: 8,
-        letterSpacing: -0.5,
-      }}
-    >
+    <Text variant="display-md" color="sage" pattern="sage">
       {children}
-    </h2>
+    </Text>
   );
 }
 
-function SectionSubtitle({ children }: { children: React.ReactNode }) {
+function SectionSub({ children }: { children: string }) {
   return (
-    <p style={{ color: t.textSecondary, fontSize: 14, marginBottom: 32, lineHeight: 1.5 }}>
+    <Text variant="body-md" color="secondary" className="mt-2 mb-8 max-w-xl">
       {children}
-    </p>
+    </Text>
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
+function Label({ children }: { children: string }) {
   return (
-    <div
-      style={{
-        color: t.textSecondary,
-        fontSize: 10,
-        textTransform: "uppercase" as const,
-        letterSpacing: 1,
-        marginBottom: 10,
-        marginTop: 24,
-      }}
-    >
+    <Text variant="label-sm" color="secondary" className="mb-1">
       {children}
-    </div>
+    </Text>
   );
 }
 
-/* ── Page ─────────────────────────────────────────────────────────────────── */
+/* ── Data ────────────────────────────────────────────────────────────── */
+
+const typographyRows = [
+  { variant: "display-lg" as const, sample: "78", meta: "34px / Bold" },
+  { variant: "display-md" as const, sample: "Good morning, Alex", meta: "28px / Semibold" },
+  { variant: "display-sm" as const, sample: "Health Score", meta: "24px / Semibold" },
+  { variant: "title-lg" as const, sample: "Sleep Duration", meta: "20px / Medium" },
+  { variant: "title-md" as const, sample: "Morning Briefing", meta: "17px / Medium" },
+  { variant: "body-lg" as const, sample: "Your HRV is 18% higher after 7+ hours of sleep.", meta: "16px / Normal" },
+  { variant: "body-md" as const, sample: "On nights with deep sleep above 90 minutes, recovery improves.", meta: "14px / Normal" },
+  { variant: "body-sm" as const, sample: "Last updated 2 hours ago", meta: "12px / Normal" },
+  { variant: "label-lg" as const, sample: "Log Activity", meta: "15px / Semibold" },
+  { variant: "label-md" as const, sample: "All  Sleep  Activity  Heart", meta: "13px / Medium" },
+  { variant: "label-sm" as const, sample: "BPM  STEPS  KCAL", meta: "11px / Medium" },
+];
+
+const categoryColors = [
+  { name: "Activity", token: "ds-cat-activity", hex: "#30D158", key: "activity" },
+  { name: "Sleep", token: "ds-cat-sleep", hex: "#5E5CE6", key: "sleep" },
+  { name: "Heart", token: "ds-cat-heart", hex: "#FF375F", key: "heart" },
+  { name: "Nutrition", token: "ds-cat-nutrition", hex: "#FF9F0A", key: "nutrition" },
+  { name: "Body", token: "ds-cat-body", hex: "#64D2FF", key: "body" },
+  { name: "Vitals", token: "ds-cat-vitals", hex: "#6AC4DC", key: "vitals" },
+  { name: "Wellness", token: "ds-cat-wellness", hex: "#BF5AF2", key: "wellness" },
+  { name: "Cycle", token: "ds-cat-cycle", hex: "#FF6482", key: "cycle" },
+  { name: "Mobility", token: "ds-cat-mobility", hex: "#FFD60A", key: "mobility" },
+  { name: "Environment", token: "ds-cat-environment", hex: "#63E6BE", key: "environment" },
+];
+
+const spacingScale = [
+  { name: "xxs", px: 2 },
+  { name: "xs", px: 4 },
+  { name: "sm", px: 8 },
+  { name: "md", px: 16 },
+  { name: "md+", px: 20 },
+  { name: "lg", px: 24 },
+  { name: "xl", px: 32 },
+  { name: "xxl", px: 48 },
+];
+
+const radiusScale = [
+  { name: "XS", px: 8, token: "rounded-ds-xs" },
+  { name: "SM", px: 12, token: "rounded-ds-sm" },
+  { name: "MD", px: 16, token: "rounded-ds-md" },
+  { name: "LG", px: 20, token: "rounded-ds-lg" },
+  { name: "XL", px: 28, token: "rounded-ds-xl" },
+  { name: "Pill", px: 100, token: "rounded-ds-pill" },
+];
+
+const patternTable = [
+  { component: "DSButton (primary)", pattern: "sage", blend: "color-burn" },
+  { component: "DSButton (destructive)", pattern: "crimson", blend: "color-burn" },
+  { component: "Card (hero)", pattern: "original", blend: "screen" },
+  { component: "Card (feature)", pattern: "category color", blend: "screen" },
+  { component: "Toggle (on)", pattern: "sage", blend: "color-burn" },
+  { component: "DSCheckbox (checked)", pattern: "sage", blend: "color-burn" },
+  { component: "DSSlider (fill)", pattern: "sage", blend: "color-burn" },
+  { component: "Chip (active)", pattern: "original", blend: "screen" },
+  { component: "Avatar (fallback)", pattern: "original", blend: "screen" },
+  { component: "DSTabsList", pattern: "original", blend: "screen" },
+  { component: "FAB", pattern: "sage", blend: "color-burn" },
+];
+
+/* ── Page ────────────────────────────────────────────────────────────── */
 
 export default function BrandBiblePage() {
   return (
-    <div
-      style={{
-        background: t.canvas,
-        minHeight: "100vh",
-        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-        color: t.textPrimary,
-      }}
-    >
-      {/* Header */}
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 24px 96px" }}>
-        <div style={{ marginBottom: 48 }}>
-          <h1
-            style={{
-              fontSize: 48,
-              fontWeight: 700,
-              color: t.sage,
-              marginBottom: 8,
-              letterSpacing: -1,
-            }}
-          >
-            Zuralog Design System
-          </h1>
-          <p style={{ color: t.textSecondary, fontSize: 16, lineHeight: 1.6, maxWidth: 600 }}>
-            Dark mode is the primary experience. Premium wellness. Calm confidence. Nature meets
-            technology. The topographic contour-line pattern is the brand&apos;s visual signature.
-          </p>
-        </div>
+    <main className="max-w-[960px] mx-auto px-6 py-12 pb-24">
+      {/* ── 1. Header ──────────────────────────────────────────────── */}
+      <header>
+        <Text variant="display-lg" color="sage" pattern="sage" as="h1">
+          Zuralog Design System
+        </Text>
+        <Text variant="body-lg" color="secondary" className="mt-3 max-w-2xl">
+          A living reference of every design token, component, and pattern.
+          Dark canvas, warm typography, topographic texture on every interactive surface.
+        </Text>
+      </header>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            1. CANVAS & ELEVATION
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 2. Canvas & Elevation ──────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Canvas &amp; Elevation</SectionTitle>
-        <SectionSubtitle>
-          Surfaces are distinguished by brightness alone. Each elevation step is exactly +8 brighter
-          across all RGB channels. No borders, no shadows.
-        </SectionSubtitle>
+        <SectionSub>Four surface levels create depth without drop shadows. Every layer lifts content closer to the user.</SectionSub>
 
-        <div style={{ display: "flex", gap: 0, borderRadius: 20, overflow: "hidden", marginBottom: 32 }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: "Canvas", hex: t.canvas, sub: "Screen background" },
-            { label: "Surface", hex: t.surface, sub: "Cards, containers" },
-            { label: "Surface Raised", hex: t.surfaceRaised, sub: "Popovers, dropdowns" },
-            { label: "Surface Overlay", hex: t.surfaceOverlay, sub: "Modals, sheets" },
-          ].map((level) => (
-            <div
-              key={level.label}
-              style={{
-                flex: 1,
-                background: level.hex,
-                padding: 24,
-                minHeight: 120,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
-              }}
-            >
-              <div style={{ color: t.textPrimary, fontSize: 14, fontWeight: 600 }}>
-                {level.label}
-              </div>
-              <div style={{ color: t.textSecondary, fontSize: 11, marginTop: 2 }}>{level.sub}</div>
+            { name: "Canvas", token: "bg-ds-canvas", hex: "#161618", usage: "Page background" },
+            { name: "Surface", token: "bg-ds-surface", hex: "#1E1E20", usage: "Cards, inputs" },
+            { name: "Surface Raised", token: "bg-ds-surface-raised", hex: "#272729", usage: "Hover, toggles" },
+            { name: "Surface Overlay", token: "bg-ds-surface-overlay", hex: "#313133", usage: "Modals, dialogs" },
+          ].map((swatch) => (
+            <Card elevation="data" key={swatch.name}>
               <div
-                style={{ color: t.textSecondary, fontSize: 11, fontFamily: "monospace", marginTop: 4 }}
-              >
-                {level.hex}
-              </div>
-            </div>
+                className={`h-20 rounded-ds-sm mb-3 ${swatch.token}`}
+                style={swatch.name === "Canvas" ? { border: "1px solid rgba(240,238,233,0.06)" } : undefined}
+              />
+              <Text variant="label-md" color="primary">{swatch.name}</Text>
+              <Text variant="body-sm" color="secondary" className="mt-0.5">{swatch.usage}</Text>
+              <Text variant="label-sm" color="secondary" className="mt-1 font-mono">{swatch.hex}</Text>
+            </Card>
           ))}
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            2. TYPOGRAPHY
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 3. Typography ──────────────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Typography</SectionTitle>
-        <SectionSubtitle>
-          Plus Jakarta Sans on all platforms. Geometric, modern, and refined. Numbers render
-          beautifully at every size.
-        </SectionSubtitle>
+        <SectionSub>Plus Jakarta Sans across all sizes. Metric numbers for health data, warm weight for readability.</SectionSub>
 
-        <div
-          style={{
-            background: t.surface,
-            borderRadius: 20,
-            padding: 32,
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-          }}
-        >
-          {[
-            { style: "Display Large", size: 34, weight: 700, sample: "78" },
-            { style: "Display Medium", size: 28, weight: 600, sample: "Good morning, Alex" },
-            { style: "Display Small", size: 24, weight: 600, sample: "Health Score" },
-            { style: "Title Large", size: 20, weight: 500, sample: "Sleep Duration" },
-            { style: "Title Medium", size: 17, weight: 500, sample: "Morning Briefing" },
-            { style: "Body Large", size: 16, weight: 400, sample: "Your HRV is 18% higher after 7+ hours of sleep." },
-            { style: "Body Medium", size: 14, weight: 400, sample: "On nights with deep sleep above 90 minutes, recovery improves." },
-            { style: "Body Small", size: 12, weight: 400, sample: "Last updated 2 hours ago" },
-            { style: "Label Large", size: 15, weight: 600, sample: "Log Activity" },
-            { style: "Label Medium", size: 13, weight: 500, sample: "All  Sleep  Activity  Heart" },
-            { style: "Label Small", size: 11, weight: 500, sample: "BPM  STEPS  KCAL" },
-          ].map((item) => (
-            <div
-              key={item.style}
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 24,
-                borderBottom: `1px solid rgba(240,238,233,0.04)`,
-                paddingBottom: 16,
-              }}
-            >
-              <div
-                style={{
-                  width: 140,
-                  flexShrink: 0,
-                  color: t.textSecondary,
-                  fontSize: 11,
-                  fontFamily: "monospace",
-                }}
-              >
-                {item.style}
-                <br />
-                {item.size}pt / {item.weight}
+        <Card elevation="standard">
+          <div className="flex flex-col gap-5">
+            {typographyRows.map((row) => (
+              <div key={row.variant} className="flex items-baseline justify-between gap-4 flex-wrap">
+                <div className="shrink-0 w-40">
+                  <Text variant="label-sm" color="sage">{row.variant}</Text>
+                  <Text variant="body-sm" color="secondary">{row.meta}</Text>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Text variant={row.variant} color="primary">{row.sample}</Text>
+                </div>
               </div>
-              <div
-                style={{
-                  color: t.textPrimary,
-                  fontSize: item.size,
-                  fontWeight: item.weight,
-                }}
-              >
-                {item.sample}
-              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      {/* ── 3b. Pattern Typography ──────────────────────────────────── */}
+      <section className="mt-16">
+        <SectionTitle>Pattern Typography</SectionTitle>
+        <SectionSub>Bold display text gets a drifting topographic fill. Semibold headings get a static fill. Body text stays solid.</SectionSub>
+
+        <div className="grid gap-6">
+          <Card elevation="standard">
+            <Label>Bold (animated drift)</Label>
+            <Text variant="display-lg" pattern="sage">Health Score: 78</Text>
+          </Card>
+
+          <Card elevation="standard">
+            <Label>Semibold (static pattern)</Label>
+            <Text variant="display-md" pattern="sage">Good morning, Alex</Text>
+            <Text variant="display-sm" pattern="sage" className="mt-3">Sleep Duration</Text>
+          </Card>
+
+          <Card elevation="standard">
+            <Label>Pattern colors</Label>
+            <div className="flex flex-col gap-3">
+              <Text variant="display-md" pattern="sage">Sage pattern</Text>
+              <Text variant="display-md" pattern="crimson">Crimson pattern</Text>
+              <Text variant="display-md" pattern="amber">Amber pattern</Text>
+              <Text variant="display-md" pattern="original">Original pattern</Text>
             </div>
-          ))}
-        </div>
+          </Card>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            3. COLOR — ACCENTS
-            ═══════════════════════════════════════════════════════════════════════ */}
+          <Card elevation="standard">
+            <Label>Solid text (no pattern)</Label>
+            <Text variant="display-md" color="sage">Solid sage heading</Text>
+            <Text variant="body-lg" color="primary" className="mt-2">Body text always stays solid and readable — patterns only appear on display-size headings where the letterforms are large enough to show the texture.</Text>
+          </Card>
+        </div>
+      </section>
+
+      {/* ── 4. Accent Colors ───────────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Accent Colors</SectionTitle>
-        <SectionSubtitle>
-          Two accent roles. Sage = brand actions (&quot;tap this&quot;). Warm White = navigation
-          (&quot;go here&quot;).
-        </SectionSubtitle>
+        <SectionSub>Two accent colors anchor the entire palette. Sage for actions, Warm White for navigation.</SectionSub>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
-          <div style={{ background: t.sage, borderRadius: 20, padding: 32 }}>
-            <div style={{ color: t.textOnSage, fontSize: 24, fontWeight: 700 }}>Sage</div>
-            <div style={{ color: t.textOnSage, fontSize: 13, opacity: 0.7, marginTop: 4 }}>
-              #CFE1B9 — Primary actions, buttons, toggles, links
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="relative overflow-hidden rounded-ds-lg h-32 bg-ds-sage flex items-end p-5">
+            <PatternOverlay variant="sage" opacity={0.15} blend="color-burn" />
+            <div className="relative z-10">
+              <Text variant="title-md" color="on-sage">Sage</Text>
+              <Text variant="body-sm" color="on-sage" className="opacity-70">
+                #CFE1B9 — Primary actions, buttons, toggles, links
+              </Text>
             </div>
           </div>
-          <div style={{ background: t.warmWhite, borderRadius: 20, padding: 32 }}>
-            <div style={{ color: t.textOnWarmWhite, fontSize: 24, fontWeight: 700 }}>Warm White</div>
-            <div style={{ color: t.textOnWarmWhite, fontSize: 13, opacity: 0.6, marginTop: 4 }}>
-              #F0EEE9 — Navigation, tabs, segmented controls
+          <div className="relative overflow-hidden rounded-ds-lg h-32 bg-ds-warm-white flex items-end p-5">
+            <div className="relative z-10">
+              <Text variant="title-md" color="on-warm-white">Warm White</Text>
+              <Text variant="body-sm" color="on-warm-white" className="opacity-70">
+                #F0EEE9 — Navigation, tabs, segmented controls
+              </Text>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* ── Text Colors ── */}
-        <Label>Text Colors</Label>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 32 }}>
+      {/* ── 5. Text Colors ─────────────────────────────────────────── */}
+      <section className="mt-16">
+        <SectionTitle>Text Colors</SectionTitle>
+        <SectionSub>Four text roles mapped to surface context. Always use the right pairing for contrast.</SectionSub>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: "Text Primary", hex: t.textPrimary, bg: t.canvas },
-            { label: "Text Secondary", hex: t.textSecondary, bg: t.canvas },
-            { label: "Text On Sage", hex: t.textOnSage, bg: t.sage },
-            { label: "Text On Warm White", hex: t.textOnWarmWhite, bg: t.warmWhite },
+            { name: "Text Primary", color: "text-ds-text-primary", bg: "bg-ds-surface", hex: "#F0EEE9" },
+            { name: "Text Secondary", color: "text-ds-text-secondary", bg: "bg-ds-surface", hex: "#9B9894" },
+            { name: "On Sage", color: "text-ds-text-on-sage", bg: "bg-ds-sage", hex: "#1A2E22" },
+            { name: "On Warm White", color: "text-ds-text-on-warm-white", bg: "bg-ds-warm-white", hex: "#161618" },
           ].map((item) => (
-            <div
-              key={item.label}
-              style={{
-                background: item.bg,
-                borderRadius: 16,
-                padding: 20,
-                border: item.bg === t.canvas ? `1px solid ${t.surfaceRaised}` : "none",
-              }}
-            >
-              <div style={{ color: item.hex, fontSize: 20, fontWeight: 600 }}>Aa</div>
-              <div style={{ color: item.hex, fontSize: 11, marginTop: 8, opacity: 0.8 }}>
-                {item.label}
-              </div>
-              <div style={{ color: item.hex, fontSize: 10, fontFamily: "monospace", opacity: 0.6 }}>
-                {item.hex}
-              </div>
+            <div key={item.name} className={`${item.bg} rounded-ds-md p-4`}>
+              <span className={`${item.color} font-jakarta text-[1rem] font-medium block`}>Aa</span>
+              <Text variant="label-sm" color="secondary" className="mt-2">{item.name}</Text>
+              <Text variant="label-sm" color="secondary" className="font-mono">{item.hex}</Text>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            4. HEALTH CATEGORIES
-            ═══════════════════════════════════════════════════════════════════════ */}
-        <SectionTitle>Health Category Colors</SectionTitle>
-        <SectionSubtitle>Fixed across light and dark mode. Each category has its own color identity.</SectionSubtitle>
+      {/* ── 6. Health Category Colors ──────────────────────────────── */}
+      <section className="mt-16">
+        <SectionTitle>Health Categories</SectionTitle>
+        <SectionSub>Ten distinct hues, one per health domain. Each category gets its own pattern tint on feature cards.</SectionSub>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-          {[
-            { name: "Activity", color: t.categoryActivity },
-            { name: "Sleep", color: t.categorySleep },
-            { name: "Heart", color: t.categoryHeart },
-            { name: "Nutrition", color: t.categoryNutrition },
-            { name: "Body", color: t.categoryBody },
-            { name: "Vitals", color: t.categoryVitals },
-            { name: "Wellness", color: t.categoryWellness },
-            { name: "Cycle", color: t.categoryCycle },
-            { name: "Mobility", color: t.categoryMobility },
-            { name: "Environment", color: t.categoryEnvironment },
-          ].map((cat) => (
-            <div
-              key={cat.name}
-              style={{
-                background: t.surface,
-                borderRadius: 16,
-                padding: 16,
-                textAlign: "center",
-              }}
-            >
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-3 mb-8">
+          {categoryColors.map((cat) => (
+            <div key={cat.key} className="flex flex-col items-center gap-1.5">
               <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: cat.color,
-                  margin: "0 auto 8px",
-                }}
+                className="w-10 h-10 rounded-full"
+                style={{ backgroundColor: cat.hex }}
               />
-              <div style={{ color: t.textPrimary, fontSize: 12, fontWeight: 500 }}>{cat.name}</div>
-              <div style={{ color: t.textSecondary, fontSize: 10, fontFamily: "monospace" }}>
-                {cat.color}
-              </div>
+              <Text variant="label-sm" color="primary">{cat.name}</Text>
+              <Text variant="label-sm" color="secondary" className="font-mono">{cat.hex}</Text>
             </div>
           ))}
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            4b. HEALTH CATEGORY CARDS (with pattern variants)
-            ═══════════════════════════════════════════════════════════════════════ */}
-        <Label>Category Feature Cards</Label>
-        <SectionSubtitle>
-          Each health category has a matching pattern variant. The left accent bar uses the category
-          color and the card background shows the matching topographic pattern.
-        </SectionSubtitle>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {(
+            [
+              { category: "sleep" as const, icon: <Moon size={20} />, title: "Sleep", metric: "7h 42m", sub: "Deep 1h 18m" },
+              { category: "heart" as const, icon: <Heart size={20} />, title: "Heart Rate", metric: "62 bpm", sub: "Resting average" },
+              { category: "activity" as const, icon: <Activity size={20} />, title: "Activity", metric: "8,432", sub: "Steps today" },
+              { category: "nutrition" as const, icon: <Droplet size={20} />, title: "Nutrition", metric: "1,840", sub: "Calories logged" },
+              { category: "wellness" as const, icon: <Smile size={20} />, title: "Wellness", metric: "8/10", sub: "Mood score" },
+              { category: "body" as const, icon: <Zap size={20} />, title: "Body", metric: "72.4 kg", sub: "This morning" },
+            ]
+          ).map((card) => (
+            <Card elevation="feature" category={card.category} key={card.category}>
+              <div className="flex items-center gap-2 mb-2 text-ds-text-secondary">
+                {card.icon}
+                <Text variant="label-md" color="secondary">{card.title}</Text>
+              </div>
+              <Text variant="display-sm" color="primary">{card.metric}</Text>
+              <Text variant="body-sm" color="secondary" className="mt-0.5">{card.sub}</Text>
+            </Card>
+          ))}
+        </div>
+      </section>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 32 }}>
+      {/* ── 7. Semantic / Status Colors ────────────────────────────── */}
+      <section className="mt-16">
+        <SectionTitle>Status Colors</SectionTitle>
+        <SectionSub>Semantic signals for success, warning, error, and sync states.</SectionSub>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { name: "Activity", color: t.categoryActivity, pattern: "green.png", metric: "8,432 steps", sub: "Daily goal: 10,000" },
-            { name: "Sleep", color: t.categorySleep, pattern: "periwinkle.png", metric: "7h 24m", sub: "Deep: 1h 45m" },
-            { name: "Heart", color: t.categoryHeart, pattern: "rose.png", metric: "68 bpm", sub: "Resting heart rate" },
-            { name: "Nutrition", color: t.categoryNutrition, pattern: "amber.png", metric: "1,850 kcal", sub: "Target: 2,200" },
-            { name: "Body", color: t.categoryBody, pattern: "sky-blue.png", metric: "72.4 kg", sub: "BMI: 23.1" },
-            { name: "Wellness", color: t.categoryWellness, pattern: "purple.png", metric: "78 / 100", sub: "Health score" },
-          ].map((cat) => (
-            <div
-              key={cat.name}
-              style={{
-                display: "flex",
-                borderRadius: 16,
-                overflow: "hidden",
-                background: t.surface,
-              }}
-            >
-              {/* Left accent bar */}
-              <div style={{ width: 4, background: cat.color, flexShrink: 0 }} />
-              {/* Card body with pattern */}
+            { name: "Success", hex: "#34C759", pattern: "sage" },
+            { name: "Warning", hex: "#FF9500", pattern: "amber" },
+            { name: "Error", hex: "#FF3B30", pattern: "crimson" },
+            { name: "Syncing", hex: "#007AFF", pattern: "sky-blue" },
+          ].map((status) => (
+            <div key={status.name} className="flex items-center gap-3">
               <div
-                style={{
-                  flex: 1,
-                  padding: 16,
-                  position: "relative" as const,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    inset: 0,
-                    backgroundImage: `url('/patterns/${cat.pattern}')`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    opacity: 0.15,
-                    mixBlendMode: "screen" as const,
-                  }}
-                />
-                <div style={{ position: "relative" as const }}>
-                  <div style={{ color: cat.color, fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 0.5, marginBottom: 4 }}>
-                    {cat.name}
-                  </div>
-                  <div style={{ color: t.textPrimary, fontSize: 20, fontWeight: 700 }}>
-                    {cat.metric}
-                  </div>
-                  <div style={{ color: t.textSecondary, fontSize: 11, marginTop: 2 }}>
-                    {cat.sub}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ═══════════════════════════════════════════════════════════════════════
-            5. SEMANTIC / STATUS COLORS
-            ═══════════════════════════════════════════════════════════════════════ */}
-        <Label>Semantic / Status</Label>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 32 }}>
-          {[
-            { name: "Success", color: t.success },
-            { name: "Warning", color: t.warning },
-            { name: "Error", color: t.error },
-            { name: "Syncing", color: t.syncing },
-          ].map((s) => (
-            <div key={s.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 24, height: 24, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
+                className="w-4 h-4 rounded-full ds-pattern-drift"
+                style={{ backgroundImage: `url('/patterns/${status.pattern}.png')` }}
+              />
               <div>
-                <div style={{ color: t.textPrimary, fontSize: 13 }}>{s.name}</div>
-                <div style={{ color: t.textSecondary, fontSize: 10, fontFamily: "monospace" }}>{s.color}</div>
+                <Text variant="label-md" color="primary">{status.name}</Text>
+                <Text variant="label-sm" color="secondary" className="font-mono">{status.hex}</Text>
               </div>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            6. SPACING
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 8. Spacing ─────────────────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Spacing</SectionTitle>
-        <SectionSubtitle>Based on a 4px grid with a 2px fine-tuning step.</SectionSubtitle>
+        <SectionSub>Consistent spacing tokens from 2px to 48px. Every margin and padding uses this scale.</SectionSub>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginBottom: 32 }}>
-          {[
-            { token: "XXS", value: 2 },
-            { token: "XS", value: 4 },
-            { token: "SM", value: 8 },
-            { token: "MD", value: 16 },
-            { token: "MD+", value: 20 },
-            { token: "LG", value: 24 },
-            { token: "XL", value: 32 },
-            { token: "XXL", value: 48 },
-          ].map((s) => (
-            <div key={s.token} style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: 48,
-                  height: s.value * 2,
-                  background: t.sage,
-                  borderRadius: 4,
-                  opacity: 0.6,
-                  marginBottom: 8,
-                }}
-              />
-              <div style={{ color: t.textPrimary, fontSize: 12, fontWeight: 600 }}>{s.token}</div>
-              <div style={{ color: t.textSecondary, fontSize: 10 }}>{s.value}px</div>
-            </div>
-          ))}
-        </div>
+        <Card elevation="standard">
+          <div className="flex flex-col gap-3">
+            {spacingScale.map((s) => (
+              <div key={s.name} className="flex items-center gap-4">
+                <Text variant="label-sm" color="secondary" className="w-8 text-right font-mono">{s.px}</Text>
+                <div
+                  className="h-3 rounded-full bg-ds-sage/30"
+                  style={{ width: `${Math.max(s.px * 3, 6)}px` }}
+                />
+                <Text variant="label-sm" color="primary">{s.name}</Text>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            7. SHAPE (BORDER RADIUS)
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 9. Shape (Border Radius) ───────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Shape</SectionTitle>
-        <SectionSubtitle>Border radius tokens from tight to pill.</SectionSubtitle>
+        <SectionSub>Six radius tokens from sharp to pill. Cards use LG, buttons use Pill, inputs use SM.</SectionSub>
 
-        <div style={{ display: "flex", gap: 16, marginBottom: 32 }}>
-          {[
-            { token: "XS", value: 8, size: 48 },
-            { token: "SM", value: 12, size: 56 },
-            { token: "MD", value: 16, size: 64 },
-            { token: "LG", value: 20, size: 72 },
-            { token: "XL", value: 28, size: 80 },
-            { token: "Pill", value: 100, size: 48 },
-          ].map((s) => (
-            <div key={s.token} style={{ textAlign: "center" }}>
+        <div className="flex flex-wrap gap-4">
+          {radiusScale.map((r) => (
+            <div key={r.name} className="flex flex-col items-center gap-2">
               <div
-                style={{
-                  width: s.token === "Pill" ? 96 : s.size,
-                  height: s.size,
-                  background: t.surface,
-                  borderRadius: s.value,
-                  marginBottom: 8,
-                }}
+                className="w-16 h-16 bg-ds-surface-raised border border-[rgba(240,238,233,0.06)]"
+                style={{ borderRadius: `${r.px}px` }}
               />
-              <div style={{ color: t.textPrimary, fontSize: 12, fontWeight: 600 }}>{s.token}</div>
-              <div style={{ color: t.textSecondary, fontSize: 10 }}>{s.value}px</div>
+              <Text variant="label-sm" color="primary">{r.name}</Text>
+              <Text variant="label-sm" color="secondary" className="font-mono">{r.px}px</Text>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            8. BUTTONS
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 10. Buttons ────────────────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Buttons</SectionTitle>
-        <SectionSubtitle>
-          Pill radius at all sizes. Filled buttons get the topographic pattern. Visual hierarchy:
-          Pattern + fill &gt; Outline &gt; Text.
-        </SectionSubtitle>
+        <SectionSub>Four intents, three sizes. Primary and destructive get the topographic pattern overlay.</SectionSub>
 
-        <div style={{ background: t.surface, borderRadius: 20, padding: 32, marginBottom: 16 }}>
-          <Label>Button Types</Label>
-          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 24 }}>
-            {/* Primary */}
-            <div
-              style={{
-                background: t.sage,
-                borderRadius: 100,
-                padding: "14px 28px",
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={sagePattern(0.28)} />
-              <span
-                style={{
-                  position: "relative" as const,
-                  color: t.textOnSage,
-                  fontWeight: 600,
-                  fontSize: 15,
-                }}
-              >
-                Primary
-              </span>
-            </div>
-            {/* Destructive */}
-            <div
-              style={{
-                background: t.error,
-                borderRadius: 100,
-                padding: "14px 28px",
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={crimsonPattern(0.25)} />
-              <span style={{ position: "relative" as const, color: "#FFFFFF", fontWeight: 600, fontSize: 15 }}>
-                Destructive
-              </span>
-            </div>
-            {/* Secondary */}
-            <div
-              style={{
-                border: `1.5px solid rgba(240,238,233,0.2)`,
-                borderRadius: 100,
-                padding: "14px 28px",
-              }}
-            >
-              <span style={{ color: t.warmWhite, fontWeight: 600, fontSize: 15 }}>Secondary</span>
-            </div>
-            {/* Text */}
-            <div style={{ padding: "14px 28px" }}>
-              <span style={{ color: t.sage, fontWeight: 600, fontSize: 15 }}>Text Button &rarr;</span>
-            </div>
+        <Card elevation="standard">
+          <Label>Intents</Label>
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <DSButton intent="primary">Primary</DSButton>
+            <DSButton intent="destructive">Destructive</DSButton>
+            <DSButton intent="secondary">Secondary</DSButton>
+            <DSButton intent="text">Text Button &rarr;</DSButton>
           </div>
 
-          <Label>Button Sizes</Label>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            {/* Large */}
-            <div
-              style={{
-                background: t.sage,
-                borderRadius: 100,
-                padding: "0 28px",
-                height: 52,
-                display: "flex",
-                alignItems: "center",
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={sagePattern(0.28)} />
-              <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 15 }}>
-                Large (52px)
-              </span>
-            </div>
-            {/* Medium */}
-            <div
-              style={{
-                background: t.sage,
-                borderRadius: 100,
-                padding: "0 24px",
-                height: 44,
-                display: "flex",
-                alignItems: "center",
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={sagePattern(0.28)} />
-              <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 15 }}>
-                Medium (44px)
-              </span>
-            </div>
-            {/* Small */}
-            <div
-              style={{
-                background: t.sage,
-                borderRadius: 100,
-                padding: "0 18px",
-                height: 32,
-                display: "flex",
-                alignItems: "center",
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={sagePattern(0.25)} />
-              <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 500, fontSize: 13 }}>
-                Small (32px)
-              </span>
-            </div>
+          <Label>Sizes (primary)</Label>
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <DSButton intent="primary" size="lg">Large</DSButton>
+            <DSButton intent="primary" size="md">Medium</DSButton>
+            <DSButton intent="primary" size="sm">Small</DSButton>
           </div>
 
-          <Label>Button States</Label>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  background: t.sage,
-                  borderRadius: 100,
-                  padding: "10px 24px",
-                  position: "relative" as const,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={sagePattern(0.28)} />
-                <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 14 }}>
-                  Default
-                </span>
-              </div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  background: t.sage,
-                  borderRadius: 100,
-                  padding: "10px 24px",
-                  opacity: 0.85,
-                  transform: "scale(0.97)",
-                  position: "relative" as const,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={sagePattern(0.28)} />
-                <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 14 }}>
-                  Pressed
-                </span>
-              </div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  background: t.sage,
-                  borderRadius: 100,
-                  padding: "10px 24px",
-                  opacity: 0.4,
-                }}
-              >
-                <span style={{ color: t.textOnSage, fontWeight: 600, fontSize: 14 }}>Disabled</span>
-              </div>
-            </div>
+          <Label>With icons</Label>
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <DSButton intent="primary" leftIcon={<Plus size={16} />}>Add Entry</DSButton>
+            <DSButton intent="secondary" leftIcon={<Search size={16} />}>Search</DSButton>
           </div>
-        </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            9. CARDS
-            ═══════════════════════════════════════════════════════════════════════ */}
+          <Label>States</Label>
+          <div className="flex flex-wrap items-center gap-3">
+            <DSButton intent="primary" disabled>Disabled</DSButton>
+            <DSButton intent="primary" loading>Loading</DSButton>
+            <DSButton intent="destructive" disabled>Disabled</DSButton>
+          </div>
+        </Card>
+      </section>
+
+      {/* ── 11. Cards ──────────────────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Cards</SectionTitle>
-        <SectionSubtitle>
-          Soft, rounded corners with generous padding. Hero and feature cards get the pattern. Data
-          cards stay clean.
-        </SectionSubtitle>
+        <SectionSub>Three elevation levels plus category feature cards. Hero and feature cards get pattern overlays.</SectionSub>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 32 }}>
-          {/* Hero Card */}
-          <div>
-            <Label>Hero Card (18%)</Label>
-            <div
-              style={{
-                background: t.surface,
-                borderRadius: 20,
-                padding: 20,
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={darkPattern(0.18, "sage.png")} />
-              <div style={{ position: "relative" as const }}>
-                <div style={{ color: t.textSecondary, fontSize: 11, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>
-                  Health Score
-                </div>
-                <div style={{ color: t.sage, fontSize: 40, fontWeight: 700, marginTop: 4 }}>78</div>
-                <div style={{ color: t.textSecondary, fontSize: 12, marginTop: 4 }}>
-                  Your best week this month
-                </div>
+        <div className="grid gap-4">
+          <Card elevation="hero">
+            <Text variant="body-sm" color="secondary">Health Score</Text>
+            <Text variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
+            <Text variant="body-md" color="secondary" className="mt-1">
+              Your overall health is trending up this week.
+            </Text>
+          </Card>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card elevation="feature">
+              <div className="flex items-center gap-2 mb-2">
+                <Leaf size={16} className="text-ds-sage" />
+                <Text variant="label-md" color="sage">AI Insight</Text>
               </div>
-            </div>
+              <Text variant="body-md" color="primary">
+                Your HRV is 18% higher on nights with 7+ hours of sleep. Try a consistent 10:30pm bedtime.
+              </Text>
+            </Card>
+
+            <Card elevation="data">
+              <Text variant="label-md" color="secondary">Steps</Text>
+              <Text variant="display-md" color="primary" className="mt-1">8,432</Text>
+              <Text variant="body-sm" color="secondary" className="mt-0.5">67% of daily goal</Text>
+            </Card>
           </div>
 
-          {/* Feature Card */}
-          <div>
-            <Label>Feature Card (15%)</Label>
-            <div
-              style={{
-                background: t.surface,
-                borderRadius: 20,
-                padding: 20,
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={darkPattern(0.15, "sage.png")} />
-              <div style={{ position: "relative" as const }}>
-                <div style={{ color: t.textPrimary, fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
-                  Sleep linked to HRV
-                </div>
-                <div style={{ color: t.textSecondary, fontSize: 13, lineHeight: 1.5 }}>
-                  Your HRV is 18% higher after 7+ hours of sleep.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Data Card */}
-          <div>
-            <Label>Data Card (no pattern)</Label>
-            <div style={{ background: t.surface, borderRadius: 16, padding: 16 }}>
-              <div style={{ color: t.textSecondary, fontSize: 10, textTransform: "uppercase" as const }}>Steps</div>
-              <div style={{ color: t.textPrimary, fontSize: 22, fontWeight: 600, marginTop: 6 }}>
-                8,432
-              </div>
-              <div style={{ color: t.categoryActivity, fontSize: 10, marginTop: 4 }}>&uarr; 12%</div>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <Card elevation="feature" category="sleep">
+              <Text variant="label-md" color="secondary">Sleep</Text>
+              <Text variant="title-lg" color="primary" className="mt-1">7h 42m</Text>
+            </Card>
+            <Card elevation="feature" category="heart">
+              <Text variant="label-md" color="secondary">Heart</Text>
+              <Text variant="title-lg" color="primary" className="mt-1">62 bpm</Text>
+            </Card>
+            <Card elevation="feature" category="activity">
+              <Text variant="label-md" color="secondary">Activity</Text>
+              <Text variant="title-lg" color="primary" className="mt-1">8,432</Text>
+            </Card>
           </div>
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            10. INPUTS & SELECTION
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 12. Inputs & Selection ─────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Inputs &amp; Selection</SectionTitle>
-        <SectionSubtitle>
-          Filled style — Surface fill with no border. Any Sage-filled interactive surface gets the
-          topographic pattern.
-        </SectionSubtitle>
+        <SectionSub>Every form control uses the surface-raised palette with sage accents on interaction.</SectionSub>
 
-        <div style={{ background: t.surface, borderRadius: 20, padding: 32, marginBottom: 32 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
-            {/* Left column */}
-            <div>
-              <Label>Text Field</Label>
-              <div style={{ background: t.canvas, borderRadius: 12, padding: "14px 16px" }}>
-                <div style={{ color: t.textSecondary, fontSize: 11, fontWeight: 500, marginBottom: 4 }}>
-                  Display Name
-                </div>
-                <div style={{ color: t.textPrimary, fontSize: 16 }}>Alex Johnson</div>
-              </div>
-
-              <Label>Toggle Switch</Label>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: t.textPrimary, fontSize: 14 }}>Morning Briefing</span>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 26,
-                      background: t.sage,
-                      borderRadius: 13,
-                      position: "relative" as const,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={sagePattern(0.28)} />
-                    <div
-                      style={{
-                        width: 22,
-                        height: 22,
-                        background: "white",
-                        borderRadius: "50%",
-                        position: "absolute" as const,
-                        right: 2,
-                        top: 2,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: t.textPrimary, fontSize: 14 }}>Smart Reminders</span>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 26,
-                      background: t.surfaceRaised,
-                      borderRadius: 13,
-                      position: "relative" as const,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 22,
-                        height: 22,
-                        background: t.textSecondary,
-                        borderRadius: "50%",
-                        position: "absolute" as const,
-                        left: 2,
-                        top: 2,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Label>Checkbox &amp; Radio</Label>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 20,
-                      height: 20,
-                      background: t.sage,
-                      borderRadius: 4,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      position: "relative" as const,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={sagePattern(0.28)} />
-                    <span style={{ position: "relative" as const, color: t.textOnSage, fontSize: 12, fontWeight: 700 }}>
-                      &#10003;
-                    </span>
-                  </div>
-                  <span style={{ color: t.textPrimary, fontSize: 14 }}>Checked</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 20,
-                      height: 20,
-                      border: `2px solid ${t.textSecondary}`,
-                      borderRadius: 4,
-                    }}
-                  />
-                  <span style={{ color: t.textPrimary, fontSize: 14 }}>Unchecked</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 20,
-                      height: 20,
-                      border: `2px solid ${t.sage}`,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <div style={{ width: 10, height: 10, background: t.sage, borderRadius: "50%" }} />
-                  </div>
-                  <span style={{ color: t.textPrimary, fontSize: 14 }}>Selected Radio</span>
-                </div>
-              </div>
+        <div className="grid gap-6">
+          {/* Text field */}
+          <Card elevation="standard">
+            <Label>Text Field</Label>
+            <div className="max-w-xs">
+              <TextField label="Display Name" defaultValue="Alex Johnson" />
             </div>
-
-            {/* Right column */}
-            <div>
-              <Label>Slider</Label>
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ color: t.textPrimary, fontSize: 13 }}>Water intake</span>
-                  <span style={{ color: t.sage, fontSize: 13, fontWeight: 600 }}>1,800 ml</span>
-                </div>
-                <div
-                  style={{
-                    height: 6,
-                    background: t.surfaceRaised,
-                    borderRadius: 3,
-                    position: "relative" as const,
-                  }}
-                >
-                  {/* Filled track */}
-                  <div
-                    style={{
-                      height: 6,
-                      background: t.sage,
-                      borderRadius: 3,
-                      width: "65%",
-                      position: "relative" as const,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={sagePattern(0.25)} />
-                  </div>
-                  {/* Thumb */}
-                  <div
-                    style={{
-                      width: 18,
-                      height: 18,
-                      background: t.sage,
-                      borderRadius: "50%",
-                      position: "absolute" as const,
-                      left: "calc(65% - 9px)",
-                      top: -6,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div style={sagePattern(0.28)} />
-                  </div>
-                </div>
-              </div>
-
-              <Label>Segmented Control</Label>
-              <div
-                style={{
-                  display: "flex",
-                  background: t.canvas,
-                  borderRadius: 12,
-                  padding: 4,
-                  position: "relative" as const,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={darkPattern(0.06, "sage.png")} />
-                <div
-                  style={{
-                    position: "relative" as const,
-                    flex: 1,
-                    background: t.warmWhite,
-                    color: t.textOnWarmWhite,
-                    textAlign: "center" as const,
-                    padding: 8,
-                    borderRadius: 9,
-                    fontSize: 12,
-                    fontWeight: 600,
-                  }}
-                >
-                  Today
-                </div>
-                <div
-                  style={{
-                    position: "relative" as const,
-                    flex: 1,
-                    textAlign: "center" as const,
-                    padding: 8,
-                    color: t.textSecondary,
-                    fontSize: 12,
-                  }}
-                >
-                  Week
-                </div>
-                <div
-                  style={{
-                    position: "relative" as const,
-                    flex: 1,
-                    textAlign: "center" as const,
-                    padding: 8,
-                    color: t.textSecondary,
-                    fontSize: 12,
-                  }}
-                >
-                  Month
-                </div>
-              </div>
-
-              <Label>Chips</Label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
-                {/* Active chip */}
-                <div
-                  style={{
-                    background: "rgba(207,225,185,0.15)",
-                    borderRadius: 100,
-                    padding: "8px 16px",
-                    position: "relative" as const,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={darkPattern(0.15, "original.png")} />
-                  <span style={{ position: "relative" as const, color: t.sage, fontSize: 12, fontWeight: 600 }}>
-                    All
-                  </span>
-                </div>
-                {["Sleep", "Activity", "Heart"].map((chip) => (
-                  <div
-                    key={chip}
-                    style={{ background: t.canvas, borderRadius: 100, padding: "8px 16px" }}
-                  >
-                    <span style={{ color: t.textSecondary, fontSize: 12 }}>{chip}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Label>Dropdown</Label>
-              <div
-                style={{
-                  background: t.canvas,
-                  borderRadius: 12,
-                  padding: "14px 16px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <div style={{ color: t.textSecondary, fontSize: 11, fontWeight: 500, marginBottom: 2 }}>
-                    Coach Persona
-                  </div>
-                  <div style={{ color: t.textPrimary, fontSize: 16 }}>Balanced</div>
-                </div>
-                <span style={{ color: t.textSecondary }}>&darr;</span>
-              </div>
+            <div className="max-w-xs mt-4">
+              <TextField label="Email" placeholder="alex@example.com" />
             </div>
-          </div>
+            <div className="max-w-xs mt-4">
+              <TextField label="With Error" defaultValue="bad input" error="This field is required." />
+            </div>
+          </Card>
+
+          {/* Toggles */}
+          <Card elevation="standard">
+            <Label>Toggle</Label>
+            <div className="flex flex-col gap-4">
+              <Toggle label="Morning Briefing" defaultChecked />
+              <Toggle label="Smart Reminders" />
+              <Toggle label="Disabled" disabled defaultChecked />
+            </div>
+          </Card>
+
+          {/* Checkboxes */}
+          <Card elevation="standard">
+            <Label>Checkbox</Label>
+            <div className="flex flex-wrap gap-6">
+              <DSCheckbox label="Checked" defaultChecked />
+              <DSCheckbox label="Unchecked" />
+              <DSCheckbox label="Disabled" disabled defaultChecked />
+            </div>
+          </Card>
+
+          {/* Slider */}
+          <Card elevation="standard">
+            <Label>Slider</Label>
+            <div className="max-w-sm">
+              <div className="flex justify-between mb-2">
+                <Text variant="body-sm" color="secondary">Target sleep</Text>
+                <Text variant="body-sm" color="sage">6.5h</Text>
+              </div>
+              <DSSlider defaultValue={[65]} />
+            </div>
+          </Card>
+
+          {/* Radio group */}
+          <Card elevation="standard">
+            <Label>Radio Group</Label>
+            <DSRadioGroup defaultValue="balanced">
+              <RadioItem value="aggressive" label="Aggressive" />
+              <RadioItem value="balanced" label="Balanced" />
+              <RadioItem value="conservative" label="Conservative" />
+            </DSRadioGroup>
+          </Card>
+
+          {/* Tabs */}
+          <Card elevation="standard">
+            <Label>Segmented Control (Tabs)</Label>
+            <DSTabs defaultValue="all">
+              <DSTabsList>
+                <DSTabsTrigger value="all">All</DSTabsTrigger>
+                <DSTabsTrigger value="sleep">Sleep</DSTabsTrigger>
+                <DSTabsTrigger value="activity">Activity</DSTabsTrigger>
+                <DSTabsTrigger value="heart">Heart</DSTabsTrigger>
+              </DSTabsList>
+              <DSTabsContent value="all">
+                <Text variant="body-md" color="secondary">Showing all health data categories.</Text>
+              </DSTabsContent>
+              <DSTabsContent value="sleep">
+                <Text variant="body-md" color="secondary">Sleep metrics and trends.</Text>
+              </DSTabsContent>
+              <DSTabsContent value="activity">
+                <Text variant="body-md" color="secondary">Activity and exercise data.</Text>
+              </DSTabsContent>
+              <DSTabsContent value="heart">
+                <Text variant="body-md" color="secondary">Heart rate and HRV readings.</Text>
+              </DSTabsContent>
+            </DSTabs>
+          </Card>
+
+          {/* Chips */}
+          <Card elevation="standard">
+            <Label>Chips</Label>
+            <div className="flex flex-wrap gap-2">
+              <Chip active>All</Chip>
+              <Chip>Sleep</Chip>
+              <Chip>Activity</Chip>
+              <Chip>Heart</Chip>
+              <Chip>Nutrition</Chip>
+            </div>
+          </Card>
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            11. FEEDBACK
-            ═══════════════════════════════════════════════════════════════════════ */}
-        <SectionTitle>Feedback &amp; Communication</SectionTitle>
-        <SectionSubtitle>
-          How the app talks back. Higher urgency = higher elevation level.
-        </SectionSubtitle>
+      {/* ── 13. Feedback ───────────────────────────────────────────── */}
+      <section className="mt-16">
+        <SectionTitle>Feedback</SectionTitle>
+        <SectionSub>Toasts, dialogs, badges, tooltips, and loading states give the user clear signals.</SectionSub>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
-          {/* Toasts */}
-          <div style={{ background: t.surface, borderRadius: 20, padding: 24 }}>
-            <Label>Toast / Snackbar</Label>
-            <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
-              <div
-                style={{
-                  background: t.surfaceRaised,
-                  borderRadius: 100,
-                  padding: "10px 20px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: t.success }} />
-                <span style={{ color: t.textPrimary, fontSize: 13 }}>Weight logged successfully</span>
+        <div className="grid gap-6">
+          {/* Toast mockups (inline — no toast component yet) */}
+          <Card elevation="standard">
+            <Label>Toast Mockups</Label>
+            <div className="flex flex-col gap-3 max-w-sm">
+              <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
+                <div
+                  className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
+                  style={{ backgroundImage: "url('/patterns/sage.png')" }}
+                />
+                <Text variant="body-sm" color="primary">Activity logged successfully.</Text>
               </div>
-              <div
-                style={{
-                  background: t.surfaceRaised,
-                  borderRadius: 100,
-                  padding: "10px 20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: t.error }} />
-                  <span style={{ color: t.textPrimary, fontSize: 13 }}>Connection failed</span>
-                </div>
-                <span style={{ color: t.sage, fontSize: 13, fontWeight: 600 }}>Retry</span>
+              <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
+                <div
+                  className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
+                  style={{ backgroundImage: "url('/patterns/crimson.png')" }}
+                />
+                <Text variant="body-sm" color="primary">Failed to sync. Tap to retry.</Text>
+              </div>
+              <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
+                <div
+                  className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
+                  style={{ backgroundImage: "url('/patterns/amber.png')" }}
+                />
+                <Text variant="body-sm" color="primary">Health data permissions required.</Text>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Dialog */}
-          <div style={{ background: t.surface, borderRadius: 20, padding: 24 }}>
-            <Label>Alert Dialog</Label>
-            <div style={{ background: t.surfaceOverlay, borderRadius: 28, padding: 24 }}>
-              <div style={{ color: t.textPrimary, fontSize: 17, fontWeight: 500, marginBottom: 8 }}>
-                Disconnect Strava?
-              </div>
-              <div style={{ color: t.textSecondary, fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
-                Your data stays, but new workouts won&apos;t sync.
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <div
-                  style={{
-                    flex: 1,
-                    border: `1.5px solid rgba(240,238,233,0.2)`,
-                    borderRadius: 100,
-                    padding: 10,
-                    textAlign: "center" as const,
-                  }}
-                >
-                  <span style={{ color: t.warmWhite, fontWeight: 600, fontSize: 13 }}>Cancel</span>
+          <Card elevation="standard">
+            <Label>Dialog</Label>
+            <div className="mt-3">
+            <DSDialog>
+              <DSDialogTrigger>
+                <DSButton intent="destructive" size="sm">Delete Entry</DSButton>
+              </DSDialogTrigger>
+              <DSDialogContent>
+                <DSDialogTitle>Delete this entry?</DSDialogTitle>
+                <DSDialogDescription className="mt-2">
+                  This action cannot be undone. The entry and all its data will be permanently removed.
+                </DSDialogDescription>
+                <div className="flex justify-end gap-3 mt-6">
+                  <DSDialogClose>
+                    <DSButton intent="secondary" size="sm">Cancel</DSButton>
+                  </DSDialogClose>
+                  <DSDialogClose>
+                    <DSButton intent="destructive" size="sm">Delete</DSButton>
+                  </DSDialogClose>
                 </div>
-                <div
-                  style={{
-                    flex: 1,
-                    background: t.error,
-                    borderRadius: 100,
-                    padding: 10,
-                    textAlign: "center" as const,
-                    position: "relative" as const,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={crimsonPattern(0.25)} />
-                  <span style={{ position: "relative" as const, color: "#FFF", fontWeight: 600, fontSize: 13 }}>
-                    Disconnect
-                  </span>
-                </div>
+              </DSDialogContent>
+            </DSDialog>
+            </div>
+          </Card>
+
+          {/* Badges */}
+          <Card elevation="standard">
+            <Label>Badges</Label>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="error">3</Badge>
+                <Text variant="body-sm" color="secondary">Error / notification count</Text>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="sage">New</Badge>
+                <Text variant="body-sm" color="secondary">New feature / label</Text>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="neutral">12</Badge>
+                <Text variant="body-sm" color="secondary">Neutral count</Text>
               </div>
             </div>
-          </div>
+          </Card>
 
-          {/* Loading states */}
-          <div style={{ background: t.surface, borderRadius: 20, padding: 24 }}>
+          {/* Tooltip */}
+          <Card elevation="standard">
+            <Label>Tooltip</Label>
+            <div className="mt-3">
+            <DSTooltip>
+              <DSTooltipTrigger>
+                <DSButton intent="secondary" size="sm">Hover me</DSButton>
+              </DSTooltipTrigger>
+              <DSTooltipContent>
+                This is a tooltip with helpful context.
+              </DSTooltipContent>
+            </DSTooltip>
+            </div>
+          </Card>
+
+          {/* Skeleton loader (inline — no component) */}
+          <Card elevation="standard">
             <Label>Skeleton Loader</Label>
-            <div style={{ background: t.canvas, borderRadius: 16, padding: 16 }}>
-              <div
-                style={{
-                  background: t.surfaceRaised,
-                  borderRadius: 6,
-                  height: 10,
-                  width: "40%",
-                  marginBottom: 10,
-                }}
-              />
-              <div
-                style={{
-                  background: t.surfaceRaised,
-                  borderRadius: 6,
-                  height: 24,
-                  width: "60%",
-                  marginBottom: 8,
-                }}
-              />
-              <div style={{ background: t.surfaceRaised, borderRadius: 6, height: 10, width: "30%" }} />
+            <div className="flex flex-col gap-3 max-w-xs">
+              <div className="h-5 w-24 bg-ds-surface-raised rounded-ds-sm animate-pulse" />
+              <div className="h-8 w-40 bg-ds-surface-raised rounded-ds-sm animate-pulse" />
+              <div className="h-4 w-32 bg-ds-surface-raised rounded-ds-sm animate-pulse" />
             </div>
+          </Card>
 
+          {/* Progress bar (inline — no component) */}
+          <Card elevation="standard">
             <Label>Progress Bar</Label>
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ color: t.textSecondary, fontSize: 11 }}>Syncing Fitbit...</span>
-                <span style={{ color: t.sage, fontSize: 11 }}>65%</span>
+            <div className="max-w-sm">
+              <div className="flex justify-between mb-1.5">
+                <Text variant="body-sm" color="secondary">Daily goal</Text>
+                <Text variant="body-sm" color="sage">67%</Text>
               </div>
-              <div style={{ height: 4, background: t.surfaceRaised, borderRadius: 2 }}>
+              <div className="h-2 bg-ds-surface-raised rounded-full overflow-hidden">
                 <div
-                  style={{
-                    height: 4,
-                    background: t.sage,
-                    borderRadius: 2,
-                    width: "65%",
-                    position: "relative" as const,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={sagePattern(0.25)} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Badge & Tooltip */}
-          <div style={{ background: t.surface, borderRadius: 20, padding: 24 }}>
-            <Label>Badge &amp; Tooltip</Label>
-            <div style={{ display: "flex", alignItems: "center", gap: 32, marginTop: 8 }}>
-              {/* Badge with bell SVG icon */}
-              <div style={{ position: "relative" as const }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    background: t.surfaceRaised,
-                    borderRadius: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: t.textSecondary,
-                  }}
-                >
-                  <IconBell />
-                </div>
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    top: -4,
-                    right: -4,
-                    width: 16,
-                    height: 16,
-                    background: t.error,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: `2px solid ${t.canvas}`,
-                  }}
-                >
-                  <span style={{ color: "white", fontSize: 8, fontWeight: 700 }}>3</span>
-                </div>
-              </div>
-              {/* Tooltip — pointer triangle connected to body */}
-              <div style={{ position: "relative" as const, display: "inline-block" }}>
-                <div
-                  style={{
-                    background: t.surfaceRaised,
-                    borderRadius: 8,
-                    padding: "8px 12px",
-                    position: "relative" as const,
-                    zIndex: 1,
-                  }}
-                >
-                  <span style={{ color: t.textPrimary, fontSize: 12 }}>Tap to expand</span>
-                </div>
-                <div
-                  style={{
-                    width: 0,
-                    height: 0,
-                    borderLeft: "6px solid transparent",
-                    borderRight: "6px solid transparent",
-                    borderTop: `6px solid ${t.surfaceRaised}`,
-                    position: "absolute" as const,
-                    bottom: -6,
-                    left: 20,
-                  }}
+                  className="relative h-full w-[67%] bg-ds-sage rounded-full overflow-hidden ds-pattern-drift"
+                  style={{ backgroundImage: "url('/patterns/sage.png')" }}
                 />
               </div>
             </div>
-          </div>
+          </Card>
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            12. DISPLAY COMPONENTS
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 14. Display Components ─────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Display Components</SectionTitle>
-        <SectionSubtitle>List items, avatars, dividers, accordions — information building blocks.</SectionSubtitle>
+        <SectionSub>List items, avatars, dividers, and accordions for structuring content.</SectionSub>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
-          {/* List Items */}
-          <div>
+        <div className="grid gap-6">
+          {/* List items */}
+          <Card elevation="standard">
             <Label>List Items</Label>
-            <div style={{ background: t.surface, borderRadius: 16, overflow: "hidden" }}>
+            <div className="flex flex-col">
               {[
-                { icon: "bell" as const, title: "Notifications", sub: "Morning briefing, reminders" },
-                { icon: "palette" as const, title: "Appearance", sub: "Theme, haptics" },
-                { icon: "lock" as const, title: "Privacy & Data", sub: "AI memory, export" },
-              ].map((item, i, arr) => (
-                <div
-                  key={item.title}
-                  style={{
-                    padding: "12px 16px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    borderBottom: i < arr.length - 1 ? "1px solid rgba(240,238,233,0.04)" : "none",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        background: t.surfaceRaised,
-                        borderRadius: 8,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "relative" as const,
-                        overflow: "hidden",
-                        color: t.textSecondary,
-                      }}
-                    >
-                      <div style={darkPattern(0.18, "original.png")} />
-                      <span style={{ position: "relative" as const }}>
-                        {item.icon === "bell" && <IconBell />}
-                        {item.icon === "palette" && <IconPalette />}
-                        {item.icon === "lock" && <IconLock />}
-                      </span>
+                { icon: <Bell size={20} />, title: "Notifications", sub: "Push, email, in-app" },
+                { icon: <Palette size={20} />, title: "Appearance", sub: "Theme, display settings" },
+                { icon: <Lock size={20} />, title: "Privacy", sub: "Data sharing, permissions" },
+              ].map((item, i) => (
+                <div key={item.title}>
+                  <div className="flex items-center gap-4 py-3">
+                    <div className="relative overflow-hidden w-9 h-9 rounded-ds-sm bg-ds-surface-raised flex items-center justify-center shrink-0">
+                      <PatternOverlay variant="original" opacity={0.12} blend="screen" />
+                      <span className="relative z-10 text-ds-sage">{item.icon}</span>
                     </div>
-                    <div>
-                      <div style={{ color: t.textPrimary, fontSize: 14, fontWeight: 500 }}>
-                        {item.title}
-                      </div>
-                      <div style={{ color: t.textSecondary, fontSize: 11 }}>{item.sub}</div>
+                    <div className="flex-1 min-w-0">
+                      <Text variant="body-md" color="primary">{item.title}</Text>
+                      <Text variant="body-sm" color="secondary">{item.sub}</Text>
                     </div>
                   </div>
-                  <span style={{ color: t.textSecondary }}>&rarr;</span>
+                  {i < 2 && <Divider />}
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          {/* Avatars & Dividers */}
-          <div>
-            <Label>Avatars (with pattern on default)</Label>
-            <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 24 }}>
-              {[48, 36, 24].map((size) => (
-                <div
-                  key={size}
-                  style={{
-                    width: size,
-                    height: size,
-                    borderRadius: "50%",
-                    background: t.surfaceRaised,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative" as const,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={darkPattern(0.2, "original.png")} />
-                  <span
-                    style={{
-                      position: "relative" as const,
-                      color: t.sage,
-                      fontSize: size * 0.38,
-                      fontWeight: 600,
-                    }}
-                  >
-                    AJ
-                  </span>
-                </div>
-              ))}
-              <span style={{ color: t.textSecondary, fontSize: 11 }}>48 / 36 / 24px</span>
+          {/* Avatars */}
+          <Card elevation="standard">
+            <Label>Avatars</Label>
+            <div className="flex items-center gap-4">
+              <Avatar initials="AJ" size="lg" />
+              <Avatar initials="AJ" size="md" />
+              <Avatar initials="AJ" size="sm" />
             </div>
+          </Card>
 
+          {/* Divider */}
+          <Card elevation="standard">
             <Label>Divider</Label>
-            <div style={{ padding: "8px 0" }}>
-              <div style={{ height: 1, background: "rgba(240,238,233,0.06)" }} />
-              <div style={{ color: t.textSecondary, fontSize: 11, marginTop: 8 }}>
-                1px - Warm White at 6% opacity
-              </div>
+            <Text variant="body-sm" color="secondary" className="mb-3">Content above</Text>
+            <Divider />
+            <Text variant="body-sm" color="secondary" className="mt-3">Content below</Text>
+            <div className="mt-4">
+              <Text variant="body-sm" color="secondary" className="mb-3">With inset</Text>
+              <Divider inset />
+              <Text variant="body-sm" color="secondary" className="mt-3">Indented for list contexts</Text>
             </div>
+          </Card>
 
+          {/* Accordion */}
+          <Card elevation="standard">
             <Label>Accordion</Label>
-            <div style={{ background: t.surface, borderRadius: 16, overflow: "hidden" }}>
-              <div
-                style={{
-                  padding: "12px 16px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ color: t.textPrimary, fontSize: 14, fontWeight: 500 }}>
-                  Sleep Details
-                </span>
-                <span style={{ color: t.sage, fontSize: 12 }}>&darr;</span>
-              </div>
-              <div
-                style={{
-                  padding: "0 16px 12px",
-                  borderTop: "1px solid rgba(240,238,233,0.04)",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    paddingTop: 12,
-                  }}
-                >
-                  <span style={{ color: t.textSecondary, fontSize: 12 }}>Deep Sleep</span>
-                  <span style={{ color: t.textPrimary, fontSize: 12 }}>1h 45m</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-                  <span style={{ color: t.textSecondary, fontSize: 12 }}>REM Sleep</span>
-                  <span style={{ color: t.textPrimary, fontSize: 12 }}>2h 10m</span>
-                </div>
-              </div>
-            </div>
-          </div>
+            <DSAccordion>
+              <DSAccordionItem value="sleep-details">
+                <DSAccordionTrigger>Sleep Details</DSAccordionTrigger>
+                <DSAccordionContent>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between">
+                      <Text variant="body-sm" color="secondary">Deep Sleep</Text>
+                      <Text variant="body-sm" color="primary">1h 18m</Text>
+                    </div>
+                    <div className="flex justify-between">
+                      <Text variant="body-sm" color="secondary">REM Sleep</Text>
+                      <Text variant="body-sm" color="primary">2h 05m</Text>
+                    </div>
+                    <div className="flex justify-between">
+                      <Text variant="body-sm" color="secondary">Light Sleep</Text>
+                      <Text variant="body-sm" color="primary">4h 19m</Text>
+                    </div>
+                  </div>
+                </DSAccordionContent>
+              </DSAccordionItem>
+              <DSAccordionItem value="hrv-details">
+                <DSAccordionTrigger>HRV Trends</DSAccordionTrigger>
+                <DSAccordionContent>
+                  <Text variant="body-sm" color="secondary">
+                    Your heart rate variability averaged 48ms this week, up 12% from last week.
+                  </Text>
+                </DSAccordionContent>
+              </DSAccordionItem>
+            </DSAccordion>
+          </Card>
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            13. SPECIAL SURFACES
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 15. Special Surfaces ───────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Special Surfaces</SectionTitle>
-        <SectionSubtitle>Empty states, onboarding, and the FAB.</SectionSubtitle>
+        <SectionSub>Empty states, onboarding, and floating actions use patterned surfaces to draw attention.</SectionSub>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 32 }}>
-          {/* Empty State */}
-          <div
-            style={{
-              background: t.surface,
-              borderRadius: 20,
-              padding: 32,
-              textAlign: "center" as const,
-              position: "relative" as const,
-              overflow: "hidden",
-            }}
-          >
-            <div style={darkPattern(0.15, "sage.png")} />
-            <div style={{ position: "relative" as const }}>
-              <div style={{ marginBottom: 12, color: t.sage, display: "flex", justifyContent: "center" }}>
-                <IconLeaf />
+        <div className="grid gap-4">
+          {/* Empty state */}
+          <Card elevation="feature">
+            <div className="flex flex-col items-center text-center py-6">
+              <div className="relative overflow-hidden w-12 h-12 rounded-full bg-ds-surface-raised flex items-center justify-center mb-4">
+                <PatternOverlay variant="original" opacity={0.12} blend="screen" />
+                <Moon size={24} className="text-ds-sage relative z-10" />
               </div>
-              <div style={{ color: t.textPrimary, fontSize: 17, fontWeight: 600, marginBottom: 6 }}>
-                No data yet
-              </div>
-              <div style={{ color: t.textSecondary, fontSize: 13, lineHeight: 1.5, marginBottom: 16 }}>
-                Connect an app or log your first entry.
-              </div>
-              <div
-                style={{
-                  display: "inline-block",
-                  background: t.sage,
-                  borderRadius: 100,
-                  padding: "10px 24px",
-                  position: "relative" as const,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={sagePattern(0.28)} />
-                <span
-                  style={{
-                    position: "relative" as const,
-                    color: t.textOnSage,
-                    fontWeight: 600,
-                    fontSize: 14,
-                  }}
-                >
-                  Get Started
-                </span>
-              </div>
+              <Text variant="title-md" color="primary">No sleep data yet</Text>
+              <Text variant="body-sm" color="secondary" className="mt-1 max-w-xs">
+                Connect your wearable or log manually to start tracking your sleep patterns.
+              </Text>
+              <DSButton intent="primary" size="sm" className="mt-4">
+                Connect Device
+              </DSButton>
             </div>
-          </div>
+          </Card>
 
-          {/* Onboarding */}
-          <div
-            style={{
-              background: t.surface,
-              borderRadius: 20,
-              padding: 32,
-              textAlign: "center" as const,
-              position: "relative" as const,
-              overflow: "hidden",
-            }}
-          >
-            <div style={darkPattern(0.18, "sage.png")} />
-            <div style={{ position: "relative" as const }}>
-              <div style={{ color: t.sage, fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
-                Welcome to Zuralog
-              </div>
-              <div style={{ color: t.textSecondary, fontSize: 14, lineHeight: 1.5 }}>
-                Your AI health assistant.
-                <br />
-                Let&apos;s set up your profile.
-              </div>
+          {/* Onboarding card */}
+          <Card elevation="hero">
+            <div className="py-2">
+              <Text variant="display-sm" color="sage" pattern="sage">Welcome to Zuralog</Text>
+              <Text variant="body-md" color="secondary" className="mt-2 max-w-md">
+                Your personal health hub. We bring together data from all your devices
+                and give you one clear picture of your well-being.
+              </Text>
+              <DSButton intent="primary" size="md" className="mt-4">
+                Get Started
+              </DSButton>
             </div>
-          </div>
+          </Card>
 
-          {/* FAB */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column" as const,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 16,
-            }}
-          >
+          {/* FAB mockup (inline — no component) */}
+          <Card elevation="standard">
+            <Label>Floating Action Button</Label>
+            <div className="mt-4">
             <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
-                background: t.sage,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative" as const,
-                overflow: "hidden",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-              }}
+              className="relative inline-flex items-center justify-center w-14 h-14 rounded-full overflow-hidden ds-pattern-drift"
+              style={{ backgroundImage: "url('/patterns/sage.png')" }}
             >
-              <div style={sagePattern(0.28)} />
-              <span
-                style={{
-                  position: "relative" as const,
-                  color: t.textOnSage,
-                  fontSize: 28,
-                  fontWeight: 300,
-                }}
-              >
-                +
-              </span>
+              <Plus size={24} className="text-ds-text-on-sage relative z-[2]" />
             </div>
-            <div style={{ color: t.textSecondary, fontSize: 11, textAlign: "center" as const }}>
-              FAB — 56px
-              <br />
-              Sage + pattern (28%)
             </div>
-          </div>
+          </Card>
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            14. NAVIGATION
-            ═══════════════════════════════════════════════════════════════════════ */}
+      {/* ── 16. Navigation Mockup ──────────────────────────────────── */}
+      <section className="mt-16">
         <SectionTitle>Navigation</SectionTitle>
-        <SectionSubtitle>Floating pill bottom bar. Transparent top bar. Sage active tab.</SectionSubtitle>
+        <SectionSub>Top bar with avatar, bottom nav with pill-shaped active indicator.</SectionSub>
 
-        <div style={{ background: t.surface, borderRadius: 20, padding: 24, marginBottom: 32 }}>
-          {/* Top bar mock */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-            <div style={{ color: t.textPrimary, fontSize: 28, fontWeight: 600 }}>Today</div>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                background: t.surfaceRaised,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative" as const,
-                overflow: "hidden",
-              }}
-            >
-              <div style={darkPattern(0.2, "original.png")} />
-              <span style={{ position: "relative" as const, color: t.sage, fontSize: 14, fontWeight: 600 }}>
-                AJ
-              </span>
-            </div>
+        <div className="max-w-sm mx-auto">
+          {/* Top bar */}
+          <div className="flex items-center justify-between bg-ds-surface rounded-t-ds-lg px-4 py-3">
+            <Text variant="title-lg" color="primary">Today</Text>
+            <Avatar initials="AJ" size="sm" />
           </div>
 
-          {/* Bottom nav mock */}
-          <div
-            style={{
-              background: t.canvas,
-              borderRadius: 100,
-              padding: "10px 8px",
-              display: "flex",
-              justifyContent: "space-around",
-              alignItems: "center",
-            }}
-          >
+          {/* Content placeholder */}
+          <div className="bg-ds-canvas h-24 flex items-center justify-center border-x border-[rgba(240,238,233,0.06)]">
+            <Text variant="body-sm" color="secondary">Screen content</Text>
+          </div>
+
+          {/* Bottom nav */}
+          <div className="flex items-center justify-around bg-ds-surface rounded-b-ds-lg px-2 py-2">
             {[
-              { label: "Today", active: true },
-              { label: "Data", active: false },
-              { label: "Coach", active: false },
-              { label: "Progress", active: false },
-              { label: "Trends", active: false },
+              { icon: <Home size={20} />, label: "Home", active: true },
+              { icon: <BarChart3 size={20} />, label: "Trends", active: false },
+              { icon: <Search size={20} />, label: "Explore", active: false },
+              { icon: <Settings size={20} />, label: "Settings", active: false },
             ].map((tab) => (
               <div
                 key={tab.label}
-                style={{
-                  padding: "6px 16px",
-                  borderRadius: 100,
-                  background: tab.active ? "rgba(207,225,185,0.12)" : "transparent",
-                }}
+                className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-ds-pill ${
+                  tab.active
+                    ? "bg-[rgba(207,225,185,0.12)] text-ds-sage"
+                    : "text-ds-text-secondary"
+                }`}
               >
-                <span
-                  style={{
-                    color: tab.active ? t.sage : t.textSecondary,
-                    fontSize: 12,
-                    fontWeight: tab.active ? 600 : 400,
-                  }}
-                >
-                  {tab.label}
-                </span>
+                {tab.icon}
+                <span className="text-[0.625rem] font-medium">{tab.label}</span>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* ═══════════════════════════════════════════════════════════════════════
-            15. PATTERN REFERENCE
-            ═══════════════════════════════════════════════════════════════════════ */}
-        <SectionTitle>Topographic Pattern Reference</SectionTitle>
-        <SectionSubtitle>
-          Every surface that gets the brand pattern. Light surfaces use color-burn blend. Dark surfaces
-          use screen blend. Web uses higher opacity than mobile for visibility.
-        </SectionSubtitle>
+      {/* ── 17. Pattern Reference Table ────────────────────────────── */}
+      <section className="mt-16">
+        <SectionTitle>Pattern Reference</SectionTitle>
+        <SectionSub>Every component that gets the topographic pattern treatment, with its variant and blend mode.</SectionSub>
 
-        <div style={{ background: t.surface, borderRadius: 20, overflow: "hidden" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse" as const,
-              fontSize: 13,
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: `1px solid rgba(240,238,233,0.08)` }}>
-                {["Component", "Opacity", "Blend", "Notes"].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      textAlign: "left" as const,
-                      padding: "12px 16px",
-                      color: t.textSecondary,
-                      fontSize: 11,
-                      textTransform: "uppercase" as const,
-                      letterSpacing: 0.5,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {h}
+        <Card elevation="standard">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[rgba(240,238,233,0.06)]">
+                  <th className="text-left py-2 pr-4">
+                    <Text variant="label-sm" color="sage" as="span">Component</Text>
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { comp: "Primary button", opacity: "25-28%", blend: "Color-burn", note: "sage.png — cover" },
-                { comp: "Destructive button", opacity: "25%", blend: "Color-burn", note: "crimson.png — cover" },
-                { comp: "FAB", opacity: "28%", blend: "Color-burn", note: "sage.png — cover" },
-                { comp: "Hero card", opacity: "18%", blend: "Screen", note: "sage.png — cover" },
-                { comp: "Feature card", opacity: "15%", blend: "Screen", note: "sage.png — cover" },
-                { comp: "Empty state", opacity: "15%", blend: "Screen", note: "sage.png — cover" },
-                { comp: "Onboarding", opacity: "18%", blend: "Screen", note: "sage.png — cover" },
-                { comp: "Toggle track (on)", opacity: "28%", blend: "Color-burn", note: "sage.png — cover" },
-                { comp: "Slider thumb + track", opacity: "28% / 25%", blend: "Color-burn", note: "sage.png — cover" },
-                { comp: "Checkbox (checked)", opacity: "28%", blend: "Color-burn", note: "sage.png — cover" },
-                { comp: "Progress bar", opacity: "25%", blend: "Color-burn", note: "sage.png — cover" },
-                { comp: "Active chip", opacity: "15%", blend: "Screen", note: "original.png — cover" },
-                { comp: "Default avatar", opacity: "20%", blend: "Screen", note: "original.png — cover" },
-                { comp: "List icon squares", opacity: "18%", blend: "Screen", note: "original.png — cover" },
-                { comp: "Search bar", opacity: "8%", blend: "Screen", note: "original.png — cover" },
-                { comp: "Tab track", opacity: "6%", blend: "Screen", note: "sage.png — cover" },
-                { comp: "Category cards", opacity: "15%", blend: "Screen", note: "[color].png — cover" },
-              ].map((row, i) => (
-                <tr
-                  key={row.comp}
-                  style={{
-                    borderBottom:
-                      i < 16 ? "1px solid rgba(240,238,233,0.04)" : "none",
-                  }}
-                >
-                  <td style={{ padding: "10px 16px", color: t.textPrimary }}>{row.comp}</td>
-                  <td style={{ padding: "10px 16px", color: t.sage, fontFamily: "monospace" }}>
-                    {row.opacity}
-                  </td>
-                  <td style={{ padding: "10px 16px", color: t.textSecondary }}>{row.blend}</td>
-                  <td style={{ padding: "10px 16px", color: t.textSecondary, fontSize: 12 }}>
-                    {row.note}
-                  </td>
+                  <th className="text-left py-2 pr-4">
+                    <Text variant="label-sm" color="sage" as="span">Pattern</Text>
+                  </th>
+                  <th className="text-left py-2">
+                    <Text variant="label-sm" color="sage" as="span">Blend Mode</Text>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {patternTable.map((row) => (
+                  <tr key={row.component} className="border-b border-[rgba(240,238,233,0.03)]">
+                    <td className="py-2 pr-4">
+                      <Text variant="body-sm" color="primary" as="span">{row.component}</Text>
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Text variant="body-sm" color="secondary" as="span">{row.pattern}</Text>
+                    </td>
+                    <td className="py-2">
+                      <Text variant="body-sm" color="secondary" as="span">{row.blend}</Text>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </section>
 
-        {/* Footer */}
-        <div
-          style={{
-            marginTop: 64,
-            paddingTop: 24,
-            borderTop: "1px solid rgba(240,238,233,0.06)",
-            color: t.textSecondary,
-            fontSize: 12,
-            textAlign: "center" as const,
-          }}
-        >
-          Zuralog Design System — Dark Mode — {new Date().getFullYear()}
-        </div>
-      </div>
-    </div>
+      {/* ── 18. Footer ─────────────────────────────────────────────── */}
+      <footer className="mt-16 text-center">
+        <Divider className="mb-6" />
+        <Text variant="body-sm" color="secondary">
+          Zuralog Design System &middot; 2026
+        </Text>
+      </footer>
+    </main>
   );
 }
