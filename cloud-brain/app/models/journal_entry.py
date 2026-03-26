@@ -101,6 +101,20 @@ class JournalEntry(Base):
         comment="Array of tag strings",
     )
 
+    # Entry origin — "diary" for manual entries, "coach" for AI-conversation entries
+    source: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        server_default="diary",
+        comment="Origin of the entry: 'diary' or 'coach'",
+    )
+    conversation_id: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        comment="Coach conversation thread ID that produced this entry",
+    )
+
     # Timestamps
     created_at: Mapped[str] = mapped_column(
         DateTime(timezone=True),
