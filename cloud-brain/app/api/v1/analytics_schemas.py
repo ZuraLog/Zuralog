@@ -306,13 +306,14 @@ class CorrelationHighlightSchema(BaseModel):
         default="activity",
         pattern="^(activity|sleep|heart|nutrition|body|wellness)$",
     )
-    discovered_at: str = ""
+    discovered_at: str | None = None
 
 
 class TrendsHomeResponse(BaseModel):
     correlation_highlights: list[CorrelationHighlightSchema] = []
     time_periods: list[dict] = []
     has_enough_data: bool = False
+    has_correlations: bool = False
     pattern_count: int = 0
     suggestion_cards: list[dict] = []
 

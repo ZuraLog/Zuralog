@@ -746,19 +746,53 @@ class TodayRepository implements TodayRepositoryInterface {
     'water_ml': 'water',
   };
 
+  // Reverse of _metricTypeToUiType -- converts UI tile keys back to
+  // the server-side metric_type strings needed by the /metrics/latest endpoint.
+  static const _uiTypeToMetricType = {
+    'weight': 'weight_kg',
+    'sleep': 'sleep_duration',
+    'run': 'distance',
+    'meal': 'calories',
+    'supplement': 'supplement_taken',
+    'water': 'water_ml',
+  };
+
   @override
   Future<Map<String, dynamic>> getLatestLogValues(Set<String> types) async {
     debugPrint('[TodayRepo] getLatestLogValues requested types=$types');
     if (types.isEmpty) return const {};
-    final summary = await getTodayLogSummary();
-    final result = <String, dynamic>{};
-    for (final type in types) {
-      final value = summary.latestValues[type];
-      if (value != null) result[type] = value;
+
+    // Convert UI type keys to server metric_type keys.
+    final serverTypes = types
+        .map((t) => _uiTypeToMetricType[t] ?? t)
+        .toList();
+
+    try {
+      final response = await _api.get(
+        '/api/v1/metrics/latest',
+        queryParameters: {'types': serverTypes.join(',')},
+      );
+      final data = response.data as Map<String, dynamic>;
+      final metrics = (data['metrics'] as List<dynamic>? ?? [])
+          .cast<Map<String, dynamic>>();
+
+      final result = <String, dynamic>{};
+      for (final m in metrics) {
+        final serverKey = m['metric_type'] as String;
+        final uiKey = _metricTypeToUiType[serverKey] ?? serverKey;
+        result[uiKey] = {
+          'value': m['value'] as num,
+          'unit': m['unit'] as String,
+          'date': m['date'] as String,
+        };
+      }
+
+      debugPrint('[TodayRepo] getLatestLogValues result=$result');
+      return result;
+    } catch (e, st) {
+      debugPrint('[TodayRepo] getLatestLogValues failed: $e\n$st');
+      return const {};
     }
-    debugPrint('[TodayRepo] getLatestLogValues result='
-        '${result.map((k, v) => MapEntry(k, '${v.runtimeType}($v)'))}');
-    return result;
   }
 
   // ── Supplements List ───────────────────────────────────────────────────────

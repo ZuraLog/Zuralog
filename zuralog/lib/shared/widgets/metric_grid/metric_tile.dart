@@ -46,6 +46,13 @@ String? _buildLastLoggedHint(MetricTileData data) {
   }
 }
 
+/// Returns true when the last-logged date is 30+ days ago.
+bool _isStaleValue(MetricTileData data) {
+  final at = data.lastLoggedAt;
+  if (at == null) return false;
+  return DateTime.now().difference(at).inDays >= 30;
+}
+
 // ── MetricTile ────────────────────────────────────────────────────────────────
 
 /// A single user-pinned metric tile.
@@ -82,6 +89,7 @@ class MetricTile extends StatelessWidget {
     // Build the last-logged hint shown on greyscale tiles.
     // e.g. "87kg · 4d ago"
     final hint = _buildLastLoggedHint(data);
+    final stale = _isStaleValue(data);
 
     Widget tile = Container(
       width: double.infinity,
@@ -106,7 +114,11 @@ class MetricTile extends StatelessWidget {
                 ? (data.value ?? '—')
                 : (data.lastValue ?? '—'),
             style: AppTextStyles.labelMedium.copyWith(
-              color: data.isLit ? categoryColor : colors.textTertiary,
+              color: data.isLit
+                  ? categoryColor
+                  : stale
+                      ? colors.textTertiary.withValues(alpha: 0.5)
+                      : colors.textTertiary,
               fontWeight: FontWeight.w700,
             ),
             maxLines: 1,
@@ -127,7 +139,9 @@ class MetricTile extends StatelessWidget {
             Text(
               hint,
               style: AppTextStyles.caption.copyWith(
-                color: colors.textTertiary,
+                color: stale
+                    ? colors.textTertiary.withValues(alpha: 0.4)
+                    : colors.textTertiary,
                 fontSize: 9,
               ),
               maxLines: 1,
