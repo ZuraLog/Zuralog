@@ -941,22 +941,17 @@ class WeeklyReport {
 
 // ── JournalEntry ──────────────────────────────────────────────────────────────
 
-/// A daily well-being journal entry logged by the user.
-///
-/// [mood], [energy], and [stress] are integer scores 1–10.
-/// [sleepQuality] is nullable and also 1–10 when provided.
+/// A journal entry created by the user, either via the diary or a conversation.
 class JournalEntry {
   /// Creates a [JournalEntry].
   const JournalEntry({
     required this.id,
     required this.date,
-    required this.mood,
-    required this.energy,
-    required this.stress,
-    required this.notes,
+    required this.content,
     required this.tags,
     required this.createdAt,
-    this.sleepQuality,
+    this.source = "diary",
+    this.conversationId,
   });
 
   /// Unique entry identifier.
@@ -965,56 +960,43 @@ class JournalEntry {
   /// ISO-8601 date this entry is associated with (e.g. "2026-03-04").
   final String date;
 
-  /// Mood score 1–10 (1 = very low, 10 = excellent).
-  final int mood;
-
-  /// Energy score 1–10.
-  final int energy;
-
-  /// Stress score 1–10 (1 = very low, 10 = very high).
-  final int stress;
-
-  /// Optional sleep quality score 1–10. Null if not provided.
-  final int? sleepQuality;
-
-  /// Free-form notes text. Empty string when none provided.
-  final String notes;
+  /// The main text content of this entry.
+  final String content;
 
   /// User-defined tags (e.g. `["gym", "busy", "good-mood"]`).
   final List<String> tags;
 
-  /// When this entry was created (server timestamp).
-  final DateTime createdAt;
+  /// When this entry was created (server timestamp as ISO-8601 string).
+  final String createdAt;
+
+  /// How this entry was created — either "diary" or "conversational".
+  final String source;
+
+  /// The conversation this entry came from, if any. Null for diary entries.
+  final String? conversationId;
 
   /// Deserializes from a JSON map.
   factory JournalEntry.fromJson(Map<String, dynamic> json) {
-    final rawTags = json['tags'] as List<dynamic>? ?? [];
     return JournalEntry(
-      id: json['id'] as String,
-      date: json['date'] as String? ?? '',
-      mood: (json['mood'] as num?)?.toInt() ?? 5,
-      energy: (json['energy'] as num?)?.toInt() ?? 5,
-      stress: (json['stress'] as num?)?.toInt() ?? 5,
-      sleepQuality: (json['sleep_quality'] as num?)?.toInt(),
-      notes: json['notes'] as String? ?? '',
-      tags: rawTags.whereType<String>().toList(),
-      createdAt: json['created_at'] != null
-          ? (DateTime.tryParse(json['created_at'] as String) ?? DateTime.now())
-          : DateTime.now(),
+      id: json["id"] as String,
+      date: json["date"] as String,
+      content: json["content"] as String? ?? "",
+      tags: (json["tags"] as List<dynamic>?)?.cast<String>() ?? [],
+      source: json["source"] as String? ?? "diary",
+      conversationId: json["conversation_id"] as String?,
+      createdAt: json["created_at"] as String? ?? "",
     );
   }
 
   /// Serializes to a JSON map.
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'date': date,
-        'mood': mood,
-        'energy': energy,
-        'stress': stress,
-        'sleep_quality': sleepQuality,
-        'notes': notes,
-        'tags': tags,
-        'created_at': createdAt.toIso8601String(),
+        "id": id,
+        "date": date,
+        "content": content,
+        "tags": tags,
+        "source": source,
+        "conversation_id": conversationId,
+        "created_at": createdAt,
       };
 }
 
