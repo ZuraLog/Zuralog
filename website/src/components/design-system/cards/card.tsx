@@ -76,8 +76,10 @@ export function Card({
       ? CATEGORY_PATTERN[category]
       : "original";
 
+  const hoverClass = elevation !== "data" ? "ds-card-hover" : undefined;
+
   return (
-    <Tag className={cn(cardVariants({ elevation }), className)}>
+    <Tag className={cn(cardVariants({ elevation }), hoverClass, className)}>
       {/* Hero pattern overlay */}
       {showHeroPattern && (
         <PatternOverlay variant="original" opacity={0.18} blend="screen" />

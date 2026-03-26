@@ -707,9 +707,16 @@ body {
   animation: dsPatternDrift 40s linear infinite;
 }
 
+.ds-pattern-drift:hover {
+  animation-duration: 15s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ds-pattern-drift {
     animation: none;
+  }
+  .ds-pattern-drift:hover {
+    animation-duration: 40s;
   }
 }
 
@@ -912,6 +919,25 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Design System — Card hover lift + sage glow
+   Applied to standard / hero / feature cards (not data).
+───────────────────────────────────────────────────────────── */
+.ds-card-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ds-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(207, 225, 185, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-card-hover:hover {
+    transform: none;
+  }
 }
 
 @layer base {
