@@ -834,9 +834,11 @@ export default function BrandBiblePage() {
           <Card elevation="standard">
             <Label>Floating Action Button</Label>
             <div className="mt-4">
-            <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-full bg-ds-sage overflow-hidden">
-              <PatternOverlay variant="sage" opacity={0.15} blend="color-burn" />
-              <Plus size={24} className="text-ds-text-on-sage relative z-10" />
+            <div
+              className="relative inline-flex items-center justify-center w-14 h-14 rounded-full overflow-hidden ds-pattern-drift"
+              style={{ backgroundImage: "url('/patterns/sage.png')" }}
+            >
+              <Plus size={24} className="text-ds-text-on-sage relative z-[2]" />
             </div>
             </div>
           </Card>
