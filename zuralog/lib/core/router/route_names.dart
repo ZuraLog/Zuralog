@@ -26,6 +26,7 @@
 ///   /progress/achievements        → AchievementsScreen
 ///   /progress/report              → WeeklyReportScreen
 ///   /progress/journal             → JournalScreen
+///   /progress/journal/diary       → JournalDiaryScreen
 /// /trends                         → TrendsHomeScreen (tab 4)
 /// /settings                       → SettingsHubScreen (pushed over shell)
 ///   /settings/account             → AccountSettingsScreen
@@ -34,6 +35,7 @@
 ///   /settings/appearance          → AppearanceSettingsScreen
 ///   /settings/coach               → CoachSettingsScreen
 ///   /settings/integrations        → IntegrationsScreen
+///   /settings/journal             → JournalSettingsScreen
 ///   /settings/privacy             → PrivacyDataScreen
 ///   /settings/subscription        → SubscriptionScreen
 ///   /settings/about               → AboutScreen
@@ -214,6 +216,12 @@ abstract final class RouteNames {
   /// Path for the Journal screen.
   static const String journalPath = '/progress/journal';
 
+  /// Name for the Journal Diary entry screen.
+  static const String journalDiary = 'journalDiary';
+
+  /// Path for the Journal Diary screen.
+  static const String journalDiaryPath = '/progress/journal/diary';
+
   // ── Tab 4: Trends ─────────────────────────────────────────────────────────
 
   /// Name for the Trends Home tab root.
@@ -253,6 +261,12 @@ abstract final class RouteNames {
 
   /// Path for the Coach Settings screen.
   static const String settingsCoachPath = '/settings/coach';
+
+  /// Name for the Journal Settings screen.
+  static const String settingsJournal = 'settingsJournal';
+
+  /// Path for the Journal Settings screen.
+  static const String settingsJournalPath = '/settings/journal';
 
   /// Name for the Integrations screen.
   static const String settingsIntegrations = 'settingsIntegrations';
