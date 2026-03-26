@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/cards/z_selectable_tile.dart';
 
 class JournalModePickerSheet extends StatefulWidget {
   const JournalModePickerSheet({super.key});
@@ -36,30 +37,58 @@ class _JournalModePickerSheetState extends State<JournalModePickerSheet> {
               style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            ListTile(
-              leading: const Icon(Icons.edit_note, size: 28),
-              title: Text(
-                'Write yourself',
-                style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
-              ),
-              subtitle: Text(
-                'Free-form text entry with tags',
-                style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
-              ),
+            ZSelectableTile(
+              isSelected: false,
+              showCheckIndicator: false,
               onTap: () => _pick('diary'),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_note, size: 28),
+                  const SizedBox(width: AppDimens.spaceMd),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Write yourself',
+                        style: AppTextStyles.bodyLarge
+                            .copyWith(color: colors.textPrimary),
+                      ),
+                      Text(
+                        'Free-form text entry with tags',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppDimens.spaceSm),
-            ListTile(
-              leading: const Icon(Icons.chat_bubble_outline, size: 28),
-              title: Text(
-                'Talk to Coach',
-                style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
-              ),
-              subtitle: Text(
-                'Guided reflective conversation',
-                style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
-              ),
+            ZSelectableTile(
+              isSelected: false,
+              showCheckIndicator: false,
               onTap: () => _pick('conversational'),
+              child: Row(
+                children: [
+                  const Icon(Icons.chat_bubble_outline, size: 28),
+                  const SizedBox(width: AppDimens.spaceMd),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Talk to Coach',
+                        style: AppTextStyles.bodyLarge
+                            .copyWith(color: colors.textPrimary),
+                      ),
+                      Text(
+                        'Guided reflective conversation',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppDimens.spaceMd),
             Row(
@@ -67,12 +96,14 @@ class _JournalModePickerSheetState extends State<JournalModePickerSheet> {
                 Switch.adaptive(
                   value: _remember,
                   activeTrackColor: colors.primary,
+                  activeThumbColor: colors.primary,
                   onChanged: (v) => setState(() => _remember = v),
                 ),
                 const SizedBox(width: AppDimens.spaceSm),
                 Text(
                   'Remember my choice',
-                  style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary),
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
