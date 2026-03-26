@@ -84,6 +84,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
   @override
   void dispose() {
+    // Clear the journal mode flag so it doesn't leak into the next Coach session
+    // if the user navigated here via journal mode but left without sending.
+    ref.read(coachJournalModeProvider.notifier).state = false;
     _inputCtrl.dispose();
     _inputFocus.dispose();
     _attachmentCount.dispose();
