@@ -40,21 +40,17 @@ class JournalEntryCreate(BaseModel):
 
     Attributes:
         date: Calendar date in YYYY-MM-DD format.
-        mood: Subjective mood rating 1–10. Optional.
-        energy: Subjective energy rating 1–10. Optional.
-        stress: Subjective stress rating 1–10. Optional.
-        sleep_quality: Subjective sleep quality rating 1–10. Optional.
-        notes: Free-text journal notes. Optional.
+        content: Free-text journal content (required, 1–10 000 chars).
         tags: Array of tag strings. Defaults to empty list.
+        source: Origin of the entry — "diary" or "conversational".
+        conversation_id: Coach conversation thread ID (optional, max 64 chars).
     """
 
-    date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
-    mood: int | None = None
-    energy: int | None = None
-    stress: int | None = None
-    sleep_quality: int | None = None
-    notes: str | None = None
-    tags: list[str] = []
+    date: str  # YYYY-MM-DD
+    content: str = Field(..., min_length=1, max_length=10000)
+    tags: list[str] = Field(default_factory=list)
+    source: str = Field(default="diary", pattern="^(diary|conversational)$")
+    conversation_id: str | None = Field(default=None, max_length=64)
 
 
 class JournalEntryResponse(BaseModel):
@@ -62,29 +58,21 @@ class JournalEntryResponse(BaseModel):
 
     Attributes:
         id: UUID primary key.
-        user_id: Owning user's ID.
         date: Calendar date in YYYY-MM-DD format.
-        mood: Mood rating 1–10 or None.
-        energy: Energy rating 1–10 or None.
-        stress: Stress rating 1–10 or None.
-        sleep_quality: Sleep quality rating 1–10 or None.
-        notes: Free-text journal notes or None.
+        content: Free-text journal content.
         tags: Array of tag strings.
+        source: Origin of the entry — "diary" or "conversational".
+        conversation_id: Coach conversation thread ID or None.
         created_at: ISO timestamp of creation.
-        updated_at: ISO timestamp of last update or None.
     """
 
     id: str
-    user_id: str
     date: str
-    mood: int | None
-    energy: int | None
-    stress: int | None
-    sleep_quality: int | None
-    notes: str | None
-    tags: list
+    content: str
+    tags: list[str]
+    source: str
+    conversation_id: str | None
     created_at: str
-    updated_at: str | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,6 +85,9 @@ class JournalEntryResponse(BaseModel):
 def _entry_to_response(entry: JournalEntry) -> dict:
     """Serialize a JournalEntry ORM object to a response dict.
 
+    The DB column is still named ``notes``; we expose it as ``content`` in
+    the API layer for backward compatibility without renaming the column.
+
     Args:
         entry: The ORM instance to serialize.
 
@@ -104,50 +95,14 @@ def _entry_to_response(entry: JournalEntry) -> dict:
         Dict suitable for the JournalEntryResponse schema.
     """
     return {
-        "id": entry.id,
-        "user_id": entry.user_id,
-        "date": entry.date,
-        "mood": entry.mood,
-        "energy": entry.energy,
-        "stress": entry.stress,
-        "sleep_quality": entry.sleep_quality,
-        "notes": entry.notes,
+        "id": str(entry.id),
+        "date": str(entry.date),
+        "content": entry.notes or "",  # notes column aliased to content
         "tags": entry.tags or [],
-        "created_at": str(entry.created_at),
-        "updated_at": str(entry.updated_at) if entry.updated_at else None,
+        "source": entry.source or "diary",
+        "conversation_id": entry.conversation_id,
+        "created_at": entry.created_at.isoformat() if entry.created_at else "",
     }
-
-
-def _validate_rating(value: int | None, field: str) -> None:
-    """Validate that a rating field is in the 1–10 range.
-
-    Args:
-        value: The integer rating to validate, or None to skip.
-        field: The field name for the error message.
-
-    Raises:
-        HTTPException: 422 if the value is outside 1–10.
-    """
-    if value is not None and not (1 <= value <= 10):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"'{field}' must be between 1 and 10, got {value}.",
-        )
-
-
-def _validate_entry_body(body: JournalEntryCreate) -> None:
-    """Run all validation rules on an entry creation/update body.
-
-    Args:
-        body: The incoming request payload.
-
-    Raises:
-        HTTPException: 422 if any rating is out of range.
-    """
-    _validate_rating(body.mood, "mood")
-    _validate_rating(body.energy, "energy")
-    _validate_rating(body.stress, "stress")
-    _validate_rating(body.sleep_quality, "sleep_quality")
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +110,7 @@ def _validate_entry_body(body: JournalEntryCreate) -> None:
 # ---------------------------------------------------------------------------
 
 
-@router.post("", summary="Create or update a journal entry (upsert by date)")
+@router.post("", summary="Create or update a journal entry (upsert by date)", status_code=status.HTTP_201_CREATED)
 async def create_journal_entry(
     body: JournalEntryCreate,
     user_id: str = Depends(get_authenticated_user_id),
@@ -176,10 +131,8 @@ async def create_journal_entry(
         The created or updated JournalEntryResponse.
 
     Raises:
-        HTTPException: 422 if any rating is outside the 1–10 range.
+        HTTPException: 422 if any field fails Pydantic validation.
     """
-    _validate_entry_body(body)
-
     # Check for existing entry on this date
     result = await db.execute(
         select(JournalEntry).where(
@@ -191,11 +144,9 @@ async def create_journal_entry(
 
     if entry is not None:
         # Update existing entry (upsert)
-        entry.mood = body.mood
-        entry.energy = body.energy
-        entry.stress = body.stress
-        entry.sleep_quality = body.sleep_quality
-        entry.notes = body.notes
+        entry.notes = body.content
+        entry.source = body.source
+        entry.conversation_id = body.conversation_id
         entry.tags = body.tags
         logger.info("Updated journal entry %s for user %s on %s", entry.id, user_id, body.date)
     else:
@@ -204,11 +155,9 @@ async def create_journal_entry(
             id=str(uuid.uuid4()),
             user_id=user_id,
             date=body.date,
-            mood=body.mood,
-            energy=body.energy,
-            stress=body.stress,
-            sleep_quality=body.sleep_quality,
-            notes=body.notes,
+            notes=body.content,
+            source=body.source,
+            conversation_id=body.conversation_id,
             tags=body.tags,
         )
         db.add(entry)
@@ -289,10 +238,8 @@ async def update_journal_entry(
 
     Raises:
         HTTPException: 404 if the entry is not found or belongs to another user.
-        HTTPException: 422 if any rating is outside the 1–10 range.
+        HTTPException: 422 if any field fails Pydantic validation.
     """
-    _validate_entry_body(body)
-
     result = await db.execute(
         select(JournalEntry).where(
             JournalEntry.id == entry_id,
@@ -308,11 +255,9 @@ async def update_journal_entry(
         )
 
     entry.date = body.date
-    entry.mood = body.mood
-    entry.energy = body.energy
-    entry.stress = body.stress
-    entry.sleep_quality = body.sleep_quality
-    entry.notes = body.notes
+    entry.notes = body.content
+    entry.source = body.source
+    entry.conversation_id = body.conversation_id
     entry.tags = body.tags
 
     await db.commit()
