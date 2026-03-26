@@ -66,7 +66,7 @@ export function DSCheckbox({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
           "after:absolute after:-inset-3",
           isChecked
-            ? "bg-cover bg-center bg-no-repeat ds-pattern-sage"
+            ? "ds-pattern-drift"
             : "border-2 border-ds-text-secondary bg-transparent",
           disabled && "opacity-40 cursor-not-allowed",
         )}

@@ -49,8 +49,8 @@ export function DSSlider({
       <SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none py-2">
         <SliderPrimitive.Track className="relative w-full h-[6px] rounded-full bg-ds-surface-raised overflow-hidden">
           <SliderPrimitive.Indicator
-            className="h-full rounded-full bg-cover bg-center bg-no-repeat ds-pattern-sage"
-            style={{ backgroundImage: "url('/patterns/sage.png')", backgroundSize: "200px auto", backgroundRepeat: "repeat" }}
+            className="h-full rounded-full ds-pattern-drift"
+            style={{ backgroundImage: "url('/patterns/sage.png')" }}
           />
         </SliderPrimitive.Track>
 
@@ -58,7 +58,7 @@ export function DSSlider({
           <SliderPrimitive.Thumb
             key={index}
             className={cn(
-              "block w-[18px] h-[18px] rounded-full bg-cover bg-center bg-no-repeat ds-pattern-sage",
+              "block w-[18px] h-[18px] rounded-full ds-pattern-drift",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
               "after:absolute after:-inset-2",
             )}

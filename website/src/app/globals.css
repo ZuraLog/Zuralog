@@ -692,60 +692,18 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Design System — Drifting topographic pattern overlays
-   Same technique as btn-pattern-light but using pre-colored PNGs.
-   Applied via utility classes: ds-pattern-sage, ds-pattern-crimson
+   Design System — Drifting topographic pattern backgrounds
+   The pattern PNG IS the background. It tiles and drifts slowly.
+   Applied via utility class: ds-pattern-drift
 ───────────────────────────────────────────────────────────── */
-.ds-pattern-sage,
-.ds-pattern-crimson {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-.ds-pattern-sage::before,
-.ds-pattern-crimson::before {
-  content: "";
-  position: absolute;
-  inset: -50%;
-  width: 200%;
-  height: 200%;
+.ds-pattern-drift {
   background-size: 300px auto;
   background-repeat: repeat;
-  pointer-events: none;
   animation: patternDrift 20s linear infinite;
-  z-index: 1;
-}
-.ds-pattern-sage::before {
-  background-image: url("/patterns/sage.png");
-  mix-blend-mode: multiply;
-  opacity: 0.12;
-}
-.ds-pattern-crimson::before {
-  background-image: url("/patterns/crimson.png");
-  mix-blend-mode: multiply;
-  opacity: 0.10;
 }
 
-/* Hover intensify */
-.ds-pattern-sage:hover::before {
-  opacity: 0.22;
-  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.ds-pattern-crimson:hover::before {
-  opacity: 0.18;
-  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Disabled: hide the pattern */
-.ds-pattern-sage:disabled::before,
-.ds-pattern-crimson:disabled::before {
-  display: none;
-}
-
-/* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .ds-pattern-sage::before,
-  .ds-pattern-crimson::before {
+  .ds-pattern-drift {
     animation: none;
   }
 }
