@@ -59,10 +59,7 @@ export function RadioItem({
           disabled && "opacity-40 cursor-not-allowed",
         )}
       >
-        <RadioPrimitive.Indicator
-          className="block w-[10px] h-[10px] rounded-full bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/patterns/sage.png')" }}
-        />
+        <RadioPrimitive.Indicator className="block w-[10px] h-[10px] rounded-full bg-ds-sage" />
       </RadioPrimitive.Root>
 
       {label && (

@@ -42,8 +42,6 @@ export function DSCheckbox({
   label,
   className,
 }: CheckboxProps) {
-  // Track internal state to conditionally apply bg-image (base-ui data attrs
-  // only apply CSS classes, but inline style is always present — so we need JS)
   const isControlled = checked !== undefined;
   const [internalChecked, setInternalChecked] = React.useState(defaultChecked ?? false);
   const isChecked = isControlled ? checked : internalChecked;
@@ -64,17 +62,16 @@ export function DSCheckbox({
         onCheckedChange={handleChange}
         disabled={disabled}
         className={cn(
-          "relative flex items-center justify-center w-[20px] h-[20px] rounded-[4px] overflow-hidden transition-colors",
+          "relative flex items-center justify-center w-[20px] h-[20px] rounded-[4px] transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
           "after:absolute after:-inset-3",
           isChecked
-            ? "bg-cover bg-center bg-no-repeat"
+            ? "bg-ds-sage ds-pattern-sage"
             : "border-2 border-ds-text-secondary bg-transparent",
           disabled && "opacity-40 cursor-not-allowed",
         )}
-        style={isChecked ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
       >
-        <CheckboxPrimitive.Indicator className="relative z-10 text-ds-text-on-sage flex items-center justify-center">
+        <CheckboxPrimitive.Indicator className="relative z-[2] text-ds-text-on-sage flex items-center justify-center">
           <CheckIcon />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>

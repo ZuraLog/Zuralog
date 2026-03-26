@@ -4,7 +4,6 @@ import React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { motion, type HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { usePatternVideo } from "@/components/design-system/primitives/pattern-video";
 
 /* ------------------------------------------------------------------ */
 /*  Spinner (internal only)                                           */
@@ -48,8 +47,8 @@ const buttonVariants = cva(
   {
     variants: {
       intent: {
-        primary: "text-ds-text-on-sage bg-cover bg-center bg-no-repeat",
-        destructive: "text-white bg-cover bg-center bg-no-repeat",
+        primary: "text-ds-text-on-sage bg-ds-sage ds-pattern-sage",
+        destructive: "text-white bg-ds-error ds-pattern-crimson",
         secondary:
           "bg-transparent border-[1.5px] border-[rgba(240,238,233,0.2)] text-ds-warm-white",
         text: "bg-transparent text-ds-sage font-semibold",
@@ -66,24 +65,6 @@ const buttonVariants = cva(
     },
   },
 );
-
-/* ------------------------------------------------------------------ */
-/*  Background image per intent                                       */
-/* ------------------------------------------------------------------ */
-
-const BG_IMAGE: Partial<Record<string, string>> = {
-  primary: "url('/patterns/sage.png')",
-  destructive: "url('/patterns/crimson.png')",
-};
-
-/* ------------------------------------------------------------------ */
-/*  Whether the intent supports the animated video hover              */
-/* ------------------------------------------------------------------ */
-
-const HAS_VIDEO_HOVER: Record<string, boolean> = {
-  primary: true,
-  destructive: true,
-};
 
 /* ------------------------------------------------------------------ */
 /*  Spinner color per intent                                          */
@@ -127,46 +108,26 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       leftIcon,
       rightIcon,
       children,
-      style,
       ...rest
     },
     ref,
   ) => {
-    const resolvedIntent = intent ?? "primary";
     const isDisabled = disabled || loading;
-    const bgImage = BG_IMAGE[resolvedIntent];
-    const supportsVideo = HAS_VIDEO_HOVER[resolvedIntent] && !isDisabled;
-    const { containerRef, onMouseEnter, onMouseLeave } = usePatternVideo();
-
-    // Merge the containerRef with the forwarded ref so the video attaches
-    // to the button element itself
-    const mergedRef = React.useCallback(
-      (node: HTMLButtonElement | null) => {
-        // Forward ref
-        if (typeof ref === "function") ref(node);
-        else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node;
-        // Video container ref
-        (containerRef as React.MutableRefObject<HTMLElement | null>).current = node;
-      },
-      [ref, containerRef],
-    );
 
     return (
       <motion.button
-        ref={mergedRef}
+        ref={ref}
         className={cn(buttonVariants({ intent, size }), className)}
         disabled={isDisabled}
         aria-busy={loading || undefined}
         aria-disabled={isDisabled || undefined}
         whileTap={isDisabled ? undefined : { scale: 0.97, opacity: 0.85 }}
-        style={bgImage ? { backgroundImage: bgImage, ...style } : style}
-        onMouseEnter={supportsVideo ? onMouseEnter : undefined}
-        onMouseLeave={supportsVideo ? onMouseLeave : undefined}
         {...rest}
       >
-        <span className="relative z-10 inline-flex items-center justify-center gap-2">
+        {/* Content sits above the ::before pattern drift */}
+        <span className="relative z-[2] inline-flex items-center justify-center gap-2">
           {loading ? (
-            <Spinner className={SPINNER_COLOR[resolvedIntent]} />
+            <Spinner className={SPINNER_COLOR[intent ?? "primary"]} />
           ) : (
             <>
               {leftIcon && (

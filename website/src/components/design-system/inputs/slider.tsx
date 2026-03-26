@@ -15,20 +15,6 @@ export interface SliderProps {
   className?: string;
 }
 
-const sageTrackStyle: React.CSSProperties = {
-  backgroundImage: "url('/patterns/sage.png')",
-  backgroundSize: "200px auto",
-  backgroundRepeat: "repeat",
-  backgroundPosition: "center",
-};
-
-const sageThumbStyle: React.CSSProperties = {
-  backgroundImage: "url('/patterns/sage.png')",
-  backgroundSize: "80px auto",
-  backgroundRepeat: "no-repeat",
-  backgroundPosition: "center",
-};
-
 export function DSSlider({
   value,
   defaultValue,
@@ -62,21 +48,17 @@ export function DSSlider({
     >
       <SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none py-2">
         <SliderPrimitive.Track className="relative w-full h-[6px] rounded-full bg-ds-surface-raised overflow-hidden">
-          <SliderPrimitive.Indicator
-            className="h-full rounded-full"
-            style={sageTrackStyle}
-          />
+          <SliderPrimitive.Indicator className="h-full rounded-full bg-ds-sage ds-pattern-sage" />
         </SliderPrimitive.Track>
 
         {Array.from({ length: values.length }, (_, index) => (
           <SliderPrimitive.Thumb
             key={index}
             className={cn(
-              "block w-[18px] h-[18px] rounded-full",
+              "block w-[18px] h-[18px] rounded-full bg-ds-sage ds-pattern-sage",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
               "after:absolute after:-inset-2",
             )}
-            style={sageThumbStyle}
           />
         ))}
       </SliderPrimitive.Control>

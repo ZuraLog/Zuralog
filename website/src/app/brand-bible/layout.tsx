@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PatternVideoProvider } from "@/components/design-system";
 
 export const metadata: Metadata = {
   title: "Brand Bible",
@@ -14,9 +13,7 @@ export default function BrandBibleLayout({
 }) {
   return (
     <div className="min-h-screen bg-ds-canvas font-jakarta text-ds-text-primary">
-      <PatternVideoProvider>
-        {children}
-      </PatternVideoProvider>
+      {children}
     </div>
   );
 }
