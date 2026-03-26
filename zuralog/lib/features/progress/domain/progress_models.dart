@@ -950,7 +950,7 @@ class JournalEntry {
     required this.content,
     required this.tags,
     required this.createdAt,
-    this.source = "diary",
+    this.source = 'diary',
     this.conversationId,
   });
 
@@ -978,25 +978,28 @@ class JournalEntry {
   /// Deserializes from a JSON map.
   factory JournalEntry.fromJson(Map<String, dynamic> json) {
     return JournalEntry(
-      id: json["id"] as String,
-      date: json["date"] as String,
-      content: json["content"] as String? ?? "",
-      tags: (json["tags"] as List<dynamic>?)?.cast<String>() ?? [],
-      source: json["source"] as String? ?? "diary",
-      conversationId: json["conversation_id"] as String?,
-      createdAt: json["created_at"] as String? ?? "",
+      id: json['id'] as String,
+      date: json['date'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+      tags: (json['tags'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      source: json['source'] as String? ?? 'diary',
+      conversationId: json['conversation_id'] as String?,
+      createdAt: json['created_at'] as String? ?? '',
     );
   }
 
   /// Serializes to a JSON map.
   Map<String, dynamic> toJson() => {
-        "id": id,
-        "date": date,
-        "content": content,
-        "tags": tags,
-        "source": source,
-        "conversation_id": conversationId,
-        "created_at": createdAt,
+        'id': id,
+        'date': date,
+        'content': content,
+        'tags': tags,
+        'source': source,
+        'conversation_id': conversationId,
+        'created_at': createdAt,
       };
 }
 
