@@ -31,6 +31,8 @@ import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/features/coach/domain/coach_models.dart';
 import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/settings/providers/settings_providers.dart';
+import 'package:zuralog/features/coach/utils/journal_summary_detector.dart';
+import 'package:zuralog/features/progress/presentation/journal_save_confirmation_sheet.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 // ── ChatThreadScreen ──────────────────────────────────────────────────────────
@@ -66,6 +68,10 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 
   /// Fix M9: prevents multiple addPostFrameCallback calls from queuing up.
   bool _scrollScheduled = false;
+
+  /// Tracks message IDs for which the journal-save sheet has already been shown,
+  /// preventing duplicate triggers on state rebuilds.
+  final Set<String> _journalSheetShownForMessageIds = {};
 
   // Fix H10: Edit state is now managed in CoachChatNotifier / CoachChatState.
   // The local _isEditing, _editingContent, _editSnapshot fields are removed;
@@ -143,6 +149,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           // Suppress route-replace when raw attachments follow — the widget
           // must stay alive until all uploads and the follow-up send finish.
           skipRouteReplace: hasRawAttachments,
+          systemPromptExtra: pending.systemPromptExtra,
         );
 
         // After the first send completes, the notifier holds a real UUID from
@@ -264,6 +271,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
     bool skipRouteReplace = false,
+    String? systemPromptExtra,
   }) async {
     final transaction = Sentry.startTransaction(
       'ai.chat_response',
@@ -290,6 +298,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             proactivity: proactivity,
             responseLength: responseLength,
             attachments: attachments,
+            systemPromptExtra: systemPromptExtra,
           );
 
       // After the stream completes, check if we got a new conversation ID
@@ -418,7 +427,33 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           (prev?.isSending ?? false) && !next.isSending && next.streamingContent == null;
 
       if (streamFinished) {
-        // Response complete — do nothing; let the user stay where they are.
+        // Response complete — check if the last assistant message contains a
+        // journal_summary payload and show the save sheet if so.
+        final lastAssistant = next.messages
+            .where((m) => m.role == MessageRole.assistant)
+            .lastOrNull;
+        if (lastAssistant != null &&
+            !_journalSheetShownForMessageIds.contains(lastAssistant.id)) {
+          final summary = detectJournalSummary(lastAssistant.content);
+          if (summary != null) {
+            _journalSheetShownForMessageIds.add(lastAssistant.id);
+            final resolvedId =
+                next.resolvedConversationId ?? widget.conversationId;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => JournalSaveConfirmationSheet(
+                  summary: summary.content,
+                  suggestedTags: summary.tags,
+                  conversationId: resolvedId,
+                ),
+              );
+            });
+          }
+        }
+        // Let the user stay where they are after streaming ends.
         // The floating scroll-to-bottom button will be visible if they scrolled up.
       } else if (newMessage || streamStarted || isActivelyStreaming) {
         // Respects [_userScrolledUp] guard inside [_scrollToBottom].

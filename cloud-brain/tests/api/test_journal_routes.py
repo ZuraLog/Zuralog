@@ -8,9 +8,9 @@ Test coverage:
     - Create entry returns 201
     - Create on same date upserts (updates)
     - List by date range returns correct entries
-    - Update changes mood value
+    - Update changes content value
     - Delete removes entry
-    - 404 on non-existent date (update and delete)
+    - 404 on non-existent entry (update and delete)
     - Auth guard returns 401
 """
 
@@ -43,17 +43,19 @@ def _make_entry(**overrides) -> SimpleNamespace:
         id=str(uuid.uuid4()),
         user_id=TEST_USER_ID,
         date=date.today(),
-        mood=7,
-        energy=6,
-        stress=3,
-        sleep_quality=8,
         notes="Test note",
         tags=["test"],
+        source="diary",
+        conversation_id=None,
         created_at=None,
         updated_at=None,
     )
     defaults.update(overrides)
-    return SimpleNamespace(**defaults)
+    ns = SimpleNamespace(**defaults)
+    # created_at needs .isoformat() support
+    if ns.created_at is None:
+        ns.created_at = None
+    return ns
 
 
 # ---------------------------------------------------------------------------
@@ -108,30 +110,21 @@ class TestCreateJournalEntry:
 
         # No existing row → SELECT returns None
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = None
+        mock_result.scalar_one_or_none.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Simulate refresh populating the entry
-        today_str = date.today().isoformat()
-        entry = _make_entry(mood=7, energy=6, notes="Feeling good", date=date.today())
         mock_db.refresh = AsyncMock(side_effect=lambda obj: None)
+        mock_db.add = MagicMock()
 
-        # Patch the new entry that gets added
-        original_add = mock_db.add
-
-        def capture_add(obj):
-            # Copy fields from the request onto the namespace so we can check them
-            pass
-
-        mock_db.add = MagicMock(side_effect=capture_add)
-
+        today_str = date.today().isoformat()
         response = client.post(
             "/api/v1/journal",
-            json={"date": today_str, "mood": 7, "energy": 6, "notes": "Feeling good"},
+            json={"date": today_str, "content": "Feeling good today"},
             headers=AUTH_HEADER,
         )
         assert response.status_code == 201
-        mock_db.add.assert_called_once()
+        # add() is called at least once for the journal entry (StreakTracker may also call it)
+        assert mock_db.add.call_count >= 1
         mock_db.commit.assert_awaited()
 
     def test_create_same_date_upserts(self, client_with_auth):
@@ -139,16 +132,15 @@ class TestCreateJournalEntry:
         client, mock_db = client_with_auth
 
         today_str = date.today().isoformat()
-        existing = _make_entry(mood=5, date=date.today())
+        existing = _make_entry(date=date.today())
 
-        # First call returns existing row; second returns the updated entry
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = existing
+        mock_result.scalar_one_or_none.return_value = existing
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.post(
             "/api/v1/journal",
-            json={"date": today_str, "mood": 9, "energy": 8},
+            json={"date": today_str, "content": "Updated content"},
             headers=AUTH_HEADER,
         )
         assert response.status_code == 201
@@ -161,12 +153,13 @@ class TestCreateJournalEntry:
         client, mock_db = client_with_auth
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = None
+        mock_result.scalar_one_or_none.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
 
+        today_str = date.today().isoformat()
         response = client.post(
             "/api/v1/journal",
-            json={"mood": 6, "tags": ["headache", "tired"]},
+            json={"date": today_str, "content": "Tired today", "tags": ["headache", "tired"]},
             headers=AUTH_HEADER,
         )
         assert response.status_code == 201
@@ -238,20 +231,20 @@ class TestListJournalEntries:
 
 
 class TestUpdateJournalEntry:
-    def test_update_changes_mood(self, client_with_auth):
+    def test_update_changes_content(self, client_with_auth):
         """PUT /journal/{date} updates existing entry and returns 200."""
         client, mock_db = client_with_auth
 
         entry_date = (date.today() + timedelta(days=30)).isoformat()
-        entry = _make_entry(mood=5, date=date.fromisoformat(entry_date))
+        entry = _make_entry(date=date.fromisoformat(entry_date))
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = entry
+        mock_result.scalar_one_or_none.return_value = entry
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.put(
             f"/api/v1/journal/{entry_date}",
-            json={"mood": 10},
+            json={"date": entry_date, "content": "New content"},
             headers=AUTH_HEADER,
         )
         assert response.status_code == 200
@@ -262,13 +255,13 @@ class TestUpdateJournalEntry:
         client, mock_db = client_with_auth
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = None
+        mock_result.scalar_one_or_none.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         future_date = (date.today() + timedelta(days=999)).isoformat()
         response = client.put(
             f"/api/v1/journal/{future_date}",
-            json={"mood": 5},
+            json={"date": future_date, "content": "Some content"},
             headers=AUTH_HEADER,
         )
         assert response.status_code == 404
@@ -288,7 +281,7 @@ class TestDeleteJournalEntry:
         entry = _make_entry(date=date.fromisoformat(entry_date))
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = entry
+        mock_result.scalar_one_or_none.return_value = entry
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         response = client.delete(
@@ -304,7 +297,7 @@ class TestDeleteJournalEntry:
         client, mock_db = client_with_auth
 
         mock_result = MagicMock()
-        mock_result.scalars.return_value.first.return_value = None
+        mock_result.scalar_one_or_none.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         future_date = (date.today() + timedelta(days=998)).isoformat()
@@ -330,6 +323,6 @@ class TestAuthGuard:
         """POST /journal without Authorization returns 401/403."""
         response = client_unauthenticated.post(
             "/api/v1/journal",
-            json={"mood": 5},
+            json={"date": date.today().isoformat(), "content": "Hello"},
         )
         assert response.status_code in (401, 403)

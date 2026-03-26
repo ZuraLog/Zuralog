@@ -27,6 +27,7 @@ import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/presentation/widgets/achievements_section_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/goal_trajectory_card.dart';
 import 'package:zuralog/features/progress/presentation/widgets/goals_empty_card.dart';
+import 'package:zuralog/features/progress/presentation/journal_entry_router.dart';
 import 'package:zuralog/features/progress/presentation/widgets/journal_prompt_cta.dart';
 import 'package:zuralog/features/progress/presentation/widgets/progress_skeleton_loader.dart';
 import 'package:zuralog/features/progress/presentation/widgets/streak_flame_hero.dart';
@@ -252,7 +253,11 @@ class _ContentView extends ConsumerWidget {
                   },
                 ),
               JournalPromptCta(
-                onTap: () => context.push(RouteNames.journalPath),
+                onTap: () => showDialog(
+                  context: context,
+                  barrierColor: Colors.transparent,
+                  builder: (_) => const JournalEntryRouter(),
+                ),
                 lastEntryDate: lastEntryDateStr,
                 journalledToday: journalledToday,
               ),

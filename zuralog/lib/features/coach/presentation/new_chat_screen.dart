@@ -84,6 +84,9 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
 
   @override
   void dispose() {
+    // Clear the journal mode flag so it doesn't leak into the next Coach session
+    // if the user navigated here via journal mode but left without sending.
+    ref.read(coachJournalModeProvider.notifier).state = false;
     _inputCtrl.dispose();
     _inputFocus.dispose();
     _attachmentCount.dispose();
@@ -146,6 +149,22 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
     final proactivity = ref.read(proactivityLevelProvider).value;
     final responseLength = ref.read(responseLengthProvider).value;
 
+    // Read and reset the journal mode flag. When set, inject the journal
+    // check-in instructions as an extra system prompt on this conversation.
+    final isJournalMode = ref.read(coachJournalModeProvider);
+    if (isJournalMode) {
+      ref.read(coachJournalModeProvider.notifier).state = false;
+    }
+    const journalSystemPrompt =
+        'You are now in journal check-in mode. Guide the user through a short '
+        'reflective conversation about their day. Ask 2-3 thoughtful questions. '
+        'When you feel the conversation has reached a natural close, respond with '
+        'a JSON payload on its own line:\n\n'
+        '{"type": "journal_summary", "content": "<a 2-4 sentence summary of '
+        'their reflection>", "tags": ["<tag>", ...]}\n\n'
+        'Use only these tags: Rest day, Gym, Stressful, Traveled, Good mood, '
+        'Poor sleep, Sick, Social, Productive.';
+
     ref.read(analyticsServiceProvider).capture(
       event: 'coach_message_sent',
       properties: {'source': 'new_chat', 'char_count': text.length},
@@ -167,6 +186,7 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
       proactivity: proactivity,
       responseLength: responseLength,
       rawAttachments: rawAttachments,
+      systemPromptExtra: isJournalMode ? journalSystemPrompt : null,
     );
 
     _isSending = true;
@@ -268,11 +288,6 @@ class _NewChatScreenState extends ConsumerState<NewChatScreen> {
                 _sendMessage(rawAttachments: rawAttachments),
             attachmentCountNotifier: _attachmentCount,
           ),
-          // Push the input bar above the frosted nav bar.
-          // AppShell(extendBody: true) injects the nav bar height into
-          // MediaQuery.padding.bottom — this SizedBox consumes exactly that
-          // inset so the Column doesn't underlap the nav bar.
-          SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),
     );

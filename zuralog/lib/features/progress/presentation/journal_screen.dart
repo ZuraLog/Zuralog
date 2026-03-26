@@ -1,6 +1,6 @@
 /// Journal Screen — date-grouped list of daily well-being journal entries.
 ///
-/// Supports pull-to-refresh, empty state, and opens [JournalEntrySheet] for
+/// Supports pull-to-refresh, empty state, and opens [JournalEntryRouter] for
 /// both creating and editing entries.
 library;
 
@@ -12,26 +12,13 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
-import 'package:zuralog/features/progress/presentation/journal_entry_sheet.dart';
+import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart';
+import 'package:zuralog/features/progress/presentation/journal_entry_router.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
 import 'package:zuralog/shared/widgets/zuralog_app_bar.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-String _moodEmoji(int mood) {
-  if (mood <= 2) return '😞';
-  if (mood <= 4) return '😕';
-  if (mood <= 6) return '😐';
-  if (mood <= 8) return '😊';
-  return '😄';
-}
-
-Color _levelColor(int value) {
-  if (value <= 3) return AppColors.statusError;
-  if (value <= 6) return AppColors.categoryNutrition;
-  return AppColors.categoryActivity;
-}
 
 String _monthLabel(String isoDate) {
   try {
@@ -97,11 +84,10 @@ class JournalScreen extends ConsumerWidget {
 
   void _openNewEntry(BuildContext context, WidgetRef ref) {
     ref.read(hapticServiceProvider).light();
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const JournalEntrySheet(),
+      barrierColor: Colors.transparent,
+      builder: (_) => const JournalEntryRouter(),
     );
   }
 
@@ -111,12 +97,22 @@ class JournalScreen extends ConsumerWidget {
     JournalEntry entry,
   ) {
     ref.read(hapticServiceProvider).light();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => JournalEntrySheet(initialEntry: entry),
-    );
+    if (entry.source == 'conversational') {
+      // Show read-only content for conversational entries.
+      // Deep-linking back to the Coach conversation is a future phase.
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _EntryDetailSheet(entry: entry),
+      );
+    } else {
+      // Open diary screen in edit mode for diary entries.
+      showDialog<void>(
+        context: context,
+        barrierColor: Colors.transparent,
+        builder: (_) => JournalDiaryScreen(existingEntry: entry),
+      );
+    }
   }
 
   @override
@@ -329,6 +325,53 @@ class _ResolvedItem {
   final JournalEntry? entry;
 }
 
+// ── Entry Detail Sheet ────────────────────────────────────────────────────────
+
+/// Read-only bottom sheet shown when tapping a conversational entry.
+class _EntryDetailSheet extends StatelessWidget {
+  const _EntryDetailSheet({required this.entry});
+
+  final JournalEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              entry.date,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            Text(
+              entry.content,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            if (entry.tags.isNotEmpty) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Wrap(
+                spacing: AppDimens.spaceSm,
+                children: entry.tags
+                    .map((t) => Chip(label: Text(t)))
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Entry Card ────────────────────────────────────────────────────────────────
 
 class _EntryCard extends StatelessWidget {
@@ -336,6 +379,11 @@ class _EntryCard extends StatelessWidget {
 
   final JournalEntry entry;
   final VoidCallback onTap;
+
+  IconData _sourceIcon(String source) {
+    if (source == 'conversational') return Icons.chat_bubble_outline;
+    return Icons.edit_note;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -351,7 +399,7 @@ class _EntryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Top row: date + mood ──────────────────────────────────────
+            // ── Top row: date + source icon ───────────────────────────────
             Row(
               children: [
                 Expanded(
@@ -362,30 +410,26 @@ class _EntryCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  '${_moodEmoji(entry.mood)} ${entry.mood}',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: colors.textPrimary,
-                  ),
+                Icon(
+                  _sourceIcon(entry.source),
+                  size: 18,
+                  color: AppColors.textTertiary,
                 ),
               ],
             ),
-            const SizedBox(height: AppDimens.spaceSm),
 
-            // ── Energy + stress dots ──────────────────────────────────────
-            Row(
-              children: [
-                _MiniIndicator(
-                  label: 'Energy',
-                  value: entry.energy,
+            // ── Content preview ───────────────────────────────────────────
+            if (entry.content.isNotEmpty) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Text(
+                entry.content,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: colors.textSecondary,
                 ),
-                const SizedBox(width: AppDimens.spaceMd),
-                _MiniIndicator(
-                  label: 'Stress',
-                  value: entry.stress,
-                ),
-              ],
-            ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
 
             // ── Tags ──────────────────────────────────────────────────────
             if (entry.tags.isNotEmpty) ...[
@@ -413,53 +457,9 @@ class _EntryCard extends StatelessWidget {
                     .toList(),
               ),
             ],
-
-            // ── Notes preview ─────────────────────────────────────────────
-            if (entry.notes.isNotEmpty) ...[
-              const SizedBox(height: AppDimens.spaceSm),
-              Text(
-                entry.notes,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: colors.textSecondary,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MiniIndicator extends StatelessWidget {
-  const _MiniIndicator({required this.label, required this.value});
-
-  final String label;
-  final int value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: _levelColor(value),
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: AppDimens.spaceXs),
-        Text(
-          '$label $value',
-          style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.textTertiary,
-          ),
-        ),
-      ],
     );
   }
 }

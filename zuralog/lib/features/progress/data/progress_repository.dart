@@ -62,23 +62,19 @@ abstract interface class ProgressRepositoryInterface {
   /// Creates a new journal entry. Invalidates journal cache on success.
   Future<JournalEntry> createJournalEntry({
     required String date,
-    required int mood,
-    required int energy,
-    required int stress,
-    int? sleepQuality,
-    required String notes,
+    required String content,
     required List<String> tags,
+    String source = 'diary',
+    String? conversationId,
   });
 
   /// Updates an existing journal entry. Invalidates journal cache on success.
   Future<JournalEntry> updateJournalEntry({
     required String entryId,
-    int? mood,
-    int? energy,
-    int? stress,
-    int? sleepQuality,
-    String? notes,
+    String? content,
     List<String>? tags,
+    String? source,
+    String? conversationId,
   });
 
   /// Deletes a journal entry by ID. Invalidates journal cache on success.
@@ -283,25 +279,19 @@ class ProgressRepository implements ProgressRepositoryInterface {
   @override
   Future<JournalEntry> createJournalEntry({
     required String date,
-    required int mood,
-    required int energy,
-    required int stress,
-    int? sleepQuality,
-    required String notes,
+    required String content,
     required List<String> tags,
+    String source = 'diary',
+    String? conversationId,
   }) async {
-    final response = await _api.post(
-      '/api/v1/journal',
-      data: {
-        'date': date,
-        'mood': mood,
-        'energy': energy,
-        'stress': stress,
-        'sleep_quality': ?sleepQuality,
-        'notes': notes,
-        'tags': tags,
-      },
-    );
+    final body = {
+      'date': date,
+      'content': content,
+      'tags': tags,
+      'source': source,
+      'conversation_id': ?conversationId,
+    };
+    final response = await _api.post('/api/v1/journal', data: body);
     _journalCache = null;
     return JournalEntry.fromJson(response.data as Map<String, dynamic>);
   }
@@ -310,24 +300,18 @@ class ProgressRepository implements ProgressRepositoryInterface {
   @override
   Future<JournalEntry> updateJournalEntry({
     required String entryId,
-    int? mood,
-    int? energy,
-    int? stress,
-    int? sleepQuality,
-    String? notes,
+    String? content,
     List<String>? tags,
+    String? source,
+    String? conversationId,
   }) async {
-    final response = await _api.patch(
-      '/api/v1/journal/$entryId',
-      body: {
-        'mood': ?mood,
-        'energy': ?energy,
-        'stress': ?stress,
-        'sleep_quality': ?sleepQuality,
-        'notes': ?notes,
-        'tags': ?tags,
-      },
-    );
+    final body = {
+      'content': ?content,
+      'tags': ?tags,
+      'source': ?source,
+      'conversation_id': ?conversationId,
+    };
+    final response = await _api.patch('/api/v1/journal/$entryId', body: body);
     _journalCache = null;
     return JournalEntry.fromJson(response.data as Map<String, dynamic>);
   }

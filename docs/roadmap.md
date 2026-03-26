@@ -207,7 +207,7 @@
 | P1 | Progress — Goal Detail | ✅ Done | feat/progress-tab-gaps — projected completion date from trend line; AI card extended with projection |
 | P1 | Progress — Achievements | ✅ Done | feat/progress-tab-gaps — progress-toward-unlock bars on locked badges |
 | P1 | Progress — Weekly Report | ✅ Done | feat/progress-tab-gaps — enforced 5-card story sequence; share-as-image via screenshot + share_plus |
-| P1 | Progress — Journal / Daily Log | ✅ Done | Phase 10 — complete (from Phase 6 rebuild) |
+| P1 | Progress — Journal / Daily Log | ✅ Done | feat/journal-redesign — diary mode + Coach conversational mode with AI summary detection (2026-03-26) |
  | P1 | Trends — Trends Home | ✅ Complete | Phase 7 |
  | P1 | Trends — Correlations | ✅ Complete | Phase 7 |
  | P1 | Trends — Reports | ✅ Complete | Phase 7 |

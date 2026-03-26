@@ -41,30 +41,23 @@ async def test_create_journal_entry_triggers_checkin_streak():
     fake_entry.id = "entry-001"
     fake_entry.user_id = "user-001"
     fake_entry.date = "2026-03-25"
-    fake_entry.mood = 7
-    fake_entry.energy = 8
-    fake_entry.stress = 3
-    fake_entry.sleep_quality = 9
     fake_entry.notes = "Good day"
     fake_entry.tags = []
-    fake_entry.created_at = "2026-03-25T10:00:00"
-    fake_entry.updated_at = None
+    fake_entry.source = "diary"
+    fake_entry.conversation_id = None
+    fake_entry.created_at = None
 
     async def _refresh(obj):
         # Replace the object's internals with fake_entry attributes
-        for attr in ("id", "user_id", "date", "mood", "energy", "stress",
-                     "sleep_quality", "notes", "tags", "created_at", "updated_at"):
+        for attr in ("id", "user_id", "date", "notes", "tags", "source",
+                     "conversation_id", "created_at"):
             setattr(obj, attr, getattr(fake_entry, attr))
 
     mock_db.refresh = _refresh
 
     body = JournalEntryCreate(
         date="2026-03-25",
-        mood=7,
-        energy=8,
-        stress=3,
-        sleep_quality=9,
-        notes="Good day",
+        content="Good day",
         tags=[],
     )
 
@@ -96,14 +89,11 @@ async def test_update_journal_entry_triggers_checkin_streak():
     fake_entry.id = "entry-002"
     fake_entry.user_id = "user-001"
     fake_entry.date = "2026-03-24"
-    fake_entry.mood = 6
-    fake_entry.energy = 7
-    fake_entry.stress = 4
-    fake_entry.sleep_quality = 8
     fake_entry.notes = "Updated"
     fake_entry.tags = []
-    fake_entry.created_at = "2026-03-24T09:00:00"
-    fake_entry.updated_at = "2026-03-25T10:00:00"
+    fake_entry.source = "diary"
+    fake_entry.conversation_id = None
+    fake_entry.created_at = None
 
     found_result = MagicMock()
     found_result.scalar_one_or_none.return_value = fake_entry
@@ -117,11 +107,7 @@ async def test_update_journal_entry_triggers_checkin_streak():
 
     body = JournalEntryCreate(
         date="2026-03-24",
-        mood=6,
-        energy=7,
-        stress=4,
-        sleep_quality=8,
-        notes="Updated",
+        content="Updated",
         tags=[],
     )
 
@@ -160,23 +146,20 @@ async def test_journal_streak_failure_does_not_block_response():
     fake_entry.id = "entry-003"
     fake_entry.user_id = "user-001"
     fake_entry.date = "2026-03-25"
-    fake_entry.mood = None
-    fake_entry.energy = None
-    fake_entry.stress = None
-    fake_entry.sleep_quality = None
-    fake_entry.notes = None
+    fake_entry.notes = "Hello"
     fake_entry.tags = []
-    fake_entry.created_at = "2026-03-25T10:00:00"
-    fake_entry.updated_at = None
+    fake_entry.source = "diary"
+    fake_entry.conversation_id = None
+    fake_entry.created_at = None
 
     async def _refresh(obj):
-        for attr in ("id", "user_id", "date", "mood", "energy", "stress",
-                     "sleep_quality", "notes", "tags", "created_at", "updated_at"):
+        for attr in ("id", "user_id", "date", "notes", "tags", "source",
+                     "conversation_id", "created_at"):
             setattr(obj, attr, getattr(fake_entry, attr))
 
     mock_db.refresh = _refresh
 
-    body = JournalEntryCreate(date="2026-03-25")
+    body = JournalEntryCreate(date="2026-03-25", content="Hello")
 
     with patch(
         "app.api.v1.journal_routes.StreakTracker"

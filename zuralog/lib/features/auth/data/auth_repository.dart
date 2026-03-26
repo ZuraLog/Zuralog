@@ -343,18 +343,6 @@ class AuthRepository {
     return data['avatar_url'] as String;
   }
 
-  /// Permanently deletes the current user's account.
-  ///
-  /// Calls `DELETE /api/v1/users/me`. This action is irreversible — all user
-  /// data is removed from the server. Local tokens are not cleared here;
-  /// the caller is responsible for logging out after this succeeds.
-  ///
-  /// Throws:
-  ///   [DioException] if the network call fails or returns a non-2xx status.
-  Future<void> deleteAccount() async {
-    await _apiClient.delete('/api/v1/users/me');
-  }
-
   /// Checks if the user has a stored auth token.
   ///
   /// This is a quick local check — it does NOT validate the token

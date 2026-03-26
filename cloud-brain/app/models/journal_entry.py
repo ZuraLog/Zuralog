@@ -1,10 +1,12 @@
 """
 Zuralog Cloud Brain — Journal Entry Model.
 
-Daily journal entries capture subjective wellness metrics (mood, energy,
-stress, sleep quality), free-text notes, and tags. The unique constraint on
-(user_id, date) enforces one entry per user per calendar day; POST upserts
-into this constraint to allow idempotent updates.
+Daily journal entries store free-text content, tags, and source tracking.
+The unique constraint on (user_id, date) enforces one entry per user per
+calendar day; POST upserts into this constraint to allow idempotent updates.
+Active fields: notes (aliased to content in the API), source, and
+conversation_id. The mood/energy/stress/sleep_quality columns are retained
+in the database for backward compatibility but are not exposed in the API.
 """
 
 import uuid
@@ -20,18 +22,16 @@ class JournalEntry(Base):
     """A daily wellness journal entry for a single user.
 
     One entry per user per calendar day (enforced by the unique constraint
-    on ``user_id`` + ``date``). All rating fields are optional 1–10 integers.
+    on ``user_id`` + ``date``).
 
     Attributes:
         id: UUID primary key.
         user_id: Supabase UID of the owning user. Indexed for list queries.
         date: Calendar date in YYYY-MM-DD format. Indexed for range queries.
-        mood: Subjective mood rating 1–10. Nullable.
-        energy: Subjective energy rating 1–10. Nullable.
-        stress: Subjective stress rating 1–10. Nullable.
-        sleep_quality: Subjective sleep quality rating 1–10. Nullable.
-        notes: Free-text journal notes. Nullable.
+        notes: Free-text journal content (aliased to ``content`` in the API). Nullable.
         tags: JSON array of tag strings (e.g. ["headache", "travel"]).
+        source: Origin of the entry — "diary" or "conversational".
+        conversation_id: Coach conversation thread ID that produced this entry.
         created_at: Server-managed creation timestamp.
         updated_at: Server-managed last-update timestamp. Nullable.
     """
@@ -63,7 +63,7 @@ class JournalEntry(Base):
         comment="Calendar date in YYYY-MM-DD format",
     )
 
-    # Subjective wellness ratings (1–10, all optional)
+    # DEPRECATED — kept for backward compat, not exposed in API
     mood: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
@@ -99,6 +99,20 @@ class JournalEntry(Base):
         server_default="[]",
         nullable=False,
         comment="Array of tag strings",
+    )
+
+    # Entry origin — "diary" for manual entries, "conversational" for AI-conversation entries
+    source: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        server_default="diary",
+        comment="Origin of the entry: 'diary' or 'conversational'",
+    )
+    conversation_id: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        comment="Coach conversation thread ID that produced this entry",
     )
 
     # Timestamps

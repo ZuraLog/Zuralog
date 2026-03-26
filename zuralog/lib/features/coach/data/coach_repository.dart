@@ -116,6 +116,7 @@ abstract interface class CoachRepository {
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
+    String? systemPromptExtra,
   });
 
   /// Cancels any in-flight WebSocket stream immediately.
@@ -225,6 +226,7 @@ final class MockCoachRepository implements CoachRepository {
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
+    String? systemPromptExtra,
   }) async* {
     final String effectiveId = conversationId ?? 'mock_${DateTime.now().millisecondsSinceEpoch}';
 

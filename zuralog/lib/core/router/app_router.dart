@@ -21,8 +21,10 @@
 ///   /progress/achievements          → AchievementsScreen
 ///   /progress/report                → WeeklyReportScreen
 ///   /progress/journal               → JournalScreen
+///   /progress/journal/diary         → JournalDiaryScreen
 /// /trends                           → TrendsHomeScreen (tab 4)
 /// /settings                         → SettingsHubScreen (pushed over shell)
+///   /settings/journal               → JournalSettingsScreen
 ///   /settings/account … /settings/about  → sub-screens
 /// /profile                          → ProfileScreen (pushed over shell)
 ///   /profile/emergency-card         → EmergencyCardScreen
@@ -80,6 +82,7 @@ import 'package:zuralog/features/progress/presentation/goal_detail_screen.dart';
 import 'package:zuralog/features/progress/presentation/achievements_screen.dart';
 import 'package:zuralog/features/progress/presentation/weekly_report_screen.dart';
 import 'package:zuralog/features/progress/presentation/journal_screen.dart';
+import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart';
 
 // ── Tab 4: Trends ─────────────────────────────────────────────────────────────
 import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
@@ -90,6 +93,7 @@ import 'package:zuralog/features/settings/presentation/account_settings_screen.d
 import 'package:zuralog/features/settings/presentation/notification_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/appearance_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/coach_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/journal_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/integrations_screen.dart';
 import 'package:zuralog/features/settings/presentation/privacy_data_screen.dart';
 import 'package:zuralog/features/settings/presentation/subscription_settings_screen.dart';
@@ -283,6 +287,14 @@ List<RouteBase> _buildRoutes() {
           builder: (context, state) => const SentryErrorBoundary(
             module: 'settings.coach',
             child: CoachSettingsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: 'journal',
+          name: RouteNames.settingsJournal,
+          builder: (context, state) => const SentryErrorBoundary(
+            module: 'settings.journal',
+            child: JournalSettingsScreen(),
           ),
         ),
         GoRoute(
@@ -593,6 +605,16 @@ List<RouteBase> _buildRoutes() {
                     module: 'progress.journal',
                     child: JournalScreen(),
                   ),
+                  routes: [
+                    GoRoute(
+                      path: 'diary',
+                      name: RouteNames.journalDiary,
+                      builder: (context, state) => const SentryErrorBoundary(
+                        module: 'progress.journal_diary',
+                        child: JournalDiaryScreen(),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

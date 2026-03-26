@@ -167,7 +167,13 @@ async def _compute_wow(db: AsyncSession, user_id: str, local_date: _date) -> dic
     last_monday = monday - _timedelta(days=7)
     last_sunday = monday - _timedelta(days=1)
 
-    key_metrics = ["steps", "sleep_hours", "calories_consumed", "weight_kg"]
+    _metric_meta: dict[str, tuple[str, str]] = {
+        "steps": ("Steps", "steps/day"),
+        "sleep_hours": ("Sleep", "hrs/night"),
+        "calories_consumed": ("Calories", "kcal/day"),
+        "weight_kg": ("Weight", "kg"),
+    }
+    key_metrics = list(_metric_meta.keys())
     metrics_out = []
 
     for metric in key_metrics:
@@ -198,15 +204,12 @@ async def _compute_wow(db: AsyncSession, user_id: str, local_date: _date) -> dic
         if this_avg is None and last_avg is None:
             continue
 
-        delta_pct = 0.0
-        if last_avg and last_avg > 0:
-            delta_pct = round(((this_avg or 0) - last_avg) / last_avg * 100, 1)
-
+        label, unit = _metric_meta[metric]
         metrics_out.append({
-            "metric": metric,
-            "this_week_avg": round(this_avg or 0, 2),
-            "last_week_avg": round(last_avg or 0, 2),
-            "delta_pct": delta_pct,
+            "label": label,
+            "current_value": round(this_avg or 0, 2),
+            "previous_value": round(last_avg or 0, 2),
+            "unit": unit,
         })
 
     return {
@@ -379,10 +382,13 @@ async def progress_home(
     )
     recent_achievements = [
         {
+            "id": str(a.id),
             "key": a.achievement_key,
             "title": a.achievement_key.replace("_", " ").title(),
-            "unlocked_at": str(a.unlocked_at),
+            "description": "",
+            "category": "consistency",
             "icon_name": _achievement_icon(a.achievement_key),
+            "unlocked_at": str(a.unlocked_at),
         }
         for a in recent_ach_result.scalars().all()
     ]
