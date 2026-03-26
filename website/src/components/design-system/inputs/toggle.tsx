@@ -53,9 +53,10 @@ export function Toggle({
         className={cn(
           "relative w-[44px] h-[26px] rounded-full transition-colors duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
-          isOn ? "bg-ds-sage ds-pattern-sage" : "bg-ds-surface-raised",
+          isOn ? "bg-cover bg-center bg-no-repeat ds-pattern-sage" : "bg-ds-surface-raised",
           disabled && "opacity-40 cursor-not-allowed",
         )}
+        style={isOn ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
       >
         {/* Thumb */}
         <span

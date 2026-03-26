@@ -66,10 +66,11 @@ export function DSCheckbox({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
           "after:absolute after:-inset-3",
           isChecked
-            ? "bg-ds-sage ds-pattern-sage"
+            ? "bg-cover bg-center bg-no-repeat ds-pattern-sage"
             : "border-2 border-ds-text-secondary bg-transparent",
           disabled && "opacity-40 cursor-not-allowed",
         )}
+        style={isChecked ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
       >
         <CheckboxPrimitive.Indicator className="relative z-[2] text-ds-text-on-sage flex items-center justify-center">
           <CheckIcon />

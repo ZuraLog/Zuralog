@@ -47,8 +47,8 @@ const buttonVariants = cva(
   {
     variants: {
       intent: {
-        primary: "text-ds-text-on-sage bg-ds-sage ds-pattern-sage",
-        destructive: "text-white bg-ds-error ds-pattern-crimson",
+        primary: "text-ds-text-on-sage bg-cover bg-center bg-no-repeat ds-pattern-sage",
+        destructive: "text-white bg-cover bg-center bg-no-repeat ds-pattern-crimson",
         secondary:
           "bg-transparent border-[1.5px] border-[rgba(240,238,233,0.2)] text-ds-warm-white",
         text: "bg-transparent text-ds-sage font-semibold",
@@ -108,11 +108,19 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       leftIcon,
       rightIcon,
       children,
+      style,
       ...rest
     },
     ref,
   ) => {
+    const resolvedIntent = intent ?? "primary";
     const isDisabled = disabled || loading;
+    const bgImage =
+      resolvedIntent === "primary"
+        ? "url('/patterns/sage.png')"
+        : resolvedIntent === "destructive"
+          ? "url('/patterns/crimson.png')"
+          : undefined;
 
     return (
       <motion.button
@@ -122,6 +130,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading || undefined}
         aria-disabled={isDisabled || undefined}
         whileTap={isDisabled ? undefined : { scale: 0.97, opacity: 0.85 }}
+        style={bgImage ? { backgroundImage: bgImage, ...style } : style}
         {...rest}
       >
         {/* Content sits above the ::before pattern drift */}
