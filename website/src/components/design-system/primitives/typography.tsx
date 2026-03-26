@@ -54,6 +54,7 @@ const DEFAULT_TAGS: Record<TextVariant, React.ElementType> = {
 export interface TextProps {
   variant?: TextVariant;
   color?: NonNullable<VariantProps<typeof textVariants>["color"]>;
+  pattern?: "sage" | "crimson" | "amber" | "original";
   as?: React.ElementType;
   className?: string;
   children: React.ReactNode;
@@ -62,16 +63,35 @@ export interface TextProps {
 export function Text({
   variant = "body-md",
   color = "primary",
+  pattern,
   as,
   className,
   children,
 }: TextProps) {
   const Component = (as ?? DEFAULT_TAGS[variant]) as React.ElementType<
-    React.HTMLAttributes<HTMLElement>
+    React.HTMLAttributes<HTMLElement> & { style?: React.CSSProperties }
   >;
 
+  const usePattern = !!pattern;
+  // Only bold (700) display text gets the animated drift; semibold and below get static pattern
+  const isBold = variant === "display-lg";
+  const patternClass = usePattern
+    ? isBold
+      ? "ds-pattern-text"
+      : "ds-pattern-text-static"
+    : undefined;
+
   return (
-    <Component className={cn(textVariants({ variant, color }), className)}>
+    <Component
+      className={cn(
+        textVariants({ variant, color: usePattern ? undefined : color }),
+        patternClass,
+        className,
+      )}
+      {...(usePattern
+        ? { style: { backgroundImage: `url('/patterns/${pattern}.png')` } }
+        : undefined)}
+    >
       {children}
     </Component>
   );

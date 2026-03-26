@@ -106,7 +106,7 @@ export function PatternVideoProvider({ children }: { children: React.ReactNode }
 export function usePatternVideo() {
   const ctx = useContext(Ctx);
   const containerRef = useRef<HTMLElement | null>(null);
-  const detachCleanup = useRef<(() => void) | undefined>();
+  const detachCleanup = useRef<(() => void) | undefined>(undefined);
 
   const onMouseEnter = useCallback(() => {
     if (!ctx || !containerRef.current) return;
