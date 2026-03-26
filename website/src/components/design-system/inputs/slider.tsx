@@ -52,7 +52,7 @@ export function DSSlider({
           <SliderPrimitive.Indicator className="relative h-full bg-ds-sage overflow-hidden rounded-full">
             <PatternOverlay
               variant="sage"
-              opacity={0.12}
+              opacity={0.25}
               blend="color-burn"
             />
           </SliderPrimitive.Indicator>

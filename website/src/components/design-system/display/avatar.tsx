@@ -48,7 +48,7 @@ export function Avatar({
         />
       ) : (
         <>
-          <PatternOverlay variant="original" opacity={0.15} blend="screen" />
+          <PatternOverlay variant="original" opacity={0.20} blend="screen" />
           {initials && (
             <span
               className={cn(

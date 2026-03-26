@@ -16,10 +16,14 @@ export function DSTooltip(props: React.ComponentProps<typeof TooltipPrimitive.Ro
 /*  DSTooltipTrigger — wraps Trigger                                   */
 /* ------------------------------------------------------------------ */
 
-export function DSTooltipTrigger(
-  props: React.ComponentProps<typeof TooltipPrimitive.Trigger>,
-) {
-  return <TooltipPrimitive.Trigger {...props} />;
+export function DSTooltipTrigger({
+  children,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  if (React.isValidElement(children)) {
+    return <TooltipPrimitive.Trigger render={children} {...props} />;
+  }
+  return <TooltipPrimitive.Trigger {...props}>{children}</TooltipPrimitive.Trigger>;
 }
 
 /* ------------------------------------------------------------------ */

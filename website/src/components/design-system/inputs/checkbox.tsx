@@ -66,7 +66,7 @@ export function DSCheckbox({
         {/* Pattern overlay when checked — rendered always but only visible when parent has sage bg */}
         <PatternOverlay
           variant="sage"
-          opacity={0.15}
+          opacity={0.28}
           blend="color-burn"
         />
       </CheckboxPrimitive.Root>

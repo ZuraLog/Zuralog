@@ -30,7 +30,7 @@ export function Chip({ active = false, children, onClick, className }: ChipProps
       )}
     >
       {active && (
-        <PatternOverlay variant="original" opacity={0.08} blend="screen" />
+        <PatternOverlay variant="original" opacity={0.15} blend="screen" />
       )}
       <span className="relative z-10">{children}</span>
     </Tag>

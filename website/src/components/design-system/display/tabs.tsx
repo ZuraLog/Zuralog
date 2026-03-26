@@ -36,7 +36,7 @@ export function DSTabsList({
       )}
       {...props}
     >
-      <PatternOverlay variant="original" opacity={0.04} blend="screen" />
+      <PatternOverlay variant="original" opacity={0.06} blend="screen" />
       <div className="relative z-10 inline-flex">{children}</div>
     </TabsPrimitive.List>
   );

@@ -62,7 +62,7 @@ export function Toggle({
         {isOn && (
           <PatternOverlay
             variant="sage"
-            opacity={0.15}
+            opacity={0.28}
             blend="color-burn"
           />
         )}

@@ -16,10 +16,17 @@ export function DSDialog(props: React.ComponentProps<typeof DialogPrimitive.Root
 /*  DSDialogTrigger — wraps Trigger                                    */
 /* ------------------------------------------------------------------ */
 
-export function DSDialogTrigger(
-  props: React.ComponentProps<typeof DialogPrimitive.Trigger>,
-) {
-  return <DialogPrimitive.Trigger {...props} />;
+export function DSDialogTrigger({
+  children,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+  // If children is a single React element, use render prop to avoid button-in-button nesting
+  if (React.isValidElement(children)) {
+    return (
+      <DialogPrimitive.Trigger render={children} {...props} />
+    );
+  }
+  return <DialogPrimitive.Trigger {...props}>{children}</DialogPrimitive.Trigger>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,8 +108,14 @@ export function DSDialogDescription({
 /*  DSDialogClose                                                      */
 /* ------------------------------------------------------------------ */
 
-export function DSDialogClose(
-  props: React.ComponentProps<typeof DialogPrimitive.Close>,
-) {
-  return <DialogPrimitive.Close {...props} />;
+export function DSDialogClose({
+  children,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Close>) {
+  if (React.isValidElement(children)) {
+    return (
+      <DialogPrimitive.Close render={children} {...props} />
+    );
+  }
+  return <DialogPrimitive.Close {...props}>{children}</DialogPrimitive.Close>;
 }

@@ -86,8 +86,8 @@ const SPINNER_COLOR: Record<string, string> = {
 const PATTERN_CONFIG: Partial<
   Record<string, { variant: "sage" | "crimson"; opacity: number }>
 > = {
-  primary: { variant: "sage", opacity: 0.15 },
-  destructive: { variant: "crimson", opacity: 0.15 },
+  primary: { variant: "sage", opacity: 0.28 },
+  destructive: { variant: "crimson", opacity: 0.25 },
 };
 
 /* ------------------------------------------------------------------ */

@@ -80,12 +80,12 @@ export function Card({
     <Tag className={cn(cardVariants({ elevation }), className)}>
       {/* Hero pattern overlay */}
       {showHeroPattern && (
-        <PatternOverlay variant="original" opacity={0.10} blend="screen" />
+        <PatternOverlay variant="original" opacity={0.18} blend="screen" />
       )}
 
       {/* Feature pattern overlay */}
       {showFeaturePattern && (
-        <PatternOverlay variant={featureVariant} opacity={0.07} blend="screen" />
+        <PatternOverlay variant={featureVariant} opacity={0.15} blend="screen" />
       )}
 
       {/* Content sits above the pattern */}
