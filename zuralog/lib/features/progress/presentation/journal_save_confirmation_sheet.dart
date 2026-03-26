@@ -47,7 +47,10 @@ class _JournalSaveConfirmationSheetState
 
   Future<void> _save() async {
     final text = _summaryCtrl.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      setState(() => _error = 'Entry text cannot be empty.');
+      return;
+    }
 
     setState(() {
       _saving = true;
@@ -96,18 +99,9 @@ class _JournalSaveConfirmationSheetState
               style: AppTextStyles.titleMedium.copyWith(color: colors.textPrimary),
             ),
             const SizedBox(height: AppDimens.spaceMd),
-            TextField(
+            AppTextField(
               controller: _summaryCtrl,
               maxLines: 6,
-              style: AppTextStyles.bodyLarge.copyWith(color: colors.textPrimary),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: colors.inputBackground,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-                  borderSide: BorderSide.none,
-                ),
-              ),
             ),
             const SizedBox(height: AppDimens.spaceSm),
             Wrap(
