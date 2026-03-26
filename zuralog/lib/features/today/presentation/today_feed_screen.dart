@@ -699,82 +699,49 @@ MetricTileData _buildTile(
 }
 
 /// Extracts the formatted last-ever value and its timestamp for [type] from
-/// the [latest] map returned by `latestLogValuesProvider`.
+/// the [latest] map returned by latestLogValuesProvider.
 ///
-/// The `/latest` endpoint returns type-specific shapes:
-///   weight  → {"value_kg": 87.3, "logged_at": "...", ...}
-///   steps   → {"steps": 8432,    "logged_at": "...", ...}
-///   others  → {"value": 7.5,     "logged_at": "...", ...}
+/// The /api/v1/metrics/latest endpoint returns a uniform shape per metric:
+///   { "value": 87.3, "unit": "kg", "date": "2026-03-22" }
 (String?, DateTime?) _extractLastLogged(
   String type,
   Map<String, dynamic> latest,
 ) {
-  // Guard: getLatestLogValues may return flat scalars (e.g. double) instead
-  // of the expected nested map shape. Until the backend exposes a proper
-  // /latest endpoint, return (null, null) for any non-map value rather
-  // than crashing with a type cast error.
   final raw = latest[type];
-  debugPrint('[extractLastLogged] type=$type '
-      'raw.runtimeType=${raw.runtimeType} raw=$raw');
   if (raw is! Map<String, dynamic>) return (null, null);
   final entry = raw;
 
-  // Parse logged_at
+  // Parse the date (YYYY-MM-DD format from the server).
+  // Construct as local midnight so relative-time comparisons are timezone-safe.
   DateTime? loggedAt;
-  final loggedAtRaw = entry['logged_at'] as String?;
-  if (loggedAtRaw != null) {
+  final dateStr = entry['date'] as String?;
+  if (dateStr != null) {
     try {
-      loggedAt = DateTime.parse(loggedAtRaw).toLocal();
+      final parsed = DateTime.parse(dateStr);
+      loggedAt = DateTime(parsed.year, parsed.month, parsed.day);
     } catch (_) {
       loggedAt = null;
     }
   }
 
-  // Format value per type
+  // Format value per type using the raw numeric value.
+  final num? v = entry['value'] as num?;
+  if (v == null) return (null, loggedAt);
+
   String? lastValue;
   try {
     lastValue = switch (type) {
-      'weight' => () {
-          final v = entry['value_kg'] as num?;
-          return v != null ? '${v.toStringAsFixed(1)}kg' : null;
-        }(),
-      'steps' => () {
-          final v = entry['steps'] as num?;
-          return v != null ? formatSteps(v.toInt()) : null;
-        }(),
-      'sleep' => () {
-          final v = entry['value'] as num?;
-          return v != null ? formatSleepMinutes(v.toDouble()) : null;
-        }(),
-      'water' => () {
-          final v = entry['value'] as num?;
-          return v != null ? '${v.toStringAsFixed(0)}ml' : null;
-        }(),
-      'run' => () {
-          final v = entry['value'] as num?;
-          return v != null ? '${v.toStringAsFixed(1)}km' : null;
-        }(),
-      'meal' => () {
-          final v = entry['value'] as num?;
-          return v != null ? '${v.toStringAsFixed(0)} kcal' : null;
-        }(),
-      'supplement' => () {
-          final v = entry['value'] as num?;
-          return v != null ? '${v.toInt()} taken' : null;
-        }(),
-      'heart_rate' => () {
-          final v = entry['value'] as num?;
-          return v != null ? '${v.toInt()} bpm' : null;
-        }(),
-      'mood' || 'energy' || 'stress' => () {
-          final v = entry['value'] as num?;
-          return v != null ? '${v.toStringAsFixed(1)}/10' : null;
-        }(),
-      'symptom' => entry['text_value'] as String?,
-      _ => () {
-          final v = entry['value'];
-          return v != null ? '$v' : null;
-        }(),
+      'weight'                                   => '${v.toStringAsFixed(1)}kg',
+      'steps'                                    => formatSteps(v.toInt()),
+      'sleep'                                    => formatSleepMinutes(v.toDouble()),
+      'water'                                    => '${v.toStringAsFixed(0)}ml',
+      'run'                                      => '${(v / 1000).toStringAsFixed(1)}km',
+      'meal'                                     => '${v.toStringAsFixed(0)} kcal',
+      'supplement'                               => '${v.toInt()} taken',
+      'heart_rate'                               => '${v.toInt()} bpm',
+      'mood' || 'energy' || 'stress'             => '${v.toStringAsFixed(1)}/10',
+      'symptom'                                  => entry['unit'] as String? ?? v.toStringAsFixed(0),
+      _                                          => v.toString(),
     };
   } catch (_) {
     lastValue = null;
