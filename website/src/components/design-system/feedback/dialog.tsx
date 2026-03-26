@@ -54,7 +54,7 @@ export function DSDialogContent({ children, className }: DSDialogContentProps) {
           "bg-ds-surface-overlay rounded-ds-xl",
           "max-w-sm sm:max-w-md w-[calc(100%-2rem)]",
           "p-6",
-          "transition-all duration-200 origin-center",
+          "transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-center",
           "data-[state=open]:opacity-100 data-[state=open]:scale-100",
           "data-[state=closed]:opacity-0 data-[state=closed]:scale-95",
           className,

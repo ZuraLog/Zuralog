@@ -29,6 +29,8 @@ function CheckIcon() {
         strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
+        strokeDasharray="20"
+        strokeDashoffset="20"
       />
     </svg>
   );
@@ -72,7 +74,7 @@ export function DSCheckbox({
         )}
         style={isChecked ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
       >
-        <CheckboxPrimitive.Indicator className="relative z-[2] text-ds-text-on-sage flex items-center justify-center">
+        <CheckboxPrimitive.Indicator className="ds-check-draw relative z-[2] text-ds-text-on-sage flex items-center justify-center">
           <CheckIcon />
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Root>

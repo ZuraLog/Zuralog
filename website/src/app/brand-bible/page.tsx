@@ -1,5 +1,6 @@
 "use client";
 
+import { type ReactNode } from "react";
 import {
   PatternOverlay,
   Text,
@@ -51,10 +52,46 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { useSplitReveal } from "@/hooks/use-split-reveal";
+import { useScrambleNumber } from "@/hooks/use-scramble-number";
+import { ScrollDivider } from "@/components/design-system/interactions/scroll-divider";
+import { TypingText } from "@/components/design-system/interactions/typing-text";
+import { sageConfetti } from "@/components/design-system/interactions/confetti";
+import { useTilt } from "@/hooks/use-tilt";
+
+/* ── Scroll-reveal section wrapper ───────────────────────────────────── */
+
+function RevealSection({
+  children,
+  className,
+  stagger = 0.06,
+}: {
+  children: ReactNode;
+  className?: string;
+  stagger?: number;
+}) {
+  const ref = useScrollReveal<HTMLElement>({ stagger });
+  return (
+    <section ref={ref} className={className}>
+      {children}
+    </section>
+  );
+}
 
 /* ── Section helpers ─────────────────────────────────────────────────── */
 
-function SectionTitle({ children }: { children: string }) {
+function SectionTitle({ children, animated = false }: { children: string; animated?: boolean }) {
+  const splitRef = useSplitReveal<HTMLHeadingElement>({ stagger: 0.02, duration: 0.4 });
+
+  if (animated) {
+    return (
+      <Text ref={splitRef} variant="display-md" color="sage" pattern="sage">
+        {children}
+      </Text>
+    );
+  }
+
   return (
     <Text variant="display-md" color="sage" pattern="sage">
       {children}
@@ -144,11 +181,21 @@ const patternTable = [
 /* ── Page ────────────────────────────────────────────────────────────── */
 
 export default function BrandBiblePage() {
+  /* ── Text animation refs ─────────────────────────────────────── */
+  const titleRef = useSplitReveal<HTMLHeadingElement>({ stagger: 0.025, duration: 0.4 });
+  const heroScoreRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "78", duration: 1.2 });
+  const stepsRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "8,432", duration: 1.0 });
+
+  /* ── 3D tilt refs ──────────────────────────────────────────── */
+  const heroTiltRef = useTilt<HTMLDivElement>({ maxTilt: 3, scale: 1.01 });
+  const onboardingTiltRef = useTilt<HTMLDivElement>({ maxTilt: 4, scale: 1.02 });
+  const insightTiltRef = useTilt<HTMLDivElement>({ maxTilt: 4, scale: 1.02 });
+
   return (
     <main className="max-w-[960px] mx-auto px-6 py-12 pb-24">
       {/* ── 1. Header ──────────────────────────────────────────────── */}
       <header>
-        <Text variant="display-lg" color="sage" pattern="sage" as="h1">
+        <Text ref={titleRef} variant="display-lg" color="sage" pattern="sage" as="h1" data-pattern-animate="true">
           Zuralog Design System
         </Text>
         <Text variant="body-lg" color="secondary" className="mt-3 max-w-2xl">
@@ -158,8 +205,8 @@ export default function BrandBiblePage() {
       </header>
 
       {/* ── 2. Canvas & Elevation ──────────────────────────────────── */}
-      <section className="mt-16">
-        <SectionTitle>Canvas &amp; Elevation</SectionTitle>
+      <RevealSection className="mt-16">
+        <SectionTitle animated>Canvas &amp; Elevation</SectionTitle>
         <SectionSub>Four surface levels create depth without drop shadows. Every layer lifts content closer to the user.</SectionSub>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -180,10 +227,10 @@ export default function BrandBiblePage() {
             </Card>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 3. Typography ──────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Typography</SectionTitle>
         <SectionSub>Plus Jakarta Sans across all sizes. Metric numbers for health data, warm weight for readability.</SectionSub>
 
@@ -202,10 +249,10 @@ export default function BrandBiblePage() {
             ))}
           </div>
         </Card>
-      </section>
+      </RevealSection>
 
       {/* ── 3b. Pattern Typography ──────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Pattern Typography</SectionTitle>
         <SectionSub>Bold display text gets a drifting topographic fill. Semibold headings get a static fill. Body text stays solid.</SectionSub>
 
@@ -237,10 +284,12 @@ export default function BrandBiblePage() {
             <Text variant="body-lg" color="primary" className="mt-2">Body text always stays solid and readable — patterns only appear on display-size headings where the letterforms are large enough to show the texture.</Text>
           </Card>
         </div>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 4. Accent Colors ───────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Accent Colors</SectionTitle>
         <SectionSub>Two accent colors anchor the entire palette. Sage for actions, Warm White for navigation.</SectionSub>
 
@@ -263,10 +312,10 @@ export default function BrandBiblePage() {
             </div>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 5. Text Colors ─────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Text Colors</SectionTitle>
         <SectionSub>Four text roles mapped to surface context. Always use the right pairing for contrast.</SectionSub>
 
@@ -284,10 +333,10 @@ export default function BrandBiblePage() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 6. Health Category Colors ──────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Health Categories</SectionTitle>
         <SectionSub>Ten distinct hues, one per health domain. Each category gets its own pattern tint on feature cards.</SectionSub>
 
@@ -325,10 +374,10 @@ export default function BrandBiblePage() {
             </Card>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 7. Semantic / Status Colors ────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Status Colors</SectionTitle>
         <SectionSub>Semantic signals for success, warning, error, and sync states.</SectionSub>
 
@@ -351,10 +400,10 @@ export default function BrandBiblePage() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 8. Spacing ─────────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Spacing</SectionTitle>
         <SectionSub>Consistent spacing tokens from 2px to 48px. Every margin and padding uses this scale.</SectionSub>
 
@@ -372,10 +421,10 @@ export default function BrandBiblePage() {
             ))}
           </div>
         </Card>
-      </section>
+      </RevealSection>
 
       {/* ── 9. Shape (Border Radius) ───────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Shape</SectionTitle>
         <SectionSub>Six radius tokens from sharp to pill. Cards use LG, buttons use Pill, inputs use SM.</SectionSub>
 
@@ -391,10 +440,10 @@ export default function BrandBiblePage() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 10. Buttons ────────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Buttons</SectionTitle>
         <SectionSub>Four intents, three sizes. Primary and destructive get the topographic pattern overlay.</SectionSub>
 
@@ -427,36 +476,45 @@ export default function BrandBiblePage() {
             <DSButton intent="destructive" disabled>Disabled</DSButton>
           </div>
         </Card>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 11. Cards ──────────────────────────────────────────────── */}
-      <section className="mt-16">
-        <SectionTitle>Cards</SectionTitle>
+      <RevealSection className="mt-16">
+        <SectionTitle animated>Cards</SectionTitle>
         <SectionSub>Three elevation levels plus category feature cards. Hero and feature cards get pattern overlays.</SectionSub>
 
         <div className="grid gap-4">
-          <Card elevation="hero">
-            <Text variant="body-sm" color="secondary">Health Score</Text>
-            <Text variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
-            <Text variant="body-md" color="secondary" className="mt-1">
-              Your overall health is trending up this week.
-            </Text>
-          </Card>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card elevation="feature">
-              <div className="flex items-center gap-2 mb-2">
-                <Leaf size={16} className="text-ds-sage" />
-                <Text variant="label-md" color="sage">AI Insight</Text>
-              </div>
-              <Text variant="body-md" color="primary">
-                Your HRV is 18% higher on nights with 7+ hours of sleep. Try a consistent 10:30pm bedtime.
+          <div ref={heroTiltRef}>
+            <Card elevation="hero">
+              <Text variant="body-sm" color="secondary">Health Score</Text>
+              <Text ref={heroScoreRef} variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
+              <Text variant="body-md" color="secondary" className="mt-1">
+                Your overall health is trending up this week.
               </Text>
             </Card>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div ref={insightTiltRef}>
+              <Card elevation="feature">
+                <div className="flex items-center gap-2 mb-2">
+                  <Leaf size={16} className="text-ds-sage" />
+                  <Text variant="label-md" color="sage">AI Insight</Text>
+                </div>
+                <Text variant="body-md" color="primary">
+                  <TypingText
+                    text="Your HRV is 18% higher on nights with 7+ hours of sleep. Try a consistent 10:30pm bedtime."
+                    speed={25}
+                  />
+                </Text>
+              </Card>
+            </div>
 
             <Card elevation="data">
               <Text variant="label-md" color="secondary">Steps</Text>
-              <Text variant="display-md" color="primary" className="mt-1">8,432</Text>
+              <Text ref={stepsRef} variant="display-md" color="primary" className="mt-1">8,432</Text>
               <Text variant="body-sm" color="secondary" className="mt-0.5">67% of daily goal</Text>
             </Card>
           </div>
@@ -476,10 +534,10 @@ export default function BrandBiblePage() {
             </Card>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 12. Inputs & Selection ─────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Inputs &amp; Selection</SectionTitle>
         <SectionSub>Every form control uses the surface-raised palette with sage accents on interaction.</SectionSub>
 
@@ -577,10 +635,12 @@ export default function BrandBiblePage() {
             </div>
           </Card>
         </div>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 13. Feedback ───────────────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Feedback</SectionTitle>
         <SectionSub>Toasts, dialogs, badges, tooltips, and loading states give the user clear signals.</SectionSub>
 
@@ -700,10 +760,10 @@ export default function BrandBiblePage() {
             </div>
           </Card>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 14. Display Components ─────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Display Components</SectionTitle>
         <SectionSub>List items, avatars, dividers, and accordions for structuring content.</SectionSub>
 
@@ -791,10 +851,12 @@ export default function BrandBiblePage() {
             </DSAccordion>
           </Card>
         </div>
-      </section>
+      </RevealSection>
+
+      <ScrollDivider />
 
       {/* ── 15. Special Surfaces ───────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Special Surfaces</SectionTitle>
         <SectionSub>Empty states, onboarding, and floating actions use patterned surfaces to draw attention.</SectionSub>
 
@@ -817,18 +879,20 @@ export default function BrandBiblePage() {
           </Card>
 
           {/* Onboarding card */}
-          <Card elevation="hero">
-            <div className="py-2">
-              <Text variant="display-sm" color="sage" pattern="sage">Welcome to Zuralog</Text>
-              <Text variant="body-md" color="secondary" className="mt-2 max-w-md">
-                Your personal health hub. We bring together data from all your devices
-                and give you one clear picture of your well-being.
-              </Text>
-              <DSButton intent="primary" size="md" className="mt-4">
-                Get Started
-              </DSButton>
-            </div>
-          </Card>
+          <div ref={onboardingTiltRef}>
+            <Card elevation="hero">
+              <div className="py-2">
+                <Text variant="display-sm" color="sage" pattern="sage">Welcome to Zuralog</Text>
+                <Text variant="body-md" color="secondary" className="mt-2 max-w-md">
+                  Your personal health hub. We bring together data from all your devices
+                  and give you one clear picture of your well-being.
+                </Text>
+                <DSButton intent="primary" size="md" className="mt-4">
+                  Get Started
+                </DSButton>
+              </div>
+            </Card>
+          </div>
 
           {/* FAB mockup (inline — no component) */}
           <Card elevation="standard">
@@ -843,10 +907,10 @@ export default function BrandBiblePage() {
             </div>
           </Card>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 16. Navigation Mockup ──────────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Navigation</SectionTitle>
         <SectionSub>Top bar with avatar, bottom nav with pill-shaped active indicator.</SectionSub>
 
@@ -884,10 +948,10 @@ export default function BrandBiblePage() {
             ))}
           </div>
         </div>
-      </section>
+      </RevealSection>
 
       {/* ── 17. Pattern Reference Table ────────────────────────────── */}
-      <section className="mt-16">
+      <RevealSection className="mt-16">
         <SectionTitle>Pattern Reference</SectionTitle>
         <SectionSub>Every component that gets the topographic pattern treatment, with its variant and blend mode.</SectionSub>
 
@@ -925,9 +989,19 @@ export default function BrandBiblePage() {
             </table>
           </div>
         </Card>
-      </section>
+      </RevealSection>
 
-      {/* ── 18. Footer ─────────────────────────────────────────────── */}
+      {/* ── 18. Confetti Demo ────────────────────────────────────────── */}
+      <RevealSection className="mt-16 text-center">
+        <Text variant="body-md" color="secondary" className="mb-4">
+          That&rsquo;s the full system. Celebrate finishing the tour.
+        </Text>
+        <DSButton intent="primary" size="md" onClick={() => sageConfetti()}>
+          Try Confetti
+        </DSButton>
+      </RevealSection>
+
+      {/* ── 19. Footer ─────────────────────────────────────────────── */}
       <footer className="mt-16 text-center">
         <Divider className="mb-6" />
         <Text variant="body-sm" color="secondary">

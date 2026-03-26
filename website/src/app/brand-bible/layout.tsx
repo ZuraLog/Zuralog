@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BrandBibleInteractions } from "@/components/design-system/interactions/brand-bible-interactions";
+import { SoundProvider } from "@/components/design-system/interactions/sound-provider";
 
 export const metadata: Metadata = {
   title: "Brand Bible",
@@ -13,9 +14,11 @@ export default function BrandBibleLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-ds-canvas font-jakarta text-ds-text-primary">
-      <BrandBibleInteractions />
-      {children}
-    </div>
+    <SoundProvider>
+      <div className="min-h-screen bg-ds-canvas font-jakarta text-ds-text-primary">
+        <BrandBibleInteractions />
+        {children}
+      </div>
+    </SoundProvider>
   );
 }

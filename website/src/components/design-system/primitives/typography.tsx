@@ -58,6 +58,9 @@ export interface TextProps {
   as?: React.ElementType;
   className?: string;
   children: React.ReactNode;
+  ref?: React.Ref<HTMLElement>;
+  /** Custom data attributes for animation hooks */
+  [key: `data-${string}`]: string | undefined;
 }
 
 export function Text({
@@ -67,10 +70,11 @@ export function Text({
   as,
   className,
   children,
+  ref,
+  ...rest
 }: TextProps) {
-  const Component = (as ?? DEFAULT_TAGS[variant]) as React.ElementType<
-    React.HTMLAttributes<HTMLElement> & { style?: React.CSSProperties }
-  >;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Tag = (as ?? DEFAULT_TAGS[variant]) as any;
 
   const usePattern = !!pattern;
   // Only bold (700) display text gets the animated drift; semibold and below get static pattern
@@ -81,18 +85,19 @@ export function Text({
       : "ds-pattern-text-static"
     : undefined;
 
-  return (
-    <Component
-      className={cn(
-        textVariants({ variant, color: usePattern ? undefined : color }),
-        patternClass,
-        className,
-      )}
-      {...(usePattern
-        ? { style: { backgroundImage: `url('/patterns/${pattern}.png')` } }
-        : undefined)}
-    >
-      {children}
-    </Component>
-  );
+  const props: Record<string, unknown> = {
+    ref,
+    className: cn(
+      textVariants({ variant, color: usePattern ? undefined : color }),
+      patternClass,
+      className,
+    ),
+    ...rest,
+  };
+
+  if (usePattern) {
+    props.style = { backgroundImage: `url('/patterns/${pattern}.png')` };
+  }
+
+  return <Tag {...props}>{children}</Tag>;
 }

@@ -58,3 +58,21 @@ export {
   DSDialogDescription,
   DSDialogClose,
 } from "./feedback/dialog";
+
+// Hooks
+export { useMagnetic } from "@/hooks/use-magnetic";
+export { useTilt } from "@/hooks/use-tilt";
+export { useScrollReveal } from "@/hooks/use-scroll-reveal";
+export { useSplitReveal } from "@/hooks/use-split-reveal";
+export { useScrambleNumber } from "@/hooks/use-scramble-number";
+
+// Interaction components & utilities
+export { SoundProvider, useSoundContext } from "./interactions/sound-provider";
+export { SoundToggle } from "./interactions/sound-toggle";
+export { AuroraBackground } from "./interactions/aurora-background";
+export { SpotlightFollow } from "./interactions/spotlight-follow";
+export { ScrollProgress } from "./interactions/scroll-progress";
+export { ScrollDivider } from "./interactions/scroll-divider";
+export { TypingText } from "./interactions/typing-text";
+export { CustomCursor } from "./interactions/custom-cursor";
+export { sageConfetti } from "./interactions/confetti";

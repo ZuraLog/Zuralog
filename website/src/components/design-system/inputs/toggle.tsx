@@ -61,11 +61,12 @@ export function Toggle({
         {/* Thumb */}
         <span
           className={cn(
-            "absolute top-[3px] block h-[20px] w-[20px] rounded-full transition-transform duration-150 z-[2]",
+            "absolute top-[3px] block h-[20px] w-[20px] rounded-full z-[2]",
             isOn
               ? "translate-x-[21px] bg-white"
               : "translate-x-[3px] bg-ds-text-secondary",
           )}
+          style={{ transition: "transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s" }}
         />
       </button>
 
