@@ -692,18 +692,48 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Design System — Drifting topographic pattern backgrounds
-   The pattern PNG IS the background. It tiles and drifts slowly.
+   Design System — Seamless drifting topographic pattern
+   Moves exactly one tile (300px) diagonally so the loop is invisible.
    Applied via utility class: ds-pattern-drift
 ───────────────────────────────────────────────────────────── */
+@keyframes dsPatternDrift {
+  0%   { background-position: 0px 0px; }
+  100% { background-position: 300px 300px; }
+}
+
 .ds-pattern-drift {
   background-size: 300px auto;
   background-repeat: repeat;
-  animation: patternDrift 20s linear infinite;
+  animation: dsPatternDrift 40s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ds-pattern-drift {
+    animation: none;
+  }
+}
+
+/* Pattern-filled display text — topographic contour lines flow through large type */
+.ds-pattern-text {
+  background-size: 300px auto;
+  background-repeat: repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: dsPatternDrift 45s linear infinite;
+}
+
+/* Pattern-filled text without animation — for semibold headings */
+.ds-pattern-text-static {
+  background-size: 300px auto;
+  background-repeat: repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-pattern-text {
     animation: none;
   }
 }
