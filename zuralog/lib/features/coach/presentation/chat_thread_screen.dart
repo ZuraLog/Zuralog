@@ -143,6 +143,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
           // Suppress route-replace when raw attachments follow — the widget
           // must stay alive until all uploads and the follow-up send finish.
           skipRouteReplace: hasRawAttachments,
+          systemPromptExtra: pending.systemPromptExtra,
         );
 
         // After the first send completes, the notifier holds a real UUID from
@@ -264,6 +265,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
     bool skipRouteReplace = false,
+    String? systemPromptExtra,
   }) async {
     final transaction = Sentry.startTransaction(
       'ai.chat_response',
@@ -290,6 +292,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             proactivity: proactivity,
             responseLength: responseLength,
             attachments: attachments,
+            systemPromptExtra: systemPromptExtra,
           );
 
       // After the stream completes, check if we got a new conversation ID

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zuralog/core/router/route_names.dart';
+import 'package:zuralog/features/coach/providers/coach_providers.dart';
 import 'package:zuralog/features/progress/presentation/journal_mode_picker_sheet.dart';
 
 class JournalEntryRouter extends ConsumerStatefulWidget {
@@ -51,8 +52,8 @@ class _JournalEntryRouterState extends ConsumerState<JournalEntryRouter> {
   }
 
   void _openConversationalMode() {
-    // Will be wired in Task 14. For now, fall back to diary.
-    context.push(RouteNames.journalDiaryPath);
+    ref.read(coachJournalModeProvider.notifier).state = true;
+    context.push(RouteNames.coachPath);
   }
 
   @override

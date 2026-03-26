@@ -295,6 +295,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
     required String responseLength,
     List<Map<String, dynamic>> attachments = const [],
     bool isRegenerate = false,
+    String? systemPromptExtra,
   }) async {
     if (state.isSending) return;
 
@@ -354,6 +355,7 @@ class CoachChatNotifier extends FamilyNotifier<CoachChatState, String> {
       responseLength: responseLength,
       attachments: attachments,
       isRegenerate: isRegenerate,
+      systemPromptExtra: systemPromptExtra,
     );
 
     final completer = Completer<void>();
@@ -682,6 +684,13 @@ final coachQuickActionsProvider =
 /// the text into the input field, so it is never reused across navigations.
 final coachPrefillProvider = StateProvider<String?>((ref) => null);
 
+// ── Journal Mode ──────────────────────────────────────────────────────────────
+
+/// When true, the next Coach conversation will use the journal check-in
+/// system prompt instead of the general coaching prompt.
+/// Reset to false after the conversation is opened.
+final coachJournalModeProvider = StateProvider<bool>((ref) => false);
+
 // ── Pending First Message ─────────────────────────────────────────────────────
 
 /// Carries the pending first message from [NewChatScreen] to [ChatThreadScreen].
@@ -703,6 +712,7 @@ class PendingMessage {
     required this.responseLength,
     this.attachments = const [],
     this.rawAttachments = const [],
+    this.systemPromptExtra,
   });
 
   final String text;
@@ -721,6 +731,11 @@ class PendingMessage {
   ///
   /// [ChatThreadScreen] uploads these after the server assigns a real UUID.
   final List<Map<String, String>> rawAttachments;
+
+  /// Optional extra system prompt injected on the first message of a
+  /// conversation. Used by journal check-in mode to override the default
+  /// coaching instructions with journal-specific guidance.
+  final String? systemPromptExtra;
 }
 
 final pendingFirstMessageProvider =
