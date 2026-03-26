@@ -119,6 +119,13 @@ class SettingsHubScreen extends ConsumerWidget {
                   subtitle: 'AI persona, proactivity level',
                   onTap: () => openSection('Coach', RouteNames.settingsCoachPath),
                 ),
+                ZSettingsTile(
+                  icon: Icons.book_outlined,
+                  iconColor: AppColors.categoryActivity,
+                  title: 'Journal',
+                  subtitle: 'Default mode when tapping Write',
+                  onTap: () => openSection('Journal', RouteNames.settingsJournalPath),
+                ),
               ],
             ),
           ),
