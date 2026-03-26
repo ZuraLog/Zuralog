@@ -1,6 +1,6 @@
 """Add source and conversation_id to journal_entries."""
 
-from alembic import op
+from alembic import op  # type: ignore[reportAttributeAccessIssue]
 
 revision = "c4d5e6f7a8b9"
 down_revision = "b5c6d7e8f9a0"
