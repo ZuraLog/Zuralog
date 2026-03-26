@@ -1,6 +1,6 @@
 """Metrics endpoints -- cross-date aggregations."""
 import logging
-from datetime import date
+import re
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
@@ -14,6 +14,8 @@ from app.models.daily_summary import DailySummary
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/metrics", tags=["metrics"])
+
+_VALID_METRIC_KEY = re.compile(r"^[a-z0-9_]+$")
 
 
 class LatestMetricItem(BaseModel):
@@ -41,7 +43,8 @@ async def metrics_latest(
     user_id: str = Depends(get_authenticated_user_id),
 ) -> LatestMetricsResponse:
     """Return the most recent non-stale daily summary row per requested metric type."""
-    requested = [t.strip() for t in types.split(",") if t.strip()]
+    requested = [t.strip() for t in types.split(",")
+                 if t.strip() and _VALID_METRIC_KEY.match(t.strip())]
     if not requested:
         return LatestMetricsResponse(metrics=[])
 
