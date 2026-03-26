@@ -41,28 +41,136 @@ const t = {
   categoryEnvironment: "#63E6BE",
 };
 
-/* ── Helpers ─────────────────────────────────────────────────────────────────── */
+/* ── Pattern helpers ────────────────────────────────────────────────────────── */
 
-function Swatch({ color, label, hex }: { color: string; label: string; hex: string }) {
+/** Sage-colored surface pattern — visible contour lines with color-burn */
+function sagePattern(opacity = 0.28): React.CSSProperties {
+  return {
+    position: "absolute" as const,
+    inset: 0,
+    backgroundImage: "url('/patterns/sage.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    opacity,
+    mixBlendMode: "color-burn" as const,
+  };
+}
+
+/** Crimson pattern for destructive/error surfaces */
+function crimsonPattern(opacity = 0.25): React.CSSProperties {
+  return {
+    position: "absolute" as const,
+    inset: 0,
+    backgroundImage: "url('/patterns/crimson.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    opacity,
+    mixBlendMode: "color-burn" as const,
+  };
+}
+
+/** Dark surface pattern — screen blend for cards, avatars, etc. */
+function darkPattern(opacity = 0.18, file = "sage.png"): React.CSSProperties {
+  return {
+    position: "absolute" as const,
+    inset: 0,
+    backgroundImage: `url('/patterns/${file}')`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    opacity,
+    mixBlendMode: "screen" as const,
+  };
+}
+
+/* ── Inline SVG Icons ───────────────────────────────────────────────────────── */
+
+const iconProps = {
+  width: 20,
+  height: 20,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+function IconBell() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 12,
-          background: color,
-          border: color === t.canvas ? `1px solid ${t.surfaceRaised}` : "none",
-          flexShrink: 0,
-        }}
-      />
-      <div>
-        <div style={{ color: t.textPrimary, fontSize: 14, fontWeight: 500 }}>{label}</div>
-        <div style={{ color: t.textSecondary, fontSize: 12, fontFamily: "monospace" }}>{hex}</div>
-      </div>
-    </div>
+    <svg {...iconProps}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
   );
 }
+
+function IconPalette() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="13.5" cy="6.5" r="1.5" />
+      <circle cx="17.5" cy="10.5" r="1.5" />
+      <circle cx="8.5" cy="7.5" r="1.5" />
+      <circle cx="6.5" cy="12" r="1.5" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+    </svg>
+  );
+}
+
+function IconLock() {
+  return (
+    <svg {...iconProps}>
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+
+function IconLeaf() {
+  return (
+    <svg {...iconProps} width={36} height={36}>
+      <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 20 4 20 4s-1 4.5-3 10.1A7 7 0 0 1 11 20z" />
+      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 12 13" />
+    </svg>
+  );
+}
+
+function IconDroplet() {
+  return (
+    <svg {...iconProps}>
+      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+    </svg>
+  );
+}
+
+function IconSmile() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      <line x1="9" y1="9" x2="9.01" y2="9" />
+      <line x1="15" y1="9" x2="15.01" y2="9" />
+    </svg>
+  );
+}
+
+function IconZap() {
+  return (
+    <svg {...iconProps}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+function IconSearch() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────────── */
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -346,6 +454,71 @@ export default function BrandBiblePage() {
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════════
+            4b. HEALTH CATEGORY CARDS (with pattern variants)
+            ═══════════════════════════════════════════════════════════════════════ */}
+        <Label>Category Feature Cards</Label>
+        <SectionSubtitle>
+          Each health category has a matching pattern variant. The left accent bar uses the category
+          color and the card background shows the matching topographic pattern.
+        </SectionSubtitle>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 32 }}>
+          {[
+            { name: "Activity", color: t.categoryActivity, pattern: "green.png", metric: "8,432 steps", sub: "Daily goal: 10,000" },
+            { name: "Sleep", color: t.categorySleep, pattern: "periwinkle.png", metric: "7h 24m", sub: "Deep: 1h 45m" },
+            { name: "Heart", color: t.categoryHeart, pattern: "rose.png", metric: "68 bpm", sub: "Resting heart rate" },
+            { name: "Nutrition", color: t.categoryNutrition, pattern: "amber.png", metric: "1,850 kcal", sub: "Target: 2,200" },
+            { name: "Body", color: t.categoryBody, pattern: "sky-blue.png", metric: "72.4 kg", sub: "BMI: 23.1" },
+            { name: "Wellness", color: t.categoryWellness, pattern: "purple.png", metric: "78 / 100", sub: "Health score" },
+          ].map((cat) => (
+            <div
+              key={cat.name}
+              style={{
+                display: "flex",
+                borderRadius: 16,
+                overflow: "hidden",
+                background: t.surface,
+              }}
+            >
+              {/* Left accent bar */}
+              <div style={{ width: 4, background: cat.color, flexShrink: 0 }} />
+              {/* Card body with pattern */}
+              <div
+                style={{
+                  flex: 1,
+                  padding: 16,
+                  position: "relative" as const,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute" as const,
+                    inset: 0,
+                    backgroundImage: `url('/patterns/${cat.pattern}')`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    opacity: 0.15,
+                    mixBlendMode: "screen" as const,
+                  }}
+                />
+                <div style={{ position: "relative" as const }}>
+                  <div style={{ color: cat.color, fontSize: 10, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 0.5, marginBottom: 4 }}>
+                    {cat.name}
+                  </div>
+                  <div style={{ color: t.textPrimary, fontSize: 20, fontWeight: 700 }}>
+                    {cat.metric}
+                  </div>
+                  <div style={{ color: t.textSecondary, fontSize: 11, marginTop: 2 }}>
+                    {cat.sub}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════════
             5. SEMANTIC / STATUS COLORS
             ═══════════════════════════════════════════════════════════════════════ */}
         <Label>Semantic / Status</Label>
@@ -443,6 +616,7 @@ export default function BrandBiblePage() {
         <div style={{ background: t.surface, borderRadius: 20, padding: 32, marginBottom: 16 }}>
           <Label>Button Types</Label>
           <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 24 }}>
+            {/* Primary */}
             <div
               style={{
                 background: t.sage,
@@ -452,17 +626,7 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/sage.png')",
-                  backgroundSize: 400,
-                  backgroundPosition: "center",
-                  opacity: 0.15,
-                  mixBlendMode: "color-burn" as const,
-                }}
-              />
+              <div style={sagePattern(0.28)} />
               <span
                 style={{
                   position: "relative" as const,
@@ -474,6 +638,7 @@ export default function BrandBiblePage() {
                 Primary
               </span>
             </div>
+            {/* Destructive */}
             <div
               style={{
                 background: t.error,
@@ -483,21 +648,12 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/crimson.png')",
-                  backgroundSize: 400,
-                  backgroundPosition: "center",
-                  opacity: 0.15,
-                  mixBlendMode: "color-burn" as const,
-                }}
-              />
+              <div style={crimsonPattern(0.25)} />
               <span style={{ position: "relative" as const, color: "#FFFFFF", fontWeight: 600, fontSize: 15 }}>
                 Destructive
               </span>
             </div>
+            {/* Secondary */}
             <div
               style={{
                 border: `1.5px solid rgba(240,238,233,0.2)`,
@@ -507,13 +663,15 @@ export default function BrandBiblePage() {
             >
               <span style={{ color: t.warmWhite, fontWeight: 600, fontSize: 15 }}>Secondary</span>
             </div>
+            {/* Text */}
             <div style={{ padding: "14px 28px" }}>
-              <span style={{ color: t.sage, fontWeight: 600, fontSize: 15 }}>Text Button →</span>
+              <span style={{ color: t.sage, fontWeight: 600, fontSize: 15 }}>Text Button &rarr;</span>
             </div>
           </div>
 
           <Label>Button Sizes</Label>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {/* Large */}
             <div
               style={{
                 background: t.sage,
@@ -526,21 +684,12 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/sage.png')",
-                  backgroundSize: 400,
-                  backgroundPosition: "center",
-                  opacity: 0.15,
-                  mixBlendMode: "color-burn" as const,
-                }}
-              />
+              <div style={sagePattern(0.28)} />
               <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 15 }}>
                 Large (52px)
               </span>
             </div>
+            {/* Medium */}
             <div
               style={{
                 background: t.sage,
@@ -553,21 +702,12 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/sage.png')",
-                  backgroundSize: 400,
-                  backgroundPosition: "center",
-                  opacity: 0.15,
-                  mixBlendMode: "color-burn" as const,
-                }}
-              />
+              <div style={sagePattern(0.28)} />
               <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 15 }}>
                 Medium (44px)
               </span>
             </div>
+            {/* Small */}
             <div
               style={{
                 background: t.sage,
@@ -580,17 +720,7 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/sage.png')",
-                  backgroundSize: 300,
-                  backgroundPosition: "center",
-                  opacity: 0.15,
-                  mixBlendMode: "color-burn" as const,
-                }}
-              />
+              <div style={sagePattern(0.25)} />
               <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 500, fontSize: 13 }}>
                 Small (32px)
               </span>
@@ -609,17 +739,7 @@ export default function BrandBiblePage() {
                   overflow: "hidden",
                 }}
               >
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    inset: 0,
-                    backgroundImage: "url('/patterns/sage.png')",
-                    backgroundSize: 400,
-                    backgroundPosition: "center",
-                    opacity: 0.12,
-                    mixBlendMode: "color-burn" as const,
-                  }}
-                />
+                <div style={sagePattern(0.28)} />
                 <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 14 }}>
                   Default
                 </span>
@@ -637,17 +757,7 @@ export default function BrandBiblePage() {
                   overflow: "hidden",
                 }}
               >
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    inset: 0,
-                    backgroundImage: "url('/patterns/sage.png')",
-                    backgroundSize: 400,
-                    backgroundPosition: "center",
-                    opacity: 0.12,
-                    mixBlendMode: "color-burn" as const,
-                  }}
-                />
+                <div style={sagePattern(0.28)} />
                 <span style={{ position: "relative" as const, color: t.textOnSage, fontWeight: 600, fontSize: 14 }}>
                   Pressed
                 </span>
@@ -680,7 +790,7 @@ export default function BrandBiblePage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 32 }}>
           {/* Hero Card */}
           <div>
-            <Label>Hero Card (10%)</Label>
+            <Label>Hero Card (18%)</Label>
             <div
               style={{
                 background: t.surface,
@@ -690,17 +800,7 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/sage.png')",
-                  backgroundSize: 500,
-                  backgroundPosition: "center",
-                  opacity: 0.1,
-                  mixBlendMode: "screen" as const,
-                }}
-              />
+              <div style={darkPattern(0.18, "sage.png")} />
               <div style={{ position: "relative" as const }}>
                 <div style={{ color: t.textSecondary, fontSize: 11, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>
                   Health Score
@@ -715,7 +815,7 @@ export default function BrandBiblePage() {
 
           {/* Feature Card */}
           <div>
-            <Label>Feature Card (7%)</Label>
+            <Label>Feature Card (15%)</Label>
             <div
               style={{
                 background: t.surface,
@@ -725,17 +825,7 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/sage.png')",
-                  backgroundSize: 600,
-                  backgroundPosition: "center",
-                  opacity: 0.07,
-                  mixBlendMode: "screen" as const,
-                }}
-              />
+              <div style={darkPattern(0.15, "sage.png")} />
               <div style={{ position: "relative" as const }}>
                 <div style={{ color: t.textPrimary, fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
                   Sleep linked to HRV
@@ -755,7 +845,7 @@ export default function BrandBiblePage() {
               <div style={{ color: t.textPrimary, fontSize: 22, fontWeight: 600, marginTop: 6 }}>
                 8,432
               </div>
-              <div style={{ color: t.categoryActivity, fontSize: 10, marginTop: 4 }}>↑ 12%</div>
+              <div style={{ color: t.categoryActivity, fontSize: 10, marginTop: 4 }}>&uarr; 12%</div>
             </div>
           </div>
         </div>
@@ -795,17 +885,7 @@ export default function BrandBiblePage() {
                       overflow: "hidden",
                     }}
                   >
-                    <div
-                      style={{
-                        position: "absolute" as const,
-                        inset: 0,
-                        backgroundImage: "url('/patterns/sage.png')",
-                        backgroundSize: 200,
-                        backgroundPosition: "center",
-                        opacity: 0.12,
-                        mixBlendMode: "color-burn" as const,
-                      }}
-                    />
+                    <div style={sagePattern(0.28)} />
                     <div
                       style={{
                         width: 22,
@@ -861,19 +941,9 @@ export default function BrandBiblePage() {
                       overflow: "hidden",
                     }}
                   >
-                    <div
-                      style={{
-                        position: "absolute" as const,
-                        inset: 0,
-                        backgroundImage: "url('/patterns/sage.png')",
-                        backgroundSize: 150,
-                        backgroundPosition: "center",
-                        opacity: 0.12,
-                        mixBlendMode: "color-burn" as const,
-                      }}
-                    />
+                    <div style={sagePattern(0.28)} />
                     <span style={{ position: "relative" as const, color: t.textOnSage, fontSize: 12, fontWeight: 700 }}>
-                      ✓
+                      &#10003;
                     </span>
                   </div>
                   <span style={{ color: t.textPrimary, fontSize: 14 }}>Checked</span>
@@ -924,6 +994,7 @@ export default function BrandBiblePage() {
                     position: "relative" as const,
                   }}
                 >
+                  {/* Filled track */}
                   <div
                     style={{
                       height: 6,
@@ -934,18 +1005,9 @@ export default function BrandBiblePage() {
                       overflow: "hidden",
                     }}
                   >
-                    <div
-                      style={{
-                        position: "absolute" as const,
-                        inset: 0,
-                        backgroundImage: "url('/patterns/sage.png')",
-                        backgroundSize: 300,
-                        backgroundPosition: "center",
-                        opacity: 0.1,
-                        mixBlendMode: "color-burn" as const,
-                      }}
-                    />
+                    <div style={sagePattern(0.25)} />
                   </div>
+                  {/* Thumb */}
                   <div
                     style={{
                       width: 18,
@@ -958,17 +1020,7 @@ export default function BrandBiblePage() {
                       overflow: "hidden",
                     }}
                   >
-                    <div
-                      style={{
-                        position: "absolute" as const,
-                        inset: 0,
-                        backgroundImage: "url('/patterns/sage.png')",
-                        backgroundSize: 150,
-                        backgroundPosition: "center",
-                        opacity: 0.12,
-                        mixBlendMode: "color-burn" as const,
-                      }}
-                    />
+                    <div style={sagePattern(0.28)} />
                   </div>
                 </div>
               </div>
@@ -984,17 +1036,7 @@ export default function BrandBiblePage() {
                   overflow: "hidden",
                 }}
               >
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    inset: 0,
-                    backgroundImage: "url('/patterns/sage.png')",
-                    backgroundSize: 500,
-                    backgroundPosition: "center",
-                    opacity: 0.04,
-                    mixBlendMode: "screen" as const,
-                  }}
-                />
+                <div style={darkPattern(0.06, "sage.png")} />
                 <div
                   style={{
                     position: "relative" as const,
@@ -1038,6 +1080,7 @@ export default function BrandBiblePage() {
 
               <Label>Chips</Label>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+                {/* Active chip */}
                 <div
                   style={{
                     background: "rgba(207,225,185,0.15)",
@@ -1047,17 +1090,7 @@ export default function BrandBiblePage() {
                     overflow: "hidden",
                   }}
                 >
-                  <div
-                    style={{
-                      position: "absolute" as const,
-                      inset: 0,
-                      backgroundImage: "url('/patterns/sage.png')",
-                      backgroundSize: 300,
-                      backgroundPosition: "center",
-                      opacity: 0.08,
-                      mixBlendMode: "screen" as const,
-                    }}
-                  />
+                  <div style={darkPattern(0.15, "original.png")} />
                   <span style={{ position: "relative" as const, color: t.sage, fontSize: 12, fontWeight: 600 }}>
                     All
                   </span>
@@ -1089,7 +1122,7 @@ export default function BrandBiblePage() {
                   </div>
                   <div style={{ color: t.textPrimary, fontSize: 16 }}>Balanced</div>
                 </div>
-                <span style={{ color: t.textSecondary }}>▼</span>
+                <span style={{ color: t.textSecondary }}>&darr;</span>
               </div>
             </div>
           </div>
@@ -1173,17 +1206,7 @@ export default function BrandBiblePage() {
                     overflow: "hidden",
                   }}
                 >
-                  <div
-                    style={{
-                      position: "absolute" as const,
-                      inset: 0,
-                      backgroundImage: "url('/patterns/crimson.png')",
-                      backgroundSize: 300,
-                      backgroundPosition: "center",
-                      opacity: 0.15,
-                      mixBlendMode: "color-burn" as const,
-                    }}
-                  />
+                  <div style={crimsonPattern(0.25)} />
                   <span style={{ position: "relative" as const, color: "#FFF", fontWeight: 600, fontSize: 13 }}>
                     Disconnect
                   </span>
@@ -1234,17 +1257,7 @@ export default function BrandBiblePage() {
                     overflow: "hidden",
                   }}
                 >
-                  <div
-                    style={{
-                      position: "absolute" as const,
-                      inset: 0,
-                      backgroundImage: "url('/patterns/sage.png')",
-                      backgroundSize: 300,
-                      backgroundPosition: "center",
-                      opacity: 0.1,
-                      mixBlendMode: "color-burn" as const,
-                    }}
-                  />
+                  <div style={sagePattern(0.25)} />
                 </div>
               </div>
             </div>
@@ -1254,6 +1267,7 @@ export default function BrandBiblePage() {
           <div style={{ background: t.surface, borderRadius: 20, padding: 24 }}>
             <Label>Badge &amp; Tooltip</Label>
             <div style={{ display: "flex", alignItems: "center", gap: 32, marginTop: 8 }}>
+              {/* Badge with bell SVG icon */}
               <div style={{ position: "relative" as const }}>
                 <div
                   style={{
@@ -1264,10 +1278,10 @@ export default function BrandBiblePage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 16,
+                    color: t.textSecondary,
                   }}
                 >
-                  🔔
+                  <IconBell />
                 </div>
                 <div
                   style={{
@@ -1287,18 +1301,28 @@ export default function BrandBiblePage() {
                   <span style={{ color: "white", fontSize: 8, fontWeight: 700 }}>3</span>
                 </div>
               </div>
-              <div style={{ position: "relative" as const }}>
-                <div style={{ background: t.surfaceRaised, borderRadius: 8, padding: "8px 12px" }}>
+              {/* Tooltip — pointer triangle connected to body */}
+              <div style={{ position: "relative" as const, display: "inline-block" }}>
+                <div
+                  style={{
+                    background: t.surfaceRaised,
+                    borderRadius: 8,
+                    padding: "8px 12px",
+                    position: "relative" as const,
+                    zIndex: 1,
+                  }}
+                >
                   <span style={{ color: t.textPrimary, fontSize: 12 }}>Tap to expand</span>
                 </div>
                 <div
                   style={{
-                    width: 8,
-                    height: 8,
-                    background: t.surfaceRaised,
-                    transform: "rotate(45deg)",
+                    width: 0,
+                    height: 0,
+                    borderLeft: "6px solid transparent",
+                    borderRight: "6px solid transparent",
+                    borderTop: `6px solid ${t.surfaceRaised}`,
                     position: "absolute" as const,
-                    bottom: -4,
+                    bottom: -6,
                     left: 20,
                   }}
                 />
@@ -1319,9 +1343,9 @@ export default function BrandBiblePage() {
             <Label>List Items</Label>
             <div style={{ background: t.surface, borderRadius: 16, overflow: "hidden" }}>
               {[
-                { icon: "🔔", title: "Notifications", sub: "Morning briefing, reminders" },
-                { icon: "🎨", title: "Appearance", sub: "Theme, haptics" },
-                { icon: "🔒", title: "Privacy & Data", sub: "AI memory, export" },
+                { icon: "bell" as const, title: "Notifications", sub: "Morning briefing, reminders" },
+                { icon: "palette" as const, title: "Appearance", sub: "Theme, haptics" },
+                { icon: "lock" as const, title: "Privacy & Data", sub: "AI memory, export" },
               ].map((item, i, arr) => (
                 <div
                   key={item.title}
@@ -1345,21 +1369,15 @@ export default function BrandBiblePage() {
                         justifyContent: "center",
                         position: "relative" as const,
                         overflow: "hidden",
-                        fontSize: 16,
+                        color: t.textSecondary,
                       }}
                     >
-                      <div
-                        style={{
-                          position: "absolute" as const,
-                          inset: 0,
-                          backgroundImage: "url('/patterns/sage.png')",
-                          backgroundSize: 150,
-                          backgroundPosition: "center",
-                          opacity: 0.12,
-                          mixBlendMode: "screen" as const,
-                        }}
-                      />
-                      <span style={{ position: "relative" as const }}>{item.icon}</span>
+                      <div style={darkPattern(0.18, "original.png")} />
+                      <span style={{ position: "relative" as const }}>
+                        {item.icon === "bell" && <IconBell />}
+                        {item.icon === "palette" && <IconPalette />}
+                        {item.icon === "lock" && <IconLock />}
+                      </span>
                     </div>
                     <div>
                       <div style={{ color: t.textPrimary, fontSize: 14, fontWeight: 500 }}>
@@ -1368,7 +1386,7 @@ export default function BrandBiblePage() {
                       <div style={{ color: t.textSecondary, fontSize: 11 }}>{item.sub}</div>
                     </div>
                   </div>
-                  <span style={{ color: t.textSecondary }}>→</span>
+                  <span style={{ color: t.textSecondary }}>&rarr;</span>
                 </div>
               ))}
             </div>
@@ -1393,17 +1411,7 @@ export default function BrandBiblePage() {
                     overflow: "hidden",
                   }}
                 >
-                  <div
-                    style={{
-                      position: "absolute" as const,
-                      inset: 0,
-                      backgroundImage: "url('/patterns/sage.png')",
-                      backgroundSize: 200,
-                      backgroundPosition: "center",
-                      opacity: 0.15,
-                      mixBlendMode: "screen" as const,
-                    }}
-                  />
+                  <div style={darkPattern(0.2, "original.png")} />
                   <span
                     style={{
                       position: "relative" as const,
@@ -1423,7 +1431,7 @@ export default function BrandBiblePage() {
             <div style={{ padding: "8px 0" }}>
               <div style={{ height: 1, background: "rgba(240,238,233,0.06)" }} />
               <div style={{ color: t.textSecondary, fontSize: 11, marginTop: 8 }}>
-                1px · Warm White at 6% opacity
+                1px - Warm White at 6% opacity
               </div>
             </div>
 
@@ -1440,7 +1448,7 @@ export default function BrandBiblePage() {
                 <span style={{ color: t.textPrimary, fontSize: 14, fontWeight: 500 }}>
                   Sleep Details
                 </span>
-                <span style={{ color: t.sage, fontSize: 12 }}>▼</span>
+                <span style={{ color: t.sage, fontSize: 12 }}>&darr;</span>
               </div>
               <div
                 style={{
@@ -1485,19 +1493,11 @@ export default function BrandBiblePage() {
               overflow: "hidden",
             }}
           >
-            <div
-              style={{
-                position: "absolute" as const,
-                inset: 0,
-                backgroundImage: "url('/patterns/sage.png')",
-                backgroundSize: 400,
-                backgroundPosition: "center",
-                opacity: 0.06,
-                mixBlendMode: "screen" as const,
-              }}
-            />
+            <div style={darkPattern(0.15, "sage.png")} />
             <div style={{ position: "relative" as const }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🌿</div>
+              <div style={{ marginBottom: 12, color: t.sage, display: "flex", justifyContent: "center" }}>
+                <IconLeaf />
+              </div>
               <div style={{ color: t.textPrimary, fontSize: 17, fontWeight: 600, marginBottom: 6 }}>
                 No data yet
               </div>
@@ -1514,17 +1514,7 @@ export default function BrandBiblePage() {
                   overflow: "hidden",
                 }}
               >
-                <div
-                  style={{
-                    position: "absolute" as const,
-                    inset: 0,
-                    backgroundImage: "url('/patterns/sage.png')",
-                    backgroundSize: 300,
-                    backgroundPosition: "center",
-                    opacity: 0.12,
-                    mixBlendMode: "color-burn" as const,
-                  }}
-                />
+                <div style={sagePattern(0.28)} />
                 <span
                   style={{
                     position: "relative" as const,
@@ -1550,17 +1540,7 @@ export default function BrandBiblePage() {
               overflow: "hidden",
             }}
           >
-            <div
-              style={{
-                position: "absolute" as const,
-                inset: 0,
-                backgroundImage: "url('/patterns/sage.png')",
-                backgroundSize: 500,
-                backgroundPosition: "center",
-                opacity: 0.1,
-                mixBlendMode: "screen" as const,
-              }}
-            />
+            <div style={darkPattern(0.18, "sage.png")} />
             <div style={{ position: "relative" as const }}>
               <div style={{ color: t.sage, fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
                 Welcome to Zuralog
@@ -1597,17 +1577,7 @@ export default function BrandBiblePage() {
                 boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/sage.png')",
-                  backgroundSize: 200,
-                  backgroundPosition: "center",
-                  opacity: 0.15,
-                  mixBlendMode: "color-burn" as const,
-                }}
-              />
+              <div style={sagePattern(0.28)} />
               <span
                 style={{
                   position: "relative" as const,
@@ -1622,7 +1592,7 @@ export default function BrandBiblePage() {
             <div style={{ color: t.textSecondary, fontSize: 11, textAlign: "center" as const }}>
               FAB — 56px
               <br />
-              Sage + pattern (15%)
+              Sage + pattern (28%)
             </div>
           </div>
         </div>
@@ -1650,17 +1620,7 @@ export default function BrandBiblePage() {
                 overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  position: "absolute" as const,
-                  inset: 0,
-                  backgroundImage: "url('/patterns/original.png')",
-                  backgroundSize: 200,
-                  backgroundPosition: "center",
-                  opacity: 0.15,
-                  mixBlendMode: "screen" as const,
-                }}
-              />
+              <div style={darkPattern(0.2, "original.png")} />
               <span style={{ position: "relative" as const, color: t.sage, fontSize: 14, fontWeight: 600 }}>
                 AJ
               </span>
@@ -1713,7 +1673,7 @@ export default function BrandBiblePage() {
         <SectionTitle>Topographic Pattern Reference</SectionTitle>
         <SectionSubtitle>
           Every surface that gets the brand pattern. Light surfaces use color-burn blend. Dark surfaces
-          use screen blend.
+          use screen blend. Web uses higher opacity than mobile for visibility.
         </SectionSubtitle>
 
         <div style={{ background: t.surface, borderRadius: 20, overflow: "hidden" }}>
@@ -1746,23 +1706,23 @@ export default function BrandBiblePage() {
             </thead>
             <tbody>
               {[
-                { comp: "Primary button", opacity: "15%", blend: "Color-burn", note: "Sage.PNG" },
-                { comp: "Destructive button", opacity: "15%", blend: "Color-burn", note: "Crimson.PNG" },
-                { comp: "FAB", opacity: "18%", blend: "Color-burn", note: "Sage.PNG" },
-                { comp: "Hero card", opacity: "10%", blend: "Screen", note: "One per screen max" },
-                { comp: "Feature card", opacity: "7%", blend: "Screen", note: "AI / celebratory" },
-                { comp: "Empty state", opacity: "6%", blend: "Screen", note: "Branded empty" },
-                { comp: "Onboarding", opacity: "10%", blend: "Screen", note: "First impression" },
-                { comp: "Toggle track (on)", opacity: "15%", blend: "Color-burn", note: "Sage.PNG" },
-                { comp: "Slider thumb + track", opacity: "15% / 12%", blend: "Color-burn", note: "Sage.PNG" },
-                { comp: "Checkbox (checked)", opacity: "15%", blend: "Color-burn", note: "Sage.PNG" },
-                { comp: "Progress bar", opacity: "12%", blend: "Color-burn", note: "Sage.PNG" },
-                { comp: "Active chip", opacity: "8%", blend: "Screen", note: "Original.PNG" },
-                { comp: "Default avatar", opacity: "15%", blend: "Screen", note: "Original.PNG" },
-                { comp: "List icon squares", opacity: "12%", blend: "Screen", note: "Original.PNG" },
-                { comp: "Search bar", opacity: "5%", blend: "Screen", note: "Original.PNG" },
-                { comp: "Tab track", opacity: "4%", blend: "Screen", note: "Original.PNG" },
-                { comp: "Toast dot (success)", opacity: "15%", blend: "Color-burn", note: "Green.PNG" },
+                { comp: "Primary button", opacity: "25-28%", blend: "Color-burn", note: "sage.png — cover" },
+                { comp: "Destructive button", opacity: "25%", blend: "Color-burn", note: "crimson.png — cover" },
+                { comp: "FAB", opacity: "28%", blend: "Color-burn", note: "sage.png — cover" },
+                { comp: "Hero card", opacity: "18%", blend: "Screen", note: "sage.png — cover" },
+                { comp: "Feature card", opacity: "15%", blend: "Screen", note: "sage.png — cover" },
+                { comp: "Empty state", opacity: "15%", blend: "Screen", note: "sage.png — cover" },
+                { comp: "Onboarding", opacity: "18%", blend: "Screen", note: "sage.png — cover" },
+                { comp: "Toggle track (on)", opacity: "28%", blend: "Color-burn", note: "sage.png — cover" },
+                { comp: "Slider thumb + track", opacity: "28% / 25%", blend: "Color-burn", note: "sage.png — cover" },
+                { comp: "Checkbox (checked)", opacity: "28%", blend: "Color-burn", note: "sage.png — cover" },
+                { comp: "Progress bar", opacity: "25%", blend: "Color-burn", note: "sage.png — cover" },
+                { comp: "Active chip", opacity: "15%", blend: "Screen", note: "original.png — cover" },
+                { comp: "Default avatar", opacity: "20%", blend: "Screen", note: "original.png — cover" },
+                { comp: "List icon squares", opacity: "18%", blend: "Screen", note: "original.png — cover" },
+                { comp: "Search bar", opacity: "8%", blend: "Screen", note: "original.png — cover" },
+                { comp: "Tab track", opacity: "6%", blend: "Screen", note: "sage.png — cover" },
+                { comp: "Category cards", opacity: "15%", blend: "Screen", note: "[color].png — cover" },
               ].map((row, i) => (
                 <tr
                   key={row.comp}
