@@ -45,7 +45,7 @@ export function useMagnetic<T extends HTMLElement = HTMLElement>(
         const dy = e.clientY - cy;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance < dist) {
+        if (distance < dist && distance > 0.1) {
           // Normalize so the shift is proportional to closeness
           const factor = (1 - distance / dist) * str;
           gsap.to(el, {
@@ -75,6 +75,7 @@ export function useMagnetic<T extends HTMLElement = HTMLElement>(
 
     return () => {
       cancelAnimationFrame(rafId.current);
+      gsap.killTweensOf(el);
       el.removeEventListener("mousemove", onMove);
       el.removeEventListener("mouseleave", onLeave);
     };
