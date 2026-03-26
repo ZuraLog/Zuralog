@@ -193,6 +193,12 @@ class _TrendsHomeBodyState extends ConsumerState<_TrendsHomeBody>
               hasScrollBody: false,
               child: _TrendsEmptyState(),
             )
+          // Data is ready but no correlations have been found yet
+          else if (!widget.data.hasCorrelations)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: _TrendsNoCorrelationsState(),
+            )
           // Empty state when a category filter yields no results
           else if (filtered.isEmpty)
             SliverFillRemaining(
@@ -1035,6 +1041,46 @@ class _TrendsEmptyState extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── _TrendsNoCorrelationsState ────────────────────────────────────────────────
+
+class _TrendsNoCorrelationsState extends StatelessWidget {
+  const _TrendsNoCorrelationsState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppDimens.spaceMd),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Single centered icon
+          _CategoryDot(
+            icon: Icons.search_off_rounded,
+            color: AppColors.trendsSage,
+            size: 52,
+          ),
+          const SizedBox(height: AppDimens.spaceMd),
+          Text(
+            'Your data is ready',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.trendsTextPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimens.spaceSm),
+          Text(
+            'No strong patterns have surfaced yet. Keep logging consistently and we\'ll let you know when a connection appears.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.trendsTextSecondary,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

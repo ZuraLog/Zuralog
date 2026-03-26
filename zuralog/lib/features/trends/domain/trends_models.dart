@@ -186,6 +186,7 @@ class TrendsHomeData {
     required this.hasEnoughData,
     this.suggestionCards = const [],
     this.patternCount = 0,
+    this.hasCorrelations = false,
   });
 
   /// Top AI-surfaced correlation cards (up to 5).
@@ -203,6 +204,9 @@ class TrendsHomeData {
   /// Total number of patterns found across all categories.
   final int patternCount;
 
+  /// Whether the backend has found at least one correlation for this user.
+  final bool hasCorrelations;
+
   factory TrendsHomeData.fromJson(Map<String, dynamic> json) {
     return TrendsHomeData(
       correlationHighlights:
@@ -218,6 +222,7 @@ class TrendsHomeData {
           .map((e) => CorrelationSuggestion.fromJson(e as Map<String, dynamic>))
           .toList(),
       patternCount: json['pattern_count'] as int? ?? 0,
+      hasCorrelations: json['has_correlations'] as bool? ?? false,
     );
   }
 }
