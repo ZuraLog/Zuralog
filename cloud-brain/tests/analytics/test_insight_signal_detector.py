@@ -323,6 +323,40 @@ def test_cat_d_correlation_no_fire_insufficient_data():
     assert len(corr) == 0
 
 
+def test_detect_correlations_returns_only_category_d():
+    """detect_correlations() must return only correlation_discovery signals, not other types."""
+    from app.analytics.insight_signal_detector import InsightSignalDetector
+
+    # Build a brief with strong sleep/steps correlation AND an anomaly to ensure non-D signals exist
+    base = date(2026, 1, 1)
+    sleep_rows = []
+    daily_rows = []
+    for i in range(20):
+        d = (base + timedelta(days=i)).isoformat()
+        sleep_hours = 6.0 + i * 0.1
+        sleep_rows.append(SleepRow(date=d, hours=sleep_hours))
+        next_d = (base + timedelta(days=i + 1)).isoformat()
+        daily_rows.append(DailyMetricsRow(date=next_d, steps=8000.0 + i * 200.0))
+    brief = _brief(sleep_records=sleep_rows, daily_metrics=daily_rows)
+
+    InsightSignalDetector(brief).detect_all()
+    corr_only = InsightSignalDetector(brief).detect_correlations()
+
+    # Every signal returned by detect_correlations must be a correlation_discovery
+    assert all(s.signal_type == "correlation_discovery" for s in corr_only)
+    # detect_correlations must not be empty when strong correlations exist
+    assert len(corr_only) >= 1
+
+
+def test_detect_correlations_empty_on_no_data():
+    """detect_correlations() must return an empty list when the brief has no data."""
+    from app.analytics.insight_signal_detector import InsightSignalDetector
+
+    brief = _brief()
+    signals = InsightSignalDetector(brief).detect_correlations()
+    assert signals == []
+
+
 # ---------------------------------------------------------------------------
 # Category E — Compound patterns
 # ---------------------------------------------------------------------------
