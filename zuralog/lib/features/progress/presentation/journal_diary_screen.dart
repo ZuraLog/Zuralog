@@ -4,6 +4,8 @@
 /// chips, and a "Save Entry" button. On save the entry is persisted via
 /// [progressRepositoryProvider] and the [journalProvider] cache is
 /// invalidated so the list screen refreshes automatically.
+///
+/// Accepts an optional [existingEntry] to pre-populate the form for editing.
 library;
 
 import 'package:flutter/material.dart';
@@ -13,6 +15,7 @@ import 'package:intl/intl.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/features/progress/domain/progress_models.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
@@ -21,7 +24,13 @@ import 'package:zuralog/shared/widgets/widgets.dart';
 /// Full-screen diary entry for the Progress > Journal section.
 class JournalDiaryScreen extends ConsumerStatefulWidget {
   /// Creates the [JournalDiaryScreen].
-  const JournalDiaryScreen({super.key});
+  ///
+  /// Pass [existingEntry] to open the screen in edit mode with the entry
+  /// pre-populated. When null, the screen creates a new entry.
+  const JournalDiaryScreen({super.key, this.existingEntry});
+
+  /// The entry to edit. When null, a new entry is created on save.
+  final JournalEntry? existingEntry;
 
   @override
   ConsumerState<JournalDiaryScreen> createState() => _JournalDiaryScreenState();
@@ -45,6 +54,15 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.existingEntry != null) {
+      _contentCtrl.text = widget.existingEntry!.content;
+      _selectedTags.addAll(widget.existingEntry!.tags);
+    }
+  }
+
+  @override
   void dispose() {
     _contentCtrl.dispose();
     super.dispose();
@@ -55,12 +73,20 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
     if (text.isEmpty) return;
     setState(() => _saving = true);
     try {
-      await ref.read(progressRepositoryProvider).createJournalEntry(
-            date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-            content: text,
-            tags: _selectedTags.toList(),
-            source: 'diary',
-          );
+      if (widget.existingEntry != null) {
+        await ref.read(progressRepositoryProvider).updateJournalEntry(
+              entryId: widget.existingEntry!.id,
+              content: text,
+              tags: _selectedTags.toList(),
+            );
+      } else {
+        await ref.read(progressRepositoryProvider).createJournalEntry(
+              date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+              content: text,
+              tags: _selectedTags.toList(),
+              source: 'diary',
+            );
+      }
       ref.invalidate(journalProvider);
       if (mounted) context.pop();
     } catch (e) {
@@ -79,9 +105,10 @@ class _JournalDiaryScreenState extends ConsumerState<JournalDiaryScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
+    final isEditing = widget.existingEntry != null;
 
     return ZuralogScaffold(
-      appBar: const ZuralogAppBar(title: 'Journal'),
+      appBar: ZuralogAppBar(title: isEditing ? 'Edit Entry' : 'Journal'),
       body: Padding(
         padding: const EdgeInsets.all(AppDimens.spaceMd),
         child: Column(

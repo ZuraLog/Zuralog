@@ -12,6 +12,7 @@ import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/features/progress/domain/progress_models.dart';
+import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart';
 import 'package:zuralog/features/progress/presentation/journal_entry_router.dart';
 import 'package:zuralog/features/progress/providers/progress_providers.dart';
 import 'package:zuralog/shared/widgets/layout/zuralog_scaffold.dart';
@@ -96,11 +97,22 @@ class JournalScreen extends ConsumerWidget {
     JournalEntry entry,
   ) {
     ref.read(hapticServiceProvider).light();
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.transparent,
-      builder: (_) => const JournalEntryRouter(),
-    );
+    if (entry.source == 'conversational') {
+      // Show read-only content for conversational entries.
+      // Deep-linking back to the Coach conversation is a future phase.
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => _EntryDetailSheet(entry: entry),
+      );
+    } else {
+      // Open diary screen in edit mode for diary entries.
+      showDialog<void>(
+        context: context,
+        barrierColor: Colors.transparent,
+        builder: (_) => JournalDiaryScreen(existingEntry: entry),
+      );
+    }
   }
 
   @override
@@ -311,6 +323,53 @@ class _ResolvedItem {
   final bool isHeader;
   final String? header;
   final JournalEntry? entry;
+}
+
+// ── Entry Detail Sheet ────────────────────────────────────────────────────────
+
+/// Read-only bottom sheet shown when tapping a conversational entry.
+class _EntryDetailSheet extends StatelessWidget {
+  const _EntryDetailSheet({required this.entry});
+
+  final JournalEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              entry.date,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppDimens.spaceSm),
+            Text(
+              entry.content,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+            if (entry.tags.isNotEmpty) ...[
+              const SizedBox(height: AppDimens.spaceSm),
+              Wrap(
+                spacing: AppDimens.spaceSm,
+                children: entry.tags
+                    .map((t) => Chip(label: Text(t)))
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ── Entry Card ────────────────────────────────────────────────────────────────

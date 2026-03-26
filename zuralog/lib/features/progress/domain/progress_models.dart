@@ -20,7 +20,7 @@
 /// - [ReportMetric]         — single metric row inside a weekly report card
 /// - [WeeklyReportCard]     — one of 6 carousel cards in the weekly report
 /// - [WeeklyReport]         — full weekly report with period + cards
-/// - [JournalEntry]         — daily mood / energy / stress journal entry
+/// - [JournalEntry]         — daily text journal entry with content, tags, and source tracking
 /// - [JournalPage]          — paginated journal history
 library;
 
