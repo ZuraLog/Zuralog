@@ -83,7 +83,6 @@ import 'package:zuralog/features/progress/presentation/achievements_screen.dart'
 import 'package:zuralog/features/progress/presentation/weekly_report_screen.dart';
 import 'package:zuralog/features/progress/presentation/journal_screen.dart';
 import 'package:zuralog/features/progress/presentation/journal_diary_screen.dart';
-import 'package:zuralog/features/settings/presentation/journal_settings_screen.dart';
 
 // ── Tab 4: Trends ─────────────────────────────────────────────────────────────
 import 'package:zuralog/features/trends/presentation/trends_home_screen.dart';
@@ -94,6 +93,7 @@ import 'package:zuralog/features/settings/presentation/account_settings_screen.d
 import 'package:zuralog/features/settings/presentation/notification_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/appearance_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/coach_settings_screen.dart';
+import 'package:zuralog/features/settings/presentation/journal_settings_screen.dart';
 import 'package:zuralog/features/settings/presentation/integrations_screen.dart';
 import 'package:zuralog/features/settings/presentation/privacy_data_screen.dart';
 import 'package:zuralog/features/settings/presentation/subscription_settings_screen.dart';
