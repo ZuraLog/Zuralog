@@ -3,7 +3,6 @@
 import React from "react";
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import { cn } from "@/lib/utils";
-import { PatternOverlay } from "@/components/design-system/primitives/pattern-overlay";
 
 export interface CheckboxProps {
   checked?: boolean;
@@ -43,32 +42,41 @@ export function DSCheckbox({
   label,
   className,
 }: CheckboxProps) {
+  // Track internal state to conditionally apply bg-image (base-ui data attrs
+  // only apply CSS classes, but inline style is always present — so we need JS)
+  const isControlled = checked !== undefined;
+  const [internalChecked, setInternalChecked] = React.useState(defaultChecked ?? false);
+  const isChecked = isControlled ? checked : internalChecked;
+
+  const handleChange = React.useCallback(
+    (val: boolean) => {
+      if (!isControlled) setInternalChecked(val);
+      onCheckedChange?.(val);
+    },
+    [isControlled, onCheckedChange],
+  );
+
   return (
     <div className={cn("inline-flex items-center gap-3", className)}>
       <CheckboxPrimitive.Root
         checked={checked}
         defaultChecked={defaultChecked}
-        onCheckedChange={onCheckedChange}
+        onCheckedChange={handleChange}
         disabled={disabled}
         className={cn(
           "relative flex items-center justify-center w-[20px] h-[20px] rounded-[4px] overflow-hidden transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-dark",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
           "after:absolute after:-inset-3",
-          "data-checked:bg-ds-sage",
-          "data-unchecked:border-2 data-unchecked:border-ds-text-secondary data-unchecked:bg-transparent",
+          isChecked
+            ? "bg-cover bg-center bg-no-repeat"
+            : "border-2 border-ds-text-secondary bg-transparent",
           disabled && "opacity-40 cursor-not-allowed",
         )}
+        style={isChecked ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
       >
         <CheckboxPrimitive.Indicator className="relative z-10 text-ds-text-on-sage flex items-center justify-center">
           <CheckIcon />
         </CheckboxPrimitive.Indicator>
-
-        {/* Pattern overlay when checked — rendered always but only visible when parent has sage bg */}
-        <PatternOverlay
-          variant="sage"
-          opacity={0.28}
-          blend="color-burn"
-        />
       </CheckboxPrimitive.Root>
 
       {label && (

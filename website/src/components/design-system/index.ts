@@ -1,6 +1,7 @@
 // Zuralog Design System — barrel export
 export { PatternOverlay } from "./primitives/pattern-overlay";
 export type { PatternOverlayProps } from "./primitives/pattern-overlay";
+export { PatternVideoProvider } from "./primitives/pattern-video";
 export { Text } from "./primitives/typography";
 export type { TextProps } from "./primitives/typography";
 export { Button as DSButton } from "./buttons/button";

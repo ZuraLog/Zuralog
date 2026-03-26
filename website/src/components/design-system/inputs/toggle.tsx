@@ -2,7 +2,7 @@
 
 import React, { useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { PatternOverlay } from "@/components/design-system/primitives/pattern-overlay";
+import { usePatternVideo } from "@/components/design-system/primitives/pattern-video";
 
 export interface ToggleProps {
   checked?: boolean;
@@ -24,6 +24,7 @@ export function Toggle({
   const isControlled = controlledChecked !== undefined;
   const [internalChecked, setInternalChecked] = React.useState(defaultChecked);
   const isOn = isControlled ? controlledChecked : internalChecked;
+  const { containerRef, onMouseEnter, onMouseLeave } = usePatternVideo();
 
   const handleClick = useCallback(() => {
     if (disabled) return;
@@ -45,32 +46,27 @@ export function Toggle({
   return (
     <div className={cn("inline-flex items-center gap-3", className)}>
       <button
+        ref={containerRef as React.Ref<HTMLButtonElement>}
         type="button"
         role="switch"
         aria-checked={isOn}
         disabled={disabled}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
+        onMouseEnter={isOn && !disabled ? onMouseEnter : undefined}
+        onMouseLeave={isOn && !disabled ? onMouseLeave : undefined}
         className={cn(
           "relative w-[44px] h-[26px] rounded-full overflow-hidden transition-colors duration-150",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-dark",
-          isOn ? "bg-ds-sage" : "bg-ds-surface-raised",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
+          isOn ? "bg-cover bg-center bg-no-repeat" : "bg-ds-surface-raised",
           disabled && "opacity-40 cursor-not-allowed",
         )}
+        style={isOn ? { backgroundImage: "url('/patterns/sage.png')" } : undefined}
       >
-        {/* Pattern overlay on the track when on */}
-        {isOn && (
-          <PatternOverlay
-            variant="sage"
-            opacity={0.28}
-            blend="color-burn"
-          />
-        )}
-
         {/* Thumb */}
         <span
           className={cn(
-            "absolute top-[3px] block h-[20px] w-[20px] rounded-full transition-transform duration-150",
+            "absolute top-[3px] block h-[20px] w-[20px] rounded-full transition-transform duration-150 z-10",
             isOn
               ? "translate-x-[21px] bg-white"
               : "translate-x-[3px] bg-ds-text-secondary",
