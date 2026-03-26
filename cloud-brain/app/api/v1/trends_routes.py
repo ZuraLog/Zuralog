@@ -162,7 +162,7 @@ async def trends_home(
 
     highlights: list[CorrelationHighlightSchema] = []
     for s in corr_signals:
-        coefficient = s.values["correlation"]
+        coefficient = s.values.get("correlation", 0.0)
         direction = "positive" if coefficient > 0 else "negative" if coefficient < 0 else "neutral"
         highlights.append(
             CorrelationHighlightSchema(
@@ -335,7 +335,19 @@ async def pattern_expand(
     db_type_b = _SIGNAL_METRIC_TO_DB_TYPE[metric_b_key]
 
     time_range_days = {"7d": 7, "30d": 30, "90d": 90}.get(time_range, 30)
-    start = (datetime.now(timezone.utc).date() - timedelta(days=time_range_days)).isoformat()
+
+    tz_row = await db.execute(
+        text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
+        {"uid": str(user_id)},
+    )
+    iana_tz = tz_row.scalar_one_or_none() or "UTC"
+    try:
+        user_tz = zoneinfo.ZoneInfo(iana_tz)
+    except Exception:
+        user_tz = zoneinfo.ZoneInfo("UTC")
+    local_date = datetime.now(tz=user_tz).date()
+
+    start = (local_date - timedelta(days=time_range_days)).isoformat()
 
     rows = await db.execute(
         text("""
@@ -346,6 +358,8 @@ async def pattern_expand(
               AND a.metric_type = :ma
               AND b.metric_type = :mb
               AND a.date >= :start
+              AND a.value IS NOT NULL
+              AND b.value IS NOT NULL
             ORDER BY a.date
         """),
         {"uid": str(user_id), "ma": db_type_a, "mb": db_type_b, "start": start},
@@ -375,16 +389,20 @@ async def pattern_expand(
     coeff_result = CorrelationAnalyzer().calculate_correlation(raw_a_values, raw_b_values)
 
     data_days = len(series_a)
-    score = coeff_result.get("score", 0.0)
-    strength = "strong" if abs(score) > 0.7 else "moderate"
-    direction = "positive" if score > 0 else "inverse"
     a_label = _METRIC_DISPLAY_NAMES.get(metric_a_key, metric_a_key)
     b_label = _METRIC_DISPLAY_NAMES.get(metric_b_key, metric_b_key)
-    ai_explanation = (
-        f"Over the past {data_days} days, your {a_label.lower()} and {b_label.lower()} "
-        f"show a {strength} {direction} correlation (r = {score:+.2f}). "
-        f"{'When one goes up, the other tends to follow.' if score > 0 else 'When one goes up, the other tends to go down.'}"
-    )
+
+    if data_days < CorrelationAnalyzer.MIN_DATA_POINTS or coeff_result.get("score", 0.0) == 0.0:
+        ai_explanation = "Not enough overlapping data yet to compute this correlation. Keep logging and check back soon."
+    else:
+        score = coeff_result.get("score", 0.0)
+        strength = "strong" if abs(score) > 0.7 else "moderate"
+        direction = "positive" if score > 0 else "inverse"
+        ai_explanation = (
+            f"Over the past {data_days} days, your {a_label.lower()} and {b_label.lower()} "
+            f"show a {strength} {direction} correlation (r = {score:+.2f}). "
+            f"{'When one goes up, the other tends to follow.' if score > 0 else 'When one goes up, the other tends to go down.'}"
+        )
 
     return PatternExpandResponse(
         id=pattern_id,
