@@ -8,7 +8,7 @@ time-machine period summaries.
 
 import re
 import zoneinfo
-from datetime import datetime, timezone
+from datetime import datetime
 from datetime import timedelta
 
 import sentry_sdk
