@@ -1,464 +1,603 @@
-# Zuralog — Design System & Brand Guidelines
+# Zuralog — Design System
 
-**Version:** 4.0
-**Last Updated:** 2026-03-23
-**Status:** Living Document
+Dark mode is the primary experience. Light mode will be designed separately as a respectful inversion.
 
 ---
 
-## Design Philosophy
+## Brand Essence
 
-Zuralog's visual identity is rooted in **organic, nature-inspired design**. A topographic contour-line pattern serves as the brand's signature texture — woven into buttons, cards, text fills, progress bars, and interactive surfaces. The result is a health app that feels alive, grounded, and unmistakably Zuralog.
+Zuralog is a premium AI health assistant. The design should feel calm, confident, and organic — like a high-end wellness product, not a clinical dashboard. The topographic contour-line pattern is the brand's visual signature and appears throughout the interface on interactive and hero elements.
 
-**Design direction:** Organic / Nature-Inspired — topographic pattern as signature
-**North star feeling:** Calm confidence. Like opening a journal in a forest.
-**Design ambition:** Premium wellness design that people screenshot and share.
-
-### Core Principles
-
-1. **The pattern is the brand.** The topographic contour-line pattern is Zuralog's signature. It appears on primary buttons, hero text, card accents, progress bars, and interactive highlights — always via CSS/Flutter blend modes from a single source image.
-2. **Two greens anchor everything.** Sage (#CFE1B9) and Deep Forest (#344E41) are the brand's fixed poles. All surfaces, text, and borders derive from these two colors.
-3. **Dark mode is home.** Ink Green (#141E18) canvas is the primary environment. Light mode is a respectful inversion, not a different design.
-4. **Depth through luminance, not shadow.** On dark backgrounds, elevation comes from progressively brighter surfaces and borders — not drop shadows.
-5. **Motion is gentle.** Expo-out easing, staggered entrances, and shimmer loading. The pace matches a wellness app — calming, not urgent.
-
-### What Stays Constant
-
-- Brand pattern image and its blend-mode treatments
-- Color palette (Sage, Deep Forest, Ink Green) and semantic tokens
-- Typography (Outfit font family)
-- Spacing scale (4px base grid)
-- Border radius conventions
-- Category color assignments
-
-### What Should Always Be Explored
-
-- New pattern applications and treatments
-- Screen layouts and card arrangements
-- Animation choreography details
-- Component visual treatments for new features
+**North star feeling:** Premium wellness. Calm confidence. Nature meets technology.
 
 ---
 
-## Brand Pattern
+## Foundations
 
-**Source:** `docs/brand/brand-pattern.png`
-**Style:** Organic topographic contour lines, green-toned
-**Format:** PNG (single source image, tinted via CSS/Flutter for variants)
+### Canvas & Elevation
 
-### Pattern Application Methods
-
-The pattern is applied through blend modes and opacity, never as a raw background fill.
-
-| Treatment | Method | Use Case |
-|-----------|--------|----------|
-| **Sage + Pattern Overlay** | Pattern image on `#CFE1B9` base, `overlay` blend mode, 100% opacity | Primary buttons (signature treatment) |
-| **Pattern Text** | `background-clip: text` / Flutter `ShaderMask` with pattern fill | Hero numbers, score displays, headlines, brand wordmark. Works on both dark AND light backgrounds. |
-| **Pattern Card Accent** | 3px top-edge strip with pattern fill | Featured cards, elevated content |
-| **Subtle Texture** | Pattern at 8–12% opacity on card surface | Texture hint on premium surfaces |
-| **Pattern Overlay on Card** | Pattern with overlay blend on sage card | Highlighted/featured cards |
-| **Pattern on Dark Forest** | Pattern at 15–20% opacity on `#344E41` | Deep forest card variant |
-
-### Pattern on Components
-
-| Component | Treatment |
-|-----------|-----------|
-| Progress bars | Pattern fill on completed portion |
-| Dividers | Pattern-filled 2px lines (decorative sections only) |
-| Avatar rings | Pattern ring border around profile images |
-| Tab indicators | Pattern underline on active tab |
-| Loading skeletons | Pattern shimmer sweep |
-| Sheet handles | Pattern-filled drag handle |
-| Chips (selected) | Sage + pattern overlay on active chip |
-
-### Category Pattern Tinting
-
-The single green pattern image can be tinted to any health category color using three CSS/Flutter methods. All three are retained for different contexts:
-
-| Method | Technique | Best For |
-|--------|-----------|----------|
-| **Hue-rotate** | `filter: hue-rotate(Xdeg) saturate(1.2)` | Quick shifts, simple implementations |
-| **Luminosity-on-color** | Pattern as luminosity source on category-color base | Rich, vibrant results |
-| **Grayscale + color blend** | Desaturate pattern → color blend overlay | Most controllable, best fidelity |
-
-**Hue rotation values from green base (120°):**
-
-| Category | Color | Rotation |
-|----------|-------|----------|
-| Activity | #30D158 | 0° |
-| Sleep | #5E5CE6 | +140° |
-| Heart | #FF375F | −120° |
-| Nutrition | #FF9F0A | −90° |
-| Body | #64D2FF | +60° |
-| Wellness | #BF5AF2 | +160° |
-| Cycle | #FF6482 | −140° |
-| Mobility | #FFD60A | −60° |
-| Vitals | #6AC4DC | +45° |
-| Environment | #63E6BE | +15° |
-
----
-
-## Color Palette
-
-### Brand Colors
+The app uses a neutral charcoal canvas with the faintest warm whisper. Surfaces are distinguished by brightness alone — no borders, no shadows. Each elevation step is exactly +8 brighter across all RGB channels.
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `sage` | `#CFE1B9` | Primary brand accent — buttons, active states, headings, interactive elements |
-| `deep-forest` | `#344E41` | Secondary brand — button fills, text on light mode, strong accents |
-| `ink-green` | `#141E18` | Canvas background (dark mode) |
+| Canvas | `#161618` | Screen background |
+| Surface | `#1E1E20` | Cards, content containers |
+| Surface Raised | `#272729` | Popovers, dropdowns, tooltips |
+| Surface Overlay | `#313133` | Modals, bottom sheets |
 
-Sage and Deep Forest are the two fixed brand colors. All other surface and text colors derive from them.
+No borders between elevation levels. The brightness difference alone creates separation.
 
-### Health Category Colors
+### Typography
 
-| Category | Token | Hex |
-|----------|-------|-----|
-| Activity | `category-activity` | `#30D158` |
-| Sleep | `category-sleep` | `#5E5CE6` |
-| Heart | `category-heart` | `#FF375F` |
-| Nutrition | `category-nutrition` | `#FF9F0A` |
-| Body | `category-body` | `#64D2FF` |
-| Vitals | `category-vitals` | `#6AC4DC` |
-| Wellness | `category-wellness` | `#BF5AF2` |
-| Cycle | `category-cycle` | `#FF6482` |
-| Mobility | `category-mobility` | `#FFD60A` |
-| Environment | `category-environment` | `#63E6BE` |
+**Font family:** Plus Jakarta Sans (all platforms).
 
-**Usage rules:**
-- Full saturation on charts, progress rings, and active state icons
-- 15–20% opacity as card tint backgrounds
-- As text only for metric values and category labels, never body text
-- Two category colors never appear adjacent at full saturation without a separator
+Geometric, modern, and refined. Numbers render beautifully at every size — critical for a health app full of metrics. Feels both premium and approachable.
 
-### Semantic Colors
+| Style | Size | Weight | Usage |
+|-------|------|--------|-------|
+| Display Large | 34pt | Bold 700 | Hero numbers, screen titles |
+| Display Medium | 28pt | SemiBold 600 | Section headers, greetings |
+| Display Small | 24pt | SemiBold 600 | Card headlines, modal titles |
+| Title Large | 20pt | Medium 500 | Card titles, dialog headers |
+| Title Medium | 17pt | Medium 500 | List item titles, nav headers |
+| Body Large | 16pt | Regular 400 | Primary body, chat messages |
+| Body Medium | 14pt | Regular 400 | Descriptions, secondary body |
+| Body Small | 12pt | Regular 400 | Captions, timestamps |
+| Label Large | 15pt | SemiBold 600 | Button text, action labels |
+| Label Medium | 13pt | Medium 500 | Chip text, tab labels |
+| Label Small | 11pt | Medium 500 | Badge text, unit labels |
+
+### Color — Accent System
+
+Two accent roles, clearly separated:
+
+**Sage (`#CFE1B9`)** — the brand color. Used for primary actions: filled buttons, active toggles, links, badges, and health-positive indicators. When a user sees Sage, it means "tap this" or "this is good."
+
+**Warm White (`#F0EEE9`)** — the UI color. Used for navigation and secondary controls: active tab indicators, segmented control selection, outlined button text. When a user sees Warm White, it means "go here" or "this is selected."
+
+### Color — Text
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `success` | `#34C759` | Connected, positive deltas, goal completion |
-| `warning` | `#FF9500` | Caution, approaching limits |
-| `error` | `#FF3B30` | Error, disconnected, destructive |
-| `syncing` | `#007AFF` | Loading/syncing indicators |
+| Text Primary | `#F0EEE9` | Headlines, metric values, body text |
+| Text Secondary | `#9B9894` | Labels, captions, muted descriptions |
+| Text On Sage | `#1A2E22` | Text sitting on Sage-filled surfaces |
+| Text On Warm White | `#161618` | Text sitting on Warm White surfaces (e.g., active segmented control) |
 
----
+### Color — Health Categories
 
-## Surface & Elevation System
+These are fixed across light and dark mode. They identify health domains throughout the app.
 
-### Dark Mode (Primary)
+| Category | Hex |
+|----------|-----|
+| Activity | `#30D158` |
+| Sleep | `#5E5CE6` |
+| Heart | `#FF375F` |
+| Nutrition | `#FF9F0A` |
+| Body | `#64D2FF` |
+| Vitals | `#6AC4DC` |
+| Wellness | `#BF5AF2` |
+| Cycle | `#FF6482` |
+| Mobility | `#FFD60A` |
+| Environment | `#63E6BE` |
 
-Depth is achieved through progressively brighter surfaces and brighter borders. No drop shadows.
+### Color — Semantic / Status
 
-| Level | Token | Background | Border | Usage |
-|-------|-------|-----------|--------|-------|
-| 0 | `canvas` | `#141E18` | `rgba(207,225,185, 0.04)` | Screen background |
-| 1 | `surface` | `#1E2E24` | `rgba(207,225,185, 0.06)` | Cards, content containers |
-| 2 | `surface-raised` | `#253A2C` | `rgba(207,225,185, 0.08)` | Popovers, dropdowns, tooltips |
-| 3 | `surface-overlay` | `#2C4534` | `rgba(207,225,185, 0.10)` | Modals, dialogs, bottom sheets |
+| Name | Hex | Usage |
+|------|-----|-------|
+| Success | `#34C759` | Connected, positive deltas, goal done |
+| Warning | `#FF9500` | Caution, approaching limits |
+| Error / Destructive | `#FF3B30` | Errors, delete actions, destructive buttons |
+| Syncing | `#007AFF` | Loading/sync indicators |
+| Streak Warm | `#FF9500` | Streak flame accent |
 
-### Light Mode
+### Spacing
 
-Light mode uses subtle shadows instead of border luminance for elevation.
+Based on a 4px grid with a 2px fine-tuning step.
 
-| Level | Token | Background | Border | Shadow | Usage |
-|-------|-------|-----------|--------|--------|-------|
-| 0 | `canvas` | `#FAFAF5` | — | — | Screen background (warm white) |
-| 1 | `surface` | `#FFFFFF` | `rgba(52,78,65, 0.08)` | `0 1px 3px rgba(52,78,65, 0.04)` | Cards |
-| 2 | `surface-raised` | `#FFFFFF` | `rgba(52,78,65, 0.08)` | `0 4px 12px rgba(52,78,65, 0.06)` | Popovers |
-| 3 | `surface-overlay` | `#FFFFFF` | `rgba(52,78,65, 0.10)` | `0 8px 24px rgba(52,78,65, 0.08)` | Modals |
+| Token | Value |
+|-------|-------|
+| XXS | 2px |
+| XS | 4px |
+| SM | 8px |
+| MD | 16px |
+| MD+ | 20px |
+| LG | 24px |
+| XL | 32px |
+| XXL | 48px |
 
-### Text Colors
-
-| Token | Dark Mode | Light Mode | Usage |
-|-------|-----------|------------|-------|
-| `text-primary` | `#E8EDE0` | `#1A2E22` | Headlines, metric values |
-| `text-secondary` | `#CFE1B9` | `#344E41` | Headings, accents, sage highlights |
-| `text-muted` | `rgba(207,225,185, 0.40)` | `rgba(52,78,65, 0.45)` | Labels, captions, timestamps |
-| `text-on-sage` | `#344E41` | — | Text on sage-colored surfaces |
-| `text-on-forest` | `#CFE1B9` | — | Text on forest-colored surfaces |
-
-### Border Colors
-
-| Token | Dark Mode | Light Mode |
-|-------|-----------|------------|
-| `border-default` | `rgba(207,225,185, 0.06)` | `rgba(52,78,65, 0.08)` |
-| `border-strong` | `rgba(207,225,185, 0.12)` | `rgba(52,78,65, 0.15)` |
-
----
-
-## Typography
-
-**Font Family:** Outfit (all platforms)
-**Weights:** Regular (400), Medium (500), SemiBold (600), Bold (700)
-
-### Type Scale
-
-| Style | Size | Weight | Line Height | Usage |
-|-------|------|--------|-------------|-------|
-| `displayLarge` | 34pt | Bold (700) | 1.1 | Hero numbers, health score, screen titles |
-| `displayMedium` | 28pt | SemiBold (600) | 1.15 | Section headers, greeting text |
-| `displaySmall` | 24pt | SemiBold (600) | 1.2 | Card headlines, modal titles |
-| `titleLarge` | 20pt | Medium (500) | 1.25 | Card titles, dialog headers |
-| `titleMedium` | 17pt | Medium (500) | 1.3 | List item titles, navigation headers |
-| `bodyLarge` | 16pt | Regular (400) | 1.5 | Primary body text, AI chat messages |
-| `bodyMedium` | 14pt | Regular (400) | 1.45 | Secondary body, descriptions |
-| `bodySmall` | 12pt | Regular (400) | 1.4 | Captions, timestamps, metadata |
-| `labelLarge` | 15pt | SemiBold (600) | 1.2 | Button text, action labels |
-| `labelMedium` | 13pt | Medium (500) | 1.2 | Chip text, tab labels |
-| `labelSmall` | 11pt | Medium (500) | 1.2 | Badge text, compact stats, unit labels |
-
-### Font Assets
-
-Font files in `zuralog/assets/fonts/`:
-- `Outfit-Regular.ttf` (400)
-- `Outfit-Medium.ttf` (500)
-- `Outfit-SemiBold.ttf` (600)
-- `Outfit-Bold.ttf` (700)
-
----
-
-## Spacing & Shape
-
-### Spacing Scale (4px Base Grid)
+### Shape (Border Radius)
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `2xs` | 2px | Hairline gaps, icon-to-text micro-spacing |
-| `xs` | 4px | Tight gaps within components |
-| `sm` | 8px | Default component internal padding |
-| `md` | 12px | Gap between related elements |
-| `base` | 16px | Standard padding, card internal padding |
-| `lg` | 20px | Section gaps, generous card padding |
-| `xl` | 24px | Screen horizontal margins, section separation |
-| `2xl` | 32px | Major section breaks |
-| `3xl` | 40px | Screen top padding (below status bar) |
-| `4xl` | 48px | Hero spacing |
-| `5xl` | 64px | Maximum breathing room |
+| XS | 8px | Chips, tags, tooltips |
+| SM | 12px | Inputs, snackbars |
+| MD | 16px | Metric tiles, compact cards |
+| LG | 20px | Feature cards, hero cards |
+| XL | 28px | Bottom sheets, modals |
+| Pill | 100px | All buttons, pills |
 
-### Border Radius (Soft & Rounded)
+### Topographic Pattern
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `none` | 0px | Flat edges (rare) |
-| `sm` | 6px | Small inner elements, badges within cards |
-| `md` | 12px | Inputs, inner containers, search bars |
-| `lg` | 16px | Cards, content containers |
-| `xl` | 20px | Large cards, feature panels |
-| `2xl` | 24px | Bottom sheets, modals |
-| `full` | 100px | Buttons, chips, badges, pills, avatars |
+The contour-line pattern (`brand_pattern.png`) is the brand's visual signature. It does not appear as wallpaper. It is applied selectively to mark interactive and important elements.
 
----
+**Where the pattern appears:**
+- **Hero cards** — the most important card on each screen (health score, main insight, streak badge). Applied at 10-12% opacity, screen blend mode.
+- **Primary buttons** — Sage-filled action buttons. Applied at 12% opacity, multiply blend mode (darkens into the Sage).
+- **Destructive buttons** — Red-filled action buttons. Same pattern, 12% opacity, multiply blend mode on red.
+- **Any filled action button** — the pattern marks "this does something significant."
 
-## Button System
+**Where the pattern does NOT appear:**
+- Screen canvas / background
+- Regular cards and metric tiles
+- Secondary (outlined) buttons
+- Text buttons
+- Input fields
+- Navigation bars
 
-All buttons use pill shape (`border-radius: 100px`).
-
-### Button Hierarchy
-
-| Variant | Background | Text | Border | Notes |
-|---------|-----------|------|--------|-------|
-| **Primary** | `#CFE1B9` + pattern overlay blend | `#344E41` | — | Signature treatment. Pattern image with `overlay` blend mode on sage base. |
-| **Secondary** | `#344E41` solid | `#CFE1B9` | — | Deep forest fill. For secondary actions. |
-| **Tertiary** | `rgba(207,225,185, 0.12)` | `#CFE1B9` | — | Sage tint fill. For lesser actions. |
-| **Ghost** | transparent | `#CFE1B9` | 1.5px `rgba(207,225,185, 0.30)` | Outline only. For paired actions. |
-| **Text** | transparent | `rgba(207,225,185, 0.60)` | — | No fill, no border. Inline actions. |
-| **Destructive** | `rgba(255,59,48, 0.15)` | `#FF3B30` | — | Red tint fill. For delete/remove actions. |
-
-### Light Mode Buttons
-
-| Variant | Background | Text | Border |
-|---------|-----------|------|--------|
-| **Primary** | `#344E41` solid | `#CFE1B9` | — |
-| **Secondary** | `rgba(52,78,65, 0.08)` | `#344E41` | — |
-| **Ghost** | transparent | `#344E41` | 1.5px `rgba(52,78,65, 0.20)` |
-
-### Button Sizes
-
-| Size | Vertical Padding | Horizontal Padding | Font Size |
-|------|-----------------|-------------------|-----------|
-| Large | 18px | 28px | 16pt |
-| Default | 14px | 24px | 15pt |
-| Small | 10px | 18px | 13pt |
-
-### Button States
-
-- **Disabled:** 35% opacity on entire button
-- **Pressed:** Slight scale-down (0.97) + darker shade
-- **Loading:** Replace text with small spinner, maintain button width
+**Blend modes by surface color:**
+- On light surfaces (Sage, red, other fills): multiply blend — the pattern darkens into the surface
+- On dark surfaces (if ever needed): screen blend — the pattern lightens onto the surface
 
 ---
 
-## Icons
+## Components
 
-**Icon Set:** Lucide (1.5px stroke, round caps, round joins)
-**Size:** 20–24px standard, 16px compact, 28px featured
+### Buttons
 
-### Active/Inactive Treatment
+Buttons use pill radius (100px) at all sizes. The topographic pattern appears on all filled buttons to mark them as significant actions.
 
-| State | Style | Details |
-|-------|-------|---------|
-| **Active** | Filled + sage pattern | Solid fill with `#CFE1B9`, pattern overlay blend. The signature brand treatment. |
-| **Inactive** | Outlined thin | 1.5px stroke, `rgba(207,225,185, 0.35)` in dark mode, `rgba(52,78,65, 0.30)` in light mode |
+**Primary (Sage fill + pattern)**
+- Background: Sage `#CFE1B9`
+- Text: `#1A2E22` (Text On Sage), SemiBold 600
+- Pattern: `brand_pattern.png`, 12% opacity, multiply blend
+- Usage: The main action on a screen. "Log Activity", "Connect", "Save"
 
-This creates a clear, on-brand distinction between active and inactive states. The active icon gets the same sage + pattern signature as the primary button.
+**Destructive (Red fill + pattern)**
+- Background: Error `#FF3B30`
+- Text: `#FFFFFF`, SemiBold 600
+- Pattern: `brand_pattern.png`, 12% opacity, multiply blend
+- Usage: Dangerous or irreversible actions. "Delete Account", "Disconnect"
 
-### Light Mode Icons
+**Secondary (Outlined, no pattern)**
+- Background: transparent
+- Border: `rgba(240, 238, 233, 0.2)` (1.5px)
+- Text: Warm White `#F0EEE9`, SemiBold 600
+- No pattern. This is the deliberately quiet option.
+- Usage: Alternative actions. "View Details", "Skip", "Cancel"
 
-- **Active:** Filled solid `#344E41` (no pattern — too busy on light backgrounds)
-- **Inactive:** Outlined thin `rgba(52,78,65, 0.30)`
+**Text (no pattern, no background)**
+- Text: Sage `#CFE1B9`, SemiBold 600
+- No background, no border, no pattern.
+- Lowest visual emphasis. Used for tertiary actions.
+- Usage: "See all →", "Learn more", inline actions
+
+**Button sizes:**
+
+| Size | Height | Horizontal Padding | Text Style |
+|------|--------|-------------------|------------|
+| Large | 52px | 28px | Label Large (15pt, SemiBold 600) |
+| Medium | 44px | 24px | Label Large (15pt, SemiBold 600) |
+| Small | 32px | 18px | Label Medium (13pt, Medium 500) |
+
+**Button states:**
+- **Pressed/Active:** opacity drops to 85%, slight scale-down (0.97)
+- **Disabled:** opacity 40%, no pattern visible, no interaction
+- **Loading:** text replaced with Sage spinner (primary) or white spinner (destructive), button stays same size
+
+**Visual hierarchy:**
+Pattern + fill = primary emphasis → Plain outline = secondary → Bare text = tertiary
+
+### Cards & Containers
+
+Cards use soft, rounded corners with generous padding. The goal is a calm, breathing layout where each card feels like its own space.
+
+**Standard card**
+- Background: Surface `#1E1E20`
+- Border radius: LG (20px) for feature cards, MD (16px) for metric tiles
+- Padding: MD+ (20px) for feature cards, MD (16px) for metric tiles
+- No border. Elevation is communicated through brightness alone.
+- No pattern on standard cards.
+
+**Hero card (pattern — 10%)**
+- Same as standard card, plus the topographic pattern at 10% opacity, screen blend
+- Used for: Health score card, the single most important card on a screen
+- Only one hero card per screen.
+
+**Feature card (pattern — 7%)**
+- Same as standard card, plus the topographic pattern at 7% opacity, screen blend (slightly softer than hero)
+- Used for: AI-generated insight cards, streak cards, achievement cards, trend/correlation cards
+- The rule: **AI-generated or celebratory content gets the pattern. Raw numbers don't.**
+
+**Data card (no pattern)**
+- Standard card with no pattern treatment
+- Used for: Metric tiles (steps, sleep, calories), settings groups, list containers, any card that displays raw data without interpretation
+- These stay clean so the numbers are the focus
+
+**The pattern rule for cards:** If the card is telling you something smart (an AI insight, a discovered pattern, a celebration), it gets the pattern. If the card is just showing a number, it stays plain.
+
+**Card grid spacing**
+- Gap between cards: 12px
+- Gap between metric tiles: 12px
+- Section spacing: 24px (LG)
+
+### Navigation
+
+**Top App Bar**
+- Background: transparent (canvas shows through)
+- Title: Text Primary `#F0EEE9`, Display Medium (28pt, SemiBold)
+- Right action: avatar circle in Surface Raised `#272729`
+- No border, no shadow. The top bar is part of the canvas, not a separate element.
+- On scroll: stays transparent. Content scrolls underneath.
+
+**Bottom Navigation Bar**
+- Style: floating pill bar
+- Background: Surface `#1E1E20`, pill radius (100px)
+- Horizontal margin: MD+ (20px) from screen edges
+- Bottom padding: safe area + 18px
+- Each tab: icon + label pair
+- Active tab: Sage tint pill background `rgba(207, 225, 185, 0.12)`, Sage text `#CFE1B9` — the bottom nav is the only navigation element that uses Sage instead of Warm White, because it is the app's primary branded surface and should feel like part of the Zuralog identity, not generic chrome
+- Inactive tabs: Text Secondary `#9B9894`
+- Tab icons: Material Symbols (or custom set), 20-22px
+
+**Tab icons:**
+- Today: sun/sunrise
+- Data: grid/chart bars
+- Coach: chat bubble or sparkle
+- Progress: target or trophy
+- Trends: trending line
+
+### Inputs & Selection
+
+All inputs use the filled style — Surface fill with no border. Consistent with the elevation system where surfaces are distinguished by brightness alone.
+
+**The Sage pattern rule for inputs:** Any Sage-filled interactive surface gets the topographic pattern at 12% opacity, multiply blend. This includes checkboxes, toggle tracks, and slider thumbs.
+
+**Text Field**
+- Background: Surface `#1E1E20`, border radius SM (12px)
+- Label: Text Secondary `#9B9894`, Label Small (11pt, Medium 500)
+- Value text: Text Primary `#F0EEE9`, Body Large (16pt, Regular 400)
+- Placeholder: Text Secondary `#9B9894`, Body Large (16pt, Regular 400)
+- Focus state: Sage border `rgba(207, 225, 185, 0.3)` appears on focus
+- Error state: Error red border `rgba(255, 59, 48, 0.5)`, error message below in Error red, Body Small (12pt)
+- Disabled state: opacity 40%, no interaction
+- No pattern (Surface fill, not Sage fill)
+
+**Text Area**
+- Same as text field but taller, min-height 120px
+- Resize handle in Text Secondary
+
+**Password Field**
+- Same as text field with obscured characters and a show/hide toggle icon
+
+**Toggle Switch**
+- On: Sage `#CFE1B9` track with pattern (12%, multiply), white thumb
+- Off: Surface Raised `#272729` track, Text Secondary `#9B9894` thumb
+- Size: 44×26px
+
+**Slider**
+- Active track: Sage `#CFE1B9` with pattern (10%, multiply)
+- Inactive track: Surface Raised `#272729`
+- Thumb: Sage `#CFE1B9` with pattern (12%, multiply), 18px diameter
+- Track height: 6px
+
+**Checkbox**
+- Checked: Sage `#CFE1B9` fill with pattern (12%, multiply), dark checkmark `#1A2E22`
+- Unchecked: Text Secondary `#9B9894` border (2px), transparent fill
+- Size: 20×20px, border radius 4px
+
+**Radio Button**
+- Selected: Sage `#CFE1B9` border with solid Sage inner dot (dot too small for pattern)
+- Unselected: Text Secondary `#9B9894` border, transparent fill
+- Size: 20×20px
+
+**Dropdown**
+- Same as text field with a chevron icon on the right
+- Opens a bottom sheet or popup menu on the Surface Raised level
+
+**Date Picker / Time Picker**
+- Presented as a bottom sheet (Surface Overlay level)
+- Selected values highlighted with Sage tint background
+- Confirm button: Primary (Sage + pattern)
+
+**Stepper**
+- Plus/minus buttons: Surface Raised `#272729` fill, 32px circles
+- Value: Text Primary, centered between buttons
+
+**Rating Bar**
+- Filled stars: Sage `#CFE1B9`
+- Empty stars: Surface Raised `#272729`
+
+**Segmented Control**
+- Background: Surface `#1E1E20`, pill radius
+- Active segment: Warm White `#F0EEE9` fill, Text On Warm White `#161618`
+- Inactive segments: Text Secondary `#9B9894`
+- This uses Warm White (not Sage) because it's a navigation/selection control, not an action
+
+### Feedback & Communication
+
+All feedback components follow the elevation system. Higher urgency = higher elevation level.
+
+**Icons & Emojis:** Always flat — no gradients, no 3D effects. Use simple line icons or flat filled icons. This keeps the visual language clean and allows the pattern to be applied on filled icon surfaces.
+
+**Toast / Snackbar**
+- Background: Surface Raised `#272729`, pill radius (100px)
+- Text: Text Primary `#F0EEE9`, Body Medium (14pt)
+- Status dot: 8px circle, color matches status (Success green, Error red, etc.) with pattern (12%, multiply) on Sage/green dots
+- Action text (optional): Sage `#CFE1B9`, SemiBold — acts as a text button ("Retry", "Undo")
+- Auto-dismisses after 3-4 seconds. Snackbar stays until action is taken or manually dismissed.
+- Position: centered horizontally, near top of screen (below safe area)
+
+**Alert Dialog**
+- Background: Surface Overlay `#313133`, XL radius (28px)
+- Title: Text Primary, Title Medium (17pt, Medium)
+- Body: Text Secondary `#9B9894`, Body Medium (14pt)
+- Buttons: Primary (Sage + pattern) or Destructive (Red + pattern) for confirm, Secondary (outlined) for cancel
+- Scrim: black at 50% opacity behind the dialog
+
+**Bottom Sheet**
+- Background: Surface Overlay `#313133`, rounded top corners XL (28px)
+- Drag handle: 36×4px, Text Secondary at 40% opacity, centered
+- Content follows standard card/list patterns inside
+- Scrim: black at 40% opacity
+
+**Linear Progress Bar**
+- Active track: Sage `#CFE1B9` with pattern (10%, multiply)
+- Inactive track: Surface Raised `#272729`
+- Height: 4px, border radius 2px
+- Label above: Text Secondary for context ("Syncing Fitbit..."), Sage for value ("65%")
+
+**Circular Progress Spinner**
+- Sage `#CFE1B9` spinning arc
+- Track: Surface Raised `#272729`
+
+**Pull-to-Refresh**
+- Sage spinner appears on pull-down
+- Canvas background — no separate refresh container
+
+**Skeleton Loader**
+- Container: Surface `#1E1E20`, standard card radius
+- Shimmer blocks: Surface Raised `#272729`, small radius (6px)
+- Animate with a subtle left-to-right shimmer (Sage tint at very low opacity)
+
+**Tooltip**
+- Background: Surface Raised `#272729`, XS radius (8px)
+- Text: Text Primary `#F0EEE9`, Body Small (12pt)
+- Pointer triangle in matching Surface Raised color
+- Appears on long-press, dismisses on tap elsewhere
+
+**Badge**
+- Background: Error `#FF3B30` (for notifications) or Sage (for positive counts)
+- Text: white, Label Small (11pt, Bold 700)
+- Size: 16px min diameter, pill-shaped for multi-digit numbers
+- Border: 2px Canvas `#161618` to lift off the parent icon
+
+### Display Components
+
+**Chip / Filter Tag**
+- Shape: pill radius (100px)
+- Active: Sage tint background `rgba(207, 225, 185, 0.15)` with pattern (8%, screen), Sage text
+- Inactive: Surface `#1E1E20`, Text Secondary
+- Size: padding 8px 16px (SM vertical, MD horizontal), Label Medium text (13pt)
+
+**List Item**
+- Container: Surface `#1E1E20` card, grouped with dividers between rows
+- Icon: 32px Surface Raised square, radius 8px, with pattern (12%, screen) — adds texture to icon containers
+- Title: Text Primary, Body Medium (14pt, Regular 400)
+- Subtitle: Text Secondary, Label Small (11pt, Medium 500)
+- Trailing: chevron arrow or value text in Text Secondary
+- Row padding: 12px 16px (SM vertical, MD horizontal)
+- Dividers between rows: 1px `rgba(240, 238, 233, 0.04)`
+
+**Avatar**
+- Shape: circle
+- Sizes: 48px (large), 36px (medium), 24px (small)
+- Photo: circular crop, no border
+- Default (no photo): Surface Raised `#272729` with pattern (15%, screen), Sage initials centered — a branded placeholder that's distinctly Zuralog
+- The pattern on default avatars is an intentional exception to the "Sage fill = pattern" rule
+
+**Divider**
+- 1px solid `rgba(240, 238, 233, 0.06)`
+- Used between list items and between content sections
+- Full-bleed within cards, inset (16px margin) between standalone sections
+
+**Accordion**
+- Container: Surface `#1E1E20` card, LG radius
+- Header: Title text + Sage chevron arrow, 12px 16px padding (SM vertical, MD horizontal)
+- Expanded content: below a divider, same padding
+- Chevron rotates 180° on expand with gentle animation
+
+**Carousel**
+- Horizontal scroll of standard Surface cards
+- 12px gap between cards
+- Right edge: next card peeks in (20-30px visible) to hint scrollability
+- No pagination dots — the peek is the affordance
+
+**Grid Tile**
+- Same as data card: Surface `#1E1E20`, MD radius (16px), 16px padding
+- Used in 2-column metric grids on Today and Data tabs
+
+**Image View**
+- Border radius: MD (16px) to match card system
+- Loading state: Surface `#1E1E20` placeholder with skeleton shimmer
+
+**Hero Image / Banner**
+- Full-width, top of screen
+- Pattern overlay (10%, screen) when used as a branded header
+- Content overlaid with gradient scrim from bottom if text sits on image
+
+### Action Components (continued)
+
+**Floating Action Button (FAB)**
+- Shape: 56px circle
+- Background: Sage `#CFE1B9` with pattern (15%, multiply)
+- Icon: `#1A2E22`, 24px
+- Shadow: `0 4px 12px rgba(0, 0, 0, 0.3)` — the only component with a shadow, needed to lift it off scrolling content
+- Position: bottom-right, above the floating nav pill
+- The FAB is a primary action — same pattern rule as buttons. The larger surface makes contour lines more visible.
+
+**Icon Button**
+- Shape: 40px circle or 40px rounded square (radius 10px)
+- Background: Surface Raised `#272729` or transparent
+- Icon: Text Primary or Sage depending on context
+- No pattern (too small and not Sage-filled)
+
+**Split Button**
+- Primary section: Sage fill + pattern (same as primary button)
+- Dropdown trigger: Surface Raised, separated by a 1px Sage divider
+- Pill radius on the combined shape
+
+### Navigation Components (continued)
+
+**Search Bar**
+- Background: Surface `#1E1E20` with pattern (5%, screen), radius SM (12px)
+- Placeholder: Text Secondary `#9B9894`, search icon left-aligned
+- Active/typing: Sage border appears `rgba(207, 225, 185, 0.3)`
+- The faint pattern makes the search bar feel branded rather than generic
+
+**Tabs (horizontal row)**
+- Used for switching views within a screen (e.g., Day/Week/Month)
+- Background track: Surface `#1E1E20` with pattern (4%, screen), radius 12px, padding 4px
+- Active tab: Warm White `#F0EEE9` fill, dark text, radius 9px — no pattern (navigation element)
+- Inactive tabs: Text Secondary, transparent background
+- The pattern peeks through the inactive track areas, creating a layered effect
+
+**Breadcrumbs**
+- Text Secondary for ancestor links, Text Primary for current
+- Separator: `/` or `›` in Text Secondary
+- Sage on hover/tap for ancestor links
+
+**Pagination**
+- Active dot: Sage `#CFE1B9` fill, 8px
+- Inactive dots: Surface Raised `#272729`, 6px
+- Used sparingly — prefer carousel peek or infinite scroll
+
+### Special Surfaces
+
+**Empty State**
+- Container: Feature card treatment — Surface `#1E1E20`, LG radius (20px), with pattern (6%, screen)
+- Flat icon: centered, 36px
+- Title: Text Primary, Title Medium
+- Description: Text Secondary, Body Medium, centered
+- CTA button: Primary (Sage + pattern)
+- Empty states are "feature cards" — they communicate and invite action. The pattern makes them feel intentional and branded, not like error pages.
+
+**Onboarding / Welcome Screens**
+- Full branded hero surface: Surface `#1E1E20`, LG radius (20px), with pattern (10%, screen)
+- The richest pattern treatment in the app — this is the user's first impression
+- Title in Sage, body in Text Secondary
+- Primary CTA button at bottom
+
+**Error State**
+- Same layout as empty state but without pattern
+- Icon in Error red, description explains what went wrong
+- Retry button: Primary (Sage + pattern)
+
+**Scroll View**
+- Standard scrollable container on Canvas background
+- No pattern on the scroll surface itself — content provides the visual interest
+- Pull-to-refresh: Sage spinner
 
 ---
 
-## Navigation
+## Pattern Reference Table
 
-### Bottom Tab Bar
+A complete summary of every surface that gets the topographic pattern treatment.
 
-**Style:** Always-visible labels — icon + text label on every tab
-**Rationale:** A health app needs zero ambiguity. Users should never guess what a tab does.
-**Anti-patterns:** No icon-only tabs, no floating pill indicators.
+| Component | Surface Color | Opacity | Blend Mode | Notes |
+|-----------|--------------|---------|------------|-------|
+| Primary button | Sage `#CFE1B9` | 12% | Multiply | All sizes |
+| Destructive button | Error `#FF3B30` | 12% | Multiply | Same pattern, red surface |
+| FAB | Sage `#CFE1B9` | 15% | Multiply | Larger surface = slightly higher opacity |
+| Hero card | Surface `#1E1E20` | 10% | Screen | One per screen max |
+| Feature card (insight, streak, achievement) | Surface `#1E1E20` | 7% | Screen | AI or celebratory content |
+| Empty state card | Surface `#1E1E20` | 6% | Screen | Branded empty states |
+| Onboarding / welcome | Surface `#1E1E20` | 10% | Screen | Richest treatment |
+| Toggle track (on) | Sage `#CFE1B9` | 12% | Multiply | |
+| Slider thumb | Sage `#CFE1B9` | 12% | Multiply | |
+| Slider active track | Sage `#CFE1B9` | 10% | Multiply | |
+| Checkbox (checked) | Sage `#CFE1B9` | 12% | Multiply | |
+| Progress bar (active) | Sage `#CFE1B9` | 10% | Multiply | |
+| Active chip | Sage tint `rgba(207,225,185,0.15)` | 8% | Screen | |
+| Default avatar | Surface Raised `#272729` | 15% | Screen | Branded placeholder |
+| List icon squares | Surface Raised `#272729` | 12% | Screen | Settings icon containers |
+| Search bar | Surface `#1E1E20` | 5% | Screen | Very subtle |
+| Tab track (inactive area) | Surface `#1E1E20` | 4% | Screen | Peeks through behind active segment |
+| Toast status dot (success) | Success `#34C759` | 12% | Multiply | Any light-colored fill gets the pattern |
+| Hero image/banner | Over image | 10% | Screen | Branded headers |
 
-| Element | Dark Mode | Light Mode |
-|---------|-----------|------------|
-| Background | `#141E18` (canvas) | `#FAFAF5` (canvas) |
-| Top border | `rgba(207,225,185, 0.06)` | `rgba(52,78,65, 0.08)` |
-| Active icon | Filled + sage pattern | Filled `#344E41` |
-| Active label | `#CFE1B9`, 600 weight, 10pt | `#344E41`, 600 weight, 10pt |
-| Inactive icon | Outlined, 35% opacity | Outlined, 30% opacity |
-| Inactive label | `rgba(207,225,185, 0.35)`, 400 weight | `rgba(52,78,65, 0.30)`, 400 weight |
+**The rule:** On light/Sage surfaces → multiply blend (pattern darkens into the surface). On dark surfaces → screen blend (pattern lightens onto the surface). Tinted surfaces (low-opacity Sage over dark) count as dark surfaces and use screen blend.
 
-### App Bar
+**Pattern on status colors:** The pattern applies to any filled action surface, not just Sage. Destructive (red) buttons and toast status dots in Success green both get the pattern with multiply blend, because they are light-colored fills.
 
-- Large title style with greeting subtitle
-- Right-side: notification bell (outlined icon), avatar button (opens profile side panel)
-- Collapse to compact on scroll
-
-### Tabs (5 main tabs)
-
-1. **Today** — Clock icon
-2. **Data** — Bar chart icon
-3. **Log** — Plus icon (also global FAB)
-4. **Coach** — Moon/AI icon
-5. **Profile** — Person icon
+**Split button dropdown trigger:** No pattern. Only the primary action section gets the pattern.
 
 ---
 
 ## Motion & Animation
 
-**Philosophy:** Gentle & Organic — calming, not urgent
-**Easing:** `cubic-bezier(0.16, 1, 0.3, 1)` — expo-out for all entrances and transitions
-**Reduced motion:** All animations respect `prefers-reduced-motion` / `MediaQuery.disableAnimations`
+Motion is gentle and intentional. Nothing snaps or bounces aggressively.
 
-### Duration Scale
-
-| Token | Duration | Usage |
-|-------|----------|-------|
-| `micro` | 200ms | Opacity toggles, color changes, icon state swaps |
-| `standard` | 400ms | Standard transitions, component state changes |
-| `entrance` | 600ms | Page/section entrance animations |
-
-### Entrance Animations
-
-- **Staggered fade-slide:** Cards appear with `opacity: 0 → 1` + `translateY(16px → 0)`, staggered 60–80ms per sibling
-- **Properties:** Only `opacity` and `transform` (GPU composited, 60fps)
-- **No bounce/elastic easing** — elements decelerate smoothly with expo-out
-
-### Loading States
-
-- **Skeleton shimmer:** Gradient sweep from left to right (`rgba(sage, 0.04)` → `rgba(sage, 0.08)` → `rgba(sage, 0.04)`), 2s duration, infinite loop
-- **Progress fill:** Smooth fill with expo-out easing, 1200ms, delayed 400ms after card entrance
-
-### Interaction Feedback
-
-- **Button press:** Scale to 0.97, 100ms
-- **Tab switch:** Cross-fade content, 200ms
-- **Card tap:** Subtle scale to 0.98 + slight brightness increase
-- **Swipe-to-dismiss:** Follow finger with resistance physics, snap to dismiss at 40% threshold
-
----
-
-## Component Reference
-
-### Cards (4 Tiers)
-
-| Tier | Background | Border | Pattern | Use Case |
-|------|-----------|--------|---------|----------|
-| **Standard** | `surface` (#1E2E24) | `border-default` | None | Default content cards |
-| **Accent** | `surface` | `border-default` + 3px pattern top-edge | Top accent strip | Featured cards, highlights |
-| **Sage** | `#CFE1B9` | — | Overlay blend | Call-to-action cards, premium features |
-| **Forest** | `#344E41` | — | 15–20% opacity texture | Deep accent cards |
-
-### Inputs
-
-| Property | Value |
+| Duration | Usage |
 |----------|-------|
-| Background | `rgba(sage, 0.06)` dark / `rgba(forest, 0.04)` light |
-| Border | `border-default`, focused: `border-strong` |
-| Border radius | `md` (12px) |
-| Padding | 12px vertical, 16px horizontal |
-| Placeholder | `text-muted` color |
-| Text | `text-primary` color |
+| 150ms | Micro-interactions: button press, toggle flip, checkbox check |
+| 250ms | Standard transitions: card expand, chip select, dropdown open |
+| 350ms | Major transitions: screen push, bottom sheet slide, modal appear |
+| 600ms | Staggered entrances: card feed loading, list population |
 
-### Chips
+**Easing:** `Curves.easeOut` (fast start, gentle stop) for entrances. `Curves.easeIn` for exits. `Curves.easeInOut` for transitions that both enter and leave.
 
-| State | Background | Text | Border |
-|-------|-----------|------|--------|
-| Default | transparent | `text-muted` | `border-default` |
-| Selected | `rgba(sage, 0.12)` | `sage` | — |
-| Category | `rgba(categoryColor, 0.15)` | category color | — |
+**Staggered animations:** When multiple cards appear at once (e.g., the Today tab loading), each card delays 60ms after the previous one. This creates a cascading "waterfall" effect.
 
-Border radius: `full` (100px)
-
-### Toasts / Snackbars
-
-| Variant | Background | Icon | Text |
-|---------|-----------|------|------|
-| Success | `surface-raised` | ✓ in `success` | `text-primary` |
-| Error | `surface-raised` | ✗ in `error` | `text-primary` |
-| Info | `surface-raised` | ℹ in `sage` | `text-primary` |
-
-Border radius: `lg` (16px). Centered at bottom with 20px margin. Entrance: slide up + fade.
-
-### Badges
-
-| Variant | Background | Text |
-|---------|-----------|------|
-| Sage | `rgba(sage, 0.15)` | `sage` |
-| Category | `rgba(categoryColor, 0.15)` | category color |
-| Positive delta | `rgba(success, 0.15)` | `success` |
-| Negative delta | `rgba(error, 0.15)` | `error` |
-
-Border radius: `full` (100px). Padding: 4px 10px.
-
-### Empty States
-
-- Centered layout
-- Muted icon or illustration (outlined style, 48px)
-- Headline in `text-secondary`
-- Body in `text-muted`
-- Primary CTA button below
-
-### Lists
-
-- Items separated by `border-default` hairline divider
-- 16px vertical padding per item
-- Leading: icon in circle badge or avatar
-- Trailing: chevron, value text, or toggle
+**Reduced motion:** Respect the system accessibility setting. When reduced motion is enabled, all animations resolve instantly (duration 0) except essential feedback like pull-to-refresh.
 
 ---
 
-## Screen Background
+## Interaction & Accessibility
 
-**Dark mode:** Solid `#141E18` (Ink Green) — no pattern, no texture, no gradient
-**Light mode:** Solid `#FAFAF5` (Warm White)
+### Touch Targets
 
-The pattern lives on components, not the background. The clean canvas lets pattern-treated elements stand out.
+All interactive elements must have a minimum touch target of 44×44pt, even if the visual element is smaller. For components like checkboxes (20×20px) and radio buttons (20×20px), the hit area extends invisibly to meet the 44pt minimum.
+
+### Contrast Ratios
+
+- Text Primary `#F0EEE9` on Canvas `#161618`: 13.5:1 (exceeds AAA)
+- Text Secondary `#9B9894` on Canvas `#161618`: 5.8:1 (exceeds AA)
+- Text On Sage `#1A2E22` on Sage `#CFE1B9`: 9.2:1 (exceeds AAA)
+- Sage `#CFE1B9` on Canvas `#161618`: 10.4:1 (exceeds AAA)
+
+### Focus Indicators
+
+When navigating with keyboard or assistive technology, focused elements show a 2px Sage outline offset by 2px from the element edge.
+
+### Screen Readers
+
+All interactive elements must have descriptive labels. Icons used as buttons must have `semanticLabel` set. Decorative elements (pattern overlays, dividers) are marked as non-accessible.
 
 ---
 
-## Future Considerations
+## Hero vs Feature Card Assignments
 
-These areas are designed to follow the same token system and pattern treatments when implemented:
+To remove ambiguity, here are the specific hero and feature card assignments per screen:
 
-- **Coach Chat UI** — User bubbles (sage/forest), AI bubbles (surface), typing indicator, streaming text
-- **Chart Palette** — Category colors on dark/light chart surfaces, reference lines, grid lines
-- **Onboarding Flow** — Welcome screens, auth forms, questionnaire steps
-- **Widget/Watch Complications** — Compact pattern usage on small surfaces
+**Today tab:**
+- Hero: Health Score card
+- Feature: AI insight cards, streak card
+
+**Data tab:**
+- Hero: Health Score summary (if shown at top)
+- Feature: Category summary cards with interpretive text
+
+**Coach tab:**
+- No hero card — the chat interface is the primary surface
+
+**Progress tab:**
+- Hero: Active goal spotlight or streak hero
+- Feature: Achievement cards, journal prompt card
+
+**Trends tab:**
+- Hero: Top correlation card (highest confidence)
+- Feature: All other correlation cards
+
+**Settings:**
+- No hero or feature cards — settings uses data cards and list items only
