@@ -119,6 +119,10 @@ class InsightSignalDetector:
         signals.extend(self._detect_category_h())
         return [self._apply_focus_boost(s) for s in signals]
 
+    def detect_correlations(self) -> list[InsightSignal]:
+        """Run only correlation detection (category D) with focus boost applied."""
+        return [self._apply_focus_boost(s) for s in self._detect_category_d()]
+
     # ------------------------------------------------------------------
     # Focus boost
     # ------------------------------------------------------------------

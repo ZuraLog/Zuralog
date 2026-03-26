@@ -71,6 +71,19 @@ _METRIC_TO_CATEGORY: dict[str, tuple[str, str]] = {
 _MIN_MATURITY_DAYS = 7  # minimum days of data before we show anything
 
 
+async def _get_user_tz(user_id: str, db: AsyncSession) -> zoneinfo.ZoneInfo:
+    """Fetch the user's preferred timezone from user_preferences, defaulting to UTC."""
+    row = await db.execute(
+        text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
+        {"uid": str(user_id)},
+    )
+    iana_tz = row.scalar_one_or_none() or "UTC"
+    try:
+        return zoneinfo.ZoneInfo(iana_tz)
+    except Exception:
+        return zoneinfo.ZoneInfo("UTC")
+
+
 def _make_pattern_id(metric_a: str, metric_b: str) -> str:
     return f"corr_{metric_a}_{metric_b}"
 
@@ -81,7 +94,7 @@ def _parse_pattern_id(pattern_id: str) -> tuple[str, str] | None:
         return None
     rest = pattern_id[5:]  # strip "corr_"
     # We need to find the split point — try all valid metric names as metric_a
-    for a in _SIGNAL_METRIC_TO_DB_TYPE:
+    for a in sorted(_SIGNAL_METRIC_TO_DB_TYPE, key=len, reverse=True):
         if rest.startswith(a + "_"):
             b = rest[len(a) + 1:]
             if b in _SIGNAL_METRIC_TO_DB_TYPE:
@@ -131,7 +144,7 @@ router = APIRouter(
 )
 
 
-@limiter.limit("60/minute")
+@limiter.limit("5/minute")
 @router.get("/home", response_model=TrendsHomeResponse)
 async def trends_home(
     request: Request,
@@ -155,8 +168,7 @@ async def trends_home(
     if brief.data_maturity_days < _MIN_MATURITY_DAYS:
         return TrendsHomeResponse()
 
-    signals = InsightSignalDetector(brief).detect_all()
-    corr_signals = [s for s in signals if s.category == "D"]
+    corr_signals = InsightSignalDetector(brief).detect_correlations()
     corr_signals.sort(key=lambda s: abs(s.values.get("correlation", 0.0)), reverse=True)
     corr_signals = corr_signals[:10]
 
@@ -175,14 +187,15 @@ async def trends_home(
                 body=_make_body(s.metrics[0], s.metrics[1], coefficient, s.values.get("lag_days", 0)),
                 category_color_hex=_METRIC_TO_CATEGORY.get(s.metrics[0], ("activity", "#30D158"))[1],
                 category=_METRIC_TO_CATEGORY.get(s.metrics[0], ("activity", "#30D158"))[0],
-                discovered_at=datetime.now(timezone.utc).date().isoformat(),
             )
         )
 
-    has_enough_data = brief.data_maturity_days >= _MIN_MATURITY_DAYS and len(corr_signals) > 0
+    has_enough_data = brief.data_maturity_days >= _MIN_MATURITY_DAYS
+    has_correlations = len(corr_signals) > 0
     return TrendsHomeResponse(
         correlation_highlights=highlights,
         has_enough_data=has_enough_data,
+        has_correlations=has_correlations,
         pattern_count=len(corr_signals),
     )
 
@@ -267,15 +280,11 @@ async def trends_correlation(
     user_id: str = Depends(get_authenticated_user_id),
 ) -> dict:
     """Correlation between two metrics over a time range."""
-    row = await db.execute(
-        text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
-        {"uid": str(user_id)},
-    )
-    iana_tz = row.scalar_one_or_none() or "UTC"
-    try:
-        user_tz = zoneinfo.ZoneInfo(iana_tz)
-    except Exception:
-        user_tz = zoneinfo.ZoneInfo("UTC")
+    valid_metrics = set(_SIGNAL_METRIC_TO_DB_TYPE.keys())
+    if metric_a not in valid_metrics or metric_b not in valid_metrics:
+        raise HTTPException(status_code=400, detail="Invalid metric name. Must be one of: " + ", ".join(sorted(valid_metrics)))
+
+    user_tz = await _get_user_tz(user_id, db)
     local_date = datetime.now(tz=user_tz).date()
     start_date = local_date - timedelta(days=days)
 
@@ -293,7 +302,7 @@ async def trends_correlation(
         {"uid": str(user_id), "ma": metric_a, "mb": metric_b, "start": start_date},
     )
     data_points = [
-        {"date": str(r.date), metric_a: r.metric_a_value, metric_b: r.metric_b_value}
+        {"date": str(r.date), "a_value": r.metric_a_value, "b_value": r.metric_b_value}
         for r in rows.fetchall()
     ]
 
@@ -301,8 +310,8 @@ async def trends_correlation(
     if len(data_points) >= 3:
         import statistics
 
-        xs = [p[metric_a] for p in data_points]
-        ys = [p[metric_b] for p in data_points]
+        xs = [p["a_value"] for p in data_points]
+        ys = [p["b_value"] for p in data_points]
         try:
             correlation = round(statistics.correlation(xs, ys), 3)
         except statistics.StatisticsError:
@@ -336,18 +345,9 @@ async def pattern_expand(
 
     time_range_days = {"7d": 7, "30d": 30, "90d": 90}.get(time_range, 30)
 
-    tz_row = await db.execute(
-        text("SELECT timezone FROM user_preferences WHERE user_id = :uid"),
-        {"uid": str(user_id)},
-    )
-    iana_tz = tz_row.scalar_one_or_none() or "UTC"
-    try:
-        user_tz = zoneinfo.ZoneInfo(iana_tz)
-    except Exception:
-        user_tz = zoneinfo.ZoneInfo("UTC")
-    local_date = datetime.now(tz=user_tz).date()
+    user_tz = await _get_user_tz(user_id, db)
 
-    start = (local_date - timedelta(days=time_range_days)).isoformat()
+    start = (datetime.now(tz=user_tz).date() - timedelta(days=time_range_days)).isoformat()
 
     rows = await db.execute(
         text("""
