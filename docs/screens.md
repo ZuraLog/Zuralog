@@ -102,7 +102,12 @@ The emotional/motivational tab. Answers "am I on track?" without requiring chart
 | **Goal Detail** | Pushed | Single goal deep-dive. Full progress chart over time, milestones hit, projected completion date, AI commentary ("At your current pace, you'll hit your target weight by April 12"). |
 | **Achievements** | Pushed | **Full badge gallery with locked/unlocked states**, grouped by category (Consistency, Fitness, Nutrition, Sleep, Social, Milestones). Each badge shows its name, description, unlock conditions, and — if unlocked — the **unlock date**. Locked badges show progress toward unlock (e.g., "3 of 7 days complete"). Unlockable badges mark real behavioral consistency: "First 10K run", "7-day logging streak", "30 days of calorie tracking", "Connected 3 apps". Functions as a motivational archive. |
 | **Weekly Report** | Pushed | **Instagram-story-style swipeable card sequence** (not a single scrollable page). Each card is full-screen with a gradient background per card type: Week Summary card (total workouts, avg sleep, calorie adherence), Top Insight card (biggest data-driven takeaway), Goal Adherence card, Comparison card (this week vs last week), and a closing card with the week's streak status. A dot indicator shows card position. **Share-as-image button** on each card exports it as a shareable graphic for social accountability. Can also be pushed as a Sunday evening notification. |
-| **Journal / Daily Log** | Pushed | Daily reflection entry. Mood rating (1-5 or emoji scale), short text note, and context tags ("rest day", "stressful", "traveled"). Over time this builds a personal health diary that the AI can correlate with quantitative data ("You tend to sleep worse on days you tag as 'stressful'"). |
+| **JournalScreen** | Pushed | Journal history — scrollable list of past entries sorted by date (newest first). Each row shows date, source icon (diary or chat bubble), and content preview. Tapping an entry opens it for viewing. Floating action button opens the Journal Mode Picker to create a new entry. |
+| **JournalModePickerSheet** | Modal bottom sheet | Mode selector for creating a new journal entry: "Diary" (free-form text entry) or "Conversational" (via Coach AI). Tapping a mode navigates to the appropriate screen. |
+| **JournalDiaryScreen** | Full-screen | Full-screen text editor for freeform diary entries. Title field (optional), large text area for content, floating submit button. Saves entry with `source: 'diary'`. |
+| **JournalEntryRouter** | Navigation helper | Routes new journal entries based on `coachJournalModeProvider` flag. If enabled, starts a Coach conversation with journal check-in system prompt and listens for `detectJournalSummary` (AI-generated `{"type": "journal_summary", ...}` payload). If disabled, opens `JournalDiaryScreen`. |
+| **JournalSaveConfirmationSheet** | Modal bottom sheet | Shown when AI generates a journal summary during Coach conversation. Displays the AI-suggested summary with edit/confirm buttons. User can confirm to save or dismiss. |
+| **JournalSettingsScreen** | Pushed (Settings > Journal) | Journal preferences: toggle for "Conversational Mode" (Coach AI journal check-ins), default entry source (diary vs. conversational), and link to view all past entries. |
 
 ### 3.5 Trends Tab
 
@@ -184,11 +189,11 @@ The following reusable components are available across all screens:
 | Today tab | 4 | 3 existing + 1 new (Quick Log Bottom Sheet) |
 | Data tab | 3 | 3 existing (rebuilt) |
 | Coach tab | 4 | 2 new, 2 existing (rebuilt) |
-| Progress tab | 6 | 6 new |
+| Progress tab | 12 | 6 from Flame redesign + 6 journal screens (history, diary, router, mode picker, save confirmation, settings) |
 | Trends tab | 4 | 4 new (backend exists, no UI) |
 | Auth & Onboarding | 5 | 4 existing + 1 rebuilt (Onboarding Flow replaces Profile Questionnaire) |
 | Settings & Profile | 15 | 12 existing + 3 new (Emergency Health Card + Edit, Edit Profile) |
-| **Total** | **~41** | **~28 new/rebuilt, ~13 carried forward** |
+| **Total** | **~47** | **~34 new/rebuilt, ~13 carried forward** |
 
 ---
 

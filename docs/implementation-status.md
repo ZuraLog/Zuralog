@@ -196,6 +196,63 @@ The `avatars` Supabase Storage bucket must be created manually in the Supabase d
 
 ---
 
+## Journal Redesign — Diary & Conversational Modes (feat/journal-redesign, 2026-03-26)
+
+**Scope:** Complete journal feature redesign. Replaced mood/energy/stress/sleep-quality questionnaire with two modes: freeform diary entries and AI-conversational check-ins via Coach. Added journal settings, history screen, and Coach integration with AI-generated summary detection and save confirmation.
+**Branch:** `feat/journal-redesign` → merged to main (2026-03-26)
+**Status:** `flutter analyze lib/features/journal/` — 0 issues. All audit cycles passed.
+
+### What was implemented
+
+**Backend (`cloud-brain/`):**
+- Alembic migration: Added `source` (VARCHAR 20, default 'diary') and `conversation_id` (VARCHAR 64, nullable) columns to `journal_entries` table.
+- API response schema updated: accepts/returns `content`, `source`, `conversation_id` instead of `mood`, `energy`, `stress`, `sleep_quality`.
+- Old columns kept in DB for backward compat; not exposed in API responses.
+- `notes` DB column aliased to `content` in API response.
+
+**Flutter (`zuralog/`):**
+
+*Models (`journal_models.dart`):*
+- `JournalEntry`: removed `mood`, `energy`, `stress`, `sleepQuality`, `notes`; added `content`, `source`, `conversationId`.
+- `source` is a string enum: `'diary'` (freeform text) or `'conversational'` (from Coach AI).
+
+*New screens (all in `lib/features/journal/presentation/screens/`):*
+- `journal_screen.dart` — journal history, scrollable list of past entries sorted by date (newest first). Each row shows date, source icon (diary or chat bubble), content preview. Tapping opens entry. FAB opens mode picker.
+- `journal_entry_router.dart` — navigation router that checks `coachJournalModeProvider` flag. If enabled, starts Coach conversation with journal check-in system prompt and listens for journal summary. If disabled, opens diary screen.
+- `journal_diary_screen.dart` — full-screen text editor. Title (optional), large content textarea, floating submit button. Saves with `source: 'diary'`.
+- `journal_mode_picker_sheet.dart` — bottom sheet mode selector: "Diary" or "Conversational" buttons. Tapping navigates to appropriate screen.
+- `journal_save_confirmation_sheet.dart` — bottom sheet shown when AI generates a journal summary during Coach conversation. Displays AI-suggested summary with edit/confirm/dismiss buttons.
+- `journal_settings_screen.dart` — Settings > Journal. Toggles: "Conversational Mode" (enables AI check-ins), default entry source selector, link to view all entries.
+
+*Providers (`journal_providers.dart`):*
+- `coachJournalModeProvider` — boolean flag (from user preferences) controlling whether Coach starts journal check-in conversations.
+- `journalEntriesProvider` — watches all user journal entries; invalidates on create/update.
+
+*Coach integration:*
+- `new_chat_screen.dart` — updated system prompt to include `coachJournalModeProvider` flag. If true, Coach is instructed to proactively offer journal check-ins.
+- `coach_service.dart` — added `detectJournalSummary()` function. Parses AI streaming responses for `{"type": "journal_summary", "title": "...", "content": "...", ...}` payloads. When detected, streams `JournalSummaryDetected` event to trigger save confirmation sheet.
+
+*Routes:*
+- `/progress/journal` — journal history screen.
+- `/progress/journal/diary` — diary entry creation.
+- `/settings/journal` — journal settings.
+
+*Settings integration:*
+- Journal tile added to Settings Hub under "Experience" section. Links to `journal_settings_screen.dart`.
+
+### Key decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| AI summary detection via JSON payload | Safer than string pattern matching; AI explicitly returns structured `{"type": "journal_summary", ...}` to signal intent |
+| Two separate screen types (diary vs conversational) | Different UX needs: diary is distraction-free editor; conversational is chat-like. Both accessible from mode picker. |
+| `source` column preserved as string (not enum) | Allows flexible extension to other source types in future (e.g., 'health-check', 'voice-memo'). |
+| Conversation ID optional | Diary entries have `conversation_id = null`. Only conversational entries link to a Coach thread. |
+| Old mood/energy columns kept in DB | Preserves historical data; any future retrospective analysis possible. Backward compat win. |
+| Settings tile in Experience section | Journal is a reflective, lifestyle-oriented feature; belongs with other personal reflection tools. |
+
+---
+
 ## Today Tab — Daily Goals Card Wiring (2026-03-19)
 
 **Scope:** Wired the Daily Goals card to real API data, removed dead stub code, and added cross-tab reactivity.  
