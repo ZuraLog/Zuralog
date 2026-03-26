@@ -3,7 +3,6 @@
 import React from "react";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { cn } from "@/lib/utils";
-import { PatternOverlay } from "@/components/design-system/primitives/pattern-overlay";
 
 /* ------------------------------------------------------------------ */
 /*  DSTabs — wraps Root                                                */
@@ -19,7 +18,7 @@ export function DSTabs({
 }
 
 /* ------------------------------------------------------------------ */
-/*  DSTabsList — the track with pattern overlay                        */
+/*  DSTabsList — the track with drifting pattern background             */
 /* ------------------------------------------------------------------ */
 
 export function DSTabsList({
@@ -31,12 +30,12 @@ export function DSTabsList({
     <TabsPrimitive.List
       className={cn(
         "relative overflow-hidden",
-        "bg-ds-surface rounded-ds-sm p-1 inline-flex",
+        "bg-cover bg-center bg-no-repeat rounded-ds-sm p-1 inline-flex",
         className,
       )}
+      style={{ backgroundImage: "url('/patterns/sage.png')" }}
       {...props}
     >
-      <PatternOverlay variant="original" opacity={0.06} blend="screen" />
       <div className="relative z-10 inline-flex">{children}</div>
     </TabsPrimitive.List>
   );

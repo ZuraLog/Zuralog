@@ -2,7 +2,6 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { PatternOverlay } from "@/components/design-system/primitives/pattern-overlay";
 
 export interface ChipProps {
   active?: boolean;
@@ -23,15 +22,15 @@ export function Chip({ active = false, children, onClick, className }: ChipProps
         "text-[0.8125rem] font-medium font-jakarta",
         "transition-colors duration-200",
         active
-          ? "bg-[rgba(207,225,185,0.15)] text-ds-sage"
+          ? "bg-cover bg-center bg-no-repeat text-ds-text-on-sage"
           : "bg-ds-surface text-ds-text-secondary",
         onClick && "cursor-pointer",
         className,
       )}
+      {...(active
+        ? { style: { backgroundImage: "url('/patterns/sage.png')" } }
+        : undefined)}
     >
-      {active && (
-        <PatternOverlay variant="original" opacity={0.15} blend="screen" />
-      )}
       <span className="relative z-10">{children}</span>
     </Tag>
   );

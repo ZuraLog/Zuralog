@@ -2,7 +2,6 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { PatternOverlay } from "@/components/design-system/primitives/pattern-overlay";
 
 export interface AvatarProps {
   src?: string;
@@ -36,9 +35,12 @@ export function Avatar({
       className={cn(
         "relative overflow-hidden rounded-full",
         sizeClasses[size],
-        !src && "bg-ds-surface-raised",
+        !src && "bg-cover bg-center bg-no-repeat",
         className,
       )}
+      {...(!src
+        ? { style: { backgroundImage: "url('/patterns/original.png')" } }
+        : undefined)}
     >
       {src ? (
         <img
@@ -48,7 +50,8 @@ export function Avatar({
         />
       ) : (
         <>
-          <PatternOverlay variant="original" opacity={0.20} blend="screen" />
+          {/* Dark scrim so initials are readable over the pattern */}
+          <div className="absolute inset-0 bg-black/40 rounded-full" />
           {initials && (
             <span
               className={cn(

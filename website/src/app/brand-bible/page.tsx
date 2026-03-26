@@ -56,7 +56,7 @@ import {
 
 function SectionTitle({ children }: { children: string }) {
   return (
-    <Text variant="display-md" color="sage">
+    <Text variant="display-md" color="sage" pattern="sage">
       {children}
     </Text>
   );
@@ -148,7 +148,7 @@ export default function BrandBiblePage() {
     <main className="max-w-[960px] mx-auto px-6 py-12 pb-24">
       {/* ── 1. Header ──────────────────────────────────────────────── */}
       <header>
-        <Text variant="display-lg" color="sage" as="h1">
+        <Text variant="display-lg" color="sage" pattern="sage" as="h1">
           Zuralog Design System
         </Text>
         <Text variant="body-lg" color="secondary" className="mt-3 max-w-2xl">
@@ -202,6 +202,41 @@ export default function BrandBiblePage() {
             ))}
           </div>
         </Card>
+      </section>
+
+      {/* ── 3b. Pattern Typography ──────────────────────────────────── */}
+      <section className="mt-16">
+        <SectionTitle>Pattern Typography</SectionTitle>
+        <SectionSub>Bold display text gets a drifting topographic fill. Semibold headings get a static fill. Body text stays solid.</SectionSub>
+
+        <div className="grid gap-6">
+          <Card elevation="standard">
+            <Label>Bold (animated drift)</Label>
+            <Text variant="display-lg" pattern="sage">Health Score: 78</Text>
+          </Card>
+
+          <Card elevation="standard">
+            <Label>Semibold (static pattern)</Label>
+            <Text variant="display-md" pattern="sage">Good morning, Alex</Text>
+            <Text variant="display-sm" pattern="sage" className="mt-3">Sleep Duration</Text>
+          </Card>
+
+          <Card elevation="standard">
+            <Label>Pattern colors</Label>
+            <div className="flex flex-col gap-3">
+              <Text variant="display-md" pattern="sage">Sage pattern</Text>
+              <Text variant="display-md" pattern="crimson">Crimson pattern</Text>
+              <Text variant="display-md" pattern="amber">Amber pattern</Text>
+              <Text variant="display-md" pattern="original">Original pattern</Text>
+            </div>
+          </Card>
+
+          <Card elevation="standard">
+            <Label>Solid text (no pattern)</Label>
+            <Text variant="display-md" color="sage">Solid sage heading</Text>
+            <Text variant="body-lg" color="primary" className="mt-2">Body text always stays solid and readable — patterns only appear on display-size headings where the letterforms are large enough to show the texture.</Text>
+          </Card>
+        </div>
       </section>
 
       {/* ── 4. Accent Colors ───────────────────────────────────────── */}
@@ -299,13 +334,16 @@ export default function BrandBiblePage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { name: "Success", hex: "#34C759", bg: "bg-ds-success" },
-            { name: "Warning", hex: "#FF9500", bg: "bg-ds-warning" },
-            { name: "Error", hex: "#FF3B30", bg: "bg-ds-error" },
-            { name: "Syncing", hex: "#007AFF", bg: "bg-ds-syncing" },
+            { name: "Success", hex: "#34C759", pattern: "sage" },
+            { name: "Warning", hex: "#FF9500", pattern: "amber" },
+            { name: "Error", hex: "#FF3B30", pattern: "crimson" },
+            { name: "Syncing", hex: "#007AFF", pattern: "sky-blue" },
           ].map((status) => (
             <div key={status.name} className="flex items-center gap-3">
-              <div className={`w-4 h-4 rounded-full ${status.bg}`} />
+              <div
+                className="w-4 h-4 rounded-full ds-pattern-drift"
+                style={{ backgroundImage: `url('/patterns/${status.pattern}.png')` }}
+              />
               <div>
                 <Text variant="label-md" color="primary">{status.name}</Text>
                 <Text variant="label-sm" color="secondary" className="font-mono">{status.hex}</Text>
@@ -399,7 +437,7 @@ export default function BrandBiblePage() {
         <div className="grid gap-4">
           <Card elevation="hero">
             <Text variant="body-sm" color="secondary">Health Score</Text>
-            <Text variant="display-lg" color="sage" className="mt-1">78</Text>
+            <Text variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
             <Text variant="body-md" color="secondary" className="mt-1">
               Your overall health is trending up this week.
             </Text>
@@ -552,15 +590,24 @@ export default function BrandBiblePage() {
             <Label>Toast Mockups</Label>
             <div className="flex flex-col gap-3 max-w-sm">
               <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
-                <div className="w-2 h-2 rounded-full bg-ds-success shrink-0" />
+                <div
+                  className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
+                  style={{ backgroundImage: "url('/patterns/sage.png')" }}
+                />
                 <Text variant="body-sm" color="primary">Activity logged successfully.</Text>
               </div>
               <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
-                <div className="w-2 h-2 rounded-full bg-ds-error shrink-0" />
+                <div
+                  className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
+                  style={{ backgroundImage: "url('/patterns/crimson.png')" }}
+                />
                 <Text variant="body-sm" color="primary">Failed to sync. Tap to retry.</Text>
               </div>
               <div className="flex items-center gap-3 bg-ds-surface-raised rounded-ds-sm px-4 py-3">
-                <div className="w-2 h-2 rounded-full bg-ds-warning shrink-0" />
+                <div
+                  className="w-2 h-2 rounded-full ds-pattern-drift shrink-0"
+                  style={{ backgroundImage: "url('/patterns/amber.png')" }}
+                />
                 <Text variant="body-sm" color="primary">Health data permissions required.</Text>
               </div>
             </div>
@@ -569,6 +616,7 @@ export default function BrandBiblePage() {
           {/* Dialog */}
           <Card elevation="standard">
             <Label>Dialog</Label>
+            <div className="mt-3">
             <DSDialog>
               <DSDialogTrigger>
                 <DSButton intent="destructive" size="sm">Delete Entry</DSButton>
@@ -588,6 +636,7 @@ export default function BrandBiblePage() {
                 </div>
               </DSDialogContent>
             </DSDialog>
+            </div>
           </Card>
 
           {/* Badges */}
@@ -612,6 +661,7 @@ export default function BrandBiblePage() {
           {/* Tooltip */}
           <Card elevation="standard">
             <Label>Tooltip</Label>
+            <div className="mt-3">
             <DSTooltip>
               <DSTooltipTrigger>
                 <DSButton intent="secondary" size="sm">Hover me</DSButton>
@@ -620,6 +670,7 @@ export default function BrandBiblePage() {
                 This is a tooltip with helpful context.
               </DSTooltipContent>
             </DSTooltip>
+            </div>
           </Card>
 
           {/* Skeleton loader (inline — no component) */}
@@ -641,9 +692,10 @@ export default function BrandBiblePage() {
                 <Text variant="body-sm" color="sage">67%</Text>
               </div>
               <div className="h-2 bg-ds-surface-raised rounded-full overflow-hidden">
-                <div className="relative h-full w-[67%] bg-ds-sage rounded-full overflow-hidden">
-                  <PatternOverlay variant="sage" opacity={0.12} blend="color-burn" />
-                </div>
+                <div
+                  className="relative h-full w-[67%] bg-ds-sage rounded-full overflow-hidden ds-pattern-drift"
+                  style={{ backgroundImage: "url('/patterns/sage.png')" }}
+                />
               </div>
             </div>
           </Card>
@@ -767,7 +819,7 @@ export default function BrandBiblePage() {
           {/* Onboarding card */}
           <Card elevation="hero">
             <div className="py-2">
-              <Text variant="display-sm" color="sage">Welcome to Zuralog</Text>
+              <Text variant="display-sm" color="sage" pattern="sage">Welcome to Zuralog</Text>
               <Text variant="body-md" color="secondary" className="mt-2 max-w-md">
                 Your personal health hub. We bring together data from all your devices
                 and give you one clear picture of your well-being.
@@ -779,13 +831,15 @@ export default function BrandBiblePage() {
           </Card>
 
           {/* FAB mockup (inline — no component) */}
-          <div>
+          <Card elevation="standard">
             <Label>Floating Action Button</Label>
-            <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-full bg-ds-sage overflow-hidden mt-2">
+            <div className="mt-4">
+            <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-full bg-ds-sage overflow-hidden">
               <PatternOverlay variant="sage" opacity={0.15} blend="color-burn" />
               <Plus size={24} className="text-ds-text-on-sage relative z-10" />
             </div>
-          </div>
+            </div>
+          </Card>
         </div>
       </section>
 
