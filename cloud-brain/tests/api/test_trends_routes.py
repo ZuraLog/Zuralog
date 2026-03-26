@@ -38,6 +38,7 @@ def mock_db():
     db.execute = AsyncMock()
     db.execute.return_value.fetchall = MagicMock(return_value=[])
     db.execute.return_value.scalar_one_or_none = MagicMock(return_value=None)
+    db.execute.return_value.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))
     app.dependency_overrides[get_db] = lambda: db
     yield db
     app.dependency_overrides.pop(get_db, None)
@@ -46,6 +47,13 @@ def mock_db():
 @pytest.fixture
 def client(mock_auth, mock_db):
     return TestClient(app)
+
+
+def _make_brief(data_maturity_days: int):
+    """Create a minimal HealthBrief stub for testing."""
+    brief = MagicMock()
+    brief.data_maturity_days = data_maturity_days
+    return brief
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +96,11 @@ def test_make_headline_moderate_positive():
 def test_make_headline_strong_negative():
     result = _make_headline("hrv_ms", "resting_heart_rate", -0.8)
     assert "less" in result
+
+
+def test_make_headline_weak_correlation():
+    result = _make_headline("sleep_hours", "steps", 0.3)
+    assert "affect" in result.lower() or "may" in result.lower()
 
 
 def test_make_body_lag_and_moderate():
@@ -194,3 +207,37 @@ def test_trends_metrics_returns_metric_types_from_db(client, mock_db):
     assert resp.status_code == 200
     data = resp.json()
     assert data["metrics"] == metric_types
+
+
+def test_trends_home_mature_data_but_no_signals(client, mock_db):
+    """Mature data with zero correlation signals returns has_enough_data=False."""
+    brief = _make_brief(data_maturity_days=30)
+    with (
+        patch("app.api.v1.trends_routes.HealthBriefBuilder") as mock_builder,
+        patch("app.api.v1.trends_routes.InsightSignalDetector") as mock_detector,
+    ):
+        mock_builder.return_value.build = AsyncMock(return_value=brief)
+        mock_detector.return_value.detect_all.return_value = []  # no signals at all
+
+        response = client.get("/api/v1/trends/home", headers=AUTH_HEADER)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["has_enough_data"] is False
+    assert data["correlation_highlights"] == []
+    assert data["pattern_count"] == 0
+
+
+def test_trends_home_requires_auth():
+    response = TestClient(app).get("/api/v1/trends/home")
+    assert response.status_code in (401, 403)
+
+
+def test_trends_metrics_requires_auth():
+    response = TestClient(app).get("/api/v1/trends/metrics")
+    assert response.status_code in (401, 403)
+
+
+def test_trends_pattern_expand_requires_auth():
+    response = TestClient(app).get("/api/v1/trends/pattern/corr_sleep_hours_steps/expand")
+    assert response.status_code in (401, 403)
