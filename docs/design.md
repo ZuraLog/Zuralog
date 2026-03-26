@@ -119,25 +119,44 @@ Based on a 4px grid with a 2px fine-tuning step.
 
 ### Topographic Pattern
 
-The contour-line pattern (`brand_pattern.png`) is the brand's visual signature. It does not appear as wallpaper. It is applied selectively to mark interactive and important elements.
+The contour-line pattern is the brand's visual signature. It does not appear as wallpaper. It is applied selectively to mark interactive and important elements.
+
+**Pattern variants** are pre-colored PNG files stored in `assets/brand/pattern/`. Each variant matches a surface or category color:
+
+| Variant File | Usage |
+|-------------|-------|
+| `Sage.PNG` | Primary buttons, toggles, checkboxes, sliders, chips, FAB — any Sage-filled surface |
+| `Crimson.PNG` | Destructive buttons, error-related surfaces |
+| `Green.PNG` | Success toasts, Activity category cards |
+| `Periwinkle.PNG` | Sleep category cards |
+| `Rose.PNG` | Heart category cards |
+| `Amber.PNG` | Nutrition category cards, Warning states |
+| `Sky Blue.PNG` | Body category cards |
+| `Teal.PNG` | Vitals/Environment category cards |
+| `Purple.PNG` | Wellness category cards |
+| `Yellow.PNG` | Mobility category cards |
+| `Original.PNG` | Dark surfaces — hero cards, feature cards, avatars, search bar, tab tracks, empty states, onboarding |
+
+**Blend modes:**
+- On **light/colored surfaces** (Sage buttons, destructive buttons, category cards): **color-burn** blend, 15% opacity. Color-burn deepens the dark contour lines while leaving light areas untouched, creating crisp etched lines.
+- On **dark surfaces** (hero cards, feature cards, avatars, search bar, etc.): **screen** blend, opacity varies by component (4-15%). Screen lightens the pattern onto the dark canvas.
 
 **Where the pattern appears:**
-- **Hero cards** — the most important card on each screen (health score, main insight, streak badge). Applied at 10-12% opacity, screen blend mode.
-- **Primary buttons** — Sage-filled action buttons. Applied at 12% opacity, multiply blend mode (darkens into the Sage).
-- **Destructive buttons** — Red-filled action buttons. Same pattern, 12% opacity, multiply blend mode on red.
-- **Any filled action button** — the pattern marks "this does something significant."
+- **Hero cards** — Original.PNG, 10% opacity, screen blend
+- **Feature cards** (AI insights, streaks, achievements) — Original.PNG, 7% opacity, screen blend
+- **Category-specific feature cards** — matching color variant, 7% opacity, screen blend (e.g., a Sleep insight uses Periwinkle.PNG)
+- **Primary buttons** — Sage.PNG, 15% opacity, color-burn blend
+- **Destructive buttons** — Crimson.PNG, 15% opacity, color-burn blend
+- **All Sage-filled inputs** (toggles, checkboxes, sliders) — Sage.PNG, 15% opacity, color-burn blend
+- **FAB** — Sage.PNG, 18% opacity, color-burn blend (larger surface = slightly higher opacity)
 
 **Where the pattern does NOT appear:**
 - Screen canvas / background
-- Regular cards and metric tiles
+- Data cards and metric tiles (raw numbers stay clean)
 - Secondary (outlined) buttons
 - Text buttons
-- Input fields
+- Text input fields
 - Navigation bars
-
-**Blend modes by surface color:**
-- On light surfaces (Sage, red, other fills): multiply blend — the pattern darkens into the surface
-- On dark surfaces (if ever needed): screen blend — the pattern lightens onto the surface
 
 ---
 
@@ -504,31 +523,41 @@ All feedback components follow the elevation system. Higher urgency = higher ele
 
 A complete summary of every surface that gets the topographic pattern treatment.
 
-| Component | Surface Color | Opacity | Blend Mode | Notes |
-|-----------|--------------|---------|------------|-------|
-| Primary button | Sage `#CFE1B9` | 12% | Multiply | All sizes |
-| Destructive button | Error `#FF3B30` | 12% | Multiply | Same pattern, red surface |
-| FAB | Sage `#CFE1B9` | 15% | Multiply | Larger surface = slightly higher opacity |
-| Hero card | Surface `#1E1E20` | 10% | Screen | One per screen max |
-| Feature card (insight, streak, achievement) | Surface `#1E1E20` | 7% | Screen | AI or celebratory content |
-| Empty state card | Surface `#1E1E20` | 6% | Screen | Branded empty states |
-| Onboarding / welcome | Surface `#1E1E20` | 10% | Screen | Richest treatment |
-| Toggle track (on) | Sage `#CFE1B9` | 12% | Multiply | |
-| Slider thumb | Sage `#CFE1B9` | 12% | Multiply | |
-| Slider active track | Sage `#CFE1B9` | 10% | Multiply | |
-| Checkbox (checked) | Sage `#CFE1B9` | 12% | Multiply | |
-| Progress bar (active) | Sage `#CFE1B9` | 10% | Multiply | |
-| Active chip | Sage tint `rgba(207,225,185,0.15)` | 8% | Screen | |
-| Default avatar | Surface Raised `#272729` | 15% | Screen | Branded placeholder |
-| List icon squares | Surface Raised `#272729` | 12% | Screen | Settings icon containers |
-| Search bar | Surface `#1E1E20` | 5% | Screen | Very subtle |
-| Tab track (inactive area) | Surface `#1E1E20` | 4% | Screen | Peeks through behind active segment |
-| Toast status dot (success) | Success `#34C759` | 12% | Multiply | Any light-colored fill gets the pattern |
-| Hero image/banner | Over image | 10% | Screen | Branded headers |
+| Component | Pattern Variant | Opacity | Blend Mode | Notes |
+|-----------|----------------|---------|------------|-------|
+| Primary button | Sage.PNG | 15% | Color-burn | All sizes |
+| Destructive button | Crimson.PNG | 15% | Color-burn | |
+| FAB | Sage.PNG | 18% | Color-burn | Larger surface = higher opacity |
+| Hero card | Original.PNG | 10% | Screen | One per screen max |
+| Feature card (generic) | Original.PNG | 7% | Screen | AI or celebratory content |
+| Feature card (Sleep) | Periwinkle.PNG | 7% | Screen | Category-colored |
+| Feature card (Activity) | Green.PNG | 7% | Screen | Category-colored |
+| Feature card (Heart) | Rose.PNG | 7% | Screen | Category-colored |
+| Feature card (Nutrition) | Amber.PNG | 7% | Screen | Category-colored |
+| Feature card (Body) | Sky Blue.PNG | 7% | Screen | Category-colored |
+| Feature card (Wellness) | Purple.PNG | 7% | Screen | Category-colored |
+| Feature card (Vitals) | Teal.PNG | 7% | Screen | Category-colored |
+| Feature card (Mobility) | Yellow.PNG | 7% | Screen | Category-colored |
+| Empty state card | Original.PNG | 6% | Screen | Branded empty states |
+| Onboarding / welcome | Original.PNG | 10% | Screen | Richest treatment |
+| Toggle track (on) | Sage.PNG | 15% | Color-burn | |
+| Slider thumb + track | Sage.PNG | 15% / 12% | Color-burn | |
+| Checkbox (checked) | Sage.PNG | 15% | Color-burn | |
+| Progress bar (active) | Sage.PNG | 12% | Color-burn | |
+| Active chip | Original.PNG | 8% | Screen | Sage-tinted dark surface |
+| Default avatar | Original.PNG | 15% | Screen | Branded placeholder |
+| List icon squares | Original.PNG | 12% | Screen | Settings icon containers |
+| Search bar | Original.PNG | 5% | Screen | Very subtle |
+| Tab track (inactive) | Original.PNG | 4% | Screen | Behind active segment |
+| Toast dot (success) | Green.PNG | 15% | Color-burn | Light fill |
+| Hero image/banner | Original.PNG | 10% | Screen | Branded headers |
 
-**The rule:** On light/Sage surfaces → multiply blend (pattern darkens into the surface). On dark surfaces → screen blend (pattern lightens onto the surface). Tinted surfaces (low-opacity Sage over dark) count as dark surfaces and use screen blend.
+**The blend mode rule:**
+- **Light/colored surfaces** → color-burn blend (etches the contour lines into the surface)
+- **Dark surfaces** → screen blend (lightens the pattern onto the surface)
+- Tinted surfaces (low-opacity Sage over dark) count as dark surfaces and use screen blend
 
-**Pattern on status colors:** The pattern applies to any filled action surface, not just Sage. Destructive (red) buttons and toast status dots in Success green both get the pattern with multiply blend, because they are light-colored fills.
+**Category-colored pattern:** When a feature card belongs to a specific health category (e.g., a Sleep insight), use the matching color variant instead of Original.PNG. This makes each health domain feel visually distinct.
 
 **Split button dropdown trigger:** No pattern. Only the primary action section gets the pattern.
 
