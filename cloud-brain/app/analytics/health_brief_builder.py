@@ -22,7 +22,6 @@ Design decisions
   for per-metric analysis, so it is intentionally excluded.
 """
 
-import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
@@ -289,30 +288,23 @@ class HealthBriefBuilder:
             return default if default is not None else []
 
     async def build(self) -> HealthBrief:
-        """Fire all 10 data fetches in parallel and assemble the brief."""
-        (
-            daily,
-            sleep,
-            activities,
-            nutrition,
-            weight,
-            quick_logs,
-            goals,
-            streaks,
-            preferences,
-            integrations,
-        ) = await asyncio.gather(
-            self._safe_fetch(self._fetch_daily_metrics()),
-            self._safe_fetch(self._fetch_sleep_records()),
-            self._safe_fetch(self._fetch_activities()),
-            self._safe_fetch(self._fetch_nutrition()),
-            self._safe_fetch(self._fetch_weight()),
-            self._safe_fetch(self._fetch_quick_logs()),
-            self._safe_fetch(self._fetch_goals()),
-            self._safe_fetch(self._fetch_streaks()),
-            self._safe_fetch(self._fetch_preferences(), default=None),
-            self._safe_fetch(self._fetch_integrations()),
-        )
+        """Fetch all health data sequentially and assemble the brief.
+
+        Uses sequential awaits because a single AsyncSession cannot serve
+        concurrent queries — ``asyncio.gather`` on the same session causes
+        "concurrent operations are not permitted" errors, silently dropping
+        most results via ``_safe_fetch``.
+        """
+        daily = await self._safe_fetch(self._fetch_daily_metrics())
+        sleep = await self._safe_fetch(self._fetch_sleep_records())
+        activities = await self._safe_fetch(self._fetch_activities())
+        nutrition = await self._safe_fetch(self._fetch_nutrition())
+        weight = await self._safe_fetch(self._fetch_weight())
+        quick_logs = await self._safe_fetch(self._fetch_quick_logs())
+        goals = await self._safe_fetch(self._fetch_goals())
+        streaks = await self._safe_fetch(self._fetch_streaks())
+        preferences = await self._safe_fetch(self._fetch_preferences(), default=None)
+        integrations = await self._safe_fetch(self._fetch_integrations())
 
         prefs = preferences or UserPreferencesSnapshot()
 
