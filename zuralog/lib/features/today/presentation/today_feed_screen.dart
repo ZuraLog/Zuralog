@@ -699,13 +699,6 @@ MetricTileData _buildTile(
 }
 
 /// Extracts the formatted last-ever value and its timestamp for [type] from
-/// the [latest] map returned by `latestLogValuesProvider`.
-///
-/// The `/latest` endpoint returns type-specific shapes:
-///   weight  → {"value_kg": 87.3, "logged_at": "...", ...}
-///   steps   → {"steps": 8432,    "logged_at": "...", ...}
-///   others  → {"value": 7.5,     "logged_at": "...", ...}
-/// Extracts the formatted last-ever value and its timestamp for [type] from
 /// the [latest] map returned by latestLogValuesProvider.
 ///
 /// The /api/v1/metrics/latest endpoint returns a uniform shape per metric:
@@ -719,11 +712,13 @@ MetricTileData _buildTile(
   final entry = raw;
 
   // Parse the date (YYYY-MM-DD format from the server).
+  // Construct as local midnight so relative-time comparisons are timezone-safe.
   DateTime? loggedAt;
   final dateStr = entry['date'] as String?;
   if (dateStr != null) {
     try {
-      loggedAt = DateTime.parse(dateStr);
+      final parsed = DateTime.parse(dateStr);
+      loggedAt = DateTime(parsed.year, parsed.month, parsed.day);
     } catch (_) {
       loggedAt = null;
     }
@@ -746,7 +741,7 @@ MetricTileData _buildTile(
       'heart_rate'                               => '${v.toInt()} bpm',
       'mood' || 'energy' || 'stress'             => '${v.toStringAsFixed(1)}/10',
       'symptom'                                  => entry['unit'] as String? ?? v.toStringAsFixed(0),
-      _                                          => '$v',
+      _                                          => v.toString(),
     };
   } catch (_) {
     lastValue = null;

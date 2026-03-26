@@ -83,6 +83,14 @@ def test_parse_pattern_id_unknown_metric():
     assert _parse_pattern_id("corr_unknown_metric_steps") is None
 
 
+def test_parse_pattern_id_longest_match_first():
+    # sleep_hours and sleep_quality share the "sleep" prefix.
+    # sorted longest-first means sleep_hours/sleep_quality are tried before
+    # any shorter hypothetical "sleep" key, so existing IDs parse correctly.
+    assert _parse_pattern_id("corr_sleep_hours_steps") == ("sleep_hours", "steps")
+    assert _parse_pattern_id("corr_sleep_quality_resting_heart_rate") == ("sleep_quality", "resting_heart_rate")
+
+
 def test_make_headline_strong_positive():
     result = _make_headline("sleep_hours", "steps", 0.75)
     assert "strongly" in result
@@ -173,7 +181,7 @@ def test_trends_home_returns_cards_when_signals_detected(client):
         MockBuilder.return_value = builder_instance
 
         detector_instance = MagicMock()
-        detector_instance.detect_all = MagicMock(return_value=[signal])
+        detector_instance.detect_correlations = MagicMock(return_value=[signal])
         MockDetector.return_value = detector_instance
 
         resp = client.get("/api/v1/trends/home", headers=AUTH_HEADER)
@@ -181,6 +189,7 @@ def test_trends_home_returns_cards_when_signals_detected(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["has_enough_data"] is True
+    assert data["has_correlations"] is True
     assert data["pattern_count"] == 1
     assert len(data["correlation_highlights"]) == 1
     highlight = data["correlation_highlights"][0]
@@ -210,20 +219,21 @@ def test_trends_metrics_returns_metric_types_from_db(client, mock_db):
 
 
 def test_trends_home_mature_data_but_no_signals(client, mock_db):
-    """Mature data with zero correlation signals returns has_enough_data=False."""
+    """Mature data with zero correlation signals: has_enough_data=True, has_correlations=False."""
     brief = _make_brief(data_maturity_days=30)
     with (
         patch("app.api.v1.trends_routes.HealthBriefBuilder") as mock_builder,
         patch("app.api.v1.trends_routes.InsightSignalDetector") as mock_detector,
     ):
         mock_builder.return_value.build = AsyncMock(return_value=brief)
-        mock_detector.return_value.detect_all.return_value = []  # no signals at all
+        mock_detector.return_value.detect_correlations.return_value = []  # no signals at all
 
         response = client.get("/api/v1/trends/home", headers=AUTH_HEADER)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["has_enough_data"] is False
+    assert data["has_enough_data"] is True
+    assert data["has_correlations"] is False
     assert data["correlation_highlights"] == []
     assert data["pattern_count"] == 0
 
@@ -241,3 +251,71 @@ def test_trends_metrics_requires_auth():
 def test_trends_pattern_expand_requires_auth():
     response = TestClient(app).get("/api/v1/trends/pattern/corr_sleep_hours_steps/expand")
     assert response.status_code in (401, 403)
+
+
+def test_trends_correlation_rejects_invalid_metric(client, mock_auth, mock_db):
+    response = client.get(
+        "/api/v1/trends/correlation?metric_a=evil_input&metric_b=steps&days=30",
+        headers=AUTH_HEADER,
+    )
+    assert response.status_code == 400
+
+
+def test_trends_correlation_uses_fixed_response_keys(client, mock_auth, mock_db):
+    """Data points from the /correlation endpoint use a_value/b_value keys."""
+    row1 = SimpleNamespace(date="2026-01-01", metric_a_value=7.5, metric_b_value=8000.0)
+    row2 = SimpleNamespace(date="2026-01-02", metric_a_value=6.0, metric_b_value=6500.0)
+    mock_db.execute.return_value.fetchall = MagicMock(return_value=[row1, row2])
+    mock_db.execute.return_value.scalar_one_or_none = MagicMock(return_value=None)
+
+    response = client.get(
+        "/api/v1/trends/correlation?metric_a=sleep_hours&metric_b=steps&days=30",
+        headers=AUTH_HEADER,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data_points"]) == 2
+    assert "a_value" in data["data_points"][0]
+    assert "b_value" in data["data_points"][0]
+
+
+def test_trends_home_discovered_at_is_null(client, mock_auth, mock_db):
+    """Correlation highlights returned by the home endpoint have discovered_at == None."""
+    from app.analytics.health_brief_builder import HealthBrief
+    from app.analytics.insight_signal_detector import InsightSignal
+
+    mock_brief = MagicMock(spec=HealthBrief)
+    mock_brief.data_maturity_days = 30
+
+    signal = InsightSignal(
+        signal_type="correlation_discovery",
+        category="D",
+        metrics=["sleep_hours", "steps"],
+        values={"correlation": 0.72, "lag_days": 1},
+        severity=3,
+        actionable=False,
+        focus_relevant=False,
+        title_hint="sleep hours linked to steps",
+    )
+
+    with patch(
+        "app.api.v1.trends_routes.HealthBriefBuilder"
+    ) as MockBuilder, patch(
+        "app.api.v1.trends_routes.InsightSignalDetector"
+    ) as MockDetector:
+        builder_instance = AsyncMock()
+        builder_instance.build = AsyncMock(return_value=mock_brief)
+        MockBuilder.return_value = builder_instance
+
+        detector_instance = MagicMock()
+        detector_instance.detect_correlations = MagicMock(return_value=[signal])
+        MockDetector.return_value = detector_instance
+
+        resp = client.get("/api/v1/trends/home", headers=AUTH_HEADER)
+
+    assert resp.status_code == 200
+    data = resp.json()
+    highlights = data["correlation_highlights"]
+    assert len(highlights) >= 1
+    assert all(h["discovered_at"] is None for h in highlights)

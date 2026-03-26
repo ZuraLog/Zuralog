@@ -7,6 +7,7 @@ time-machine period summaries.
 """
 
 import re
+import statistics
 import zoneinfo
 from datetime import datetime
 from datetime import timedelta
@@ -308,8 +309,6 @@ async def trends_correlation(
 
     correlation = None
     if len(data_points) >= 3:
-        import statistics
-
         xs = [p["a_value"] for p in data_points]
         ys = [p["b_value"] for p in data_points]
         try:
