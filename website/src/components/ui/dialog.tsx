@@ -4,7 +4,6 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
@@ -63,15 +62,12 @@ function DialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             render={
-              <Button
-                variant="ghost"
-                className="absolute top-2 right-2"
-                size="icon-sm"
+              <button
+                className="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2"
               />
             }
           >
-            <XIcon
-            />
+            <XIcon className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}
@@ -109,7 +105,11 @@ function DialogFooter({
     >
       {children}
       {showCloseButton && (
-        <DialogPrimitive.Close render={<Button variant="outline" />}>
+        <DialogPrimitive.Close
+          render={
+            <button className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm font-semibold hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2" />
+          }
+        >
           Close
         </DialogPrimitive.Close>
       )}
