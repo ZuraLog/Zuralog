@@ -63,14 +63,23 @@ abstract final class AppTheme {
             onSecondary: Colors.white,
             tertiary: AppColors.accentDark,
             onTertiary: Colors.white,
-            surface: AppColors.surfaceDark,
+            // Force ALL surface levels to our brand bible tokens.
+            // ColorScheme.dark() auto-generates surfaceContainer* values
+            // from the seed — those generated colors don't match our spec.
+            surface: AppColors.surface,
+            surfaceDim: AppColors.canvas,
+            surfaceBright: AppColors.surfaceRaised,
+            surfaceContainerLowest: AppColors.canvas,
+            surfaceContainerLow: AppColors.surface,
+            surfaceContainer: AppColors.surface,
+            surfaceContainerHigh: AppColors.surfaceRaised,
+            surfaceContainerHighest: AppColors.surfaceOverlay,
             onSurface: AppColors.textPrimaryDark,
             onSurfaceVariant: AppColors.textSecondaryDark,
             outline: AppColors.borderDark,
             outlineVariant: AppColors.borderDark,
-            error: AppColors.accentDark,
+            error: AppColors.error,
             onError: Colors.white,
-            surfaceContainerHighest: AppColors.secondaryButtonDark,
           );
 
     return ThemeData(
