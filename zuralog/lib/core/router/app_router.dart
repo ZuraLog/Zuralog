@@ -51,6 +51,7 @@ import 'package:zuralog/features/auth/presentation/onboarding/onboarding_page_vi
 import 'package:zuralog/features/onboarding/presentation/onboarding_flow_screen.dart';
 import 'package:zuralog/features/auth/presentation/onboarding/welcome_screen.dart';
 import 'package:zuralog/features/catalog/catalog_screen.dart';
+import 'package:zuralog/features/dev/component_showcase_screen.dart';
 import 'package:zuralog/core/router/auth_guard.dart';
 import 'package:zuralog/core/router/route_names.dart';
 
@@ -385,6 +386,14 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) => const SentryErrorBoundary(
         module: 'dev.catalog',
         child: CatalogScreen(),
+      ),
+    ),
+    GoRoute(
+      path: RouteNames.componentShowcasePath,
+      name: RouteNames.componentShowcase,
+      builder: (context, state) => const SentryErrorBoundary(
+        module: 'dev.components',
+        child: ComponentShowcaseScreen(),
       ),
     ),
 

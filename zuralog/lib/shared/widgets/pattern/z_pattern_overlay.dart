@@ -111,7 +111,6 @@ class ZPatternOverlay extends StatefulWidget {
 
 class _ZPatternOverlayState extends State<ZPatternOverlay> {
   ui.Image? _image;
-  String? _loadedAsset;
 
   @override
   void initState() {
@@ -149,10 +148,7 @@ class _ZPatternOverlayState extends State<ZPatternOverlay> {
       final frame = await codec.getNextFrame();
       _PatternCache.put(assetPath, frame.image);
       if (mounted) {
-        setState(() {
-          _image = frame.image.clone();
-          _loadedAsset = assetPath;
-        });
+        setState(() => _image = frame.image.clone());
       }
     } catch (_) {
       // Asset unavailable — no overlay shown.
@@ -202,8 +198,6 @@ class _PatternPainter extends CustomPainter {
 
     // Scale the pattern to logical pixels.
     final scale = 1.0 / devicePixelRatio;
-    final imgW = image.width * scale;
-    final imgH = image.height * scale;
 
     canvas.save();
     canvas.scale(scale);

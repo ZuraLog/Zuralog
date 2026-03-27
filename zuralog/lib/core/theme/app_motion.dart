@@ -32,7 +32,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 
 /// Spring description constants for the Zuralog animation system.
 ///
