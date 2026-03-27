@@ -1,13 +1,11 @@
 /// Zuralog Design System — Pattern Overlay Component.
 ///
 /// The single source of truth for applying the brand topographic contour-line
-/// pattern to any surface. Replaces all previous inline pattern implementations.
+/// pattern to any surface. Uses a stretched cover approach (matching the website)
+/// with an optional slow diagonal drift animation.
 library;
 
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
 
@@ -48,33 +46,29 @@ ZPatternVariant patternForCategory(Color category) {
   return ZPatternVariant.original;
 }
 
-/// Applies the brand topographic contour-line pattern over its [child].
+/// Applies the brand topographic contour-line pattern over its parent.
 ///
-/// This is a decorative overlay — it sits on top of the child content and is
+/// This is a decorative overlay — it sits on top of content and is
 /// marked non-interactive ([IgnorePointer]) and non-accessible
 /// ([ExcludeSemantics]).
 ///
-/// ## Blend mode rules (from the brand bible)
+/// The pattern PNG is stretched to cover the entire surface (matching the
+/// website implementation) instead of being tiled in a grid.
 ///
-/// - **Light/colored surfaces** (Sage buttons, destructive buttons):
-///   [BlendMode.colorBurn] — etches dark contour lines into the surface.
-/// - **Dark surfaces** (hero cards, feature cards, avatars):
-///   [BlendMode.screen] — lightens the pattern onto the dark canvas.
+/// When [animate] is true, the pattern drifts slowly on a diagonal — the
+/// same effect the website uses on buttons and hero sections.
 ///
 /// ## Usage
 ///
 /// ```dart
 /// Stack(
 ///   children: [
-///     // Your card background
 ///     Container(color: AppColors.surface),
-///     // Pattern layer
 ///     ZPatternOverlay(
 ///       variant: ZPatternVariant.original,
 ///       opacity: 0.07,
-///       blendMode: BlendMode.screen,
+///       animate: true,
 ///     ),
-///     // Your content
 ///     Padding(padding: ..., child: ...),
 ///   ],
 /// )
@@ -85,145 +79,136 @@ class ZPatternOverlay extends StatefulWidget {
     this.variant = ZPatternVariant.original,
     this.opacity = 0.07,
     this.blendMode = BlendMode.screen,
+    this.animate = false,
   });
 
   /// Which pre-colored pattern PNG to use.
   final ZPatternVariant variant;
 
-  /// Pattern opacity (0.0 – 1.0). Brand bible values:
-  /// - Hero cards: 0.10
-  /// - Feature cards: 0.07
+  /// Pattern opacity (0.0 – 1.0). Recommended values:
+  /// - Hero cards: 0.18
+  /// - Feature cards: 0.15
+  /// - Buttons (primary/destructive): 0.60
+  /// - FAB: 0.50
   /// - Empty states: 0.06
   /// - Search bar: 0.05
   /// - Tab track: 0.04
-  /// - Buttons (color-burn): 0.15
-  /// - FAB (color-burn): 0.18
   final double opacity;
 
-  /// How the pattern blends with the surface beneath.
-  /// - [BlendMode.screen] for dark surfaces
-  /// - [BlendMode.colorBurn] for light/colored surfaces
+  /// Kept for API compatibility but no longer used for rendering.
+  /// The pre-colored PNGs combined with opacity produce the correct
+  /// look on both light and dark surfaces without blend modes.
   final BlendMode blendMode;
+
+  /// When true, the pattern drifts slowly on a diagonal (20-second loop).
+  /// Respects the system reduced-motion setting — if the user has asked
+  /// for less motion, the pattern stays static.
+  final bool animate;
 
   @override
   State<ZPatternOverlay> createState() => _ZPatternOverlayState();
 }
 
-class _ZPatternOverlayState extends State<ZPatternOverlay> {
-  ui.Image? _image;
+class _ZPatternOverlayState extends State<ZPatternOverlay>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _controller;
+
+  static const _start = Alignment(-0.5, -0.5);
+  static const _end = Alignment(0.5, 0.5);
 
   @override
   void initState() {
     super.initState();
-    _loadPattern();
+    _maybeStartAnimation();
   }
 
   @override
   void didUpdateWidget(ZPatternOverlay old) {
     super.didUpdateWidget(old);
-    if (old.variant != widget.variant) {
-      _image?.dispose();
-      _image = null;
-      _loadPattern();
+    if (old.animate != widget.animate) {
+      if (widget.animate) {
+        _maybeStartAnimation();
+      } else {
+        _disposeAnimation();
+      }
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-evaluate animation when reduced-motion setting changes.
+    if (widget.animate) {
+      final reduceMotion = MediaQuery.of(context).disableAnimations;
+      if (reduceMotion && _controller != null) {
+        _disposeAnimation();
+      } else if (!reduceMotion && _controller == null) {
+        _maybeStartAnimation();
+      }
+    }
+  }
+
+  void _maybeStartAnimation() {
+    if (!widget.animate) return;
+    // Defer the reduced-motion check — MediaQuery is not available in initState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final reduceMotion = MediaQuery.of(context).disableAnimations;
+      if (reduceMotion) return;
+      _controller ??= AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 20),
+      )..repeat(reverse: true);
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _disposeAnimation() {
+    _controller?.dispose();
+    _controller = null;
   }
 
   @override
   void dispose() {
-    _image?.dispose();
+    _disposeAnimation();
     super.dispose();
   }
 
-  Future<void> _loadPattern() async {
-    final assetPath = widget.variant.assetPath;
-    // Check shared cache first.
-    final cached = _PatternCache.get(assetPath);
-    if (cached != null) {
-      if (mounted) setState(() => _image = cached.clone());
-      return;
-    }
-    try {
-      final data = await rootBundle.load(assetPath);
-      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-      final frame = await codec.getNextFrame();
-      _PatternCache.put(assetPath, frame.image);
-      if (mounted) {
-        setState(() => _image = frame.image.clone());
-      }
-    } catch (_) {
-      // Asset unavailable — no overlay shown.
-    }
+  Alignment get _currentAlignment {
+    if (_controller == null) return Alignment.center;
+    return Alignment.lerp(_start, _end, _controller!.value)!;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_image == null) return const SizedBox.shrink();
-
-    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final alignment = _controller != null
+        ? AnimatedBuilder(
+            animation: _controller!,
+            builder: (context, child) => _buildContainer(_currentAlignment),
+          )
+        : _buildContainer(Alignment.center);
 
     return Positioned.fill(
       child: ExcludeSemantics(
         child: IgnorePointer(
           child: Opacity(
             opacity: widget.opacity,
-            child: CustomPaint(
-              painter: _PatternPainter(
-                image: _image!,
-                blendMode: widget.blendMode,
-                devicePixelRatio: dpr,
-              ),
-            ),
+            child: alignment,
           ),
         ),
       ),
     );
   }
-}
 
-/// Paints a tiled pattern image with the specified blend mode.
-class _PatternPainter extends CustomPainter {
-  _PatternPainter({
-    required this.image,
-    required this.blendMode,
-    required this.devicePixelRatio,
-  });
-
-  final ui.Image image;
-  final BlendMode blendMode;
-  final double devicePixelRatio;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..blendMode = blendMode;
-
-    // Scale the pattern to logical pixels.
-    final scale = 1.0 / devicePixelRatio;
-
-    canvas.save();
-    canvas.scale(scale);
-
-    for (var y = 0.0; y < size.height / scale; y += image.height.toDouble()) {
-      for (var x = 0.0; x < size.width / scale; x += image.width.toDouble()) {
-        canvas.drawImage(image, Offset(x, y), paint);
-      }
-    }
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_PatternPainter old) =>
-      old.image != image || old.blendMode != blendMode;
-}
-
-/// Simple in-memory cache so the pattern PNG is decoded once and shared
-/// across all overlay instances using the same variant.
-class _PatternCache {
-  static final Map<String, ui.Image> _cache = {};
-
-  static ui.Image? get(String key) => _cache[key];
-
-  static void put(String key, ui.Image image) {
-    _cache[key] = image;
+  Widget _buildContainer(Alignment alignment) {
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(widget.variant.assetPath),
+          fit: BoxFit.cover,
+          alignment: alignment,
+        ),
+      ),
+    );
   }
 }

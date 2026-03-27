@@ -5,18 +5,20 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/widgets.dart';
 
-class ComponentShowcaseScreen extends StatefulWidget {
+class ComponentShowcaseScreen extends ConsumerStatefulWidget {
   const ComponentShowcaseScreen({super.key});
 
   @override
-  State<ComponentShowcaseScreen> createState() =>
+  ConsumerState<ComponentShowcaseScreen> createState() =>
       _ComponentShowcaseScreenState();
 }
 
-class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
+class _ComponentShowcaseScreenState
+    extends ConsumerState<ComponentShowcaseScreen> {
   // ── State for interactive demos ──────────────────────────────────────────
   bool _toggleValue = true;
   bool _toggleOff = false;
@@ -44,10 +46,32 @@ class _ComponentShowcaseScreenState extends State<ComponentShowcaseScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      color: AppColors.warmWhite,
-                      onPressed: () => Navigator.of(context).pop(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          color: AppColors.warmWhite,
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        Builder(builder: (context) {
+                          final isDark =
+                              Theme.of(context).brightness == Brightness.dark;
+                          return ZIconButton(
+                            icon: isDark
+                                ? Icons.light_mode
+                                : Icons.dark_mode,
+                            isSage: true,
+                            onPressed: () {
+                              final newMode =
+                                  isDark ? ThemeMode.light : ThemeMode.dark;
+                              ref
+                                  .read(themeModeProvider.notifier)
+                                  .setTheme(newMode);
+                            },
+                          );
+                        }),
+                      ],
                     ),
                     const SizedBox(height: AppDimens.spaceMd),
                     Text(

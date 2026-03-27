@@ -97,7 +97,9 @@ class ZuralogCard extends StatelessWidget {
       variant == ZCardVariant.feature || variant == ZCardVariant.hero;
 
   double get _patternOpacity =>
-      variant == ZCardVariant.hero ? 0.10 : 0.07;
+      variant == ZCardVariant.hero ? 0.18 : 0.15;
+
+  bool get _patternAnimated => variant == ZCardVariant.hero;
 
   ZPatternVariant get _patternVariant {
     if (variant == ZCardVariant.feature && category != null) {
@@ -125,7 +127,7 @@ class ZuralogCard extends StatelessWidget {
               child: ZPatternOverlay(
                 variant: _patternVariant,
                 opacity: _patternOpacity,
-                blendMode: BlendMode.screen,
+                animate: _patternAnimated,
               ),
             ),
           ),

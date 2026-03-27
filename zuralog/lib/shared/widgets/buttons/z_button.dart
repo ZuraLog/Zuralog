@@ -221,8 +221,8 @@ class _ZButtonState extends State<ZButton> {
             Positioned.fill(
               child: ZPatternOverlay(
                 variant: _patternVariant,
-                opacity: 0.15,
-                blendMode: BlendMode.colorBurn,
+                opacity: 0.6,
+                animate: true,
               ),
             ),
         ],

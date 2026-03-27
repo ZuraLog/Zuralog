@@ -50,8 +50,8 @@ class ZLogFab extends StatelessWidget {
                 // Pattern overlay
                 const ZPatternOverlay(
                   variant: ZPatternVariant.sage,
-                  opacity: 0.18,
-                  blendMode: BlendMode.colorBurn,
+                  opacity: 0.5,
+                  animate: true,
                 ),
                 // Icon
                 const Icon(
