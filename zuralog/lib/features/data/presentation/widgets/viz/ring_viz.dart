@@ -49,6 +49,7 @@ class RingViz extends StatelessWidget {
             PieChart(
               duration:
                   reduceMotion ? Duration.zero : const Duration(milliseconds: 400),
+              curve: Curves.easeOutCubic,
               PieChartData(
                 startDegreeOffset: -90,
                 sectionsSpace: 0,

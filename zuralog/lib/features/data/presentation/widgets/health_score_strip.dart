@@ -22,6 +22,7 @@ import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/widgets/shimmer.dart';
 import 'package:zuralog/features/today/domain/today_models.dart';
 import 'package:zuralog/features/today/providers/today_providers.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── HealthScoreStrip ──────────────────────────────────────────────────────────
 
@@ -52,18 +53,34 @@ class HealthScoreStrip extends ConsumerWidget {
       button: true,
       child: GestureDetector(
         onTap: () => context.push('/data/score-breakdown'),
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: colors.cardBackground,
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-            boxShadow: colors.isDark ? null : AppDimens.cardShadowLight,
-          ),
-          padding: const EdgeInsets.all(12), // tight card padding for compact strip
-          child: scoreAsync.when(
-            loading: () => const _SkeletonRow(),
-            error: (e, _) => const _ScoreRow(data: null),
-            data: (data) => _ScoreRow(data: data),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: colors.cardBackground,
+              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              boxShadow: colors.isDark ? null : AppDimens.cardShadowLight,
+            ),
+            child: Stack(
+              children: [
+                // Hero pattern — brand bible: "Hero: Health Score summary"
+                const Positioned.fill(
+                  child: ZPatternOverlay(
+                    variant: ZPatternVariant.original,
+                    opacity: 0.18,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: scoreAsync.when(
+                    loading: () => const _SkeletonRow(),
+                    error: (e, _) => const _ScoreRow(data: null),
+                    data: (data) => _ScoreRow(data: data),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

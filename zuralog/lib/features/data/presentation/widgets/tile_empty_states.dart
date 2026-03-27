@@ -15,8 +15,10 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/core/widgets/shimmer.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 // ── GhostTileContent ──────────────────────────────────────────────────────────
 
@@ -278,37 +280,52 @@ class OnboardingEmptyState extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Welcome card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: colors.cardBackground,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.favorite_rounded,
-                  size: 48,
-                  color: colors.primary,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Start tracking your health',
-                  style: AppTextStyles.displaySmall.copyWith(
-                    color: colors.textPrimary,
+          // Welcome card — brand bible: empty states get pattern (6%, screen)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colors.cardBackground,
+                borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+              ),
+              child: Stack(
+                children: [
+                  const Positioned.fill(
+                    child: ZPatternOverlay(
+                      variant: ZPatternVariant.original,
+                      opacity: 0.06,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Connect a device or log your first entry to see your metrics here.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: colors.textSecondary,
+                  Padding(
+                    padding: const EdgeInsets.all(AppDimens.spaceMdPlus),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.favorite_rounded,
+                          size: 48,
+                          color: colors.primary,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Start tracking your health',
+                          style: AppTextStyles.displaySmall.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Connect a device or log your first entry to see your metrics here.',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
