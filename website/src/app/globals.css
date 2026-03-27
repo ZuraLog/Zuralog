@@ -970,25 +970,6 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Design System — Card hover lift + sage glow
-   Applied to standard / hero / feature cards (not data).
-───────────────────────────────────────────────────────────── */
-.ds-card-hover {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.ds-card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(207, 225, 185, 0.08);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ds-card-hover:hover {
-    transform: none;
-  }
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
