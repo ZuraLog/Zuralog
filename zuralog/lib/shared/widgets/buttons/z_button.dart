@@ -200,32 +200,39 @@ class _ZButtonState extends State<ZButton> {
     }
 
     // ── Button body ─────────────────────────────────────────────────────
+    // Stack order: 1) solid background, 2) pattern overlay, 3) content on top.
     Widget button = ClipRRect(
       borderRadius: borderRadius,
-      child: Stack(
-        children: [
-          // Background container
-          Container(
-            height: height,
-            padding: EdgeInsets.symmetric(horizontal: hPadding),
-            decoration: BoxDecoration(
-              color: _backgroundColor(),
-              borderRadius: borderRadius,
-              border: _border(),
-            ),
-            alignment: widget.isFullWidth ? Alignment.center : null,
-            child: content,
-          ),
-          // Pattern overlay (primary & destructive only, not when disabled)
-          if (_hasPattern)
+      child: SizedBox(
+        height: height,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Layer 1 — solid background color
             Positioned.fill(
-              child: ZPatternOverlay(
-                variant: _patternVariant,
-                opacity: 0.6,
-                animate: true,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _backgroundColor(),
+                  border: _border(),
+                ),
               ),
             ),
-        ],
+            // Layer 2 — pattern overlay (primary & destructive only)
+            if (_hasPattern)
+              Positioned.fill(
+                child: ZPatternOverlay(
+                  variant: _patternVariant,
+                  opacity: 0.6,
+                  animate: true,
+                ),
+              ),
+            // Layer 3 — content (text/icon) on top of everything
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: hPadding),
+              child: content,
+            ),
+          ],
+        ),
       ),
     );
 
