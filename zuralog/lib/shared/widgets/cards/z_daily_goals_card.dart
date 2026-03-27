@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 
 /// Display data for a single daily goal progress bar.
 class DailyGoalDisplay {
@@ -53,15 +54,8 @@ class ZDailyGoalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: colors.border),
-      ),
+    return ZuralogCard(
+      variant: ZCardVariant.data,
       child: goals.isEmpty
           ? _EmptyGoals(onTap: onSetupTap)
           : _GoalList(goals: goals, onSetupTap: onSetupTap),

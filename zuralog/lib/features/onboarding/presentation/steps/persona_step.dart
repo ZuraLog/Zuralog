@@ -81,9 +81,6 @@ class PersonaStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -97,15 +94,15 @@ class PersonaStep extends StatelessWidget {
           // ── Heading ────────────────────────────────────────────────────
           Text(
             'Choose your\nAI persona',
-            style: AppTextStyles.h1.copyWith(
-              color: colorScheme.onSurface,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: AppColors.primary,
               height: 1.15,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Pick the coaching style that resonates with you.',
-            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondaryDark),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -132,34 +129,26 @@ class PersonaStep extends StatelessWidget {
           // ── Proactivity section ───────────────────────────────────────
           Text(
             'Proactivity',
-            style: AppTextStyles.h3.copyWith(color: colorScheme.onSurface),
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.textPrimaryDark,
+            ),
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             'How often should your AI coach reach out?',
-            style: AppTextStyles.bodyMedium
-                .copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondaryDark,
+            ),
           ),
           const SizedBox(height: AppDimens.spaceMd),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppColors.primary,
-              inactiveTrackColor: colors.border,
-              thumbColor: AppColors.primary,
-              overlayColor: AppColors.primary.withValues(alpha: 0.1),
-              trackHeight: 4,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 10),
-            ),
-            child: Slider(
-              value: proactivity,
-              onChanged: onProactivityChanged,
-            ),
+          ZSlider(
+            value: proactivity,
+            onChanged: onProactivityChanged,
           ),
           Center(
             child: Text(
               _proactivityLabel,
-              style: AppTextStyles.caption.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
@@ -187,9 +176,6 @@ class _PersonaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return ZSelectableTile(
       isSelected: isSelected,
       onTap: onTap,
@@ -224,13 +210,13 @@ class _PersonaCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? persona.accentColor.withValues(alpha: 0.15)
-                              : colorScheme.onSurface.withValues(alpha: 0.05),
+                              : AppColors.surfaceRaised,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: Text(
                             persona.emoji,
-                            style: AppTextStyles.body.copyWith(fontSize: 22),
+                            style: AppTextStyles.bodyLarge.copyWith(fontSize: 22),
                           ),
                         ),
                       ),
@@ -241,17 +227,17 @@ class _PersonaCard extends StatelessWidget {
                           children: [
                             Text(
                               persona.title,
-                              style: AppTextStyles.h3.copyWith(
+                              style: AppTextStyles.titleMedium.copyWith(
                                 color: isSelected
                                     ? AppColors.primary
-                                    : colorScheme.onSurface,
+                                    : AppColors.textPrimaryDark,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               persona.description,
                               style: AppTextStyles.bodyMedium
-                                  .copyWith(color: colors.textSecondary),
+                                  .copyWith(color: AppColors.textSecondaryDark),
                             ),
                           ],
                         ),

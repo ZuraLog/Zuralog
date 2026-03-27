@@ -31,7 +31,7 @@
 /// | slowEffects    | 1.0          | 800       | Skeleton→content crossfade     |
 library;
 
-import 'package:flutter/physics.dart';
+import 'package:flutter/material.dart';
 
 /// Spring description constants for the Zuralog animation system.
 ///
@@ -45,6 +45,33 @@ import 'package:flutter/physics.dart';
 /// - defaultEffects: c = 2 * 1.0 * sqrt(1600) ≈ 80.0
 /// - slowEffects:    c = 2 * 1.0 * sqrt(800)  ≈ 56.6
 abstract final class AppMotion {
+  // ── Duration-Based Tokens (Brand Bible) ──────────────────────────────────
+  // Simple duration + curve combos for straightforward animations.
+
+  /// 150ms — micro-interactions: button press, toggle flip, checkbox check.
+  static const Duration durationFast = Duration(milliseconds: 150);
+
+  /// 250ms — standard transitions: card expand, chip select, dropdown open.
+  static const Duration durationMedium = Duration(milliseconds: 250);
+
+  /// 350ms — major transitions: screen push, bottom sheet slide, modal appear.
+  static const Duration durationSlow = Duration(milliseconds: 350);
+
+  /// 600ms — staggered entrances: card feed loading, list population.
+  static const Duration durationEntrance = Duration(milliseconds: 600);
+
+  /// Easing for elements appearing (fast start, gentle stop).
+  static const Curve curveEntrance = Curves.easeOut;
+
+  /// Easing for elements disappearing (slow start, fast finish).
+  static const Curve curveExit = Curves.easeIn;
+
+  /// Easing for transitions that both enter and leave.
+  static const Curve curveTransition = Curves.easeInOut;
+
+  /// Stagger delay between cascading card animations (60ms per card).
+  static const Duration staggerDelay = Duration(milliseconds: 60);
+
   // ── Spatial Springs ────────────────────────────────────────────────────────
   // Underdamped (ratio < 1.0) — slight overshoot before settling.
   // Use for position, scale, and size transitions.

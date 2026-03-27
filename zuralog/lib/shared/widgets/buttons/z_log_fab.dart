@@ -1,13 +1,14 @@
 /// Zuralog Design System — Log Floating Action Button.
 ///
-/// A circular FAB with the app's primary colour and a "+" icon.
-/// Pure UI component — no business logic. Debounce is the caller's
-/// responsibility.
+/// Brand bible: 56px circle, Sage fill with pattern overlay (sage, 0.18,
+/// colorBurn), textOnSage icon, drop shadow. The ONLY component with a
+/// shadow in dark mode.
 library;
 
 import 'package:flutter/material.dart';
 
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 /// Floating action button for opening the log grid sheet.
 ///
@@ -21,14 +22,48 @@ class ZLogFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return FloatingActionButton(
-      onPressed: onPressed,
-      backgroundColor: colors.primary,
-      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-      elevation: 4,
-      shape: const CircleBorder(),
-      child: const Icon(Icons.add_rounded, size: 28),
+    return Semantics(
+      button: true,
+      label: 'Log new entry',
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x4D000000), // rgba(0,0,0,0.3)
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Sage fill (already the container background)
+                const SizedBox.expand(),
+                // Pattern overlay
+                const ZPatternOverlay(
+                  variant: ZPatternVariant.sage,
+                  opacity: 0.18,
+                  blendMode: BlendMode.colorBurn,
+                ),
+                // Icon
+                const Icon(
+                  Icons.add_rounded,
+                  size: AppDimens.iconMd,
+                  color: AppColors.textOnSage,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

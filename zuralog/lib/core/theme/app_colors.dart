@@ -9,22 +9,25 @@ library;
 
 import 'package:flutter/material.dart';
 
-/// Centralized color palette for the Zuralog "Sophisticated Softness" design system.
+/// Centralized color palette for the Zuralog design system.
 ///
 /// Provides semantic color tokens for both light and dark themes.
-/// Organized by role (brand, backgrounds, surfaces, text, borders, UI elements,
+/// Organized by role (brand, canvas/elevation, text, borders, UI elements,
 /// health categories).
 ///
-/// ## v3.1 additions
-/// - Light mode scaffold, surface, card, and input background tokens per MVP spec.
-/// - `textTertiary` for de-emphasized labels and placeholders.
-/// - Health category color tokens (`category*`).
-/// - Health Score ring color stops.
+/// ## v4.0 — Brand Bible alignment
+/// - Unified Canvas → Surface → Surface Raised → Surface Overlay elevation system.
+/// - Plus Jakarta Sans font (see AppTextStyles).
+/// - Warm White and Text On Sage/Warm White tokens.
+/// - Semantic status colors (success, warning, error, syncing).
 abstract final class AppColors {
   // ── Brand ────────────────────────────────────────────────────────────────
 
   /// Sage Green — Main actions, active states, brand identity (dark mode).
   static const Color primary = Color(0xFFCFE1B9);
+
+  /// Warm White — Navigation, secondary controls, selected tab indicators.
+  static const Color warmWhite = Color(0xFFF0EEE9);
 
   /// Deep Forest Green — Primary color for light mode only.
   ///
@@ -68,48 +71,70 @@ abstract final class AppColors {
   /// Main scaffold background — light mode (Brand Cream — matches website light palette).
   static const Color backgroundLight = Color(0xFFFAFAF5);
 
-  /// Main scaffold background — dark mode (Brand Dark Charcoal — matches website dark palette).
-  static const Color backgroundDark = Color(0xFF141E18);
+  /// Main scaffold background — dark mode (Canvas per brand bible).
+  static const Color backgroundDark = Color(0xFF161618);
 
-  // ── Surfaces ─────────────────────────────────────────────────────────────
+  // ── Canvas & Elevation (Brand Bible v4.0) ────────────────────────────────
+  // Dark mode uses a four-level brightness hierarchy — no borders, no shadows.
+  // Each step is +8 brighter across all RGB channels.
+
+  /// Canvas — screen/page background. Darkest level.
+  static const Color canvas = Color(0xFF161618);
+
+  /// Surface — cards, content containers. One step above canvas.
+  static const Color surface = Color(0xFF1E1E20);
+
+  /// Surface Raised — popovers, dropdowns, tooltips, hover states.
+  static const Color surfaceRaised = Color(0xFF272729);
+
+  /// Surface Overlay — modals, bottom sheets, dialogs. Highest level.
+  static const Color surfaceOverlay = Color(0xFF313133);
+
+  // ── Legacy surface aliases (light/dark) ─────────────────────────────────
 
   /// Elevated surfaces (colorScheme.surface) — light mode (system grey).
   static const Color surfaceLight = Color(0xFFF2F2F7);
 
   /// Elevated surfaces (colorScheme.surface) — dark mode.
-  static const Color surfaceDark = Color(0xFF1E2E24);
+  static const Color surfaceDark = surface;
 
   /// Standard card background — light mode (white on white-scaffold).
   static const Color cardBackgroundLight = Color(0xFFFFFFFF);
 
   /// Standard card background — dark mode.
-  static const Color cardBackgroundDark = Color(0xFF1E2E24);
+  static const Color cardBackgroundDark = surface;
 
   /// Elevated card / modal surface — light mode.
   static const Color elevatedSurfaceLight = Color(0xFFFFFFFF);
 
   /// Elevated card / modal surface — dark mode.
-  static const Color elevatedSurfaceDark = Color(0xFF253A2C);
+  static const Color elevatedSurfaceDark = surfaceRaised;
 
   /// Input field background — light mode.
   static const Color inputBackgroundLight = Color(0xFFF2F2F7);
 
-  /// Input field background — dark mode.
-  static const Color inputBackgroundDark = Color(0xFF3A3A3C);
+  /// Input field background — dark mode (same as Surface per brand bible).
+  static const Color inputBackgroundDark = surface;
 
   // ── Text ─────────────────────────────────────────────────────────────────
 
   /// Primary heading / body text — light mode (pure black).
   static const Color textPrimaryLight = Color(0xFF000000);
 
-  /// Primary heading / body text — dark mode.
-  static const Color textPrimaryDark = Color(0xFFFAFAF5);
+  /// Primary heading / body text — dark mode (Warm White per brand bible).
+  static const Color textPrimaryDark = Color(0xFFF0EEE9);
 
   /// Subtitles, captions, secondary metadata — light mode.
   static const Color textSecondaryLight = Color(0xFF636366);
 
   /// Subtitles, captions, secondary metadata — dark mode.
-  static const Color textSecondaryDark = Color(0xFFA0A0A5);
+  static const Color textSecondaryDark = Color(0xFF9B9894);
+
+  /// Text on Sage-filled surfaces (buttons, toggles, checkboxes).
+  static const Color textOnSage = Color(0xFF1A2E22);
+
+  /// Text on Warm White surfaces (active segmented control).
+  static const Color textOnWarmWhite = Color(0xFF161618);
 
   /// De-emphasised labels, placeholders, disabled text — both modes.
   static const Color textTertiary = Color(0xFFABABAB);
@@ -125,6 +150,26 @@ abstract final class AppColors {
 
   /// Dividers, card borders — dark mode.
   static const Color borderDark = Color(0xFF4A4A4C);
+
+  /// Brand bible divider: warm-tinted 6% transparency.
+  static const Color dividerDefault = Color(0x0FF0EEE9); // rgba(240,238,233,0.06)
+
+  // ── Semantic Status ─────────────────────────────────────────────────────
+
+  /// Connected, positive deltas, goal complete.
+  static const Color success = Color(0xFF34C759);
+
+  /// Caution, approaching limits.
+  static const Color warning = Color(0xFFFF9500);
+
+  /// Errors, destructive actions, delete buttons.
+  static const Color error = Color(0xFFFF3B30);
+
+  /// Loading/sync indicators.
+  static const Color syncing = Color(0xFF007AFF);
+
+  /// Streak flame accent.
+  static const Color streakWarm = Color(0xFFFF9500);
 
   // ── Health Category Colors ────────────────────────────────────────────────
   // Vivid, saturated colors designed to pop on OLED black backgrounds.
@@ -198,8 +243,8 @@ abstract final class AppColors {
 
   // ── Buttons ──────────────────────────────────────────────────────────────
 
-  /// Primary button foreground text (always dark grey on Sage Green).
-  static const Color primaryButtonText = Color(0xFF1C1C1E);
+  /// Primary button foreground text (dark forest on Sage Green).
+  static const Color primaryButtonText = textOnSage;
 
   /// Secondary button background — light mode (translucent grey).
   static const Color secondaryButtonLight = Color(0xFFF2F2F7);
@@ -301,6 +346,11 @@ class AppColorsOf {
   Color get secondary => _isDark ? AppColors.secondaryDark : AppColors.secondaryLight;
   Color get accent => _isDark ? AppColors.accentDark : AppColors.accentLight;
 
+  // ── Canvas & Elevation (Brand Bible) ───────────────────────────────────
+  Color get canvas => _isDark ? AppColors.canvas : AppColors.backgroundLight;
+  Color get surfaceRaised => _isDark ? AppColors.surfaceRaised : AppColors.elevatedSurfaceLight;
+  Color get surfaceOverlay => _isDark ? AppColors.surfaceOverlay : AppColors.elevatedSurfaceLight;
+
   // ── Backgrounds ────────────────────────────────────────────────────────
   Color get background => _isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
 
@@ -314,9 +364,19 @@ class AppColorsOf {
   Color get textPrimary => _isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
   Color get textSecondary => _isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
   Color get textTertiary => AppColors.textTertiary;
+  Color get textOnSage => AppColors.textOnSage;
+  Color get textOnWarmWhite => AppColors.textOnWarmWhite;
+  Color get warmWhite => AppColors.warmWhite;
 
   // ── Borders ────────────────────────────────────────────────────────────
   Color get border => _isDark ? AppColors.borderDark : AppColors.borderLight;
+  Color get divider => _isDark ? AppColors.dividerDefault : AppColors.borderLight;
+
+  // ── Semantic Status ────────────────────────────────────────────────────
+  Color get success => AppColors.success;
+  Color get warning => AppColors.warning;
+  Color get error => AppColors.error;
+  Color get syncing => AppColors.syncing;
 
   // ── Chat ───────────────────────────────────────────────────────────────
   Color get aiBubble => _isDark ? AppColors.aiBubbleDark : AppColors.aiBubbleLight;

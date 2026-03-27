@@ -1,0 +1,114 @@
+/// Zuralog Design System — Text Area Component.
+///
+/// Multi-line text input with Surface fill, Sage focus border, and
+/// consistent styling with the design system text field.
+library;
+
+import 'package:flutter/material.dart';
+
+import 'package:zuralog/core/theme/theme.dart';
+
+/// A brand-styled multi-line text area.
+///
+/// Same visual treatment as AppTextField but built for multi-line content.
+/// Uses Surface fill (#1E1E20), shapeSm (12px) radius, and a Sage border
+/// on focus at rgba(207,225,185,0.3).
+class ZTextArea extends StatelessWidget {
+  const ZTextArea({
+    super.key,
+    this.controller,
+    this.placeholder,
+    this.label,
+    this.errorText,
+    this.maxLines = 5,
+    this.enabled = true,
+  });
+
+  /// Controller for reading and manipulating the text content.
+  final TextEditingController? controller;
+
+  /// Placeholder text shown when the field is empty.
+  final String? placeholder;
+
+  /// Optional label shown above the text area.
+  final String? label;
+
+  /// Error message shown below the text area in red.
+  final String? errorText;
+
+  /// Maximum number of visible lines before scrolling.
+  final int maxLines;
+
+  /// Whether the text area accepts input.
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final sageFocusBorder = AppColors.primary.withValues(alpha: 0.3);
+
+    final field = Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: TextFormField(
+        controller: controller,
+        enabled: enabled,
+        maxLines: maxLines,
+        minLines: 4,
+        cursorColor: AppColors.primary,
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textPrimaryDark,
+        ),
+        decoration: InputDecoration(
+          hintText: placeholder,
+          hintStyle: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+          filled: true,
+          fillColor: AppColors.surface,
+          contentPadding: const EdgeInsets.all(AppDimens.spaceMd),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            borderSide: BorderSide(color: sageFocusBorder, width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppDimens.shapeSm),
+            borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+          ),
+          errorText: errorText,
+          errorStyle: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.error,
+          ),
+          constraints: const BoxConstraints(minHeight: 120),
+        ),
+      ),
+    );
+
+    if (label == null) return field;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label!,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textPrimaryDark,
+          ),
+        ),
+        const SizedBox(height: AppDimens.spaceXs),
+        field,
+      ],
+    );
+  }
+}

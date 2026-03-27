@@ -1,29 +1,39 @@
 /// Zuralog Design System — Card Component.
 ///
-/// A theme-aware card that implements the view-design.md Section 1.3 spec:
-/// - Light mode: white surface, soft diffusion shadow.
-/// - Dark mode: dark surface (#3A3A3C), 1px border (#4A4A4C), no shadow.
-/// - 24px corner radius in both modes.
+/// A theme-aware card with variant support for different visual treatments:
+/// - `data`: compact data display, no pattern
+/// - `feature`: mid-level cards with subtle pattern
+/// - `hero`: prominent cards with stronger pattern
+/// - `plain`: backwards-compatible default, no pattern
 library;
 
 import 'package:flutter/material.dart';
 
-import 'package:zuralog/core/theme/app_dimens.dart';
+import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+
+/// Card visual style variants.
+enum ZCardVariant {
+  /// Compact data display: 16px radius, 16px padding, no pattern, no border.
+  data,
+
+  /// Mid-level feature card: 20px radius, 20px padding, subtle pattern (0.07).
+  feature,
+
+  /// Prominent hero card: 20px radius, 20px padding, stronger pattern (0.10).
+  hero,
+
+  /// Backwards-compatible plain card: 20px radius, 16px padding, no pattern.
+  plain,
+}
 
 /// Theme-aware card component for the Zuralog design system.
-///
-/// Renders differently in light and dark mode:
-/// - **Light**: White background with a subtle diffusion shadow
-///   (`0px 4px 20px rgba(0,0,0,0.05)`) and no border.
-/// - **Dark**: Dark surface (`#3A3A3C`) with a 1px separator border
-///   (`#4A4A4C`) and no shadow (prevents glow artifacts on OLED).
-///
-/// Corner radius is fixed at 24px per the design specification.
 ///
 /// Example usage:
 /// ```dart
 /// ZuralogCard(
-///   padding: EdgeInsets.all(AppDimens.spaceMd),
+///   variant: ZCardVariant.feature,
+///   category: AppColors.categoryActivity,
 ///   onTap: () => _handleTap(),
 ///   child: Text('Card content'),
 /// )
@@ -34,15 +44,22 @@ class ZuralogCard extends StatelessWidget {
 
   /// Inner padding around [child].
   ///
-  /// Defaults to [AppDimens.spaceMd] (16px) on all sides.
+  /// When null, defaults based on variant:
+  /// - data/plain: 16px
+  /// - feature/hero: 20px
   final EdgeInsetsGeometry? padding;
 
   /// Optional tap callback.
-  ///
-  /// When provided, the card gains [InkWell] tap behavior with
-  /// a clipped ripple matching the card's corner radius.
-  /// Pass `null` for a non-interactive card.
   final VoidCallback? onTap;
+
+  /// Card visual style variant. Defaults to [ZCardVariant.plain].
+  final ZCardVariant variant;
+
+  /// Optional health category color for pattern tinting on feature cards.
+  ///
+  /// When provided on a [ZCardVariant.feature] card, the pattern overlay
+  /// uses the matching category color variant via [patternForCategory].
+  final Color? category;
 
   /// Creates a [ZuralogCard].
   const ZuralogCard({
@@ -50,43 +67,106 @@ class ZuralogCard extends StatelessWidget {
     required this.child,
     this.padding,
     this.onTap,
+    this.variant = ZCardVariant.plain,
+    this.category,
   });
+
+  double get _radius {
+    switch (variant) {
+      case ZCardVariant.data:
+        return AppDimens.shapeMd; // 16px
+      case ZCardVariant.feature:
+      case ZCardVariant.hero:
+      case ZCardVariant.plain:
+        return AppDimens.shapeLg; // 20px
+    }
+  }
+
+  EdgeInsetsGeometry get _defaultPadding {
+    switch (variant) {
+      case ZCardVariant.data:
+      case ZCardVariant.plain:
+        return const EdgeInsets.all(AppDimens.spaceMd); // 16px
+      case ZCardVariant.feature:
+      case ZCardVariant.hero:
+        return const EdgeInsets.all(AppDimens.spaceMdPlus); // 20px
+    }
+  }
+
+  bool get _hasPattern =>
+      variant == ZCardVariant.feature || variant == ZCardVariant.hero;
+
+  double get _patternOpacity =>
+      variant == ZCardVariant.hero ? 0.10 : 0.07;
+
+  ZPatternVariant get _patternVariant {
+    if (variant == ZCardVariant.feature && category != null) {
+      return patternForCategory(category!);
+    }
+    return ZPatternVariant.original;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final borderRadius = BorderRadius.circular(_radius);
+    final effectivePadding = padding ?? _defaultPadding;
 
-    final borderRadius = BorderRadius.circular(AppDimens.radiusCard);
+    // Build the card body with optional pattern overlay
+    Widget body;
+    if (_hasPattern) {
+      body = Stack(
+        children: [
+          // Pattern overlay
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: ZPatternOverlay(
+                variant: _patternVariant,
+                opacity: _patternOpacity,
+                blendMode: BlendMode.screen,
+              ),
+            ),
+          ),
+          // Content
+          Padding(padding: effectivePadding, child: child),
+        ],
+      );
+    } else {
+      body = Container(
+        padding: effectivePadding,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surface : theme.colorScheme.surface,
+          borderRadius: borderRadius,
+          // Light mode only: soft shadow
+          boxShadow: isDark ? null : AppDimens.cardShadowLight,
+        ),
+        child: child,
+      );
+    }
 
-    final container = Container(
-      padding: padding ?? const EdgeInsets.all(AppDimens.spaceMd),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: borderRadius,
-        // Light mode: soft shadow; dark mode: 1px border.
-        border: isDark
-            ? Border.all(color: theme.colorScheme.outline, width: 1)
-            : null,
-        boxShadow: isDark ? null : AppDimens.cardShadowLight,
-      ),
-      child: child,
-    );
-
+    // Wrap in InkWell for tap support
     if (onTap != null) {
-      // Clip the InkWell ripple to the card's rounded corners.
       return ClipRRect(
         borderRadius: borderRadius,
         child: Material(
-          color: Colors.transparent,
+          color: _hasPattern
+              ? AppColors.surface
+              : (isDark ? AppColors.surface : theme.colorScheme.surface),
           child: InkWell(
             onTap: onTap,
-            child: container,
+            child: _hasPattern
+                ? body
+                : Padding(
+                    padding: effectivePadding,
+                    child: child,
+                  ),
           ),
         ),
       );
     }
 
-    return container;
+    return body;
   }
 }

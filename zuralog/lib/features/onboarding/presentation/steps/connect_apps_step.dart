@@ -82,9 +82,6 @@ class ConnectAppsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -98,8 +95,8 @@ class ConnectAppsStep extends StatelessWidget {
           // ── Heading ────────────────────────────────────────────────────
           Text(
             'Connect your\napps & devices',
-            style: AppTextStyles.h1.copyWith(
-              color: colorScheme.onSurface,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: AppColors.primary,
               height: 1.15,
             ),
           ),
@@ -107,7 +104,8 @@ class ConnectAppsStep extends StatelessWidget {
           Text(
             'Zuralog works best with your existing health apps. '
             'Connect them now or any time from Settings.',
-            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyLarge
+                .copyWith(color: AppColors.textSecondaryDark),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -147,8 +145,8 @@ class ConnectAppsStep extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '45+ apps supported via Apple Health and Google Health Connect.',
-                    style: AppTextStyles.caption
-                        .copyWith(color: colors.textSecondary),
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.textSecondaryDark),
                   ),
                 ),
               ],
@@ -170,15 +168,11 @@ class _IntegrationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return Container(
       padding: const EdgeInsets.all(AppDimens.spaceMd),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimens.shapeMd),
-        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,8 +192,8 @@ class _IntegrationTile extends StatelessWidget {
             children: [
               Text(
                 app.name,
-                style: AppTextStyles.h3
-                    .copyWith(color: colorScheme.onSurface),
+                style: AppTextStyles.titleMedium
+                    .copyWith(color: AppColors.textPrimaryDark),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -207,7 +201,7 @@ class _IntegrationTile extends StatelessWidget {
               Text(
                 app.description,
                 style: AppTextStyles.bodyMedium
-                    .copyWith(color: colors.textSecondary),
+                    .copyWith(color: AppColors.textSecondaryDark),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -228,7 +222,7 @@ class _IntegrationTile extends StatelessWidget {
               ),
               child: Text(
                 'Later',
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w600,
                 ),

@@ -48,9 +48,6 @@ class DiscoveryStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -64,15 +61,16 @@ class DiscoveryStep extends StatelessWidget {
           // ── Heading ────────────────────────────────────────────────────
           Text(
             'One last thing',
-            style: AppTextStyles.h1.copyWith(
-              color: colorScheme.onSurface,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: AppColors.primary,
               height: 1.15,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Where did you hear about Zuralog?',
-            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyLarge
+                .copyWith(color: AppColors.textSecondaryDark),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -101,8 +99,8 @@ class DiscoveryStep extends StatelessWidget {
           const SizedBox(height: AppDimens.spaceMd),
           Text(
             'This is optional — tap Finish to complete setup.',
-            style: AppTextStyles.caption
-                .copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodySmall
+                .copyWith(color: AppColors.textSecondaryDark),
           ),
           const SizedBox(height: AppDimens.spaceLg),
         ],
@@ -127,9 +125,6 @@ class _SourceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return ZSelectableTile(
       isSelected: isSelected,
       onTap: onTap,
@@ -145,10 +140,10 @@ class _SourceTile extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? AppColors.primary : colors.border,
+                color: isSelected ? AppColors.primary : AppColors.textSecondaryDark,
                 width: isSelected ? 0 : 1.5,
               ),
-              color: isSelected ? AppColors.primary : Colors.transparent,
+              color: isSelected ? AppColors.primary : const Color(0x00000000),
             ),
             child: isSelected
                 ? const Icon(
@@ -162,10 +157,10 @@ class _SourceTile extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.bodyLarge.copyWith(
                 color: isSelected
-                    ? colorScheme.onSurface
-                    : colors.textSecondary,
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textSecondaryDark,
                 fontWeight:
                     isSelected ? FontWeight.w600 : FontWeight.normal,
               ),

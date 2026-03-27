@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/shared/widgets/cards/zuralog_card.dart';
 
 /// Empty state card shown when no AI insights are available yet.
 ///
@@ -30,15 +31,12 @@ class ZEmptyInsightsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColorsOf(context);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-      padding: const EdgeInsets.all(AppDimens.spaceLg),
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+      child: ZuralogCard(
+        variant: ZCardVariant.feature,
+        padding: const EdgeInsets.all(AppDimens.spaceLg),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -79,6 +77,7 @@ class ZEmptyInsightsCard extends StatelessWidget {
             onTap: onConnectTap,
           ),
         ],
+        ),
       ),
     );
   }

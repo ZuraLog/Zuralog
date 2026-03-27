@@ -2,11 +2,13 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_dimens.dart';
-import 'package:zuralog/core/theme/app_text_styles.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/shared/widgets/buttons/z_button.dart';
 
 /// Displays an error message with an optional retry button.
+///
+/// Same card layout as [ZEmptyState] but without the pattern overlay,
+/// and uses error red for the icon per brand bible.
 ///
 /// Example:
 /// ```dart
@@ -27,31 +29,40 @@ class ZErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.spaceXl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 56, color: colorScheme.error),
-            const SizedBox(height: AppDimens.spaceMd),
-            Text(
-              message,
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: colorScheme.onSurface,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppDimens.shapeLg),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.spaceXl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 36,
+                color: AppColors.error,
               ),
-              textAlign: TextAlign.center,
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: AppDimens.spaceLg),
-              ZButton(
-                label: 'Try Again',
-                onPressed: onRetry,
-                isFullWidth: false,
+              const SizedBox(height: AppDimens.spaceMd),
+              Text(
+                message,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textPrimaryDark,
+                ),
+                textAlign: TextAlign.center,
               ),
+              if (onRetry != null) ...[
+                const SizedBox(height: AppDimens.spaceLg),
+                ZButton(
+                  label: 'Try Again',
+                  onPressed: onRetry,
+                  isFullWidth: false,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

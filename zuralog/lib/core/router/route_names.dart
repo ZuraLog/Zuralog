@@ -340,6 +340,12 @@ abstract final class RouteNames {
   /// Path for the design system catalog screen.
   static const String debugCatalogPath = '/debug/catalog';
 
+  /// Name for the component showcase screen (dev only).
+  static const String componentShowcase = 'componentShowcase';
+
+  /// Path for the component showcase screen.
+  static const String componentShowcasePath = '/debug/components';
+
   // ── Unauthenticated Route Set ─────────────────────────────────────────────
 
   /// Set of paths that are accessible without authentication.

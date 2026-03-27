@@ -71,7 +71,6 @@ class ZSelectableTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final resolvedColor = selectedColor ?? AppColors.primary;
     final resolvedRadius = BorderRadius.circular(
       borderRadius ?? AppDimens.shapeMd,
@@ -86,13 +85,11 @@ class ZSelectableTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected
             ? resolvedColor.withValues(alpha: 0.08)
-            : colorScheme.surface,
-        border: isSelected
-            ? Border.all(color: resolvedColor, width: 1.5)
-            : Border.all(
-                color: colorScheme.outline.withValues(alpha: 0.4),
-                width: 1.0,
-              ),
+            : AppColors.surface,
+        border: Border.all(
+          color: isSelected ? resolvedColor : Colors.transparent,
+          width: 1.5,
+        ),
         borderRadius: resolvedRadius,
       ),
       child: showCheckIndicator

@@ -115,9 +115,6 @@ class GoalsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final colors = AppColorsOf(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -131,15 +128,15 @@ class GoalsStep extends StatelessWidget {
           // ── Heading ────────────────────────────────────────────────────
           Text(
             'What are your\nhealth goals?',
-            style: AppTextStyles.h1.copyWith(
-              color: colorScheme.onSurface,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: AppColors.primary,
               height: 1.15,
             ),
           ),
           const SizedBox(height: AppDimens.spaceSm),
           Text(
             'Select all that apply. You can change these later.',
-            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondaryDark),
           ),
 
           const SizedBox(height: AppDimens.spaceXl),
@@ -170,8 +167,8 @@ class GoalsStep extends StatelessWidget {
           if (selectedGoals.isEmpty)
             Text(
               'You can skip this — tap Next to continue.',
-              style: AppTextStyles.caption
-                  .copyWith(color: colors.textSecondary),
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.textSecondaryDark),
             ),
           const SizedBox(height: AppDimens.spaceLg),
         ],
@@ -196,8 +193,6 @@ class _GoalTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return ZSelectableTile(
       isSelected: isSelected,
       onTap: onTap,
@@ -208,11 +203,11 @@ class _GoalTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(goal.emoji, style: AppTextStyles.body.copyWith(fontSize: 24)),
+          Text(goal.emoji, style: AppTextStyles.bodyLarge.copyWith(fontSize: 24)),
           Text(
             goal.label,
-            style: AppTextStyles.caption.copyWith(
-              color: isSelected ? goal.color : colorScheme.onSurface,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: isSelected ? goal.color : AppColors.textPrimaryDark,
               fontWeight:
                   isSelected ? FontWeight.w600 : FontWeight.w500,
             ),

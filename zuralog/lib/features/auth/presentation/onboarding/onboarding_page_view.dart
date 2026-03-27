@@ -1,7 +1,7 @@
-/// Zuralog Edge Agent — Onboarding Page View (v3.2 redesign).
+/// Zuralog Edge Agent — Onboarding Page View (v4.0 brand bible redesign).
 ///
 /// 3-slide full-bleed layout with hero image, parallax scroll, editorial
-/// typography, morphing dot indicators, and spring CTA button.
+/// typography, morphing dot indicators, and [ZButton] CTA.
 ///
 /// Shown only on first launch. After completion or skip, marks onboarding done
 /// and navigates to [WelcomeScreen].
@@ -267,7 +267,7 @@ class _BottomPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentSlide = slides[currentPage];
+    final colors = AppColorsOf(context);
     final safeBottom = MediaQuery.paddingOf(context).bottom;
 
     return Padding(
@@ -284,43 +284,52 @@ class _BottomPanel extends StatelessWidget {
           if (!isLastPage)
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: onSkip,
-                style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceSm,
-                    vertical: AppDimens.spaceXs,
-                  ),
-                ),
-                child: Text(
-                  'Skip',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+              child: Semantics(
+                button: true,
+                label: 'Skip onboarding',
+                child: GestureDetector(
+                  onTap: onSkip,
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    height: AppDimens.touchTargetMin,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.spaceSm,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Skip',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             )
           else
-            const SizedBox(height: 32), // Mirror skip button height
+            const SizedBox(height: AppDimens.touchTargetMin),
 
           const Spacer(),
 
           // Headline
           Text(
-            currentSlide.headline,
-            style: AppTextStyles.displayLarge.copyWith(color: Colors.white),
+            slides[currentPage].headline,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: colors.textPrimary,
+            ),
           ),
 
           const SizedBox(height: AppDimens.spaceSm),
 
           // Body
           Text(
-            currentSlide.body,
+            slides[currentPage].body,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: colors.textSecondary,
             ),
           ),
 
@@ -339,24 +348,14 @@ class _BottomPanel extends StatelessWidget {
 
               const Spacer(),
 
-              // CTA Button — 140px fixed width
+              // CTA Button — primary Sage fill + pattern
               SizedBox(
                 width: 140,
-                child: ZuralogSpringButton(
-                  onTap: onNext,
-                  child: FilledButton(
-                    onPressed: onNext,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: currentSlide.accentColor,
-                      foregroundColor: AppColors.primaryButtonText,
-                      minimumSize: const Size(140, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppDimens.shapePill),
-                      ),
-                      textStyle: AppTextStyles.titleMedium,
-                    ),
-                    child: Text(isLastPage ? 'Get Started' : 'Next'),
-                  ),
+                child: ZButton(
+                  label: isLastPage ? 'Get Started' : 'Next',
+                  onPressed: onNext,
+                  size: ZButtonSize.large,
+                  isFullWidth: true,
                 ),
               ),
             ],
@@ -401,7 +400,7 @@ class _SlideDots extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppDimens.shapePill),
             color: isActive
                 ? slides[currentPage].accentColor
-                : Theme.of(context).colorScheme.outline,
+                : AppColors.surfaceRaised,
           ),
         );
       }),

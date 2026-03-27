@@ -1,13 +1,14 @@
-/// Zuralog Edge Agent — Welcome / Auth Home Screen (v3.2 redesign).
+/// Zuralog Edge Agent — Welcome / Auth Home Screen (v4.0 brand bible redesign).
 ///
 /// The auth gate screen the user lands on after the slideshow (or on every
-/// subsequent launch). Full-screen OLED black with a subtle Sage Green radial
-/// bloom at top-center, brand logo card, and three spring-animated auth buttons.
+/// subsequent launch). Full-screen canvas with a subtle Sage Green radial
+/// bloom at top-center, brand logo card with topographic pattern, and three
+/// auth buttons using the design system [ZButton] component.
 ///
 /// **Backend wiring is unchanged:**
 /// - [_handleGoogleSignIn] → [SocialAuthService.signInWithGoogle] → [authStateProvider.socialLogin]
-/// - [_handleAppleSignIn] → stubbed dialog (preserved exactly)
-/// - [_showError] → SnackBar helper (preserved exactly)
+/// - [_handleAppleSignIn] → [ZAlertDialog] (stubbed until Apple Developer enrollment)
+/// - [_showError] → [ZToast.error] overlay notification
 library;
 
 import 'package:flutter/gestures.dart';
@@ -48,7 +49,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   ///
   /// Shows a loading overlay, calls [SocialAuthService.signInWithGoogle],
   /// then delegates to [AuthStateNotifier.socialLogin]. Navigates to the
-  /// dashboard on success (handled by GoRouter), or shows a SnackBar on failure.
+  /// dashboard on success (handled by GoRouter), or shows a ZToast on failure.
   Future<void> _handleGoogleSignIn() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
@@ -89,40 +90,26 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   /// requires an Apple Developer Program membership. Preserved exactly.
   Future<void> _handleAppleSignIn() async {
     if (_isLoading) return;
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Apple Sign In'),
-        content: const Text(
-          'Apple Sign In requires an Apple Developer Program membership '
+    await ZAlertDialog.show(
+      context,
+      title: 'Apple Sign In',
+      body: 'Apple Sign In requires an Apple Developer Program membership '
           '(\$99/year). Configuration is in progress — use Google or Email '
           'sign-in in the meantime.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      confirmLabel: 'OK',
+      cancelLabel: 'Close',
     );
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
+    if (!mounted) return;
+    ZToast.error(context, message);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final safeBottom = MediaQuery.paddingOf(context).bottom;
 
     return ZuralogScaffold(
@@ -147,7 +134,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     onApple: _handleAppleSignIn,
                     onGoogle: _handleGoogleSignIn,
                     onEmail: () => context.push(RouteNames.loginPath),
-                    colorScheme: colorScheme,
                   ),
 
                   SizedBox(height: AppDimens.spaceLg + safeBottom),
@@ -158,9 +144,21 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
           // ── Loading overlay ────────────────────────────────────────────
           if (_isLoading)
-            const ColoredBox(
-              color: Colors.black54,
-              child: Center(child: CircularProgressIndicator()),
+            Positioned.fill(
+              child: Semantics(
+                liveRegion: true,
+                label: 'Signing in',
+                child: ColoredBox(
+                  color: Colors.black54,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -178,12 +176,12 @@ class _RadialBloom extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: RadialGradient(
-          center: Alignment(0, -1.2),
+          center: const Alignment(0, -1.2),
           radius: 0.8,
           colors: [
-            Color(0x12CFE1B9), // AppColors.primary at ~7% opacity
+            AppColors.primary.withValues(alpha: 0.07),
             Colors.transparent,
           ],
         ),
@@ -198,10 +196,12 @@ class _BrandArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Logo card — 96×96px, shapeLg, primary fill with glow shadow
+        // Logo card — 96×96px, shapeLg, primary fill with pattern
         const _LogoCard(),
 
         const SizedBox(height: AppDimens.spaceLg),
@@ -209,7 +209,9 @@ class _BrandArea extends StatelessWidget {
         // App name
         Text(
           'Zuralog',
-          style: AppTextStyles.displayLarge.copyWith(color: Colors.white),
+          style: AppTextStyles.displayLarge.copyWith(
+            color: colors.textPrimary,
+          ),
         ),
 
         const SizedBox(height: AppDimens.spaceSm),
@@ -218,7 +220,7 @@ class _BrandArea extends StatelessWidget {
         Text(
           'Better health,\ntogether.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: colors.textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -227,33 +229,47 @@ class _BrandArea extends StatelessWidget {
   }
 }
 
-/// 96×96px logo card with Sage Green fill and brand glow shadow.
+/// 96×96px logo card with Sage Green fill and brand topographic pattern.
 class _LogoCard extends StatelessWidget {
   const _LogoCard();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 96,
-      height: 96,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(AppDimens.shapeLg),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.40),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: SvgPicture.asset(
-        WelcomeScreen._logoAsset,
-        fit: BoxFit.contain,
-        colorFilter: const ColorFilter.mode(
-          AppColors.primaryButtonText,
-          BlendMode.srcIn,
+    final borderRadius = BorderRadius.circular(AppDimens.shapeLg);
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: SizedBox(
+        width: 96,
+        height: 96,
+        child: Stack(
+          children: [
+            // Sage fill background
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: borderRadius,
+              ),
+            ),
+            // Brand pattern — Sage surface gets colorBurn at 15%
+            const ZPatternOverlay(
+              variant: ZPatternVariant.sage,
+              opacity: 0.15,
+              blendMode: BlendMode.colorBurn,
+            ),
+            // Logo icon
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SvgPicture.asset(
+                WelcomeScreen._logoAsset,
+                fit: BoxFit.contain,
+                colorFilter: const ColorFilter.mode(
+                  AppColors.primaryButtonText,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -267,94 +283,42 @@ class _AuthActions extends StatelessWidget {
     required this.onApple,
     required this.onGoogle,
     required this.onEmail,
-    required this.colorScheme,
   });
 
   final bool isLoading;
   final VoidCallback onApple;
   final VoidCallback onGoogle;
   final VoidCallback onEmail;
-  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Apple button
-        ZuralogSpringButton(
-          onTap: isLoading ? null : onApple,
-          child: SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: FilledButton(
-              onPressed: isLoading ? null : onApple,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.black,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.shapePill),
-                ),
-                textStyle: AppTextStyles.titleMedium,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.apple, size: 20, color: Colors.white),
-                  SizedBox(width: AppDimens.spaceSm),
-                  Text('Continue with Apple'),
-                ],
-              ),
-            ),
-          ),
+        // Apple button — secondary (outlined) with Apple icon
+        ZButton(
+          label: 'Continue with Apple',
+          variant: ZButtonVariant.secondary,
+          icon: Icons.apple,
+          onPressed: isLoading ? null : onApple,
+          size: ZButtonSize.large,
         ),
 
         const SizedBox(height: AppDimens.spaceSm),
 
-        // Google button
-        ZuralogSpringButton(
-          onTap: isLoading ? null : onGoogle,
-          child: SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: OutlinedButton(
-              onPressed: isLoading ? null : onGoogle,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: colorScheme.onSurface,
-                side: BorderSide(
-                  color: colors.border,
-                  width: 1.5,
-                ),
-                minimumSize: const Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.shapePill),
-                ),
-                textStyle: AppTextStyles.titleMedium,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'G',
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.googleBlue,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: AppDimens.spaceSm),
-                  Text(
-                    'Continue with Google',
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
+        // Google button — secondary (outlined) with colored "G"
+        ZButton(
+          label: 'Continue with Google',
+          variant: ZButtonVariant.secondary,
+          leadingWidget: Text(
+            'G',
+            style: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.googleBlue,
+              fontWeight: FontWeight.w700,
             ),
           ),
+          onPressed: isLoading ? null : onGoogle,
+          size: ZButtonSize.large,
         ),
 
         const SizedBox(height: AppDimens.spaceMd),
@@ -364,25 +328,12 @@ class _AuthActions extends StatelessWidget {
 
         const SizedBox(height: AppDimens.spaceMd),
 
-        // Email button
-        ZuralogSpringButton(
-          onTap: isLoading ? null : onEmail,
-          child: SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: TextButton(
-              onPressed: isLoading ? null : onEmail,
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onSurfaceVariant,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimens.shapePill),
-                ),
-                textStyle: AppTextStyles.titleMedium,
-              ),
-              child: const Text('Log in with Email'),
-            ),
-          ),
+        // Email button — text variant (Sage text, no background)
+        ZButton(
+          label: 'Log in with Email',
+          variant: ZButtonVariant.text,
+          onPressed: isLoading ? null : onEmail,
+          size: ZButtonSize.medium,
         ),
 
         const SizedBox(height: AppDimens.spaceMd),
@@ -400,19 +351,21 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return Row(
       children: [
-        const Expanded(child: Divider()),
+        const Expanded(child: ZDivider()),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
           child: Text(
             'or',
             style: AppTextStyles.bodySmall.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: colors.textSecondary,
             ),
           ),
         ),
-        const Expanded(child: Divider()),
+        const Expanded(child: ZDivider()),
       ],
     );
   }
@@ -466,11 +419,13 @@ class _LegalFooterState extends State<_LegalFooter> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
+
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
         style: AppTextStyles.bodySmall.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          color: colors.textSecondary,
         ),
         children: [
           const TextSpan(text: 'By continuing, you agree to our '),

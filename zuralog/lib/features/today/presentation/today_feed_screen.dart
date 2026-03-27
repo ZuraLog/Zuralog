@@ -103,7 +103,7 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
       ),
       body: RefreshIndicator(
         color: colors.primary,
-        backgroundColor: colors.cardBackground,
+        backgroundColor: colors.canvas,
         onRefresh: () async {
           ref.read(todayRepositoryProvider).invalidateFeedCache();
           ref.invalidate(healthScoreProvider);
@@ -138,158 +138,188 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             // ── Health Score + Streak Hero Card (side by side) ──────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceLg,
-                AppDimens.spaceMd,
-                AppDimens.spaceMd,
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Health Score hero — left half.
-                    Flexible(
-                      child: OnboardingTooltip(
-                        screenKey: 'today_feed',
-                        tooltipKey: 'health_score',
-                        message: 'This is your daily health score — a composite of '
-                            'all your health data from the last 24 hours.',
-                        child: _HealthScoreHero(scoreAsync: scoreAsync),
-                      ),
-                    ),
-                    const SizedBox(width: AppDimens.spaceSm),
-                    // Streak Hero Card — right half.
-                    Flexible(
-                      child: feedAsync.when(
-                        loading: () => const StreakHeroCard(streakDays: 0),
-                        error: (e, _) => const StreakHeroCard(streakDays: 0),
-                        data: (feed) => StreakHeroCard(
-                          streakDays: feed.streak?.currentStreak ?? 0,
-                          isPersonalBest: feed.streak != null &&
-                              feed.streak!.currentStreak > 0 &&
-                              feed.streak!.currentStreak >=
-                                  (feed.streak!.longestStreak ?? 0),
-                          isFrozen: feed.streak?.isFrozen ?? false,
+            ZFadeSlideIn(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceMd,
+                ),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Health Score hero — left half.
+                      Flexible(
+                        child: OnboardingTooltip(
+                          screenKey: 'today_feed',
+                          tooltipKey: 'health_score',
+                          message: 'This is your daily health score — a composite of '
+                              'all your health data from the last 24 hours.',
+                          child: _HealthScoreHero(scoreAsync: scoreAsync),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppDimens.spaceSm),
+                      // Streak Hero Card — right half.
+                      Flexible(
+                        child: feedAsync.when(
+                          loading: () => const StreakHeroCard(streakDays: 0),
+                          error: (e, _) => const StreakHeroCard(streakDays: 0),
+                          data: (feed) => StreakHeroCard(
+                            streakDays: feed.streak?.currentStreak ?? 0,
+                            isPersonalBest: feed.streak != null &&
+                                feed.streak!.currentStreak > 0 &&
+                                feed.streak!.currentStreak >=
+                                    (feed.streak!.longestStreak ?? 0),
+                            isFrozen: feed.streak?.isFrozen ?? false,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
 
             // ── Data Maturity banner ─────────────────────────────────────────
             if (showBanner)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimens.spaceMd,
-                ),
-                child: DataMaturityBanner(
-                  daysWithData: dataDays,
-                  targetDays: kMinDataDaysForMaturity,
-                  mode: bannerMode,
-                  onDismiss: bannerMode == DataMaturityMode.progress
-                      ? persistBannerDismissed
-                      : () =>
-                          ref.read(todayBannerSessionDismissed.notifier).state =
-                              true,
-                  onPermanentDismiss:
-                      bannerMode == DataMaturityMode.stillBuilding
-                          ? persistBannerDismissed
-                          : null,
+              ZFadeSlideIn(
+                delay: const Duration(milliseconds: 60),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimens.spaceMd,
+                  ),
+                  child: DataMaturityBanner(
+                    daysWithData: dataDays,
+                    targetDays: kMinDataDaysForMaturity,
+                    mode: bannerMode,
+                    onDismiss: bannerMode == DataMaturityMode.progress
+                        ? persistBannerDismissed
+                        : () =>
+                            ref.read(todayBannerSessionDismissed.notifier).state =
+                                true,
+                    onPermanentDismiss:
+                        bannerMode == DataMaturityMode.stillBuilding
+                            ? persistBannerDismissed
+                            : null,
+                  ),
                 ),
               ),
 
             // ── Greeting ────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                AppDimens.spaceLg,
-                AppDimens.spaceMd,
-                AppDimens.spaceSm,
-              ),
-              child: () {
-                final subtitle = _greetingSubtitle(
-                  dataDays,
-                  ref.watch(todayLogSummaryProvider).valueOrNull ??
-                      TodayLogSummary.empty,
-                );
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionHeader(
-                      title: _timeOfDayGreeting(profile?.aiName),
-                    ),
-                    if (subtitle != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppDimens.spaceXs),
-                        child: Text(
-                          subtitle,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: colors.textSecondary,
+            ZFadeSlideIn(
+              delay: const Duration(milliseconds: 120),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  AppDimens.spaceLg,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceSm,
+                ),
+                child: () {
+                  final subtitle = _greetingSubtitle(
+                    dataDays,
+                    ref.watch(todayLogSummaryProvider).valueOrNull ??
+                        TodayLogSummary.empty,
+                  );
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SectionHeader(
+                        title: _timeOfDayGreeting(profile?.aiName),
+                      ),
+                      if (subtitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppDimens.spaceXs),
+                          child: Text(
+                            subtitle,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: colors.textSecondary,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
-                );
-              }(),
+                    ],
+                  );
+                }(),
+              ),
             ),
 
             // ── My Metrics Grid ──────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
-              child: _MetricGridSection(),
+            ZFadeSlideIn(
+              delay: const Duration(milliseconds: 180),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppDimens.spaceMd),
+                child: _MetricGridSection(),
+              ),
             ),
 
             const SizedBox(height: AppDimens.spaceMd),
 
             // ── Daily Goals ──────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimens.spaceMd,
+            ZFadeSlideIn(
+              delay: const Duration(milliseconds: 240),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.spaceMd,
+                ),
+                child: _DailyGoalsSection(),
               ),
-              child: _DailyGoalsSection(),
             ),
 
             const SizedBox(height: AppDimens.spaceLg),
 
             // ── Section: Your Briefing ────────────────────────────────────────
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppDimens.spaceMd,
-                0,
-                AppDimens.spaceMd,
-                AppDimens.spaceSm,
+            ZFadeSlideIn(
+              delay: const Duration(milliseconds: 300),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppDimens.spaceMd,
+                  0,
+                  AppDimens.spaceMd,
+                  AppDimens.spaceSm,
+                ),
+                child: SectionHeader(title: 'Your Briefing'),
               ),
-              child: SectionHeader(title: 'Your Briefing'),
             ),
 
             // Provider never errors — only loading and data branches needed.
             ...feedAsync.when(
               error: (err, stack) => [
-                ZEmptyInsightsCard(
-                  onLogTap: openSheet,
-                  onConnectTap: () =>
-                      context.pushNamed(RouteNames.settingsIntegrations),
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 360),
+                  child: ZEmptyInsightsCard(
+                    onLogTap: openSheet,
+                    onConnectTap: () =>
+                        context.pushNamed(RouteNames.settingsIntegrations),
+                  ),
                 ),
               ],
               loading: () => [
-                SizedBox(
-                  height: 120,
-                  child: Center(
-                    child: CircularProgressIndicator(color: colors.primary),
+                ZFadeSlideIn(
+                  delay: const Duration(milliseconds: 360),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.spaceMd,
+                    ),
+                    child: ZLoadingSkeleton(
+                      width: double.infinity,
+                      height: 120,
+                      borderRadius: AppDimens.shapeLg,
+                    ),
                   ),
                 ),
               ],
               data: (feed) {
                 if (feed.insights.isEmpty) {
                   return [
-                    ZEmptyInsightsCard(
-                      onLogTap: openSheet,
-                      onConnectTap: () =>
-                          context.pushNamed(RouteNames.settingsIntegrations),
+                    ZFadeSlideIn(
+                      delay: const Duration(milliseconds: 360),
+                      child: ZEmptyInsightsCard(
+                        onLogTap: openSheet,
+                        onConnectTap: () =>
+                            context.pushNamed(RouteNames.settingsIntegrations),
+                      ),
                     ),
                   ];
                 }
@@ -298,46 +328,52 @@ class _TodayFeedScreenState extends ConsumerState<TodayFeedScreen> {
                 final isBuilding = dataDays > 0 &&
                     dataDays < kMinDataDaysForMaturity;
 
-                Widget buildInsightCard(InsightCard insight) => Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimens.spaceMd,
-                    vertical: AppDimens.spaceXs,
-                  ),
-                  child: ZInsightCard(
-                    insight: insight,
-                    onTap: () {
-                      ref.read(hapticServiceProvider).light();
-                      ref.read(analyticsServiceProvider).capture(
-                        event: AnalyticsEvents.insightCardTapped,
-                        properties: {
-                          'insight_id': insight.id,
-                          'insight_type': insight.type.name,
-                          'category': insight.category,
-                          'is_unread': !insight.isRead,
-                        },
-                      );
-                      context.pushNamed(
-                        RouteNames.insightDetail,
-                        pathParameters: {'id': insight.id},
-                      );
-                    },
-                  ),
-                );
+                Widget buildInsightCard(InsightCard insight, int index) =>
+                    ZFadeSlideIn(
+                      delay: Duration(milliseconds: 360 + (index * 60)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceMd,
+                          vertical: AppDimens.spaceXs,
+                        ),
+                        child: ZInsightCard(
+                          insight: insight,
+                          onTap: () {
+                            ref.read(hapticServiceProvider).light();
+                            ref.read(analyticsServiceProvider).capture(
+                              event: AnalyticsEvents.insightCardTapped,
+                              properties: {
+                                'insight_id': insight.id,
+                                'insight_type': insight.type.name,
+                                'category': insight.category,
+                                'is_unread': !insight.isRead,
+                              },
+                            );
+                            context.pushNamed(
+                              RouteNames.insightDetail,
+                              pathParameters: {'id': insight.id},
+                            );
+                          },
+                        ),
+                      ),
+                    );
 
                 if (isBuilding) {
                   return [
-                    buildInsightCard(feed.insights.first),
+                    buildInsightCard(feed.insights.first, 0),
                     const _BuildingInsightsNote(),
                   ];
                 }
 
                 return feed.insights
-                    .map((insight) => buildInsightCard(insight))
+                    .asMap()
+                    .entries
+                    .map((e) => buildInsightCard(e.value, e.key))
                     .toList();
               },
             ),
 
-            // Bottom padding so last card clears the FAB (added in Part 2).
+            // Bottom padding so last card clears the FAB.
             const SizedBox(height: 80),
           ],
         ),
@@ -355,9 +391,12 @@ class _HealthScoreHero extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColorsOf(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+    return ZuralogCard(
+      variant: ZCardVariant.hero,
+      padding: const EdgeInsets.symmetric(
+        vertical: AppDimens.spaceLg,
+        horizontal: AppDimens.spaceMd,
+      ),
       child: Stack(
         children: [
           // Ambient sage-green radial glow — top-right corner.
@@ -377,26 +416,14 @@ class _HealthScoreHero extends ConsumerWidget {
               ),
             ),
           ),
-          // Card body.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              vertical: AppDimens.spaceLg,
-              horizontal: AppDimens.spaceMd,
-            ),
-            decoration: BoxDecoration(
-              color: colors.cardBackground,
-              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              border: Border.all(color: colors.border),
-            ),
-            child: scoreAsync.when(
+          // Card content.
+          scoreAsync.when(
               // Provider never errors — this branch is a safety net only.
               error: (err, stack) => const HealthScoreZeroState(),
-              loading: () => SizedBox(
+              loading: () => const ZLoadingSkeleton(
+                width: double.infinity,
                 height: 120,
-                child: Center(
-                  child: CircularProgressIndicator(color: colors.primary),
-                ),
+                borderRadius: AppDimens.shapeLg,
               ),
               data: (data) {
                 // Three states based on data maturity:
@@ -436,7 +463,6 @@ class _HealthScoreHero extends ConsumerWidget {
                 );
               },
             ),
-          ),
         ],
       ),
     );
@@ -810,14 +836,10 @@ class _GoalsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
-    return Container(
+    return const ZLoadingSkeleton(
+      width: double.infinity,
       height: 120,
-      decoration: BoxDecoration(
-        color: colors.cardBackground,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        border: Border.all(color: colors.border),
-      ),
+      borderRadius: AppDimens.shapeMd,
     );
   }
 }
@@ -830,36 +852,24 @@ class _MetricGridSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section header placeholder
-        Padding(
-          padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
-          child: Container(
-            width: 80,
-            height: 12,
-            decoration: BoxDecoration(
-              color: colors.border,
-              borderRadius: BorderRadius.circular(AppDimens.shapeXs),
-            ),
-          ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: AppDimens.spaceSm),
+          child: ZLoadingSkeleton(width: 80, height: 12),
         ),
         // Row 1: 3 tiles
         for (int row = 0; row < 2; row++) ...[
           Row(
             children: [
               for (int col = 0; col < 3; col++) ...[
-                Expanded(
-                  child: Container(
+                const Expanded(
+                  child: ZLoadingSkeleton(
+                    width: double.infinity,
                     height: 56,
-                    decoration: BoxDecoration(
-                      color: colors.cardBackground,
-                      borderRadius:
-                          BorderRadius.circular(AppDimens.shapeSm),
-                      border: Border.all(color: colors.border),
-                    ),
+                    borderRadius: AppDimens.shapeSm,
                   ),
                 ),
                 if (col < 2) const SizedBox(width: AppDimens.spaceXs),

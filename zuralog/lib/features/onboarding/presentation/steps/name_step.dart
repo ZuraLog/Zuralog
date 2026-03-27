@@ -67,8 +67,6 @@ class _NameStepState extends State<NameStep> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppDimens.spaceLg,
@@ -82,16 +80,16 @@ class _NameStepState extends State<NameStep> {
           // ── Heading ───────────────────────────────────────────────────
           Text(
             'What should we\ncall you?',
-            style: AppTextStyles.h1.copyWith(
-              color: colorScheme.onSurface,
+            style: AppTextStyles.displayLarge.copyWith(
+              color: AppColors.primary,
               height: 1.1,
             ),
           ),
           const SizedBox(height: AppDimens.spaceXs),
           Text(
             'Your AI coach will use this name.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: colorScheme.onSurfaceVariant,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textSecondaryDark,
             ),
           ),
 
@@ -101,16 +99,16 @@ class _NameStepState extends State<NameStep> {
           TextFormField(
             controller: _controller,
             autofocus: true,
+            maxLength: 50,
             textCapitalization: TextCapitalization.words,
             keyboardType: TextInputType.name,
             textInputAction: TextInputAction.done,
-            style: AppTextStyles.h3.copyWith(
-              fontSize: 20,
-              color: colorScheme.onSurface,
+            style: AppTextStyles.titleLarge.copyWith(
+              color: AppColors.textPrimaryDark,
             ),
             decoration: InputDecoration(
               hintText: 'Your name or nickname...',
-              hintStyle: AppTextStyles.bodyMedium.copyWith(
+              hintStyle: AppTextStyles.bodyLarge.copyWith(
                 fontSize: 20,
                 color: AppColors.textTertiary,
               ),
@@ -173,7 +171,7 @@ class _LivePreviewCard extends StatelessWidget {
               children: [
                 Text(
                   'Preview',
-                  style: AppTextStyles.labelXs.copyWith(
+                  style: AppTextStyles.labelSmall.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
@@ -183,7 +181,7 @@ class _LivePreviewCard extends StatelessWidget {
                 Text(
                   'Hi $greeting, here\'s your morning briefing...',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: AppColors.textPrimaryDark,
                   ),
                 ),
               ],
