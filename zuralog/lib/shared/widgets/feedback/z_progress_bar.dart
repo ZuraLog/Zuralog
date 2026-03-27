@@ -7,7 +7,8 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
+    show ZPatternVariant;
 
 /// A horizontal progress bar with a Sage-colored fill and brand pattern.
 ///
@@ -75,9 +76,9 @@ class ZProgressBar extends StatelessWidget {
 
         // Track.
         ClipRRect(
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(3),
           child: SizedBox(
-            height: 4,
+            height: 6,
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final totalWidth = constraints.maxWidth;
@@ -88,33 +89,27 @@ class ZProgressBar extends StatelessWidget {
                     // Inactive track (full width).
                     Container(
                       width: totalWidth,
-                      height: 4,
-                      color: AppColors.surfaceRaised,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceRaised,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
                     ),
 
-                    // Active track with pattern overlay.
+                    // Active track — sage pattern as the fill.
                     AnimatedContainer(
                       duration: animate
                           ? AppMotion.durationMedium
                           : Duration.zero,
                       curve: AppMotion.curveEntrance,
                       width: fillWidth,
-                      height: 4,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: Stack(
-                          children: [
-                            // Sage fill.
-                            Positioned.fill(
-                              child: ColoredBox(color: AppColors.primary),
-                            ),
-                            // Pattern on the filled portion only.
-                            ZPatternOverlay(
-                              variant: ZPatternVariant.sage,
-                              opacity: 0.12,
-                              blendMode: BlendMode.colorBurn,
-                            ),
-                          ],
+                      height: 6,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(3),
+                        image: DecorationImage(
+                          image:
+                              AssetImage(ZPatternVariant.sage.assetPath),
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),

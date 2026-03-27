@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
 
 /// Visual variant that controls the accent color and icon.
 enum ZAlertVariant {
@@ -17,23 +18,33 @@ enum ZAlertVariant {
   success(
     color: AppColors.success,
     icon: Icons.check_circle_outline,
+    patternVariant: ZPatternVariant.sage,
   ),
   warning(
     color: AppColors.warning,
     icon: Icons.warning_amber_rounded,
+    patternVariant: ZPatternVariant.amber,
   ),
   error(
     color: AppColors.error,
     icon: Icons.error_outline,
+    patternVariant: ZPatternVariant.crimson,
   );
 
-  const ZAlertVariant({required this.color, required this.icon});
+  const ZAlertVariant({
+    required this.color,
+    required this.icon,
+    this.patternVariant,
+  });
 
   /// Accent and icon color for this variant.
   final Color color;
 
   /// Leading icon for this variant.
   final IconData icon;
+
+  /// Optional pattern variant for the subtle background overlay.
+  final ZPatternVariant? patternVariant;
 }
 
 /// An inline alert banner with a left accent border and variant icon.
@@ -68,17 +79,25 @@ class ZAlertBanner extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
+        color: variant.color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppDimens.shapeSm),
       ),
       clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
+      child: Stack(
+        children: [
+          // Subtle pattern overlay matching the variant.
+          if (variant.patternVariant != null)
+            ZPatternOverlay(
+              variant: variant.patternVariant!,
+              opacity: 0.04,
+            ),
+          IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Left accent border.
           Container(
-            width: 3,
+            width: 4,
             // Match the height of the content by letting it expand.
             color: variant.color,
           ),
@@ -88,7 +107,7 @@ class ZAlertBanner extends StatelessWidget {
             alignment: Alignment.topCenter,
             child: Padding(
               padding: const EdgeInsets.only(
-                left: AppDimens.spaceMd - 3, // account for accent width
+                left: AppDimens.spaceMd - 4, // account for accent width
                 top: AppDimens.spaceMd,
               ),
               child: Icon(
@@ -150,6 +169,8 @@ class ZAlertBanner extends StatelessWidget {
             ),
           ],
         ),
+      ),
+        ],
       ),
     );
   }

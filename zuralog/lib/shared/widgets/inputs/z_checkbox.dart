@@ -6,7 +6,8 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
+    show ZPatternVariant;
 
 /// A brand-styled checkbox.
 ///
@@ -103,33 +104,38 @@ class _ZCheckboxState extends State<ZCheckbox>
                     borderRadius: BorderRadius.circular(4),
                     child: Stack(
                       children: [
-                        // Background — transitions from transparent to Sage.
+                        // Background — sage pattern when checked, border when unchecked.
                         Container(
                           decoration: BoxDecoration(
-                            color: Color.lerp(
-                              Colors.transparent,
-                              AppColors.primary,
-                              progress,
-                            ),
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: Color.lerp(
-                                AppColors.textSecondary,
-                                AppColors.primary,
-                                progress,
-                              )!,
-                              width: 2,
-                            ),
+                            border: progress < 1.0
+                                ? Border.all(
+                                    color: Color.lerp(
+                                      AppColors.textSecondary,
+                                      Colors.transparent,
+                                      progress,
+                                    )!,
+                                    width: 2,
+                                  )
+                                : null,
+                            image: progress > 0
+                                ? DecorationImage(
+                                    image: AssetImage(
+                                        ZPatternVariant.sage.assetPath),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
                         ),
-                        // Pattern overlay — visible when checked.
-                        if (progress > 0)
+                        // Fade-in for the pattern during transition.
+                        if (progress > 0 && progress < 1.0)
                           Opacity(
-                            opacity: progress,
-                            child: const ZPatternOverlay(
-                              variant: ZPatternVariant.sage,
-                              opacity: 0.15,
-                              blendMode: BlendMode.colorBurn,
+                            opacity: 1.0 - progress,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                             ),
                           ),
                         // Checkmark icon.

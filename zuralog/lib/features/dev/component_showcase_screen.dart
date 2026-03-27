@@ -220,12 +220,14 @@ class _ComponentShowcaseScreenState
         ),
 
         _label('Status Colors'),
-        Row(
+        Wrap(
+          spacing: AppDimens.spaceMd,
+          runSpacing: AppDimens.spaceSm,
           children: [
-            _colorSwatch('Success', AppColors.success),
-            _colorSwatch('Warning', AppColors.warning),
-            _colorSwatch('Error', AppColors.error),
-            _colorSwatch('Syncing', AppColors.syncing),
+            _statusDot('Success', AppColors.success, ZPatternVariant.sage),
+            _statusDot('Warning', AppColors.warning, ZPatternVariant.amber),
+            _statusDot('Error', AppColors.error, ZPatternVariant.crimson),
+            _statusDot('Syncing', AppColors.syncing, ZPatternVariant.skyBlue),
           ],
         ),
 
@@ -323,6 +325,27 @@ class _ComponentShowcaseScreenState
         Text(name,
             style: AppTextStyles.labelSmall
                 .copyWith(color: AppColors.textSecondaryDark, fontSize: 9)),
+      ],
+    );
+  }
+
+  Widget _statusDot(String name, Color color, ZPatternVariant variant) {
+    return Column(
+      children: [
+        ClipOval(
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Image.asset(
+              variant.assetPath,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(name,
+            style: AppTextStyles.labelSmall
+                .copyWith(color: AppColors.textSecondaryDark)),
       ],
     );
   }

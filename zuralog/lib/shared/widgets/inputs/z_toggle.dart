@@ -7,7 +7,8 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
+    show ZPatternVariant;
 
 /// A brand-styled toggle switch.
 ///
@@ -44,7 +45,6 @@ class ZToggle extends StatefulWidget {
 class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _position;
-  late final Animation<Color?> _trackColor;
   late final Animation<Color?> _thumbColor;
 
   static const _trackWidth = 44.0;
@@ -64,10 +64,6 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
       begin: _thumbPadding,
       end: _trackWidth - _thumbDiameter - _thumbPadding,
     ).animate(CurvedAnimation(parent: _controller, curve: AppMotion.curveEntrance));
-    _trackColor = ColorTween(
-      begin: AppColors.surfaceRaised,
-      end: AppColors.primary,
-    ).animate(_controller);
     _thumbColor = ColorTween(
       begin: Colors.white,
       end: Colors.white,
@@ -117,21 +113,33 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(_trackHeight / 2),
                 child: Stack(
                   children: [
-                    // Track background.
+                    // Track background — sage pattern when ON, surfaceRaised when OFF.
                     Container(
                       decoration: BoxDecoration(
-                        color: _trackColor.value,
+                        color: _controller.value < 1.0
+                            ? AppColors.surfaceRaised
+                            : null,
                         borderRadius: BorderRadius.circular(_trackHeight / 2),
+                        image: _controller.value > 0.0
+                            ? DecorationImage(
+                                image: AssetImage(
+                                    ZPatternVariant.sage.assetPath),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
                     ),
-                    // Pattern overlay — visible only when on.
-                    if (_controller.value > 0.0)
+                    // Cross-fade: dim the pattern at the surfaceRaised opacity
+                    // during the transition so it fades in smoothly.
+                    if (_controller.value > 0.0 && _controller.value < 1.0)
                       Opacity(
-                        opacity: _controller.value,
-                        child: const ZPatternOverlay(
-                          variant: ZPatternVariant.sage,
-                          opacity: 0.15,
-                          blendMode: BlendMode.colorBurn,
+                        opacity: 1.0 - _controller.value,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius:
+                                BorderRadius.circular(_trackHeight / 2),
+                          ),
                         ),
                       ),
                     // Thumb.

@@ -6,7 +6,8 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:zuralog/core/theme/theme.dart';
-import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart';
+import 'package:zuralog/shared/widgets/pattern/z_pattern_overlay.dart'
+    show ZPatternVariant;
 
 /// A brand-styled selectable chip.
 ///
@@ -40,59 +41,46 @@ class ZChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sageTint = AppColors.primary.withValues(alpha: 0.15);
-
     return Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: GestureDetector(
         onTap: enabled ? onTap : null,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppDimens.shapePill),
-          child: AnimatedContainer(
-            duration: AppMotion.durationFast,
-            curve: AppMotion.curveEntrance,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isActive ? sageTint : AppColors.surface,
-              borderRadius: BorderRadius.circular(AppDimens.shapePill),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Pattern overlay — only when active.
-                if (isActive)
-                  const Positioned.fill(
-                    child: ZPatternOverlay(
-                      variant: ZPatternVariant.original,
-                      opacity: 0.08,
-                      blendMode: BlendMode.screen,
-                    ),
-                  ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(
-                        icon,
-                        size: 16,
-                        color: isActive
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: AppDimens.spaceXs),
-                    ],
-                    Text(
-                      label,
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: isActive
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+        child: AnimatedContainer(
+          duration: AppMotion.durationFast,
+          curve: AppMotion.curveEntrance,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            color: isActive ? null : AppColors.surface,
+            image: isActive
+                ? DecorationImage(
+                    image: AssetImage(ZPatternVariant.sage.assetPath),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isActive
+                      ? AppColors.textOnSage
+                      : AppColors.textSecondary,
                 ),
+                const SizedBox(width: AppDimens.spaceXs),
               ],
-            ),
+              Text(
+                label,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: isActive
+                      ? AppColors.textOnSage
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       ),
