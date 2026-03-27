@@ -91,7 +91,6 @@ export function Card({
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (!window.matchMedia("(pointer: fine)").matches) return;
 
-    const maxTilt = 4;
     let rafId = 0;
 
     const onMove = (e: MouseEvent) => {
@@ -102,6 +101,11 @@ export function Card({
         const cy = rect.top + rect.height / 2;
         const dx = (e.clientX - cx) / (rect.width / 2);
         const dy = (e.clientY - cy) / (rect.height / 2);
+
+        // Scale tilt inversely with card size so all cards feel the same.
+        // A 150px card gets ~6deg, a 400px card gets ~3deg, a 900px card gets ~2deg.
+        const diagonal = Math.sqrt(rect.width ** 2 + rect.height ** 2);
+        const maxTilt = Math.max(1.5, Math.min(6, 900 / diagonal));
 
         gsap.to(el, {
           rotateY: dx * maxTilt,
