@@ -1359,7 +1359,7 @@ export default function BrandBiblePage() {
                     <Share2 className="mr-2 h-4 w-4" /> Share Summary
                   </DSContextMenuItem>
                   <DSContextMenuSeparator />
-                  <DSContextMenuItem className="text-ds-error">
+                  <DSContextMenuItem className="text-ds-error [&_svg]:!text-ds-error focus:!text-ds-error focus:[&_svg]:!text-ds-error focus:!bg-[rgba(255,59,48,0.08)]">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete Entry
                   </DSContextMenuItem>
                 </DSContextMenuContent>

@@ -30,8 +30,9 @@ export function DSCommand({
         "[&_[data-slot=command]]:bg-ds-surface-overlay [&_[data-slot=command]]:rounded-ds-xl [&_[data-slot=command]]:overflow-hidden [&_[data-slot=command]]:p-0",
         /* Override input wrapper */
         "[&_[data-slot=command-input-wrapper]]:bg-ds-surface [&_[data-slot=command-input-wrapper]]:border-b [&_[data-slot=command-input-wrapper]]:border-[rgba(240,238,233,0.06)] [&_[data-slot=command-input-wrapper]]:p-3",
-        /* Override InputGroup inside input wrapper */
-        "[&_[data-slot=command-input-wrapper]_.group]:bg-transparent [&_[data-slot=command-input-wrapper]_.group]:border-none [&_[data-slot=command-input-wrapper]_.group]:shadow-none",
+        /* Override InputGroup inside input wrapper — remove all borders and shadows */
+        "[&_[data-slot=command-input-wrapper]_.group]:bg-transparent [&_[data-slot=command-input-wrapper]_.group]:border-none [&_[data-slot=command-input-wrapper]_.group]:shadow-none [&_[data-slot=command-input-wrapper]_.group]:ring-0",
+        "[&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:bg-transparent [&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:border-none [&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:shadow-none [&_[data-slot=command-input-wrapper]_[data-slot=input-group]]:ring-0",
         /* Override selected item */
         "[&_[data-slot=command-item][data-selected=true]]:bg-[rgba(207,225,185,0.08)] [&_[data-slot=command-item][data-selected=true]]:text-ds-sage",
         "[&_[data-slot=command-item][data-selected=true]_svg]:text-ds-sage",

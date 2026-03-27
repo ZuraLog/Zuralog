@@ -74,8 +74,8 @@ export function DSContextMenuItem({
       className={cn(
         "text-ds-text-primary text-[0.875rem] font-jakarta",
         "px-3 py-2 rounded-ds-xs",
-        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage",
-        "[&_svg]:text-ds-sage",
+        "[&_svg]:text-ds-text-primary",
+        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage focus:[&_svg]:text-ds-sage",
         "cursor-pointer",
         "min-h-[44px] flex items-center",
         className,
@@ -98,8 +98,8 @@ export function DSContextMenuCheckboxItem({
       className={cn(
         "text-ds-text-primary text-[0.875rem] font-jakarta",
         "px-3 py-2 rounded-ds-xs",
-        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage",
-        "[&_svg]:text-ds-sage",
+        "[&_svg]:text-ds-text-primary",
+        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage focus:[&_svg]:text-ds-sage",
         "min-h-[44px] flex items-center",
         "[&_span]:text-ds-sage",
         className,
@@ -229,8 +229,8 @@ export function DSContextMenuSubTrigger({
       className={cn(
         "text-ds-text-primary text-[0.875rem] font-jakarta",
         "px-3 py-2 rounded-ds-xs",
-        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage",
-        "[&_svg]:text-ds-sage",
+        "[&_svg]:text-ds-text-primary",
+        "focus:bg-[rgba(207,225,185,0.08)] focus:text-ds-sage focus:[&_svg]:text-ds-sage",
         "min-h-[44px] flex items-center",
         className,
       )}
