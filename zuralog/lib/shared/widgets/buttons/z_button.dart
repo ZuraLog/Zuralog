@@ -208,11 +208,12 @@ class _ZButtonState extends State<ZButton> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Layer 1 — solid background color
+            // Layer 1 — solid background color + border
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
                   color: _backgroundColor(),
+                  borderRadius: borderRadius,
                   border: _border(),
                 ),
               ),
