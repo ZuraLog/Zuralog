@@ -23,6 +23,7 @@
 ///   9. Sign Out         — logs out the current user.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -209,6 +210,17 @@ class ProfileSidePanelWidget extends ConsumerWidget {
                       context.push(RouteNames.settingsAboutPath);
                     },
                   ),
+                  if (kDebugMode)
+                    _NavItem(
+                      icon: Icons.grid_view_rounded,
+                      label: 'Component Showcase',
+                      color: AppColors.primary,
+                      onTap: () {
+                        ref.read(hapticServiceProvider).light();
+                        onClose();
+                        context.push(RouteNames.componentShowcasePath);
+                      },
+                    ),
                 ],
               ),
             ),
