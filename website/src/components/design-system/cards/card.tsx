@@ -1,5 +1,9 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import gsap from "gsap";
 import { PatternOverlay } from "@/components/design-system/primitives/pattern-overlay";
 
 /* ------------------------------------------------------------------ */
@@ -26,7 +30,6 @@ type Category = keyof typeof CATEGORY_PATTERN;
 /* ------------------------------------------------------------------ */
 
 const cardVariants = cva(
-  // base — every card gets these
   "relative overflow-hidden bg-ds-surface",
   {
     variants: {
@@ -50,15 +53,16 @@ const cardVariants = cva(
 export interface CardProps
   extends VariantProps<typeof cardVariants> {
   elevation?: "standard" | "hero" | "feature" | "data";
-  /** Health category — only applies when elevation is "feature" */
   category?: Category;
   as?: "div" | "article" | "section";
   className?: string;
   children: React.ReactNode;
+  /** Disable the 3D tilt effect on this card */
+  noTilt?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
-/*  Component (server component — no "use client")                     */
+/*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 export function Card({
@@ -67,7 +71,10 @@ export function Card({
   as: Tag = "div",
   className,
   children,
+  noTilt = false,
 }: CardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
   const showHeroPattern = elevation === "hero";
   const showFeaturePattern = elevation === "feature";
 
@@ -76,19 +83,74 @@ export function Card({
       ? CATEGORY_PATTERN[category]
       : "original";
 
+  // 3D tilt effect — applied to all cards unless noTilt is set
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || noTilt) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+
+    const maxTilt = 4;
+    let rafId = 0;
+
+    const onMove = (e: MouseEvent) => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = (e.clientX - cx) / (rect.width / 2);
+        const dy = (e.clientY - cy) / (rect.height / 2);
+
+        gsap.to(el, {
+          rotateY: dx * maxTilt,
+          rotateX: -dy * maxTilt,
+          transformPerspective: 800,
+          duration: 0.4,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
+      });
+    };
+
+    const onLeave = () => {
+      cancelAnimationFrame(rafId);
+      gsap.to(el, {
+        rotateY: 0,
+        rotateX: 0,
+        scale: 1,
+        duration: 0.7,
+        ease: "elastic.out(1, 0.4)",
+        overwrite: "auto",
+      });
+    };
+
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      gsap.killTweensOf(el);
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseleave", onLeave);
+    };
+  }, [noTilt]);
+
   return (
-    <Tag className={cn(cardVariants({ elevation }), className)}>
-      {/* Hero pattern overlay */}
+    <Tag
+      ref={cardRef as React.Ref<HTMLDivElement>}
+      className={cn(cardVariants({ elevation }), className)}
+      style={{ willChange: "transform", transformStyle: "preserve-3d" }}
+    >
       {showHeroPattern && (
         <PatternOverlay variant="original" opacity={0.18} blend="screen" />
       )}
 
-      {/* Feature pattern overlay */}
       {showFeaturePattern && (
         <PatternOverlay variant={featureVariant} opacity={0.15} blend="screen" />
       )}
 
-      {/* Content sits above the pattern */}
       <div className="relative z-10">{children}</div>
     </Tag>
   );

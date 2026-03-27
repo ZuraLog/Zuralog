@@ -57,7 +57,6 @@ import { useScrambleNumber } from "@/hooks/use-scramble-number";
 import { ScrollDivider } from "@/components/design-system/interactions/scroll-divider";
 import { TypingText } from "@/components/design-system/interactions/typing-text";
 import { sageConfetti } from "@/components/design-system/interactions/confetti";
-import { useTilt } from "@/hooks/use-tilt";
 
 /* ── Scroll-reveal section wrapper ───────────────────────────────────── */
 
@@ -173,11 +172,6 @@ export default function BrandBiblePage() {
   /* ── Text animation refs ─────────────────────────────────────── */
   const heroScoreRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "78", duration: 1.2 });
   const stepsRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "8,432", duration: 1.0 });
-
-  /* ── 3D tilt refs ──────────────────────────────────────────── */
-  const heroTiltRef = useTilt<HTMLDivElement>({ maxTilt: 3, scale: 1.01 });
-  const onboardingTiltRef = useTilt<HTMLDivElement>({ maxTilt: 4, scale: 1.02 });
-  const insightTiltRef = useTilt<HTMLDivElement>({ maxTilt: 4, scale: 1.02 });
 
   return (
     <main className="max-w-[960px] mx-auto px-6 py-12 pb-24">
@@ -474,31 +468,27 @@ export default function BrandBiblePage() {
         <SectionSub>Three elevation levels plus category feature cards. Hero and feature cards get pattern overlays.</SectionSub>
 
         <div className="grid gap-4">
-          <div ref={heroTiltRef}>
-            <Card elevation="hero">
-              <Text variant="body-sm" color="secondary">Health Score</Text>
-              <Text ref={heroScoreRef} variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
-              <Text variant="body-md" color="secondary" className="mt-1">
-                Your overall health is trending up this week.
-              </Text>
-            </Card>
-          </div>
+          <Card elevation="hero">
+            <Text variant="body-sm" color="secondary">Health Score</Text>
+            <Text ref={heroScoreRef} variant="display-lg" color="sage" pattern="sage" className="mt-1">78</Text>
+            <Text variant="body-md" color="secondary" className="mt-1">
+              Your overall health is trending up this week.
+            </Text>
+          </Card>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div ref={insightTiltRef}>
-              <Card elevation="feature">
-                <div className="flex items-center gap-2 mb-2">
-                  <Leaf size={16} className="text-ds-sage" />
-                  <Text variant="label-md" color="sage">AI Insight</Text>
-                </div>
-                <Text variant="body-md" color="primary">
-                  <TypingText
-                    text="Your HRV is 18% higher on nights with 7+ hours of sleep. Try a consistent 10:30pm bedtime."
-                    speed={25}
-                  />
-                </Text>
-              </Card>
-            </div>
+            <Card elevation="feature">
+              <div className="flex items-center gap-2 mb-2">
+                <Leaf size={16} className="text-ds-sage" />
+                <Text variant="label-md" color="sage">AI Insight</Text>
+              </div>
+              <Text variant="body-md" color="primary">
+                <TypingText
+                  text="Your HRV is 18% higher on nights with 7+ hours of sleep. Try a consistent 10:30pm bedtime."
+                  speed={25}
+                />
+              </Text>
+            </Card>
 
             <Card elevation="data">
               <Text variant="label-md" color="secondary">Steps</Text>
@@ -867,20 +857,18 @@ export default function BrandBiblePage() {
           </Card>
 
           {/* Onboarding card */}
-          <div ref={onboardingTiltRef}>
-            <Card elevation="hero">
-              <div className="py-2">
-                <Text variant="display-sm" color="sage" pattern="sage">Welcome to Zuralog</Text>
-                <Text variant="body-md" color="secondary" className="mt-2 max-w-md">
-                  Your personal health hub. We bring together data from all your devices
-                  and give you one clear picture of your well-being.
-                </Text>
-                <DSButton intent="primary" size="md" className="mt-4">
-                  Get Started
-                </DSButton>
-              </div>
-            </Card>
-          </div>
+          <Card elevation="hero">
+            <div className="py-2">
+              <Text variant="display-sm" color="sage" pattern="sage">Welcome to Zuralog</Text>
+              <Text variant="body-md" color="secondary" className="mt-2 max-w-md">
+                Your personal health hub. We bring together data from all your devices
+                and give you one clear picture of your well-being.
+              </Text>
+              <DSButton intent="primary" size="md" className="mt-4">
+                Get Started
+              </DSButton>
+            </div>
+          </Card>
 
           {/* FAB mockup (inline — no component) */}
           <Card elevation="standard">
