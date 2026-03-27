@@ -108,11 +108,15 @@ class NotificationsStep extends StatelessWidget {
             trailing: morningBriefingEnabled
                 ? GestureDetector(
                     onTap: () => _pickTime(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimens.spaceSm,
-                        vertical: 4,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: AppDimens.touchTargetMin,
                       ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.spaceSm,
+                          vertical: 4,
+                        ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.12),
                         borderRadius:
@@ -136,6 +140,7 @@ class NotificationsStep extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   )
                 : null,

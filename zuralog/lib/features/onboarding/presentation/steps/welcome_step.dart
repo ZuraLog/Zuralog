@@ -209,12 +209,9 @@ class _WelcomeStepState extends State<WelcomeStep>
           // ── CTA button — ZButton with pattern ────────────────────
           FadeTransition(
             opacity: _ctaOpacity,
-            child: ZuralogSpringButton(
-              onTap: widget.onNext,
-              child: ZButton(
-                label: "Let's go →",
-                onPressed: widget.onNext,
-              ),
+            child: ZButton(
+              label: "Let's go →",
+              onPressed: widget.onNext,
             ),
           ),
         ],

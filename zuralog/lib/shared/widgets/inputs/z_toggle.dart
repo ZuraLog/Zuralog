@@ -99,11 +99,15 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final toggle = Opacity(
-      opacity: widget.enabled ? 1.0 : 0.4,
-      child: GestureDetector(
-        onTap: _handleTap,
-        child: AnimatedBuilder(
+    final toggle = Semantics(
+      toggled: widget.value,
+      label: widget.label ?? 'Toggle',
+      enabled: widget.enabled,
+      child: Opacity(
+        opacity: widget.enabled ? 1.0 : 0.4,
+        child: GestureDetector(
+          onTap: _handleTap,
+          child: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {
             return SizedBox(
@@ -149,6 +153,7 @@ class _ZToggleState extends State<ZToggle> with SingleTickerProviderStateMixin {
             );
           },
         ),
+      ),
       ),
     );
 

@@ -143,7 +143,7 @@ class _SourceTile extends StatelessWidget {
                 color: isSelected ? AppColors.primary : AppColors.textSecondaryDark,
                 width: isSelected ? 0 : 1.5,
               ),
-              color: isSelected ? AppColors.primary : Colors.transparent,
+              color: isSelected ? AppColors.primary : const Color(0x00000000),
             ),
             child: isSelected
                 ? const Icon(

@@ -99,6 +99,7 @@ class _NameStepState extends State<NameStep> {
           TextFormField(
             controller: _controller,
             autofocus: true,
+            maxLength: 50,
             textCapitalization: TextCapitalization.words,
             keyboardType: TextInputType.name,
             textInputAction: TextInputAction.done,

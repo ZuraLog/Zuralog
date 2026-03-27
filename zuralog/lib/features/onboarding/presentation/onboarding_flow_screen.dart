@@ -364,7 +364,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Failed to save preferences. Please try again.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
