@@ -1,8 +1,8 @@
 library;
 
-import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -21,101 +21,81 @@ class AreaChartViz extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (config.points.isEmpty) return const SizedBox.shrink();
-    return Stack(
-      children: [
-        CustomPaint(
-          painter: _AreaPainter(
-            points: config.points,
-            color: color,
-            fillOpacity: config.fillOpacity,
-            targetLine: config.targetLine,
-          ),
-          child: const SizedBox.expand(),
+
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    final lastIndex = config.points.length - 1;
+
+    final spots = <FlSpot>[
+      for (var i = 0; i < config.points.length; i++)
+        FlSpot(i.toDouble(), config.points[i].value),
+    ];
+
+    final lineBarData = LineChartBarData(
+      spots: spots,
+      color: color,
+      barWidth: 1.5,
+      isCurved: false,
+      isStrokeCapRound: true,
+      dotData: FlDotData(
+        show: true,
+        checkToShowDot: (spot, barData) =>
+            spot.x.toInt() == lastIndex,
+        getDotPainter: (spot, percent, barData, index) =>
+            FlDotCirclePainter(radius: 3, color: color, strokeWidth: 0),
+      ),
+      belowBarData: BarAreaData(
+        show: true,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            color.withValues(alpha: config.fillOpacity),
+            color.withValues(alpha: 0),
+          ],
         ),
-        if (config.delta != null)
-          Positioned(
-            top: 4,
-            right: 4,
-            child: _DeltaBadge(delta: config.delta!, positiveIsUp: config.positiveIsUp),
+      ),
+    );
+
+    final chartData = LineChartData(
+      lineBarsData: [lineBarData],
+      gridData: const FlGridData(show: false),
+      borderData: FlBorderData(show: false),
+      titlesData: const FlTitlesData(show: false),
+      lineTouchData: const LineTouchData(enabled: false),
+      extraLinesData: config.targetLine != null
+          ? ExtraLinesData(horizontalLines: [
+              HorizontalLine(
+                y: config.targetLine!,
+                color: color.withValues(alpha: 0.5),
+                strokeWidth: 0.75,
+                dashArray: [4, 3],
+              ),
+            ])
+          : const ExtraLinesData(),
+    );
+
+    return Semantics(
+      label: 'Area chart with ${config.points.length} data points',
+      child: Stack(
+        children: [
+          LineChart(
+            chartData,
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
           ),
-      ],
+          if (config.delta != null)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: _DeltaBadge(
+                  delta: config.delta!, positiveIsUp: config.positiveIsUp),
+            ),
+        ],
+      ),
     );
   }
-}
-
-class _AreaPainter extends CustomPainter {
-  const _AreaPainter({
-    required this.points,
-    required this.color,
-    required this.fillOpacity,
-    this.targetLine,
-  });
-
-  final List<ChartPoint> points;
-  final Color color;
-  final double fillOpacity;
-  final double? targetLine;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (points.length < 2) return;
-
-    final values = points.map((p) => p.value).toList();
-    final minV = values.reduce((a, b) => a < b ? a : b);
-    final maxV = values.reduce((a, b) => a > b ? a : b);
-    final range = math.max((maxV - minV).abs(), 1.0);
-
-    double toX(int i) => size.width * i / (points.length - 1);
-    double toY(double v) => size.height * (1 - (v - minV) / range);
-
-    // Build area path
-    final areaPath = Path();
-    areaPath.moveTo(toX(0), size.height);
-    areaPath.lineTo(toX(0), toY(points[0].value));
-    for (var i = 1; i < points.length; i++) {
-      areaPath.lineTo(toX(i), toY(points[i].value));
-    }
-    areaPath.lineTo(toX(points.length - 1), size.height);
-    areaPath.close();
-
-    canvas.drawPath(areaPath, Paint()..color = color.withValues(alpha: fillOpacity));
-
-    // Line on top
-    final linePath = Path();
-    for (var i = 0; i < points.length; i++) {
-      if (i == 0) linePath.moveTo(toX(i), toY(points[i].value));
-      else linePath.lineTo(toX(i), toY(points[i].value));
-    }
-    canvas.drawPath(linePath, Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round);
-
-    // Target dashed line
-    if (targetLine != null) {
-      final ty = toY(targetLine!);
-      final dashPaint = Paint()
-        ..color = color.withValues(alpha: 0.5)
-        ..strokeWidth = 0.75;
-      const dashWidth = 4.0, dashGap = 3.0;
-      double x = 0;
-      while (x < size.width) {
-        canvas.drawLine(Offset(x, ty), Offset((x + dashWidth).clamp(0.0, size.width), ty), dashPaint);
-        x += dashWidth + dashGap;
-      }
-    }
-
-    // Today dot
-    canvas.drawCircle(
-      Offset(toX(points.length - 1), toY(points.last.value)),
-      3,
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _DeltaBadge extends StatelessWidget {
@@ -127,9 +107,10 @@ class _DeltaBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPositive = delta >= 0;
     final isGood = positiveIsUp ? isPositive : !isPositive;
-    final badgeColor = isGood ? AppColors.categoryActivity : AppColors.accentDark;
+    final badgeColor =
+        isGood ? AppColors.categoryActivity : AppColors.accentDark;
     final arrow = isPositive ? '▲' : '▼';
-    final pct = '${arrow} ${(delta.abs() * 100).toStringAsFixed(1)}%';
+    final pct = '$arrow ${(delta.abs() * 100).toStringAsFixed(1)}%';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -137,7 +118,9 @@ class _DeltaBadge extends StatelessWidget {
         color: badgeColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(pct, style: TextStyle(fontSize: 8, color: badgeColor, fontWeight: FontWeight.bold)),
+      child: Text(pct,
+          style: TextStyle(
+              fontSize: 8, color: badgeColor, fontWeight: FontWeight.bold)),
     );
   }
 }

@@ -1,5 +1,6 @@
 library;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
@@ -18,83 +19,122 @@ class BarChartViz extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const labelReserve = 14.0;
-        double effectiveH(double preferred, bool labels) {
-          if (constraints.maxHeight.isInfinite) return preferred;
-          final cap = labels
-              ? (constraints.maxHeight - labelReserve).clamp(2.0, constraints.maxHeight)
-              : constraints.maxHeight;
-          return cap < preferred ? cap : preferred;
-        }
+    final bars = switch (size) {
+      TileSize.square => config.bars.length > 5
+          ? config.bars.sublist(config.bars.length - 5)
+          : config.bars,
+      _ => config.bars,
+    };
 
-        return switch (size) {
-          TileSize.square => _BarChart(
-              bars: config.bars.length > 5
-                  ? config.bars.sublist(config.bars.length - 5)
-                  : config.bars,
-              color: color,
-              showLabels: false,
-              barHeight: effectiveH(60, false),
-            ),
-          TileSize.wide => _BarChart(
-              bars: config.bars,
-              color: color,
-              showLabels: true,
-              barHeight: effectiveH(80, true),
-            ),
-          TileSize.tall => _BarChart(
-              bars: config.bars,
-              color: color,
-              showLabels: true,
-              barHeight: effectiveH(120, true),
-            ),
-        };
-      },
-    );
-  }
-}
-
-class _BarChart extends StatelessWidget {
-  const _BarChart({required this.bars, required this.color, required this.showLabels, required this.barHeight});
-  final List<BarPoint> bars;
-  final Color color;
-  final bool showLabels;
-  final double barHeight;
-
-  @override
-  Widget build(BuildContext context) {
     if (bars.isEmpty) return const SizedBox.shrink();
-    final maxVal = bars.map((b) => b.value).reduce((a, b) => a > b ? a : b);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: bars.map((bar) {
-        final h = maxVal > 0 ? barHeight * bar.value / maxVal : 0.0;
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 1.5),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  key: const Key('bar_chart_bar'),
-                  height: h.clamp(2.0, barHeight),
-                  decoration: BoxDecoration(
-                    color: bar.isToday ? color : color.withValues(alpha: 0.3),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+
+    final showLabels = size != TileSize.square;
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+
+    return Semantics(
+      label: 'Bar chart with ${bars.length} bars',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barWidth = switch (size) {
+            TileSize.square => 8.0,
+            _ => 12.0,
+          };
+
+          final maxVal = bars.map((b) => b.value).fold(0.0, (a, b) => a > b ? a : b);
+          // Add 10% headroom so bars don't clip at the top edge.
+          final maxY = maxVal > 0 ? maxVal * 1.1 : 1.0;
+
+          // -- Extra horizontal lines (goal + average) --
+          final horizontalLines = <HorizontalLine>[];
+
+          if (config.goalValue != null && config.goalValue! > 0) {
+            horizontalLines.add(
+              HorizontalLine(
+                y: config.goalValue!,
+                color: color.withValues(alpha: 0.5),
+                strokeWidth: 1,
+                dashArray: [4, 3],
+              ),
+            );
+          }
+
+          if (config.showAvgLine && bars.isNotEmpty) {
+            final avg = bars.map((b) => b.value).reduce((a, b) => a + b) / bars.length;
+            horizontalLines.add(
+              HorizontalLine(
+                y: avg,
+                color: color.withValues(alpha: 0.5),
+                strokeWidth: 1,
+                dashArray: [4, 3],
+              ),
+            );
+          }
+
+          // -- Bar groups --
+          final groups = <BarChartGroupData>[
+            for (var i = 0; i < bars.length; i++)
+              BarChartGroupData(
+                x: i,
+                barRods: [
+                  BarChartRodData(
+                    toY: bars[i].value,
+                    color: bars[i].isToday ? color : color.withValues(alpha: 0.3),
+                    width: barWidth,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(2),
+                    ),
                   ),
-                ),
-                if (showLabels) ...[
-                  const SizedBox(height: 2),
-                  Text(bar.label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 7)),
                 ],
-              ],
+              ),
+          ];
+
+          return BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: maxY,
+              minY: 0,
+              barGroups: groups,
+              barTouchData: const BarTouchData(enabled: false),
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              extraLinesData: ExtraLinesData(
+                horizontalLines: horizontalLines,
+              ),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(),
+                rightTitles: const AxisTitles(),
+                leftTitles: const AxisTitles(),
+                bottomTitles: showLabels
+                    ? AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 14,
+                          getTitlesWidget: (value, meta) {
+                            final idx = value.toInt();
+                            if (idx < 0 || idx >= bars.length) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                bars[idx].label,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 7),
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    : const AxisTitles(),
+              ),
             ),
-          ),
-        );
-      }).toList(),
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+          );
+        },
+      ),
     );
   }
 }

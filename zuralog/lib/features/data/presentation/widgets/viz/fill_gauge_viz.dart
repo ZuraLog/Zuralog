@@ -1,7 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -22,11 +22,14 @@ class FillGaugeViz extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (size) {
-      TileSize.square => _buildSquare(),
-      TileSize.wide   => _buildWide(),
-      TileSize.tall   => _buildTall(),
-    };
+    return Semantics(
+      label: '${config.value} of ${config.maxValue} ${config.unit}',
+      child: switch (size) {
+        TileSize.square => _buildSquare(context),
+        TileSize.wide   => _buildWide(context),
+        TileSize.tall   => _buildTall(context),
+      },
+    );
   }
 
   Widget _buildTank(double width, double height) {
@@ -63,7 +66,7 @@ class FillGaugeViz extends StatelessWidget {
     );
   }
 
-  Widget _buildSquare() {
+  Widget _buildSquare(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -74,15 +77,15 @@ class FillGaugeViz extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_valueLabel, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-            Text('/ ${config.maxValue} ${config.unit}', style: const TextStyle(fontSize: 9, color: AppColors.textSecondaryDark)),
+            Text(_valueLabel, style: AppTextStyles.bodyMedium.copyWith(color: color, fontWeight: FontWeight.bold)),
+            Text('/ ${config.maxValue} ${config.unit}', style: AppTextStyles.labelSmall.copyWith(color: AppColorsOf(context).textSecondary)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildWide() {
+  Widget _buildWide(BuildContext context) {
     final iconCount = config.unitSize != null ? (config.value / config.unitSize!).floor() : 0;
     final totalIcons = config.unitSize != null ? (config.maxValue / config.unitSize!).ceil() : 0;
     return Row(
@@ -94,14 +97,14 @@ class FillGaugeViz extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_valueLabel, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+              Text(_valueLabel, style: AppTextStyles.bodyMedium.copyWith(color: color, fontWeight: FontWeight.bold)),
               if (config.unitIcon != null && config.unitSize != null) ...[
                 const SizedBox(height: 4),
                 Wrap(
                   children: List.generate(totalIcons, (i) =>
                     Text(config.unitIcon!, style: TextStyle(
                       fontSize: 14,
-                      color: i < iconCount ? AppColors.categorySleep : AppColors.borderLight,
+                      color: i < iconCount ? color : color.withValues(alpha: 0.15),
                     )),
                   ),
                 ),
@@ -113,7 +116,7 @@ class FillGaugeViz extends StatelessWidget {
     );
   }
 
-  Widget _buildTall() {
+  Widget _buildTall(BuildContext context) {
     final iconCount = config.unitSize != null ? (config.value / config.unitSize!).floor() : 0;
     final totalIcons = config.unitSize != null ? (config.maxValue / config.unitSize!).ceil() : 0;
     return Column(
@@ -121,7 +124,7 @@ class FillGaugeViz extends StatelessWidget {
       children: [
         _buildTank(34, 90),
         const SizedBox(height: 8),
-        Text(_valueLabel, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+        Text(_valueLabel, style: AppTextStyles.titleMedium.copyWith(color: color, fontWeight: FontWeight.bold)),
         if (config.unitIcon != null && config.unitSize != null) ...[
           const SizedBox(height: 4),
           Wrap(
@@ -129,7 +132,7 @@ class FillGaugeViz extends StatelessWidget {
             children: List.generate(totalIcons, (i) =>
               Text(config.unitIcon!, style: TextStyle(
                 fontSize: 16,
-                color: i < iconCount ? Colors.blue : Colors.grey[300],
+                color: i < iconCount ? color : color.withValues(alpha: 0.15),
               )),
             ),
           ),

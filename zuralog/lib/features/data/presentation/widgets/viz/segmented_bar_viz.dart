@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -20,11 +21,15 @@ class SegmentedBarViz extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (size) {
-      TileSize.square => _buildSquare(),
-      TileSize.wide   => _buildWide(),
-      TileSize.tall   => _buildTall(),
+    final child = switch (size) {
+      TileSize.square => _buildSquare(context),
+      TileSize.wide   => _buildWide(context),
+      TileSize.tall   => _buildTall(context),
     };
+    return Semantics(
+      label: 'Segmented bar: ${config.totalLabel}',
+      child: child,
+    );
   }
 
   Widget _buildBar(double height) {
@@ -41,12 +46,19 @@ class SegmentedBarViz extends StatelessWidget {
     );
   }
 
-  Widget _buildSquare() {
+  Widget _buildSquare(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(config.totalLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          config.totalLabel,
+          style: AppTextStyles.titleMedium.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 6),
         _buildBar(10),
         const SizedBox(height: 4),
@@ -57,7 +69,12 @@ class SegmentedBarViz extends StatelessWidget {
             children: [
               Container(width: 6, height: 6, decoration: BoxDecoration(color: seg.color, shape: BoxShape.circle)),
               const SizedBox(width: 2),
-              Text(seg.label, style: const TextStyle(fontSize: 7)),
+              Text(
+                seg.label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
             ],
           )).toList(),
         ),
@@ -65,12 +82,19 @@ class SegmentedBarViz extends StatelessWidget {
     );
   }
 
-  Widget _buildWide() {
+  Widget _buildWide(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(config.totalLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          config.totalLabel,
+          style: AppTextStyles.titleMedium.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 4),
         _buildBar(16),
         const SizedBox(height: 6),
@@ -81,8 +105,19 @@ class SegmentedBarViz extends StatelessWidget {
             children: [
               Container(width: 8, height: 8, decoration: BoxDecoration(color: seg.color, shape: BoxShape.circle)),
               const SizedBox(height: 2),
-              Text(seg.label, style: const TextStyle(fontSize: 7)),
-              Text(_fmtMins(seg.value.round()), style: const TextStyle(fontSize: 7, fontWeight: FontWeight.bold)),
+              Text(
+                seg.label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              Text(
+                _fmtMins(seg.value.round()),
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           )).toList(),
         ),
@@ -90,12 +125,19 @@ class SegmentedBarViz extends StatelessWidget {
     );
   }
 
-  Widget _buildTall() {
+  Widget _buildTall(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.max,
       children: [
-        Text(config.totalLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          config.totalLabel,
+          style: AppTextStyles.titleMedium.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 4),
         _buildBar(16),
         const SizedBox(height: 8),
@@ -105,8 +147,21 @@ class SegmentedBarViz extends StatelessWidget {
             children: [
               Container(width: 8, height: 8, decoration: BoxDecoration(color: seg.color, shape: BoxShape.circle)),
               const SizedBox(width: 6),
-              Expanded(child: Text(seg.label, style: const TextStyle(fontSize: 9))),
-              Text(_fmtMins(seg.value.round()), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  seg.label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
+              Text(
+                _fmtMins(seg.value.round()),
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         )),

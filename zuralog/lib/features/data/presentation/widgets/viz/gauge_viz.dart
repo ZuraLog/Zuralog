@@ -2,7 +2,7 @@ library;
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -27,45 +27,49 @@ class GaugeViz extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final gaugeSize = switch (size) {
       TileSize.square => 80.0,
       TileSize.wide   => 110.0,
       TileSize.tall   => 120.0,
     };
 
-    return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: gaugeSize,
-            height: gaugeSize / 2 + 20,
-            child: CustomPaint(
-              painter: _GaugePainter(config: config, color: color),
-            ),
-          ),
-          Text(
-            '${config.value}',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
-          ),
-          Text(
-            _currentZoneLabel,
-            style: const TextStyle(fontSize: 9, color: AppColors.textSecondaryDark),
-          ),
-          if (size == TileSize.tall) ...[
-            const SizedBox(height: 8),
-            ...config.zones.map((z) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 1),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(width: 8, height: 8, decoration: BoxDecoration(color: z.color, shape: BoxShape.circle)),
-                  const SizedBox(width: 4),
-                  Text('${z.label}: ${z.min}–${z.max}', style: const TextStyle(fontSize: 8)),
-                ],
+    return Semantics(
+      label: 'Gauge showing ${config.value}, $_currentZoneLabel',
+      child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: gaugeSize,
+              height: gaugeSize / 2 + 20,
+              child: CustomPaint(
+                painter: _GaugePainter(config: config, color: color),
               ),
-            )),
+            ),
+            Text(
+              '${config.value}',
+              style: AppTextStyles.titleMedium.copyWith(color: color, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              _currentZoneLabel,
+              style: AppTextStyles.labelSmall.copyWith(color: colors.textSecondary),
+            ),
+            if (size == TileSize.tall) ...[
+              const SizedBox(height: 8),
+              ...config.zones.map((z) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 8, height: 8, decoration: BoxDecoration(color: z.color, shape: BoxShape.circle)),
+                    const SizedBox(width: 4),
+                    Text('${z.label}: ${z.min}–${z.max}', style: AppTextStyles.labelSmall.copyWith(color: colors.textSecondary)),
+                  ],
+                ),
+              )),
+            ],
           ],
-        ],
+      ),
     );
   }
 }

@@ -1,7 +1,8 @@
 library;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -20,49 +21,94 @@ class RingViz extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (size) {
-      TileSize.square => _buildSquare(),
-      TileSize.wide   => _buildWide(),
-      TileSize.tall   => _buildTall(),
+      TileSize.square => _buildSquare(context),
+      TileSize.wide   => _buildWide(context),
+      TileSize.tall   => _buildTall(context),
     };
   }
 
   String get _pct => '${(config.value / config.maxValue * 100).round()}%';
 
-  Widget _buildRing(double diameter) {
-    return SizedBox(
-      width: diameter,
-      height: diameter,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CircularProgressIndicator(
-            value: (config.value / config.maxValue).clamp(0.0, 1.0),
-            color: color,
-            backgroundColor: color.withValues(alpha: 0.15),
-            strokeWidth: diameter * 0.12,
-            strokeCap: StrokeCap.round,
-          ),
-          Text(_pct, style: TextStyle(fontSize: diameter * 0.2, fontWeight: FontWeight.bold)),
-        ],
+  Widget _buildRing(BuildContext context, double diameter) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    final radius = diameter * 0.12;
+    final filled = config.value.clamp(0.0, config.maxValue);
+    final empty = (config.maxValue - config.value).clamp(0.0, config.maxValue);
+
+    return Semantics(
+      label: '${(config.value / config.maxValue * 100).round()} percent',
+      child: SizedBox(
+        width: diameter,
+        height: diameter,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            PieChart(
+              duration:
+                  reduceMotion ? Duration.zero : const Duration(milliseconds: 400),
+              PieChartData(
+                startDegreeOffset: -90,
+                sectionsSpace: 0,
+                centerSpaceRadius: diameter / 2 - radius,
+                pieTouchData: PieTouchData(enabled: false),
+                sections: [
+                  PieChartSectionData(
+                    value: filled,
+                    color: color,
+                    radius: radius,
+                    showTitle: false,
+                  ),
+                  PieChartSectionData(
+                    value: empty,
+                    color: color.withValues(alpha: 0.15),
+                    radius: radius,
+                    showTitle: false,
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              _pct,
+              style: AppTextStyles.labelLarge.copyWith(
+                fontSize: diameter * 0.2,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSquare() => Center(child: _buildRing(80));
+  Widget _buildSquare(BuildContext context) =>
+      Center(child: _buildRing(context, 80));
 
-  Widget _buildWide() {
+  Widget _buildWide(BuildContext context) {
+    final colors = AppColorsOf(context);
     return Row(
       children: [
-        _buildRing(90),
+        _buildRing(context, 90),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${config.value.round()}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('/ ${config.maxValue.round()} ${config.unit}', style: const TextStyle(fontSize: 9, color: AppColors.textSecondaryDark)),
-              Text('${(config.maxValue - config.value).round()} remaining', style: const TextStyle(fontSize: 9, color: AppColors.textTertiary)),
+              Text(
+                '${config.value.round()}',
+                style: AppTextStyles.titleMedium
+                    .copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '/ ${config.maxValue.round()} ${config.unit}',
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: colors.textSecondary),
+              ),
+              Text(
+                '${(config.maxValue - config.value).round()} remaining',
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: colors.textSecondary),
+              ),
             ],
           ),
         ),
@@ -70,11 +116,11 @@ class RingViz extends StatelessWidget {
     );
   }
 
-  Widget _buildTall() {
+  Widget _buildTall(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.max,
       children: [
-        _buildRing(110),
+        _buildRing(context, 110),
         if (config.weeklyBars != null) ...[
           const SizedBox(height: 8),
           _BarRow(bars: config.weeklyBars!, color: color),
@@ -110,7 +156,7 @@ class _BarRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(bar.label, style: const TextStyle(fontSize: 7)),
+                Text(bar.label, style: AppTextStyles.labelSmall),
               ],
             ),
           ),

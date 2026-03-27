@@ -1,7 +1,8 @@
 library;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:zuralog/core/theme/app_colors.dart';
+import 'package:zuralog/core/theme/theme.dart';
 import 'package:zuralog/features/data/domain/data_models.dart';
 import 'package:zuralog/features/data/domain/tile_visualization_config.dart';
 
@@ -20,139 +21,99 @@ class LineChartViz extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (config.points.isEmpty) return const SizedBox.shrink();
-    return switch (size) {
-      TileSize.square => _buildSquare(),
-      TileSize.wide   => _buildWide(),
-      TileSize.tall   => _buildTall(),
-    };
-  }
-
-  Widget _buildSquare() {
-    return CustomPaint(
-      painter: _LinePainter(
-        points: config.points,
-        color: color,
-        showDot: true,
-        referenceLine: config.referenceLine,
-        rangeMin: config.rangeMin,
-        rangeMax: config.rangeMax,
-      ),
-      child: const SizedBox.expand(),
+    return Semantics(
+      label: 'Line chart with ${config.points.length} data points',
+      child: switch (size) {
+        TileSize.square => _buildChart(context),
+        TileSize.wide   => _buildChart(context),
+        TileSize.tall   => _buildTall(context),
+      },
     );
   }
 
-  Widget _buildWide() {
-    return CustomPaint(
-      painter: _LinePainter(
-        points: config.points,
-        color: color,
-        showDot: true,
-        referenceLine: config.referenceLine,
-        rangeMin: config.rangeMin,
-        rangeMax: config.rangeMax,
-      ),
-      child: const SizedBox.expand(),
+  Widget _buildChart(BuildContext context) {
+    return SizedBox.expand(
+      child: _lineChart(context),
     );
   }
 
-  Widget _buildTall() {
+  Widget _buildTall(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.max,
       children: [
         Expanded(
-          child: CustomPaint(
-            painter: _LinePainter(
-              points: config.points,
-              color: color,
-              showDot: true,
-              referenceLine: config.referenceLine,
-              rangeMin: config.rangeMin,
-              rangeMax: config.rangeMax,
-            ),
-            child: const SizedBox.expand(),
-          ),
+          child: _lineChart(context),
         ),
         _StatsRow(points: config.points, color: color),
       ],
     );
   }
-}
 
-class _LinePainter extends CustomPainter {
-  const _LinePainter({
-    required this.points,
-    required this.color,
-    this.showDot = false,
-    this.referenceLine,
-    this.rangeMin,
-    this.rangeMax,
-  });
+  Widget _lineChart(BuildContext context) {
+    final spots = <FlSpot>[
+      for (var i = 0; i < config.points.length; i++)
+        FlSpot(i.toDouble(), config.points[i].value),
+    ];
 
-  final List<ChartPoint> points;
-  final Color color;
-  final bool showDot;
-  final double? referenceLine;
-  final double? rangeMin;
-  final double? rangeMax;
+    final lastIndex = config.points.length - 1;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (points.length < 2) return;
+    final lineBarData = LineChartBarData(
+      spots: spots,
+      color: color,
+      barWidth: 1.5,
+      isCurved: false,
+      dotData: FlDotData(
+        checkToShowDot: (spot, barData) =>
+            spot.x == lastIndex.toDouble(),
+        getDotPainter: (spot, xPercentage, barData, index) =>
+            FlDotCirclePainter(
+          radius: 3,
+          color: color,
+          strokeWidth: 0,
+        ),
+      ),
+      belowBarData: BarAreaData(show: false),
+    );
 
-    final values = points.map((p) => p.value).toList();
-    final minV = rangeMin ?? values.reduce((a, b) => a < b ? a : b);
-    final maxV = rangeMax ?? values.reduce((a, b) => a > b ? a : b);
-    final range = (maxV - minV).abs();
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
 
-    double toX(int i) => size.width * i / (points.length - 1);
-    double toY(double v) => range == 0 ? size.height / 2 : size.height * (1 - (v - minV) / range);
-
-    // Range band
-    if (rangeMin != null && rangeMax != null) {
-      final bandPaint = Paint()..color = color.withValues(alpha: 0.08);
-      canvas.drawRect(Rect.fromLTRB(0, toY(maxV), size.width, toY(minV)), bandPaint);
-    }
-
-    // Reference line
-    if (referenceLine != null) {
-      final refY = toY(referenceLine!);
-      final refPaint = Paint()
-        ..color = color.withValues(alpha: 0.4)
-        ..strokeWidth = 0.75
-        ..style = PaintingStyle.stroke;
-      const dashWidth = 4.0, dashGap = 3.0;
-      double x = 0;
-      while (x < size.width) {
-        canvas.drawLine(Offset(x, refY), Offset((x + dashWidth).clamp(0.0, size.width), refY), refPaint);
-        x += dashWidth + dashGap;
-      }
-    }
-
-    // Line
-    final linePaint = Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path();
-    for (var i = 0; i < points.length; i++) {
-      final x = toX(i);
-      final y = toY(points[i].value);
-      if (i == 0) path.moveTo(x, y); else path.lineTo(x, y);
-    }
-    canvas.drawPath(path, linePaint);
-
-    // Today dot
-    if (showDot) {
-      final lastX = toX(points.length - 1);
-      final lastY = toY(points.last.value);
-      canvas.drawCircle(Offset(lastX, lastY), 3, Paint()..color = color);
-    }
+    return LineChart(
+      LineChartData(
+        lineBarsData: [lineBarData],
+        gridData: const FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        titlesData: const FlTitlesData(show: false),
+        lineTouchData: const LineTouchData(enabled: false),
+        minY: config.rangeMin,
+        maxY: config.rangeMax,
+        extraLinesData: ExtraLinesData(
+          horizontalLines: [
+            if (config.referenceLine != null)
+              HorizontalLine(
+                y: config.referenceLine!,
+                color: color.withValues(alpha: 0.4),
+                strokeWidth: 0.75,
+                dashArray: [4, 3],
+              ),
+          ],
+        ),
+        rangeAnnotations: RangeAnnotations(
+          horizontalRangeAnnotations: [
+            if (config.rangeMin != null && config.rangeMax != null)
+              HorizontalRangeAnnotation(
+                y1: config.rangeMin!,
+                y2: config.rangeMax!,
+                color: color.withValues(alpha: 0.08),
+              ),
+          ],
+        ),
+      ),
+      duration: disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _StatsRow extends StatelessWidget {
@@ -192,8 +153,8 @@ class _Stat extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: const TextStyle(fontSize: 8, color: AppColors.textSecondaryDark)),
+        Text(value, style: AppTextStyles.labelSmall.copyWith(color: color, fontWeight: FontWeight.bold)),
+        Text(label, style: AppTextStyles.labelSmall.copyWith(color: AppColorsOf(context).textSecondary)),
       ],
     );
   }
