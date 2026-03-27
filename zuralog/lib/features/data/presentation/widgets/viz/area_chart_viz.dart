@@ -62,6 +62,7 @@ class AreaChartViz extends StatelessWidget {
       borderData: FlBorderData(show: false),
       titlesData: const FlTitlesData(show: false),
       lineTouchData: const LineTouchData(enabled: false),
+      clipData: const FlClipData.all(),
       extraLinesData: config.targetLine != null
           ? ExtraLinesData(horizontalLines: [
               HorizontalLine(

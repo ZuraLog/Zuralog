@@ -17,7 +17,9 @@ class FillGaugeViz extends StatelessWidget {
   final Color color;
   final TileSize size;
 
-  double get _fillRatio => (config.value / config.maxValue).clamp(0.0, 1.0);
+  double get _fillRatio => config.maxValue > 0
+      ? (config.value / config.maxValue).clamp(0.0, 1.0)
+      : 0.0;
   String get _valueLabel => '${config.value} ${config.unit}';
 
   @override

@@ -84,6 +84,7 @@ class _GaugePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height - 16);
     final radius = size.width / 2 - 4;
     final range = config.maxValue - config.minValue;
+    if (range == 0) return;
 
     // Draw zone arcs
     for (final zone in config.zones) {

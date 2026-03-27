@@ -84,6 +84,7 @@ class LineChartViz extends StatelessWidget {
         borderData: FlBorderData(show: false),
         titlesData: const FlTitlesData(show: false),
         lineTouchData: const LineTouchData(enabled: false),
+        clipData: const FlClipData.all(),
         minY: config.rangeMin,
         maxY: config.rangeMax,
         extraLinesData: ExtraLinesData(

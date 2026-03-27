@@ -27,7 +27,10 @@ class RingViz extends StatelessWidget {
     };
   }
 
-  String get _pct => '${(config.value / config.maxValue * 100).round()}%';
+  String get _pct {
+    if (config.maxValue == 0) return '0%';
+    return '${(config.value / config.maxValue * 100).round()}%';
+  }
 
   Widget _buildRing(BuildContext context, double diameter) {
     final reduceMotion = MediaQuery.of(context).disableAnimations;
@@ -36,7 +39,7 @@ class RingViz extends StatelessWidget {
     final empty = (config.maxValue - config.value).clamp(0.0, config.maxValue);
 
     return Semantics(
-      label: '${(config.value / config.maxValue * 100).round()} percent',
+      label: '${config.maxValue > 0 ? (config.value / config.maxValue * 100).round() : 0} percent',
       child: SizedBox(
         width: diameter,
         height: diameter,
@@ -58,12 +61,13 @@ class RingViz extends StatelessWidget {
                     radius: radius,
                     showTitle: false,
                   ),
-                  PieChartSectionData(
-                    value: empty,
-                    color: color.withValues(alpha: 0.15),
-                    radius: radius,
-                    showTitle: false,
-                  ),
+                  if (empty > 0)
+                    PieChartSectionData(
+                      value: empty,
+                      color: color.withValues(alpha: 0.15),
+                      radius: radius,
+                      showTitle: false,
+                    ),
                 ],
               ),
             ),
@@ -156,7 +160,9 @@ class _BarRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(bar.label, style: AppTextStyles.labelSmall),
+                Text(bar.label, style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColorsOf(context).textSecondary,
+                )),
               ],
             ),
           ),
