@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { CustomCursor } from "./custom-cursor";
 import { SoundToggle } from "./sound-toggle";
 import { useSoundContext } from "./sound-provider";
-import { AuroraBackground } from "./aurora-background";
 import { SpotlightFollow } from "./spotlight-follow";
 import { ScrollProgress } from "./scroll-progress";
 
@@ -20,7 +19,8 @@ export function BrandBibleInteractions() {
   // what the user clicked (button, toggle, checkbox, tab, etc.).
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
 
       // Toggle switches
       if (target.closest("[role='switch']")) {
@@ -54,13 +54,24 @@ export function BrandBibleInteractions() {
       }
     };
 
+    // Hover sound on buttons
+    const handleHover = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (target instanceof HTMLElement && target.closest("button:not([disabled])")) {
+        playSound("pop");
+      }
+    };
+
     document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
+    document.addEventListener("mouseenter", handleHover, true);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("mouseenter", handleHover, true);
+    };
   }, [playSound]);
 
   return (
     <>
-      <AuroraBackground />
       <SpotlightFollow />
       <ScrollProgress />
       <CustomCursor />

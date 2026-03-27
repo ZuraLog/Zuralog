@@ -40,7 +40,8 @@ function Spinner({ className }: { className?: string }) {
 const buttonVariants = cva(
   [
     "relative isolate overflow-hidden inline-flex items-center justify-center",
-    "font-jakarta rounded-ds-pill transition-colors",
+    "font-jakarta rounded-ds-pill",
+    "transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
     "disabled:opacity-40 disabled:pointer-events-none",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-sage focus-visible:ring-offset-2 focus-visible:ring-offset-ds-canvas",
   ],
@@ -65,6 +66,17 @@ const buttonVariants = cva(
     },
   },
 );
+
+/* ------------------------------------------------------------------ */
+/*  Hover glow per intent                                              */
+/* ------------------------------------------------------------------ */
+
+const HOVER_GLOW: Record<string, string> = {
+  primary: "0 0 20px rgba(207,225,185,0.35), 0 0 6px rgba(207,225,185,0.2)",
+  destructive: "0 0 20px rgba(255,59,48,0.3), 0 0 6px rgba(255,59,48,0.15)",
+  secondary: "0 0 16px rgba(240,238,233,0.1), 0 0 4px rgba(240,238,233,0.06)",
+  text: "none",
+};
 
 /* ------------------------------------------------------------------ */
 /*  Spinner color per intent                                          */
@@ -122,6 +134,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           ? "url('/patterns/crimson.png')"
           : undefined;
 
+    const hoverGlow = HOVER_GLOW[resolvedIntent] ?? "none";
+
     return (
       <motion.button
         ref={ref}
@@ -129,14 +143,22 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         aria-busy={loading || undefined}
         aria-disabled={isDisabled || undefined}
+        whileHover={
+          isDisabled
+            ? undefined
+            : {
+                scale: 1.03,
+                boxShadow: hoverGlow,
+              }
+        }
         whileTap={isDisabled ? undefined : { scale: 0.97, opacity: 0.85 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
         style={bgImage ? { backgroundImage: bgImage, ...style } : style}
         {...rest}
       >
-        {/* Content sits above the ::before pattern drift */}
         <span className="relative z-[2] inline-flex items-center justify-center gap-2">
           {loading ? (
-            <Spinner className={SPINNER_COLOR[intent ?? "primary"]} />
+            <Spinner className={SPINNER_COLOR[resolvedIntent]} />
           ) : (
             <>
               {leftIcon && (
