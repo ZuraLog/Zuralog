@@ -87,9 +87,11 @@ class ZAlertBanner extends StatelessWidget {
         children: [
           // Subtle pattern overlay matching the variant.
           if (variant.patternVariant != null)
-            ZPatternOverlay(
-              variant: variant.patternVariant!,
-              opacity: 0.04,
+            Positioned.fill(
+              child: ZPatternOverlay(
+                variant: variant.patternVariant!,
+                opacity: 0.04,
+              ),
             ),
           IntrinsicHeight(
         child: Row(

@@ -149,10 +149,12 @@ class _WelcomeStepState extends State<WelcomeStep>
                               BorderRadius.circular(AppDimens.shapeLg),
                         ),
                       ),
-                      const ZPatternOverlay(
-                        variant: ZPatternVariant.sage,
-                        opacity: 0.15,
-                        blendMode: BlendMode.colorBurn,
+                      const Positioned.fill(
+                        child: ZPatternOverlay(
+                          variant: ZPatternVariant.sage,
+                          opacity: 0.15,
+                          blendMode: BlendMode.colorBurn,
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.all(18),

@@ -58,10 +58,12 @@ class ZSegmentedControl extends StatelessWidget {
             child: Stack(
               children: [
                 // Pattern overlay on the track.
-                const ZPatternOverlay(
-                  variant: ZPatternVariant.original,
-                  opacity: 0.04,
-                  blendMode: BlendMode.screen,
+                const Positioned.fill(
+                  child: ZPatternOverlay(
+                    variant: ZPatternVariant.original,
+                    opacity: 0.04,
+                    blendMode: BlendMode.screen,
+                  ),
                 ),
                 // Sliding active pill.
                 AnimatedPositioned(

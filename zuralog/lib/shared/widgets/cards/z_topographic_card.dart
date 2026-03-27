@@ -58,10 +58,12 @@ class ZTopographicCard extends StatelessWidget {
         child: Stack(
           children: [
             // Pattern overlay
-            ZPatternOverlay(
-              variant: ZPatternVariant.original,
-              opacity: 0.07,
-              blendMode: BlendMode.screen,
+            Positioned.fill(
+              child: ZPatternOverlay(
+                variant: ZPatternVariant.original,
+                opacity: 0.07,
+                blendMode: BlendMode.screen,
+              ),
             ),
             // Content
             Padding(padding: effectivePadding, child: child),

@@ -198,10 +198,12 @@ class _FilledPatternButton extends StatelessWidget {
                 child: ColoredBox(color: backgroundColor),
               ),
               // Pattern overlay on the colored surface.
-              ZPatternOverlay(
-                variant: ZPatternVariant.sage,
-                opacity: 0.12,
-                blendMode: BlendMode.colorBurn,
+              Positioned.fill(
+                child: ZPatternOverlay(
+                  variant: ZPatternVariant.sage,
+                  opacity: 0.12,
+                  blendMode: BlendMode.colorBurn,
+                ),
               ),
               // Label.
               Center(

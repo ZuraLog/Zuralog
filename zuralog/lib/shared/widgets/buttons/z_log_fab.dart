@@ -48,10 +48,12 @@ class ZLogFab extends StatelessWidget {
                 // Sage fill (already the container background)
                 const SizedBox.expand(),
                 // Pattern overlay
-                const ZPatternOverlay(
-                  variant: ZPatternVariant.sage,
-                  opacity: 0.5,
-                  animate: true,
+                const Positioned.fill(
+                  child: ZPatternOverlay(
+                    variant: ZPatternVariant.sage,
+                    opacity: 0.5,
+                    animate: true,
+                  ),
                 ),
                 // Icon
                 const Icon(

@@ -188,13 +188,11 @@ class _ZPatternOverlayState extends State<ZPatternOverlay>
           )
         : _buildContainer(Alignment.center);
 
-    return Positioned.fill(
-      child: ExcludeSemantics(
-        child: IgnorePointer(
-          child: Opacity(
-            opacity: widget.opacity,
-            child: alignment,
-          ),
+    return ExcludeSemantics(
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: widget.opacity,
+          child: alignment,
         ),
       ),
     );

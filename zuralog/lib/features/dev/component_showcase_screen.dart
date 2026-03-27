@@ -966,9 +966,11 @@ class _ComponentShowcaseScreenState
                 child: Stack(
                   children: [
                     Container(color: AppColors.surface),
-                    ZPatternOverlay(
-                      opacity: opacity,
-                      blendMode: BlendMode.screen,
+                    Positioned.fill(
+                      child: ZPatternOverlay(
+                        opacity: opacity,
+                        blendMode: BlendMode.screen,
+                      ),
                     ),
                     Center(
                       child: Text(
@@ -1004,10 +1006,12 @@ class _ComponentShowcaseScreenState
                   child: Stack(
                     children: [
                       Container(color: v.$3),
-                      ZPatternOverlay(
-                        variant: v.$1,
-                        opacity: 0.15,
-                        blendMode: BlendMode.colorBurn,
+                      Positioned.fill(
+                        child: ZPatternOverlay(
+                          variant: v.$1,
+                          opacity: 0.15,
+                          blendMode: BlendMode.colorBurn,
+                        ),
                       ),
                       Center(
                         child: Text(

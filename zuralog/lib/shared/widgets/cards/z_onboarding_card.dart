@@ -67,10 +67,12 @@ class ZOnboardingCard extends StatelessWidget {
         child: Stack(
           children: [
             // ── Pattern overlay (richest treatment) ──────────────────────
-            const ZPatternOverlay(
-              variant: ZPatternVariant.original,
-              opacity: 0.10,
-              blendMode: BlendMode.screen,
+            const Positioned.fill(
+              child: ZPatternOverlay(
+                variant: ZPatternVariant.original,
+                opacity: 0.10,
+                blendMode: BlendMode.screen,
+              ),
             ),
 
             // ── Content ─────────────────────────────────────────────────

@@ -81,10 +81,12 @@ class ZAvatar extends StatelessWidget {
               // Background
               Container(color: AppColors.surfaceRaised),
               // Pattern overlay
-              ZPatternOverlay(
-                variant: ZPatternVariant.original,
-                opacity: 0.15,
-                blendMode: BlendMode.screen,
+              Positioned.fill(
+                child: ZPatternOverlay(
+                  variant: ZPatternVariant.original,
+                  opacity: 0.15,
+                  blendMode: BlendMode.screen,
+                ),
               ),
               // Initials
               Center(

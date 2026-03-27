@@ -252,10 +252,12 @@ class _LogoCard extends StatelessWidget {
               ),
             ),
             // Brand pattern — Sage surface gets colorBurn at 15%
-            const ZPatternOverlay(
-              variant: ZPatternVariant.sage,
-              opacity: 0.15,
-              blendMode: BlendMode.colorBurn,
+            const Positioned.fill(
+              child: ZPatternOverlay(
+                variant: ZPatternVariant.sage,
+                opacity: 0.15,
+                blendMode: BlendMode.colorBurn,
+              ),
             ),
             // Logo icon
             Padding(
