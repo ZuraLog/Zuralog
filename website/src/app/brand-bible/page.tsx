@@ -100,6 +100,13 @@ import {
   DSSkeleton,
   DSAlert,
   dsToast,
+  MorphSvgDemo,
+  FooterBouncDemo,
+  FlipFilterDemo,
+  ShapeOverlayDemo,
+  MorphCurveDemo,
+  RollingTextDemo,
+  ContainerTextDemo,
 } from "@/components/design-system";
 import {
   AreaChart,
@@ -1549,7 +1556,127 @@ export default function BrandBiblePage() {
         </div>
       </RevealSection>
 
-      {/* ── 17. Pattern Reference Table ────────────────────────────── */}
+      {/* ── 17. GSAP Effects Showcase ──────────────────────────────── */}
+      <ScrollDivider />
+
+      <RevealSection className="mt-16">
+        <SectionTitle>Effects Showcase</SectionTitle>
+        <SectionSub>Interactive animation effects built with GSAP — reusable across the product. Each demo integrates our Sage pattern.</SectionSub>
+      </RevealSection>
+
+      {/* 17a. MorphSVG */}
+      <RevealSection className="mt-10">
+        <Label>MorphSVG — Shape Morphing</Label>
+        <Text variant="body-sm" color="secondary" className="mb-4 max-w-lg">
+          Smooth transitions between completely different SVG shapes. The Sage
+          pattern fills each shape as it morphs. Auto-cycles every 3 seconds
+          or click any shape to jump directly.
+        </Text>
+        <Card elevation="standard">
+          <div className="p-6">
+            <MorphSvgDemo />
+          </div>
+        </Card>
+      </RevealSection>
+
+      {/* 17b. Footer Bounce */}
+      <RevealSection className="mt-10">
+        <Label>Footer Bounce — Scroll-Velocity Wave</Label>
+        <Text variant="body-sm" color="secondary" className="mb-4 max-w-lg">
+          The wave edge at the top of this footer bounces when you scroll to
+          it. The faster you scroll, the bigger the elastic bounce. Uses
+          GSAP ScrollTrigger velocity detection paired with MorphSVG.
+        </Text>
+        <Card elevation="standard">
+          <div className="p-6">
+            <FooterBouncDemo />
+          </div>
+        </Card>
+      </RevealSection>
+
+      {/* 17c. Flip Filter */}
+      <RevealSection className="mt-10">
+        <Label>Smooth Filtering — GSAP Flip</Label>
+        <Text variant="body-sm" color="secondary" className="mb-4 max-w-lg">
+          Health metric tiles laid out in a flex grid. Click any category to
+          filter — matching tiles smoothly reposition while others fade out.
+          No jarring layout jumps.
+        </Text>
+        <Card elevation="standard">
+          <div className="p-6">
+            <FlipFilterDemo />
+          </div>
+        </Card>
+      </RevealSection>
+
+      {/* 17d. Shape Overlay */}
+      <RevealSection className="mt-10">
+        <Label>Shape Overlay — Page Transitions</Label>
+        <Text variant="body-sm" color="secondary" className="mb-4 max-w-lg">
+          A Sage-patterned SVG shape wipes across the container, covering
+          content during transitions and revealing new content underneath.
+          Perfect for page or section transitions.
+        </Text>
+        <Card elevation="standard">
+          <div className="p-6">
+            <ShapeOverlayDemo />
+          </div>
+        </Card>
+      </RevealSection>
+
+      {/* 17e. MorphSVG Curve */}
+      <RevealSection className="mt-10">
+        <Label>MorphSVG Curve — Click Reveal</Label>
+        <Text variant="body-sm" color="secondary" className="mb-4 max-w-lg">
+          Click the container to toggle a curved SVG shape. The shape bows
+          upward as it sweeps in, then flattens to cover the surface. Click
+          again to reverse.
+        </Text>
+        <Card elevation="standard">
+          <div className="p-6">
+            <MorphCurveDemo />
+          </div>
+        </Card>
+      </RevealSection>
+
+      {/* 17f. Rolling Text */}
+      <RevealSection className="mt-10">
+        <Label>Rolling Text — SplitText 3D</Label>
+        <Text variant="body-sm" color="secondary" className="mb-4 max-w-lg">
+          Each character rotates on a 3D cylinder, staggered per letter and
+          per line. Uses GSAP SplitText for character-level control.
+        </Text>
+        <Card elevation="standard">
+          <div className="p-6">
+            <RollingTextDemo />
+          </div>
+        </Card>
+      </RevealSection>
+
+      {/* ── 18. Scroll-Driven Effects ──────────────────────────────── */}
+      <ScrollDivider />
+
+      <RevealSection className="mt-16">
+        <SectionTitle>Scroll-Driven Effects</SectionTitle>
+        <SectionSub>These effects are driven by the page scroll — they activate as you scroll through them.</SectionSub>
+      </RevealSection>
+
+      {/* 18a. Container Animation SplitText */}
+      <RevealSection className="mt-6">
+        <Label>Container Animation — Horizontal SplitText</Label>
+        <Text variant="body-sm" color="secondary" className="mb-4 max-w-lg">
+          Text scrolls horizontally as you scroll down. Each character
+          tumbles in from a random position and rotation, driven by
+          ScrollTrigger containerAnimation.
+        </Text>
+      </RevealSection>
+
+      {/* Break out of max-width so the horizontal scroll spans full viewport */}
+      <div className="-mx-6" style={{ width: "100vw", position: "relative", left: "50%", marginLeft: "-50vw" }}>
+        <ContainerTextDemo />
+      </div>
+
+      {/* ── 19. Pattern Reference Table ────────────────────────────── */}
       <RevealSection className="mt-16">
         <SectionTitle>Pattern Reference</SectionTitle>
         <SectionSub>Every component that gets the topographic pattern treatment, with its variant and blend mode.</SectionSub>
