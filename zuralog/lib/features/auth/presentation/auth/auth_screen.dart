@@ -11,6 +11,7 @@
 /// - Sentry breadcrumbs: included in [AuthStateNotifier] (unchanged)
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -245,6 +246,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 // ── Top Bar ────────────────────────────────────────────────────────────────────
 
 /// Custom top bar: back chevron + "Zuralog" wordmark + balancing spacer.
+///
+/// In debug builds, triple-tapping the wordmark opens the component showcase.
 class _TopBar extends StatelessWidget {
   const _TopBar({required this.onBack});
 
@@ -266,10 +269,15 @@ class _TopBar extends StatelessWidget {
           ),
           Expanded(
             child: Center(
-              child: Text(
-                'Zuralog',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.primary,
+              child: GestureDetector(
+                onDoubleTap: kDebugMode
+                    ? () => context.push(RouteNames.componentShowcasePath)
+                    : null,
+                child: Text(
+                  'Zuralog',
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),

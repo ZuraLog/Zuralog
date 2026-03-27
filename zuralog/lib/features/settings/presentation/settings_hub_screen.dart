@@ -7,6 +7,7 @@
 /// Full implementation: Phase 8, Task 8.1.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -171,6 +172,32 @@ class SettingsHubScreen extends ConsumerWidget {
               ],
             ),
           ),
+
+          // ── Developer Tools (debug builds only) ─────────────────────
+          if (kDebugMode) ...[
+            _SectionHeader(title: 'Developer'),
+
+            SliverToBoxAdapter(
+              child: _SettingsGroup(
+                tiles: [
+                  ZSettingsTile(
+                    icon: Icons.grid_view_rounded,
+                    iconColor: AppColors.primary,
+                    title: 'Component Showcase',
+                    subtitle: 'View every design system lego',
+                    onTap: () => context.push(RouteNames.componentShowcasePath),
+                  ),
+                  ZSettingsTile(
+                    icon: Icons.palette_outlined,
+                    iconColor: AppColors.categoryMobility,
+                    title: 'Design Catalog',
+                    subtitle: 'Legacy component catalog',
+                    onTap: () => context.push(RouteNames.debugCatalogPath),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SliverToBoxAdapter(
             child: SizedBox(height: AppDimens.spaceXxl),
