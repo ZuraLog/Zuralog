@@ -24,34 +24,6 @@ class AppShell extends ConsumerStatefulWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  static const List<NavigationDestination> _destinations = [
-    NavigationDestination(
-      icon: Icon(Icons.wb_sunny_outlined),
-      selectedIcon: Icon(Icons.wb_sunny_rounded),
-      label: 'Today',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.grid_view_outlined),
-      selectedIcon: Icon(Icons.grid_view_rounded),
-      label: 'Data',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.chat_bubble_outline_rounded),
-      selectedIcon: Icon(Icons.chat_bubble_rounded),
-      label: 'Coach',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.track_changes_outlined),
-      selectedIcon: Icon(Icons.track_changes_rounded),
-      label: 'Progress',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.trending_up_rounded),
-      selectedIcon: Icon(Icons.trending_up_rounded),
-      label: 'Trends',
-    ),
-  ];
-
   @override
   ConsumerState<AppShell> createState() => _AppShellState();
 }
@@ -176,75 +148,162 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-// ── Frosted Navigation Bar ────────────────────────────────────────────────────
+// ── Frosted Floating Pill Navigation Bar ──────────────────────────────────────
 
-/// A frosted-glass [NavigationBar] with 5 destinations.
+/// Tab definition for the floating pill nav bar.
+class _NavTab {
+  const _NavTab({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+}
+
+/// A frosted-glass floating pill navigation bar.
 ///
-/// Uses [BackdropFilter] + Gaussian blur to blur the scrolling content behind
-/// the bar. A translucent container gives the frosted tint. The
-/// [NavigationBar] itself is fully transparent so the blur shows through.
-///
-/// Per design spec: no indicator pill — icon/label color change is sufficient
-/// to communicate the active tab. The active color is [AppColors.primary]
-/// (Sage Green) and inactive is [AppColors.textTertiary].
+/// Brand bible spec:
+/// - Floating pill shape with 100px radius, 20px horizontal margin.
+/// - Surface (#1E1E1E) background with backdrop blur showing through.
+/// - Active tab: Sage tint pill (rgba(207,225,185,0.12)) behind icon+label,
+///   Sage text (#CFE1B9).
+/// - Inactive tabs: Text Secondary (#9B9894).
+/// - Icons 20-22px, labels Label Medium (13pt Medium 500).
+/// - Bottom padding: safe area + 18px.
 class _FrostedNavigationBar extends StatelessWidget {
   const _FrostedNavigationBar({
     required this.currentIndex,
     required this.onDestinationSelected,
   });
 
-  /// The currently active tab index (0-based).
   final int currentIndex;
-
-  /// Callback invoked with the tapped destination index.
   final ValueChanged<int> onDestinationSelected;
+
+  static const List<_NavTab> _tabs = [
+    _NavTab(
+      icon: Icons.wb_sunny_outlined,
+      activeIcon: Icons.wb_sunny_rounded,
+      label: 'Today',
+    ),
+    _NavTab(
+      icon: Icons.grid_view_outlined,
+      activeIcon: Icons.grid_view_rounded,
+      label: 'Data',
+    ),
+    _NavTab(
+      icon: Icons.chat_bubble_outline_rounded,
+      activeIcon: Icons.chat_bubble_rounded,
+      label: 'Coach',
+    ),
+    _NavTab(
+      icon: Icons.track_changes_outlined,
+      activeIcon: Icons.track_changes_rounded,
+      label: 'Progress',
+    ),
+    _NavTab(
+      icon: Icons.trending_up_rounded,
+      activeIcon: Icons.trending_up_rounded,
+      label: 'Trends',
+    ),
+  ];
+
+  /// Sage tint pill behind the active tab: rgba(207, 225, 185, 0.12).
+  static const Color _sageTint = Color(0x1FCFE1B9);
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Dark mode → charcoal tint at 0.85 opacity so blur shows through.
-    // Light mode → translucent scaffold bg for frosted glass effect.
-    final bgColor = Theme.of(context).scaffoldBackgroundColor;
-    final opacity = isDark ? 0.85 : AppDimens.navBarFrostOpacity;
+    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: AppDimens.navBarBlurSigma,
-          sigmaY: AppDimens.navBarBlurSigma,
-        ),
-        child: NavigationBarTheme(
-          data: NavigationBarThemeData(
-            // Design spec: no indicator pill — color change only.
-            indicatorColor: Colors.transparent,
-            // Active: Sage Green. Inactive: text-tertiary (de-emphasised).
-            iconTheme: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return const IconThemeData(color: AppColors.primary);
-              }
-              return const IconThemeData(color: AppColors.textTertiary);
-            }),
-            labelTextStyle: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return AppTextStyles.bodySmall
-                    .copyWith(color: AppColors.primary);
-              }
-              return AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textTertiary);
-            }),
+    return Padding(
+      // 20px horizontal margin from screen edges, 18px + safe area from bottom.
+      padding: EdgeInsets.fromLTRB(
+        AppDimens.spaceMdPlus,
+        0,
+        AppDimens.spaceMdPlus,
+        bottomSafeArea + 18,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppDimens.shapePill),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: AppDimens.navBarBlurSigma,
+            sigmaY: AppDimens.navBarBlurSigma,
           ),
           child: Container(
-            color: bgColor.withValues(alpha: opacity),
-            child: NavigationBar(
-              // Transparent — frosted container provides the visual background.
-              backgroundColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              elevation: 0,
-              selectedIndex: currentIndex,
-              onDestinationSelected: onDestinationSelected,
-              // 200ms cross-fade for icon/label transitions.
-              animationDuration: const Duration(milliseconds: 200),
-              destinations: AppShell._destinations,
+            height: 64,
+            decoration: BoxDecoration(
+              // Surface background at 0.92 opacity — translucent enough for
+              // the blur to show through but solid enough to read the labels.
+              color: AppColors.surface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(AppDimens.shapePill),
+            ),
+            child: Row(
+              children: List.generate(_tabs.length, (index) {
+                final isActive = index == currentIndex;
+                final tab = _tabs[index];
+
+                return Expanded(
+                  child: Semantics(
+                    label: tab.label,
+                    selected: isActive,
+                    button: true,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => onDestinationSelected(index),
+                      child: SizedBox(
+                        // Ensures minimum 44px touch target height.
+                        height: 64,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isActive ? _sageTint : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                AppDimens.shapePill,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isActive ? tab.activeIcon : tab.icon,
+                                  size: 22,
+                                  color: isActive
+                                      ? AppColors.primary
+                                      : AppColors.textSecondaryDark,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  tab.label,
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    color: isActive
+                                        ? AppColors.primary
+                                        : AppColors.textSecondaryDark,
+                                    // Scaled down from 13pt to 11pt so all 5
+                                    // labels (including "Progress") fit inside
+                                    // the pill without clipping.
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
             ),
           ),
         ),

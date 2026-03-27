@@ -73,7 +73,7 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleText = Text(title, style: AppTextStyles.displaySmall);
+    final titleText = Text(title, style: AppTextStyles.displayMedium);
 
     final Widget titleWidget = tooltipConfig != null
         ? OnboardingTooltip(

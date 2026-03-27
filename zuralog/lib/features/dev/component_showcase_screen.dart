@@ -31,6 +31,10 @@ class _ComponentShowcaseScreenState
   String? _selectValue;
   int _stepperValue = 5;
   final double _progressValue = 0.67;
+  Set<String> _toggleGroupValues = {'mon', 'fri'};
+  int _ratingValue = 3;
+  DateTime? _selectedDate = DateTime.now();
+  int _staggerKey = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -769,6 +773,42 @@ class _ComponentShowcaseScreenState
           labelText: 'Email',
           hintText: 'you@example.com',
         ),
+
+        _label('Toggle Group'),
+        ZToggleGroup<String>(
+          items: const [
+            ZToggleGroupItem(value: 'mon', label: 'Mon'),
+            ZToggleGroupItem(value: 'wed', label: 'Wed'),
+            ZToggleGroupItem(value: 'fri', label: 'Fri'),
+            ZToggleGroupItem(value: 'sat', label: 'Sat'),
+          ],
+          selectedValues: _toggleGroupValues,
+          onChanged: (v) => setState(() => _toggleGroupValues = v),
+        ),
+
+        _label('OTP / PIN Input'),
+        ZOtpInput(
+          onCompleted: (code) {},
+          onChanged: (code) {},
+        ),
+
+        _label('Password Field'),
+        const ZPasswordField(
+          label: 'Password',
+          hint: 'Enter your password',
+        ),
+
+        _label('Rating Bar'),
+        ZRatingBar(
+          rating: _ratingValue,
+          onChanged: (v) => setState(() => _ratingValue = v),
+        ),
+
+        _label('Calendar'),
+        ZCalendar(
+          selectedDate: _selectedDate,
+          onDateSelected: (d) => setState(() => _selectedDate = d),
+        ),
       ],
     );
   }
@@ -920,6 +960,21 @@ class _ComponentShowcaseScreenState
 
         _label('Skeleton Loader'),
         const ZLoadingSkeleton(width: double.infinity, height: 80),
+
+        _label('Circular Progress'),
+        Row(
+          children: [
+            const ZCircularProgress(),
+            const SizedBox(width: AppDimens.spaceMd),
+            const ZCircularProgress(size: 24, strokeWidth: 2),
+            const SizedBox(width: AppDimens.spaceMd),
+            const ZCircularProgress(value: 0.7, size: 40),
+          ],
+        ),
+
+        _label('Pull-to-Refresh (wraps scrollable content)'),
+        Text('ZPullToRefresh wraps a scrollable child with a Sage spinner',
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryDark)),
       ],
     );
   }
@@ -1019,6 +1074,86 @@ class _ComponentShowcaseScreenState
           ),
         ),
 
+        _label('List Item'),
+        ZuralogCard(
+          variant: ZCardVariant.plain,
+          child: Column(
+            children: [
+              ZListItem(
+                icon: Icons.directions_walk,
+                title: 'Steps',
+                subtitle: '8,432 today',
+                onTap: () {},
+              ),
+              ZListItem(
+                icon: Icons.bedtime,
+                title: 'Sleep',
+                subtitle: '7h 23m last night',
+                onTap: () {},
+              ),
+              ZListItem(
+                icon: Icons.favorite,
+                title: 'Heart Rate',
+                subtitle: '72 bpm avg',
+                showDivider: false,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+
+        _label('Carousel'),
+        // Note: Carousel extends beyond section padding
+        ZCarousel(
+          height: 140,
+          children: [
+            for (final item in ['Sleep Score', 'Activity Ring', 'Heart Rate', 'Nutrition'])
+              ZuralogCard(
+                variant: ZCardVariant.data,
+                child: Center(
+                  child: Text(item,
+                      style: AppTextStyles.titleMedium.copyWith(color: AppColors.warmWhite)),
+                ),
+              ),
+          ],
+        ),
+
+        _label('Chart Container'),
+        ZChartContainer(
+          title: 'Weekly Steps',
+          subtitle: 'Last 7 days',
+          child: Center(
+            child: Text('Chart goes here',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark)),
+          ),
+        ),
+
+        _label('Data Table'),
+        ZDataTable(
+          columns: const [
+            ZDataColumn(label: 'Metric'),
+            ZDataColumn(label: 'Value', alignment: Alignment.centerRight),
+            ZDataColumn(label: 'Change', alignment: Alignment.centerRight),
+          ],
+          rows: [
+            ZDataRow(cells: [
+              Text('Steps', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('8,432', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('+12%', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.success)),
+            ]),
+            ZDataRow(cells: [
+              Text('Sleep', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('7h 23m', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('-5%', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.statusError)),
+            ]),
+            ZDataRow(cells: [
+              Text('Heart Rate', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('72 bpm', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+              Text('—', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark)),
+            ]),
+          ],
+        ),
+
         _label('Empty State'),
         ZEmptyState(
           icon: Icons.bedtime_outlined,
@@ -1056,6 +1191,45 @@ class _ComponentShowcaseScreenState
           ctaLabel: 'Get Started',
           icon: Icons.favorite,
           onCtaTap: () {},
+        ),
+
+        _label('Hero Banner'),
+        ZHeroBanner(
+          height: 180,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Your Health Journey',
+                  style: AppTextStyles.displaySmall.copyWith(color: AppColors.warmWhite)),
+              const SizedBox(height: AppDimens.spaceXs),
+              Text('Track, understand, improve',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondaryDark)),
+            ],
+          ),
+        ),
+
+        _label('Staggered Animation (tap to replay)'),
+        ZStaggeredList(
+          key: ValueKey(_staggerKey),
+          children: [
+            for (final label in ['Card 1 — First', 'Card 2 — Staggered', 'Card 3 — Cascade'])
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppDimens.spaceSm),
+                child: ZuralogCard(
+                  variant: ZCardVariant.data,
+                  child: Text(label,
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warmWhite)),
+                ),
+              ),
+          ],
+        ),
+        _gap(),
+        ZButton(
+          label: 'Replay Animation',
+          variant: ZButtonVariant.secondary,
+          size: ZButtonSize.small,
+          onPressed: () => setState(() => _staggerKey++),
         ),
 
         _label('Pattern Overlay Demo'),
