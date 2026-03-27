@@ -266,6 +266,68 @@ class _ComponentShowcaseScreenState
             style: AppTextStyles.labelSmall
                 .copyWith(color: AppColors.warmWhite)),
 
+        _label('Pattern Typography'),
+        // Bold (animated drift) — display-lg
+        ZPatternText(
+          text: 'Zuralog Health',
+          style: AppTextStyles.displayLarge,
+          variant: ZPatternVariant.sage,
+          animate: true,
+        ),
+        _gap(),
+        // Semibold (static) — display-md
+        ZPatternText(
+          text: 'AI Wellness Coach',
+          style: AppTextStyles.displayMedium,
+          variant: ZPatternVariant.sage,
+        ),
+        _gap(),
+        // Semibold (static) — display-sm
+        ZPatternText(
+          text: 'Your Health Journey',
+          style: AppTextStyles.displaySmall,
+          variant: ZPatternVariant.sage,
+        ),
+
+        _label('Pattern Color Variants'),
+        // Sage
+        ZPatternText(
+          text: 'Sage Pattern',
+          style: AppTextStyles.displayMedium,
+          variant: ZPatternVariant.sage,
+        ),
+        _gap(),
+        // Crimson
+        ZPatternText(
+          text: 'Crimson Pattern',
+          style: AppTextStyles.displayMedium,
+          variant: ZPatternVariant.crimson,
+        ),
+        _gap(),
+        // Amber
+        ZPatternText(
+          text: 'Amber Pattern',
+          style: AppTextStyles.displayMedium,
+          variant: ZPatternVariant.amber,
+        ),
+        _gap(),
+        // Original
+        ZPatternText(
+          text: 'Original Pattern',
+          style: AppTextStyles.displayMedium,
+          variant: ZPatternVariant.original,
+        ),
+
+        _label('Solid Text (comparison)'),
+        Text('Solid Sage',
+            style: AppTextStyles.displayMedium
+                .copyWith(color: AppColors.primary)),
+        _gap(),
+        Text(
+            'Body text stays solid — patterns are only for display-size headings where the letterforms are large enough.',
+            style: AppTextStyles.bodyLarge
+                .copyWith(color: AppColorsOf(context).textPrimary)),
+
         _label('Spacing'),
         _spacingBar('XXS (2px)', AppDimens.spaceXxs),
         _spacingBar('XS (4px)', AppDimens.spaceXs),
@@ -294,6 +356,8 @@ class _ComponentShowcaseScreenState
   }
 
   Widget _colorSwatch(String name, Color color) {
+    final hex =
+        '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
     return Expanded(
       child: Column(
         children: [
@@ -308,6 +372,11 @@ class _ComponentShowcaseScreenState
           Text(name,
               style: AppTextStyles.labelSmall
                   .copyWith(color: AppColors.textSecondaryDark)),
+          Text(hex,
+              style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textSecondaryDark,
+                  fontSize: 9,
+                  fontFamily: 'monospace')),
         ],
       ),
     );
