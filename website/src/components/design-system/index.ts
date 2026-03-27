@@ -41,6 +41,35 @@ export {
   DSTabsTrigger,
   DSTabsContent,
 } from "./display/tabs";
+export {
+  DSDropdownMenu,
+  DSDropdownMenuTrigger,
+  DSDropdownMenuContent,
+  DSDropdownMenuItem,
+  DSDropdownMenuSeparator,
+  DSDropdownMenuLabel,
+  DSDropdownMenuCheckboxItem,
+  DSDropdownMenuRadioGroup,
+  DSDropdownMenuRadioItem,
+  DSDropdownMenuSub,
+  DSDropdownMenuSubTrigger,
+  DSDropdownMenuSubContent,
+} from "./display/dropdown-menu";
+export { DSScrollArea, DSScrollBar } from "./display/scroll-area";
+export {
+  DSPagination,
+  DSPaginationContent,
+  DSPaginationItem,
+  DSPaginationLink,
+  DSPaginationPrevious,
+  DSPaginationNext,
+  DSPaginationEllipsis,
+} from "./display/pagination";
+export {
+  DSCollapsible,
+  DSCollapsibleTrigger,
+  DSCollapsibleContent,
+} from "./display/collapsible";
 
 // Feedback components
 export { Badge } from "./feedback/badge";
@@ -58,6 +87,53 @@ export {
   DSDialogDescription,
   DSDialogClose,
 } from "./feedback/dialog";
+export {
+  DSPopover,
+  DSPopoverTrigger,
+  DSPopoverContent,
+  DSPopoverHeader,
+  DSPopoverTitle,
+  DSPopoverDescription,
+} from "./feedback/popover";
+export {
+  DSSheet,
+  DSSheetTrigger,
+  DSSheetClose,
+  DSSheetContent,
+  DSSheetHeader,
+  DSSheetFooter,
+  DSSheetTitle,
+  DSSheetDescription,
+} from "./feedback/sheet";
+export { DSSkeleton } from "./feedback/skeleton";
+export type { DSSkeletonProps } from "./feedback/skeleton";
+export { DSProgress } from "./feedback/progress";
+export type { DSProgressProps } from "./feedback/progress";
+export { DSAlert } from "./feedback/alert";
+export type { DSAlertProps } from "./feedback/alert";
+export {
+  DSHoverCard,
+  DSHoverCardTrigger,
+  DSHoverCardContent,
+} from "./feedback/hover-card";
+
+// Input components (new)
+export { DSLabel } from "./inputs/label";
+export type { DSLabelProps } from "./inputs/label";
+export { DSTextarea } from "./inputs/textarea";
+export type { DSTextareaProps } from "./inputs/textarea";
+export {
+  DSSelect,
+  DSSelectTrigger,
+  DSSelectContent,
+  DSSelectItem,
+  DSSelectLabel,
+  DSSelectSeparator,
+  DSSelectValue,
+  DSSelectGroup,
+} from "./inputs/select";
+export { DSToggleGroup } from "./inputs/toggle-group";
+export type { DSToggleGroupProps } from "./inputs/toggle-group";
 
 // Hooks
 export { useMagnetic } from "@/hooks/use-magnetic";

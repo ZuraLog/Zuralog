@@ -795,6 +795,26 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Design System — Skeleton shimmer animation
+───────────────────────────────────────────────────────────── */
+@keyframes ds-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Design System — Collapsible open/close animations
+───────────────────────────────────────────────────────────── */
+@keyframes ds-collapse-open {
+  from { height: 0; opacity: 0; }
+  to   { height: var(--collapsible-panel-height); opacity: 1; }
+}
+@keyframes ds-collapse-close {
+  from { height: var(--collapsible-panel-height); opacity: 1; }
+  to   { height: 0; opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────────────────────
    Premium UI — Navbar CTA pattern button glow (sage)
 ───────────────────────────────────────────────────────────── */
 @keyframes sage-glow {
