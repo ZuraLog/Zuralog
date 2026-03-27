@@ -31,6 +31,13 @@
 # reinstall / reinstall-prod: uninstall the existing APK, run flutter clean,
 # then build and install fresh. Use these whenever make run / make run-prod
 # launches stale code after making source changes in release mode.
+#
+# Renderer: All Android targets use --no-enable-impeller (Skia backend).
+# Impeller's OpenGLES renderer shifts dark colors during linear↔sRGB
+# conversion (e.g. #1E1E20 renders as #1C1C22). Skia renders colors
+# accurately. iOS targets use Impeller (Metal) which doesn't have this
+# issue. When Flutter fixes this, remove --no-enable-impeller from Android
+# targets to switch back.
 # ---------------------------------------------------------------------------
 
 # Force Git Bash on Windows — prevents make from falling back to cmd.exe
@@ -67,7 +74,7 @@ ADB    := $(shell ls "$$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe" 2>/dev/
 ## Default dev target. Connects to local backend at http://10.0.2.2:8001.
 ## Mock repositories activate automatically in debug mode (kDebugMode=true).
 run:
-	cd zuralog && flutter run --debug \
+	cd zuralog && flutter run --debug --no-enable-impeller \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
 		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
@@ -79,7 +86,7 @@ run:
 ## Runs in debug mode with mock data. No backend or Docker needed.
 ## Useful for UI work or when you don't have API credentials yet.
 run-mock:
-	cd zuralog && flutter run --debug \
+	cd zuralog && flutter run --debug --no-enable-impeller \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
 		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
@@ -92,7 +99,7 @@ run-mock:
 ## Release build against api.zuralog.com. kDebugMode=false → real repositories.
 ## Use this to verify production behaviour before submitting to the Play Store.
 run-prod:
-	cd zuralog && flutter run --release \
+	cd zuralog && flutter run --release --no-enable-impeller \
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
@@ -132,7 +139,7 @@ run-device:
 		echo "Error: DEVICE_IP is not set. Add DEVICE_IP=192.168.x.x to cloud-brain/.env"; \
 		exit 1; \
 	fi
-	cd zuralog && flutter run --debug \
+	cd zuralog && flutter run --debug --no-enable-impeller \
 		--dart-define=BASE_URL=http://$(DEVICE_IP):8001 \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
@@ -143,7 +150,7 @@ run-device:
 # Physical Device — RELEASE (production backend, real data, no mocks)
 # ---------------------------------------------------------------------------
 run-device-prod:
-	cd zuralog && flutter run --release \
+	cd zuralog && flutter run --release --no-enable-impeller \
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
@@ -164,7 +171,7 @@ uninstall:
 ## Use this when make run produces stale behaviour after code changes.
 reinstall: uninstall
 	cd zuralog && flutter clean
-	cd zuralog && flutter run --debug \
+	cd zuralog && flutter run --debug --no-enable-impeller \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
 		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
@@ -174,7 +181,7 @@ reinstall: uninstall
 ## Use this when make run-prod produces stale behaviour after code changes.
 reinstall-prod: uninstall
 	cd zuralog && flutter clean
-	cd zuralog && flutter run --release \
+	cd zuralog && flutter run --release --no-enable-impeller \
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
@@ -197,7 +204,7 @@ test:
 # ---------------------------------------------------------------------------
 ## Build a debug APK (local credentials, dev env)
 build-apk:
-	cd zuralog && flutter build apk --debug \
+	cd zuralog && flutter build apk --debug --no-enable-impeller \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
 		--dart-define=POSTHOG_API_KEY=$(POSTHOG_API_KEY) \
@@ -207,7 +214,7 @@ build-apk:
 ## flutter clean runs first to prevent Windows file-lock errors in the lint cache.
 build-appbundle:
 	cd zuralog && flutter clean
-	cd zuralog && flutter build appbundle --release \
+	cd zuralog && flutter build appbundle --release --no-enable-impeller \
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
@@ -223,7 +230,7 @@ build-prod: build-appbundle
 ## Or send the file to your phone and tap to install (enable "Install from unknown sources" first).
 build-apk-prod:
 	cd zuralog && flutter clean
-	cd zuralog && flutter build apk --release \
+	cd zuralog && flutter build apk --release --no-enable-impeller \
 		--dart-define=BASE_URL=https://api.zuralog.com \
 		--dart-define=GOOGLE_WEB_CLIENT_ID=$(GOOGLE_WEB_CLIENT_ID) \
 		--dart-define=SENTRY_DSN=$(SENTRY_DSN) \
