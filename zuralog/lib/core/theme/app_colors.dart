@@ -72,23 +72,24 @@ abstract final class AppColors {
   static const Color backgroundLight = Color(0xFFFAFAF5);
 
   /// Main scaffold background — dark mode (Canvas per brand bible).
-  static const Color backgroundDark = Color(0xFF161618);
+  static const Color backgroundDark = canvas;
 
   // ── Canvas & Elevation (Brand Bible v4.0) ────────────────────────────────
   // Dark mode uses a four-level brightness hierarchy — no borders, no shadows.
   // Each step is +8 brighter across all RGB channels.
 
   /// Canvas — screen/page background. Darkest level.
-  static const Color canvas = Color(0xFF161618);
+  /// Pure neutral grey (no blue tint) to prevent Impeller color shift.
+  static const Color canvas = Color(0xFF161616);
 
   /// Surface — cards, content containers. One step above canvas.
-  static const Color surface = Color(0xFF1E1E20);
+  static const Color surface = Color(0xFF1E1E1E);
 
   /// Surface Raised — popovers, dropdowns, tooltips, hover states.
-  static const Color surfaceRaised = Color(0xFF272729);
+  static const Color surfaceRaised = Color(0xFF272727);
 
   /// Surface Overlay — modals, bottom sheets, dialogs. Highest level.
-  static const Color surfaceOverlay = Color(0xFF313133);
+  static const Color surfaceOverlay = Color(0xFF313131);
 
   // ── Legacy surface aliases (light/dark) ─────────────────────────────────
 
