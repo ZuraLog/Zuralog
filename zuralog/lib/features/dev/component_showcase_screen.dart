@@ -186,12 +186,36 @@ class _ComponentShowcaseScreenState
         _label('Canvas & Elevation'),
         Row(
           children: [
-            _colorSwatch('Canvas', AppColors.canvas),
-            _colorSwatch('Surface', AppColors.surface),
-            _colorSwatch('Raised', AppColors.surfaceRaised),
-            _colorSwatch('Overlay', AppColors.surfaceOverlay),
+            _colorSwatch('Canvas\n#161618', const Color(0xFF161618)),
+            _colorSwatch('Surface\n#1E1E20', const Color(0xFF1E1E20)),
+            _colorSwatch('Raised\n#272729', const Color(0xFF272729)),
+            _colorSwatch('Overlay\n#313133', const Color(0xFF313133)),
           ],
         ),
+        const SizedBox(height: AppDimens.spaceSm),
+        // Debug: large individual swatches to verify colors render correctly
+        for (final entry in [
+          ('Canvas #161618', const Color(0xFF161618)),
+          ('Surface #1E1E20', const Color(0xFF1E1E20)),
+          ('Raised #272729', const Color(0xFF272729)),
+          ('Overlay #313133', const Color(0xFF313133)),
+        ])
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Container(
+              width: double.infinity,
+              height: 40,
+              decoration: BoxDecoration(
+                color: entry.$2,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0x33F0EEE9), width: 0.5),
+              ),
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 12),
+              child: Text(entry.$1,
+                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.warmWhite)),
+            ),
+          ),
 
         _label('Accent Colors'),
         Row(
