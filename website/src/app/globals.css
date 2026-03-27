@@ -705,10 +705,11 @@ body {
   background-size: 300px auto;
   background-repeat: repeat;
   animation: dsPatternDrift 40s linear infinite;
+  transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ds-pattern-drift:hover {
-  animation-duration: 15s;
+  filter: brightness(1.15);
 }
 
 .ds-pattern-drift:active {
@@ -792,6 +793,26 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .ds-aurora-blob { animation: none !important; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Design System — Skeleton shimmer animation
+───────────────────────────────────────────────────────────── */
+@keyframes ds-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Design System — Collapsible open/close animations
+───────────────────────────────────────────────────────────── */
+@keyframes ds-collapse-open {
+  from { height: 0; opacity: 0; }
+  to   { height: var(--collapsible-panel-height); opacity: 1; }
+}
+@keyframes ds-collapse-close {
+  from { height: var(--collapsible-panel-height); opacity: 1; }
+  to   { height: 0; opacity: 0; }
 }
 
 /* ─────────────────────────────────────────────────────────────

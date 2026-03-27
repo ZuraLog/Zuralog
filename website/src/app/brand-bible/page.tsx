@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   PatternOverlay,
   Text,
@@ -33,7 +33,83 @@ import {
   DSDialogTitle,
   DSDialogDescription,
   DSDialogClose,
+  /* ── New imports ───────────────────────────────────────────────── */
+  DSChartContainer,
+  DSChartTooltip,
+  CHART_COLORS,
+  DS_CHART_THEME,
+  DSTable,
+  DSTableHeader,
+  DSTableBody,
+  DSTableHead,
+  DSTableRow,
+  DSTableCell,
+  DSSelect,
+  DSSelectTrigger,
+  DSSelectContent,
+  DSSelectItem,
+  DSSelectValue,
+  DSTextarea,
+  DSToggleGroup,
+  DSCalendar,
+  DSInputOTP,
+  DSInputOTPGroup,
+  DSInputOTPSlot,
+  DSInputOTPSeparator,
+  DSSheet,
+  DSSheetTrigger,
+  DSSheetContent,
+  DSSheetHeader,
+  DSSheetTitle,
+  DSSheetDescription,
+  DSPopover,
+  DSPopoverTrigger,
+  DSPopoverContent,
+  DSHoverCard,
+  DSHoverCardTrigger,
+  DSHoverCardContent,
+  DSCommand,
+  DSCommandInput,
+  DSCommandList,
+  DSCommandEmpty,
+  DSCommandGroup,
+  DSCommandItem,
+  DSBreadcrumb,
+  DSBreadcrumbList,
+  DSBreadcrumbItem,
+  DSBreadcrumbLink,
+  DSBreadcrumbPage,
+  DSBreadcrumbSeparator,
+  DSPagination,
+  DSPaginationContent,
+  DSPaginationItem,
+  DSPaginationLink,
+  DSPaginationPrevious,
+  DSPaginationNext,
+  DSPaginationEllipsis,
+  DSCollapsible,
+  DSCollapsibleTrigger,
+  DSCollapsibleContent,
+  DSScrollArea,
+  DSContextMenu,
+  DSContextMenuTrigger,
+  DSContextMenuContent,
+  DSContextMenuItem,
+  DSContextMenuSeparator,
+  DSProgress,
+  DSSkeleton,
+  DSAlert,
+  dsToast,
 } from "@/components/design-system";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 import {
   Bell,
   Palette,
@@ -51,12 +127,41 @@ import {
   BarChart3,
   Settings,
   User,
+  ChevronDown,
+  Copy,
+  Trash2,
+  Share2,
+  AlertCircle,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { useScrambleNumber } from "@/hooks/use-scramble-number";
 import { ScrollDivider } from "@/components/design-system/interactions/scroll-divider";
 import { TypingText } from "@/components/design-system/interactions/typing-text";
 import { sageConfetti } from "@/components/design-system/interactions/confetti";
+
+/* ── Chart sample data ──────────────────────────────────────────────── */
+
+const chartData = [
+  { day: "Mon", steps: 6200, sleep: 7.2 },
+  { day: "Tue", steps: 8100, sleep: 6.8 },
+  { day: "Wed", steps: 7400, sleep: 7.5 },
+  { day: "Thu", steps: 9200, sleep: 8.1 },
+  { day: "Fri", steps: 8432, sleep: 7.0 },
+  { day: "Sat", steps: 5600, sleep: 8.5 },
+  { day: "Sun", steps: 4200, sleep: 9.0 },
+];
+
+/* ── Table sample data ──────────────────────────────────────────────── */
+
+const tableData = [
+  { metric: "Steps", value: "8,432", change: "+12%", status: "On track" },
+  { metric: "Sleep", value: "7h 24m", change: "+8%", status: "Improving" },
+  { metric: "Heart Rate", value: "62 bpm", change: "-3%", status: "Optimal" },
+  { metric: "Calories", value: "1,840", change: "+5%", status: "On track" },
+];
 
 /* ── Scroll-reveal section wrapper ───────────────────────────────────── */
 
@@ -172,6 +277,12 @@ export default function BrandBiblePage() {
   /* ── Text animation refs ─────────────────────────────────────── */
   const heroScoreRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "78", duration: 1.2 });
   const stepsRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "8,432", duration: 1.0 });
+
+  /* ── Controlled state for new demos ─────────────────────────── */
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date());
+  const [toggleGroupValue, setToggleGroupValue] = useState("day");
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [collapsibleOpen, setCollapsibleOpen] = useState(false);
 
   return (
     <main className="max-w-[960px] mx-auto px-6 py-12 pb-24">
@@ -835,7 +946,517 @@ export default function BrandBiblePage() {
 
       <ScrollDivider />
 
-      {/* ── 15. Special Surfaces ───────────────────────────────────── */}
+      {/* ── 15. Data Visualization ──────────────────────────────────── */}
+      <RevealSection className="mt-16">
+        <SectionTitle>Data Visualization</SectionTitle>
+        <SectionSub>Charts and graphs styled for the dark canvas, using the Zuralog color palette.</SectionSub>
+
+        <Card elevation="standard">
+          <Label>Weekly Steps — Area Chart</Label>
+          <DSChartContainer className="mt-3">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="stepsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.sage} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_COLORS.sage} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={DS_CHART_THEME.gridColor} />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fill: DS_CHART_THEME.textColor, fontSize: DS_CHART_THEME.fontSize }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: DS_CHART_THEME.textColor, fontSize: DS_CHART_THEME.fontSize }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<DSChartTooltip valueFormatter={(v) => `${v.toLocaleString()} steps`} />} />
+                <Area
+                  type="monotone"
+                  dataKey="steps"
+                  stroke={CHART_COLORS.sage}
+                  strokeWidth={2}
+                  fill="url(#stepsGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </DSChartContainer>
+        </Card>
+      </RevealSection>
+
+      <ScrollDivider />
+
+      {/* ── 16. Tables ──────────────────────────────────────────────── */}
+      <RevealSection className="mt-16">
+        <SectionTitle>Tables</SectionTitle>
+        <SectionSub>Structured data presented in the dark-canvas table style with hover states.</SectionSub>
+
+        <Card elevation="standard">
+          <Label>Health Summary</Label>
+          <div className="mt-3">
+            <DSTable>
+              <DSTableHeader>
+                <DSTableRow>
+                  <DSTableHead>Metric</DSTableHead>
+                  <DSTableHead>Value</DSTableHead>
+                  <DSTableHead>Change</DSTableHead>
+                  <DSTableHead>Status</DSTableHead>
+                </DSTableRow>
+              </DSTableHeader>
+              <DSTableBody>
+                {tableData.map((row) => (
+                  <DSTableRow key={row.metric}>
+                    <DSTableCell className="font-medium">{row.metric}</DSTableCell>
+                    <DSTableCell>{row.value}</DSTableCell>
+                    <DSTableCell>
+                      <span className={row.change.startsWith("+") ? "text-ds-success" : "text-ds-error"}>
+                        {row.change}
+                      </span>
+                    </DSTableCell>
+                    <DSTableCell>{row.status}</DSTableCell>
+                  </DSTableRow>
+                ))}
+              </DSTableBody>
+            </DSTable>
+          </div>
+        </Card>
+      </RevealSection>
+
+      <ScrollDivider />
+
+      {/* ── 17. Advanced Inputs ─────────────────────────────────────── */}
+      <RevealSection className="mt-16">
+        <SectionTitle>Advanced Inputs</SectionTitle>
+        <SectionSub>Dropdowns, text areas, toggle groups, calendars, and one-time-password fields.</SectionSub>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Select */}
+          <Card elevation="standard">
+            <Label>Select</Label>
+            <DSSelect>
+              <DSSelectTrigger className="mt-2">
+                <DSSelectValue placeholder="Choose time range" />
+              </DSSelectTrigger>
+              <DSSelectContent>
+                <DSSelectItem value="daily">Daily</DSSelectItem>
+                <DSSelectItem value="weekly">Weekly</DSSelectItem>
+                <DSSelectItem value="monthly">Monthly</DSSelectItem>
+                <DSSelectItem value="yearly">Yearly</DSSelectItem>
+              </DSSelectContent>
+            </DSSelect>
+          </Card>
+
+          {/* Textarea */}
+          <Card elevation="standard">
+            <Label>Textarea</Label>
+            <DSTextarea
+              className="mt-2"
+              placeholder="How are you feeling today? Log a note about your workout, sleep, or mood..."
+              rows={3}
+            />
+          </Card>
+
+          {/* Toggle Group */}
+          <Card elevation="standard">
+            <Label>Toggle Group</Label>
+            <div className="mt-2">
+              <DSToggleGroup
+                value={toggleGroupValue}
+                onValueChange={setToggleGroupValue}
+                items={[
+                  { value: "day", label: "Day" },
+                  { value: "week", label: "Week" },
+                  { value: "month", label: "Month" },
+                ]}
+              />
+            </div>
+          </Card>
+
+          {/* Input OTP */}
+          <Card elevation="standard">
+            <Label>One-Time Password</Label>
+            <div className="mt-2">
+              <DSInputOTP maxLength={6}>
+                <DSInputOTPGroup>
+                  <DSInputOTPSlot index={0} />
+                  <DSInputOTPSlot index={1} />
+                  <DSInputOTPSlot index={2} />
+                </DSInputOTPGroup>
+                <DSInputOTPSeparator />
+                <DSInputOTPGroup>
+                  <DSInputOTPSlot index={3} />
+                  <DSInputOTPSlot index={4} />
+                  <DSInputOTPSlot index={5} />
+                </DSInputOTPGroup>
+              </DSInputOTP>
+            </div>
+          </Card>
+
+          {/* Calendar */}
+          <Card elevation="standard" className="md:col-span-2">
+            <Label>Calendar</Label>
+            <div className="mt-2 flex justify-center">
+              <DSCalendar
+                mode="single"
+                selected={calendarDate}
+                onSelect={setCalendarDate}
+              />
+            </div>
+          </Card>
+        </div>
+      </RevealSection>
+
+      <ScrollDivider />
+
+      {/* ── 18. Overlays & Panels ──────────────────────────────────── */}
+      <RevealSection className="mt-16">
+        <SectionTitle>Overlays &amp; Panels</SectionTitle>
+        <SectionSub>Sheets, popovers, hover cards, and command palettes that float above the canvas.</SectionSub>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Sheet */}
+          <Card elevation="standard">
+            <Label>Sheet (Bottom Panel)</Label>
+            <div className="mt-2">
+              <DSSheet>
+                <DSSheetTrigger className="inline-flex items-center justify-center rounded-ds-sm bg-ds-surface-raised px-4 py-2 text-sm font-medium text-ds-text-primary hover:bg-ds-surface-overlay transition-colors">
+                  Open Sheet
+                </DSSheetTrigger>
+                <DSSheetContent side="bottom">
+                  <DSSheetHeader>
+                    <DSSheetTitle>Log Activity</DSSheetTitle>
+                    <DSSheetDescription>
+                      Choose an activity type and enter your details below.
+                    </DSSheetDescription>
+                  </DSSheetHeader>
+                  <div className="py-6 px-4">
+                    <Text variant="body-md" color="secondary">
+                      This panel slides up from the bottom, perfect for mobile-friendly forms
+                      and quick actions.
+                    </Text>
+                  </div>
+                </DSSheetContent>
+              </DSSheet>
+            </div>
+          </Card>
+
+          {/* Popover */}
+          <Card elevation="standard">
+            <Label>Popover</Label>
+            <div className="mt-2">
+              <DSPopover>
+                <DSPopoverTrigger className="inline-flex items-center justify-center rounded-ds-sm bg-ds-surface-raised px-4 py-2 text-sm font-medium text-ds-text-primary hover:bg-ds-surface-overlay transition-colors">
+                  Show Popover
+                </DSPopoverTrigger>
+                <DSPopoverContent className="w-72">
+                  <div className="flex flex-col gap-2">
+                    <Text variant="title-md" color="primary">Quick Stats</Text>
+                    <Text variant="body-sm" color="secondary">
+                      You have walked 8,432 steps today — that is 84% of your daily goal.
+                    </Text>
+                  </div>
+                </DSPopoverContent>
+              </DSPopover>
+            </div>
+          </Card>
+
+          {/* Hover Card */}
+          <Card elevation="standard">
+            <Label>Hover Card</Label>
+            <div className="mt-2">
+              <DSHoverCard>
+                <DSHoverCardTrigger className="text-ds-sage underline underline-offset-4 cursor-pointer text-sm font-medium">
+                  @zuralog
+                </DSHoverCardTrigger>
+                <DSHoverCardContent className="w-72">
+                  <div className="flex items-center gap-3">
+                    <Avatar initials="ZL" size="md" />
+                    <div>
+                      <Text variant="body-md" color="primary">Zuralog</Text>
+                      <Text variant="body-sm" color="secondary">Your personal health hub</Text>
+                    </div>
+                  </div>
+                  <Text variant="body-sm" color="secondary" className="mt-2">
+                    Bringing together data from all your devices into one clear picture of your well-being.
+                  </Text>
+                </DSHoverCardContent>
+              </DSHoverCard>
+            </div>
+          </Card>
+
+          {/* Command Palette */}
+          <Card elevation="standard">
+            <Label>Command Palette</Label>
+            <div className="mt-2">
+              <DSButton intent="secondary" size="sm" onClick={() => setCommandOpen(true)}>
+                Open Command Palette
+              </DSButton>
+              <DSDialog open={commandOpen} onOpenChange={setCommandOpen}>
+                <DSDialogContent className="!p-0 !max-w-lg overflow-hidden">
+                  <DSCommand>
+                    <DSCommandInput placeholder="Search actions..." />
+                    <DSCommandList>
+                      <DSCommandEmpty>No results found.</DSCommandEmpty>
+                      <DSCommandGroup heading="Actions">
+                        <DSCommandItem>
+                          <Activity className="mr-2 h-4 w-4" /> Log Activity
+                        </DSCommandItem>
+                        <DSCommandItem>
+                          <Heart className="mr-2 h-4 w-4" /> Check Heart Rate
+                        </DSCommandItem>
+                        <DSCommandItem>
+                          <Moon className="mr-2 h-4 w-4" /> Sleep Summary
+                        </DSCommandItem>
+                      </DSCommandGroup>
+                      <DSCommandGroup heading="Navigation">
+                        <DSCommandItem>
+                          <Home className="mr-2 h-4 w-4" /> Dashboard
+                        </DSCommandItem>
+                        <DSCommandItem>
+                          <Settings className="mr-2 h-4 w-4" /> Settings
+                        </DSCommandItem>
+                      </DSCommandGroup>
+                    </DSCommandList>
+                  </DSCommand>
+                </DSDialogContent>
+              </DSDialog>
+            </div>
+          </Card>
+        </div>
+      </RevealSection>
+
+      <ScrollDivider />
+
+      {/* ── 19. Navigation & Structure ─────────────────────────────── */}
+      <RevealSection className="mt-16">
+        <SectionTitle>Navigation &amp; Structure</SectionTitle>
+        <SectionSub>Breadcrumbs, pagination, collapsible sections, scroll areas, and context menus for organizing content.</SectionSub>
+
+        <div className="grid gap-6">
+          {/* Breadcrumb */}
+          <Card elevation="standard">
+            <Label>Breadcrumb</Label>
+            <div className="mt-2">
+              <DSBreadcrumb>
+                <DSBreadcrumbList>
+                  <DSBreadcrumbItem>
+                    <DSBreadcrumbLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>Home</DSBreadcrumbLink>
+                  </DSBreadcrumbItem>
+                  <DSBreadcrumbSeparator />
+                  <DSBreadcrumbItem>
+                    <DSBreadcrumbLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>Health</DSBreadcrumbLink>
+                  </DSBreadcrumbItem>
+                  <DSBreadcrumbSeparator />
+                  <DSBreadcrumbItem>
+                    <DSBreadcrumbLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>Sleep</DSBreadcrumbLink>
+                  </DSBreadcrumbItem>
+                  <DSBreadcrumbSeparator />
+                  <DSBreadcrumbItem>
+                    <DSBreadcrumbPage>Details</DSBreadcrumbPage>
+                  </DSBreadcrumbItem>
+                </DSBreadcrumbList>
+              </DSBreadcrumb>
+            </div>
+          </Card>
+
+          {/* Pagination */}
+          <Card elevation="standard">
+            <Label>Pagination</Label>
+            <div className="mt-2">
+              <DSPagination>
+                <DSPaginationContent>
+                  <DSPaginationItem>
+                    <DSPaginationPrevious href="" onClick={(e: React.MouseEvent) => e.preventDefault()} />
+                  </DSPaginationItem>
+                  <DSPaginationItem>
+                    <DSPaginationLink href="" isActive onClick={(e: React.MouseEvent) => e.preventDefault()}>1</DSPaginationLink>
+                  </DSPaginationItem>
+                  <DSPaginationItem>
+                    <DSPaginationLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>2</DSPaginationLink>
+                  </DSPaginationItem>
+                  <DSPaginationItem>
+                    <DSPaginationLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>3</DSPaginationLink>
+                  </DSPaginationItem>
+                  <DSPaginationItem>
+                    <DSPaginationEllipsis />
+                  </DSPaginationItem>
+                  <DSPaginationItem>
+                    <DSPaginationLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>10</DSPaginationLink>
+                  </DSPaginationItem>
+                  <DSPaginationItem>
+                    <DSPaginationNext href="" onClick={(e: React.MouseEvent) => e.preventDefault()} />
+                  </DSPaginationItem>
+                </DSPaginationContent>
+              </DSPagination>
+            </div>
+          </Card>
+
+          {/* Collapsible */}
+          <Card elevation="standard">
+            <Label>Collapsible</Label>
+            <div className="mt-2">
+              <DSCollapsible open={collapsibleOpen} onOpenChange={setCollapsibleOpen}>
+                <DSCollapsibleTrigger className="inline-flex items-center justify-center rounded-ds-sm bg-ds-surface-raised px-4 py-2 text-sm font-medium text-ds-text-primary hover:bg-ds-surface-overlay transition-colors">
+                  <ChevronDown className={`h-4 w-4 mr-1 transition-transform ${collapsibleOpen ? "rotate-180" : ""}`} />
+                  {collapsibleOpen ? "Hide" : "Show"} weekly breakdown
+                </DSCollapsibleTrigger>
+                <DSCollapsibleContent>
+                  <div className="mt-3 flex flex-col gap-2 pl-1">
+                    {["Monday: 6,200 steps", "Tuesday: 8,100 steps", "Wednesday: 7,400 steps", "Thursday: 9,200 steps"].map((day) => (
+                      <Text key={day} variant="body-sm" color="secondary">{day}</Text>
+                    ))}
+                  </div>
+                </DSCollapsibleContent>
+              </DSCollapsible>
+            </div>
+          </Card>
+
+          {/* Scroll Area */}
+          <Card elevation="standard">
+            <Label>Scroll Area</Label>
+            <DSScrollArea className="h-40 mt-2 rounded-ds-sm bg-ds-surface p-3">
+              <div className="flex flex-col gap-2">
+                {[
+                  "Morning walk — 2,400 steps",
+                  "Yoga session — 45 min",
+                  "Lunch break walk — 1,800 steps",
+                  "Afternoon cycling — 30 min",
+                  "Evening run — 3,200 steps",
+                  "Stretching — 15 min",
+                  "Post-dinner walk — 1,500 steps",
+                  "Meditation — 10 min",
+                  "Sleep logged — 7h 24m",
+                  "Water intake — 2.4L",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2 py-1 border-b border-[rgba(240,238,233,0.04)] last:border-0">
+                    <Activity size={14} className="text-ds-sage shrink-0" />
+                    <Text variant="body-sm" color="primary">{item}</Text>
+                  </div>
+                ))}
+              </div>
+            </DSScrollArea>
+          </Card>
+
+          {/* Context Menu */}
+          <Card elevation="standard">
+            <Label>Context Menu</Label>
+            <div className="mt-2">
+              <DSContextMenu>
+                <DSContextMenuTrigger>
+                  <div className="flex items-center justify-center h-24 rounded-ds-sm border border-dashed border-[rgba(240,238,233,0.12)] bg-ds-surface">
+                    <Text variant="body-sm" color="secondary">Right-click here</Text>
+                  </div>
+                </DSContextMenuTrigger>
+                <DSContextMenuContent>
+                  <DSContextMenuItem>
+                    <Copy className="mr-2 h-4 w-4" /> Copy Data
+                  </DSContextMenuItem>
+                  <DSContextMenuItem>
+                    <Share2 className="mr-2 h-4 w-4" /> Share Summary
+                  </DSContextMenuItem>
+                  <DSContextMenuSeparator />
+                  <DSContextMenuItem className="text-ds-error [&_svg]:!text-ds-error focus:!text-ds-error focus:[&_svg]:!text-ds-error focus:!bg-[rgba(255,59,48,0.08)]">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete Entry
+                  </DSContextMenuItem>
+                </DSContextMenuContent>
+              </DSContextMenu>
+            </div>
+          </Card>
+        </div>
+      </RevealSection>
+
+      <ScrollDivider />
+
+      {/* ── 20. Loading & Feedback ─────────────────────────────────── */}
+      <RevealSection className="mt-16">
+        <SectionTitle>Loading &amp; Feedback</SectionTitle>
+        <SectionSub>Progress indicators, loading skeletons, alert banners, and toast notifications.</SectionSub>
+
+        <div className="grid gap-6">
+          {/* Progress bars */}
+          <Card elevation="standard">
+            <Label>Progress</Label>
+            <div className="mt-2 flex flex-col gap-4">
+              <DSProgress value={25} label="Steps Goal" showValue />
+              <DSProgress value={67} label="Sleep Target" showValue />
+              <DSProgress value={100} label="Water Intake" showValue />
+            </div>
+          </Card>
+
+          {/* Skeleton */}
+          <Card elevation="standard">
+            <Label>Skeleton (Loading State)</Label>
+            <div className="mt-2 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <DSSkeleton width="40px" height="40px" className="rounded-full" />
+                <div className="flex-1 flex flex-col gap-2">
+                  <DSSkeleton width="60%" height="14px" />
+                  <DSSkeleton width="40%" height="12px" />
+                </div>
+              </div>
+              <DSSkeleton width="100%" height="120px" />
+              <div className="flex gap-3">
+                <DSSkeleton width="33%" height="32px" />
+                <DSSkeleton width="33%" height="32px" />
+                <DSSkeleton width="33%" height="32px" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Alerts */}
+          <Card elevation="standard">
+            <Label>Alerts</Label>
+            <div className="mt-2 flex flex-col gap-3">
+              <DSAlert
+                variant="default"
+                icon={<Info size={18} className="text-ds-text-secondary" />}
+                title="Sync in progress"
+                description="Your health data is being updated from connected devices."
+              />
+              <DSAlert
+                variant="success"
+                icon={<CheckCircle2 size={18} className="text-ds-success" />}
+                title="Goal reached!"
+                description="You hit your 10,000 steps target for today."
+              />
+              <DSAlert
+                variant="warning"
+                icon={<AlertTriangle size={18} className="text-ds-warning" />}
+                title="Low battery"
+                description="Your connected watch is below 15% — charge it to keep syncing."
+              />
+              <DSAlert
+                variant="error"
+                icon={<AlertCircle size={18} className="text-ds-error" />}
+                title="Sync failed"
+                description="Could not reach your Fitbit account. Check your connection and try again."
+              />
+            </div>
+          </Card>
+
+          {/* Toast */}
+          <Card elevation="standard">
+            <Label>Toast Notification</Label>
+            <div className="mt-2">
+              <DSButton
+                intent="primary"
+                size="sm"
+                onClick={() => dsToast.success("Activity logged!")}
+              >
+                Show Toast
+              </DSButton>
+            </div>
+          </Card>
+        </div>
+      </RevealSection>
+
+      <ScrollDivider />
+
+      {/* ── 21. Special Surfaces ───────────────────────────────────── */}
       <RevealSection className="mt-16">
         <SectionTitle>Special Surfaces</SectionTitle>
         <SectionSub>Empty states, onboarding, and floating actions use patterned surfaces to draw attention.</SectionSub>
