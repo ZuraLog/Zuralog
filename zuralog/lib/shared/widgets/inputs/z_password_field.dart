@@ -19,7 +19,7 @@ class ZPasswordField extends StatefulWidget {
     this.controller,
     this.label,
     this.hint,
-    this.errorText,
+    this.validator,
     this.onChanged,
     this.enabled = true,
   });
@@ -33,8 +33,8 @@ class ZPasswordField extends StatefulWidget {
   /// Placeholder text shown when the field is empty.
   final String? hint;
 
-  /// Error message displayed below the field. Null means no error.
-  final String? errorText;
+  /// Validation callback used by [Form.validate()].
+  final String? Function(String?)? validator;
 
   /// Callback invoked on every character change.
   final ValueChanged<String>? onChanged;
@@ -55,16 +55,18 @@ class _ZPasswordFieldState extends State<ZPasswordField> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorsOf(context);
     final field = AppTextField(
       controller: widget.controller,
       labelText: widget.label,
       hintText: widget.hint,
       obscureText: _obscured,
       onChanged: widget.onChanged,
+      validator: widget.validator,
       suffixIcon: IconButton(
         icon: Icon(
           _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-          color: AppColors.textSecondaryDark,
+          color: colors.textSecondary,
         ),
         onPressed: widget.enabled ? _toggleVisibility : null,
         tooltip: _obscured ? 'Show password' : 'Hide password',

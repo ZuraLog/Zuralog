@@ -255,7 +255,7 @@ class _Slot extends StatelessWidget {
         width: _ZOtpInputState._slotWidth,
         height: _ZOtpInputState._slotHeight,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(AppDimens.shapeSm),
           border: Border.fromBorderSide(borderSide),
         ),
