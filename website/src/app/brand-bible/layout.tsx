@@ -15,9 +15,13 @@ export default function BrandBibleLayout({
 }) {
   return (
     <SoundProvider>
-      <div className="min-h-screen bg-ds-canvas font-jakarta text-ds-text-primary">
+      <div className="min-h-screen bg-ds-canvas font-jakarta text-ds-text-primary relative">
+        {/* Aurora + ambient effects sit between the bg and content */}
         <BrandBibleInteractions />
-        {children}
+        {/* Content floats above everything */}
+        <div className="relative z-10">
+          {children}
+        </div>
       </div>
     </SoundProvider>
   );
