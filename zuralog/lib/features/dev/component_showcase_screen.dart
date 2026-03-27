@@ -183,7 +183,45 @@ class _ComponentShowcaseScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Canvas & Elevation'),
+        _label('Canvas & Elevation (runtime ColorScheme)'),
+        // Show what Flutter ACTUALLY resolves at runtime
+        Builder(builder: (context) {
+          final cs = Theme.of(context).colorScheme;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final entry in [
+                ('cs.surface', cs.surface),
+                ('cs.surfaceContainerLowest', cs.surfaceContainerLowest),
+                ('cs.surfaceContainerLow', cs.surfaceContainerLow),
+                ('cs.surfaceContainer', cs.surfaceContainer),
+                ('cs.surfaceContainerHigh', cs.surfaceContainerHigh),
+                ('cs.surfaceContainerHighest', cs.surfaceContainerHighest),
+                ('cs.surfaceDim', cs.surfaceDim),
+                ('cs.surfaceBright', cs.surfaceBright),
+                ('scaffoldBg', Theme.of(context).scaffoldBackgroundColor),
+                ('cardColor', Theme.of(context).cardColor),
+                ('inputFill', Theme.of(context).inputDecorationTheme.fillColor ?? Colors.transparent),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      Container(width: 20, height: 20, color: entry.$2),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${entry.$1}: #${entry.$2.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.warmWhite, fontFamily: 'monospace', fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        }),
+        const SizedBox(height: AppDimens.spaceMd),
+        _label('Brand Bible Tokens'),
         for (final entry in [
           ('Canvas', AppColors.canvas),
           ('Surface', AppColors.surface),
