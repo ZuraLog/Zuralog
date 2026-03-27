@@ -90,10 +90,15 @@ class ZDataTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    assert(
+      rows.every((r) => r.cells.length == columns.length),
+      'Every ZDataRow must have exactly ${columns.length} cells '
+      '(matching columns.length).',
+    );
     final colors = AppColorsOf(context);
 
     return Semantics(
-      label: 'Data table',
+      label: 'Data table, ${rows.length} rows, ${columns.length} columns',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppDimens.shapeLg),
         child: DecoratedBox(

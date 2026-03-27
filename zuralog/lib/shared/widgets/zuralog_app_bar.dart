@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:zuralog/core/theme/app_colors.dart';
 import 'package:zuralog/core/theme/app_dimens.dart';
 import 'package:zuralog/core/theme/app_text_styles.dart';
 import 'package:zuralog/shared/widgets/onboarding_tooltip.dart';
@@ -66,9 +67,13 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// When provided, wraps the title in an [OnboardingTooltip].
   final ZuralogAppBarTooltipConfig? tooltipConfig;
 
+  /// Extra height added when a subtitle is present, based on bodySmall line
+  /// height (12pt × 1.4) plus 4px spacing.
+  static const double _subtitleExtra = 18;
+
   @override
   Size get preferredSize => Size.fromHeight(
-        subtitle != null ? kToolbarHeight + 18 : kToolbarHeight,
+        subtitle != null ? kToolbarHeight + _subtitleExtra : kToolbarHeight,
       );
 
   @override
@@ -93,10 +98,7 @@ class ZuralogAppBar extends StatelessWidget implements PreferredSizeWidget {
               Text(
                 subtitle!,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.55),
+                  color: AppColorsOf(context).textSecondary,
                 ),
               ),
             ],

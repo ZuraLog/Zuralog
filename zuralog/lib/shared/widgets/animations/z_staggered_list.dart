@@ -51,7 +51,7 @@ class ZStaggeredList extends StatelessWidget {
       children: [
         for (var i = 0; i < children.length; i++)
           ZFadeSlideIn(
-            delay: staggerDelay * i,
+            delay: staggerDelay * (i < 10 ? i : 10),
             duration: duration,
             offset: offset,
             child: children[i],

@@ -143,7 +143,9 @@ class _ZCalendarState extends State<ZCalendar> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  bool _isToday(DateTime date) => _isSameDay(date, DateTime.now());
+  late DateTime _today;
+
+  bool _isToday(DateTime date) => _isSameDay(date, _today);
 
   bool _isSelected(DateTime date) =>
       widget.selectedDate != null && _isSameDay(date, widget.selectedDate!);
@@ -187,6 +189,7 @@ class _ZCalendarState extends State<ZCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    _today = DateTime.now();
     final colors = AppColorsOf(context);
     final days = _buildDayGrid();
 

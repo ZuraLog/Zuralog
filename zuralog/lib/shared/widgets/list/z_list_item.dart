@@ -113,6 +113,8 @@ class ZListItem extends StatelessWidget {
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: colors.textPrimary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null)
                   Text(
@@ -134,8 +136,9 @@ class ZListItem extends StatelessWidget {
     if (onTap != null) {
       tappable = Semantics(
         button: true,
-        child: InkWell(
+        child: GestureDetector(
           onTap: onTap,
+          behavior: HitTestBehavior.opaque,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 44),
             child: row,

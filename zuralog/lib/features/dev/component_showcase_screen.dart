@@ -27,7 +27,7 @@ class _ComponentShowcaseScreenState
   double _sliderValue = 0.6;
   String? _radioValue = 'daily';
   int _segmentIndex = 0;
-  final Set<String> _activeChips = {'Sleep', 'Heart'};
+  Set<String> _activeChips = {'Sleep', 'Heart'};
   String? _selectValue;
   int _stepperValue = 5;
   final double _progressValue = 0.67;
@@ -729,6 +729,7 @@ class _ComponentShowcaseScreenState
                 label: chip,
                 isActive: _activeChips.contains(chip),
                 onTap: () => setState(() {
+                  _activeChips = Set.of(_activeChips);
                   if (_activeChips.contains(chip)) {
                     _activeChips.remove(chip);
                   } else {

@@ -21,7 +21,9 @@ class ZRatingBar extends StatelessWidget {
     this.maxRating = 5,
     this.size = 28.0,
     this.enabled = true,
-  });
+  })  : assert(maxRating > 0, 'maxRating must be greater than zero'),
+        assert(rating >= 0 && rating <= maxRating,
+            'rating must be between 0 and maxRating');
 
   /// The current rating (1-based). Zero means no stars selected.
   final int rating;
@@ -52,9 +54,10 @@ class ZRatingBar extends StatelessWidget {
             final starValue = index + 1;
             final isFilled = starValue <= rating;
 
+            final touchSize = size < 44 ? 44.0 : size;
             return SizedBox(
-              width: 44,
-              height: 44,
+              width: touchSize,
+              height: touchSize,
               child: GestureDetector(
                 onTap: enabled ? () => onChanged(starValue) : null,
                 behavior: HitTestBehavior.opaque,

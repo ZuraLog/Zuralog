@@ -39,7 +39,7 @@ class ZOtpInput extends StatefulWidget {
     this.onChanged,
     this.hasError = false,
     this.enabled = true,
-  });
+  }) : assert(length > 0, 'OTP length must be greater than zero');
 
   /// Number of character slots to display.
   final int length;
@@ -179,6 +179,7 @@ class _ZOtpInputState extends State<ZOtpInput> {
                     controller: _controller,
                     focusNode: _focusNode,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
                     maxLength: widget.length,
                     enableSuggestions: false,
                     autocorrect: false,
