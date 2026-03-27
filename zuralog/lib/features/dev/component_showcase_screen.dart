@@ -359,25 +359,33 @@ class _ComponentShowcaseScreenState
     final hex =
         '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
     return Expanded(
-      child: Column(
-        children: [
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(AppDimens.shapeXs),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(AppDimens.shapeXs),
+                border: Border.all(
+                  color: AppColors.warmWhite.withValues(alpha: 0.1),
+                  width: 0.5,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(name,
-              style: AppTextStyles.labelSmall
-                  .copyWith(color: AppColors.textSecondaryDark)),
-          Text(hex,
-              style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.textSecondaryDark,
-                  fontSize: 9,
-                  fontFamily: 'monospace')),
-        ],
+            const SizedBox(height: 4),
+            Text(name,
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: AppColors.textSecondaryDark)),
+            Text(hex,
+                style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.textSecondaryDark,
+                    fontSize: 9,
+                    fontFamily: 'monospace')),
+          ],
+        ),
       ),
     );
   }
