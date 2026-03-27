@@ -68,7 +68,7 @@ import {
   DSHoverCard,
   DSHoverCardTrigger,
   DSHoverCardContent,
-  DSCommandDialog,
+  DSCommand,
   DSCommandInput,
   DSCommandList,
   DSCommandEmpty,
@@ -1195,31 +1195,35 @@ export default function BrandBiblePage() {
               <DSButton intent="secondary" size="sm" onClick={() => setCommandOpen(true)}>
                 Open Command Palette
               </DSButton>
-              <DSCommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
-                <DSCommandInput placeholder="Search actions..." />
-                <DSCommandList>
-                  <DSCommandEmpty>No results found.</DSCommandEmpty>
-                  <DSCommandGroup heading="Actions">
-                    <DSCommandItem>
-                      <Activity className="mr-2 h-4 w-4" /> Log Activity
-                    </DSCommandItem>
-                    <DSCommandItem>
-                      <Heart className="mr-2 h-4 w-4" /> Check Heart Rate
-                    </DSCommandItem>
-                    <DSCommandItem>
-                      <Moon className="mr-2 h-4 w-4" /> Sleep Summary
-                    </DSCommandItem>
-                  </DSCommandGroup>
-                  <DSCommandGroup heading="Navigation">
-                    <DSCommandItem>
-                      <Home className="mr-2 h-4 w-4" /> Dashboard
-                    </DSCommandItem>
-                    <DSCommandItem>
-                      <Settings className="mr-2 h-4 w-4" /> Settings
-                    </DSCommandItem>
-                  </DSCommandGroup>
-                </DSCommandList>
-              </DSCommandDialog>
+              <DSDialog open={commandOpen} onOpenChange={setCommandOpen}>
+                <DSDialogContent className="!p-0 !max-w-lg overflow-hidden">
+                  <DSCommand>
+                    <DSCommandInput placeholder="Search actions..." />
+                    <DSCommandList>
+                      <DSCommandEmpty>No results found.</DSCommandEmpty>
+                      <DSCommandGroup heading="Actions">
+                        <DSCommandItem>
+                          <Activity className="mr-2 h-4 w-4" /> Log Activity
+                        </DSCommandItem>
+                        <DSCommandItem>
+                          <Heart className="mr-2 h-4 w-4" /> Check Heart Rate
+                        </DSCommandItem>
+                        <DSCommandItem>
+                          <Moon className="mr-2 h-4 w-4" /> Sleep Summary
+                        </DSCommandItem>
+                      </DSCommandGroup>
+                      <DSCommandGroup heading="Navigation">
+                        <DSCommandItem>
+                          <Home className="mr-2 h-4 w-4" /> Dashboard
+                        </DSCommandItem>
+                        <DSCommandItem>
+                          <Settings className="mr-2 h-4 w-4" /> Settings
+                        </DSCommandItem>
+                      </DSCommandGroup>
+                    </DSCommandList>
+                  </DSCommand>
+                </DSDialogContent>
+              </DSDialog>
             </div>
           </Card>
         </div>
@@ -1240,15 +1244,15 @@ export default function BrandBiblePage() {
               <DSBreadcrumb>
                 <DSBreadcrumbList>
                   <DSBreadcrumbItem>
-                    <DSBreadcrumbLink href="#">Home</DSBreadcrumbLink>
+                    <DSBreadcrumbLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>Home</DSBreadcrumbLink>
                   </DSBreadcrumbItem>
                   <DSBreadcrumbSeparator />
                   <DSBreadcrumbItem>
-                    <DSBreadcrumbLink href="#">Health</DSBreadcrumbLink>
+                    <DSBreadcrumbLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>Health</DSBreadcrumbLink>
                   </DSBreadcrumbItem>
                   <DSBreadcrumbSeparator />
                   <DSBreadcrumbItem>
-                    <DSBreadcrumbLink href="#">Sleep</DSBreadcrumbLink>
+                    <DSBreadcrumbLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>Sleep</DSBreadcrumbLink>
                   </DSBreadcrumbItem>
                   <DSBreadcrumbSeparator />
                   <DSBreadcrumbItem>
@@ -1266,25 +1270,25 @@ export default function BrandBiblePage() {
               <DSPagination>
                 <DSPaginationContent>
                   <DSPaginationItem>
-                    <DSPaginationPrevious href="#" />
+                    <DSPaginationPrevious href="" onClick={(e: React.MouseEvent) => e.preventDefault()} />
                   </DSPaginationItem>
                   <DSPaginationItem>
-                    <DSPaginationLink href="#" isActive>1</DSPaginationLink>
+                    <DSPaginationLink href="" isActive onClick={(e: React.MouseEvent) => e.preventDefault()}>1</DSPaginationLink>
                   </DSPaginationItem>
                   <DSPaginationItem>
-                    <DSPaginationLink href="#">2</DSPaginationLink>
+                    <DSPaginationLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>2</DSPaginationLink>
                   </DSPaginationItem>
                   <DSPaginationItem>
-                    <DSPaginationLink href="#">3</DSPaginationLink>
+                    <DSPaginationLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>3</DSPaginationLink>
                   </DSPaginationItem>
                   <DSPaginationItem>
                     <DSPaginationEllipsis />
                   </DSPaginationItem>
                   <DSPaginationItem>
-                    <DSPaginationLink href="#">10</DSPaginationLink>
+                    <DSPaginationLink href="" onClick={(e: React.MouseEvent) => e.preventDefault()}>10</DSPaginationLink>
                   </DSPaginationItem>
                   <DSPaginationItem>
-                    <DSPaginationNext href="#" />
+                    <DSPaginationNext href="" onClick={(e: React.MouseEvent) => e.preventDefault()} />
                   </DSPaginationItem>
                 </DSPaginationContent>
               </DSPagination>

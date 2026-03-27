@@ -16,10 +16,10 @@ interface DSScrollAreaProps extends ScrollAreaPrimitive.Root.Props {
 export function DSScrollArea({ className, children, ...props }: DSScrollAreaProps) {
   return (
     <ScrollAreaPrimitive.Root
-      className={cn("relative", className)}
+      className={cn("relative overflow-hidden", className)}
       {...props}
     >
-      <ScrollAreaPrimitive.Viewport className="size-full rounded-[inherit]">
+      <ScrollAreaPrimitive.Viewport className="size-full overflow-auto rounded-[inherit]">
         {children}
       </ScrollAreaPrimitive.Viewport>
       <DSScrollBar />

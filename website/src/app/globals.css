@@ -705,10 +705,11 @@ body {
   background-size: 300px auto;
   background-repeat: repeat;
   animation: dsPatternDrift 40s linear infinite;
+  transition: filter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ds-pattern-drift:hover {
-  animation-duration: 15s;
+  filter: brightness(1.15);
 }
 
 .ds-pattern-drift:active {

@@ -12,7 +12,10 @@ export interface DSAlertProps extends React.HTMLAttributes<HTMLDivElement> {
   description?: string;
 }
 
-const variantStyles: Record<AlertVariant, { bg: string; border: string }> = {
+const variantStyles: Record<
+  AlertVariant,
+  { bg: string; border: string; pattern?: string }
+> = {
   default: {
     bg: "bg-ds-surface",
     border: "border-l-ds-text-secondary",
@@ -20,14 +23,17 @@ const variantStyles: Record<AlertVariant, { bg: string; border: string }> = {
   success: {
     bg: "bg-[rgba(52,199,89,0.06)]",
     border: "border-l-ds-success",
+    pattern: "/patterns/sage.png",
   },
   warning: {
     bg: "bg-[rgba(255,149,0,0.06)]",
     border: "border-l-ds-warning",
+    pattern: "/patterns/amber.png",
   },
   error: {
     bg: "bg-[rgba(255,59,48,0.06)]",
     border: "border-l-ds-error",
+    pattern: "/patterns/crimson.png",
   },
 };
 
@@ -46,8 +52,8 @@ export function DSAlert({
     <div
       role="alert"
       className={cn(
-        "rounded-ds-sm p-4",
-        "border-l-[3px]",
+        "relative overflow-hidden rounded-ds-sm p-4",
+        "border-l-4",
         styles.bg,
         styles.border,
         "font-jakarta",
@@ -55,7 +61,18 @@ export function DSAlert({
       )}
       {...props}
     >
-      <div className="flex gap-3">
+      {styles.pattern && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: `url('${styles.pattern}')`,
+            backgroundSize: "300px auto",
+            backgroundRepeat: "repeat",
+          }}
+        />
+      )}
+      <div className="relative z-10 flex gap-3">
         {icon && (
           <div className="shrink-0 mt-0.5" aria-hidden="true">
             {icon}
