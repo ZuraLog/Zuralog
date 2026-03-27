@@ -53,7 +53,6 @@ import {
   User,
 } from "lucide-react";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
-import { useSplitReveal } from "@/hooks/use-split-reveal";
 import { useScrambleNumber } from "@/hooks/use-scramble-number";
 import { ScrollDivider } from "@/components/design-system/interactions/scroll-divider";
 import { TypingText } from "@/components/design-system/interactions/typing-text";
@@ -81,17 +80,7 @@ function RevealSection({
 
 /* ── Section helpers ─────────────────────────────────────────────────── */
 
-function SectionTitle({ children, animated = false }: { children: string; animated?: boolean }) {
-  const splitRef = useSplitReveal<HTMLHeadingElement>({ stagger: 0.02, duration: 0.4 });
-
-  if (animated) {
-    return (
-      <Text ref={splitRef} variant="display-md" color="sage" pattern="sage">
-        {children}
-      </Text>
-    );
-  }
-
+function SectionTitle({ children }: { children: string }) {
   return (
     <Text variant="display-md" color="sage" pattern="sage">
       {children}
@@ -182,7 +171,6 @@ const patternTable = [
 
 export default function BrandBiblePage() {
   /* ── Text animation refs ─────────────────────────────────────── */
-  const titleRef = useSplitReveal<HTMLHeadingElement>({ stagger: 0.025, duration: 0.4 });
   const heroScoreRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "78", duration: 1.2 });
   const stepsRef = useScrambleNumber<HTMLSpanElement>({ finalValue: "8,432", duration: 1.0 });
 
@@ -195,7 +183,7 @@ export default function BrandBiblePage() {
     <main className="max-w-[960px] mx-auto px-6 py-12 pb-24">
       {/* ── 1. Header ──────────────────────────────────────────────── */}
       <header>
-        <Text ref={titleRef} variant="display-lg" color="sage" pattern="sage" as="h1" data-pattern-animate="true">
+        <Text variant="display-lg" color="sage" pattern="sage" as="h1">
           Zuralog Design System
         </Text>
         <Text variant="body-lg" color="secondary" className="mt-3 max-w-2xl">
@@ -206,7 +194,7 @@ export default function BrandBiblePage() {
 
       {/* ── 2. Canvas & Elevation ──────────────────────────────────── */}
       <RevealSection className="mt-16">
-        <SectionTitle animated>Canvas &amp; Elevation</SectionTitle>
+        <SectionTitle>Canvas &amp; Elevation</SectionTitle>
         <SectionSub>Four surface levels create depth without drop shadows. Every layer lifts content closer to the user.</SectionSub>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -482,7 +470,7 @@ export default function BrandBiblePage() {
 
       {/* ── 11. Cards ──────────────────────────────────────────────── */}
       <RevealSection className="mt-16">
-        <SectionTitle animated>Cards</SectionTitle>
+        <SectionTitle>Cards</SectionTitle>
         <SectionSub>Three elevation levels plus category feature cards. Hero and feature cards get pattern overlays.</SectionSub>
 
         <div className="grid gap-4">
